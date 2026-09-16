@@ -1,0 +1,245 @@
+/* Placeholder product illustrations — used only when an item has no `image`.
+   viewBox 120x100, each drawn around the centre. `c` = product colour. */
+
+const Pack = ({ c = "#1f7a4c", t = "", c2 = "#fff" }) => (
+  <g>
+    <ellipse cx="60" cy="92" rx="30" ry="4" fill="#000" opacity=".08" />
+    <path d="M36 18h48l-2 6 2 6v54a6 6 0 0 1-6 6H40a6 6 0 0 1-6-6V30l2-6z" fill={c} />
+    <path d="M36 18h48l-2 6 2 6H34l2-6z" fill="#000" opacity=".15" />
+    <path d="M38 22h44" stroke="#fff" strokeOpacity=".35" strokeDasharray="3 3" />
+    <rect x="40" y="42" width="40" height="30" rx="4" fill={c2} opacity=".95" />
+    <text x="60" y="62" textAnchor="middle" fontSize="13" fontWeight="800" fill={c}>{t}</text>
+    <path d="M42 34h8" stroke="#fff" strokeOpacity=".6" strokeWidth="3" strokeLinecap="round" />
+  </g>
+);
+
+const Bottle = ({ c = "#d4a017", t = "" }) => (
+  <g>
+    <ellipse cx="60" cy="93" rx="20" ry="3.5" fill="#000" opacity=".08" />
+    <rect x="53" y="6" width="14" height="10" rx="2" fill="#2b3a42" />
+    <path d="M52 16h16v8c8 4 12 10 12 18v42a7 7 0 0 1-7 7H47a7 7 0 0 1-7-7V42c0-8 4-14 12-18z" fill={c} opacity=".9" />
+    <path d="M46 36c0 0 2-6 8-9v58h-4a4 4 0 0 1-4-4z" fill="#fff" opacity=".25" />
+    <rect x="42" y="50" width="36" height="24" rx="3" fill="#fff" />
+    <text x="60" y="66" textAnchor="middle" fontSize="11" fontWeight="800" fill="#2b3a42">{t}</text>
+  </g>
+);
+
+const Box = ({ c = "#8a4b2a", t = "" }) => (
+  <g>
+    <ellipse cx="60" cy="92" rx="36" ry="4" fill="#000" opacity=".08" />
+    <path d="M26 34l34-12 34 12-34 12z" fill={c} />
+    <path d="M26 34l34 12v42L26 76z" fill={c} opacity=".78" />
+    <path d="M94 34L60 46v42l34-12z" fill={c} opacity=".92" />
+    <path d="M26 34l34 12 34-12" stroke="#fff" strokeOpacity=".3" fill="none" />
+    <path d="M65 58l24-8.5v18L65 76z" fill="#fff" opacity=".92" />
+    <path d="M69 64l16-5.6M69 69l11-3.8" stroke={c} strokeWidth="2.4" strokeLinecap="round" />
+  </g>
+);
+
+const Jar = ({ c = "#e59aa8", t = "" }) => (
+  <g>
+    <ellipse cx="60" cy="93" rx="24" ry="3.5" fill="#000" opacity=".08" />
+    <rect x="40" y="14" width="40" height="12" rx="3" fill="#39434b" />
+    <rect x="36" y="26" width="48" height="64" rx="10" fill={c} />
+    <rect x="42" y="30" width="6" height="52" rx="3" fill="#fff" opacity=".35" />
+    <rect x="40" y="48" width="40" height="22" rx="3" fill="#fff" />
+    <text x="60" y="63" textAnchor="middle" fontSize="11" fontWeight="800" fill="#39434b">{t}</text>
+  </g>
+);
+
+const Bar = ({ c = "#5a2e1c", t = "" }) => (
+  <g>
+    <ellipse cx="60" cy="90" rx="36" ry="4" fill="#000" opacity=".08" />
+    <g transform="rotate(-12 60 55)">
+      <rect x="24" y="30" width="72" height="50" rx="4" fill={c} />
+      <path d="M24 30h30l-8 50H24z" fill="#3a1d11" opacity=".5" />
+      <rect x="50" y="42" width="40" height="26" rx="3" fill="#f3d9a6" />
+      <text x="70" y="59" textAnchor="middle" fontSize="11" fontWeight="800" fill={c}>{t}</text>
+    </g>
+  </g>
+);
+
+const Banana = () => (
+  <g>
+    <ellipse cx="60" cy="90" rx="38" ry="4" fill="#000" opacity=".08" />
+    {[0, 1, 2].map((i) => (
+      <g key={i} transform={`rotate(${-18 + i * 18} 72 30)`}>
+        <path d="M70 28c-26 6-42 26-40 52 8-18 24-34 46-44z" fill={["#f6c945", "#f2bd2c", "#fad35c"][i]} />
+        <path d="M30 80c2-3 3-4 5-6" stroke="#6b4b12" strokeWidth="3" strokeLinecap="round" />
+      </g>
+    ))}
+    <rect x="68" y="22" width="10" height="12" rx="3" fill="#6f7d2c" />
+  </g>
+);
+
+const Apple = ({ c = "#d8262e" }) => (
+  <g>
+    <ellipse cx="60" cy="90" rx="30" ry="4" fill="#000" opacity=".08" />
+    <path d="M60 34c-6-6-28-6-30 16-2 22 12 38 22 38 4 0 6-2 8-2s4 2 8 2c10 0 24-16 22-38-2-22-24-22-30-16z" fill={c} />
+    <path d="M40 46c2-8 10-10 14-8-6 2-10 8-10 14z" fill="#fff" opacity=".35" />
+    <path d="M60 34c0-8 2-12 6-16" stroke="#5a3a1a" strokeWidth="3" strokeLinecap="round" fill="none" />
+    <path d="M64 24c8-8 18-6 20-4-6 6-14 8-20 4z" fill="#4c9a2a" />
+  </g>
+);
+
+const Pomegranate = () => (
+  <g>
+    <ellipse cx="60" cy="91" rx="30" ry="4" fill="#000" opacity=".08" />
+    <circle cx="60" cy="58" r="30" fill="#b3122b" />
+    <path d="M52 30l3-10 5 7 5-7 3 10z" fill="#8e0e22" />
+    <circle cx="48" cy="48" r="7" fill="#fff" opacity=".18" />
+  </g>
+);
+
+const Orange = () => (
+  <g>
+    <ellipse cx="60" cy="91" rx="30" ry="4" fill="#000" opacity=".08" />
+    <circle cx="60" cy="58" r="30" fill="#f28c1b" />
+    {[[48, 50], [66, 44], [72, 62], [54, 70], [44, 62], [60, 58]].map(([x, y], i) => <circle key={i} cx={x} cy={y} r="1.3" fill="#c96a0c" />)}
+    <path d="M58 28c6-8 16-8 20-6-6 6-14 8-20 6z" fill="#3f8e2e" />
+    <circle cx="48" cy="46" r="7" fill="#fff" opacity=".2" />
+  </g>
+);
+
+const Grapes = () => (
+  <g>
+    <ellipse cx="60" cy="92" rx="22" ry="3.5" fill="#000" opacity=".08" />
+    <path d="M60 14v12" stroke="#6b4b12" strokeWidth="3" strokeLinecap="round" />
+    <path d="M62 20c8-6 16-4 18-2-6 4-12 6-18 2z" fill="#4c9a2a" />
+    {[[48, 34], [60, 32], [72, 34], [42, 46], [54, 46], [66, 46], [78, 46], [48, 58], [60, 58], [72, 58], [54, 70], [66, 70], [60, 82]].map(([x, y], i) => (
+      <circle key={i} cx={x} cy={y} r="8" fill={i % 3 ? "#9cc63b" : "#88b62f"} stroke="#fff" strokeOpacity=".25" />
+    ))}
+  </g>
+);
+
+const Headphones = ({ c = "#1b3a55" }) => (
+  <g>
+    <ellipse cx="60" cy="92" rx="34" ry="4" fill="#000" opacity=".08" />
+    <path d="M30 62V52a30 30 0 0 1 60 0v10" stroke={c} strokeWidth="7" fill="none" strokeLinecap="round" />
+    <rect x="22" y="56" width="18" height="32" rx="8" fill={c} />
+    <rect x="80" y="56" width="18" height="32" rx="8" fill={c} />
+    <rect x="26" y="62" width="4" height="20" rx="2" fill="#fff" opacity=".25" />
+  </g>
+);
+
+const Speaker = ({ c = "#0f6a9c" }) => (
+  <g>
+    <ellipse cx="60" cy="92" rx="36" ry="4" fill="#000" opacity=".08" />
+    <rect x="22" y="36" width="76" height="50" rx="22" fill={c} />
+    <rect x="30" y="44" width="60" height="34" rx="16" fill="#0b2a3c" opacity=".35" />
+    {[0, 1, 2, 3, 4, 5, 6].map((i) => <circle key={i} cx={38 + i * 7.5} cy={61} r="2.2" fill="#fff" opacity=".45" />)}
+    <rect x="52" y="30" width="16" height="6" rx="3" fill={c} />
+  </g>
+);
+
+const Charger = () => (
+  <g>
+    <ellipse cx="60" cy="92" rx="26" ry="4" fill="#000" opacity=".08" />
+    <rect x="50" y="14" width="5" height="16" rx="1.5" fill="#9aa6ae" />
+    <rect x="65" y="14" width="5" height="16" rx="1.5" fill="#9aa6ae" />
+    <rect x="36" y="28" width="48" height="60" rx="12" fill="#f4f6f8" stroke="#d3dbe1" strokeWidth="2" />
+    <rect x="50" y="62" width="20" height="6" rx="3" fill="#2b3a42" />
+    <rect x="50" y="74" width="20" height="6" rx="3" fill="#2b3a42" />
+    <text x="60" y="52" textAnchor="middle" fontSize="11" fontWeight="800" fill="#1a7f9a">65W</text>
+  </g>
+);
+
+const Ssd = ({ c = "#155c86" }) => (
+  <g>
+    <ellipse cx="60" cy="88" rx="38" ry="4" fill="#000" opacity=".08" />
+    <g transform="rotate(-10 60 55)">
+      <rect x="26" y="32" width="68" height="46" rx="8" fill={c} />
+      <rect x="32" y="38" width="56" height="34" rx="5" fill="#fff" opacity=".12" />
+      <text x="60" y="60" textAnchor="middle" fontSize="12" fontWeight="800" fill="#fff">1TB</text>
+      <circle cx="84" cy="70" r="2" fill="#7fe3a0" />
+    </g>
+  </g>
+);
+
+const Webcam = () => (
+  <g>
+    <ellipse cx="60" cy="92" rx="26" ry="4" fill="#000" opacity=".08" />
+    <rect x="28" y="30" width="64" height="30" rx="15" fill="#1f2a31" />
+    <circle cx="60" cy="45" r="11" fill="#33424b" />
+    <circle cx="60" cy="45" r="6" fill="#2a86b8" />
+    <circle cx="58" cy="43" r="2" fill="#fff" opacity=".7" />
+    <path d="M60 60v18M44 88h32" stroke="#1f2a31" strokeWidth="5" strokeLinecap="round" />
+  </g>
+);
+
+const Lamp = ({ c = "#b3561a" }) => (
+  <g>
+    <ellipse cx="60" cy="92" rx="30" ry="4" fill="#000" opacity=".08" />
+    <rect x="34" y="80" width="52" height="10" rx="5" fill="#2b3a42" />
+    <path d="M44 80l12-34 20-10" stroke="#2b3a42" strokeWidth="4" strokeLinecap="round" fill="none" />
+    <path d="M70 22l24 8-8 18-24-8z" fill={c} />
+    <path d="M74 44l10 14" stroke="#ffd36b" strokeWidth="8" strokeLinecap="round" opacity=".45" />
+  </g>
+);
+
+const Plates = ({ c = "#b85a1c" }) => (
+  <g>
+    <ellipse cx="60" cy="90" rx="42" ry="5" fill="#000" opacity=".08" />
+    {[0, 1, 2].map((i) => (
+      <g key={i}>
+        <ellipse cx="60" cy={78 - i * 10} rx="40" ry="11" fill="#fff" stroke="#dfe5ea" strokeWidth="2" />
+        <ellipse cx="60" cy={78 - i * 10} rx="30" ry="7" fill="none" stroke={c} strokeWidth="2" opacity=".7" />
+      </g>
+    ))}
+    <ellipse cx="60" cy="58" rx="16" ry="4" fill={c} opacity=".15" />
+  </g>
+);
+
+const Flask = ({ c = "#a8561f" }) => (
+  <g>
+    <ellipse cx="60" cy="93" rx="18" ry="3.5" fill="#000" opacity=".08" />
+    <rect x="48" y="8" width="24" height="14" rx="4" fill="#2b3a42" />
+    <rect x="44" y="22" width="32" height="70" rx="10" fill="#c9d3da" />
+    <rect x="44" y="40" width="32" height="30" fill={c} />
+    <rect x="50" y="26" width="5" height="60" rx="2.5" fill="#fff" opacity=".5" />
+  </g>
+);
+
+const Towels = ({ c = "#c07a45" }) => (
+  <g>
+    <ellipse cx="60" cy="90" rx="40" ry="4" fill="#000" opacity=".08" />
+    {["#e7d5c3", c, "#f0e6da", "#8bb0c9"].map((col, i) => (
+      <g key={i}>
+        <rect x="22" y={70 - i * 14} width="76" height="16" rx="7" fill={col} />
+        <path d={`M24 ${76 - i * 14}h72`} stroke="#fff" strokeOpacity=".35" />
+      </g>
+    ))}
+  </g>
+);
+
+const Board = () => (
+  <g>
+    <ellipse cx="60" cy="90" rx="38" ry="4" fill="#000" opacity=".08" />
+    <g transform="rotate(-14 60 55)">
+      <rect x="24" y="22" width="60" height="64" rx="10" fill="#d9a766" />
+      <rect x="40" y="28" width="68" height="56" rx="10" fill="#c38c49" />
+      <circle cx="96" cy="40" r="5" fill="#fff" />
+      {[0, 1, 2, 3].map((i) => <path key={i} d={`M${50 + i * 12} 34v44`} stroke="#a8743a" strokeOpacity=".5" />)}
+    </g>
+  </g>
+);
+
+const Basket = ({ c = "#c9a36b" }) => (
+  <g>
+    <ellipse cx="60" cy="92" rx="36" ry="4" fill="#000" opacity=".08" />
+    <path d="M22 42h76l-8 46H30z" fill={c} />
+    {[0, 1, 2, 3].map((i) => <path key={i} d={`M24 ${52 + i * 10}h72`} stroke="#8c6a3a" strokeOpacity=".45" strokeWidth="3" />)}
+    <rect x="18" y="36" width="84" height="10" rx="5" fill="#a9844d" />
+  </g>
+);
+
+const ART = { Pack, Bottle, Box, Jar, Bar, Banana, Apple, Pomegranate, Orange, Grapes, Headphones, Speaker, Charger, Ssd, Webcam, Lamp, Plates, Flask, Towels, Board, Basket };
+
+export default function ProductArt({ art = "Pack", color, label }) {
+  const A = ART[art] || Pack;
+  return (
+    <svg viewBox="0 0 120 100" role="img" aria-hidden="true" className="hm-art">
+      <A c={color} t={label} />
+    </svg>
+  );
+}
