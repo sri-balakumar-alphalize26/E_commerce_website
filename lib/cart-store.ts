@@ -116,6 +116,7 @@ type RepricedLine =
       stock: number
       stockStatus: CartLine['stockStatus']
       inStock: boolean
+      quickDelivery: boolean
       minQty: number
       qtyStep: number
       badge: string | null
@@ -172,6 +173,7 @@ export async function reconcile() {
         stock: f.stock,
         stockStatus: f.stockStatus,
         inStock: f.inStock,
+        quickDelivery: f.quickDelivery,
         minQty: f.minQty,
         qtyStep: f.qtyStep,
         badge: f.badge,

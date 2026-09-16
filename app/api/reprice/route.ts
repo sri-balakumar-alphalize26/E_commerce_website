@@ -28,6 +28,7 @@ export type RepricedLine =
       stock: number
       stockStatus: 'ok' | 'low' | 'out'
       inStock: boolean
+      quickDelivery: boolean
       minQty: number
       qtyStep: number
       badge: string | null
@@ -63,6 +64,7 @@ export async function POST(request: Request) {
         stock: p.stock,
         stockStatus: p.stockStatus,
         inStock: p.inStock,
+        quickDelivery: p.quickDelivery,
         minQty: p.minQty,
         qtyStep: p.qtyStep,
         badge: p.badge,

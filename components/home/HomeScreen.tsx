@@ -67,6 +67,7 @@ export default function HomeScreen({
         const rail = {
           key: r.key,
           title: r.title,
+          href: r.href,
           subtitle: r.subtitle,
           items: r.products.map(toHomeItem),
         }

@@ -191,18 +191,23 @@ export default function ProductCardMedia({ product, priority, railSafe, classNam
               pack-size band would add its height to every card in every
               grid, and the skeleton would have to grow to match.
 
-              Bottom RIGHT, not centred: the discount badge sits bottom-left
-              and is ~59px wide, which on a 158px tile reaches past the
-              middle and straight through a centred row. The lift clears the
-              out-of-stock ribbon, which owns the whole bottom edge. */}
+              CENTRED, AND CLEAR OF THE BOTTOM ROW. These were bottom-right
+              for a while, tucked beside the discount badge, and they read as
+              misaligned because they were: a 6px dot and an 18px chip share
+              a bottom edge and nothing else, so the eye lines them up and
+              finds them 2px apart.
+
+              36px up is the vendored design's own answer to the same
+              problem, and it is worth copying exactly -- it clears both the
+              badge and the out-of-stock ribbon, which lets the position stop
+              depending on stock. The translucent pill is what keeps six grey
+              pixels legible over a photograph. */}
           <Dots
             count={images.length}
             index={index}
             onMedia
-            align="end"
             className={cn(
-              'pointer-events-none absolute inset-x-0 pr-2',
-              product.inStock ? 'bottom-1.5' : 'bottom-8',
+              'rounded-pill bg-surface/75 pointer-events-none absolute bottom-9 left-1/2 -translate-x-1/2 items-center px-1.5 py-1 backdrop-blur-[4px]',
               railSafe && 'hidden md:flex',
             )}
           />

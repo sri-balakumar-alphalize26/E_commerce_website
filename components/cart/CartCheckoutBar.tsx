@@ -34,12 +34,23 @@ const MAX_THUMBS = 3
 export default function CartCheckoutBar() {
   const { cart, ready } = useCart()
   const pathname = usePathname()
-  const onCartPage = pathname === '/cart'
 
   // Suppressed on product detail, which pins its own buy bar in exactly this
   // slot. Two stacked bars would eat a third of a 390px viewport, and the
   // tab bar right below already carries a live cart badge.
   if (pathname.startsWith('/p/')) return null
+
+  /*
+   * And suppressed on the cart itself.
+   *
+   * This bar used to switch its View Cart link for an orange Checkout
+   * button here -- a button with no onClick, inert by design, waiting for a
+   * backend. The cart page now says that in words, in its own to-pay card,
+   * and a button that cannot act is the thing AGENTS.md rules out most
+   * plainly. Repeating the total under a page that already shows it was the
+   * lesser half of what this bar was doing anyway.
+   */
+  if (pathname === '/cart') return null
 
   if (!ready || !cart.lines.length) return null
 
@@ -104,25 +115,12 @@ export default function CartCheckoutBar() {
           )}
         </div>
 
-        {onCartPage ? (
-          // The one orange control in the build. Ink on orange, not white:
-          // #ff7800 is 2.65:1 against white in both directions, while ink on
-          // it is 6.90:1. The accent-700 rim comes from .cta-accent and makes
-          // the silhouette perceivable against a white bar.
-          <button
-            type="button"
-            className="cta-accent inline-flex h-11 shrink-0 items-center rounded-pill px-6 text-sm font-extrabold"
-          >
-            Checkout
-          </button>
-        ) : (
-          <Link
-            href="/cart"
-            className="bg-brand-600 hover:bg-brand-700 inline-flex h-11 shrink-0 items-center rounded-pill px-6 text-sm font-extrabold text-white transition-colors"
-          >
-            View Cart
-          </Link>
-        )}
+        <Link
+          href="/cart"
+          className="bg-brand-600 hover:bg-brand-700 inline-flex h-11 shrink-0 items-center rounded-pill px-6 text-sm font-extrabold text-white transition-colors"
+        >
+          View Cart
+        </Link>
       </div>
     </div>
   )

@@ -1,4 +1,8 @@
 "use client";
+/* 369mart: this file is VENDORED from the 369mart-store drop and adapted --
+   its header, tabs, cart bar and free-delivery meter are removed (the root
+   layout provides them), it uses this app's flyToCart, and it carries the
+   local edits marked "369mart: LOCAL EDIT". Re-apply them on every update. */
 /* ==========================================================================
    369 Mart — Home (quick-commerce layout)
    White sticky header · category tabs · promo carousel · category strip ·
@@ -13,7 +17,10 @@
    `image` URL show the photo; items without one get a drawn placeholder.
    ========================================================================== */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { flyToCart } from "@/lib/fly-to-cart";
+import { useWishlisted } from "@/lib/use-wishlist";
+import { toggle as toggleWishlist } from "@/lib/wishlist-store";
 import ProductArt from "./art";
 
 const inr = (n) => "₹" + Number(n).toLocaleString("en-IN");
@@ -85,7 +92,7 @@ function useRailScroll() {
 /* ---------- banners ---------- */
 function Banner({ b, i }) {
   return (
-    <a className={"hm-banner hm-tone-" + b.tone} href="#" onClick={(e) => e.preventDefault()} style={{ "--i": i }}>
+    <Link className={"hm-banner hm-tone-" + b.tone} href={b.href || "/"} style={{ "--i": i }}>
       <div className="hm-banner-copy">
         <span className="hm-kicker">{b.kicker}</span>
         <strong>{b.title}</strong>
@@ -95,7 +102,7 @@ function Banner({ b, i }) {
       <div className="hm-banner-art" aria-hidden="true">
         {b.art.map((a, k) => <span key={k} style={{ "--k": k }}><ProductArt art={a} /></span>)}
       </div>
-    </a>
+    </Link>
   );
 }
 
@@ -128,10 +135,10 @@ function CategoryStrip({ cats }) {
   return (
     <section className={"hm-cats" + (inView ? " hm-in" : "")} ref={ref} aria-label="Shop by category">
       {cats.map((c, i) => (
-        <a key={c.key} href="#" onClick={(e) => e.preventDefault()} className="hm-cat" style={{ "--i": i }}>
+        <Link key={c.key} href={c.href || "/"} className="hm-cat" style={{ "--i": i }}>
           <span className="hm-cat-img" style={{ background: c.bg }}><ProductArt art={c.art} color={c.color} label={c.t} /></span>
           <span>{c.label}</span>
-        </a>
+        </Link>
       ))}
     </section>
   );
@@ -183,7 +190,12 @@ function CardGallery({ p }) {
   const [idx, setIdx] = useState(0);
   const [woke, setWoke] = useState(false);
 
-  if (!imgs.length) return <ProductArt art={p.art} color={p.color} label={p.label} />;
+  if (!imgs.length)
+    return (
+      <Link href={p.href || "/"} aria-label={p.name}>
+        <ProductArt art={p.art} color={p.color} label={p.label} />
+      </Link>
+    );
 
   const go = (d) => {
     const el = track.current;
@@ -206,7 +218,9 @@ function CardGallery({ p }) {
       >
         {imgs.map((src, k) => (
           <div className="hm-gal-slide" key={src} aria-hidden={k === 0 ? undefined : true}>
-            {k === 0 || woke ? <img src={src} alt="" loading={k === 0 ? undefined : "lazy"} /> : <span className="hm-gal-hold" />}
+            <Link href={p.href || "/"} tabIndex={k === 0 ? undefined : -1} aria-label={k === 0 ? p.name : undefined}>
+              {k === 0 || woke ? <img src={src} alt="" loading={k === 0 ? undefined : "lazy"} /> : <span className="hm-gal-hold" />}
+            </Link>
           </div>
         ))}
       </div>
@@ -229,7 +243,15 @@ function CardGallery({ p }) {
 }
 
 function ProductCard({ p, qty, setQty, i }) {
-  const [liked, setLiked] = useState(false);
+  /* 369mart: LOCAL EDIT -- re-apply after every drop of this file.
+
+     The design keeps the heart in component state, which means it forgets
+     itself on reload. The catalogue cards already save to the real
+     wishlist, and /account/list reads it, so a home page that only
+     pretended would be the one surface where saving an item did nothing.
+     Subscribed per product rather than through a list, so pressing one
+     heart does not re-render the whole page of them. */
+  const liked = useWishlisted(p.id);
   const [notified, setNotified] = useState(false);
   const oos = p.stock === 0;
   const off = p.mrp ? Math.round(((p.mrp - p.price) / p.mrp) * 100) : 0;
@@ -237,7 +259,7 @@ function ProductCard({ p, qty, setQty, i }) {
     <article className={"hm-card" + (oos ? " hm-oos" : "")} style={{ "--i": i }}>
       <div className="hm-card-img">
         <CardGallery p={p} />
-        <button className={"hm-heart" + (liked ? " hm-liked" : "")} aria-pressed={liked} aria-label={liked ? "Remove from wishlist" : "Save to wishlist"} onClick={() => setLiked((v) => !v)}>
+        <button className={"hm-heart" + (liked ? " hm-liked" : "")} aria-pressed={liked} aria-label={liked ? "Remove from wishlist" : "Save to wishlist"} onClick={() => void toggleWishlist(p.id)}>
           <Icon n="heart" size={18} />
         </button>
         <div className="hm-card-cta">
@@ -254,7 +276,7 @@ function ProductCard({ p, qty, setQty, i }) {
       </div>
       <div className="hm-card-body">
         <div className="hm-unit">{p.unit}</div>
-        <h3 className="hm-name" title={p.name}>{p.name}</h3>
+        <h3 className="hm-name" title={p.name}><Link href={p.href || "/"}>{p.name}</Link></h3>
         {p.note && <div className="hm-subnote">({p.note})</div>}
         <div className="hm-price">
           <b>{inr(p.price)}</b>
@@ -283,7 +305,9 @@ function Rail({ section, cart, setQty }) {
           <h2 id={"rail-" + section.key}>{section.title}</h2>
           {section.subtitle && <p>{section.subtitle}</p>}
         </div>
-        <a href="#" onClick={(e) => e.preventDefault()} className="hm-viewall">View all<Icon n="right" size={15} /></a>
+        {section.href ? (
+          <Link href={section.href} className="hm-viewall">View all<Icon n="right" size={15} /></Link>
+        ) : null}
       </div>
       <div className="hm-rail-box">
         <div className="hm-rail-track" ref={ref}>

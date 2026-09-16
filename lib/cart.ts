@@ -38,6 +38,17 @@ export type CartLine = {
   qtyStep: number
   /** Snapshot of availability so the cart can flag items that lapsed. */
   inStock: boolean
+  /**
+   * Whether the local store stocks this, which is what splits the cart into
+   * its two delivery groups.
+   *
+   * Optional because carts written before it existed do not carry it, and
+   * the reader validates only three fields on purpose -- dropping an
+   * otherwise good cart over a missing flag would be a worse trade than
+   * showing one line in the wrong group until reconcile() refreshes it on
+   * the next load.
+   */
+  quickDelivery?: boolean
   stock: number
 }
 
@@ -78,6 +89,7 @@ export function lineFromProduct(p: Product, qty: number): CartLine {
     qtyStep: p.qtyStep,
     inStock: p.inStock,
     stock: p.stock,
+    quickDelivery: p.quickDelivery,
   }
 }
 

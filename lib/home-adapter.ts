@@ -1,4 +1,5 @@
 import type { Product } from '@/lib/catalog'
+import { productHref } from '@/lib/slug'
 import { CATALOG } from '@/lib/catalog-config'
 import { PRODUCTS, listProducts } from '@/lib/fixtures'
 
@@ -33,10 +34,21 @@ export type HomeItem = {
   tag?: string
   /** Stocked locally, so eligible for the fast promise. */
   quick?: boolean
+  /**
+   * Where the card goes when tapped.
+   *
+   * The design ships its cards with nothing to click -- it was drawn for a
+   * shop whose product page did not exist yet -- so this is supplied here
+   * rather than built in the component, which is not allowed to know how
+   * this app routes.
+   */
+  href: string
 }
 
 export type HomeBanner = {
   id: string
+  /** Where the banner goes when tapped. */
+  href: string
   kicker: string
   title: string
   note: string
@@ -71,6 +83,8 @@ export type HomeCategory = {
 export type HomeRail = {
   key: string
   title: string
+  /** The rail's "View all" destination. */
+  href?: string
   subtitle?: string
   products: Product[]
   /** Banner ids to place after this rail. */
@@ -85,6 +99,7 @@ function unitOf(p: Product) {
 export function toHomeItem(p: Product): HomeItem {
   return {
     id: p.id,
+    href: productHref(p),
     name: p.name,
     unit: unitOf(p),
     price: p.price,
@@ -132,6 +147,7 @@ const SLIDE_ART: Record<string, string[]> = {
 export function homeBanners(): HomeBanner[] {
   return CATALOG.slides.map((s) => ({
     id: s.key,
+    href: s.href,
     kicker: s.subtitle,
     title: s.title,
     note: s.cta,
@@ -159,6 +175,7 @@ export function homeRails(): HomeRail[] {
     return {
       key: rail.key,
       title: rail.title,
+      href: rail.href,
       subtitle: rail.subtitle,
       products: products.slice(0, 12),
       // One banner break, after the second rail. Without it a long home
