@@ -1,39 +1,24 @@
 {
-  "name": "e_commerce_website",
-  "version": "0.1.0",
+  "name": "369mart-store",
+  "version": "1.0.0",
   "private": true,
+  "description": "369 Mart storefront \u2014 home (Quick / Shop all), cart and sign-in. Next.js + React.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
-    "typecheck": "tsc --noEmit",
+    "lint": "next lint",
     "images": "node scripts/export-images.mjs"
   },
+  "engines": {
+    "node": ">=18.18"
+  },
   "dependencies": {
-    "lucide-react": "^1.33.0",
-    "next": "16.3.5",
-    "react": "19.3.0",
-    "react-dom": "19.3.0",
-    "sanitize-html": "^2.13.1"
+    "next": "15.5.3",
+    "react": "19.1.1",
+    "react-dom": "19.1.1"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "@types/sanitize-html": "^2.13.0",
-    "esbuild": "^0.28.2",
-    "eslint": "^9",
-    "eslint-config-next": "16.3.5",
-    "sharp": "^0.35.3",
-    "tailwindcss": "^4",
-    "typescript": "^5"
-  },
-  "browserslist": [
-    "chrome >= 111",
-    "edge >= 111",
-    "firefox >= 113",
-    "safari >= 16.4"
-  ]
+    "esbuild": "0.25.9"
+  }
 }
