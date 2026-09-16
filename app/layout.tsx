@@ -11,6 +11,8 @@ import SiteHeader from '@/components/layout/SiteHeader'
 import { CATALOG } from '@/lib/catalog-config'
 import './globals.css'
 import './mart-motion.css'
+import './vendor-tokens.css'
+import '@/components/home/vendor/extras.css'
 
 /*
  * Inter, for everything.

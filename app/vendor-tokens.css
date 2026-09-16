@@ -1,0 +1,33 @@
+/* ==========================================================================
+   The vendored designs' tokens, at the root.
+
+   home.css declares its --hm-* palette on .hm-page, and home.brand.css
+   remaps it onto ours there. That is enough while the vendored markup only
+   appears inside .hm-page, on the home and cart routes.
+
+   The location picker breaks that assumption: it hangs off the header,
+   which is in the root layout on every route, and it is portalled to the
+   body, so it is never inside .hm-page at all. Without these, every colour
+   and easing in extras.css would resolve to nothing on the one surface that
+   is always on screen.
+
+   Declared at :root and therefore inherited, so .hm-page keeps overriding
+   them exactly as before -- this is a floor, not a replacement.
+   ========================================================================== */
+:root {
+  --hm-ink: var(--color-ink);
+  --hm-muted: var(--color-slate-muted);
+  --hm-line: var(--color-surface-line);
+  --hm-soft: var(--color-surface-alt);
+  --hm-navy: var(--color-brand-900);
+  --hm-blue: var(--color-brand-600);
+  --hm-orange: var(--color-accent-500);
+  --hm-green: var(--color-save);
+  --hm-red: var(--color-danger);
+
+  /* The designs' own easings. --ease-out-soft and --ease-spring in the
+     @theme block are the same curves; these are the names extras.css asks
+     for, pointed at them so there is one definition of each motion. */
+  --hm-ease: var(--ease-out-soft);
+  --hm-spring: var(--ease-spring);
+}
