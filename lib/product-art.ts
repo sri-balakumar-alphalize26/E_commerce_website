@@ -49,29 +49,38 @@ export type ArtSpec = {
   label: string
 }
 
-/** First match wins, so put the specific before the general. */
+/**
+ * First match wins, so the specific comes before the general.
+ *
+ * EVERY PATTERN IS WORD-ANCHORED, and that is not fussiness. The first
+ * draft matched bare substrings and produced a charger for "Organic Whole
+ * Wheat Atta" and for "Desk Organiser" -- both contain "gan", as in GaN --
+ * and a desk lamp for "Highlighter". A drawing that is confidently wrong is
+ * worse on a grid than a plain box, because a shopper reads it before the
+ * name and has to correct themselves.
+ */
 const RULES: Array<[RegExp, ArtKind, string]> = [
-  [/headphone|earbud|headset/i, 'Headphones', '#04384f'],
-  [/speaker|soundbar/i, 'Speaker', '#006090'],
-  [/charger|adapter|power bank|gan/i, 'Charger', '#0078a8'],
-  [/ssd|hard drive|pen ?drive|storage device/i, 'Ssd', '#024a70'],
-  [/webcam|camera/i, 'Webcam', '#1890c0'],
-  [/lamp|light|bulb/i, 'Lamp', '#b84f00'],
-  [/dinner set|plate|crockery|bowl/i, 'Plates', '#b85a1c'],
-  [/flask|thermos|vacuum/i, 'Flask', '#a8561f'],
-  [/towel|linen|bedsheet/i, 'Towels', '#c07a45'],
-  [/board|chopping|cutting/i, 'Board', '#c38c49'],
-  [/basket|hamper|organiser|organizer/i, 'Basket', '#c9a36b'],
-  [/banana/i, 'Banana', '#e8b923'],
-  [/apple/i, 'Apple', '#d8262e'],
-  [/pomegranate/i, 'Pomegranate', '#b3122b'],
-  [/orange|citrus/i, 'Orange', '#f28c1b'],
-  [/grape/i, 'Grapes', '#88b62f'],
-  [/oil|sauce|syrup|vinegar|juice/i, 'Bottle', '#d4a017'],
-  [/coffee|tea|honey|jam|pickle|spread/i, 'Jar', '#7a4a1e'],
-  [/chocolate|bar|biscuit|cookie/i, 'Bar', '#5c3317'],
-  [/salt|sugar|atta|flour|rice|dal|masala|powder/i, 'Pack', '#1f7a4c'],
-  [/dry fruit|nut|gift box|assorted/i, 'Box', '#8a5a2b'],
+  [/(headphones?|earbuds?|headsets?)/i, 'Headphones', '#04384f'],
+  [/(speakers?|soundbar)/i, 'Speaker', '#006090'],
+  [/(charger|adapter|power bank|gan)/i, 'Charger', '#0078a8'],
+  [/(ssd|hard drive|pen ?drive)/i, 'Ssd', '#024a70'],
+  [/(webcam|camera)/i, 'Webcam', '#1890c0'],
+  [/(lamps?|lights?|lighting|bulbs?)/i, 'Lamp', '#b84f00'],
+  [/(dinner set|plates?|crockery|bowls?)/i, 'Plates', '#b85a1c'],
+  [/(flask|thermos|vacuum)/i, 'Flask', '#a8561f'],
+  [/(towels?|linen|bedsheet)/i, 'Towels', '#c07a45'],
+  [/(board|chopping|cutting)/i, 'Board', '#c38c49'],
+  [/(basket|hamper|organiser|organizer)/i, 'Basket', '#c9a36b'],
+  [/bananas?/i, 'Banana', '#e8b923'],
+  [/apples?/i, 'Apple', '#d8262e'],
+  [/pomegranates?/i, 'Pomegranate', '#b3122b'],
+  [/(oranges?|citrus)/i, 'Orange', '#f28c1b'],
+  [/grapes?/i, 'Grapes', '#88b62f'],
+  [/(oil|sauce|syrup|vinegar|juice)/i, 'Bottle', '#d4a017'],
+  [/(coffee|tea|honey|jam|pickle|spread)/i, 'Jar', '#7a4a1e'],
+  [/(chocolate|bars?|biscuits?|cookies?)/i, 'Bar', '#5c3317'],
+  [/(salt|sugar|atta|flour|rice|dal|masala|powder)/i, 'Pack', '#1f7a4c'],
+  [/(dry fruits?|nuts?|gift box|assorted)/i, 'Box', '#8a5a2b'],
 ]
 
 const FALLBACK: Record<string, [ArtKind, string]> = {
