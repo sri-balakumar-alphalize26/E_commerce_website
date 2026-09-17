@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- New / Active / Dormant depend on today's date, so refresh them daily. -->
+    <record id="ir_cron_mart369_customer_status" model="ir.cron">
+        <field name="name">369 Mart: refresh customer status</field>
+        <field name="model_id" ref="base.model_res_users"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_mart369_refresh_status()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">days</field>
+        <field name="active" eval="True"/>
+    </record>
+
+    <!-- Set the status of accounts that existed before this version. -->
+    <function model="res.users" name="_cron_mart369_refresh_status"/>
+</odoo>

@@ -43,6 +43,10 @@ class ResPartner(models.Model):
         string='Default address',
         help="The address the app selects for this customer. Exactly one "
              "address can be the default.")
+    mart369_gap_label = fields.Char(
+        string='Missing', compute='_compute_mart369_gap_label',
+        help="What this address still needs before a rider can be sent to it. "
+             "Empty when nothing is missing.")
 
     # -------------------------------------------------------------- helpers
 
@@ -102,18 +106,26 @@ class ResPartner(models.Model):
     # ------------------------------------------------------- what it misses
 
     def _mart369_gaps(self):
-        """Plain-English list of what is incomplete, for the staff console."""
+        """What this address is missing, as nouns a view can prefix with
+        "Missing": ``['pincode', 'map location']``.
+        """
         self.ensure_one()
         gaps = []
         if not self.phone:
-            gaps.append(_('no mobile'))
+            gaps.append(_('mobile'))
         if not self.zip:
-            gaps.append(_('no pincode'))
+            gaps.append(_('pincode'))
         if not self.street:
-            gaps.append(_('no street'))
+            gaps.append(_('street'))
         if not (self.partner_latitude or self.partner_longitude):
-            gaps.append(_('no map location'))
+            gaps.append(_('map location'))
         return gaps
+
+    @api.depends('phone', 'zip', 'street', 'partner_latitude', 'partner_longitude')
+    def _compute_mart369_gap_label(self):
+        """The same list, as one string a view can show in red."""
+        for address in self:
+            address.mart369_gap_label = ', '.join(address._mart369_gaps())
 
     # ------------------------------------------------- button on the kanban
 

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-    <!-- A 369 Mart page on the user form: the mobile we collect at signup and
-         the stored password fingerprint, for administrators only. -->
+    <!-- A 369 Mart page on the standard user form: the mobile we collect at
+         signup and the stored password fingerprint, for administrators only. -->
     <record id="view_users_form_mart369" model="ir.ui.view">
         <field name="name">res.users.form.mart369</field>
         <field name="model">res.users</field>
@@ -25,17 +25,396 @@
         </field>
     </record>
 
+    <!-- ================================================================
+         369 Mart -> Customers
+         ================================================================ -->
+
+    <record id="view_mart369_customer_search" model="ir.ui.view">
+        <field name="name">res.users.search.mart369.customer</field>
+        <field name="model">res.users</field>
+        <field name="priority">90</field>
+        <field name="arch" type="xml">
+            <search string="Customers">
+                <field name="name" string="Customer"
+                       filter_domain="['|', '|', ('name', 'ilike', self), ('login', 'ilike', self), ('phone', 'ilike', self)]"/>
+                <field name="login" string="Email"/>
+                <field name="phone" string="Mobile"/>
+                <field name="city" string="City"/>
+                <field name="country_id"/>
+                <filter name="status_new" string="New" domain="[('mart369_status', '=', 'new')]"/>
+                <filter name="status_active" string="Active" domain="[('mart369_status', '=', 'active')]"/>
+                <filter name="status_dormant" string="Dormant" domain="[('mart369_status', '=', 'dormant')]"/>
+                <separator/>
+                <filter name="no_mobile" string="No mobile" domain="[('phone', '=', False)]"/>
+                <filter name="signed_up_week" string="Signed up this week"
+                        domain="[('create_date', '&gt;=', (context_today() - relativedelta(days=7)).strftime('%Y-%m-%d'))]"/>
+                <separator/>
+                <filter name="archived" string="Archived" domain="[('active', '=', False)]"/>
+                <group>
+                    <filter name="group_status" string="Status" context="{'group_by': 'mart369_status'}"/>
+                    <filter name="group_country" string="Country" context="{'group_by': 'country_id'}"/>
+                    <filter name="group_signup" string="Sign-up month" context="{'group_by': 'create_date:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Directory: numbers strip on top, one row per customer. -->
+    <record id="view_mart369_customer_list" model="ir.ui.view">
+        <field name="name">res.users.list.mart369.customer</field>
+        <field name="model">res.users</field>
+        <field name="priority">90</field>
+        <field name="arch" type="xml">
+            <list string="Customers" js_class="mart369_customers_list" class="o_mart369_list"
+                  create="0" default_order="create_date desc" sample="1">
+                <field name="avatar_128" string=" " widget="image" options="{'size': [34, 34], 'img_class': 'rounded-circle object-fit-cover'}"
+                       width="50px" class="o_mart369_list_avatar"/>
+                <field name="name" string="Customer" class="fw-bold"/>
+                <field name="login" string="Email" class="text-muted"/>
+                <field name="phone" column_invisible="1"/>
+                <field name="mart369_phone_display" string="Mobile"/>
+                <field name="city" string="City" optional="show"/>
+                <field name="create_date" string="Signed up" options="{'show_time': false}" optional="show"/>
+                <field name="mart369_seen_label" string="Last sign-in"/>
+                <field name="login_date" column_invisible="1"/>
+                <field name="mart369_order_count" string="Orders" class="text-end"/>
+                <field name="mart369_currency_id" column_invisible="1"/>
+                <field name="mart369_total_spent" string="Spent" class="fw-bold"/>
+                <field name="mart369_status" string="Status" widget="badge"
+                       decoration-success="mart369_status == 'active'"
+                       decoration-info="mart369_status == 'new'"
+                       decoration-warning="mart369_status == 'dormant'"
+                       decoration-muted="mart369_status == 'archived'"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Board: cards grouped by status. -->
+    <record id="view_mart369_customer_kanban" model="ir.ui.view">
+        <field name="name">res.users.kanban.mart369.customer</field>
+        <field name="model">res.users</field>
+        <field name="priority">90</field>
+        <field name="arch" type="xml">
+            <kanban js_class="mart369_customers_kanban" class="o_mart369_kanban" default_group_by="mart369_status"
+                    create="0" quick_create="0" group_create="0" group_delete="0" group_edit="0"
+                    records_draggable="0" sample="1">
+                <field name="mart369_status"/>
+                <field name="login_date"/>
+                <field name="create_date"/>
+                <field name="phone"/>
+                <field name="mart369_country_code"/>
+                <field name="mart369_order_count"/>
+                <field name="mart369_currency_id"/>
+                <templates>
+                    <t t-name="card" class="o_mart369_card">
+                        <div class="o_mart369_card_top">
+                            <div class="o_mart369_card_avatar" t-att-class="{'o_mart369_ring': record.mart369_status.raw_value == 'active'}">
+                                <field name="avatar_128" widget="image" options="{'img_class': 'rounded-circle object-fit-cover'}"/>
+                            </div>
+                            <div class="o_mart369_card_who">
+                                <field name="name" class="o_mart369_card_name"/>
+                                <field name="login" class="o_mart369_card_email"/>
+                            </div>
+                        </div>
+                        <div class="o_mart369_card_line">
+                            <span t-if="record.phone.raw_value" class="o_mart369_phone">
+                                <span class="o_mart369_cc_tag" t-out="record.mart369_country_code.value"/>
+                                <field name="mart369_phone_display"/>
+                            </span>
+                            <span t-else="" class="o_mart369_nophone">No mobile</span>
+                            <field name="city" class="text-muted text-truncate"/>
+                        </div>
+                        <div class="o_mart369_mini">
+                            <div><small>Orders</small><field name="mart369_order_count"/></div>
+                            <div><small>Spent</small><field name="mart369_total_spent"/></div>
+                            <div><small>Seen</small><field name="mart369_seen_label"/></div>
+                        </div>
+                        <div t-if="record.mart369_status.raw_value == 'new' and !record.mart369_order_count.raw_value"
+                             class="o_mart369_nudge o_mart369_nudge_cool">
+                            <i title="No order" class="fa fa-shopping-cart"/> No order yet. A welcome offer could help.
+                        </div>
+                        <div t-if="record.mart369_status.raw_value == 'dormant'" class="o_mart369_nudge o_mart369_nudge_warm">
+                            <i title="Quiet" class="fa fa-clock-o"/>
+                            <t t-if="record.phone.raw_value">Quiet for 60+ days. Call or message.</t>
+                            <t t-else="">Quiet for 60+ days. No mobile, email only.</t>
+                        </div>
+                        <footer class="o_mart369_card_foot">
+                            <span>Since <field name="create_date" options="{'show_time': false}"/></span>
+                            <field name="mart369_status" widget="badge"
+                                   decoration-success="mart369_status == 'active'"
+                                   decoration-info="mart369_status == 'new'"
+                                   decoration-warning="mart369_status == 'dormant'"
+                                   decoration-muted="mart369_status == 'archived'"/>
+                        </footer>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <!-- Profile: everything about one customer. -->
+    <record id="view_mart369_customer_form" model="ir.ui.view">
+        <field name="name">res.users.form.mart369.customer</field>
+        <field name="model">res.users</field>
+        <field name="priority">90</field>
+        <field name="arch" type="xml">
+            <form string="Customer" class="o_mart369_form" create="0" duplicate="0">
+                <header>
+                    <button name="action_reset_password" type="object" string="Send reset link"
+                            class="btn-primary" icon="fa-envelope-o" invisible="not active"/>
+                    <button name="action_mart369_change_password" type="object" string="Change password"
+                            icon="fa-lock" groups="base.group_system"/>
+                    <button name="action_archive" type="object" string="Archive account"
+                            invisible="not active" confirm="The customer will no longer be able to sign in. Their orders are kept."/>
+                    <button name="action_unarchive" type="object" string="Restore account" invisible="active"/>
+                </header>
+                <sheet>
+                    <field name="active" invisible="1"/>
+                    <field name="share" invisible="1"/>
+                    <field name="mart369_currency_id" invisible="1"/>
+                    <field name="mart369_country_code" invisible="1"/>
+                    <widget name="web_ribbon" title="Archived" bg_color="text-bg-danger" invisible="active"/>
+
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_mart369_orders" type="object" class="oe_stat_button" icon="fa-shopping-bag">
+                            <div class="o_field_widget o_stat_info">
+                                <span class="o_stat_value"><field name="mart369_order_count"/></span>
+                                <span class="o_stat_text">Orders</span>
+                            </div>
+                        </button>
+                        <button name="action_mart369_orders" type="object" class="oe_stat_button" icon="fa-inr">
+                            <div class="o_field_widget o_stat_info">
+                                <span class="o_stat_value"><field name="mart369_total_spent" widget="monetary"/></span>
+                                <span class="o_stat_text">Total spent</span>
+                            </div>
+                        </button>
+                    </div>
+
+                    <div class="o_mart369_hero">
+                        <field name="avatar_128" widget="image" readonly="1" class="o_mart369_hero_avatar"
+                               options="{'img_class': 'rounded-circle object-fit-cover'}"/>
+                        <div class="o_mart369_hero_txt">
+                            <h1><field name="name" placeholder="Full name" required="1"/></h1>
+                            <div class="o_mart369_hero_meta">
+                                <span><i title="Email" class="fa fa-envelope-o"/> <field name="login" readonly="1"/></span>
+                                <span invisible="not phone"><i title="Mobile" class="fa fa-mobile"/> <field name="mart369_phone_display" readonly="1"/></span>
+                                <span invisible="not city"><i title="Location" class="fa fa-map-marker"/> <field name="city" readonly="1"/></span>
+                            </div>
+                            <field name="mart369_status" widget="badge" class="o_mart369_hero_badge"
+                                   decoration-success="mart369_status == 'active'"
+                                   decoration-info="mart369_status == 'new'"
+                                   decoration-warning="mart369_status == 'dormant'"
+                                   decoration-muted="mart369_status == 'archived'"/>
+                        </div>
+                    </div>
+
+                    <div class="o_mart369_stats">
+                        <div class="o_mart369_stat">
+                            <small>Average order</small>
+                            <field name="mart369_avg_order" widget="monetary"/>
+                            <span>per confirmed order</span>
+                        </div>
+                        <div class="o_mart369_stat">
+                            <small>Last order</small>
+                            <field name="mart369_last_order_date" options="{'show_time': false}"/>
+                            <span invisible="mart369_last_order_date">No order yet</span>
+                        </div>
+                        <div class="o_mart369_stat">
+                            <small>Last sign-in</small>
+                            <field name="mart369_seen_label"/>
+                            <field name="login_date" readonly="1"/>
+                        </div>
+                        <div class="o_mart369_stat">
+                            <small>Customer for</small>
+                            <field name="mart369_since_label"/>
+                            <field name="create_date" options="{'show_time': false}" readonly="1"/>
+                        </div>
+                    </div>
+
+                    <notebook>
+                        <page string="Overview" name="overview">
+                            <div class="o_mart369_card_block">
+                                <div class="o_mart369_block_head">
+                                    <h3>Contact details</h3>
+                                    <p>What the customer gave at sign-up and checkout</p>
+                                </div>
+                                <div class="o_mart369_fields">
+                                    <div class="o_mart369_field">
+                                        <label for="name" string="Full name"/>
+                                        <field name="name" nolabel="1"/>
+                                    </div>
+                                    <div class="o_mart369_field">
+                                        <label for="login" string="Sign-in email"/>
+                                        <field name="login" nolabel="1" widget="email"/>
+                                    </div>
+                                    <div class="o_mart369_field">
+                                        <label for="phone" string="Mobile"/>
+                                        <div class="o_row">
+                                            <span class="o_mart369_cc_tag" invisible="not phone"><field name="mart369_country_code" nolabel="1" readonly="1"/></span>
+                                            <field name="phone" nolabel="1" widget="phone" placeholder="The number a rider can call"/>
+                                            <span class="o_mart369_ok" invisible="not mart369_phone_ok"><i title="Valid" class="fa fa-check"/> Valid</span>
+                                        </div>
+                                    </div>
+                                    <div class="o_mart369_field">
+                                        <label for="city" string="Location"/>
+                                        <div class="o_row">
+                                            <field name="city" nolabel="1" placeholder="City"/>
+                                            <field name="country_id" nolabel="1" placeholder="Country" options="{'no_create': True, 'no_open': True}"/>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="o_mart369_card_block">
+                                <div class="o_mart369_block_head">
+                                    <h3>Account</h3>
+                                    <p>Portal account: sees only their own orders, addresses and details</p>
+                                </div>
+                                <div class="o_mart369_fields">
+                                    <div class="o_mart369_field">
+                                        <span class="o_form_label">Signs in with</span>
+                                        <span class="o_mart369_value">Email or full name</span>
+                                    </div>
+                                    <div class="o_mart369_field">
+                                        <label for="lang" string="Language"/>
+                                        <field name="lang" nolabel="1"/>
+                                    </div>
+                                    <div class="o_mart369_field">
+                                        <label for="create_date" string="Signed up"/>
+                                        <field name="create_date" nolabel="1" readonly="1"/>
+                                    </div>
+                                    <div class="o_mart369_field">
+                                        <label for="login_date" string="Last sign-in"/>
+                                        <field name="login_date" nolabel="1" readonly="1" placeholder="Never"/>
+                                    </div>
+                                </div>
+                            </div>
+                        </page>
+
+                        <page string="Orders" name="orders">
+                            <field name="sale_order_ids" readonly="1" nolabel="1" class="o_mart369_orders"
+                                   context="{'active_test': False}">
+                                <list create="0" delete="0" default_order="date_order desc">
+                                    <field name="name" string="Order" class="fw-bold"/>
+                                    <field name="date_order" string="Date"/>
+                                    <field name="currency_id" column_invisible="1"/>
+                                    <field name="amount_total" string="Total" widget="monetary" sum="Total"/>
+                                    <field name="state" string="Status" widget="badge"
+                                           decoration-success="state == 'sale'"
+                                           decoration-info="state in ('draft', 'sent')"
+                                           decoration-danger="state == 'cancel'"/>
+                                </list>
+                            </field>
+                        </page>
+
+                        <page string="Delivery addresses" name="addresses">
+                            <field name="child_ids" readonly="1" nolabel="1" mode="kanban" class="o_mart369_addresses">
+                                <kanban create="0">
+                                    <field name="type"/>
+                                    <templates>
+                                        <t t-name="card" class="o_mart369_addr">
+                                            <div class="d-flex gap-3 align-items-center">
+                                                <span class="o_mart369_tile o_mart369_tile_blue">
+                                                    <i title="Icon" t-att-class="record.type.raw_value == 'delivery' ? 'fa fa-truck' : 'fa fa-map-marker'"/>
+                                                </span>
+                                                <div class="o_mart369_addr_txt">
+                                                    <b><field name="type"/></b>
+                                                    <field name="name"/>
+                                                    <span class="text-muted">
+                                                        <field name="street"/> <field name="city"/> <field name="zip"/>
+                                                    </span>
+                                                    <field name="phone" class="text-muted"/>
+                                                </div>
+                                            </div>
+                                        </t>
+                                    </templates>
+                                </kanban>
+                            </field>
+                        </page>
+
+                        <page string="Activity" name="activity">
+                            <field name="mart369_timeline" nolabel="1" readonly="1"/>
+                        </page>
+
+                        <page string="Password &amp; access" name="access" groups="base.group_system">
+                            <div class="o_mart369_info">
+                                <i title="Info" class="fa fa-info-circle"/>
+                                <span>Passwords are never kept, only a fingerprint that can't be turned back into
+                                    the password. To help a customer, send a reset link.</span>
+                            </div>
+                            <div class="o_mart369_card_block">
+                                <div class="o_mart369_block_head">
+                                    <h3>Stored fingerprint <span class="o_mart369_admin">Admins only</span></h3>
+                                    <p>PBKDF2-SHA512</p>
+                                </div>
+                                <field name="mart369_password_hash" nolabel="1" readonly="1" widget="CopyClipboardChar"
+                                       class="o_mart369_hash"/>
+                            </div>
+                            <div class="o_mart369_card_block">
+                                <div class="o_mart369_srow">
+                                    <span class="o_mart369_tile o_mart369_tile_blue"><i title="Email" class="fa fa-envelope-o"/></span>
+                                    <div><b>Reset link</b><span>Emails the customer a link to choose a new password</span></div>
+                                    <button name="action_reset_password" type="object" string="Send reset link"
+                                            class="btn btn-primary" invisible="not active"/>
+                                </div>
+                                <div class="o_mart369_srow">
+                                    <span class="o_mart369_tile"><i title="Password" class="fa fa-key"/></span>
+                                    <div><b>Set a new password</b><span>Takes effect at their next sign-in</span></div>
+                                    <button name="action_mart369_change_password" type="object" string="Change password"
+                                            class="btn btn-secondary"/>
+                                </div>
+                                <div class="o_mart369_srow">
+                                    <span class="o_mart369_tile o_mart369_tile_red"><i title="Archive" class="fa fa-archive"/></span>
+                                    <div>
+                                        <b invisible="not active">Archive account</b>
+                                        <b invisible="active">Restore account</b>
+                                        <span invisible="not active">Blocks sign-in, keeps orders</span>
+                                        <span invisible="active">Lets them sign in again</span>
+                                    </div>
+                                    <button name="action_archive" type="object" string="Archive" class="btn btn-secondary text-danger"
+                                            invisible="not active" confirm="The customer will no longer be able to sign in. Their orders are kept."/>
+                                    <button name="action_unarchive" type="object" string="Restore" class="btn btn-secondary"
+                                            invisible="active"/>
+                                </div>
+                            </div>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
     <!-- Who has signed up from the storefront: portal users only. -->
     <record id="action_mart369_customers" model="ir.actions.act_window">
         <field name="name">Customers</field>
         <field name="res_model">res.users</field>
-        <field name="view_mode">list,form</field>
+        <field name="view_mode">list,kanban,form</field>
         <field name="domain">[('share', '=', True)]</field>
+        <field name="search_view_id" ref="view_mart369_customer_search"/>
+        <field name="context">{'create': False}</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">No customer has signed up yet</p>
             <p>Accounts created from the 369 Mart storefront appear here.
                Each one can only see its own orders and details.</p>
         </field>
+    </record>
+
+    <record id="action_mart369_customers_view_list" model="ir.actions.act_window.view">
+        <field name="sequence">1</field>
+        <field name="view_mode">list</field>
+        <field name="view_id" ref="view_mart369_customer_list"/>
+        <field name="act_window_id" ref="action_mart369_customers"/>
+    </record>
+    <record id="action_mart369_customers_view_kanban" model="ir.actions.act_window.view">
+        <field name="sequence">2</field>
+        <field name="view_mode">kanban</field>
+        <field name="view_id" ref="view_mart369_customer_kanban"/>
+        <field name="act_window_id" ref="action_mart369_customers"/>
+    </record>
+    <record id="action_mart369_customers_view_form" model="ir.actions.act_window.view">
+        <field name="sequence">3</field>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="view_mart369_customer_form"/>
+        <field name="act_window_id" ref="action_mart369_customers"/>
     </record>
 
     <menuitem id="menu_mart369_customers"

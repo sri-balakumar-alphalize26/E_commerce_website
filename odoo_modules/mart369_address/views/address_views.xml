@@ -1,13 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-    <!-- ============================ list ============================ -->
+    <!-- ============================ list ============================
+         Styled with mart369_auth's classes: that module is a dependency, so its
+         stylesheet is already in this bundle and the two screens cannot drift. -->
     <record id="mart369_address_view_list" model="ir.ui.view">
         <field name="name">mart369.address.list</field>
         <field name="model">res.partner</field>
         <field name="arch" type="xml">
-            <list string="Delivery addresses" create="false"
-                  decoration-success="mart369_default"
+            <list string="Delivery addresses" create="false" class="o_mart369_list"
+                  decoration-danger="mart369_gap_label"
                   decoration-muted="not active">
                 <field name="parent_id" string="Customer"/>
                 <field name="mart369_label" string="Type"/>
@@ -21,6 +23,7 @@
                 <field name="mart369_alt_phone" string="Alternate" optional="hide"/>
                 <field name="partner_latitude" string="Latitude" optional="hide"/>
                 <field name="partner_longitude" string="Longitude" optional="hide"/>
+                <field name="mart369_gap_label" string="Missing" optional="show"/>
                 <field name="mart369_default" string="Default" widget="boolean_toggle"/>
                 <field name="active" column_invisible="1"/>
             </list>
@@ -33,34 +36,55 @@
         <field name="name">mart369.address.kanban</field>
         <field name="model">res.partner</field>
         <field name="arch" type="xml">
-            <kanban create="false" default_order="parent_id, mart369_default desc">
+            <kanban create="false" class="o_mart369_kanban"
+                    default_order="parent_id, mart369_default desc">
                 <field name="mart369_default"/>
-                <t t-name="card">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <span class="fw-bold"><field name="name"/></span>
-                        <span class="badge rounded-pill text-bg-light border">
-                            <field name="mart369_label"/>
-                        </span>
-                    </div>
-                    <div class="text-muted small font-monospace"><field name="phone"/></div>
-                    <div class="mt-1">
-                        <field name="street"/>
-                        <div t-if="record.street2.raw_value" class="text-muted">
-                            <field name="street2"/>
+                <field name="mart369_label"/>
+                <field name="parent_id"/>
+                <field name="mart369_gap_label"/>
+                <templates>
+                    <t t-name="card" class="o_mart369_addr">
+                        <t t-set="kind" t-value="(record.mart369_label.raw_value || '').toLowerCase()"/>
+                        <div class="d-flex gap-3 align-items-start">
+                            <span class="o_mart369_tile"
+                                  t-att-class="kind === 'work' ? 'o_mart369_tile_orange' : 'o_mart369_tile_blue'">
+                                <i t-att-class="kind === 'work' ? 'fa fa-briefcase' : (kind === 'home' ? 'fa fa-home' : 'fa fa-map-marker')"
+                                   t-att-title="record.mart369_label.value"/>
+                            </span>
+                            <div class="o_mart369_addr_txt flex-grow-1">
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                    <b><field name="parent_id"/></b>
+                                    <span class="badge rounded-pill text-bg-secondary">
+                                        <field name="mart369_label"/>
+                                    </span>
+                                    <span t-if="record.mart369_default.raw_value"
+                                          class="badge rounded-pill text-bg-success">&#10003; Default</span>
+                                </div>
+                                <span>
+                                    <field name="name"/> &#183; <field name="phone"/>
+                                </span>
+                                <field name="street"/>
+                                <span t-if="record.street2.raw_value" class="text-muted">
+                                    <field name="street2"/>
+                                </span>
+                                <span class="text-muted">
+                                    <field name="city"/> <field name="zip"/>
+                                </span>
+                            </div>
                         </div>
-                        <div><field name="city"/> <field name="zip"/></div>
-                    </div>
-                    <div class="mt-2 d-flex justify-content-between align-items-center">
-                        <span t-if="record.mart369_default.raw_value"
-                              class="badge text-bg-success">&#10003; Default</span>
-                        <button t-if="!record.mart369_default.raw_value"
-                                name="action_mart369_make_default" type="object"
-                                class="btn btn-sm btn-secondary"
-                                confirm="Use this as the customer's default delivery address?">
-                            Make default
-                        </button>
-                    </div>
-                </t>
+                        <div t-if="record.mart369_gap_label.raw_value" class="o_mart369_nudge o_mart369_nudge_warm mt-2">
+                            <i title="Incomplete" class="fa fa-exclamation-triangle"/>
+                            Missing <field name="mart369_gap_label"/>
+                        </div>
+                        <footer t-if="!record.mart369_default.raw_value" class="pt-2">
+                            <button name="action_mart369_make_default" type="object"
+                                    class="btn btn-sm btn-secondary"
+                                    confirm="Use this as the customer's default delivery address?">
+                                Make default
+                            </button>
+                        </footer>
+                    </t>
+                </templates>
             </kanban>
         </field>
     </record>
@@ -110,6 +134,21 @@
         </field>
     </record>
 
+    <!-- res.partner already has stock list/kanban views, and without these
+         bindings Odoo picks those instead of the ones above. -->
+    <record id="action_mart369_addresses_view_kanban" model="ir.actions.act_window.view">
+        <field name="sequence">1</field>
+        <field name="view_mode">kanban</field>
+        <field name="view_id" ref="mart369_address_view_kanban"/>
+        <field name="act_window_id" ref="action_mart369_addresses"/>
+    </record>
+    <record id="action_mart369_addresses_view_list" model="ir.actions.act_window.view">
+        <field name="sequence">2</field>
+        <field name="view_mode">list</field>
+        <field name="view_id" ref="mart369_address_view_list"/>
+        <field name="act_window_id" ref="action_mart369_addresses"/>
+    </record>
+
     <menuitem id="menu_mart369_addresses"
               name="Addresses"
               parent="mart369_home.menu_mart369_root"
@@ -117,7 +156,68 @@
               groups="base.group_system"
               sequence="30"/>
 
-    <!-- The customer's own addresses, on their user form, editable in place. -->
+    <!-- ================= the customer profile's address tab =================
+         mart369_auth shows child_ids there, which also lists invoice contacts
+         and says nothing about the label, the default or what is missing.
+         Swap it for the customer's real 369 Mart addresses. -->
+    <record id="view_mart369_customer_form_addresses" model="ir.ui.view">
+        <field name="name">res.users.form.mart369.customer.addresses</field>
+        <field name="model">res.users</field>
+        <field name="inherit_id" ref="mart369_auth.view_mart369_customer_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//page[@name='addresses']/field[@name='child_ids']" position="replace">
+                <field name="mart369_address_ids" nolabel="1" mode="kanban" class="o_mart369_addresses">
+                    <kanban create="0" delete="0">
+                        <field name="mart369_default"/>
+                        <field name="mart369_label"/>
+                        <field name="mart369_gap_label"/>
+                        <templates>
+                            <t t-name="card" class="o_mart369_addr">
+                                <t t-set="kind" t-value="(record.mart369_label.raw_value || '').toLowerCase()"/>
+                                <div class="d-flex gap-3 align-items-start">
+                                    <span class="o_mart369_tile"
+                                          t-att-class="kind === 'work' ? 'o_mart369_tile_orange' : 'o_mart369_tile_blue'">
+                                        <i t-att-class="kind === 'work' ? 'fa fa-briefcase' : (kind === 'home' ? 'fa fa-home' : 'fa fa-map-marker')"
+                                           t-att-title="record.mart369_label.value"/>
+                                    </span>
+                                    <div class="o_mart369_addr_txt flex-grow-1">
+                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                            <b><field name="mart369_label"/></b>
+                                            <span t-if="record.mart369_default.raw_value"
+                                                  class="badge rounded-pill text-bg-success">&#10003; Default</span>
+                                        </div>
+                                        <field name="name"/>
+                                        <span class="text-muted">
+                                            <field name="street"/>
+                                            <t t-if="record.street2.raw_value">, <field name="street2"/></t>
+                                        </span>
+                                        <span class="text-muted">
+                                            <field name="city"/> <field name="zip"/>
+                                        </span>
+                                        <field name="phone" class="text-muted"/>
+                                    </div>
+                                    <button t-if="!record.mart369_default.raw_value"
+                                            name="action_mart369_make_default" type="object"
+                                            class="btn btn-sm btn-secondary"
+                                            confirm="Use this as the customer's default delivery address?">
+                                        Make default
+                                    </button>
+                                </div>
+                                <div t-if="record.mart369_gap_label.raw_value"
+                                     class="o_mart369_nudge o_mart369_nudge_warm mt-2">
+                                    <i title="Incomplete" class="fa fa-exclamation-triangle"/>
+                                    Missing <field name="mart369_gap_label"/>
+                                </div>
+                            </t>
+                        </templates>
+                    </kanban>
+                </field>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- The same addresses on the stock user form, editable in place, so a wrong
+         flat number is fixed without leaving the customer. -->
     <record id="view_users_form_mart369_addresses" model="ir.ui.view">
         <field name="name">res.users.form.mart369.addresses</field>
         <field name="model">res.users</field>
@@ -126,7 +226,7 @@
             <xpath expr="//page[@name='mart369']" position="inside">
                 <separator string="Delivery addresses"/>
                 <field name="mart369_address_ids" nolabel="1">
-                    <list editable="bottom">
+                    <list editable="bottom" decoration-danger="mart369_gap_label">
                         <field name="mart369_label" string="Type"/>
                         <field name="name" string="Delivered to"/>
                         <field name="phone" string="Mobile"/>
@@ -134,6 +234,7 @@
                         <field name="street2" string="Area" optional="hide"/>
                         <field name="city"/>
                         <field name="zip" string="Pincode"/>
+                        <field name="mart369_gap_label" string="Missing" optional="show"/>
                         <field name="mart369_default" string="Default" widget="boolean_toggle"/>
                     </list>
                 </field>

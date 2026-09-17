@@ -126,7 +126,7 @@
                 <img t-if="img" t-att-src="img" alt="" style="max-width:70%; max-height:70%; object-fit:contain;"/>
                 <span t-else="" class="mart-pdp-auto">no photo yet</span>
             </div>
-            <span class="pd-unit-tag" t-if="rowVisible('buy', 'unit_tag') and d.card"
+            <span class="pd-unit-tag" t-if="rowVisible('gallery', 'unit_tag') and d.card"
                   t-esc="d.card.unit"/>
         </div>
     </t>
@@ -172,7 +172,7 @@
                 </ul>
 
                 <dl class="pd-table" t-elif="section.key === 'info'">
-                    <div t-foreach="section.rows" t-as="row" t-key="row.id"
+                    <div t-foreach="rowsOf(section)" t-as="row" t-key="row.id"
                          t-attf-class="{{ row.visible ? '' : 'mart-pdp-off' }}">
                         <dt t-esc="row.name"/>
                         <dd>
@@ -184,7 +184,7 @@
                 </dl>
 
                 <dl class="pd-grid" t-elif="section.key === 'specs'">
-                    <div t-foreach="section.rows" t-as="row" t-key="row.id"
+                    <div t-foreach="rowsOf(section)" t-as="row" t-key="row.id"
                          t-attf-class="{{ row.visible ? '' : 'mart-pdp-off' }}">
                         <dt t-esc="row.name"/>
                         <dd>
@@ -196,7 +196,7 @@
                 </dl>
 
                 <div class="pd-desc pd-full" t-elif="section.key === 'description'">
-                    <t t-foreach="section.rows" t-as="row" t-key="row.id">
+                    <t t-foreach="rowsOf(section)" t-as="row" t-key="row.id">
                         <h4 t-if="row.key === 'disclaimer'">Disclaimer</h4>
                         <p t-attf-class="{{ row.visible ? '' : 'mart-pdp-off' }}">
                             <t t-if="!row.visible">— <t t-esc="row.name"/> hidden —</t>
@@ -207,7 +207,7 @@
                 </div>
 
                 <t t-elif="section.key === 'returns'">
-                    <p class="pd-return" t-foreach="section.rows" t-as="row" t-key="row.id"
+                    <p class="pd-return" t-foreach="rowsOf(section)" t-as="row" t-key="row.id"
                        t-attf-class="{{ row.visible ? 'pd-return' : 'pd-return mart-pdp-off' }}">
                         <Icon n="'grid'" size="16"/>
                         <t t-if="!row.visible">— <t t-esc="row.name"/> hidden —</t>
@@ -216,7 +216,7 @@
                 </t>
 
                 <dl class="pd-table" t-else="">
-                    <div t-foreach="section.rows" t-as="row" t-key="row.id"
+                    <div t-foreach="rowsOf(section)" t-as="row" t-key="row.id"
                          t-attf-class="{{ row.visible ? '' : 'mart-pdp-off' }}">
                         <dt t-esc="row.name"/>
                         <dd t-esc="row.visible ? (row.value || 'from the product') : 'hidden'"/>
@@ -257,7 +257,7 @@
             <b style="font-size: 14px;" t-esc="section.name"/>
             <div class="mart-pdp-auto" style="margin-top: 4px;">
                 <t t-esc="visibleRows(section).length"/> of
-                <t t-esc="section.rows.length"/> shown
+                <t t-esc="rowsOf(section).length"/> shown
             </div>
         </section>
     </t>
@@ -320,7 +320,7 @@
                 show — whatever they say individually.
             </div>
 
-            <t t-foreach="section.rows" t-as="row" t-key="row.id">
+            <t t-foreach="rowsOf(section)" t-as="row" t-key="row.id">
                 <div class="mart-fieldrow">
                     <div class="mart-fieldrow-head">
                         <b t-esc="row.name"/>

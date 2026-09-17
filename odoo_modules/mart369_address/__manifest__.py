@@ -1,6 +1,6 @@
 {
     'name': '369 Mart Delivery Addresses',
-    'version': '19.0.1.0.0',
+    'version': '19.0.1.1.0',
     'category': 'Website',
     'summary': "Customers' delivery addresses, found from their live location.",
     'description': """
@@ -14,8 +14,9 @@ customer fills in the rest - flat, name, mobile, and whether it is Home or Work.
 An address is an ordinary Odoo delivery contact under the customer, so sale
 orders, delivery and invoicing all understand it.
 
-Staff get **369 Mart -> Customers & Addresses**: one colour-coded screen that
-shows every customer, their addresses, and what is missing.
+Staff see them in two places: on each customer's profile under
+**369 Mart -> Customers**, and all together under **369 Mart -> Addresses**,
+where a missing pincode, mobile or map fix is called out in red.
 """,
     'author': '369 Mart',
     'license': 'LGPL-3',
@@ -23,15 +24,12 @@ shows every customer, their addresses, and what is missing.
     'data': [
         'security/ir.model.access.csv',
         'views/address_views.xml',
-        'views/console_views.xml',
     ],
-    'assets': {
-        'web.assets_backend': [
-            'mart369_address/static/src/console/console.scss',
-            'mart369_address/static/src/console/console.js',
-            'mart369_address/static/src/console/console.xml',
-        ],
-    },
+    'images': [
+        'static/description/customer_addresses.png',
+        'static/description/addresses_board.png',
+        'static/description/addresses_list.png',
+    ],
     'installable': True,
     'application': False,
     'auto_install': False,

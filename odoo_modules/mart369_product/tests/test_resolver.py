@@ -143,11 +143,21 @@ class TestResolver(TransactionCase):
             'the information table renders in sequence order')
 
     def test_builder_load_shape(self):
+        """One call gives the builder the page, its rows and the product card."""
         data = self.Field.builder_load(self.product.id)
-        self.assertEqual(set(data),
-                         {'sections', 'fields', 'product', 'overrides', 'values'})
-        self.assertTrue(data['sections'] and data['fields'])
+        self.assertEqual(set(data), {'sections', 'product', 'card'})
+        self.assertTrue(data['sections'])
         self.assertEqual(data['product']['id'], self.product.id)
+        self.assertEqual(data['card']['name'], self.product.name)
+
+        info = [s for s in data['sections'] if s['key'] == 'info'][0]
+        self.assertTrue(info['rows'], 'a section carries its fields')
+        row = [r for r in info['rows'] if r['key'] == 'manufacturer_address'][0]
+        # Each row says what it is, what it says, and whether it shows - the
+        # mock needs all three to draw a hidden field greyed rather than gone.
+        self.assertLessEqual({'key', 'name', 'value', 'visible', 'state', 'show'},
+                             set(row))
+        self.assertEqual(row['state'], 'follow')
 
     def test_reset_puts_a_whole_section_back(self):
         self._state('hide')
@@ -165,7 +175,7 @@ class TestResolver(TransactionCase):
             ])],
         })
         Field = self.Field.with_user(designer)
-        self.assertTrue(Field.builder_load(self.product.id)['fields'])
+        self.assertTrue(Field.builder_load(self.product.id)['sections'])
         Field.set_product_state(self.field.id, self.product.id, 'hide')
         self.assertEqual(
             Field.browse(self.field.id)._state_for(self.product), 'hide')

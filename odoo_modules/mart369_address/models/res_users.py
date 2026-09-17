@@ -1,6 +1,6 @@
 """The customer's delivery addresses, reachable from their user form."""
 
-from odoo import fields, models
+from odoo import api, fields, models
 
 
 class ResUsers(models.Model):
@@ -12,6 +12,8 @@ class ResUsers(models.Model):
         domain=[('type', 'in', ['delivery', 'other'])],
         help="Addresses this customer has saved in the 369 Mart app.")
 
+    @api.depends('partner_id', 'partner_id.child_ids.type',
+                 'partner_id.child_ids.mart369_default', 'partner_id.child_ids.active')
     def _compute_mart369_address_ids(self):
         for user in self:
             user.mart369_address_ids = self.env['res.partner'].search([

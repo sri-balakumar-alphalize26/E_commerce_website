@@ -95,8 +95,15 @@ export class ProductBuilder extends Component {
     }
 
     row(sectionKey, fieldKey) {
-        const section = this.sectionByKey(sectionKey);
-        return section && section.rows.find((r) => r.key === fieldKey);
+        return this.rowsOf(this.sectionByKey(sectionKey)).find(
+            (r) => r.key === fieldKey
+        );
+    }
+
+    /** A section always has rows server-side, but never assume it here:
+     *  a half-loaded payload should not take the whole screen down. */
+    rowsOf(section) {
+        return (section && section.rows) || [];
     }
 
     rowVisible(sectionKey, fieldKey) {
@@ -110,14 +117,14 @@ export class ProductBuilder extends Component {
     }
 
     visibleRows(section) {
-        return section.rows.filter((r) => r.visible);
+        return this.rowsOf(section).filter((r) => r.visible);
     }
 
     differing(section) {
         if (this.state.tab !== "product") {
             return 0;
         }
-        return section.rows.filter((r) => r.state !== "follow").length;
+        return this.rowsOf(section).filter((r) => r.state !== "follow").length;
     }
 
     get offPct() {
@@ -166,7 +173,7 @@ export class ProductBuilder extends Component {
     }
 
     resetSection(section) {
-        const ids = section.rows.map((r) => r.id);
+        const ids = this.rowsOf(section).map((r) => r.id);
         return this.save.run(
             () =>
                 this.orm.call(M.field, "reset_product_state", [

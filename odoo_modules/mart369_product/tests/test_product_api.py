@@ -142,3 +142,13 @@ class TestProductApiDetails(TransactionCase):
         self.assertIn('real one', texts)
         self.assertNotIn('token', texts)
         self.assertEqual(d.get('ratingCount'), 1)
+
+
+@tagged('post_install', '-at_install')
+class TestProductBuilderTour(HttpCase):
+
+    def test_builder_tour(self):
+        # Generous: the first request after an upgrade rebuilds the backend
+        # asset bundle, which takes minutes on a big database.
+        self.start_tour('/odoo/mart-product', 'mart369_product_builder',
+                        login='admin', timeout=600)

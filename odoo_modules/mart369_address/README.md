@@ -9,13 +9,21 @@ orders, delivery and invoicing all understand it. No new model.
 
 ## For staff
 
-**369 Mart → Customers & Addresses** is the screen to use: every customer, their
-addresses folded underneath, and anything incomplete — no mobile, no pincode, no
-map location — marked in red so it is visible without opening a record. Search
-by name, email, mobile or city, filter, and export what is on screen to CSV.
+**369 Mart → Customers**, then open a customer and go to **Delivery addresses**.
+Each address shows as a card with its Home / Work chip, the green *Default*
+badge, and a *Make default* button on the others. Anything incomplete — no
+mobile, no pincode, no street, no map location — is called out on the card.
 
-**369 Mart → Addresses** is the plain list and kanban, for Odoo's own grouping
-and filtering.
+**369 Mart → Addresses** is every address from every customer at once: a board
+of the same cards, a list with the same warnings in a *Missing* column, and
+Odoo's own search, grouping (by customer, city or type) and export.
+
+Both screens use `mart369_auth`'s stylesheet, so they and the Customers screen
+are one design.
+
+![A customer's delivery addresses](static/description/customer_addresses.png)
+![Every address](static/description/addresses_board.png)
+![The same as a list](static/description/addresses_list.png)
 
 ## The API
 
