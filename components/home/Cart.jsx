@@ -1,14 +1,14 @@
 "use client";
 /* ==========================================================================
    369 Mart — Cart
-   Left:  delivery groups (Quick in minutes / Shop all in days) · minimum-order
+   Left:  delivery groups (Quick in minutes / Express in days) · minimum-order
           nudge · Recommended rail · You may also like rail
    Right: coupons · free-delivery progress · WhatsApp updates · payment details
           · to-pay bar · cancellation note · delivery instructions
    ========================================================================== */
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import ProductArt from "./art";
-import { Icon, Rail, Thumb, inr } from "./shared";
+import { Icon, OpenContext, Rail, Thumb, inr } from "./shared";
 
 export const CART_RULES = {
   quick: { label: "Quick", eta: "Delivery in 13 mins", minOrder: 99, freeAbove: 499, fee: 30 },
@@ -21,8 +21,34 @@ export const COUPONS = [
   { code: "FREEDEL", title: "Free delivery", note: "Waives delivery fees on orders above ₹299", group: null, min: 299, calc: (s) => s.fees },
 ];
 
+/* One bill for cart and checkout: groups, fees, coupon, totals. */
+export function computeBill({ cart, byId, rules = CART_RULES, coupon = null }) {
+  const groups = { quick: [], all: [] };
+  Object.entries(cart).forEach(([id, qty]) => {
+    const p = byId[id];
+    if (p && qty > 0) groups[p.delivery ? "all" : "quick"].push({ p, qty });
+  });
+  const lines = [...groups.quick, ...groups.all];
+  const mrp = lines.reduce((s, l) => s + (l.p.mrp || l.p.price) * l.qty, 0);
+  const items = lines.reduce((s, l) => s + l.p.price * l.qty, 0);
+  const sub = { quick: groups.quick.reduce((s, l) => s + l.p.price * l.qty, 0), all: groups.all.reduce((s, l) => s + l.p.price * l.qty, 0) };
+  const feeFor = (g) => (groups[g].length && sub[g] < rules[g].freeAbove ? rules[g].fee : 0);
+  const fees = feeFor("quick") + feeFor("all");
+  const sums = { items, quick: sub.quick, all: sub.all, fees };
+  const active = COUPONS.find((c) => c.code === coupon);
+  const couponValid = !!active && (active.group ? sub[active.group] : items) >= active.min;
+  const couponOff = couponValid ? Math.min(active.calc(sums), items + fees) : 0;
+  const total = Math.max(0, items + fees - couponOff);
+  return {
+    groups, lines, mrp, items, sub, fees, feeFor, sums, couponValid, couponOff, total,
+    saved: mrp - items + couponOff,
+    count: lines.reduce((s, l) => s + l.qty, 0),
+    blocked: groups.quick.length > 0 && sub.quick < rules.quick.minOrder,
+  };
+}
+
 /* counts smoothly between values */
-function Amount({ value, prefix = "" }) {
+export function Amount({ value, prefix = "" }) {
   const [shown, setShown] = useState(value);
   const from = useRef(value);
   useEffect(() => {
@@ -54,6 +80,7 @@ function Stepper({ qty, onChange, name }) {
 
 function LineItem({ p, qty, setQty, i }) {
   const [leaving, setLeaving] = useState(false);
+  const open = useContext(OpenContext);
   const change = (n) => {
     if (n <= 0) { setLeaving(true); setTimeout(() => setQty(p.id, 0), 320); }
     else setQty(p.id, n);
@@ -61,7 +88,7 @@ function LineItem({ p, qty, setQty, i }) {
   return (
     <li className={"ct-line" + (leaving ? " ct-leaving" : "")} style={{ "--i": i }}>
       <span className="ct-thumb"><Thumb p={p} /></span>
-      <div className="ct-line-info">
+      <div className="ct-line-info" data-open="" onClick={(e) => open?.(p, e.currentTarget.parentElement.querySelector(".ct-thumb")?.getBoundingClientRect())}>
         <b>{p.name}</b>
         <small>{p.unit}{p.veg ? " · Veg" : ""}</small>
       </div>
@@ -158,32 +185,10 @@ export default function CartPage({ cart, setQty, byId, recommended = [], alsoLik
   const [toast, setToast] = useState("");
   const [paying, setPaying] = useState("");
 
-  const groups = useMemo(() => {
-    const g = { quick: [], all: [] };
-    Object.entries(cart).forEach(([id, qty]) => {
-      const p = byId[id];
-      if (p && qty > 0) g[p.delivery ? "all" : "quick"].push({ p, qty });
-    });
-    return g;
-  }, [cart, byId]);
-
-  const all = [...groups.quick, ...groups.all];
-  const mrp = all.reduce((s, l) => s + (l.p.mrp || l.p.price) * l.qty, 0);
-  const items = all.reduce((s, l) => s + l.p.price * l.qty, 0);
-  const sub = { quick: groups.quick.reduce((s, l) => s + l.p.price * l.qty, 0), all: groups.all.reduce((s, l) => s + l.p.price * l.qty, 0) };
-  const feeFor = (g) => (groups[g].length && sub[g] < rules[g].freeAbove ? rules[g].fee : 0);
-  const fees = feeFor("quick") + feeFor("all");
-  const sums = { items, quick: sub.quick, all: sub.all, fees };
-
-  const active = COUPONS.find((c) => c.code === coupon);
-  const couponValid = active && (active.group ? sub[active.group] : items) >= active.min;
-  const couponOff = couponValid ? Math.min(active.calc(sums), items + fees) : 0;
+  const bill = useMemo(() => computeBill({ cart, byId, rules, coupon }), [cart, byId, rules, coupon]);
+  const { groups, mrp, items, sub, fees, feeFor, sums, couponValid, couponOff, total, saved, blocked, count } = bill;
   useEffect(() => { if (coupon && !couponValid) { setCoupon(null); flash(`${coupon} removed — cart no longer qualifies`); } }, [couponValid]); // eslint-disable-line
 
-  const total = Math.max(0, items + fees - couponOff);
-  const saved = mrp - items + couponOff;
-  const blocked = groups.quick.length > 0 && sub.quick < rules.quick.minOrder;
-  const count = all.reduce((s, l) => s + l.qty, 0);
   const nextFree = groups.quick.length && sub.quick < rules.quick.freeAbove ? rules.quick.freeAbove - sub.quick : 0;
 
   function flash(msg) { setToast(msg); clearTimeout(flash.t); flash.t = setTimeout(() => setToast(""), 2600); }
@@ -193,7 +198,7 @@ export default function CartPage({ cart, setQty, byId, recommended = [], alsoLik
   };
   const pay = (how) => {
     setPaying(how);
-    setTimeout(() => { setPaying(""); onCheckout ? onCheckout({ how, total, coupon, instructions: { ...instr, note }, whatsapp }) : flash("Demo: checkout would start here"); }, 900);
+    setTimeout(() => { setPaying(""); onCheckout ? onCheckout({ how, total, coupon: couponValid ? coupon : null, instructions: { ...instr, note }, whatsapp }) : flash("Demo: checkout would start here"); }, 350);
   };
 
   if (!count) {

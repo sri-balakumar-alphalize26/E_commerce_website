@@ -17,7 +17,7 @@
   --hm-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
   --hm-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --hm-card-w: 172px;
-  /* mode accent — Quick = orange, Shop all = ocean blue */
+  /* mode accent — Quick = orange, Express = ocean blue */
   --hm-accent: #f7931e;
   --hm-accent-2: #ef6f1a;
   --hm-accent-soft: #fff1de;
@@ -285,7 +285,7 @@
 .hm-viewcart:hover { gap: 8px; }
 .hm-viewcart:active { transform: scale(0.97); }
 
-/* ---------------- Quick <-> Shop all switch ---------------- */
+/* ---------------- Quick <-> Express switch ---------------- */
 .hm-switch {
   position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; color: #fff; pointer-events: all;
   background: radial-gradient(120% 90% at var(--x) var(--y), #ffb14a 0%, #f7931e 38%, #e8631a 100%);

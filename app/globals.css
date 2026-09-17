@@ -3,6 +3,11 @@
 @import "../components/home/cart.css";
 @import "../components/home/extras.css";
 @import "../components/home/account.css";
+@import "../components/home/product.css";
+@import "../components/home/browse.css";
+@import "../components/home/checkout.css";
+@import "../components/home/cartfx.css";
+@import "../components/home/track.css";
 @import "../components/signin/signin.css";
 
 *, *::before, *::after { box-sizing: border-box; }

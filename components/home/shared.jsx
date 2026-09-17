@@ -1,9 +1,11 @@
 "use client";
 /* Shared pieces used by Home.jsx and Cart.jsx */
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 /* wishlist shared by cards, search and the account "My List" page */
 export const WishContext = createContext(null);
+/* open the product page: open(product, rectOfTappedImage) */
+export const OpenContext = createContext(null);
 import ProductArt from "./art";
 
 export const inr = (n) => "₹" + Number(n).toLocaleString("en-IN");
@@ -61,7 +63,18 @@ const P = {
   mail: <><rect x="3" y="5" width="18" height="14" rx="2.5" /><path d="m3.5 6.5 8.5 6.5 8.5-6.5" /></>,
   phone: <path d="M5 4h3l2 5-2 1a11 11 0 0 0 6 6l1-2 5 2v3a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z" />,
   star: <path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z" />,
+  share: <><circle cx="18" cy="5" r="2.5" /><circle cx="6" cy="12" r="2.5" /><circle cx="18" cy="19" r="2.5" /><path d="m8.2 10.8 7.6-4.4M8.2 13.2l7.6 4.4" /></>,
   trend: <><path d="M3 17l6-6 4 4 8-8" /><path d="M15 7h6v6" /></>,
+  printer: <><path d="M7 9V4h10v5" /><rect x="3" y="9" width="18" height="8" rx="2" /><path d="M7 14h10v6H7z" /><path d="M17.5 12h.01" /></>,
+  scissors: <><circle cx="6" cy="7" r="2.6" /><circle cx="6" cy="17" r="2.6" /><path d="M8.2 8.4 20 17M8.2 15.6 20 7" /></>,
+  volume: <><path d="M4 9h4l5-4v14l-5-4H4z" /><path d="M16.5 9a4 4 0 0 1 0 6M19 6.5a7.5 7.5 0 0 1 0 11" /></>,
+  mute: <><path d="M4 9h4l5-4v14l-5-4H4z" /><path d="m16 9 5 6M21 9l-5 6" /></>,
+  lock: <><rect x="5" y="10.5" width="14" height="10" rx="2" /><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" /></>,
+  upi: <><path d="M9 4 5 20" /><path d="m13 4-4 16" /><path d="m15 7 4 5-6 7" /></>,
+  bank: <><path d="M3 9.5 12 4l9 5.5" /><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18" /></>,
+  wallet: <><path d="M4 7a2 2 0 0 1 2-2h11v4" /><rect x="3" y="7" width="18" height="13" rx="2.5" /><path d="M16 13.5h3" /></>,
+  sort: <><path d="M7 4v16M3.5 16.5 7 20l3.5-3.5" /><path d="M17 20V4M13.5 7.5 17 4l3.5 3.5" /></>,
+  filter: <><path d="M4 6h16M7 12h10M10 18h4" /></>,
   scooter: <><circle cx="6" cy="17" r="2.5" /><circle cx="18" cy="17" r="2.5" /><path d="M8.5 17h6.5l2-6h-4l-2 4M15 5h3l1 6" /></>,
 };
 export const Icon = ({ n, size = 20, className = "" }) => (
@@ -104,10 +117,11 @@ export function useRailScroll() {
   return { ref, edge, by };
 }
 
-export function flyTo(fromEl, targetSel) {
+/* small dot flight (buttons without a product image, e.g. Reorder all) */
+export function flyTo(fromEl, targetSel, id) {
   if (typeof document === "undefined" || !fromEl) return;
   if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
-  const target = document.querySelector(targetSel);
+  const target = (targetSel && targetSel !== "#hm-cart-icon" ? document.querySelector(targetSel) : null) || cartTarget(id);
   if (!target) return;
   const a = fromEl.getBoundingClientRect(), b = target.getBoundingClientRect();
   const x0 = a.left + a.width / 2, y0 = a.top + a.height / 2, x1 = b.left + b.width / 2, y1 = b.top + b.height / 2;
@@ -122,17 +136,133 @@ export function flyTo(fromEl, targetSel) {
     { transform: `translateY(${y1}px) scale(.5)` },
   ], { duration: dur, easing: "cubic-bezier(0,.55,.45,1)", fill: "forwards" }).onfinish = () => {
     ox.remove();
-    target.animate?.([{ transform: "scale(1)" }, { transform: "scale(1.18)" }, { transform: "scale(1)" }], { duration: 380, easing: "cubic-bezier(.34,1.56,.64,1)" });
+    landed(target);
   };
 }
 
 /* ---------- product card ---------- */
-export function QtyControl({ qty, onChange, name }) {
+/* ---------- add-to-cart flight ----------
+   The product image lifts out of its card (the card turns mint and empty),
+   arcs up and down into the floating cart pill while shrinking and spinning,
+   the pill gulps and the item's thumbnail pops in; the card image grows back.
+   The target is re-measured every frame, so it still lands on the pill while
+   the pill is springing in for the first item. */
+const flying = new Map();
+const flySubs = new Set();
+const flyEmit = () => flySubs.forEach((f) => f());
+const flySub = (f) => { flySubs.add(f); return () => flySubs.delete(f); };
+export const useFlying = (id) => useSyncExternalStore(flySub, () => (flying.get(id) || 0) > 0, () => false);
+
+const visible = (el) => { if (!el) return false; const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(el).visibility !== "hidden"; };
+function cartTarget(id) {
+  const panel = document.querySelector(".mc-panel");
+  if (visible(panel)) return panel.querySelector(`[data-row="${id}"] .mc-row-img`) || panel.querySelector(".mc-head-ic");
+  const pill = document.querySelector(".mc-pill.mc-show");
+  if (pill) return pill.querySelector(`[data-thumb="${id}"]`) || pill.querySelector(".mc-thumbs") || pill;
+  return document.querySelector("#hm-cart-icon");
+}
+const SOURCE_BOX = ".hm-card-img, .sr-row-img, .sr-pick-img, .pd-stage, .ac-wish-img, .ct-thumb, .pd-fbt-img";
+
+export function flyToCart(fromEl, { id } = {}) {
+  if (typeof document === "undefined" || !fromEl) return;
+  if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+  const box = fromEl.closest?.(SOURCE_BOX) || (fromEl.matches?.(SOURCE_BOX) ? fromEl : null);
+  const src = box && [".hm-gal-slide.hm-cur img", ".pd-slide.pd-cur img", ".pd-slide.pd-cur svg.hm-art", "img", "svg.hm-art"].reduce((f, sel) => f || box.querySelector(sel), null);
+  if (!src) return flyTo(fromEl, null, id);
+
+  const a = src.getBoundingClientRect();
+  if (!a.width) return flyTo(fromEl, null, id);
+  const ghost = document.createElement("div");
+  ghost.className = "hm-fly-img";
+  ghost.style.width = a.width + "px"; ghost.style.height = a.height + "px";
+  const clone = src.tagName === "IMG" ? Object.assign(document.createElement("img"), { src: src.currentSrc || src.src, alt: "" }) : src.cloneNode(true);
+  ghost.appendChild(clone);
+  document.body.appendChild(ghost);
+
+  if (id) { flying.set(id, (flying.get(id) || 0) + 1); flyEmit(); }
+  box.classList.remove("hm-regrow"); box.classList.add("hm-lift");
+  box.closest(".hm-card")?.classList.add("hm-card-adding");
+
+  const x0 = a.left + a.width / 2, y0 = a.top + a.height / 2;
+  const first = cartTarget(id)?.getBoundingClientRect();
+  const dist = first ? Math.hypot(first.left - x0, first.top - y0) : 600;
+  const D = Math.min(1050, Math.max(700, dist * 0.95));
+  const LIFT = 0.2;
+  const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+  const t0 = performance.now();
+  let regrown = false;
+
+  const frame = (now) => {
+    const k = Math.min(1, (now - t0) / D);
+    const tgt = cartTarget(id);
+    const b = tgt?.getBoundingClientRect() || { left: innerWidth - 40, top: innerHeight - 40, width: 30, height: 30 };
+    const x1 = b.left + b.width / 2, y1 = b.top + b.height / 2;
+    const endScale = Math.max(0.12, Math.min(b.width, b.height, 40) / Math.max(a.width, a.height));
+    let x, y, sc, rot, op = 1;
+    if (k < LIFT) {
+      const u = easeInOut(k / LIFT);
+      x = x0; y = y0 - 16 * u; sc = 1 + 0.12 * u; rot = -7 * u;
+    } else {
+      const u = easeInOut((k - LIFT) / (1 - LIFT));
+      const sx = x0, sy = y0 - 16;
+      const cx = sx + (x1 - sx) * 0.55, cy = Math.min(sy, y1) - Math.max(90, Math.abs(x1 - sx) * 0.18);
+      x = (1 - u) * (1 - u) * sx + 2 * (1 - u) * u * cx + u * u * x1;
+      y = (1 - u) * (1 - u) * sy + 2 * (1 - u) * u * cy + u * u * y1;
+      sc = 1.12 + (endScale - 1.12) * Math.pow(u, 1.4);
+      rot = -7 + 367 * u;
+      op = u > 0.88 ? 1 - (u - 0.88) / 0.12 : 1;
+    }
+    ghost.style.transform = `translate(${x - a.width / 2}px, ${y - a.height / 2}px) rotate(${rot}deg) scale(${sc})`;
+    ghost.style.opacity = op;
+    if (!regrown && k > 0.72) {
+      regrown = true;
+      box.classList.remove("hm-lift"); box.classList.add("hm-regrow");
+      setTimeout(() => box.classList.remove("hm-regrow"), 650);
+      setTimeout(() => box.closest(".hm-card")?.classList.remove("hm-card-adding"), 900);
+    }
+    if (k < 1) return requestAnimationFrame(frame);
+    ghost.remove();
+    if (id) { flying.set(id, Math.max(0, (flying.get(id) || 1) - 1)); flyEmit(); }
+    landed(tgt);
+  };
+  requestAnimationFrame(frame);
+}
+
+function landed(tgt) {
+  const pill = tgt?.closest?.(".mc-pill");
+  (pill || tgt)?.animate?.(
+    pill
+      ? [{ transform: "scale(1,1)" }, { transform: "scale(1.07,.9)" }, { transform: "scale(.97,1.04)" }, { transform: "scale(1,1)" }]
+      : [{ transform: "scale(1)" }, { transform: "scale(1.18)" }, { transform: "scale(1)" }],
+    { duration: 460, easing: "cubic-bezier(.34,1.56,.64,1)" }
+  );
+  if (pill) {
+    const ring = document.createElement("i");
+    ring.className = "mc-ripple";
+    pill.appendChild(ring);
+    setTimeout(() => ring.remove(), 700);
+  }
+}
+
+export function QtyControl({ qty, onChange, name, id }) {
   const btn = useRef(null);
+  const [added, setAdded] = useState(false);
+  const timer = useRef(0);
+  useEffect(() => () => clearTimeout(timer.current), []);
   if (qty <= 0) {
     return (
-      <button ref={btn} className="hm-add" onClick={() => { flyTo(btn.current, document.querySelector(".hm-cartbar.hm-show") ? "#hm-cartbar-thumbs" : "#hm-cart-icon"); onChange(1); }}
-        aria-label={`Add ${name}`}>Add</button>
+      <button ref={btn} className="hm-add" onClick={() => {
+        flyToCart(btn.current, { id });
+        onChange(1);
+        setAdded(true); clearTimeout(timer.current); timer.current = setTimeout(() => setAdded(false), 1100);
+      }} aria-label={`Add ${name}`}><Icon n="plus" size={13} />Add</button>
+    );
+  }
+  if (added) {
+    return (
+      <button className="hm-added" onClick={() => setAdded(false)} aria-label={`${name} added. Change quantity`}>
+        <svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path d="M5 12.5 9.5 17 19 7.5" /></svg>Added
+      </button>
     );
   }
   return (
@@ -202,10 +332,15 @@ export function ProductCard({ p, qty, setQty, i }) {
   const liked = wish ? wish.has(p.id) : localLiked;
   const setLiked = () => (wish ? wish.toggle(p.id) : setLocalLiked((v) => !v));
   const [notified, setNotified] = useState(false);
+  const open = useContext(OpenContext);
   const oos = p.stock === 0;
   const off = p.mrp ? Math.round(((p.mrp - p.price) / p.mrp) * 100) : 0;
   return (
-    <article className={"hm-card" + (oos ? " hm-oos" : "")} style={{ "--i": i }}>
+    <article className={"hm-card" + (oos ? " hm-oos" : "")} style={{ "--i": i }} data-open={open ? "" : undefined}
+      onClick={(e) => {
+        if (!open || e.target.closest("button, a, input, .hm-card-cta")) return;
+        open(p, e.currentTarget.querySelector(".hm-card-img")?.getBoundingClientRect());
+      }}>
       <div className="hm-card-img">
         <Gallery p={p} />
         <button className={"hm-heart" + (liked ? " hm-liked" : "")} aria-pressed={liked} aria-label={liked ? "Remove from wishlist" : "Save to wishlist"} onClick={setLiked}>
@@ -216,7 +351,7 @@ export function ProductCard({ p, qty, setQty, i }) {
             <button className={"hm-notify" + (notified ? " hm-done" : "")} onClick={() => setNotified(true)}>
               <Icon n={notified ? "check" : "bell"} size={13} />{notified ? "We'll notify" : "Notify"}
             </button>
-          ) : <QtyControl qty={qty} name={p.name} onChange={(n) => setQty(p.id, n)} />}
+          ) : <QtyControl qty={qty} id={p.id} name={p.name} onChange={(n) => setQty(p.id, n)} />}
         </div>
         {off >= 10 && !oos && !p.tag && <span className="hm-off">{off}% OFF</span>}
         {p.tag && <span className="hm-off hm-new">{p.tag}</span>}
@@ -225,7 +360,7 @@ export function ProductCard({ p, qty, setQty, i }) {
       </div>
       <div className="hm-card-body">
         <div className="hm-unit">{p.unit}</div>
-        <h3 className="hm-name" title={p.name}>{p.name}</h3>
+        <h3 className="hm-name" title={p.name}>{open ? <a href={`/product/${p.id}`} onClick={(e) => { e.preventDefault(); open(p, e.currentTarget.closest(".hm-card")?.querySelector(".hm-card-img")?.getBoundingClientRect()); }}>{p.name}</a> : p.name}</h3>
         {p.note && <div className="hm-subnote">({p.note})</div>}
         <div className="hm-price">
           <b>{inr(p.price)}</b>
@@ -243,7 +378,7 @@ export function ProductCard({ p, qty, setQty, i }) {
   );
 }
 
-export function Rail({ section, cart, setQty, tone }) {
+export function Rail({ section, cart, setQty, tone, onViewAll }) {
   const [ioRef, inView] = useInView();
   const { ref, edge, by } = useRailScroll();
   return (
@@ -253,7 +388,7 @@ export function Rail({ section, cart, setQty, tone }) {
           <h2 id={"rail-" + section.key}>{section.title}</h2>
           {section.subtitle && <p>{section.subtitle}</p>}
         </div>
-        <a href="#" onClick={(e) => e.preventDefault()} className="hm-viewall">View all<Icon n="right" size={15} /></a>
+        {onViewAll && <a href="#" onClick={(e) => { e.preventDefault(); onViewAll?.(section); }} className="hm-viewall">View all<Icon n="right" size={15} /></a>}
       </div>
       <div className="hm-rail-box">
         <div className="hm-rail-track" ref={ref}>

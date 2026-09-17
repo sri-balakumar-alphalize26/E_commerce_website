@@ -14,12 +14,23 @@
    ========================================================================== */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ProductArt from "./art";
-import { Icon, ProductCard, Rail, SEARCH_WORDS, Thumb, WishContext, flyTo, inr, useInView, useRailScroll } from "./shared";
+import { Icon, OpenContext, Rail, SEARCH_WORDS, Thumb, WishContext, flyTo, inr, useInView, useRailScroll } from "./shared";
 import AccountPage from "./Account";
+import ProductDetail from "./ProductDetail";
 import SearchOverlay from "./SearchOverlay";
 import LocationPicker, { SAMPLE_ADDRESSES } from "./LocationPicker";
 import CartPage from "./Cart";
+import CheckoutPage from "./Checkout";
+import MiniCart from "./MiniCart";
+import ReceiptPrinter from "./Receipt";
+import OrderTrack from "./OrderTrack";
+import { liveStatus } from "./orderState";
+import { SAMPLE_ORDERS } from "./Account";
+import { WALLET_BALANCE } from "./payment";
 import { ALL_BANNERS, ALL_CATEGORIES, ALL_SECTIONS, ALL_TABS, BANNERS, CATEGORIES, SECTIONS, TABS } from "./sampleData";
+import { SECTION_TO_ROUTE, TAB_TO_ROUTE, TILE_TO_ROUTE, buildIndex, enrich, listable, variantsOf } from "./catalog";
+import { NavContext, pathToRoute, routeToPath } from "./nav";
+import { BuyAgainPage, CategoryPage, NotFoundView, OffersPage, SearchResults, SiteFooter } from "./Browse";
 
 /* ---------- header ---------- */
 function ModeToggle({ mode, onMode }) {
@@ -47,7 +58,7 @@ function ModeToggle({ mode, onMode }) {
   );
 }
 
-function StoreHeader({ count, mode, onMode, onCart, onAccount, address, onLoc, locOpen, onSearch }) {
+function StoreHeader({ count, mode, onMode, onCart, onAccount, address, onLoc, locOpen, onSearch, onHome, onOffers, onBuyAgain, route, query }) {
   const [scrolled, setScrolled] = useState(false);
   const [w, setW] = useState(0);
   useEffect(() => {
@@ -60,7 +71,7 @@ function StoreHeader({ count, mode, onMode, onCart, onAccount, address, onLoc, l
   return (
     <header className={"hm-hdr" + (scrolled ? " hm-scrolled" : "")}>
       <div className="hm-wrap hm-hdr-row">
-        <a className="hm-logo" href="/" aria-label="369 Mart home">
+        <a className="hm-logo" href="/" aria-label="369 Mart home" onClick={(e) => { if (onHome) { e.preventDefault(); onHome(); } }}>
           <span className="hm-logo-mark">369</span>
           <svg viewBox="0 0 24 24" className="hm-logo-arrow" aria-hidden="true"><path d="M6 18 18 6M9 6h9v9" /></svg>
           <span>Mart</span>
@@ -75,17 +86,18 @@ function StoreHeader({ count, mode, onMode, onCart, onAccount, address, onLoc, l
         </button>
         <button className="hm-search" onClick={onSearch} aria-label="Search products">
           <Icon n="search" size={18} />
+          {query ? <span className="hm-search-q" key={query}>{query}</span> : (
           <span className="hm-search-ph">Search for '
             <span className="hm-roll">
               {SEARCH_WORDS.map((word, i) => (
                 <span key={word} data-s={i === cur ? "in" : i === prev ? "out" : ""}>{word}'</span>
               ))}
             </span>
-          </span>
+          </span>)}
         </button>
         <nav className="hm-icons" aria-label="Account">
-          <button className="hm-iconbtn hm-hide-sm" aria-label="Offers"><Icon n="pct" /></button>
-          <button className="hm-iconbtn hm-hide-sm" aria-label="Reorder"><Icon n="reorder" /></button>
+          <button className={"hm-iconbtn hm-hide-sm" + (route === "offers" ? " hm-iconbtn-on" : "")} aria-label="Offers" title="Offers & coupons" onClick={onOffers}><Icon n="pct" /></button>
+          <button className={"hm-iconbtn hm-hide-sm" + (route === "buyagain" ? " hm-iconbtn-on" : "")} aria-label="Buy again" title="Buy again" onClick={onBuyAgain}><Icon n="reorder" /></button>
           <button className="hm-iconbtn" id="hm-cart-icon" onClick={onCart} aria-label={`Cart, ${count} items`}>
             <Icon n="cart" />
             {count > 0 && <span key={count} className="hm-badge">{count}</span>}
@@ -103,7 +115,8 @@ function Tabs({ tabs, active, onChange }) {
   useEffect(() => {
     const place = () => {
       const el = wrap.current?.querySelector(`[data-k="${active}"]`);
-      if (el) setInd({ x: el.offsetLeft, w: el.offsetWidth });
+      setInd(el ? { x: el.offsetLeft, w: el.offsetWidth } : null);
+      el?.scrollIntoView?.({ block: "nearest", inline: "nearest", behavior: "smooth" });
     };
     place();
     window.addEventListener("resize", place);
@@ -167,12 +180,12 @@ function BannerCarousel({ banners, autoplay = true }) {
   );
 }
 
-function CategoryStrip({ cats }) {
+function CategoryStrip({ cats, onPick }) {
   const [ref, inView] = useInView();
   return (
     <section className={"hm-cats" + (inView ? " hm-in" : "")} ref={ref} aria-label="Shop by category">
       {cats.map((c, i) => (
-        <a key={c.key} href="#" onClick={(e) => e.preventDefault()} className="hm-cat" style={{ "--i": i }}>
+        <a key={c.key} href={TILE_TO_ROUTE[c.key] ? "/category/" + TILE_TO_ROUTE[c.key] : "#"} onClick={(e) => { e.preventDefault(); onPick?.(c); }} className="hm-cat" style={{ "--i": i }}>
           <span className="hm-cat-img" style={{ background: c.bg }}>{c.image ? <img src={c.image} alt="" loading="lazy" /> : <ProductArt art={c.art} color={c.color} label={c.t} />}</span>
           <span>{c.label}</span>
         </a>
@@ -197,29 +210,8 @@ function FreeDelivery({ total, threshold }) {
   );
 }
 
-function CartBar({ lines, count, total, onView }) {
-  const thumbs = lines.slice(-3).reverse();
-  return (
-    <div className={"hm-cartbar" + (count > 0 ? " hm-show" : "")} aria-hidden={count === 0}>
-      <div className="hm-wrap hm-cartbar-row">
-        <div className="hm-cartbar-left">
-          <span className="hm-thumbs" id="hm-cartbar-thumbs">
-            {thumbs.map((l) => (
-              <span key={l.p.id} className="hm-thumb"><Thumb p={l.p} /></span>
-            ))}
-          </span>
-          <span className="hm-cartbar-txt">
-            <b key={count} className="hm-count-pop">{count} {count === 1 ? "item" : "items"}</b>
-            <small>{inr(total)}</small>
-          </span>
-        </div>
-        <button className="hm-viewcart" onClick={onView} tabIndex={count ? 0 : -1}>View Cart <Icon n="right" size={16} /></button>
-      </div>
-    </div>
-  );
-}
 
-/* ---------- Quick <-> Shop all transition ---------- */
+/* ---------- Quick <-> Express transition ---------- */
 const MODE_COPY = {
   quick: { icon: "bolt", title: "Quick", sub: "Groceries & essentials in minutes" },
   all: { icon: "grid", title: "Express", sub: "Electronics, home & more · 2–5 day delivery" },
@@ -270,6 +262,7 @@ const DEFAULT_MODES = {
   quick: { tabs: TABS, banners: BANNERS, categories: CATEGORIES, sections: SECTIONS, freeDeliveryAt: 499 },
   all: { tabs: ALL_TABS, banners: ALL_BANNERS, categories: ALL_CATEGORIES, sections: ALL_SECTIONS, freeDeliveryAt: 999 },
 };
+const RECENT_KEY = "369mart.recent";
 
 export default function Home({
   modes = DEFAULT_MODES,
@@ -280,22 +273,44 @@ export default function Home({
   onViewCart,
   onCheckout,
   onSearch,
-  initialView = "home",
+  initialView = "home",  /* home | product | category | search | offers | buyagain | cart | account | notfound */
+  initialParam = null,   /* product id · "slug/sub" · search term */
+  initialProduct = null, /* kept for older callers: same as initialParam for the product view */
   onAccount,
   onSignOut,
-  syncUrl = false,      /* true in the Next app: header/cart switches update /cart in the address bar */
-  persistCart = false,  /* true in the Next app: cart survives reloads and the /cart route */
+  syncUrl = false,      /* true in the Next app: views update the address bar (/category/…, /search?q=…) */
+  persistCart = false,  /* true in the Next app: cart survives reloads and route changes */
 }) {
   const [mode, setMode] = useState(initialMode);
-  const [view, setView] = useState(initialView);
+  const [route, setRoute] = useState({ view: initialView, param: initialParam ?? initialProduct });
+  const view = route.view;
+  const fromRect = useRef(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [locOpen, setLocOpen] = useState(false);
   const [address, setAddress] = useState(null);
   const [addresses, setAddresses] = useState(SAMPLE_ADDRESSES);
   const [wishIds, setWishIds] = useState([]);
+  const [recentIds, setRecentIds] = useState([]);
+  const [orders, setOrders] = useState(SAMPLE_ORDERS);
+  const [wallet, setWallet] = useState(WALLET_BALANCE);
+  const [draft, setDraft] = useState({});
+  const [ready, setReady] = useState(!persistCart); /* true once saved cart / orders are loaded */
+  const load = (k, fallback) => { try { const v = JSON.parse(localStorage.getItem(k) || "null"); return v ?? fallback; } catch (e) { return fallback; } };
+  const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
   useEffect(() => {
-    try { const w = JSON.parse(localStorage.getItem("369mart.list") || "null"); if (Array.isArray(w)) setWishIds(w); } catch (e) {}
+    const w = load("369mart.list", null); if (Array.isArray(w)) setWishIds(w);
+    const r = load(RECENT_KEY, null); if (Array.isArray(r)) setRecentIds(r);
+    const o = load("369mart.orders", null);
+    const patches = load("369mart.orderPatches", {});
+    const list = [...(Array.isArray(o) ? o : []), ...SAMPLE_ORDERS].map((x) => (patches[x.id] ? { ...x, ...patches[x.id] } : x));
+    setOrders(list);
+    const wb = load("369mart.wallet", null); if (typeof wb === "number") setWallet(wb);
+    const ad = load("369mart.addresses", null); if (Array.isArray(ad) && ad.length) setAddresses(ad);
+    const sel = load("369mart.address", null); if (sel && sel.id) setAddress(sel);
+    try { const d = JSON.parse(sessionStorage.getItem("369mart.checkout") || "null"); if (d) setDraft(d); } catch (e) {}
   }, []);
+  const pickAddress = (a) => { setAddress(a); save("369mart.address", a); };
+  const updateAddresses = (list) => { setAddresses(list); save("369mart.addresses", list); };
   const wish = useMemo(() => ({
     ids: wishIds,
     has: (id) => wishIds.includes(id),
@@ -306,20 +321,42 @@ export default function Home({
     }),
   }), [wishIds]);
   const { tabs, banners, categories, sections, freeDeliveryAt } = modes[mode];
-  const [tab, setTab] = useState(tabs[0]?.key);
   const [cart, setCart] = useState(initialCart);
   const [fx, runSwitch] = useModeSwitch();
+
+  /* one index for every view: home rails + browse catalogue + pack-size variants */
   const byId = useMemo(() => {
-    const m = {};
-    Object.values(modes).forEach((md) => md.sections.forEach((s) => s.items?.forEach((p) => { m[p.id] = p; })));
+    const m = buildIndex();
+    Object.values(modes).forEach((md) => md.sections.forEach((s) => s.items?.forEach((p) => { m[p.id] = enrich({ ...m[p.id], ...p }); })));
     return m;
   }, [modes]);
+  const products = useMemo(() => listable(byId), [byId]);
+
+  /* ---- navigation ---- */
+  const nav = useCallback((v, param = null, opts = {}) => {
+    if (v === "cart" && onViewCart) return onViewCart(); /* separate /cart route */
+    if (v !== "product") fromRect.current = null;
+    setSearchOpen(false);
+    if (syncUrl) {
+      const path = routeToPath(v, param);
+      if (path !== location.pathname + location.search) history[opts.replace ? "replaceState" : "pushState"](null, "", path);
+    }
+    if (!opts.keepScroll) window.scrollTo({ top: 0 });
+    setRoute({ view: v, param });
+  }, [syncUrl, onViewCart]);
+
+  useEffect(() => {
+    if (!syncUrl) return;
+    const onPop = () => { fromRect.current = null; setSearchOpen(false); setRoute(pathToRoute(location.pathname, location.search)); };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, [syncUrl]);
 
   const switchMode = (to, el) => {
     if (to === mode || fx) return;
     runSwitch(to, el, async () => {
       setMode(to);
-      setTab(modes[to].tabs[0]?.key);
+      if (view !== "home") nav("home");
       await onModeChange?.(to); /* e.g. router.push("/shop") — the curtain waits for it */
     });
   };
@@ -332,7 +369,7 @@ export default function Home({
       else { if (!order.current.includes(id)) order.current = [...order.current, id]; next[id] = n; }
       return next;
     });
-  }, [onCartChange]);
+  }, []);
 
   const first = useRef(true);
   useEffect(() => {
@@ -343,6 +380,7 @@ export default function Home({
           const saved = JSON.parse(localStorage.getItem("369mart.cart") || "null");
           if (saved && typeof saved === "object") { order.current = Object.keys(saved); setCart(saved); }
         } catch (e) { /* storage blocked */ }
+        setReady(true);
       }
       return;
     }
@@ -350,26 +388,96 @@ export default function Home({
     onCartChange?.(cart);
   }, [cart]); // eslint-disable-line
 
-  useEffect(() => {
-    if (!syncUrl) return;
-    const onPop = () => setView(location.pathname.startsWith("/cart") ? "cart" : location.pathname.startsWith("/account") ? "account" : "home");
-    window.addEventListener("popstate", onPop);
-    return () => window.removeEventListener("popstate", onPop);
-  }, [syncUrl]);
-
   const lines = order.current.filter((id) => cart[id] && byId[id]).map((id) => ({ p: byId[id], qty: cart[id] }));
   const count = lines.reduce((s, l) => s + l.qty, 0);
   const total = lines.reduce((s, l) => s + l.qty * l.p.price, 0);
   const bannerById = Object.fromEntries(banners.map((b) => [b.id, b]));
 
-  const go = (v) => {
-    if (v === "cart" && onViewCart) return onViewCart(); /* separate /cart route */
-    window.scrollTo({ top: 0 });
-    if (syncUrl && v !== view) history.pushState(null, "", v === "home" ? "/" : "/" + v);
-    setView(v);
+  /* cart → checkout → order. Pass onCheckout to hand the cart to your own flow instead. */
+  const startCheckout = (payload) => {
+    if (onCheckout) return onCheckout(payload);
+    setDraft(payload);
+    try { sessionStorage.setItem("369mart.checkout", JSON.stringify(payload)); } catch (e) {}
+    nav("checkout");
   };
-  const allProducts = useMemo(() => Object.values(byId), [byId]);
-  const quickPicks = useMemo(() => modes[mode].sections.flatMap((s) => s.items || []).filter((p) => p.stock !== 0).slice(0, 6), [mode, modes]);
+  /* after-order changes (cancel, rating, return, demo skip) are stored as patches per order id */
+  const patchOrder = useCallback((id, patch) => {
+    setOrders((list) => list.map((x) => (x.id === id ? { ...x, ...patch } : x)));
+    const all = load("369mart.orderPatches", {});
+    all[id] = { ...(all[id] || {}), ...patch };
+    save("369mart.orderPatches", all);
+  }, []); // eslint-disable-line
+  const reorder = (o, el) => { flyTo(el); o.items.forEach(([id, q]) => byId[id] && byId[id].stock !== 0 && setQty(id, (cart[id] || 0) + q)); };
+  /* account + buy again show the live status of demo orders */
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    if (view !== "account" && view !== "buyagain") return;
+    const t = setInterval(() => setTick((n) => n + 1), 5000);
+    return () => clearInterval(t);
+  }, [view]);
+  const ordersView = useMemo(() => orders.map((x) => {
+    if (!x.at || x.status === "cancelled") return x;
+    const st = liveStatus(x);
+    return st.key === x.status ? x : { ...x, status: st.key, eta: st.key === "delivered" ? "Delivered" : st.mode === "quick" ? `${st.etaMin} mins` : x.eta };
+  }), [orders, tick]); // eslint-disable-line
+
+  const orderPlaced = (o) => {
+    const saved = load("369mart.orders", []);
+    save("369mart.orders", [o, ...(Array.isArray(saved) ? saved : [])].slice(0, 30));
+    setOrders((list) => [o, ...list]);
+    if (o.walletUsed) { const left = Math.max(0, wallet - o.walletUsed); setWallet(left); save("369mart.wallet", left); }
+    order.current = []; setCart({});
+    try { sessionStorage.removeItem("369mart.checkout"); } catch (e) {}
+    nav("order", o.id, { replace: true });
+  };
+
+  const openProduct = useCallback((p, rect) => {
+    fromRect.current = rect || null;
+    setSearchOpen(false);
+    if (syncUrl) history.pushState(null, "", routeToPath("product", p.id));
+    setRoute({ view: "product", param: p.id });
+  }, [syncUrl]);
+
+  /* ---- product page data ---- */
+  const product = view === "product" ? byId[route.param] : null;
+  useEffect(() => {
+    if (!product) return;
+    setRecentIds((r) => {
+      const next = [product.id, ...r.filter((x) => x !== product.id)].slice(0, 12);
+      try { localStorage.setItem(RECENT_KEY, JSON.stringify(next)); } catch (e) {}
+      return next;
+    });
+  }, [product?.id]); // eslint-disable-line
+  const pd = useMemo(() => {
+    if (!product) return null;
+    const self = new Set([product.id, ...variantsOf(product, byId).map((v) => v.id)]);
+    const pool = products.filter((x) => !self.has(x.id));
+    const similar = pool.filter((x) => product.sub && x.cat === product.cat && x.sub === product.sub);
+    const sameCat = pool.filter((x) => product.cat && x.cat === product.cat && x.sub !== product.sub);
+    const sameMode = pool.filter((x) => !!x.delivery === !!product.delivery && x.cat !== product.cat);
+    const byPop = (list) => list.filter((x) => x.stock !== 0).sort((a, b) => b.popularity - a.popularity);
+    /* one pick per other subcategory first (atta → oil, dal…), then anything with the same delivery type */
+    const perSub = Object.values(byPop(sameCat).reduce((m, x) => { if (!m[x.sub] || x.price < m[x.sub].price) m[x.sub] = x; return m; }, {})).sort((a, b) => a.price - b.price);
+    const bundle = [...perSub, ...byPop(sameMode)].slice(0, 2);
+    const also = [...sameCat, ...sameMode].filter((x) => !bundle.includes(x)).slice(0, 10);
+    return { variants: variantsOf(product, byId), similar, bundle, also };
+  }, [product, byId, products]);
+  const recent = recentIds.map((id) => byId[id]).filter(Boolean);
+
+  /* ---- tabs follow the route ---- */
+  const activeTab = useMemo(() => {
+    if (view === "home") return tabs[0]?.key;
+    const hit = tabs.find((t) => {
+      const r = TAB_TO_ROUTE[t.key];
+      if (!r) return false;
+      if (view === "offers") return r[0] === "offers";
+      return view === "category" && r[0] === "category" && String(route.param || "").split("/")[0] === r[1];
+    });
+    return hit?.key || null;
+  }, [view, route.param, tabs]);
+  const pickTab = (key) => { const r = TAB_TO_ROUTE[key]; if (r) nav(r[0], r[1] ?? null); };
+
+  const quickPicks = useMemo(() => modes[mode].sections.flatMap((s) => s.items || []).map((p) => byId[p.id] || p).filter((p) => p.stock !== 0).slice(0, 6), [mode, modes, byId]);
   useEffect(() => {
     const k = (e) => {
       const tag = document.activeElement?.tagName || "";
@@ -378,50 +486,141 @@ export default function Home({
     window.addEventListener("keydown", k);
     return () => window.removeEventListener("keydown", k);
   }, []);
-  const pick = (md) => modes[md].sections.flatMap((s) => s.items || []).filter((p) => !cart[p.id] && p.stock !== 0);
+  const pick = (md) => modes[md].sections.flatMap((s) => s.items || []).map((p) => byId[p.id] || p).filter((p) => !cart[p.id] && p.stock !== 0);
   const recommended = useMemo(() => pick("quick").slice(0, 8), [view]); // eslint-disable-line
   const alsoLike = useMemo(() => pick("all").slice(0, 8), [view]); // eslint-disable-line
 
-  return (
-    <WishContext.Provider value={wish}>
-    <div className={"hm-page" + (count > 0 && view === "home" ? " hm-has-cart" : "") + (view !== "home" ? " hm-in-cart" : "")} data-mode={mode}>
-      <StoreHeader count={count} mode={mode} onMode={switchMode} onCart={() => go("cart")} onAccount={onAccount || (() => go("account"))}
-        onSearch={() => { onSearch?.(); setSearchOpen(true); }} address={address} locOpen={locOpen} onLoc={() => setLocOpen(true)} />
-      {view === "account" ? (
-        <main className="hm-wrap hm-view-account" key="account">
-          <AccountPage byId={byId} cart={cart} setQty={setQty}
-            addresses={addresses} setAddresses={setAddresses} selectedAddress={address} onSelectAddress={setAddress}
-            onBrowse={() => go("home")}
-            onReorder={(o, el) => { flyTo(el, "#hm-cart-icon"); o.items.forEach(([id, q]) => byId[id] && byId[id].stock !== 0 && setQty(id, (cart[id] || 0) + q)); }}
-            onSignOut={() => { onSignOut ? onSignOut() : go("home"); }} />
-        </main>
-      ) : view === "cart" ? (
-        <main className="hm-wrap hm-view-cart" key="cart">
-          <CartPage cart={cart} setQty={setQty} byId={byId} recommended={recommended} alsoLike={alsoLike}
-            onBack={() => go("home")} onCheckout={onCheckout} />
-        </main>
-      ) : (<>
-      <Tabs key={"t" + mode} tabs={tabs} active={tab} onChange={setTab} />
+  const withTabs = view === "home" || view === "category" || view === "offers";
+  const browsing = ["home", "product", "category", "search", "offers", "buyagain", "track"].includes(view);
+  const viewAll = (s) => SECTION_TO_ROUTE[s.key] && nav("category", SECTION_TO_ROUTE[s.key]);
+  const common = { byId, cart, setQty };
+
+  let body;
+  if (view === "product") {
+    body = product ? (
+      <main className="hm-wrap hm-view-product" key={"product-" + (product.variantGroup || product.id)}>
+        <ProductDetail p={product} cart={cart} setQty={setQty} address={address}
+          fromRect={fromRect.current}
+          variants={pd.variants}
+          onVariant={(v) => nav("product", v.id, { replace: true, keepScroll: true })}
+          bundle={pd.bundle}
+          similar={pd.similar}
+          related={pd.also}
+          recent={recent.filter((x) => x.id !== product.id)}
+          onViewSimilar={product.sub ? () => nav("category", `${product.cat}/${product.sub}`) : undefined}
+          onBack={() => { if (syncUrl && history.length > 1) history.back(); else nav("home"); }}
+          onChangeAddress={() => setLocOpen(true)}
+          onExplore={() => (product.cat ? nav("category", product.cat) : nav("home"))} />
+      </main>
+    ) : (
+      <main className="hm-wrap hm-view-browse" key="product-missing">
+        <NotFoundView title="Product not found" text="It may have been removed or the link is incomplete." />
+      </main>
+    );
+  } else if (view === "account") {
+    body = (
+      <main className="hm-wrap hm-view-account" key={"account-" + (route.param || "")}>
+        <AccountPage byId={byId} cart={cart} setQty={setQty} section={route.param || undefined}
+          addresses={addresses} setAddresses={updateAddresses} selectedAddress={address} onSelectAddress={pickAddress} orders={ordersView}
+          onBrowse={() => nav("home")}
+          onReorder={reorder} onTrack={(o) => nav("track", o.id)}
+          onSignOut={() => { onSignOut ? onSignOut() : nav("home"); }} />
+      </main>
+    );
+  } else if (view === "cart") {
+    body = (
+      <main className="hm-wrap hm-view-cart" key="cart">
+        <CartPage cart={cart} setQty={setQty} byId={byId} recommended={recommended} alsoLike={alsoLike}
+          onBack={() => nav("home")} onCheckout={startCheckout} />
+      </main>
+    );
+  } else if (view === "checkout") {
+    body = (
+      <main className="hm-wrap hm-view-checkout" key="checkout">
+        <CheckoutPage cart={cart} byId={byId} draft={draft} ready={ready}
+          addresses={addresses} setAddresses={updateAddresses} address={address} onSelectAddress={pickAddress}
+          walletBalance={wallet} onBack={() => nav("cart")} onPlaced={orderPlaced} />
+      </main>
+    );
+  } else if (view === "track") {
+    const o = orders.find((x) => x.id === route.param);
+    body = (
+      <main className="hm-wrap hm-view-track" key={"track-" + route.param}>
+        {o ? (
+          <OrderTrack order={o} byId={byId} patchOrder={patchOrder}
+            onBack={() => nav("account", "orders")} onReceipt={() => nav("order", o.id)} onShop={() => nav("home")}
+            onReorder={reorder}
+            onRefundWallet={(amt) => setWallet((w) => { const n = w + amt; save("369mart.wallet", n); return n; })} />
+        ) : ready ? (
+          <NotFoundView title="Order not found" text="This order isn't on this device. Your orders are listed in your account." />
+        ) : <div className="co-skel"><span /><span /></div>}
+      </main>
+    );
+  } else if (view === "order") {
+    const o = orders.find((x) => x.id === route.param);
+    body = (
+      <main className="hm-wrap hm-view-order" key={"order-" + route.param}>
+        {o && o.bill ? (
+          <ReceiptPrinter order={o} byId={byId} onTrack={() => nav("track", o.id)} onShop={() => nav("home")} />
+        ) : ready ? (
+          <NotFoundView title="Order not found" text="This receipt isn't on this device. Your orders are listed in your account." />
+        ) : <div className="co-skel"><span /><span /></div>}
+      </main>
+    );
+  } else if (view === "category") {
+    const [slug, sub] = String(route.param || "").split("/");
+    body = <main className="hm-wrap hm-view-browse" key={"cat-" + slug}><CategoryPage slug={slug} subSlug={sub} {...common} /></main>;
+  } else if (view === "search") {
+    body = <main className="hm-wrap hm-view-browse" key="search"><SearchResults q={route.param || ""} mode={mode} {...common} /></main>;
+  } else if (view === "offers") {
+    body = <main className="hm-wrap hm-view-browse" key="offers"><OffersPage {...common} /></main>;
+  } else if (view === "buyagain") {
+    body = <main className="hm-wrap hm-view-browse" key="buyagain"><BuyAgainPage {...common} orders={ordersView} /></main>;
+  } else if (view === "notfound") {
+    body = <main className="hm-wrap hm-view-browse" key="nf"><NotFoundView /></main>;
+  } else {
+    body = (
       <main className="hm-wrap hm-main hm-view-home" key={"m" + mode}>
         <BannerCarousel banners={banners} />
-        <CategoryStrip cats={categories} />
+        <CategoryStrip cats={categories} onPick={(c) => TILE_TO_ROUTE[c.key] && nav("category", TILE_TO_ROUTE[c.key])} />
         {sections.map((s, i) =>
           s.banner ? (
             <div className="hm-inline-banners" key={"bn" + i}>
               {s.banner.map((id, k) => bannerById[id] && <Banner key={id} b={bannerById[id]} i={k} />)}
             </div>
           ) : (
-            <Rail key={s.key} section={s} cart={cart} setQty={setQty} />
+            <Rail key={s.key} section={{ ...s, items: s.items.map((p) => byId[p.id] || p) }} cart={cart} setQty={setQty} onViewAll={SECTION_TO_ROUTE[s.key] ? viewAll : undefined} />
           )
         )}
+        {recent.length > 1 && <Rail key="recent" section={{ key: "recent", title: "Recently viewed", subtitle: "Pick up where you left off", items: recent }} cart={cart} setQty={setQty} />}
       </main>
-      <FreeDelivery total={total} threshold={freeDeliveryAt} />
-      <CartBar lines={lines} count={count} total={total} onView={() => go("cart")} />
-      </>)}
+    );
+  }
+
+  return (
+    <NavContext.Provider value={nav}>
+    <WishContext.Provider value={wish}>
+    <OpenContext.Provider value={openProduct}>
+    <div className={"hm-page" + (count > 0 && browsing ? " hm-has-cart" : "") + (view !== "home" ? " hm-in-cart" : "") + " hm-at-" + view} data-mode={mode}>
+      <StoreHeader count={count} mode={mode} onMode={switchMode} onCart={() => nav("cart")} onAccount={onAccount || (() => nav("account"))}
+        onHome={() => nav("home")} onOffers={() => nav("offers")} onBuyAgain={() => nav("buyagain")} route={view} query={view === "search" ? route.param || "" : ""}
+        onSearch={() => { onSearch?.(); setSearchOpen(true); }} address={address} locOpen={locOpen} onLoc={() => setLocOpen(true)} />
+      {withTabs && <Tabs key={"t" + mode} tabs={tabs} active={activeTab} onChange={pickTab} />}
+      {body}
+      {!["cart", "checkout", "order"].includes(view) && <SiteFooter />}
+      {view === "home" && <FreeDelivery total={total} threshold={freeDeliveryAt} />}
+      {browsing && (
+        <MiniCart lines={lines} count={count} total={total} freeAt={freeDeliveryAt} setQty={setQty}
+          onViewCart={() => nav("cart")} onCheckout={() => startCheckout({ how: "online" })} hidden={!!fx} />
+      )}
       <ModeSwitchOverlay fx={fx} />
-      <SearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} products={allProducts} picks={quickPicks} cart={cart} setQty={setQty} />
-      <LocationPicker open={locOpen} onClose={() => setLocOpen(false)} selected={address} onSelect={setAddress} addresses={addresses} />
+      <SearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} products={products} picks={quickPicks} cart={cart} setQty={setQty}
+        initialQuery={view === "search" ? route.param || "" : ""}
+        onSubmit={(term) => nav("search", term)} />
+      <LocationPicker open={locOpen} onClose={() => setLocOpen(false)} selected={address} onSelect={pickAddress} addresses={addresses} />
     </div>
+    </OpenContext.Provider>
     </WishContext.Provider>
+    </NavContext.Provider>
   );
 }

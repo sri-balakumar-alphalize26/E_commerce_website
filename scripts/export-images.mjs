@@ -1,5 +1,5 @@
 /* Generates the sample product + category images in /public/images from
-   components/home/art.jsx, reading names and counts from sampleData.js.
+   components/home/art.jsx, reading names and counts from sampleData.js and catalog.js (browse-only products).
    Run:  npm run images
    Replace the generated files with real photos (same file names) whenever you have them. */
 import { build } from "esbuild";
@@ -17,6 +17,7 @@ await build({
       import { renderToStaticMarkup } from "react-dom/server";
       import ProductArt from "./components/home/art.jsx";
       export * as data from "./components/home/sampleData.js";
+      export * as catalog from "./components/home/catalog.js";
       export const render = (props) => renderToStaticMarkup(React.createElement(ProductArt, props));
     `,
     resolveDir: root,
@@ -26,7 +27,7 @@ await build({
   loader: { ".js": "jsx" }, outfile: tmp, logLevel: "error",
 });
 
-const { data, render } = await import(pathToFileURL(tmp).href + "?t=" + Date.now());
+const { data, catalog, render } = await import(pathToFileURL(tmp).href + "?t=" + Date.now());
 rmSync(tmp);
 
 const inner = (p) => render(p).replace(/^<svg[^>]*>/, "").replace(/<\/svg>$/, "");
@@ -45,12 +46,12 @@ const VIEWS = [
   (g) => svg("0 -10 120 120", `<g transform="translate(120 0) scale(-1 1)">${g}</g>`),
 ];
 
-const DEFAULT_COLOR = { Banana: "#e8b923", Apple: "#d8262e", Pomegranate: "#b3122b", Orange: "#f28c1b", Grapes: "#88b62f", Headphones: "#1b3a55", Speaker: "#0f6a9c", Charger: "#1a7f9a", Ssd: "#155c86", Webcam: "#2a86b8", Lamp: "#b3561a", Plates: "#b85a1c", Flask: "#a8561f", Towels: "#c07a45", Board: "#c38c49", Basket: "#c9a36b" };
+const DEFAULT_COLOR = { Banana: "#e8b923", Apple: "#d8262e", Pomegranate: "#b3122b", Orange: "#f28c1b", Grapes: "#88b62f", Headphones: "#1b3a55", Speaker: "#0f6a9c", Charger: "#1a7f9a", Ssd: "#155c86", Webcam: "#2a86b8", Lamp: "#b3561a", Plates: "#b85a1c", Flask: "#a8561f", Towels: "#c07a45", Board: "#c38c49", Basket: "#c9a36b", Soap: "#2e7d4f", SoapBar: "#d99a5b", Tomato: "#d8312a", Onion: "#9c4a6b", Leafy: "#2f8a3a" };
 
 const out = (rel, text) => { const f = join(root, "public", rel); mkdirSync(dirname(f), { recursive: true }); writeFileSync(f, text); };
 let n = 0;
 
-for (const list of [data.SECTIONS, data.ALL_SECTIONS]) {
+for (const list of [data.SECTIONS, data.ALL_SECTIONS, [{ items: catalog.EXTRA_ITEMS }]]) {
   for (const s of list) {
     for (const p of s.items || []) {
       const g = inner({ art: p.art, color: p.color, label: p.label });

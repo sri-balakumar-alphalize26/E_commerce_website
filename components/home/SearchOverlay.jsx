@@ -6,9 +6,9 @@
    Typing shows live results with the match highlighted; rows re-cascade.
    Esc / backdrop / close → shrinks back into the bar. Full-screen sheet < 600px.
    ========================================================================== */
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import ProductArt from "./art";
-import { Icon, QtyControl, SEARCH_WORDS, inr } from "./shared";
+import { Icon, OpenContext, QtyControl, SEARCH_WORDS, Thumb, inr } from "./shared";
 
 const TRENDING = ["Coffee beans", "Fast charger", "Bananas", "Bath towels", "Dry fruits", "Headphones"];
 const STORE_KEY = "369mart.searches";
@@ -19,9 +19,6 @@ function insetOf(bar, p) {
   return `inset(${c(bar.top - p.top)} ${c(p.right - bar.right)} ${c(p.bottom - bar.bottom)} ${c(bar.left - p.left)} round ${(bar.height / 2).toFixed(1)}px)`;
 }
 
-function Thumb({ p }) {
-  return p.image ? <img src={p.image} alt="" /> : <ProductArt art={p.art} color={p.color} label={p.label} />;
-}
 
 function Highlight({ text, q }) {
   if (!q) return text;
@@ -30,7 +27,7 @@ function Highlight({ text, q }) {
   return <>{text.slice(0, i)}<mark>{text.slice(i, i + q.length)}</mark>{text.slice(i + q.length)}</>;
 }
 
-export default function SearchOverlay({ open, onClose, products, picks, cart, setQty, triggerSelector = ".hm-search" }) {
+export default function SearchOverlay({ open, onClose, products, picks, cart, setQty, onSubmit, initialQuery = "", triggerSelector = ".hm-search" }) {
   const [phase, setPhase] = useState("closed"); // closed | open | closing
   const [q, setQ] = useState("");
   const [past, setPast] = useState(["atta", "headphones", "dark chocolate", "portable ssd", "green tea"]);
@@ -41,6 +38,7 @@ export default function SearchOverlay({ open, onClose, products, picks, cart, se
   const back = useRef(null);
   const input = useRef(null);
   const anims = useRef([]);
+  const openProduct = useContext(OpenContext);
 
   /* restore / persist past searches */
   useEffect(() => {
@@ -66,6 +64,7 @@ export default function SearchOverlay({ open, onClose, products, picks, cart, se
         const w = Math.min(Math.max(720, bar.width + 24), vw - 32);
         setPlace({ sheet: false, bar, x: Math.min(Math.max(16, bar.left - 12), vw - 16 - w), y: Math.max(8, bar.top - 10), w });
       }
+      setQ(initialQuery); /* on the results page the current term is prefilled and selected */
       setPhase("open");
     }
     if (!open && phase === "open") close();
@@ -76,6 +75,7 @@ export default function SearchOverlay({ open, onClose, products, picks, cart, se
     if (phase !== "open" || !panel.current) return;
     document.documentElement.classList.add("sr-lock");
     input.current?.focus({ preventScroll: true });
+    if (initialQuery) input.current?.select();
     anims.current.forEach((a) => a.cancel());
     if (!reducedMotion() && panel.current.animate) {
       const p = panel.current.getBoundingClientRect();
@@ -134,11 +134,14 @@ export default function SearchOverlay({ open, onClose, products, picks, cart, se
   }); // eslint-disable-line
 
   const term = q.trim();
-  const results = useMemo(() => {
+  const matches = useMemo(() => {
     if (!term) return [];
-    const t = term.toLowerCase();
-    return products.filter((p) => `${p.name} ${p.unit || ""}`.toLowerCase().includes(t)).slice(0, 8);
+    const words = term.toLowerCase().split(/\s+/);
+    return products.filter((p) => { const hay = `${p.name} ${p.unit || ""} ${p.brand || ""} ${p.subName || ""}`.toLowerCase(); return words.every((w) => hay.includes(w)); });
   }, [term, products]);
+  const results = matches.slice(0, 8);
+  /* Enter / "See all" → full results page (when the app provides one) */
+  const submit = (t) => { remember(t); if (onSubmit) { close(); onSubmit(t); } };
 
   if (phase === "closed") return null;
 
@@ -163,7 +166,7 @@ export default function SearchOverlay({ open, onClose, products, picks, cart, se
             <Icon n="search" size={18} />
             <input ref={input} type="search" value={q} placeholder=" " autoComplete="off" aria-label="Search products"
               onChange={(e) => setQ(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter" && term) remember(term); }} />
+              onKeyDown={(e) => { if (e.key === "Enter" && term) submit(term); }} />
             <span className="sr-ph">Search for '{roll}</span>
             {q && <button className="sr-clear" onClick={() => { setQ(""); input.current?.focus(); }} aria-label="Clear text"><Icon n="x" size={14} /></button>}
           </label>
@@ -201,7 +204,7 @@ export default function SearchOverlay({ open, onClose, products, picks, cart, se
                   <article key={p.id} className="sr-pick" style={{ "--i": i }}>
                     <div className="sr-pick-img"><Thumb p={p} />
                       <div className="sr-pick-cta">
-                        {p.stock === 0 ? <span className="sr-sold">Sold out</span> : <QtyControl qty={cart[p.id] || 0} name={p.name} onChange={(n) => setQty(p.id, n)} />}
+                        {p.stock === 0 ? <span className="sr-sold">Sold out</span> : <QtyControl qty={cart[p.id] || 0} id={p.id} name={p.name} onChange={(n) => setQty(p.id, n)} />}
                       </div>
                     </div>
                     <b>{p.name}</b>
@@ -217,18 +220,29 @@ export default function SearchOverlay({ open, onClose, products, picks, cart, se
             {results.length ? (
               <ul className="sr-results" key={term}>
                 {results.map((p, i) => (
-                  <li key={p.id} className="sr-row" style={{ "--i": i }}>
+                  <li key={p.id} className="sr-row" style={{ "--i": i }} data-open=""
+                    onClick={(e) => {
+                      if (!openProduct || e.target.closest("button")) return;
+                      const r = e.currentTarget.querySelector(".sr-row-img")?.getBoundingClientRect();
+                      remember(term); close(); openProduct(p, r);
+                    }}>
                     <span className="sr-row-img"><Thumb p={p} /></span>
                     <span className="sr-row-txt">
                       <b><Highlight text={p.name} q={term} /></b>
                       <small>{p.unit}{p.delivery ? ` · ${p.delivery}` : " · Quick"}{p.stock === 0 ? " · out of stock" : ""}</small>
                     </span>
                     <span className="sr-row-price">{inr(p.price)}</span>
-                    {p.stock === 0 ? <span className="sr-sold">Sold out</span> : <QtyControl qty={cart[p.id] || 0} name={p.name} onChange={(n) => { remember(term); setQty(p.id, n); }} />}
+                    {p.stock === 0 ? <span className="sr-sold">Sold out</span> : <QtyControl qty={cart[p.id] || 0} id={p.id} name={p.name} onChange={(n) => { remember(term); setQty(p.id, n); }} />}
                   </li>
                 ))}
               </ul>
-            ) : (
+            ) : null}
+            {term && onSubmit && (
+              <button className="sr-all" onClick={() => submit(term)} style={{ "--i": results.length }}>
+                <Icon n="search" size={15} />{matches.length ? `See all ${matches.length} results for “${term}”` : `Search 369 Mart for “${term}”`}<Icon n="right" size={15} />
+              </button>
+            )}
+            {results.length ? null : (
               <div className="sr-empty">
                 <Icon n="search" size={28} />
                 <b>Nothing matches “{term}”</b>

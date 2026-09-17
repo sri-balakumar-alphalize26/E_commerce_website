@@ -15,7 +15,7 @@
    - sign out: confirm dialog pops, then the page fades out
    ========================================================================== */
 import { useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Icon, QtyControl, Thumb, WishContext, inr } from "./shared";
+import { Icon, OpenContext, QtyControl, Thumb, WishContext, inr } from "./shared";
 
 const MENU = [
   { key: "profile", label: "My Profile", icon: "user" },
@@ -111,6 +111,7 @@ function ProfileSec({ user, onSave }) {
 function ListSec({ byId, cart, setQty, onBrowse }) {
   const wish = useContext(WishContext);
   const [leaving, setLeaving] = useState({});
+  const open = useContext(OpenContext);
   const ids = wish ? [...wish.ids] : [];
   if (!ids.length) {
     return (
@@ -126,14 +127,14 @@ function ListSec({ byId, cart, setQty, onBrowse }) {
         const p = byId[id];
         return (
           <article key={id} className={"ac-wish" + (leaving[id] ? " ac-leaving" : "")} style={{ "--i": i }}>
-            <div className="ac-wish-img"><Thumb p={p} />
+            <div className="ac-wish-img" onClick={(e) => { if (!e.target.closest("button")) open?.(p, e.currentTarget.getBoundingClientRect()); }} style={{ cursor: "pointer" }}><Thumb p={p} />
               <button className="ac-wish-heart" onClick={() => remove(id)} aria-label={`Remove ${p.name} from My List`}><Icon n="heartFill" size={18} /></button>
             </div>
             <b>{p.name}</b>
             <small>{p.unit}</small>
             <div className="ac-wish-foot">
               <span className="ac-price">{inr(p.price)}{p.mrp ? <s>{inr(p.mrp)}</s> : null}</span>
-              {p.stock === 0 ? <span className="ac-muted">Sold out</span> : <QtyControl qty={cart[p.id] || 0} name={p.name} onChange={(n) => setQty(p.id, n)} />}
+              {p.stock === 0 ? <span className="ac-muted">Sold out</span> : <QtyControl qty={cart[p.id] || 0} id={p.id} name={p.name} onChange={(n) => setQty(p.id, n)} />}
             </div>
           </article>
         );
@@ -188,7 +189,7 @@ function AddressSec({ addresses, setAddresses, selected, onSelect }) {
   );
 }
 
-function OrdersSec({ orders, byId, onReorder }) {
+function OrdersSec({ orders, byId, onReorder, onTrack }) {
   const [tab, setTab] = useState("all");
   const [open, setOpen] = useState(orders[0]?.id);
   const tabs = [["all", "All"], ["active", "Active"], ["delivered", "Delivered"], ["cancelled", "Cancelled"]];
@@ -244,8 +245,8 @@ function OrdersSec({ orders, byId, onReorder }) {
                     <span><small>Total</small><b>{inr(o.total)}</b></span>
                   </div>
                   <div className="ac-order-act">
-                    <button className="ac-ghost" tabIndex={isOpen ? 0 : -1}>Download invoice</button>
-                    {o.status === "delivered" && <button className="ac-ghost" tabIndex={isOpen ? 0 : -1}><Icon n="star" size={15} />Rate items</button>}
+                    {onTrack && <button className="ac-ghost" onClick={() => onTrack(o)} tabIndex={isOpen ? 0 : -1}><Icon n={cancelled || o.status === "delivered" ? "note" : "pin"} size={15} />{cancelled || o.status === "delivered" ? "Order details" : "Track order"}</button>}
+                    {o.status === "delivered" && <button className="ac-ghost" onClick={() => onTrack?.(o)} tabIndex={isOpen ? 0 : -1}><Icon n="star" size={15} />{o.rating ? "Rated " + o.rating.stars + "★" : "Rate order"}</button>}
                     <button className="ac-primary" onClick={(e) => onReorder(o, e.currentTarget)} tabIndex={isOpen ? 0 : -1}>Reorder</button>
                   </div>
                 </div>
@@ -334,7 +335,7 @@ export default function AccountPage({
   user: initialUser = { name: "Demo", email: "abc", phone: "" },
   section: initialSection = "list",
   byId, cart, setQty, addresses, setAddresses, selectedAddress, onSelectAddress,
-  orders = SAMPLE_ORDERS, onBrowse, onReorder, onSignOut,
+  orders = SAMPLE_ORDERS, onBrowse, onReorder, onTrack, onSignOut,
 }) {
   const [user, setUser] = useState(initialUser);
   const [section, setSection] = useState(initialSection);
@@ -374,7 +375,7 @@ export default function AccountPage({
   if (section === "profile") body = <ProfileSec user={user} onSave={setUser} />;
   else if (section === "list") body = <ListSec byId={byId} cart={cart} setQty={setQty} onBrowse={onBrowse} />;
   else if (section === "address") body = <AddressSec addresses={addresses} setAddresses={setAddresses} selected={selectedAddress} onSelect={onSelectAddress} />;
-  else if (section === "orders") body = <OrdersSec orders={orders} byId={byId} onReorder={onReorder} />;
+  else if (section === "orders") body = <OrdersSec orders={orders} byId={byId} onReorder={onReorder} onTrack={onTrack} />;
   else if (section === "help") body = <HelpSec />;
   else if (section === "about") body = <AboutSec />;
   else body = <LegalSec />;

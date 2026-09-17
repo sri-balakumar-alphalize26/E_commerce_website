@@ -90,7 +90,7 @@ export const SECTIONS = [
   },
 ];
 
-/* ---------------- Shop all (marketplace, 2–5 day delivery) ---------------- */
+/* ---------------- Express (marketplace, 2–5 day delivery) ---------------- */
 export const ALL_TABS = [
   { key: "foryou", label: "For you", icon: "grid" },
   { key: "electronics", label: "Electronics", icon: "plug" },
