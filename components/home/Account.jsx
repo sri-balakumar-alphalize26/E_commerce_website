@@ -170,6 +170,7 @@ function AddressSec({ addresses, setAddresses, selected, onSelect }) {
         <span className="ac-add-ic"><Icon n="plus" size={18} /></span>Add a new address
       </button>
       <div className={"ac-collapse" + (adding ? " ac-show" : "")}>
+        <div>
         <form className="ac-card ac-addr-form" onSubmit={add}>
           <div className="ac-chips">
             {["Home", "Work", "Other"].map((l) => (
@@ -180,6 +181,7 @@ function AddressSec({ addresses, setAddresses, selected, onSelect }) {
           <input placeholder="City and pincode" value={draft.city} onChange={(e) => setDraft({ ...draft, city: e.target.value })} tabIndex={adding ? 0 : -1} />
           <button className="ac-primary" type="submit" tabIndex={adding ? 0 : -1}>Save address</button>
         </form>
+        </div>
       </div>
       {addresses.map((a, i) => {
         const on = selected?.id === a.id;
@@ -245,6 +247,7 @@ function OrdersSec({ orders, byId, onReorder, onTrack }) {
                 </div>
               )}
               <div className={"ac-collapse" + (isOpen ? " ac-show" : "")}>
+                <div>
                 <div className="ac-order-body">
                   <ul>
                     {o.items.map(([id, q]) => byId[id] && (
@@ -261,6 +264,7 @@ function OrdersSec({ orders, byId, onReorder, onTrack }) {
                     {o.status === "delivered" && <button className="ac-ghost" onClick={() => onTrack?.(o)} tabIndex={isOpen ? 0 : -1}><Icon n="star" size={15} />{o.rating ? "Rated " + o.rating.stars + "★" : "Rate order"}</button>}
                     <button className="ac-primary" onClick={(e) => onReorder(o, e.currentTarget)} tabIndex={isOpen ? 0 : -1}>Reorder</button>
                   </div>
+                </div>
                 </div>
               </div>
             </article>
