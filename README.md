@@ -58,7 +58,9 @@ Needs Node 18.18 or newer (Node 20 LTS recommended).
   cross draws, sheet shakes, Retry or Change method. Demo rules: UPI ID with "fail" is declined, OTP
   000000 is wrong, card ending 0002 is declined.
 - **Order success** (`/order/<id>`) — receipt printer: brass slot, the receipt feeds out in motor steps with
-  a synthesised printer sound (mute button), then Re-print receipt (rolls back in and prints again) or
+  a printer sound (chatter + motor, synced to the paper steps, mute button; sound is unlocked by the first
+  tap in the app, and a "Tap for printer sound" hint appears if the page was opened directly), the page
+  auto-scrolls with the paper and stops when it ends or when you scroll yourself, then Re-print receipt (rolls back in and prints again) or
   Tear receipt (two tugs, rip sound, jagged top edge, paper drops free). Then Download receipt (prints
   only the receipt), Track order (Account → Orders, where the new order is listed) and Continue shopping.
   Orders, wallet balance and addresses are kept in localStorage.
@@ -163,7 +165,8 @@ components/
   home/orderState.js  order steps, demo clock, rider, OTP, return window — replace with Odoo data
   home/track.css      tracking styles and animations
   home/Checkout.jsx   checkout steps, payment methods, pay sheet (UPI wait, OTP, redirect, result)
-  home/Receipt.jsx    receipt printer animation + printer sounds
+  home/Receipt.jsx    receipt printer animation, auto-scroll
+  home/sound.js       shared Web Audio engine: unlock on first tap, printer / rewind / tug / rip sounds
   home/payment.js     card/UPI helpers, banks, UPI apps, demo gateway — swap for your real gateway
   home/checkout.css   checkout, payment and receipt styles
   home/ProductDetail.jsx  product page

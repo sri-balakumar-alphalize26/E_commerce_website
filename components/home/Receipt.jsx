@@ -2,102 +2,19 @@
 /* ==========================================================================
    369 Mart — Receipt printer (order success)
    A brass printer slot sits on top; the paper feeds out of it in small motor
-   steps while the printer hums (Web Audio, can be muted). When it's done:
+   steps while the printer chatters (Web Audio, can be muted) and the page
+   scrolls with the paper so the printing edge stays in view; the scroll
+   stops when the paper ends (or as soon as you scroll yourself). When it's done:
    Re-print receipt (paper rolls back into the slot and prints again) or
    Tear receipt (two tugs, a rip, the paper drops free and settles as a card
    with Download / Track order).
    ========================================================================== */
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Icon, inr } from "./shared";
+import { audioRunning, onAudioState, playPrint, playRewind, playRip, playTug, unlockAudio } from "./sound";
 
 const SOUND_KEY = "369mart.sound";
 const reduced = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-
-/* ---------- printer + tear sounds, synthesised (no audio files) ---------- */
-function usePrinterSound(enabled) {
-  const ctx = useRef(null);
-  const live = useRef([]);
-  const get = () => {
-    if (typeof window === "undefined") return null;
-    const AC = window.AudioContext || window.webkitAudioContext;
-    if (!AC) return null;
-    if (!ctx.current) ctx.current = new AC();
-    if (ctx.current.state === "suspended") ctx.current.resume().catch(() => {});
-    return ctx.current;
-  };
-  const noise = (ac, secs) => {
-    const buf = ac.createBuffer(1, Math.ceil(ac.sampleRate * secs), ac.sampleRate);
-    const d = buf.getChannelData(0);
-    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
-    const src = ac.createBufferSource();
-    src.buffer = buf;
-    return src;
-  };
-  const stop = () => { live.current.forEach((n) => { try { n.stop(); } catch (e) {} }); live.current = []; };
-  useEffect(() => { if (!enabled) stop(); }, [enabled]);
-  useEffect(() => () => { stop(); ctx.current?.close?.().catch(() => {}); }, []);
-
-  return {
-    /* thermal print head: band-passed noise chopped by a fast square LFO */
-    print(ms) {
-      if (!enabled) return;
-      const ac = get(); if (!ac) return;
-      const t = ac.currentTime, secs = ms / 1000;
-      const src = noise(ac, secs + 0.1);
-      const bp = ac.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 2600; bp.Q.value = 0.9;
-      const amp = ac.createGain(); amp.gain.value = 0;
-      const lfo = ac.createOscillator(); lfo.type = "square"; lfo.frequency.value = 26;
-      const lfoGain = ac.createGain(); lfoGain.gain.value = 0.05;
-      const out = ac.createGain();
-      out.gain.setValueAtTime(0, t); out.gain.linearRampToValueAtTime(1, t + 0.05);
-      out.gain.setValueAtTime(1, t + secs - 0.12); out.gain.linearRampToValueAtTime(0, t + secs);
-      lfo.connect(lfoGain).connect(amp.gain);
-      amp.gain.setValueAtTime(0.06, t);
-      src.connect(bp).connect(amp).connect(out).connect(ac.destination);
-      /* motor whine underneath */
-      const motor = ac.createOscillator(); motor.type = "sawtooth"; motor.frequency.value = 118;
-      const mg = ac.createGain(); mg.gain.value = 0.012;
-      const lp = ac.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 600;
-      motor.connect(lp).connect(mg).connect(out);
-      src.start(t); lfo.start(t); motor.start(t);
-      src.stop(t + secs + 0.05); lfo.stop(t + secs + 0.05); motor.stop(t + secs + 0.05);
-      live.current.push(src, lfo, motor);
-    },
-    rewind(ms) {
-      if (!enabled) return;
-      const ac = get(); if (!ac) return;
-      const t = ac.currentTime, secs = ms / 1000;
-      const o = ac.createOscillator(); o.type = "sawtooth";
-      o.frequency.setValueAtTime(90, t); o.frequency.linearRampToValueAtTime(160, t + secs);
-      const g = ac.createGain(); g.gain.setValueAtTime(0.018, t); g.gain.linearRampToValueAtTime(0, t + secs);
-      const lp = ac.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 700;
-      o.connect(lp).connect(g).connect(ac.destination); o.start(t); o.stop(t + secs);
-      live.current.push(o);
-    },
-    rip() {
-      if (!enabled) return;
-      const ac = get(); if (!ac) return;
-      const t = ac.currentTime;
-      const src = noise(ac, 0.4);
-      const hp = ac.createBiquadFilter(); hp.type = "highpass";
-      hp.frequency.setValueAtTime(900, t); hp.frequency.exponentialRampToValueAtTime(4800, t + 0.28);
-      const g = ac.createGain();
-      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.22, t + 0.03); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.34);
-      src.connect(hp).connect(g).connect(ac.destination); src.start(t); src.stop(t + 0.4);
-      live.current.push(src);
-    },
-    tug() {
-      if (!enabled) return;
-      const ac = get(); if (!ac) return;
-      const t = ac.currentTime;
-      const src = noise(ac, 0.12);
-      const bp = ac.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 1400;
-      const g = ac.createGain(); g.gain.setValueAtTime(0.08, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.1);
-      src.connect(bp).connect(g).connect(ac.destination); src.start(t); src.stop(t + 0.12);
-      live.current.push(src);
-    },
-  };
-}
 
 /* ---------- barcode from the transaction id ---------- */
 function Barcode({ value }) {
@@ -198,17 +115,74 @@ function feedFrames(dir = 1) {
   return frames;
 }
 
+const FEED_STEPS = 22;
+
 export default function ReceiptPrinter({ order, byId, onTrack, onShop }) {
   const [phase, setPhase] = useState("printing"); // printing | printed | rewinding | tearing | torn
   const [sound, setSound] = useState(true);
+  const [needTap, setNeedTap] = useState(false);
   const [pulled, setPulled] = useState(false);
   const paper = useRef(null);
   const printer = useRef(null);
   const anim = useRef(null);
-  const sfx = usePrinterSound(sound);
+  const stopSound = useRef(() => {});
+  const run = useRef(null); /* { t0, ms } of the current print */
+  const soundOn = useRef(true);
+  soundOn.current = sound;
+  const phaseRef = useRef(phase);
+  phaseRef.current = phase;
 
   useEffect(() => { try { if (localStorage.getItem(SOUND_KEY) === "off") setSound(false); } catch (e) {} }, []);
-  const toggleSound = () => setSound((s) => { try { localStorage.setItem(SOUND_KEY, s ? "off" : "on"); } catch (e) {} return !s; });
+  useEffect(() => () => { stopSound.current(); cancelAnimationFrame(follow.current.raf); }, []); // eslint-disable-line
+
+  /* play the print sound from wherever the paper is now */
+  const soundFromNow = () => {
+    const r = run.current;
+    if (!r || !soundOn.current) return;
+    const done = (performance.now() - r.t0) / r.ms;
+    if (done >= 0.97) return;
+    if (!audioRunning()) { setNeedTap(true); return; }
+    setNeedTap(false);
+    stopSound.current();
+    const from = Math.min(FEED_STEPS - 1, Math.floor(done * FEED_STEPS));
+    stopSound.current = playPrint({ ms: r.ms, steps: FEED_STEPS, from });
+  };
+  /* sound unlocked later (e.g. first tap on this page) → join in mid-print */
+  useEffect(() => onAudioState((st) => { if (st === "running") { setNeedTap(false); if (phaseRef.current === "printing") soundFromNow(); } }), []); // eslint-disable-line
+
+  const toggleSound = () => {
+    const next = !sound;
+    setSound(next);
+    soundOn.current = next;
+    try { localStorage.setItem(SOUND_KEY, next ? "on" : "off"); } catch (e) {}
+    if (!next) { stopSound.current(); setNeedTap(false); return; }
+    unlockAudio().then(() => { if (phaseRef.current === "printing") soundFromNow(); });
+  };
+
+  /* ---- auto-scroll: keep the paper's bottom edge in view while it feeds ---- */
+  const follow = useRef({ raf: 0, user: false });
+  const stopFollow = () => { cancelAnimationFrame(follow.current.raf); window.removeEventListener("wheel", userScroll); window.removeEventListener("touchmove", userScroll); window.removeEventListener("keydown", userKey); };
+  function userScroll() { follow.current.user = true; }
+  function userKey(e) { if (["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "].includes(e.key)) follow.current.user = true; }
+  const startFollow = () => {
+    stopFollow();
+    follow.current.user = false;
+    window.addEventListener("wheel", userScroll, { passive: true });
+    window.addEventListener("touchmove", userScroll, { passive: true });
+    window.addEventListener("keydown", userKey);
+    const tick = () => {
+      const el = paper.current;
+      if (!el || !anim.current || anim.current.playState !== "running") return stopFollow();
+      if (!follow.current.user) {
+        const bottom = el.getBoundingClientRect().bottom;
+        const keep = Math.min(230, window.innerHeight * 0.32); /* room for the title and buttons under the paper */
+        const over = bottom - (window.innerHeight - keep);
+        if (over > 1) window.scrollTo(0, window.scrollY + over * 0.22);
+      }
+      follow.current.raf = requestAnimationFrame(tick);
+    };
+    follow.current.raf = requestAnimationFrame(tick);
+  };
 
   const print = () => {
     const el = paper.current;
@@ -219,11 +193,17 @@ export default function ReceiptPrinter({ order, byId, onTrack, onShop }) {
     anim.current?.cancel();
     anim.current = el.animate(feedFrames(1), { duration: ms, easing: "linear", fill: "both" });
     printer.current?.animate([{ transform: "translateY(0)" }, { transform: "translateY(-0.6px)" }, { transform: "translateY(0.6px)" }], { duration: 90, iterations: Math.ceil(ms / 90) });
-    sfx.print(ms);
-    anim.current.onfinish = () => setPhase("printed");
+    run.current = { t0: performance.now(), ms };
+    stopSound.current();
+    if (soundOn.current) {
+      if (audioRunning()) stopSound.current = playPrint({ ms, steps: FEED_STEPS });
+      else setNeedTap(true);
+    }
+    startFollow();
+    anim.current.onfinish = () => { stopFollow(); run.current = null; setNeedTap(false); setPhase("printed"); };
   };
 
-  useLayoutEffect(() => { const t = setTimeout(print, 650); return () => clearTimeout(t); }, []); // eslint-disable-line
+  useLayoutEffect(() => { const t = setTimeout(print, 650); return () => { clearTimeout(t); stopFollow(); }; }, []); // eslint-disable-line
 
   const reprint = () => {
     const el = paper.current;
@@ -231,7 +211,8 @@ export default function ReceiptPrinter({ order, byId, onTrack, onShop }) {
     if (reduced() || !el.animate) return print();
     setPhase("rewinding");
     anim.current?.cancel();
-    sfx.rewind(520);
+    if (sound) { unlockAudio(); stopSound.current = playRewind({ ms: 520 }); }
+    window.scrollTo({ top: 0, behavior: "smooth" }); /* watch it print again from the top */
     anim.current = el.animate([{ transform: "translateY(0)" }, { transform: "translateY(-100%)" }], { duration: 520, easing: "cubic-bezier(.5,0,.75,0)", fill: "both" });
     anim.current.onfinish = () => setTimeout(print, 160);
   };
@@ -242,10 +223,11 @@ export default function ReceiptPrinter({ order, byId, onTrack, onShop }) {
     setPhase("tearing");
     if (reduced() || !el.animate) { setPulled(true); setPhase("torn"); return; }
     anim.current?.cancel();
+    if (sound) unlockAudio();
     const tug = (y, r) => el.animate([{ transform: "translateY(0) rotate(0)" }, { transform: `translateY(${y}px) rotate(${r}deg)` }, { transform: "translateY(0) rotate(0)" }], { duration: 170, easing: "ease-out" }).finished;
-    sfx.tug(); await tug(5, 0.6);
-    sfx.tug(); await tug(8, -0.8);
-    sfx.rip();
+    if (sound) playTug({}); await tug(5, 0.6);
+    if (sound) playTug({}); await tug(8, -0.8);
+    if (sound) playRip({});
     setPulled(true); /* top edge becomes jagged */
     const drop = el.animate(
       [{ transform: "translateY(0) rotate(0)" }, { transform: "translateY(26px) rotate(-3.5deg)", offset: 0.45 }, { transform: "translateY(16px) rotate(1.2deg)", offset: 0.75 }, { transform: "translateY(20px) rotate(-1.2deg)" }],
@@ -296,7 +278,8 @@ export default function ReceiptPrinter({ order, byId, onTrack, onShop }) {
         )}
       </div>
 
-      <button className={"rc-sound" + (sound ? "" : " rc-muted")} onClick={toggleSound} aria-pressed={!sound} aria-label={sound ? "Mute printer sound" : "Unmute printer sound"}>
+      {needTap && sound && <button className="rc-sound-hint" onClick={() => unlockAudio().then(soundFromNow)}><Icon n="volume" size={14} />Tap for printer sound</button>}
+      <button className={"rc-sound" + (sound ? "" : " rc-muted") + (needTap && sound ? " rc-need" : "")} onClick={needTap && sound ? () => unlockAudio().then(soundFromNow) : toggleSound} aria-pressed={!sound} aria-label={sound ? "Mute printer sound" : "Unmute printer sound"}>
         <Icon n={sound ? "volume" : "mute"} size={18} />
       </button>
     </div>

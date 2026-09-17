@@ -25,6 +25,7 @@ import MiniCart from "./MiniCart";
 import ReceiptPrinter from "./Receipt";
 import OrderTrack from "./OrderTrack";
 import { liveStatus } from "./orderState";
+import { installAudioUnlock } from "./sound";
 import { SAMPLE_ORDERS } from "./Account";
 import { WALLET_BALANCE } from "./payment";
 import { ALL_BANNERS, ALL_CATEGORIES, ALL_SECTIONS, ALL_TABS, BANNERS, CATEGORIES, SECTIONS, TABS } from "./sampleData";
@@ -297,6 +298,7 @@ export default function Home({
   const [ready, setReady] = useState(!persistCart); /* true once saved cart / orders are loaded */
   const load = (k, fallback) => { try { const v = JSON.parse(localStorage.getItem(k) || "null"); return v ?? fallback; } catch (e) { return fallback; } };
   const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+  useEffect(() => { installAudioUnlock(); }, []); /* first tap anywhere unlocks sound for the receipt printer */
   useEffect(() => {
     const w = load("369mart.list", null); if (Array.isArray(w)) setWishIds(w);
     const r = load(RECENT_KEY, null); if (Array.isArray(r)) setRecentIds(r);
