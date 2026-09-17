@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- What shoppers typed into the app's search box. Read top-down it is a
+         demand list; read bottom-up, where Results is 0, it is a list of things
+         the catalogue does not have. -->
+    <record id="mart369_search_term_view_list" model="ir.ui.view">
+        <field name="name">mart369.search.term.list</field>
+        <field name="model">mart369.search.term</field>
+        <field name="arch" type="xml">
+            <list string="Searches" class="o_mart369_list" create="false"
+                  decoration-danger="results == 0"
+                  decoration-muted="not trending">
+                <field name="term" string="Searched for" class="fw-bold"/>
+                <field name="hits" string="Times"/>
+                <field name="results" string="Results"/>
+                <field name="last_seen" string="Last searched"/>
+                <field name="trending" string="Allow in Trending" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="mart369_search_term_view_search" model="ir.ui.view">
+        <field name="name">mart369.search.term.search</field>
+        <field name="model">mart369.search.term</field>
+        <field name="arch" type="xml">
+            <search string="Searches">
+                <field name="term"/>
+                <filter name="nothing_found" string="Found nothing"
+                        domain="[('results', '=', 0)]"/>
+                <filter name="blocked" string="Blocked from Trending"
+                        domain="[('trending', '=', False)]"/>
+                <separator/>
+                <filter name="recent" string="Searched this week"
+                        domain="[('last_seen', '&gt;=', (context_today() - relativedelta(days=7)).strftime('%Y-%m-%d'))]"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_mart369_searches" model="ir.actions.act_window">
+        <field name="name">Searches</field>
+        <field name="res_model">mart369.search.term</field>
+        <field name="view_mode">list</field>
+        <field name="search_view_id" ref="mart369_search_term_view_search"/>
+        <field name="context">{'search_default_nothing_found': 0}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Nobody has searched yet</p>
+            <p>Every search in the 369 Mart app is counted here. The ones that
+               found nothing are worth reading first - they are what customers
+               wanted and you do not stock.</p>
+        </field>
+    </record>
+
+    <menuitem id="menu_mart369_searches"
+              name="Searches"
+              parent="mart369_home.menu_mart369_root"
+              action="action_mart369_searches"
+              groups="base.group_system"
+              sequence="45"/>
+
+</odoo>

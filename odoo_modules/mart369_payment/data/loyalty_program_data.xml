@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+
+        <!--
+            The 369 Wallet.
+
+            One eWallet programme for the whole shop; each customer gets one
+            loyalty.card under it, and that card's `points` is their balance.
+
+            The reward line is not optional decoration - loyalty.program's own
+            _constrains_reward_ids refuses a programme with no reward. One point
+            is one rupee, so `discount_mode='per_point'` with `discount=1` makes
+            spending the wallet an ordinary order discount.
+        -->
+        <record id="loyalty_program_369_wallet" model="loyalty.program">
+            <field name="name">369 Wallet</field>
+            <field name="program_type">ewallet</field>
+            <field name="applies_on">future</field>
+            <field name="trigger">auto</field>
+            <field name="portal_visible" eval="True"/>
+            <field name="portal_point_name">₹</field>
+            <field name="rule_ids" eval="[(5, 0, 0), (0, 0, {
+                'reward_point_mode': 'money',
+                'reward_point_amount': 1,
+            })]"/>
+            <field name="reward_ids" eval="[(5, 0, 0), (0, 0, {
+                'reward_type': 'discount',
+                'discount_mode': 'per_point',
+                'discount': 1,
+                'discount_applicability': 'order',
+                'required_points': 1,
+                'description': '369 Wallet',
+            })]"/>
+        </record>
+
+    </data>
+</odoo>

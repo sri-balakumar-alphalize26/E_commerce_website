@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--
+        The translation table between the storefront's five payment keys and Odoo.
+
+        Four of the five already exist: `payment` ships UPI, card and net banking,
+        and `delivery` ships cash on delivery together with the provider and the
+        rule that refuses cash unless the carrier allows it. We only tag them.
+
+        Only the wallet is ours, because no gateway has a concept of it.
+    -->
+
+    <record id="payment_method_wallet" model="payment.method">
+        <field name="name">369 Wallet</field>
+        <field name="code">wallet</field>
+        <field name="sequence">4010</field>
+        <field name="active" eval="False"/>
+        <field name="support_tokenization" eval="False"/>
+        <field name="support_express_checkout" eval="False"/>
+        <field name="support_refund">full_only</field>
+        <field name="mart369_app_code">wallet</field>
+    </record>
+
+    <!--
+        The four Odoo already has are tagged in Python, not here: `payment` and
+        `delivery` create their records with noupdate set, so a <record> against
+        those xmlids is skipped on every update no matter which module writes it.
+        A <function> runs either way.
+    -->
+    <function model="payment.method" name="_mart369_tag_core_methods"/>
+
+</odoo>

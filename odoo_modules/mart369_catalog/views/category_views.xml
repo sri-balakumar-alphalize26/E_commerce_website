@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- The 369 Mart page on Odoo's own category form. -->
+    <record id="view_product_public_category_form_mart369" model="ir.ui.view">
+        <field name="name">product.public.category.form.mart369</field>
+        <field name="model">product.public.category</field>
+        <field name="inherit_id" ref="website_sale.product_public_category_form_view"/>
+        <field name="arch" type="xml">
+            <sheet position="inside">
+                <group string="369 Mart app" name="mart369">
+                    <group>
+                        <field name="mart_in_app" widget="boolean_toggle"/>
+                        <field name="mart_slug" placeholder="fruits-vegetables"/>
+                        <field name="mart_mode" invisible="parent_id"/>
+                        <field name="mart_product_count"/>
+                    </group>
+                    <group>
+                        <field name="mart_tone" widget="color" placeholder="#e8f5e9"/>
+                        <field name="mart_accent" widget="color" placeholder="#1f7a4c"/>
+                        <field name="mart_blurb" placeholder="Farm-fresh produce, picked daily"/>
+                    </group>
+                </group>
+            </sheet>
+        </field>
+    </record>
+
+    <!-- ============================ list ============================ -->
+    <record id="mart369_category_view_list" model="ir.ui.view">
+        <field name="name">mart369.category.list</field>
+        <field name="model">product.public.category</field>
+        <field name="arch" type="xml">
+            <list string="Catalog" class="o_mart369_list"
+                  decoration-muted="not mart_in_app"
+                  default_order="sequence, id">
+                <field name="sequence" widget="handle"/>
+                <field name="name" string="Category" class="fw-bold"/>
+                <field name="parent_id" string="Inside"/>
+                <field name="mart_slug" string="App address"/>
+                <field name="mart_mode" string="Storefront" widget="badge"
+                       decoration-success="mart_mode == 'quick'"
+                       decoration-info="mart_mode == 'all'"/>
+                <field name="mart_product_count" string="Products"/>
+                <field name="mart_blurb" string="Description" optional="show"/>
+                <field name="mart_tone" string="Background" optional="hide"/>
+                <field name="mart_accent" string="Heading" optional="hide"/>
+                <field name="mart_in_app" string="In the app" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- =========================== kanban ===========================
+         Each card painted in the colours the app will use, so an operator
+         picking a background can see what the shopper will see. -->
+    <record id="mart369_category_view_kanban" model="ir.ui.view">
+        <field name="name">mart369.category.kanban</field>
+        <field name="model">product.public.category</field>
+        <field name="arch" type="xml">
+            <kanban class="o_mart369_kanban" default_order="sequence, id">
+                <field name="mart_tone"/>
+                <field name="mart_accent"/>
+                <field name="mart_in_app"/>
+                <field name="mart_product_count"/>
+                <templates>
+                    <t t-name="card" class="o_mart369_cat">
+                        <div class="o_mart369_cat_swatch"
+                             t-attf-style="background: #{record.mart_tone.raw_value or '#f4f6f8'};">
+                            <span t-attf-style="color: #{record.mart_accent.raw_value or '#0b4a6e'};">
+                                <field name="name"/>
+                            </span>
+                        </div>
+                        <div class="o_mart369_cat_body">
+                            <span class="text-muted"><field name="mart_blurb"/></span>
+                            <div class="d-flex align-items-center gap-2 mt-2 flex-wrap">
+                                <span class="badge rounded-pill text-bg-secondary">
+                                    <field name="mart_slug"/>
+                                </span>
+                                <span class="badge rounded-pill text-bg-light border"
+                                      title="Published products in the app">
+                                    <i class="fa fa-cube me-1"/><field name="mart_product_count"/>
+                                </span>
+                                <span t-if="!record.mart_in_app.raw_value"
+                                      class="badge rounded-pill text-bg-danger">Hidden</span>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <!-- =========================== search =========================== -->
+    <record id="mart369_category_view_search" model="ir.ui.view">
+        <field name="name">mart369.category.search</field>
+        <field name="model">product.public.category</field>
+        <field name="arch" type="xml">
+            <search string="Catalog">
+                <field name="name"/>
+                <field name="mart_slug" string="App address"/>
+                <field name="parent_id" string="Inside"/>
+                <filter name="tops" string="Top level" domain="[('parent_id', '=', False)]"/>
+                <filter name="subs" string="Sub-categories" domain="[('parent_id', '!=', False)]"/>
+                <separator/>
+                <filter name="quick" string="Quick" domain="[('mart_mode', '=', 'quick')]"/>
+                <filter name="express" string="Express" domain="[('mart_mode', '=', 'all')]"/>
+                <separator/>
+                <filter name="hidden" string="Hidden from the app"
+                        domain="[('mart_in_app', '=', False)]"/>
+                <filter name="no_blurb" string="No description"
+                        domain="[('mart_blurb', 'in', [False, ''])]"/>
+                <group name="group_by">
+                    <filter name="by_parent" string="Inside" context="{'group_by': 'parent_id'}"/>
+                    <filter name="by_mode" string="Storefront" context="{'group_by': 'mart_mode'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_mart369_catalog" model="ir.actions.act_window">
+        <field name="name">Catalog</field>
+        <field name="res_model">product.public.category</field>
+        <field name="view_mode">kanban,list,form</field>
+        <field name="search_view_id" ref="mart369_category_view_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No category yet</p>
+            <p>Categories group products for the 369 Mart app. Each one gets a
+               page in the app, with the background and heading colour you choose
+               here.</p>
+        </field>
+    </record>
+
+    <!-- res.partner taught us this: without these, Odoo quietly uses the
+         website's own category views instead of the ones above. -->
+    <record id="action_mart369_catalog_view_kanban" model="ir.actions.act_window.view">
+        <field name="sequence">1</field>
+        <field name="view_mode">kanban</field>
+        <field name="view_id" ref="mart369_category_view_kanban"/>
+        <field name="act_window_id" ref="action_mart369_catalog"/>
+    </record>
+    <record id="action_mart369_catalog_view_list" model="ir.actions.act_window.view">
+        <field name="sequence">2</field>
+        <field name="view_mode">list</field>
+        <field name="view_id" ref="mart369_category_view_list"/>
+        <field name="act_window_id" ref="action_mart369_catalog"/>
+    </record>
+
+    <menuitem id="menu_mart369_catalog"
+              name="Catalog"
+              parent="mart369_home.menu_mart369_root"
+              action="action_mart369_catalog"
+              groups="base.group_system"
+              sequence="40"/>
+
+    <!-- Brand sits with the rest of the app's product wording. -->
+    <record id="view_product_template_form_mart369_catalog" model="ir.ui.view">
+        <field name="name">product.template.form.mart369.catalog</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="mart369_home.mart369_product_template_form_inherit"/>
+        <field name="arch" type="xml">
+            <field name="mart_unit_text" position="before">
+                <field name="mart_brand" placeholder="369 Fresh"/>
+            </field>
+        </field>
+    </record>
+
+</odoo>

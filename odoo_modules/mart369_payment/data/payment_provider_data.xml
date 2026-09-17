@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--
+        The cash limit.
+
+        This is the whole of COD_LIMIT. The provider is Odoo's own, shipped by
+        `delivery`; all we do is say how much cash a rider may be asked to carry.
+        Odoo's _get_compatible_providers already refuses a provider whose maximum is
+        below the basket, so the rule is enforced by the framework, an operator can
+        change it without a deployment, and it is measured against the cash actually
+        to be collected rather than a number the browser sent.
+
+        Outside the noupdate block on purpose: a <function> inside one is skipped on
+        every update, which is precisely when this needs checking.
+    -->
+    <function model="payment.provider" name="_mart369_apply_cod_limit"/>
+
+    <data noupdate="1">
+
+        <!--
+            The 369 Wallet as a provider.
+
+            There is nothing external to confirm, so a wallet payment is settled the
+            moment the ledger row is written. It ships disabled: a fresh install
+            should never start taking money by surprise.
+        -->
+        <record id="payment_provider_wallet" model="payment.provider">
+            <field name="name">369 Wallet</field>
+            <field name="code">custom</field>
+            <field name="custom_mode">mart369_wallet</field>
+            <field name="state">disabled</field>
+            <field name="sequence">10</field>
+            <field name="allow_tokenization" eval="False"/>
+            <field name="redirect_form_view_id" ref="payment_custom.redirect_form"/>
+            <field name="payment_method_ids"
+                   eval="[Command.set([ref('mart369_payment.payment_method_wallet')])]"/>
+            <field name="pending_msg" type="html">
+                <p>Paid from your 369 Wallet.</p>
+            </field>
+        </record>
+
+    </data>
+</odoo>

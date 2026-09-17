@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+
+        <!--
+            The two wallet limits the app already enforces in the browser, moved
+            somewhere the server can see them: WALLET_LIMIT (accountStore.js:18)
+            and the "Add at least Rs 10" rule (AccountExtras.jsx:142).
+
+            The cash-on-delivery limit is deliberately NOT here. It lives on the
+            COD payment.provider's own `maximum_amount`, which Odoo already
+            applies when it works out which providers a basket may use.
+        -->
+        <record id="mart369_wallet_limit" model="ir.config_parameter">
+            <field name="key">mart369.wallet.limit</field>
+            <field name="value">10000</field>
+        </record>
+
+        <record id="mart369_wallet_topup_min" model="ir.config_parameter">
+            <field name="key">mart369.wallet.topup_min</field>
+            <field name="value">10</field>
+        </record>
+
+    </data>
+</odoo>
