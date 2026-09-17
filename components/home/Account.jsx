@@ -355,6 +355,7 @@ export default function AccountPage({
   wallet = 0, onWallet, onNav, onSection,
 }) {
   const [user, setUser] = useState(initialUser);
+  useEffect(() => { if (initialUser) setUser(initialUser); }, [initialUser?.name, initialUser?.email]); // eslint-disable-line
   const [section, setSection] = useState(ORDER.includes(initialSection) ? initialSection : "list");
   const [toast, setToast] = useState(null);
   const toastT = useRef(null);

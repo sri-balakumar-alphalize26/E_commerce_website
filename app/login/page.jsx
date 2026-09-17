@@ -3,8 +3,23 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import SignInPage from "@/components/signin/SignIn";
 
+/* Every call goes to our own /api/auth/* routes, which talk to Odoo server-side.
+   The answers already have the shape the sign-in card expects. */
+const api = async (path, body) => {
+  try {
+    const r = await fetch(`/api/auth/${path}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    return await r.json();
+  } catch (e) {
+    return { ok: false, error: "Can't reach the server. Try again." };
+  }
+};
+
 export default function LoginRoute() {
   const router = useRouter();
+  const after = () => {
+    const next = new URLSearchParams(window.location.search).get("next");
+    router.push(next && next.startsWith("/") ? next : "/");
+  };
   return (
     <div style={{ minHeight: "100vh", background: "#f2f6f9" }}>
       <header className="lg-hdr">
@@ -12,11 +27,10 @@ export default function LoginRoute() {
       </header>
       <SignInPage
         onGuest={() => router.push("/cart")}
-        onDone={() => router.push("/")}
-        /* Wire to your backend — each returns { ok } or { ok:false, error } */
-        // onEmailSignIn={async (email, password, remember) => fetch("/api/auth/login", …)}
-        // onCreateAccount={async ({ name, email, password }) => …}
-        // onForgotPassword={async (email) => …}
+        onDone={after}
+        onEmailSignIn={(login, password, remember) => api("login", { login, password, remember })}
+        onCreateAccount={(values) => api("signup", values)}
+        onForgotPassword={(email) => api("forgot", { email })}
       />
     </div>
   );

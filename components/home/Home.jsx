@@ -298,6 +298,10 @@ export default function Home({
   const [orders, setOrders] = useState(SAMPLE_ORDERS);
   const [wallet, setWallet] = useState(WALLET_BALANCE);
   const [draft, setDraft] = useState({});
+  const [me, setMe] = useState(null); /* the signed-in customer, from /api/auth/me */
+  useEffect(() => {
+    fetch("/api/auth/me").then((r) => (r.ok ? r.json() : null)).then((d) => { if (d?.ok) setMe({ name: d.name, email: d.email, phone: d.phone || "" }); }).catch(() => {});
+  }, []);
   const [ready, setReady] = useState(!persistCart); /* true once saved cart / orders are loaded */
   const load = (k, fallback) => { try { const v = JSON.parse(localStorage.getItem(k) || "null"); return v ?? fallback; } catch (e) { return fallback; } };
   const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
@@ -531,13 +535,13 @@ export default function Home({
   } else if (view === "account") {
     body = (
       <main className="hm-wrap hm-view-account" key={"account-" + (route.param || "")}>
-        <AccountPage byId={byId} cart={cart} setQty={setQty} section={route.param || undefined}
+        <AccountPage user={me || undefined} byId={byId} cart={cart} setQty={setQty} section={route.param || undefined}
           addresses={addresses} setAddresses={updateAddresses} selectedAddress={address} onSelectAddress={pickAddress} orders={ordersView}
           onBrowse={() => nav("home")}
           onReorder={reorder} onTrack={(o) => nav("track", o.id)}
           wallet={wallet} onWallet={walletMove} onNav={nav}
           onSection={(k) => { if (syncUrl) history.replaceState(null, "", routeToPath("account", k)); }}
-          onSignOut={() => { onSignOut ? onSignOut() : nav("home"); }} />
+          onSignOut={async () => { try { await fetch("/api/auth/logout", { method: "POST" }); } catch (e) {} setMe(null); onSignOut ? onSignOut() : nav("home"); }} />
       </main>
     );
   } else if (view === "cart") {

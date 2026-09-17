@@ -133,7 +133,7 @@ export function SignInCard({
 
   async function submitSignIn(e) {
     e.preventDefault();
-    if (!emailOk) return fail("email", "Enter a valid email address.");
+    if (!email.trim()) return fail("email", "Enter your email or name.");
     if (!password) return fail("password", "Enter your password.");
     setBusy(true);
     const r = await onEmailSignIn(email.trim(), password, remember);
@@ -168,11 +168,11 @@ export function SignInCard({
 
   const firstName = doneName.split(/\s+/)[0] || "";
 
-  const emailField = (autoFocus) => (
-    <Field id="si-email" label="Email" error={errFor("email")}>
+  const emailField = (autoFocus, { label = "Email", loose = false } = {}) => (
+    <Field id="si-email" label={label} error={errFor("email")}>
       <input id="si-email" key={shakeK("email")}
         className={"si-input" + (error.field === "email" ? " si-shake" : "")}
-        type="email" autoComplete="email" autoFocus={autoFocus} placeholder="you@example.com"
+        type={loose ? "text" : "email"} autoComplete={loose ? "username" : "email"} autoFocus={autoFocus} placeholder={loose ? "you@example.com or your name" : "you@example.com"}
         value={email} onChange={(e) => { setEmail(e.target.value); clear(); }} />
     </Field>
   );
@@ -187,7 +187,7 @@ export function SignInCard({
               <p>Welcome back. Your cart and saved addresses are waiting.</p>
             </header>
             <form onSubmit={submitSignIn} noValidate className="si-form">
-              {emailField(true)}
+              {emailField(true, { label: "Email or name", loose: true })}
               <Field id="si-pw" label="Password" error={errFor("password")} hint={caps ? "Caps Lock is on." : ""}
                 trailing={<button type="button" className="si-link si-right" onClick={() => go("forgot")}>Forgot password?</button>}>
                 <PasswordInput id="si-pw" key={shakeK("password")} value={password}
