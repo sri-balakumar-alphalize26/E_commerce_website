@@ -109,6 +109,59 @@ class TestMart369Seam(Mart369PaymentCase):
         tx._mart369_mark_cod_collected()
         self.assertEqual(tx.state, 'done', 'and only the rider returning makes it true')
 
+    def test_a_payment_this_module_did_not_make_is_left_alone(self):
+        """This database serves other projects; their payments are not ours.
+
+        The field carries no default for exactly this reason, and the hooks skip
+        anything unlabelled - otherwise another project's cash-on-delivery order
+        would appear in our Payments screen and in the cash-to-collect figure.
+        """
+        calls = []
+        foreign = self.env['payment.transaction'].sudo().create({
+            'provider_id': self.provider.id,
+            'payment_method_id': self.method.id,
+            'partner_id': self.partner.id,
+            'amount': 100,
+            'currency_id': self.env.company.currency_id.id,
+            'operation': 'online_direct',
+        })
+        self.assertFalse(foreign.mart369_kind, 'nothing claims it on creation')
+        self.patch(type(foreign), '_mart369_on_paid', lambda s: calls.append(s.reference))
+        foreign._set_done()
+        foreign._post_process()
+        self.assertEqual(calls, [], 'and our hooks leave it alone')
+
+    def test_payments_wrongly_claimed_by_an_older_version_are_released(self):
+        foreign = self.env['payment.transaction'].sudo().create({
+            'provider_id': self.provider.id,
+            'payment_method_id': self.method.id,
+            'partner_id': self.partner.id,
+            'amount': 100,
+            'currency_id': self.env.company.currency_id.id,
+            'operation': 'online_direct',
+            'mart369_kind': 'order',  # as the old default would have left it
+        })
+        self.env['payment.transaction']._mart369_disown_foreign_payments()
+        foreign.invalidate_recordset()
+        self.assertFalse(foreign.mart369_kind, 'it carries none of our markers')
+
+    def test_a_payment_of_ours_survives_the_cleanup(self):
+        card = self.env['loyalty.card']._mart369_wallet(self.partner)
+        mine = self.env['payment.transaction'].sudo().create({
+            'provider_id': self.provider.id,
+            'payment_method_id': self.method.id,
+            'partner_id': self.partner.id,
+            'amount': 100,
+            'currency_id': self.env.company.currency_id.id,
+            'operation': 'online_direct',
+            'mart369_kind': 'order',
+            'mart369_wallet_card_id': card.id,
+        })
+        self.env['payment.transaction']._mart369_disown_foreign_payments()
+        mine.invalidate_recordset()
+        self.assertEqual(mine.mart369_kind, 'order',
+                         'every payment we make carries the customer wallet')
+
     def test_the_txn_the_app_prints_is_the_providers_reference_when_there_is_one(self):
         tx = self._tx()
         tx.sudo().write({'provider_reference': 'rzp_ABC123'})

@@ -53,7 +53,8 @@ class LoyaltyCard(models.Model):
         string="Ledger total", compute='_compute_mart369_ledger_total',
         help="What the movements add up to. It must equal the balance.")
     mart369_consistent = fields.Boolean(
-        string="Balance agrees with the ledger", compute='_compute_mart369_ledger_total')
+        string="Balance agrees with the ledger",
+        compute='_compute_mart369_ledger_total', search='_search_mart369_consistent')
 
     # ------------------------------------------------------------------ setup
 
@@ -92,6 +93,26 @@ class LoyaltyCard(models.Model):
             currency = card.currency_id or self.env.company.currency_id
             # Never ==. These are Floats and the balance is money.
             card.mart369_consistent = currency.compare_amounts(card.points, total) == 0
+
+    def _search_mart369_consistent(self, operator, value):
+        """Find the wallets whose balance and ledger disagree.
+
+        A computed field is not searchable by itself, and an operator screen that
+        cannot filter for a broken wallet would make the check decorative. Done in
+        SQL because the alternative is reading every card in Python.
+        """
+        self.env.cr.execute("""
+            SELECT c.id
+              FROM loyalty_card c
+              LEFT JOIN loyalty_history h ON h.card_id = c.id
+             WHERE c.mart369_is_wallet IS TRUE
+             GROUP BY c.id, c.points
+            HAVING ROUND(c.points::numeric, 2)
+                 <> ROUND(COALESCE(SUM(h.issued), 0)::numeric - COALESCE(SUM(h.used), 0)::numeric, 2)
+        """)
+        broken = [row[0] for row in self.env.cr.fetchall()]
+        wants_broken = (operator in ('=', '==')) == (not value)
+        return [('id', 'in' if wants_broken else 'not in', broken)]
 
     # ------------------------------------------------------------------ guard
 

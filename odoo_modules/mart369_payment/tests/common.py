@@ -6,11 +6,26 @@ when mart369_order lands and changes how an order is priced, there should be exa
 one place in the tests to follow it.
 """
 
+from unittest.mock import patch
+
 from odoo.tests import HttpCase, TransactionCase
 
 
 class Mart369PaymentFixtures:
     """Mixin: a gateway that can actually take money, and transactions to test with."""
+
+    def setUp(self):
+        super().setUp()
+        # `account_payment` turns a completed transaction into an account.payment,
+        # which needs a journal and a full accounting setup on every provider.
+        # Odoo's own payment tests patch this out for the same reason - the
+        # accounting side is not what any of these tests are about, and our hooks
+        # run in our own _post_process either way.
+        if self.env['ir.module.module']._get('account_payment').state in (
+                'installed', 'to upgrade'):
+            self.startPatcher(patch(
+                'odoo.addons.account_payment.models.payment_transaction'
+                '.PaymentTransaction._post_process'))
 
     @classmethod
     def _mart369_journal(cls, company):
@@ -29,7 +44,7 @@ class Mart369PaymentFixtures:
         """
         company = provider.company_id or cls.env.company
         journal = cls._mart369_journal(company)
-        values = {'state': 'test'}
+        values = {'state': 'test', 'is_published': True}
         if journal and 'journal_id' in provider._fields:
             values['journal_id'] = journal.id
         provider.sudo().write(values)
@@ -52,8 +67,9 @@ class Mart369PaymentFixtures:
         Provider = cls.env['payment.provider'].sudo()
         provider = Provider.search([('name', '=', "369 Mart Test Gateway")], limit=1)
         upi = cls.env.ref('payment.payment_method_upi')
-        upi.sudo().write({'active': True})
 
+        # Order matters: Odoo refuses to activate a payment method until some
+        # enabled provider supports it, so the provider has to exist first.
         if not provider:
             form = cls.env['ir.ui.view'].sudo().create({
                 'name': "369 Mart test redirect form",
@@ -64,6 +80,7 @@ class Mart369PaymentFixtures:
                 'name': "369 Mart Test Gateway",
                 'code': 'none',
                 'state': 'test',
+                'is_published': True,
                 'company_id': cls.env.company.id,
                 'redirect_form_view_id': form.id,
                 'payment_method_ids': [(6, 0, [upi.id])],
@@ -72,7 +89,10 @@ class Mart369PaymentFixtures:
         elif upi not in provider.payment_method_ids:
             provider.write({'payment_method_ids': [(4, upi.id)]})
 
-        return cls._mart369_enable(provider)
+        cls._mart369_enable(provider)
+        if not upi.active:
+            upi.sudo().write({'active': True})
+        return provider
 
     @classmethod
     def _mart369_wallet_provider(cls):

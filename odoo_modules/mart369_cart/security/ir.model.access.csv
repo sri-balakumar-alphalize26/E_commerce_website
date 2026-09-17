@@ -1,0 +1,9 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_mart369_delivery_rule_system,mart369.delivery.rule system,model_mart369_delivery_rule,base.group_system,1,1,1,1
+access_mart369_delivery_rule_user,mart369.delivery.rule user,model_mart369_delivery_rule,base.group_user,1,0,0,0
+access_mart369_service_area_system,mart369.service.area system,model_mart369_service_area,base.group_system,1,1,1,1
+access_mart369_service_area_user,mart369.service.area user,model_mart369_service_area,base.group_user,1,0,0,0
+access_mart369_delivery_slot_system,mart369.delivery.slot system,model_mart369_delivery_slot,base.group_system,1,1,1,1
+access_mart369_delivery_slot_user,mart369.delivery.slot user,model_mart369_delivery_slot,base.group_user,1,0,0,0
+access_mart369_coupon_system,mart369.coupon system,model_mart369_coupon,base.group_system,1,1,1,1
+access_mart369_coupon_user,mart369.coupon user,model_mart369_coupon,base.group_user,1,0,0,0

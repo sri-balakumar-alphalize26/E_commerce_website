@@ -129,7 +129,7 @@ class Mart369PaymentApi(http.Controller):
         if existing:
             return self._fail(_("This UPI ID is already saved."), 'vpa')
 
-        method = request.env.ref('payment.payment_method_upi', raise_if_not_found=False)
+        method = request.env.ref('payment.payment_method_upi', raise_if_not_found=False).sudo()
         provider = request.env['payment.provider'].sudo().search([
             ('state', '!=', 'disabled'),
         ], order='sequence asc', limit=1)
@@ -355,7 +355,7 @@ class Mart369PaymentApi(http.Controller):
         provider = request.env['payment.provider']
         if currency.is_zero(payable):
             settle_provider = request.env.ref(
-                'mart369_payment.payment_provider_wallet', raise_if_not_found=False)
+                'mart369_payment.payment_provider_wallet', raise_if_not_found=False).sudo()
             if not settle_provider or settle_provider.state == 'disabled':
                 return self._fail(_("The 369 Wallet is not switched on yet."))
             provider = settle_provider
@@ -366,7 +366,7 @@ class Mart369PaymentApi(http.Controller):
                     return self._fail(_(
                         "Cash on delivery is available on orders up to %s.",
                         currency.format(
-                            request.env.ref('delivery.payment_provider_cod').maximum_amount)))
+                            request.env.ref('delivery.payment_provider_cod').sudo().maximum_amount)))
                 return self._fail(_("That way of paying is not available right now."), 'method')
 
         # 3. Move the wallet money, then record the payment. Same request, so a

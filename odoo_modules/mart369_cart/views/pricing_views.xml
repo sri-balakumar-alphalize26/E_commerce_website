@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ===================== delivery rules ===================== -->
+    <record id="mart369_delivery_rule_view_list" model="ir.ui.view">
+        <field name="name">mart369.delivery.rule.list</field>
+        <field name="model">mart369.delivery.rule</field>
+        <field name="arch" type="xml">
+            <list string="Delivery" class="o_mart369_list" editable="bottom">
+                <field name="mode" string="Storefront" widget="badge"
+                       decoration-success="mode == 'quick'"
+                       decoration-info="mode == 'all'"/>
+                <field name="label" string="Shown as"/>
+                <field name="eta" string="Delivery promise"/>
+                <field name="min_order" string="Minimum order"/>
+                <field name="free_above" string="Free above"/>
+                <field name="fee" string="Fee"/>
+                <field name="carrier_id" string="Carrier" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_mart369_delivery_rules" model="ir.actions.act_window">
+        <field name="name">Delivery &amp; fees</field>
+        <field name="res_model">mart369.delivery.rule</field>
+        <field name="view_mode">list</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No delivery rule yet</p>
+            <p>One rule per storefront: what delivery costs, the smallest order
+               you accept, and the amount above which delivery is free.</p>
+        </field>
+    </record>
+
+    <!-- ========================= coupons ========================= -->
+    <record id="mart369_coupon_view_list" model="ir.ui.view">
+        <field name="name">mart369.coupon.list</field>
+        <field name="model">mart369.coupon</field>
+        <field name="arch" type="xml">
+            <list string="Coupons" class="o_mart369_list" default_order="sequence, id">
+                <field name="sequence" widget="handle"/>
+                <field name="code" class="fw-bold font-monospace"/>
+                <field name="title"/>
+                <field name="kind" string="Discount" widget="badge"
+                       decoration-info="kind == 'percent'"
+                       decoration-success="kind == 'flat'"
+                       decoration-warning="kind == 'free_delivery'"/>
+                <field name="value" string="Amount / %"/>
+                <field name="max_off" string="Capped at" optional="show"/>
+                <field name="min_spend" string="Minimum spend"/>
+                <field name="group" string="Applies to" optional="show"/>
+                <field name="ends_on" string="Ends" optional="show"/>
+                <field name="used_count" string="Used"/>
+                <field name="limit_total" string="Allowed" optional="hide"/>
+                <field name="active" string="Live" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="mart369_coupon_view_form" model="ir.ui.view">
+        <field name="name">mart369.coupon.form</field>
+        <field name="model">mart369.coupon</field>
+        <field name="arch" type="xml">
+            <form string="Coupon" class="o_mart369_form">
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="code" placeholder="QUICK20"/></h1>
+                        <field name="title" placeholder="20% off on Quick orders"/>
+                    </div>
+                    <group>
+                        <group string="What it takes off">
+                            <field name="kind"/>
+                            <field name="value" invisible="kind == 'free_delivery'"/>
+                            <field name="max_off" invisible="kind != 'percent'"/>
+                            <field name="group"/>
+                            <field name="min_spend"/>
+                        </group>
+                        <group string="When it works">
+                            <field name="active" widget="boolean_toggle"/>
+                            <field name="starts_on"/>
+                            <field name="ends_on"/>
+                            <field name="limit_total"/>
+                            <field name="limit_per_customer"/>
+                            <field name="used_count"/>
+                        </group>
+                    </group>
+                    <group string="Small print">
+                        <field name="note" nolabel="1"
+                               placeholder="Up to ₹60 · Quick items above ₹199"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_mart369_coupons" model="ir.actions.act_window">
+        <field name="name">Coupons</field>
+        <field name="res_model">mart369.coupon</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No coupon yet</p>
+            <p>Codes customers type at checkout. The discount is worked out here,
+               on the server - never in the shopper's browser.</p>
+        </field>
+    </record>
+
+    <!-- ====================== service areas ====================== -->
+    <record id="mart369_service_area_view_list" model="ir.ui.view">
+        <field name="name">mart369.service.area.list</field>
+        <field name="model">mart369.service.area</field>
+        <field name="arch" type="xml">
+            <list string="Service areas" class="o_mart369_list" editable="bottom">
+                <field name="pincode" class="fw-bold font-monospace"/>
+                <field name="name" string="Area"/>
+                <field name="quick" string="Quick" widget="boolean_toggle"/>
+                <field name="express" string="Express" widget="boolean_toggle"/>
+                <field name="eta" string="Delivery promise"/>
+                <field name="active" string="Live" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_mart369_service_areas" model="ir.actions.act_window">
+        <field name="name">Service areas</field>
+        <field name="res_model">mart369.service.area</field>
+        <field name="view_mode">list</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Nowhere is served yet</p>
+            <p>A row is a pincode, or the start of one: <b>68</b> covers every
+               pincode beginning 68. The most specific row wins, so a city can
+               have its own promise inside a region that already has one.</p>
+        </field>
+    </record>
+
+    <!-- ========================== slots ========================== -->
+    <record id="mart369_delivery_slot_view_list" model="ir.ui.view">
+        <field name="name">mart369.delivery.slot.list</field>
+        <field name="model">mart369.delivery.slot</field>
+        <field name="arch" type="xml">
+            <list string="Slots" class="o_mart369_list" default_order="mode, sequence, id">
+                <field name="sequence" widget="handle"/>
+                <field name="mode" string="Storefront" widget="badge"
+                       decoration-success="mode == 'quick'"
+                       decoration-info="mode == 'all'"/>
+                <field name="top" string="Heading" class="fw-bold"/>
+                <field name="sub" string="Detail"/>
+                <field name="kind" string="Kind"/>
+                <field name="from_hour" string="From" optional="show"/>
+                <field name="to_hour" string="To" optional="show"/>
+                <field name="day_offset" string="Days ahead"/>
+                <field name="order_before" string="Order before" optional="show"/>
+                <field name="fee" string="Extra fee"/>
+                <field name="capacity" string="Capacity"/>
+                <field name="key" string="Key" optional="hide"/>
+                <field name="label" string="Confirmation line" optional="hide"/>
+                <field name="active" string="Live" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_mart369_slots" model="ir.actions.act_window">
+        <field name="name">Delivery slots</field>
+        <field name="res_model">mart369.delivery.slot</field>
+        <field name="view_mode">list</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No slot yet</p>
+            <p>The windows a customer can choose at checkout. Give a window a
+               capacity and the app stops offering it once that many orders have
+               taken it.</p>
+        </field>
+    </record>
+
+    <!-- =========================== menu ===========================
+         Inside the 369 Mart app, never a top-level one. -->
+    <menuitem id="menu_mart369_pricing"
+              name="Delivery &amp; Pricing"
+              parent="mart369_home.menu_mart369_root"
+              groups="base.group_system"
+              sequence="50"/>
+
+    <menuitem id="menu_mart369_delivery_rules"
+              name="Delivery &amp; fees"
+              parent="menu_mart369_pricing"
+              action="action_mart369_delivery_rules"
+              sequence="10"/>
+    <menuitem id="menu_mart369_coupons"
+              name="Coupons"
+              parent="menu_mart369_pricing"
+              action="action_mart369_coupons"
+              sequence="20"/>
+    <menuitem id="menu_mart369_service_areas"
+              name="Service areas"
+              parent="menu_mart369_pricing"
+              action="action_mart369_service_areas"
+              sequence="30"/>
+    <menuitem id="menu_mart369_slots"
+              name="Delivery slots"
+              parent="menu_mart369_pricing"
+              action="action_mart369_slots"
+              sequence="40"/>
+
+</odoo>

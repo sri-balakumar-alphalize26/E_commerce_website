@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="mart369_payment.PaymentListRenderer" t-inherit="web.ListRenderer" t-inherit-mode="primary">
+        <xpath expr="//div[hasclass('o_list_renderer')]" position="before">
+            <Mart369PaymentDashboard list="props.list"/>
+        </xpath>
+    </t>
+
+    <t t-name="mart369_payment.PaymentKanbanRenderer" t-inherit="web.KanbanRenderer" t-inherit-mode="primary">
+        <xpath expr="//div[hasclass('o_kanban_renderer')]" position="before">
+            <Mart369PaymentDashboard list="props.list"/>
+        </xpath>
+    </t>
+
+    <t t-name="mart369_payment.PaymentDashboard">
+        <div class="o_mart369_dash" t-if="state.data">
+            <t t-set="d" t-value="state.data"/>
+
+            <button type="button" class="o_mart369_kpi"
+                    t-on-click="() => this.applyFilter('state_done,today')"
+                    title="Show what was collected today">
+                <span class="o_mart369_tile o_mart369_tile_green"><i class="fa fa-inr"/></span>
+                <span class="o_mart369_kpi_txt">
+                    <small>Collected today</small>
+                    <strong t-out="d.collected"/>
+                    <span><t t-out="d.collected_count"/> payments</span>
+                </span>
+            </button>
+
+            <button type="button" class="o_mart369_kpi"
+                    t-on-click="() => this.applyFilter('state_done')"
+                    title="Show payments that went through">
+                <span class="o_mart369_tile o_mart369_tile_blue"><i class="fa fa-check-circle"/></span>
+                <span class="o_mart369_kpi_txt">
+                    <small>Went through</small>
+                    <strong><t t-out="d.success_pct"/>%</strong>
+                    <span class="o_mart369_bars" aria-label="Payments settled over the last 14 days">
+                        <t t-foreach="bars" t-as="b" t-key="b.day">
+                            <i t-att-style="'height:' + b.h + '%'"
+                               t-att-class="{'o_last': b.last, 'o_zero': !b.count}"
+                               t-att-title="b.day + ': ' + b.count"/>
+                        </t>
+                    </span>
+                </span>
+            </button>
+
+            <button type="button" class="o_mart369_kpi"
+                    t-on-click="() => this.applyFilter('state_pending')"
+                    title="Show payments still waiting on a provider">
+                <span class="o_mart369_tile o_mart369_tile_orange"><i class="fa fa-clock-o"/></span>
+                <span class="o_mart369_kpi_txt">
+                    <small>Waiting</small>
+                    <strong t-out="d.pending"/>
+                    <span t-out="d.pending_oldest"/>
+                </span>
+            </button>
+
+            <button type="button" class="o_mart369_kpi"
+                    t-on-click="() => this.applyFilter('method_cod,state_pending')"
+                    title="Show cash still to be collected at the door">
+                <span class="o_mart369_tile"><i class="fa fa-money"/></span>
+                <span class="o_mart369_kpi_txt">
+                    <small>Cash to collect</small>
+                    <strong t-out="d.cash"/>
+                    <span><t t-out="d.cash_count"/> orders</span>
+                </span>
+            </button>
+
+            <button type="button" class="o_mart369_kpi" t-on-click="() => this.openWallets()"
+                    title="Open the 369 Wallets">
+                <span t-att-class="'o_mart369_tile' + (d.wallet_broken ? ' o_mart369_tile_red' : '')">
+                    <i class="fa fa-wallet"/>
+                </span>
+                <span class="o_mart369_kpi_txt">
+                    <small>Wallet float</small>
+                    <strong t-out="d.wallet_float"/>
+                    <span t-if="d.wallet_broken">
+                        <t t-out="d.wallet_broken"/> disagree with their ledger
+                    </span>
+                    <span t-else=""><t t-out="d.wallet_count"/> wallets</span>
+                </span>
+            </button>
+
+        </div>
+    </t>
+
+</templates>

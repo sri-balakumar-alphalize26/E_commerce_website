@@ -21,6 +21,7 @@ Two payments have no gateway behind them and so settle differently:
 """
 
 import logging
+from datetime import timedelta
 
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
@@ -37,7 +38,10 @@ class PaymentTransaction(models.Model):
 
     mart369_kind = fields.Selection(
         [('order', "Order"), ('topup', "Wallet top-up"), ('validation', "Saving a method")],
-        string="369 Mart kind", default='order', index='btree_not_null', copy=False)
+        string="369 Mart kind", index='btree_not_null', copy=False,
+        help="Set only on payments the 369 Mart storefront made. Deliberately has "
+             "no default: this database serves other projects too, and a default "
+             "would quietly claim their payments as ours.")
     mart369_app_method = fields.Selection(
         related='payment_method_id.mart369_app_code', store=True, string="369 Mart method")
     mart369_order_ref = fields.Char(
@@ -80,7 +84,9 @@ class PaymentTransaction(models.Model):
         could not be before.
         """
         super()._post_process()
-        for tx in self:
+        # Only ours. This database also serves other projects, and their payments
+        # are none of this module's business.
+        for tx in self.filtered('mart369_kind'):
             try:
                 if tx.mart369_kind == 'topup':
                     tx._mart369_credit_wallet()
@@ -172,6 +178,16 @@ class PaymentTransaction(models.Model):
             self.mart369_wallet_used, 'refund', _("Payment failed"), sub=self.reference)
         return True
 
+    def action_mart369_mark_cod_collected(self):
+        """The Cash collected button on the payment form.
+
+        A thin public wrapper: Odoo refuses a button that calls a private method,
+        and the private one is what mart369_order's delivery transition will call.
+        """
+        for tx in self:
+            tx._mart369_mark_cod_collected()
+        return True
+
     def _mart369_mark_cod_collected(self):
         """The rider came back with the cash.
 
@@ -187,6 +203,92 @@ class PaymentTransaction(models.Model):
         self._set_done(state_message=_("Cash collected on delivery."))
         self._post_process()
         return True
+
+    @api.model
+    def _mart369_disown_foreign_payments(self):
+        """Let go of payments this module never made.
+
+        An earlier version of this field carried ``default='order'``, which meant
+        every payment already in the database - and every payment another project
+        on this server made afterwards - was silently labelled as ours. They then
+        showed up on the Payments screen and in the cash-to-collect figure.
+
+        Every payment the storefront makes is created by our own controller, which
+        always attaches the customer's wallet. Anything wearing our label without
+        one was never ours.
+        """
+        foreign = self.sudo().search([
+            ('mart369_kind', '!=', False),
+            ('mart369_wallet_card_id', '=', False),
+            ('mart369_order_ref', '=', False),
+            ('mart369_history_id', '=', False),
+        ])
+        if foreign:
+            foreign.write({'mart369_kind': False})
+            _logger.info('mart369: released %s payments that were not ours', len(foreign))
+
+    # ------------------------------------------------------- the numbers strip
+
+    @api.model
+    def mart369_payment_dashboard(self):
+        """The five tiles above 369 Mart -> Payments.
+
+        Same shape as mart369_auth's mart369_customer_dashboard, so the OWL
+        component above the list is the same component with a different call.
+        """
+        company = self.env.company
+        currency = company.currency_id
+        today = fields.Date.context_today(self)
+        start = fields.Datetime.to_datetime(today)
+        week = start - timedelta(days=7)
+        fortnight = start - timedelta(days=13)
+        base = [('company_id', '=', company.id), ('mart369_kind', 'in', ('order', 'topup'))]
+
+        done_today = self.sudo().search(base + [
+            ('state', '=', 'done'), ('write_date', '>=', start)])
+        collected = sum(done_today.mapped('amount'))
+
+        recent = self.sudo().search(base + [('create_date', '>=', week)])
+        settled = len(recent.filtered(lambda t: t.state == 'done'))
+        attempted = len(recent.filtered(lambda t: t.state in ('done', 'error', 'cancel')))
+
+        pending = self.sudo().search(base + [('state', '=', 'pending')], order='create_date asc')
+        cash = pending.filtered(lambda t: t.provider_id.mart369_is_cod)
+
+        # 14 days of settled payments, for the sparkline.
+        rows = self.sudo()._read_group(
+            base + [('state', '=', 'done'), ('create_date', '>=', fortnight)],
+            groupby=['create_date:day'], aggregates=['__count'])
+        counts = {str(day): count for day, count in rows}
+        bars = []
+        for offset in range(13, -1, -1):
+            day = today - timedelta(days=offset)
+            label = day.strftime('%Y-%m-%d')
+            bars.append({'day': label, 'count': next(
+                (c for k, c in counts.items() if k.startswith(label)), 0)})
+
+        wallets = self.env['loyalty.card'].sudo().search([('mart369_is_wallet', '=', True)])
+        float_total = sum(wallets.mapped('points'))
+        broken = len(wallets.filtered(lambda c: not c.mart369_consistent))
+
+        oldest = ''
+        if pending:
+            minutes = int((fields.Datetime.now() - pending[0].create_date).total_seconds() // 60)
+            oldest = _("oldest %s min", minutes)
+
+        return {
+            'collected': currency.format(collected),
+            'collected_count': len(done_today),
+            'success_pct': round(settled * 100 / attempted) if attempted else 0,
+            'bars': bars,
+            'pending': len(pending),
+            'pending_oldest': oldest,
+            'cash': currency.format(sum(cash.mapped('amount'))),
+            'cash_count': len(cash),
+            'wallet_float': currency.format(float_total),
+            'wallet_count': len(wallets),
+            'wallet_broken': broken,
+        }
 
     # ------------------------------------------------------------- the app's view
 

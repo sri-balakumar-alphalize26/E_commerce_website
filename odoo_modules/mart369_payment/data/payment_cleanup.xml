@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--
+        Outside a noupdate block so it runs on every update: an earlier version of
+        mart369_kind carried a default, which quietly claimed other projects'
+        payments as 369 Mart's. This lets them go again.
+    -->
+    <function model="payment.transaction" name="_mart369_disown_foreign_payments"/>
+
+</odoo>

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--
+        Both screens are options inside the existing 369 Mart menu - no new app.
+        Home Page 10, Product Page 15, Customers 20, Addresses 30, Advanced 90.
+    -->
+
+    <menuitem id="menu_mart369_payments"
+              name="Payments"
+              parent="mart369_home.menu_mart369_root"
+              action="action_mart369_payments"
+              groups="base.group_system"
+              sequence="40"/>
+
+    <menuitem id="menu_mart369_wallets"
+              name="Wallets"
+              parent="mart369_home.menu_mart369_root"
+              action="action_mart369_wallets"
+              groups="base.group_system"
+              sequence="45"/>
+
+</odoo>

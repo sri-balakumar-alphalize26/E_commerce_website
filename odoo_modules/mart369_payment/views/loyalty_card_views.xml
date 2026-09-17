@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- 369 Mart -> Wallets. Same classes as the Customers screen. -->
+
+    <record id="view_mart369_wallet_list" model="ir.ui.view">
+        <field name="name">loyalty.card.list.mart369.wallet</field>
+        <field name="model">loyalty.card</field>
+        <field name="priority">90</field>
+        <field name="arch" type="xml">
+            <list class="o_mart369_list" create="0" default_order="points desc">
+                <field name="partner_id" string="Customer"/>
+                <field name="points" string="Balance" widget="monetary" sum="Total held"/>
+                <field name="mart369_ledger_total" string="Ledger" widget="monetary"/>
+                <field name="currency_id" column_invisible="1"/>
+                <field name="mart369_consistent" string="Agrees" widget="boolean_toggle" readonly="1"/>
+                <field name="use_count" string="Movements" optional="show"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_mart369_wallet_form" model="ir.ui.view">
+        <field name="name">loyalty.card.form.mart369.wallet</field>
+        <field name="model">loyalty.card</field>
+        <field name="priority">90</field>
+        <field name="arch" type="xml">
+            <form class="o_mart369_form" create="0">
+                <sheet>
+                    <div class="o_mart369_hero">
+                        <div class="o_mart369_hero_txt">
+                            <h1><field name="points" widget="monetary" readonly="1"/></h1>
+                            <div class="o_mart369_hero_meta">
+                                <field name="partner_id" readonly="1"/>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="o_mart369_nudge o_mart369_nudge_warm"
+                         invisible="mart369_consistent">
+                        This balance does not match its movements. Every change should
+                        go through a wallet movement - find out what wrote to it.
+                    </div>
+                    <group>
+                        <field name="currency_id" invisible="1"/>
+                        <field name="mart369_ledger_total" widget="monetary" readonly="1"/>
+                        <field name="mart369_consistent" readonly="1"/>
+                        <field name="code" readonly="1"/>
+                    </group>
+                    <notebook>
+                        <page string="Movements" name="movements">
+                            <field name="history_ids" readonly="1">
+                                <list default_order="id desc">
+                                    <field name="create_date" string="When"/>
+                                    <field name="mart369_kind" string="Kind" widget="badge"
+                                           decoration-success="mart369_kind in ('add', 'refund', 'reward')"
+                                           decoration-warning="mart369_kind == 'spend'"/>
+                                    <field name="mart369_title" string="Title"/>
+                                    <field name="mart369_sub" string="Detail"/>
+                                    <field name="issued" string="In"/>
+                                    <field name="used" string="Out"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_mart369_wallet_search" model="ir.ui.view">
+        <field name="name">loyalty.card.search.mart369.wallet</field>
+        <field name="model">loyalty.card</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="partner_id"/>
+                <filter name="wallet_broken" string="Balance disagrees with the ledger"
+                        domain="[('mart369_consistent', '=', False)]"/>
+                <filter name="wallet_funded" string="Has money"
+                        domain="[('points', '&gt;', 0)]"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_mart369_wallets" model="ir.actions.act_window">
+        <field name="name">Wallets</field>
+        <field name="res_model">loyalty.card</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('mart369_is_wallet', '=', True)]</field>
+        <field name="search_view_id" ref="view_mart369_wallet_search"/>
+        <field name="context">{'create': False}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No wallet yet</p>
+            <p>A customer's 369 Wallet is made the first time they look at it.</p>
+        </field>
+    </record>
+
+    <!-- loyalty.card has stock views; without these Odoo uses those instead. -->
+    <record id="action_mart369_wallets_view_list" model="ir.actions.act_window.view">
+        <field name="sequence">1</field>
+        <field name="view_mode">list</field>
+        <field name="view_id" ref="view_mart369_wallet_list"/>
+        <field name="act_window_id" ref="action_mart369_wallets"/>
+    </record>
+
+    <record id="action_mart369_wallets_view_form" model="ir.actions.act_window.view">
+        <field name="sequence">2</field>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="view_mart369_wallet_form"/>
+        <field name="act_window_id" ref="action_mart369_wallets"/>
+    </record>
+
+</odoo>

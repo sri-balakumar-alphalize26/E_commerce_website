@@ -39,7 +39,18 @@ Staff see every payment and every wallet under **369 Mart -> Payments** and
         'data/payment_provider_data.xml',
         'data/loyalty_program_data.xml',
         'data/payment_params.xml',
+        'data/payment_cleanup.xml',
+        'views/payment_transaction_views.xml',
+        'views/loyalty_card_views.xml',
+        'views/menus.xml',
     ],
+    'assets': {
+        'web.assets_backend': [
+            'mart369_payment/static/src/payments/payment_dashboard.js',
+            'mart369_payment/static/src/payments/payment_views.js',
+            'mart369_payment/static/src/payments/payment_views.xml',
+        ],
+    },
     'installable': True,
     'application': False,
     'auto_install': False,

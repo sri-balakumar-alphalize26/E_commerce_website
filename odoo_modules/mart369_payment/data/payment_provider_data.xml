@@ -30,6 +30,7 @@
             <field name="code">custom</field>
             <field name="custom_mode">mart369_wallet</field>
             <field name="state">disabled</field>
+            <field name="is_published" eval="True"/>
             <field name="sequence">10</field>
             <field name="allow_tokenization" eval="False"/>
             <field name="redirect_form_view_id" ref="payment_custom.redirect_form"/>

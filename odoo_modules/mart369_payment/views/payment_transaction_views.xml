@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--
+        369 Mart -> Payments.
+
+        Styled with mart369_auth's classes: that module is a dependency, so its
+        stylesheet is already in this bundle and the two screens cannot drift.
+    -->
+
+    <record id="view_mart369_payment_list" model="ir.ui.view">
+        <field name="name">payment.transaction.list.mart369</field>
+        <field name="model">payment.transaction</field>
+        <field name="priority">90</field>
+        <field name="arch" type="xml">
+            <list class="o_mart369_list" js_class="mart369_payments_list"
+                  create="0" default_order="create_date desc">
+                <field name="create_date" string="When"/>
+                <field name="partner_id" string="Customer"/>
+                <field name="mart369_order_ref" string="Order" optional="show"/>
+                <field name="mart369_app_method" string="Method" widget="badge"/>
+                <field name="provider_id" string="Provider" optional="show"/>
+                <field name="amount" widget="monetary" sum="Total"/>
+                <field name="mart369_wallet_used" widget="monetary" string="From wallet" optional="show"/>
+                <field name="mart369_txn" string="Txn" optional="show"/>
+                <field name="mart369_amount_client" string="App priced" optional="hide"/>
+                <field name="currency_id" column_invisible="1"/>
+                <field name="state" widget="badge"
+                       decoration-success="state == 'done'"
+                       decoration-info="state == 'pending'"
+                       decoration-danger="state in ('error', 'cancel')"
+                       decoration-muted="state == 'draft'"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_mart369_payment_kanban" model="ir.ui.view">
+        <field name="name">payment.transaction.kanban.mart369</field>
+        <field name="model">payment.transaction</field>
+        <field name="priority">90</field>
+        <field name="arch" type="xml">
+            <kanban class="o_mart369_kanban" js_class="mart369_payments_kanban"
+                    default_group_by="state" create="0"
+                    records_draggable="0" group_create="false">
+                <field name="state"/>
+                <field name="currency_id"/>
+                <templates>
+                    <t t-name="card">
+                        <div class="o_mart369_card">
+                            <div class="o_mart369_card_top">
+                                <div class="o_mart369_card_who">
+                                    <strong class="o_mart369_card_name">
+                                        <field name="partner_id"/>
+                                    </strong>
+                                    <span class="o_mart369_card_email">
+                                        <field name="mart369_order_ref"/>
+                                    </span>
+                                </div>
+                                <span class="o_mart369_tile o_mart369_tile_blue">
+                                    <i class="fa fa-credit-card"/>
+                                </span>
+                            </div>
+                            <div class="o_mart369_mini">
+                                <div>
+                                    <small>Amount</small>
+                                    <field name="amount" widget="monetary"/>
+                                </div>
+                                <div>
+                                    <small>Method</small>
+                                    <field name="mart369_app_method"/>
+                                </div>
+                                <div>
+                                    <small>From wallet</small>
+                                    <field name="mart369_wallet_used" widget="monetary"/>
+                                </div>
+                            </div>
+                            <div class="o_mart369_nudge o_mart369_nudge_cool"
+                                 invisible="not mart369_amount_client">
+                                Priced by the app - no cart on the server yet.
+                            </div>
+                            <div class="o_mart369_card_foot">
+                                <field name="create_date" widget="date"/>
+                                <field name="mart369_txn"/>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <record id="view_mart369_payment_form" model="ir.ui.view">
+        <field name="name">payment.transaction.form.mart369</field>
+        <field name="model">payment.transaction</field>
+        <field name="priority">90</field>
+        <field name="arch" type="xml">
+            <form class="o_mart369_form" create="0">
+                <header>
+                    <button name="action_mart369_mark_cod_collected" type="object"
+                            string="Cash collected" class="btn-primary"
+                            invisible="state == 'done'"
+                            help="The rider came back with the cash. Only this makes a cash order paid."/>
+                    <field name="state" widget="statusbar"/>
+                </header>
+                <sheet>
+                    <div class="o_mart369_hero">
+                        <div class="o_mart369_hero_txt">
+                            <h1><field name="amount" widget="monetary"/></h1>
+                            <div class="o_mart369_hero_meta">
+                                <field name="partner_id" readonly="1"/>
+                                &#183;
+                                <field name="mart369_app_method" readonly="1"/>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="o_mart369_nudge o_mart369_nudge_warm"
+                         invisible="not mart369_amount_client">
+                        This amount is the one the app sent, because no cart exists on
+                        the server yet. mart369_cart and mart369_order close this.
+                    </div>
+                    <group>
+                        <group string="Payment">
+                            <field name="reference" readonly="1"/>
+                            <field name="mart369_txn" readonly="1"/>
+                            <field name="provider_id" readonly="1"/>
+                            <field name="mart369_kind" readonly="1"/>
+                            <field name="mart369_order_ref" readonly="1"/>
+                            <field name="currency_id" invisible="1"/>
+                        </group>
+                        <group string="369 Wallet">
+                            <field name="mart369_wallet_card_id" readonly="1"/>
+                            <field name="mart369_wallet_used" widget="monetary" readonly="1"/>
+                            <field name="mart369_history_id" readonly="1"/>
+                        </group>
+                    </group>
+                    <group string="What happened">
+                        <field name="state_message" readonly="1" nolabel="1"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_mart369_payment_search" model="ir.ui.view">
+        <field name="name">payment.transaction.search.mart369</field>
+        <field name="model">payment.transaction</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="partner_id"/>
+                <field name="reference"/>
+                <field name="mart369_order_ref"/>
+                <filter name="state_done" string="Paid" domain="[('state', '=', 'done')]"/>
+                <filter name="state_pending" string="Pending" domain="[('state', '=', 'pending')]"/>
+                <filter name="state_failed" string="Failed"
+                        domain="[('state', 'in', ('error', 'cancel'))]"/>
+                <separator/>
+                <filter name="method_cod" string="Cash on delivery"
+                        domain="[('mart369_app_method', '=', 'cod')]"/>
+                <filter name="kind_topup" string="Wallet top-ups"
+                        domain="[('mart369_kind', '=', 'topup')]"/>
+                <filter name="app_priced" string="Priced by the app"
+                        domain="[('mart369_amount_client', '=', True)]"/>
+                <separator/>
+                <filter name="today" string="Today"
+                        domain="[('create_date', '&gt;=', context_today().strftime('%Y-%m-%d'))]"/>
+                <group>
+                    <filter name="group_method" string="Method"
+                            context="{'group_by': 'mart369_app_method'}"/>
+                    <filter name="group_provider" string="Provider"
+                            context="{'group_by': 'provider_id'}"/>
+                    <filter name="group_state" string="Status" context="{'group_by': 'state'}"/>
+                    <filter name="group_day" string="Day" context="{'group_by': 'create_date:day'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_mart369_payments" model="ir.actions.act_window">
+        <field name="name">Payments</field>
+        <field name="res_model">payment.transaction</field>
+        <field name="view_mode">list,kanban,form</field>
+        <field name="domain">[('mart369_kind', 'in', ('order', 'topup'))]</field>
+        <field name="search_view_id" ref="view_mart369_payment_search"/>
+        <field name="context">{'create': False}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No payment yet</p>
+            <p>Payments made from the 369 Mart storefront appear here, with what
+               was paid from the wallet and what the provider confirmed.</p>
+        </field>
+    </record>
+
+    <!--
+        Without these bindings Odoo picks payment.transaction's own stock views
+        instead of the ones above.
+    -->
+    <record id="action_mart369_payments_view_list" model="ir.actions.act_window.view">
+        <field name="sequence">1</field>
+        <field name="view_mode">list</field>
+        <field name="view_id" ref="view_mart369_payment_list"/>
+        <field name="act_window_id" ref="action_mart369_payments"/>
+    </record>
+
+    <record id="action_mart369_payments_view_kanban" model="ir.actions.act_window.view">
+        <field name="sequence">2</field>
+        <field name="view_mode">kanban</field>
+        <field name="view_id" ref="view_mart369_payment_kanban"/>
+        <field name="act_window_id" ref="action_mart369_payments"/>
+    </record>
+
+    <record id="action_mart369_payments_view_form" model="ir.actions.act_window.view">
+        <field name="sequence">3</field>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="view_mart369_payment_form"/>
+        <field name="act_window_id" ref="action_mart369_payments"/>
+    </record>
+
+</odoo>

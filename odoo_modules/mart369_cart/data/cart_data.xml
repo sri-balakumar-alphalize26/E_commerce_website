@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- The numbers the app has been using, so installing this module changes
+         nothing a customer can see - it only moves who decides them. Every one
+         of these is now editable in 369 Mart > Delivery & Pricing.
+
+         noupdate: an upgrade must never overwrite what an operator has since
+         changed the ₹30 delivery fee to. -->
+    <data noupdate="1">
+
+        <!-- ===================== delivery rules ===================== -->
+        <record id="rule_quick" model="mart369.delivery.rule">
+            <field name="mode">quick</field>
+            <field name="label">Quick</field>
+            <field name="eta">Delivery in 13 mins</field>
+            <field name="min_order">99</field>
+            <field name="free_above">499</field>
+            <field name="fee">30</field>
+        </record>
+        <record id="rule_all" model="mart369.delivery.rule">
+            <field name="mode">all</field>
+            <field name="label">Express</field>
+            <field name="eta">Delivery in 2–3 days</field>
+            <field name="min_order">0</field>
+            <field name="free_above">999</field>
+            <field name="fee">49</field>
+        </record>
+
+        <!-- ======================== coupons ========================= -->
+        <record id="coupon_quick20" model="mart369.coupon">
+            <field name="sequence">10</field>
+            <field name="code">QUICK20</field>
+            <field name="title">20% off on Quick orders</field>
+            <field name="note">Up to ₹60 · Quick items above ₹199</field>
+            <field name="kind">percent</field>
+            <field name="value">20</field>
+            <field name="max_off">60</field>
+            <field name="min_spend">199</field>
+            <field name="group">quick</field>
+        </record>
+        <record id="coupon_welcome50" model="mart369.coupon">
+            <field name="sequence">20</field>
+            <field name="code">WELCOME50</field>
+            <field name="title">Flat ₹50 off</field>
+            <field name="note">On orders above ₹499</field>
+            <field name="kind">flat</field>
+            <field name="value">50</field>
+            <field name="min_spend">499</field>
+        </record>
+        <record id="coupon_freedel" model="mart369.coupon">
+            <field name="sequence">30</field>
+            <field name="code">FREEDEL</field>
+            <field name="title">Free delivery</field>
+            <field name="note">Waives delivery fees on orders above ₹299</field>
+            <field name="kind">free_delivery</field>
+            <field name="min_spend">299</field>
+        </record>
+
+        <!-- ========================= slots ==========================
+             The four Quick windows and two Express options the checkout used
+             to build from the browser clock. "Order before" is what the app
+             expressed as `if (now.getHours() < 17)`. -->
+        <record id="slot_quick_now" model="mart369.delivery.slot">
+            <field name="mode">quick</field>
+            <field name="kind">now</field>
+            <field name="sequence">10</field>
+            <field name="key">now</field>
+            <field name="top">Now</field>
+            <field name="sub">10–20 min</field>
+            <field name="label">Arriving in 10–20 mins</field>
+        </record>
+        <record id="slot_quick_eve" model="mart369.delivery.slot">
+            <field name="mode">quick</field>
+            <field name="kind">window</field>
+            <field name="sequence">20</field>
+            <field name="key">eve</field>
+            <field name="top">Today</field>
+            <field name="sub">6 – 8 PM</field>
+            <field name="from_hour">18</field>
+            <field name="to_hour">20</field>
+            <field name="day_offset">0</field>
+            <field name="order_before">17</field>
+        </record>
+        <record id="slot_quick_tm" model="mart369.delivery.slot">
+            <field name="mode">quick</field>
+            <field name="kind">window</field>
+            <field name="sequence">30</field>
+            <field name="key">tm</field>
+            <field name="top">Tomorrow</field>
+            <field name="sub">8 – 10 AM</field>
+            <field name="from_hour">8</field>
+            <field name="to_hour">10</field>
+            <field name="day_offset">1</field>
+        </record>
+        <record id="slot_quick_te" model="mart369.delivery.slot">
+            <field name="mode">quick</field>
+            <field name="kind">window</field>
+            <field name="sequence">40</field>
+            <field name="key">te</field>
+            <field name="top">Tomorrow</field>
+            <field name="sub">6 – 8 PM</field>
+            <field name="from_hour">18</field>
+            <field name="to_hour">20</field>
+            <field name="day_offset">1</field>
+        </record>
+        <record id="slot_all_std" model="mart369.delivery.slot">
+            <field name="mode">all</field>
+            <field name="kind">days</field>
+            <field name="sequence">10</field>
+            <field name="key">std</field>
+            <field name="top">Standard</field>
+            <field name="day_offset">3</field>
+            <field name="fee">0</field>
+        </record>
+        <record id="slot_all_pri" model="mart369.delivery.slot">
+            <field name="mode">all</field>
+            <field name="kind">days</field>
+            <field name="sequence">20</field>
+            <field name="key">pri</field>
+            <field name="top">Priority</field>
+            <field name="day_offset">1</field>
+            <field name="fee">49</field>
+        </record>
+
+        <!-- ====================== service areas =====================
+             What the regex covered: Kerala, 67-69, with Quick only where the
+             demo allowed it. Add a row per city as you actually open one. -->
+        <record id="area_67" model="mart369.service.area">
+            <field name="pincode">67</field>
+            <field name="name">Kerala – 67 (Express only)</field>
+            <field name="quick" eval="False"/>
+            <field name="express" eval="True"/>
+            <field name="eta">2–3 days</field>
+        </record>
+        <record id="area_68" model="mart369.service.area">
+            <field name="pincode">68</field>
+            <field name="name">Kerala – 68</field>
+            <field name="quick" eval="True"/>
+            <field name="express" eval="True"/>
+            <field name="eta">13 mins</field>
+        </record>
+        <record id="area_69" model="mart369.service.area">
+            <field name="pincode">69</field>
+            <field name="name">Kerala – 69</field>
+            <field name="quick" eval="True"/>
+            <field name="express" eval="True"/>
+            <field name="eta">13 mins</field>
+        </record>
+
+    </data>
+</odoo>
