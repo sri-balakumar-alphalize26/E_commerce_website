@@ -4,7 +4,7 @@
    Pill   springs in with the first item; thumbnails stack (newest first) and
           each one pops in when its flying product image lands; count and
           total roll. Tap → the pill grows into the panel (clip-path morph from
-          the pill's exact box), rows cascade in.
+          the pill's exact box; transform-only, GPU), rows cascade in.
    Panel  Your cart (n) · rows with thumb, name, stepper, price (rows collapse
           out when removed) · free-delivery check (scooter drives across while
           "checking", then progress / unlocked) · subtotal · View cart and
@@ -55,7 +55,7 @@ function FreeCheck({ total, threshold, open }) {
   useEffect(() => {
     if (!open) return;
     setChecking(true);
-    const t = setTimeout(() => setChecking(false), reduced() ? 0 : 1100);
+    const t = setTimeout(() => setChecking(false), reduced() ? 0 : 650);
     return () => clearTimeout(t);
   }, [open]);
   const left = Math.max(0, threshold - total);
@@ -94,38 +94,63 @@ export default function MiniCart({ lines, count, total, freeAt = 499, setQty, on
   useEffect(() => { if (!show && phase !== "closed") { anim.current.forEach((a) => a.cancel()); setPhase("closed"); } }, [show]); // eslint-disable-line
 
   const open = () => {
-    if (!pill.current) return;
+    if (!pill.current || phase !== "closed") return;
     fromRect.current = pill.current.getBoundingClientRect();
     setPhase("open");
+  };
+
+  /* Morph = one GPU layer (.mc-bg) scaled from the pill's box to the panel's box.
+     Only transform + opacity animate, so the page behind is never repainted. */
+  const morph = (el, from, box) => {
+    const sx = Math.max(0.05, from.width / box.width), sy = Math.max(0.05, from.height / box.height);
+    const r = from.height / 2;
+    return {
+      t: `translate(${(from.left - box.left).toFixed(1)}px, ${(from.top - box.top).toFixed(1)}px) scale(${sx.toFixed(4)}, ${sy.toFixed(4)})`,
+      radius: `${(r / sx).toFixed(1)}px / ${(r / sy).toFixed(1)}px`,
+    };
   };
 
   useLayoutEffect(() => {
     if (phase !== "open" || !panel.current) return;
     const el = panel.current;
+    const bg = el.querySelector(".mc-bg");
     el.querySelector(".mc-x")?.focus({ preventScroll: true });
     if (reduced() || !el.animate || !fromRect.current) { el.setAttribute("data-in", ""); return; }
     const box = el.getBoundingClientRect();
+    const m = morph(el, fromRect.current, box);
     anim.current.forEach((a) => a.cancel());
+    const ease = "cubic-bezier(.16,1,.3,1)";
     anim.current = [
-      el.animate([{ clipPath: inset(fromRect.current, box, fromRect.current.height / 2) }, { clipPath: `inset(0px 0px 0px 0px round 22px)` }], { duration: 520, easing: "cubic-bezier(.2,.9,.2,1)" }),
-      back.current.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300, easing: "ease-out" }),
+      bg.animate([{ transform: m.t, borderRadius: m.radius }, { transform: "none", borderRadius: "22px" }], { duration: 340, easing: ease }),
+      back.current.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200, easing: "ease-out" }),
     ];
-    const id = requestAnimationFrame(() => el.setAttribute("data-in", ""));
-    return () => cancelAnimationFrame(id);
+    void el.offsetWidth; /* commit the hidden state so the content fade actually runs */
+    el.setAttribute("data-in", ""); /* content fades in on its own short delay (CSS) */
   }, [phase]);
 
   const close = (after) => {
-    if (phase !== "open") return;
+    if (phase !== "open") return; /* ignores repeat taps while it is closing */
     const el = panel.current;
-    const done = () => { anim.current.forEach((a) => a.cancel()); anim.current = []; setPhase("closed"); after?.(); };
-    if (reduced() || !el?.animate) return done();
+    /* Don't cancel the finished animations here: cancelling drops their "forwards" fill, so the
+       panel and backdrop flashed back to fully open for a frame before unmounting (looked like it
+       re-opened and closed again). The pill is swapped in instantly where the panel shrank to. */
+    const done = () => {
+      const pl = pill.current;
+      if (pl) { pl.style.transition = "none"; requestAnimationFrame(() => requestAnimationFrame(() => { pl.style.transition = ""; })); }
+      anim.current = [];
+      setPhase("closed");
+      after?.();
+    };
+    if (reduced() || !el?.animate) { anim.current.forEach((a) => a.cancel()); return done(); }
     el.removeAttribute("data-in");
     setPhase("closing");
     const box = el.getBoundingClientRect();
     const to = pill.current?.getBoundingClientRect() || fromRect.current;
+    const m = morph(el, to, box);
     anim.current.forEach((a) => a.cancel());
-    const a = el.animate([{ clipPath: `inset(0px 0px 0px 0px round 22px)` }, { clipPath: inset(to, box, to.height / 2) }], { duration: 380, easing: "cubic-bezier(.5,0,.3,1)", fill: "forwards" });
-    const b = back.current.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, fill: "forwards" });
+    const bg = el.querySelector(".mc-bg");
+    const a = bg.animate([{ transform: "none", borderRadius: "22px" }, { transform: m.t, borderRadius: m.radius }], { duration: 260, delay: 60, easing: "cubic-bezier(.5,0,.2,1)", fill: "forwards" });
+    const b = back.current.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 240, delay: 60, fill: "forwards" });
     anim.current = [a, b];
     a.onfinish = done;
   };
@@ -158,6 +183,7 @@ export default function MiniCart({ lines, count, total, freeAt = 499, setQty, on
         <>
           <div className="mc-back" ref={back} onClick={() => close()} />
           <section ref={panel} className="mc-panel" role="dialog" aria-modal="true" aria-label="Your cart">
+            <i className="mc-bg" aria-hidden="true" />
             <header className="mc-head">
               <span className="mc-head-ic"><Icon n="bag" size={17} /></span>
               <b>Your cart</b>

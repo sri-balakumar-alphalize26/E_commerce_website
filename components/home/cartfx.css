@@ -68,20 +68,22 @@
 .mc-ripple { position: absolute; inset: 0; border-radius: inherit; box-shadow: 0 0 0 0 rgba(28, 182, 94, 0.55); animation: mc-ripple 650ms ease-out forwards; pointer-events: none; }
 
 /* ---------------- mini cart panel ---------------- */
-.mc-back { position: fixed; inset: 0; z-index: 63; background: rgba(10, 30, 20, 0.18); backdrop-filter: blur(1.5px); -webkit-backdrop-filter: blur(1.5px); }
+/* no backdrop-filter: blurring the whole page every frame made opening the cart lag */
+.mc-back { position: fixed; inset: 0; z-index: 63; background: rgba(10, 30, 20, 0.26); will-change: opacity; }
 .mc-panel {
   position: fixed; right: 24px; bottom: calc(env(safe-area-inset-bottom, 0px) + 22px); z-index: 64;
   width: min(380px, calc(100vw - 32px)); max-height: min(620px, calc(100vh - 110px)); display: flex; flex-direction: column;
-  border-radius: 22px; color: #fff; overflow: hidden;
+  color: #fff; contain: layout style;
+}
+.mc-bg {
+  position: absolute; inset: 0; z-index: -1; border-radius: 22px; transform-origin: 0 0; will-change: transform;
   background: radial-gradient(420px 220px at 100% 0%, rgba(255, 255, 255, 0.16), transparent 60%), linear-gradient(160deg, var(--mc-g1), var(--mc-g2) 70%, var(--mc-deep));
   box-shadow: 0 30px 60px -24px rgba(11, 90, 45, 0.7);
 }
-.mc-panel > * { opacity: 0; transform: translateY(10px); transition: opacity 300ms ease, transform 420ms var(--hm-ease, ease); }
-.mc-panel[data-in] > * { opacity: 1; transform: none; }
-.mc-panel[data-in] > :nth-child(2) { transition-delay: 60ms; }
-.mc-panel[data-in] > :nth-child(3) { transition-delay: 140ms; }
-.mc-panel[data-in] > :nth-child(4) { transition-delay: 190ms; }
-.mc-panel[data-in] > :nth-child(5) { transition-delay: 240ms; }
+.mc-panel { isolation: isolate; }
+.mc-panel > :not(.mc-bg) { opacity: 0; transform: translateY(8px); transition: opacity 90ms ease, transform 90ms ease; }
+.mc-panel[data-in] > :not(.mc-bg) { transition: opacity 220ms ease 110ms, transform 300ms var(--hm-ease, ease) 110ms; }
+.mc-panel[data-in] > :not(.mc-bg) { opacity: 1; transform: none; }
 .mc-head { display: flex; align-items: center; gap: 8px; padding: 14px 14px 12px 18px; border-bottom: 1px solid rgba(255, 255, 255, 0.18); }
 .mc-head-ic { width: 30px; height: 30px; border-radius: 9px; background: rgba(255, 255, 255, 0.18); display: grid; place-items: center; }
 .mc-head b { font-size: 17px; font-weight: 800; letter-spacing: -0.02em; }
@@ -90,7 +92,7 @@
 .mc-x:hover { transform: rotate(90deg); background: rgba(255, 255, 255, 0.28); }
 
 .mc-rows { list-style: none; margin: 0; padding: 12px 12px 4px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.35) transparent; }
-.mc-row { display: grid; grid-template-rows: 1fr; transition: grid-template-rows 300ms var(--hm-ease, ease), opacity 260ms, transform 300ms; animation: mc-row-in 420ms var(--hm-ease, ease) backwards; animation-delay: calc(var(--i) * 55ms + 120ms); }
+.mc-row { display: grid; grid-template-rows: 1fr; transition: grid-template-rows 300ms var(--hm-ease, ease), opacity 260ms, transform 300ms; animation: mc-row-in 300ms var(--hm-ease, ease) backwards; animation-delay: calc(min(var(--i), 6) * 30ms + 130ms); }
 .mc-row > div {
   min-height: 0; overflow: hidden; display: grid; grid-template-columns: 48px minmax(0, 1fr) auto auto; align-items: center; gap: 10px;
   padding: 8px 10px 8px 8px; border-radius: 14px; background: rgba(255, 255, 255, 0.14); border: 1px solid rgba(255, 255, 255, 0.16);
