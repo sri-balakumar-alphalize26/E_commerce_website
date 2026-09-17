@@ -20,7 +20,7 @@ export function routeToPath(view, param) {
     case "buyagain": return "/buy-again";
     case "product": return "/product/" + encodeURIComponent(param || "");
     case "cart": return "/cart";
-    case "account": return "/account";
+    case "account": return param ? "/account/" + encodeURIComponent(param) : "/account";
     case "checkout": return "/checkout";
     case "order": return "/order/" + encodeURIComponent(param || "");
     case "track": return "/track/" + encodeURIComponent(param || "");
@@ -38,7 +38,7 @@ export function pathToRoute(pathname, search = "") {
   if (head === "buy-again") return { view: "buyagain", param: null };
   if (head === "product") return { view: "product", param: rest[0] || "" };
   if (head === "cart") return { view: "cart", param: null };
-  if (head === "account") return { view: "account", param: null };
+  if (head === "account") return { view: "account", param: rest[0] || null };
   if (head === "checkout") return { view: "checkout", param: null };
   if (head === "order") return { view: "order", param: rest[0] || "" };
   if (head === "track") return { view: "track", param: rest[0] || "" };

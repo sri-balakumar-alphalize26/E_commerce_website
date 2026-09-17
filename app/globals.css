@@ -8,6 +8,7 @@
 @import "../components/home/checkout.css";
 @import "../components/home/cartfx.css";
 @import "../components/home/track.css";
+@import "../components/home/acx.css";
 @import "../components/signin/signin.css";
 
 *, *::before, *::after { box-sizing: border-box; }

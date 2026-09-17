@@ -80,6 +80,23 @@ Needs Node 18.18 or newer (Node 20 LTS recommended).
   the location picker), Orders (tabs, live progress tracker, expandable detail, Reorder), Help (search +
   FAQ accordion), About us, Legal information, Sign out (confirm dialog). Sections slide in by menu
   order and the panel height eases between them.
+- **Account extras** (`/account/<section>`) — sections under *Payments & rewards* plus two new ones:
+  - **369 Wallet** (`wallet`): balance card that counts up with a sheen; Add money sheet (amount chips,
+    UPI app, "waiting for app" rings, coins drop into the wallet); transactions grouped by month with
+    All / Added / Spent / Refunds tabs. Checkout wallet use, cancel refunds and scratch-card cashback are logged.
+  - **Saved payments** (`payments`): cards tilt with the pointer; add a card with the live flipping preview
+    (Luhn + expiry checks, "Securing card…"), set default, remove with fold-away; UPI IDs verified before
+    saving. Checkout shows the saved cards and UPI IDs, and a new card saved at checkout appears here.
+  - **Coupons & rewards** (`rewards`): scratch cards on a foil canvas (scratch 45% → auto reveal, confetti;
+    cashback goes to the wallet, coupons unlock), coupon tickets with copy.
+  - **Ratings & reviews** (`reviews`): products from delivered orders waiting for a review — tap a star to
+    open the editor (star words, tags, headline, text counter, photos); your reviews with edit / delete.
+    Your review is pinned on the product page.
+  - **Notifications** (`notifications`): order updates built from live order status plus offers and wallet
+    news; unread dots, tabs with counts, mark all read, swipe sideways to clear, tap to open the order /
+    section; preferences with spring switches. Unread count shows on the menu and as a dot on the header avatar.
+  - **Refer & earn** (`refer`): code with flip-in letters and copy, WhatsApp / copy link / share, earnings,
+    progress to a ₹500 bonus with milestone dots, how it works, invite a friend and remind.
 - **Browsing** — category pages (`/category/<slug>/<sub>`) with a hero, subcategory tiles and a
   product grid; filters for brand (with brand search), price range, discount, rating, veg, in stock and
   delivery type; sort (relevance, popularity, price, discount, rating); active filter chips; infinite
@@ -125,7 +142,7 @@ Regenerate the sample SVGs after editing `art.jsx` with `npm run images`.
 | `/checkout` | Checkout — address, delivery slot, payment (UPI, card, net banking, wallet, COD) |
 | `/order/<id>` | Payment success — printed receipt, re-print, tear, download, track |
 | `/track/<id>` | After the order — live tracking, rider, OTP, cancel, rate, return / replace, help |
-| `/account` | Account — profile, My List, addresses, orders, help, about, legal |
+| `/account` · `/account/<section>` | Account — profile, My List, addresses, orders, reviews, notifications, wallet, saved payments, rewards, refer & earn, help |
 | `/login` | Sign in · Create account · Forgot password (email only) |
 | anything else | 404 inside the store shell |
 
@@ -174,6 +191,9 @@ components/
   home/product.css    product page styles
   home/Account.jsx    account page and sections
   home/account.css    account styles
+  home/AccountExtras.jsx  wallet, saved payments, rewards, reviews, notifications, refer & earn
+  home/accountStore.js    account extras data + localStorage hook — replace with Odoo endpoints
+  home/acx.css        account extras styles and animations
   home/Cart.jsx       cart page, coupon sheet, payment details
   home/shared.jsx     icons, product card, rail, fly-to-cart, hooks
   home/art.jsx        drawn product placeholders (used when an item has no image)
@@ -200,6 +220,12 @@ scripts/export-images.mjs  regenerates the sample images (npm run images)
   where the confirmed order is saved — post it to Odoo there. Never store card numbers in the app.
 - Sign in: `components/signin/SignIn.jsx` props `onEmailSignIn`, `onCreateAccount`,
   `onForgotPassword` — each returns `{ ok: true }` or `{ ok: false, error }`.
+
+- Account extras (`accountStore.js`): wallet log ↔ a wallet ledger model (e.g. loyalty / gift-card
+  balance moves); saved cards ↔ `payment.token` (token only, never card numbers); UPI IDs ↔ partner
+  payment preferences; scratch cards and coupons ↔ `loyalty.program` / `loyalty.card`; reviews ↔
+  `rating.rating` on product templates; notifications ↔ `mail.message` / push service; referrals ↔ a
+  referral program. Each `useStored(key, seed)` becomes a fetch + POST to the matching endpoint.
 
 ## Sample rules to replace
 Quick: minimum order ₹99, delivery ₹30, free above ₹499. Express: delivery ₹49, free above ₹999

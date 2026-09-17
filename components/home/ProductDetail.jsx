@@ -25,6 +25,7 @@ import ProductArt from "./art";
 import { Icon, OpenContext, Rail, Thumb, WishContext, flyTo, flyToCart, inr } from "./shared";
 import { getDetails } from "./productDetails";
 import { Crumbs } from "./Browse";
+import { KEYS, SEED_REVIEWS, STAR_WORDS, fmtDate, useStored } from "./accountStore";
 
 const ZOOM = 2.6;
 
@@ -261,9 +262,11 @@ function unitPrice(v) {
 /* ---------------- page ---------------- */
 export default function ProductDetail({
   p, cart, setQty, address, onBack, onChangeAddress, onExplore, fromRect,
-  related = [], variants = [], onVariant, bundle = [], similar = [], recent = [], onViewSimilar,
+  related = [], variants = [], onVariant, bundle = [], similar = [], recent = [], onViewSimilar, onEditReview,
 }) {
   const d = useMemo(() => getDetails(p), [p]);
+  const [myReviews] = useStored(KEYS.reviews, SEED_REVIEWS);
+  const mine = myReviews[p.id];
   const wish = useContext(WishContext);
   const liked = wish?.has(p.id);
   const [showAll, setShowAll] = useState(true);
@@ -399,6 +402,13 @@ export default function ProductDetail({
                     </div>
                   </div>
                   <ul className="pd-rev-list">
+                    {mine && (
+                      <li className="pd-mine" style={{ "--k": 0 }}>
+                        <div className="pd-rev-top"><span className={"pd-chip s" + mine.stars}>{mine.stars}★</span><b>{mine.title || STAR_WORDS[mine.stars]}</b><em>Your review</em><small>· {fmtDate(mine.at)} · Verified purchase</small></div>
+                        {mine.text && <p>{mine.text}</p>}
+                        {onEditReview && <button className="pd-helpful" onClick={onEditReview}>Edit in My reviews</button>}
+                      </li>
+                    )}
                     {d.reviews.map((r, k) => (
                       <li key={k} style={{ "--k": k }}>
                         <div className="pd-rev-top"><span className={"pd-chip s" + r.stars}>{r.stars}★</span><b>{r.name}</b><small>· {r.when} · Verified purchase</small></div>

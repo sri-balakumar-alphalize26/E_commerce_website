@@ -16,8 +16,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Icon, Thumb, inr } from "./shared";
 import { Amount, CART_RULES, COUPONS, computeBill } from "./Cart";
+import { KEYS, SEED_PAYMENTS, useStored } from "./accountStore";
 import {
-  BANKS, BRAND_LABEL, COD_LIMIT, SAVED_CARDS, UPI_APPS, cardBrand, demoGateway, expiryOk,
+  BANKS, BRAND_LABEL, COD_LIMIT, UPI_APPS, cardBrand, demoGateway, expiryOk,
   formatCard, formatExpiry, luhn, newOrderId, upiOk,
 } from "./payment";
 
@@ -180,7 +181,7 @@ function SlotStep({ bill, slots, slot, setSlot, onContinue }) {
 }
 
 /* ---------------- 3 payment ---------------- */
-function CardPreview({ num, name, exp, flipped, brand }) {
+export function CardPreview({ num, name, exp, flipped, brand }) {
   const digits = num.replace(/\D/g, "");
   const shown = (formatCard(digits) || "").padEnd(19, "•").replace(/ /g, " ");
   return (
@@ -198,7 +199,7 @@ function CardPreview({ num, name, exp, flipped, brand }) {
   );
 }
 
-function PaymentStep({ payable, pay, setPay, wallet, walletUse, setWalletUse, walletBal, codAllowed }) {
+function PaymentStep({ payable, pay, setPay, wallet, walletUse, setWalletUse, walletBal, codAllowed, cards = [], upis = [] }) {
   const [verifying, setVerifying] = useState(false);
   const [cvvFocus, setCvvFocus] = useState(false);
   const set = (patch) => setPay((p) => ({ ...p, ...patch }));
@@ -243,6 +244,19 @@ function PaymentStep({ payable, pay, setPay, wallet, walletUse, setWalletUse, wa
                 <div className="co-collapse"><div inert={!on}><div className="co-method-body">
                   {m.key === "upi" && (
                     <>
+                      {upis.length > 0 && (
+                        <div className="co-saved co-savedupi">
+                          {upis.map((u) => {
+                            const onU = pay.useVpa && pay.vpa === u.vpa;
+                            return (
+                              <button key={u.id} className={"co-savedcard" + (onU ? " co-on" : "")} onClick={() => set({ useVpa: true, vpa: u.vpa, vpaName: u.name, vpaError: "" })} tabIndex={on ? 0 : -1}>
+                                <Radio on={onU} /><span className="co-brandtag"><Icon n="upi" size={14} /></span>
+                                <span><b>{u.vpa}</b><small>Saved · verified as {u.name}</small></span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
                       <div className="co-apps">
                         {UPI_APPS.map((a, k) => (
                           <button key={a.key} className={"co-app" + (pay.upiApp === a.key && !pay.useVpa ? " co-on" : "")} style={{ "--k": k, "--tone": a.tone }} onClick={() => set({ upiApp: a.key, useVpa: false })} tabIndex={on ? 0 : -1}>
@@ -271,7 +285,7 @@ function PaymentStep({ payable, pay, setPay, wallet, walletUse, setWalletUse, wa
                   {m.key === "card" && (
                     <>
                       <div className="co-saved">
-                        {SAVED_CARDS.map((c) => (
+                        {cards.map((c) => (
                           <button key={c.id} className={"co-savedcard" + (pay.cardId === c.id ? " co-on" : "")} onClick={() => set({ cardId: c.id })} tabIndex={on ? 0 : -1}>
                             <Radio on={pay.cardId === c.id} />
                             <span className={"co-brandtag co-b-" + c.brand}>{BRAND_LABEL[c.brand]}</span>
@@ -541,8 +555,13 @@ export default function CheckoutPage({
   const [walletUse, setWalletUse] = useState(false);
   const [pay, setPay] = useState({
     method: draft.how === "cod" ? "cod" : "upi", upiApp: "gpay", useVpa: false, vpa: "", vpaName: "", vpaError: "",
-    cardId: SAVED_CARDS[0]?.id || "new", savedCvv: "", cardNum: "", cardName: "", cardExp: "", cardCvv: "", saveCard: true, bank: "",
+    cardId: SEED_PAYMENTS.cards[0]?.id || "new", savedCvv: "", cardNum: "", cardName: "", cardExp: "", cardCvv: "", saveCard: true, bank: "",
   });
+  const [savedPay, setSavedPay] = useStored(KEYS.payments, SEED_PAYMENTS);
+  const cards = useMemo(() => [...savedPay.cards].sort((a, b) => !!b.default - !!a.default), [savedPay.cards]);
+  useEffect(() => { /* saved cards load after mount: keep the pick valid */
+    setPay((p) => (p.cardId === "new" || cards.some((c) => c.id === p.cardId) ? p : { ...p, cardId: cards[0]?.id || "new" }));
+  }, [cards]);
   const [job, setJob] = useState(null);
   const [attempt, setAttempt] = useState(0);
   const [nudge, setNudge] = useState(0);
@@ -574,7 +593,7 @@ export default function CheckoutPage({
   const startPay = () => {
     if (!methodReady) { setNudge((n) => n + 1); return; }
     const method = wallet.covers ? "wallet" : pay.method;
-    const saved = SAVED_CARDS.find((c) => c.id === pay.cardId);
+    const saved = cards.find((c) => c.id === pay.cardId);
     const last4 = pay.cardId === "new" ? pay.cardNum.replace(/\D/g, "").slice(-4) : saved?.last4;
     setJob({
       method, upiApp: pay.useVpa ? null : pay.upiApp, vpa: pay.useVpa ? pay.vpa : "", bank: pay.bank,
@@ -590,6 +609,11 @@ export default function CheckoutPage({
     const app = UPI_APPS.find((a) => a.key === job.upiApp);
     const payNote = method === "upi" ? (job.vpa || `${app?.name}`) : method === "card" ? job.cardLabel : method === "netbanking" ? BANKS.find((b) => b.key === job.bank)?.name : method === "wallet" ? "369 Wallet" : "Cash on delivery";
     const at = Date.now();
+    if (method === "card" && pay.cardId === "new" && pay.saveCard) { /* shows up in Account → Saved payments */
+      const d = pay.cardNum.replace(/\D/g, "");
+      setSavedPay((sp) => sp.cards.some((c) => c.last4 === d.slice(-4) && c.exp === pay.cardExp) ? sp
+        : { ...sp, cards: [...sp.cards, { id: "c" + at, brand: cardBrand(d) || "visa", last4: d.slice(-4), name: pay.cardName.trim(), exp: pay.cardExp, bank: "Saved card", default: !sp.cards.length }] });
+    }
     const order = {
       id: newOrderId(mode), at, mode,
       placed: "Today, " + new Date(at).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" }),
@@ -652,7 +676,7 @@ export default function CheckoutPage({
           </Step>
           <Step n={3} icon="card" title="Payment" open={step === 3} done={false}>
             <div key={nudge} className={nudge ? "co-nudge" : ""}>
-              <PaymentStep payable={payable} pay={pay} setPay={setPay} wallet={wallet} walletUse={walletUse} setWalletUse={setWalletUse} walletBal={walletBalance} codAllowed={codAllowed} />
+              <PaymentStep payable={payable} pay={pay} setPay={setPay} wallet={wallet} walletUse={walletUse} setWalletUse={setWalletUse} walletBal={walletBalance} codAllowed={codAllowed} cards={cards} upis={savedPay.upis} />
             </div>
           </Step>
         </div>

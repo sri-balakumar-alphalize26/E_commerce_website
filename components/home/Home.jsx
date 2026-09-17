@@ -15,7 +15,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ProductArt from "./art";
 import { Icon, OpenContext, Rail, SEARCH_WORDS, Thumb, WishContext, flyTo, inr, useInView, useRailScroll } from "./shared";
+import { logWallet } from "./accountStore";
 import AccountPage from "./Account";
+import { useNotifications } from "./AccountExtras";
 import ProductDetail from "./ProductDetail";
 import SearchOverlay from "./SearchOverlay";
 import LocationPicker, { SAMPLE_ADDRESSES } from "./LocationPicker";
@@ -59,7 +61,7 @@ function ModeToggle({ mode, onMode }) {
   );
 }
 
-function StoreHeader({ count, mode, onMode, onCart, onAccount, address, onLoc, locOpen, onSearch, onHome, onOffers, onBuyAgain, route, query }) {
+function StoreHeader({ unread = 0, count, mode, onMode, onCart, onAccount, address, onLoc, locOpen, onSearch, onHome, onOffers, onBuyAgain, route, query }) {
   const [scrolled, setScrolled] = useState(false);
   const [w, setW] = useState(0);
   useEffect(() => {
@@ -103,7 +105,7 @@ function StoreHeader({ count, mode, onMode, onCart, onAccount, address, onLoc, l
             <Icon n="cart" />
             {count > 0 && <span key={count} className="hm-badge">{count}</span>}
           </button>
-          <button className="hm-avatar" aria-label="Account" onClick={onAccount}><Icon n="user" size={18} /></button>
+          <button className="hm-avatar" aria-label={unread ? `Account, ${unread} unread notifications` : "Account"} onClick={onAccount}><Icon n="user" size={18} />{unread > 0 && <i className="ax-avatar-dot" key={unread} />}</button>
         </nav>
       </div>
     </header>
@@ -423,11 +425,17 @@ export default function Home({
     return st.key === x.status ? x : { ...x, status: st.key, eta: st.key === "delivered" ? "Delivered" : st.mode === "quick" ? `${st.etaMin} mins` : x.eta };
   }), [orders, tick]); // eslint-disable-line
 
+  /* wallet credits from the account page (add money, scratch cards) and refunds */
+  const walletMove = (amount, entry) => {
+    setWallet((w) => { const n = Math.max(0, w + amount); save("369mart.wallet", n); return n; });
+    if (entry) logWallet({ amount: Math.abs(amount), ...entry });
+  };
+  const { unread } = useNotifications(ordersView);
   const orderPlaced = (o) => {
     const saved = load("369mart.orders", []);
     save("369mart.orders", [o, ...(Array.isArray(saved) ? saved : [])].slice(0, 30));
     setOrders((list) => [o, ...list]);
-    if (o.walletUsed) { const left = Math.max(0, wallet - o.walletUsed); setWallet(left); save("369mart.wallet", left); }
+    if (o.walletUsed) { const left = Math.max(0, wallet - o.walletUsed); setWallet(left); save("369mart.wallet", left); logWallet({ kind: "spend", amount: o.walletUsed, title: "Paid for order", sub: `Order #${o.id}` }); }
     order.current = []; setCart({});
     try { sessionStorage.removeItem("369mart.checkout"); } catch (e) {}
     nav("order", o.id, { replace: true });
@@ -501,7 +509,7 @@ export default function Home({
   if (view === "product") {
     body = product ? (
       <main className="hm-wrap hm-view-product" key={"product-" + (product.variantGroup || product.id)}>
-        <ProductDetail p={product} cart={cart} setQty={setQty} address={address}
+        <ProductDetail onEditReview={() => nav("account", "reviews")} p={product} cart={cart} setQty={setQty} address={address}
           fromRect={fromRect.current}
           variants={pd.variants}
           onVariant={(v) => nav("product", v.id, { replace: true, keepScroll: true })}
@@ -526,6 +534,8 @@ export default function Home({
           addresses={addresses} setAddresses={updateAddresses} selectedAddress={address} onSelectAddress={pickAddress} orders={ordersView}
           onBrowse={() => nav("home")}
           onReorder={reorder} onTrack={(o) => nav("track", o.id)}
+          wallet={wallet} onWallet={walletMove} onNav={nav}
+          onSection={(k) => { if (syncUrl) history.replaceState(null, "", routeToPath("account", k)); }}
           onSignOut={() => { onSignOut ? onSignOut() : nav("home"); }} />
       </main>
     );
@@ -552,7 +562,7 @@ export default function Home({
           <OrderTrack order={o} byId={byId} patchOrder={patchOrder}
             onBack={() => nav("account", "orders")} onReceipt={() => nav("order", o.id)} onShop={() => nav("home")}
             onReorder={reorder}
-            onRefundWallet={(amt) => setWallet((w) => { const n = w + amt; save("369mart.wallet", n); return n; })} />
+            onRefundWallet={(amt) => walletMove(amt, { kind: "refund", title: "Refund for cancelled order", sub: `Order #${o.id}` })} />
         ) : ready ? (
           <NotFoundView title="Order not found" text="This order isn't on this device. Your orders are listed in your account." />
         ) : <div className="co-skel"><span /><span /></div>}
@@ -604,7 +614,7 @@ export default function Home({
     <WishContext.Provider value={wish}>
     <OpenContext.Provider value={openProduct}>
     <div className={"hm-page" + (count > 0 && browsing ? " hm-has-cart" : "") + (view !== "home" ? " hm-in-cart" : "") + " hm-at-" + view} data-mode={mode}>
-      <StoreHeader count={count} mode={mode} onMode={switchMode} onCart={() => nav("cart")} onAccount={onAccount || (() => nav("account"))}
+      <StoreHeader unread={unread} count={count} mode={mode} onMode={switchMode} onCart={() => nav("cart")} onAccount={onAccount || (() => nav("account"))}
         onHome={() => nav("home")} onOffers={() => nav("offers")} onBuyAgain={() => nav("buyagain")} route={view} query={view === "search" ? route.param || "" : ""}
         onSearch={() => { onSearch?.(); setSearchOpen(true); }} address={address} locOpen={locOpen} onLoc={() => setLocOpen(true)} />
       {withTabs && <Tabs key={"t" + mode} tabs={tabs} active={activeTab} onChange={pickTab} />}

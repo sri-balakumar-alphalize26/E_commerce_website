@@ -2,7 +2,10 @@
 /* ==========================================================================
    369 Mart — Account
    Sidebar: profile card · My Profile · My List · Delivery Address · Orders ·
+   Ratings & reviews · Notifications ·
+   Payments & rewards (369 Wallet, Saved payments, Coupons & rewards, Refer & earn) ·
    Help & information (Help, About us, Legal information) · Sign out.
+   The extras live in AccountExtras.jsx (+ accountStore.js, acx.css).
 
    Motion
    - page: sidebar slides in from the left, panel rises, menu items cascade
@@ -16,19 +19,28 @@
    ========================================================================== */
 import { useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Icon, OpenContext, QtyControl, Thumb, WishContext, inr } from "./shared";
+import { NotifsSec, PaymentsSec, ReferSec, ReviewsSec, RewardsSec, WalletSec, useNotifications } from "./AccountExtras";
 
 const MENU = [
   { key: "profile", label: "My Profile", icon: "user" },
   { key: "list", label: "My List", icon: "heart" },
   { key: "address", label: "Delivery Address", icon: "pin" },
   { key: "orders", label: "Orders", icon: "box" },
+  { key: "reviews", label: "Ratings & reviews", icon: "star" },
+  { key: "notifications", label: "Notifications", icon: "bell" },
+  { group: "Payments & rewards" },
+  { key: "wallet", label: "369 Wallet", icon: "wallet" },
+  { key: "payments", label: "Saved payments", icon: "card" },
+  { key: "rewards", label: "Coupons & rewards", icon: "gift" },
+  { key: "refer", label: "Refer & earn", icon: "share" },
   { group: "Help & information" },
   { key: "help", label: "Help", icon: "help" },
   { key: "about", label: "About us", icon: "info" },
   { key: "legal", label: "Legal information", icon: "legal" },
 ];
 const ORDER = MENU.filter((m) => m.key).map((m) => m.key);
-const TITLES = { profile: "My Profile", list: "My List", address: "Delivery Address", orders: "Orders", help: "Help", about: "About us", legal: "Legal information" };
+const TITLES = Object.fromEntries(MENU.filter((m) => m.key).map((m) => [m.key, m.label]));
+export const ACCOUNT_SECTIONS = ORDER;
 
 export const SAMPLE_ORDERS = [
   { id: "369M-24091612", placed: "Today, 11:42 am", mode: "quick", status: "out", eta: "9 mins", items: [["f3", 1], ["d6", 2], ["f2", 1]], total: 796, pay: "UPI" },
@@ -336,9 +348,15 @@ export default function AccountPage({
   section: initialSection = "list",
   byId, cart, setQty, addresses, setAddresses, selectedAddress, onSelectAddress,
   orders = SAMPLE_ORDERS, onBrowse, onReorder, onTrack, onSignOut,
+  wallet = 0, onWallet, onNav, onSection,
 }) {
   const [user, setUser] = useState(initialUser);
-  const [section, setSection] = useState(initialSection);
+  const [section, setSection] = useState(ORDER.includes(initialSection) ? initialSection : "list");
+  const [toast, setToast] = useState(null);
+  const toastT = useRef(null);
+  const flash = (m) => { setToast(m); clearTimeout(toastT.current); toastT.current = setTimeout(() => setToast(null), 2200); };
+  const { unread } = useNotifications(orders);
+  const openProduct = useContext(OpenContext);
   const [dir, setDir] = useState(1);
   const [ind, setInd] = useState(null);
   const [confirm, setConfirm] = useState(false);
@@ -366,6 +384,7 @@ export default function AccountPage({
     if (k === section) return;
     setDir(ORDER.indexOf(k) > ORDER.indexOf(section) ? 1 : -1);
     setSection(k);
+    onSection?.(k);
     const el = nav.current?.querySelector(`[data-k="${k}"]`);
     el?.scrollIntoView?.({ block: "nearest", inline: "center", behavior: "smooth" });
   };
@@ -376,6 +395,12 @@ export default function AccountPage({
   else if (section === "list") body = <ListSec byId={byId} cart={cart} setQty={setQty} onBrowse={onBrowse} />;
   else if (section === "address") body = <AddressSec addresses={addresses} setAddresses={setAddresses} selected={selectedAddress} onSelect={onSelectAddress} />;
   else if (section === "orders") body = <OrdersSec orders={orders} byId={byId} onReorder={onReorder} onTrack={onTrack} />;
+  else if (section === "reviews") body = <ReviewsSec orders={orders} byId={byId} onOpen={openProduct} flash={flash} />;
+  else if (section === "notifications") body = <NotifsSec orders={orders} onNav={onNav} goSection={go} />;
+  else if (section === "wallet") body = <WalletSec balance={wallet} onWallet={onWallet} onNav={onNav} flash={flash} />;
+  else if (section === "payments") body = <PaymentsSec flash={flash} />;
+  else if (section === "rewards") body = <RewardsSec onWallet={onWallet} onNav={onNav} flash={flash} />;
+  else if (section === "refer") body = <ReferSec user={user} flash={flash} />;
   else if (section === "help") body = <HelpSec />;
   else if (section === "about") body = <AboutSec />;
   else body = <LegalSec />;
@@ -397,6 +422,8 @@ export default function AccountPage({
               <span className="ac-nav-ic" key={section === m.key ? "on" : "off"}><Icon n={section === m.key && m.icon === "heart" ? "heartFill" : m.icon} size={19} /></span>
               {m.label}
               {m.key === "orders" && orders.some((o) => o.status === "out") && <em className="ac-live">Live</em>}
+              {m.key === "notifications" && unread > 0 && <em className="ax-badge" key={unread}>{unread}</em>}
+              {m.key === "wallet" && <em className="ax-navamt">{inr(wallet)}</em>}
             </button>
           ))}
           <hr />
@@ -410,6 +437,8 @@ export default function AccountPage({
         <h1 className="ac-title"><span key={section}>{TITLES[section]}</span></h1>
         <Panel k={section} dir={dir}>{body}</Panel>
       </main>
+
+      <div className={"ot-toast ax-toast" + (toast ? " ot-show" : "")} role="status" aria-live="polite">{toast}</div>
 
       {confirm && (
         <div className="ac-modal-wrap" role="presentation" onClick={() => setConfirm(false)}>

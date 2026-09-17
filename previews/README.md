@@ -11,6 +11,7 @@ They run the same components as the app with sample data and inline sample image
 - `product.html` — product page with thumbnails, image scrolling and hover zoom
 - `cart.html` — cart page
 - `account.html` — account page
+- `account-extras.html` — account on 369 Wallet: add money, saved cards / UPI, scratch cards, reviews, notifications (swipe), refer & earn
 - `sign-in.html` — sign-in page
 
 Fonts load from Google Fonts when online (system font fallback offline).
