@@ -80,6 +80,14 @@ Needs Node 18.18 or newer (Node 20 LTS recommended).
   the location picker), Orders (tabs, live progress tracker, expandable detail, Reorder), Help (search +
   FAQ accordion), About us, Legal information, Sign out (confirm dialog). Sections slide in by menu
   order and the panel height eases between them.
+- **Support bot** — floating white button with the headset bot (bottom-right; it rises above the green
+  View cart pill, the free-delivery nudge on phones and the cart page pay bar). Idle bob, blinking and
+  glancing eyes, pulsing mic; head tilts on hover. After 3.5 s (once per visit) it waves with a "Hi! Need
+  help?" bubble and an unread dot. Tap → chat grows out of the button (transform/opacity only): greeting
+  that knows your active order, quick topics (track, refund, cancel, payment, delivery charges, agent),
+  typing dots, action buttons that open the order / wallet / offers, and a Talk to an agent hand-off with a
+  queue bar. Chat is kept for the visit (sessionStorage). Hidden on checkout, receipt and tracking (tracking
+  has its own help chat). Replace `reply()` in `botReplies.js` with your helpdesk or LLM endpoint.
 - **Account extras** (`/account/<section>`) — sections under *Payments & rewards* plus two new ones:
   - **369 Wallet** (`wallet`): balance card that counts up with a sheen; Add money sheet (amount chips,
     UPI app, "waiting for app" rings, coins drop into the wallet); transactions grouped by month with
@@ -194,6 +202,9 @@ components/
   home/AccountExtras.jsx  wallet, saved payments, rewards, reviews, notifications, refer & earn
   home/accountStore.js    account extras data + localStorage hook — replace with Odoo endpoints
   home/acx.css        account extras styles and animations
+  home/SupportBot.jsx floating support bot button + chat panel
+  home/botReplies.js  bot replies (intent rules, order-aware) — swap for a helpdesk / LLM API
+  home/bot.css        support bot styles and animations
   home/Cart.jsx       cart page, coupon sheet, payment details
   home/shared.jsx     icons, product card, rail, fly-to-cart, hooks
   home/art.jsx        drawn product placeholders (used when an item has no image)

@@ -24,6 +24,7 @@ import LocationPicker, { SAMPLE_ADDRESSES } from "./LocationPicker";
 import CartPage from "./Cart";
 import CheckoutPage from "./Checkout";
 import MiniCart from "./MiniCart";
+import SupportBot from "./SupportBot";
 import ReceiptPrinter from "./Receipt";
 import OrderTrack from "./OrderTrack";
 import { liveStatus } from "./orderState";
@@ -625,6 +626,9 @@ export default function Home({
         <MiniCart lines={lines} count={count} total={total} freeAt={freeDeliveryAt} setQty={setQty}
           onViewCart={() => nav("cart")} onCheckout={() => startCheckout({ how: "online" })} hidden={!!fx} />
       )}
+      <SupportBot orders={ordersView} wallet={wallet} onNav={nav}
+        hidden={!!fx || ["checkout", "order", "track"].includes(view)}
+        lift={view === "cart" ? 3 : browsing && count > 0 ? (view === "home" ? 2 : 1) : 0} />
       <ModeSwitchOverlay fx={fx} />
       <SearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} products={products} picks={quickPicks} cart={cart} setQty={setQty}
         initialQuery={view === "search" ? route.param || "" : ""}

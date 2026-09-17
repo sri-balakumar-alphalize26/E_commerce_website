@@ -5,6 +5,7 @@ They run the same components as the app with sample data and inline sample image
 
 - `home.html` — home, Quick / Express switch, location picker, search, product galleries, cart bar
 - `browsing.html` — category page with filters, sort and infinite scroll; tabs, search results, offers, buy again, pack sizes, footer
+- `support-bot.html` — home page with the support bot: wait for the wave, tap the bot, try the topics and Talk to an agent
 - `add-to-cart.html` — home page: tap Add to see the image fly into the floating cart pill; tap the pill for the mini cart
 - `order-tracking.html` — order on the way: live map, rider, OTP; Skip ahead to delivered, then rate, return, cancel (on other orders) and help chat
 - `checkout.html` — checkout with 4 sample items: address, slot, payment methods, pay sheets, receipt printer
