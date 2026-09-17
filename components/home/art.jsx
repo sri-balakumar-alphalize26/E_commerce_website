@@ -233,7 +233,66 @@ const Basket = ({ c = "#c9a36b" }) => (
   </g>
 );
 
-const ART = { Pack, Bottle, Box, Jar, Bar, Banana, Apple, Pomegranate, Orange, Grapes, Headphones, Speaker, Charger, Ssd, Webcam, Lamp, Plates, Flask, Towels, Board, Basket };
+const Tomato = ({ c = "#e03b2f" }) => (
+  <g>
+    <ellipse cx="60" cy="91" rx="32" ry="4" fill="#000" opacity=".08" />
+    <path d="M60 32c20 0 32 12 32 28S80 88 60 88 28 76 28 60s12-28 32-28z" fill={c} />
+    <path d="M40 48c3-6 9-9 14-9-6 4-9 9-10 15z" fill="#fff" opacity=".3" />
+    <path d="M60 36l-9-8 7 2 2-8 2 8 7-2-9 8 10 2-10 1-3 5-3-5-10-1z" fill="#3f8e2e" />
+  </g>
+);
+
+const Onion = ({ c = "#b2566e" }) => (
+  <g>
+    <ellipse cx="60" cy="91" rx="28" ry="4" fill="#000" opacity=".08" />
+    <path d="M60 24c4 10 30 22 30 42 0 14-13 22-30 22S30 80 30 66c0-20 26-32 30-42z" fill={c} />
+    <path d="M60 30c-6 14-14 26-14 40M60 30c6 14 14 26 14 40M60 30v56" stroke="#fff" strokeOpacity=".28" strokeWidth="2" fill="none" />
+    <path d="M57 24c0-6 1-10 3-14 2 4 3 8 3 14z" fill="#8aa35a" />
+  </g>
+);
+
+const Leafy = ({ c = "#2f8a3c" }) => (
+  <g>
+    <ellipse cx="60" cy="92" rx="30" ry="4" fill="#000" opacity=".08" />
+    {[[-34, 0], [-14, -6], [8, -8], [28, -2]].map(([r, dy], i) => (
+      <g key={i} transform={`rotate(${r} 60 88)`}>
+        <path d={`M60 88C44 70 42 ${40 + dy} 60 ${22 + dy}c18 ${18 - dy} 16 48 0 66z`} fill={c} opacity={0.75 + i * 0.07} />
+        <path d={`M60 86V${30 + dy}`} stroke="#d8f0c6" strokeOpacity=".7" strokeWidth="1.6" />
+      </g>
+    ))}
+    <rect x="52" y="82" width="16" height="8" rx="3" fill="#c9a36b" />
+  </g>
+);
+
+/* soap carton: flat box, colour band, leaf mark, label */
+const Soap = ({ c = "#2e7d4f", t = "" }) => (
+  <g>
+    <ellipse cx="60" cy="88" rx="40" ry="4" fill="#000" opacity=".08" />
+    <path d="M18 40l14-12h70l-14 12z" fill={c} opacity=".75" />
+    <path d="M88 40l14-12v38l-14 14z" fill={c} opacity=".55" />
+    <rect x="18" y="40" width="70" height="40" rx="3" fill={c} />
+    <rect x="18" y="58" width="70" height="10" fill="#fff" opacity=".22" />
+    <path d="M30 56c0-9 6-14 15-14 0 9-6 14-15 14z" fill="#fff" opacity=".85" />
+    <path d="M30 56l10-9" stroke={c} strokeWidth="1.6" strokeLinecap="round" />
+    <text x="66" y="56" textAnchor="middle" fontSize={t.length > 7 ? 8.5 : t.length > 5 ? 10 : 12} fontWeight="800" fill="#fff">{t}</text>
+    <path d="M50 74h30" stroke="#fff" strokeOpacity=".55" strokeWidth="2.4" strokeLinecap="round" />
+  </g>
+);
+
+/* unwrapped oval bar with a pressed mark */
+const SoapBar = ({ c = "#d99a5b", t = "" }) => (
+  <g>
+    <ellipse cx="60" cy="86" rx="38" ry="4.5" fill="#000" opacity=".1" />
+    <ellipse cx="60" cy="62" rx="40" ry="22" fill={c} />
+    <ellipse cx="60" cy="56" rx="40" ry="22" fill={c} />
+    <ellipse cx="60" cy="56" rx="40" ry="22" fill="#fff" opacity=".14" />
+    <ellipse cx="60" cy="56" rx="28" ry="13" fill="none" stroke="#000" strokeOpacity=".14" strokeWidth="2" />
+    <text x="60" y="60" textAnchor="middle" fontSize="10" fontWeight="800" fill="#000" fillOpacity=".28">{t}</text>
+    <path d="M34 46c6-5 14-7 22-7" stroke="#fff" strokeOpacity=".5" strokeWidth="3" strokeLinecap="round" fill="none" />
+  </g>
+);
+
+const ART = { Soap, SoapBar, Tomato, Onion, Leafy, Pack, Bottle, Box, Jar, Bar, Banana, Apple, Pomegranate, Orange, Grapes, Headphones, Speaker, Charger, Ssd, Webcam, Lamp, Plates, Flask, Towels, Board, Basket };
 
 export default function ProductArt({ art = "Pack", color, label }) {
   const A = ART[art] || Pack;
