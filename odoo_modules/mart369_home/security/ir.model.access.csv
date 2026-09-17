@@ -1,0 +1,25 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_mart369_config_user,mart369.home.config user,model_mart369_home_config,base.group_user,1,0,0,0
+access_mart369_config_designer,mart369.home.config designer,model_mart369_home_config,website.group_website_designer,1,1,1,0
+access_mart369_config_manager,mart369.home.config manager,model_mart369_home_config,base.group_system,1,1,1,1
+access_mart369_mode_user,mart369.home.mode user,model_mart369_home_mode,base.group_user,1,0,0,0
+access_mart369_mode_designer,mart369.home.mode designer,model_mart369_home_mode,website.group_website_designer,1,1,1,0
+access_mart369_mode_manager,mart369.home.mode manager,model_mart369_home_mode,base.group_system,1,1,1,1
+access_mart369_tab_user,mart369.home.tab user,model_mart369_home_tab,base.group_user,1,0,0,0
+access_mart369_tab_designer,mart369.home.tab designer,model_mart369_home_tab,website.group_website_designer,1,1,1,1
+access_mart369_tab_manager,mart369.home.tab manager,model_mart369_home_tab,base.group_system,1,1,1,1
+access_mart369_banner_user,mart369.home.banner user,model_mart369_home_banner,base.group_user,1,0,0,0
+access_mart369_banner_designer,mart369.home.banner designer,model_mart369_home_banner,website.group_website_designer,1,1,1,1
+access_mart369_banner_manager,mart369.home.banner manager,model_mart369_home_banner,base.group_system,1,1,1,1
+access_mart369_tile_user,mart369.home.tile user,model_mart369_home_tile,base.group_user,1,0,0,0
+access_mart369_tile_designer,mart369.home.tile designer,model_mart369_home_tile,website.group_website_designer,1,1,1,1
+access_mart369_tile_manager,mart369.home.tile manager,model_mart369_home_tile,base.group_system,1,1,1,1
+access_mart369_section_user,mart369.home.section user,model_mart369_home_section,base.group_user,1,0,0,0
+access_mart369_section_designer,mart369.home.section designer,model_mart369_home_section,website.group_website_designer,1,1,1,1
+access_mart369_section_manager,mart369.home.section manager,model_mart369_home_section,base.group_system,1,1,1,1
+access_mart369_section_product_user,mart369.home.section.product user,model_mart369_home_section_product,base.group_user,1,0,0,0
+access_mart369_section_product_designer,mart369.home.section.product designer,model_mart369_home_section_product,website.group_website_designer,1,1,1,1
+access_mart369_section_product_manager,mart369.home.section.product manager,model_mart369_home_section_product,base.group_system,1,1,1,1
+access_mart369_section_banner_user,mart369.home.section.banner user,model_mart369_home_section_banner,base.group_user,1,0,0,0
+access_mart369_section_banner_designer,mart369.home.section.banner designer,model_mart369_home_section_banner,website.group_website_designer,1,1,1,1
+access_mart369_section_banner_manager,mart369.home.section.banner manager,model_mart369_home_section_banner,base.group_system,1,1,1,1

@@ -1,0 +1,618 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- noupdate="1": this is a starting point, not a template. Once the
+         module is installed an upgrade never overwrites what the operator
+         has changed. -->
+    <data noupdate="1">
+
+        <!-- ══════════════ Shop categories the rows point at ══════════════
+             Created so the home page works the moment the module is
+             installed. Put products into these and the rows fill up. -->
+
+        <record id="categ_fruits" model="product.public.category">
+            <field name="name">Fresh Fruits</field>
+            <field name="sequence">10</field>
+        </record>
+        <record id="categ_staples" model="product.public.category">
+            <field name="name">Daily Essentials</field>
+            <field name="sequence">20</field>
+        </record>
+        <record id="categ_tech" model="product.public.category">
+            <field name="name">Electronics</field>
+            <field name="sequence">30</field>
+        </record>
+        <record id="categ_home" model="product.public.category">
+            <field name="name">Home &amp; Kitchen</field>
+            <field name="sequence">40</field>
+        </record>
+        <record id="categ_office" model="product.public.category">
+            <field name="name">Office &amp; Stationery</field>
+            <field name="sequence">50</field>
+        </record>
+
+        <!-- ══════════════════════ Settings ══════════════════════ -->
+
+        <record id="home_config" model="mart369.home.config">
+            <field name="name">Home Page Settings</field>
+            <field name="default_rail_limit">12</field>
+            <field name="cache_seconds">60</field>
+            <field name="hide_out_of_stock" eval="False"/>
+        </record>
+
+        <record id="mode_quick" model="mart369.home.mode">
+            <field name="config_id" ref="home_config"/>
+            <field name="key">quick</field>
+            <field name="name">Quick</field>
+            <field name="sequence">10</field>
+            <field name="free_delivery_at">499</field>
+        </record>
+
+        <record id="mode_all" model="mart369.home.mode">
+            <field name="config_id" ref="home_config"/>
+            <field name="key">all</field>
+            <field name="name">Express</field>
+            <field name="sequence">20</field>
+            <field name="free_delivery_at">999</field>
+        </record>
+
+        <!-- ══════════════════ Quick - tabs ══════════════════ -->
+
+        <record id="tab_q_home" model="mart369.home.tab">
+            <field name="mode_id" ref="mode_quick"/>
+            <field name="key">home</field>
+            <field name="name">My Home</field>
+            <field name="icon">bag</field>
+            <field name="route_view">home</field>
+            <field name="sequence">10</field>
+        </record>
+        <record id="tab_q_grocery" model="mart369.home.tab">
+            <field name="mode_id" ref="mode_quick"/>
+            <field name="key">grocery</field>
+            <field name="name">Groceries</field>
+            <field name="icon">basket</field>
+            <field name="route_view">category</field>
+            <field name="route_param">staples</field>
+            <field name="sequence">20</field>
+        </record>
+        <record id="tab_q_fruits" model="mart369.home.tab">
+            <field name="mode_id" ref="mode_quick"/>
+            <field name="key">fruits</field>
+            <field name="name">Fruits &amp; Veg</field>
+            <field name="icon">leaf</field>
+            <field name="route_view">category</field>
+            <field name="route_param">fruits-vegetables</field>
+            <field name="sequence">30</field>
+        </record>
+        <record id="tab_q_electronics" model="mart369.home.tab">
+            <field name="mode_id" ref="mode_quick"/>
+            <field name="key">electronics</field>
+            <field name="name">Electronics</field>
+            <field name="icon">plug</field>
+            <field name="route_view">category</field>
+            <field name="route_param">electronics</field>
+            <field name="sequence">40</field>
+        </record>
+        <record id="tab_q_kitchen" model="mart369.home.tab">
+            <field name="mode_id" ref="mode_quick"/>
+            <field name="key">kitchen</field>
+            <field name="name">Home &amp; Kitchen</field>
+            <field name="icon">pot</field>
+            <field name="route_view">category</field>
+            <field name="route_param">home-kitchen</field>
+            <field name="sequence">50</field>
+        </record>
+        <record id="tab_q_stationery" model="mart369.home.tab">
+            <field name="mode_id" ref="mode_quick"/>
+            <field name="key">stationery</field>
+            <field name="name">Stationery</field>
+            <field name="icon">pen</field>
+            <field name="route_view">category</field>
+            <field name="route_param">stationery</field>
+            <field name="sequence">60</field>
+        </record>
+        <record id="tab_q_coupons" model="mart369.home.tab">
+            <field name="mode_id" ref="mode_quick"/>
+            <field name="key">coupons</field>
+            <field name="name">Coupons</field>
+            <field name="icon">ticket</field>
+            <field name="route_view">offers</field>
+            <field name="sequence">70</field>
+        </record>
+
+        <!-- ══════════════════ Quick - banners ══════════════════ -->
+
+        <record id="banner_b1" model="mart369.home.banner">
+            <field name="mode_id" ref="mode_quick"/>
+            <field name="key">b1</field>
+            <field name="kicker">Fresh fruit week</field>
+            <field name="name">Fruits picked this morning</field>
+            <field name="note">Up to 30% off</field>
+            <field name="tone">green</field>
+            <field name="art_lines">Apple
+Orange
+Banana</field>
+            <field name="sequence">10</field>
+        </record>
+        <record id="banner_b2" model="mart369.home.banner">
+            <field name="mode_id" ref="mode_quick"/>
+            <field name="key">b2</field>
+            <field name="kicker">Tech week</field>
+            <field name="name">Audio &amp; chargers</field>
+            <field name="note">Up to 46% off</field>
+            <field name="tone">navy</field>
+            <field name="art_lines">Headphones
+Speaker</field>
+            <field name="sequence">20</field>
+        </record>
+        <record id="banner_b3" model="mart369.home.banner">
+            <field name="mode_id" ref="mode_quick"/>
+            <field name="key">b3</field>
+            <field name="kicker">Festive gifting</field>
+            <field name="name">Dry fruit delights</field>
+            <field name="note">Up to 40% off</field>
+            <field name="tone">brown</field>
+            <field name="art_lines">Box
+Jar</field>
+            <field name="sequence">30</field>
+        </record>
+        <record id="banner_b4" model="mart369.home.banner">
+            <field name="mode_id" ref="mode_quick"/>
+            <field name="key">b4</field>
+            <field name="kicker">Back to office</field>
+            <field name="name">Desk &amp; stationery</field>
+            <field name="note">From 49</field>
+            <field name="tone">orange</field>
+            <field name="art_lines">Lamp
+Flask</field>
+            <field name="sequence">40</field>
+        </record>
+
+        <!-- ══════════════════ Quick - category tiles ══════════════════ -->
+
+        <record id="tile_q_fruits" model="mart369.home.tile">
+            <field name="mode_id" ref="mode_quick"/>
+            <field name="key">fruits</field>
+            <field name="name">Fresh fruits</field>
+            <field name="public_categ_id" ref="categ_fruits"/>
+            <field name="route">fruits-vegetables/fresh-fruits</field>
+            <field name="image_source">art</field>
+            <field name="art">Apple</field>
+            <field name="bg">#fdecec</field>
+            <field name="sequence">10</field>
+        </record>
+        <record id="tile_q_veg" model="mart369.home.tile">
+            <field name="mode_id" ref="mode_quick"/>
+            <field name="key">veg</field>
+            <field name="name">Vegetables</field>
+            <field name="route">fruits-vegetables/vegetables</field>
+            <field name="image_source">art</field>
+            <field name="art">Leafy</field>
+            <field name="bg">#eef7e4</field>
+            <field name="sequence">20</field>
+        </record>
+        <record id="tile_q_staples" model="mart369.home.tile">
+            <field name="mode_id" ref="mode_quick"/>
+            <field name="key">staples</field>
+            <field name="name">Atta &amp; staples</field>
+            <field name="public_categ_id" ref="categ_staples"/>
+            <field name="route">staples</field>
+            <field name="image_source">art</field>
+            <field name="art">Pack</field>
+            <field name="color">#b0662a</field>
+            <field name="badge">ATTA</field>
+            <field name="bg">#fbf0e4</field>
+            <field name="sequence">30</field>
+        </record>
+        <record id="tile_q_oil" model="mart369.home.tile">
+            <field name="mode_id" ref="mode_quick"/>
+            <field name="key">oil</field>
+            <field name="name">Oils &amp; ghee</field>
+            <field name="route">staples/oils</field>
+            <field name="image_source">art</field>
+            <field name="art">Bottle</field>
+            <field name="color">#d4a017</field>
+            <field name="badge">OIL</field>
+            <field name="bg">#fdf6dd</field>
+            <field name="sequence">40</field>
+        </record>
+        <record id="tile_q_snacks" model="mart369.home.tile">
+            <field name="mode_id" ref="mode_quick"/>
+            <field name="key">snacks</field>
+            <field name="name">Chocolates</field>
+            <field name="route">snacks</field>
+            <field name="image_source">art</field>
+            <field name="art">Bar</field>
+            <field name="color">#5a2e1c</field>
+            <field name="badge">70%</field>
+            <field name="bg">#f5ece6</field>
+            <field name="sequence">50</field>
+        </record>
+        <record id="tile_q_audio" model="mart369.home.tile">
+            <field name="mode_id" ref="mode_quick"/>
+            <field name="key">audio</field>
+            <field name="name">Audio</field>
+            <field name="public_categ_id" ref="categ_tech"/>
+            <field name="route">electronics/audio</field>
+            <field name="image_source">art</field>
+            <field name="art">Headphones</field>
+            <field name="bg">#e8f1f8</field>
+            <field name="sequence">60</field>
+        </record>
+        <record id="tile_q_kitchen" model="mart369.home.tile">
+            <field name="mode_id" ref="mode_quick"/>
+            <field name="key">kitchen</field>
+            <field name="name">Kitchen</field>
+            <field name="public_categ_id" ref="categ_home"/>
+            <field name="route">home-kitchen</field>
+            <field name="image_source">art</field>
+            <field name="art">Plates</field>
+            <field name="bg">#fbefe6</field>
+            <field name="sequence">70</field>
+        </record>
+        <record id="tile_q_stationery" model="mart369.home.tile">
+            <field name="mode_id" ref="mode_quick"/>
+            <field name="key">stationery</field>
+            <field name="name">Office desk</field>
+            <field name="public_categ_id" ref="categ_office"/>
+            <field name="route">stationery</field>
+            <field name="image_source">art</field>
+            <field name="art">Lamp</field>
+            <field name="bg">#fff1e2</field>
+            <field name="sequence">80</field>
+        </record>
+
+        <!-- ══════════════ Quick - the home page, top to bottom ══════════════
+             Each row uses a different way of choosing products, so all four
+             are there to look at and copy. -->
+
+        <record id="section_q_new" model="mart369.home.section">
+            <field name="mode_id" ref="mode_quick"/>
+            <field name="kind">rail</field>
+            <field name="key">new</field>
+            <field name="name">New this week</field>
+            <field name="subtitle">Just landed in store</field>
+            <field name="source">rule</field>
+            <field name="rule">new</field>
+            <field name="limit">12</field>
+            <field name="sequence">10</field>
+        </record>
+
+        <record id="section_q_fruits" model="mart369.home.section">
+            <field name="mode_id" ref="mode_quick"/>
+            <field name="kind">rail</field>
+            <field name="key">fruits</field>
+            <field name="name">Fresh fruits</field>
+            <field name="subtitle">Handpicked, delivered in minutes</field>
+            <field name="view_all_route">fruits-vegetables/fresh-fruits</field>
+            <field name="source">category</field>
+            <field name="public_categ_id" ref="categ_fruits"/>
+            <field name="limit">12</field>
+            <field name="sequence">20</field>
+        </record>
+
+        <record id="section_q_daily" model="mart369.home.section">
+            <field name="mode_id" ref="mode_quick"/>
+            <field name="kind">rail</field>
+            <field name="key">daily</field>
+            <field name="name">Daily essentials</field>
+            <field name="subtitle">Staples you reorder every week</field>
+            <field name="view_all_route">staples</field>
+            <field name="source">category</field>
+            <field name="public_categ_id" ref="categ_staples"/>
+            <field name="limit">12</field>
+            <field name="sequence">30</field>
+        </record>
+
+        <record id="section_q_strip" model="mart369.home.section">
+            <field name="mode_id" ref="mode_quick"/>
+            <field name="kind">banner_row</field>
+            <field name="name">Mid-page banners</field>
+            <field name="sequence">40</field>
+        </record>
+        <record id="section_q_strip_b3" model="mart369.home.section.banner">
+            <field name="section_id" ref="section_q_strip"/>
+            <field name="banner_id" ref="banner_b3"/>
+            <field name="sequence">10</field>
+        </record>
+        <record id="section_q_strip_b4" model="mart369.home.section.banner">
+            <field name="section_id" ref="section_q_strip"/>
+            <field name="banner_id" ref="banner_b4"/>
+            <field name="sequence">20</field>
+        </record>
+
+        <record id="section_q_tech" model="mart369.home.section">
+            <field name="mode_id" ref="mode_quick"/>
+            <field name="kind">rail</field>
+            <field name="key">tech</field>
+            <field name="name">Top deals on tech</field>
+            <field name="subtitle">Biggest savings right now</field>
+            <field name="view_all_route">electronics</field>
+            <field name="source">rule</field>
+            <field name="rule">discount</field>
+            <field name="limit">12</field>
+            <field name="sequence">50</field>
+        </record>
+
+        <record id="section_q_home" model="mart369.home.section">
+            <field name="mode_id" ref="mode_quick"/>
+            <field name="kind">rail</field>
+            <field name="key">home</field>
+            <field name="name">For your home</field>
+            <field name="view_all_route">home-kitchen</field>
+            <field name="source">category</field>
+            <field name="public_categ_id" ref="categ_home"/>
+            <field name="limit">12</field>
+            <field name="sequence">60</field>
+        </record>
+
+        <!-- ══════════════════ Express - tabs ══════════════════ -->
+
+        <record id="tab_a_foryou" model="mart369.home.tab">
+            <field name="mode_id" ref="mode_all"/>
+            <field name="key">foryou</field>
+            <field name="name">For you</field>
+            <field name="icon">grid</field>
+            <field name="route_view">home</field>
+            <field name="sequence">10</field>
+        </record>
+        <record id="tab_a_electronics" model="mart369.home.tab">
+            <field name="mode_id" ref="mode_all"/>
+            <field name="key">electronics</field>
+            <field name="name">Electronics</field>
+            <field name="icon">plug</field>
+            <field name="route_view">category</field>
+            <field name="route_param">electronics</field>
+            <field name="sequence">20</field>
+        </record>
+        <record id="tab_a_kitchen" model="mart369.home.tab">
+            <field name="mode_id" ref="mode_all"/>
+            <field name="key">kitchen</field>
+            <field name="name">Home &amp; Kitchen</field>
+            <field name="icon">pot</field>
+            <field name="route_view">category</field>
+            <field name="route_param">home-kitchen</field>
+            <field name="sequence">30</field>
+        </record>
+        <record id="tab_a_fashion" model="mart369.home.tab">
+            <field name="mode_id" ref="mode_all"/>
+            <field name="key">fashion</field>
+            <field name="name">Fashion</field>
+            <field name="icon">shirt</field>
+            <field name="route_view">category</field>
+            <field name="route_param">fashion</field>
+            <field name="sequence">40</field>
+        </record>
+        <record id="tab_a_stationery" model="mart369.home.tab">
+            <field name="mode_id" ref="mode_all"/>
+            <field name="key">stationery</field>
+            <field name="name">Stationery</field>
+            <field name="icon">pen</field>
+            <field name="route_view">category</field>
+            <field name="route_param">stationery</field>
+            <field name="sequence">50</field>
+        </record>
+        <record id="tab_a_books" model="mart369.home.tab">
+            <field name="mode_id" ref="mode_all"/>
+            <field name="key">books</field>
+            <field name="name">Books</field>
+            <field name="icon">book</field>
+            <field name="route_view">category</field>
+            <field name="route_param">books</field>
+            <field name="sequence">60</field>
+        </record>
+        <record id="tab_a_offers" model="mart369.home.tab">
+            <field name="mode_id" ref="mode_all"/>
+            <field name="key">offers</field>
+            <field name="name">Offers</field>
+            <field name="icon">ticket</field>
+            <field name="route_view">offers</field>
+            <field name="sequence">70</field>
+        </record>
+
+        <!-- ══════════════════ Express - banners ══════════════════ -->
+
+        <record id="banner_ab1" model="mart369.home.banner">
+            <field name="mode_id" ref="mode_all"/>
+            <field name="key">ab1</field>
+            <field name="kicker">Big tech savings</field>
+            <field name="name">Audio, storage &amp; more</field>
+            <field name="note">Up to 40% off</field>
+            <field name="tone">navy</field>
+            <field name="art_lines">Headphones
+Ssd</field>
+            <field name="sequence">10</field>
+        </record>
+        <record id="banner_ab2" model="mart369.home.banner">
+            <field name="mode_id" ref="mode_all"/>
+            <field name="key">ab2</field>
+            <field name="kicker">Home makeover</field>
+            <field name="name">Dinnerware &amp; linen</field>
+            <field name="note">From 499</field>
+            <field name="tone">teal</field>
+            <field name="art_lines">Plates
+Towels</field>
+            <field name="sequence">20</field>
+        </record>
+        <record id="banner_ab3" model="mart369.home.banner">
+            <field name="mode_id" ref="mode_all"/>
+            <field name="key">ab3</field>
+            <field name="kicker">Work from home</field>
+            <field name="name">Desk setup deals</field>
+            <field name="note">Up to 35% off</field>
+            <field name="tone">indigo</field>
+            <field name="art_lines">Lamp
+Webcam</field>
+            <field name="sequence">30</field>
+        </record>
+        <record id="banner_ab4" model="mart369.home.banner">
+            <field name="mode_id" ref="mode_all"/>
+            <field name="key">ab4</field>
+            <field name="kicker">Kitchen upgrade</field>
+            <field name="name">Flasks &amp; serving boards</field>
+            <field name="note">Buy 2, save 10%</field>
+            <field name="tone">brown</field>
+            <field name="art_lines">Flask
+Board</field>
+            <field name="sequence">40</field>
+        </record>
+
+        <!-- ══════════════ Express - category tiles ══════════════ -->
+
+        <record id="tile_a_audio" model="mart369.home.tile">
+            <field name="mode_id" ref="mode_all"/>
+            <field name="key">audio</field>
+            <field name="name">Audio</field>
+            <field name="public_categ_id" ref="categ_tech"/>
+            <field name="route">electronics/audio</field>
+            <field name="image_source">art</field>
+            <field name="art">Headphones</field>
+            <field name="bg">#e8f1f8</field>
+            <field name="sequence">10</field>
+        </record>
+        <record id="tile_a_storage" model="mart369.home.tile">
+            <field name="mode_id" ref="mode_all"/>
+            <field name="key">storage</field>
+            <field name="name">Storage</field>
+            <field name="route">electronics/storage</field>
+            <field name="image_source">art</field>
+            <field name="art">Ssd</field>
+            <field name="bg">#e6eef6</field>
+            <field name="sequence">20</field>
+        </record>
+        <record id="tile_a_chargers" model="mart369.home.tile">
+            <field name="mode_id" ref="mode_all"/>
+            <field name="key">chargers</field>
+            <field name="name">Chargers</field>
+            <field name="route">electronics/chargers</field>
+            <field name="image_source">art</field>
+            <field name="art">Charger</field>
+            <field name="bg">#eef3f6</field>
+            <field name="sequence">30</field>
+        </record>
+        <record id="tile_a_cameras" model="mart369.home.tile">
+            <field name="mode_id" ref="mode_all"/>
+            <field name="key">cameras</field>
+            <field name="name">Webcams</field>
+            <field name="route">electronics/cameras</field>
+            <field name="image_source">art</field>
+            <field name="art">Webcam</field>
+            <field name="bg">#edf0f3</field>
+            <field name="sequence">40</field>
+        </record>
+        <record id="tile_a_dinner" model="mart369.home.tile">
+            <field name="mode_id" ref="mode_all"/>
+            <field name="key">dinner</field>
+            <field name="name">Dinnerware</field>
+            <field name="public_categ_id" ref="categ_home"/>
+            <field name="route">home-kitchen/dinnerware</field>
+            <field name="image_source">art</field>
+            <field name="art">Plates</field>
+            <field name="color">#2d6a8a</field>
+            <field name="bg">#e9f1f5</field>
+            <field name="sequence">50</field>
+        </record>
+        <record id="tile_a_linen" model="mart369.home.tile">
+            <field name="mode_id" ref="mode_all"/>
+            <field name="key">linen</field>
+            <field name="name">Bath linen</field>
+            <field name="route">home-kitchen/linen</field>
+            <field name="image_source">art</field>
+            <field name="art">Towels</field>
+            <field name="color">#2d6a8a</field>
+            <field name="bg">#eef2f4</field>
+            <field name="sequence">60</field>
+        </record>
+        <record id="tile_a_lighting" model="mart369.home.tile">
+            <field name="mode_id" ref="mode_all"/>
+            <field name="key">lighting</field>
+            <field name="name">Lighting</field>
+            <field name="route">home-kitchen/lighting</field>
+            <field name="image_source">art</field>
+            <field name="art">Lamp</field>
+            <field name="bg">#fff1e2</field>
+            <field name="sequence">70</field>
+        </record>
+        <record id="tile_a_baskets" model="mart369.home.tile">
+            <field name="mode_id" ref="mode_all"/>
+            <field name="key">baskets</field>
+            <field name="name">Storage baskets</field>
+            <field name="route">home-kitchen/storage</field>
+            <field name="image_source">art</field>
+            <field name="art">Basket</field>
+            <field name="bg">#f5eee2</field>
+            <field name="sequence">80</field>
+        </record>
+
+        <!-- ══════════ Express - the home page, top to bottom ══════════ -->
+
+        <record id="section_a_tech" model="mart369.home.section">
+            <field name="mode_id" ref="mode_all"/>
+            <field name="kind">rail</field>
+            <field name="key">all-tech</field>
+            <field name="name">Best of electronics</field>
+            <field name="subtitle">Free delivery on every order above 999</field>
+            <field name="view_all_route">electronics</field>
+            <field name="source">category</field>
+            <field name="public_categ_id" ref="categ_tech"/>
+            <field name="limit">12</field>
+            <field name="sequence">10</field>
+        </record>
+
+        <record id="section_a_home" model="mart369.home.section">
+            <field name="mode_id" ref="mode_all"/>
+            <field name="kind">rail</field>
+            <field name="key">all-home</field>
+            <field name="name">Home makeover</field>
+            <field name="subtitle">Dinnerware, linen and storage</field>
+            <field name="view_all_route">home-kitchen</field>
+            <field name="source">category</field>
+            <field name="public_categ_id" ref="categ_home"/>
+            <field name="limit">12</field>
+            <field name="sequence">20</field>
+        </record>
+
+        <record id="section_a_strip" model="mart369.home.section">
+            <field name="mode_id" ref="mode_all"/>
+            <field name="kind">banner_row</field>
+            <field name="name">Mid-page banners</field>
+            <field name="sequence">30</field>
+        </record>
+        <record id="section_a_strip_ab3" model="mart369.home.section.banner">
+            <field name="section_id" ref="section_a_strip"/>
+            <field name="banner_id" ref="banner_ab3"/>
+            <field name="sequence">10</field>
+        </record>
+        <record id="section_a_strip_ab4" model="mart369.home.section.banner">
+            <field name="section_id" ref="section_a_strip"/>
+            <field name="banner_id" ref="banner_ab4"/>
+            <field name="sequence">20</field>
+        </record>
+
+        <record id="section_a_office" model="mart369.home.section">
+            <field name="mode_id" ref="mode_all"/>
+            <field name="kind">rail</field>
+            <field name="key">all-office</field>
+            <field name="name">Office &amp; stationery</field>
+            <field name="subtitle">Stock the desk for the month</field>
+            <field name="view_all_route">stationery</field>
+            <field name="source">category</field>
+            <field name="public_categ_id" ref="categ_office"/>
+            <field name="limit">12</field>
+            <field name="sequence">40</field>
+        </record>
+
+        <record id="section_a_loved" model="mart369.home.section">
+            <field name="mode_id" ref="mode_all"/>
+            <field name="kind">rail</field>
+            <field name="key">all-loved</field>
+            <field name="name">Most loved</field>
+            <field name="subtitle">What everyone is buying</field>
+            <field name="source">rule</field>
+            <field name="rule">best</field>
+            <field name="rule_days">365</field>
+            <field name="limit">12</field>
+            <field name="sequence">50</field>
+        </record>
+
+    </data>
+</odoo>

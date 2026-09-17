@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="mart369_home_tab_view_list" model="ir.ui.view">
+        <field name="name">mart369.home.tab.list</field>
+        <field name="model">mart369.home.tab</field>
+        <field name="arch" type="xml">
+            <list default_order="sequence" editable="bottom">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="key"/>
+                <field name="icon"/>
+                <field name="route_view"/>
+                <field name="route_param"
+                       placeholder="e.g. fruits-vegetables"/>
+                <field name="mode_id" optional="show"/>
+                <field name="active" string="Show" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="mart369_home_tab_view_form" model="ir.ui.view">
+        <field name="name">mart369.home.tab.form</field>
+        <field name="model">mart369.home.tab</field>
+        <field name="arch" type="xml">
+            <form string="Tab">
+                <sheet>
+                    <div class="alert alert-warning" role="alert" invisible="not deleted_at">
+                        This is in the Trash and is not shown in the app.
+                        <button name="action_restore" type="object" string="Put back" class="btn-link"/>
+                        <field name="deleted_at" invisible="1"/>
+                    </div>
+                    <group>
+                        <group string="The pill">
+                            <field name="name" placeholder="e.g. Groceries"/>
+                            <field name="key" placeholder="e.g. grocery"/>
+                            <field name="icon"/>
+                        </group>
+                        <group string="Where it goes">
+                            <field name="mode_id"/>
+                            <field name="route_view"/>
+                            <field name="route_param"
+                                   invisible="route_view != 'category'"
+                                   required="route_view == 'category'"
+                                   placeholder="e.g. fruits-vegetables"/>
+                            <field name="active"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="mart369_home_tab_view_search" model="ir.ui.view">
+        <field name="name">mart369.home.tab.search</field>
+        <field name="model">mart369.home.tab</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="key"/>
+                <filter string="Not in the Trash" name="kept" domain="[('deleted_at', '=', False)]"/>
+                <filter string="In the Trash" name="trashed" domain="[('deleted_at', '!=', False)]"/>
+                <separator/>
+                <filter string="Hidden" name="inactive" domain="[('active', '=', False)]"/>
+                <filter string="App mode" name="group_mode" context="{'group_by': 'mode_id'}"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_mart369_home_tab" model="ir.actions.act_window">
+        <field name="name">Tabs</field>
+        <field name="res_model">mart369.home.tab</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{'active_test': False, 'search_default_kept': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Add your first tab</p>
+            <p>
+                Tabs are the row of pills across the very top of the app -
+                My Home, Groceries, Coupons. Drag the rows to reorder them.
+            </p>
+        </field>
+    </record>
+
+</odoo>

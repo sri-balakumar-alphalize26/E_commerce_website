@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- The visual product-page editor: the real page drawn as a phone,
+         with a switch on every field. Lives at /odoo/mart-product. -->
+    <record id="action_mart369_product_builder" model="ir.actions.client">
+        <field name="name">Product Page</field>
+        <field name="tag">mart369_product.builder</field>
+        <field name="path">mart-product</field>
+    </record>
+
+</odoo>

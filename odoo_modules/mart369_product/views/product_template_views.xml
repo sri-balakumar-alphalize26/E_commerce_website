@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- The product-page values that genuinely belong to one product go on
+         the 369 Mart page the home module already added, rather than a
+         second tab competing with it. -->
+    <record id="mart369_product_page_form_inherit" model="ir.ui.view">
+        <field name="name">product.template.form.mart369.page</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="mart369_home.mart369_product_template_form_inherit"/>
+        <field name="arch" type="xml">
+            <xpath expr="//page[@name='mart369']" position="inside">
+                <separator string="Product page"/>
+                <div class="text-muted small mb-2">
+                    Everything repeated across a whole category - sold by,
+                    manufacturer, return policy, shelf life - is set once in
+                    369 Mart &gt; Product Page, not here.
+                </div>
+                <group>
+                    <group string="Key features">
+                        <field name="mart_features" nolabel="1" colspan="2"
+                               placeholder="One per line, e.g.&#10;Hand-picked and quality checked&#10;Stored cold from farm to door"/>
+                    </group>
+                    <group string="Specifications">
+                        <field name="mart_in_the_box" placeholder="e.g. Product, cable, manual"/>
+                        <field name="mart_material" placeholder="e.g. Stainless steel"/>
+                    </group>
+                </group>
+                <group string="Size">
+                    <group>
+                        <field name="mart_item_height" placeholder="e.g. 12 cm"/>
+                        <field name="mart_item_length" placeholder="e.g. 8 cm"/>
+                    </group>
+                    <group>
+                        <field name="mart_item_width" placeholder="e.g. 6 cm"/>
+                    </group>
+                </group>
+                <group string="What this product shows">
+                    <div colspan="2" class="text-muted small mb-2">
+                        Every field follows the shop-wide setting unless it is
+                        listed here. Edit this visually in
+                        369 Mart &gt; Product Page.
+                    </div>
+                    <field name="mart_page_differs" string="Fields differing from the default"/>
+                    <field name="mart_page_override_ids" nolabel="1" colspan="2">
+                        <list editable="bottom">
+                            <field name="section_id" optional="show"/>
+                            <field name="field_id"/>
+                            <field name="state"/>
+                            <field name="value"/>
+                        </list>
+                    </field>
+                    <button name="action_mart_reset_page" type="object" colspan="2"
+                            string="Put every field back to the shop default"
+                            class="btn-link" icon="fa-undo"
+                            invisible="mart_page_differs == 0"
+                            confirm="This product will follow the shop-wide settings again. Any wording typed only for this product is removed."/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

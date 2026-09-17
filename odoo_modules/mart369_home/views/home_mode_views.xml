@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="mart369_home_mode_view_form" model="ir.ui.view">
+        <field name="name">mart369.home.mode.form</field>
+        <field name="model">mart369.home.mode</field>
+        <field name="arch" type="xml">
+            <form string="App Mode">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="key"/>
+                        </group>
+                        <group>
+                            <field name="free_delivery_at"/>
+                            <field name="active"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Home page" name="sections">
+                            <div class="text-muted small mb-2">
+                                Top to bottom, the way the customer scrolls.
+                                Drag a row to move that band.
+                            </div>
+                            <field name="section_ids" nolabel="1">
+                                <list default_order="sequence">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="kind"/>
+                                    <field name="name" string="Title"/>
+                                    <field name="source" string="Products from"/>
+                                    <field name="product_count" string="Products"/>
+                                    <field name="active" string="Show" widget="boolean_toggle"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Banners" name="banners">
+                            <field name="banner_ids" nolabel="1">
+                                <list default_order="sequence">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="key"/>
+                                    <field name="kicker"/>
+                                    <field name="name"/>
+                                    <field name="note"/>
+                                    <field name="tone"/>
+                                    <field name="active" string="Show" widget="boolean_toggle"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Category tiles" name="tiles">
+                            <field name="tile_ids" nolabel="1">
+                                <list default_order="sequence">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="key"/>
+                                    <field name="name"/>
+                                    <field name="route"/>
+                                    <field name="bg" widget="color"/>
+                                    <field name="active" string="Show" widget="boolean_toggle"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Tabs" name="tabs">
+                            <field name="tab_ids" nolabel="1">
+                                <list editable="bottom" default_order="sequence">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="name"/>
+                                    <field name="key"/>
+                                    <field name="icon"/>
+                                    <field name="route_view"/>
+                                    <field name="route_param"/>
+                                    <field name="active" string="Show" widget="boolean_toggle"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="mart369_home_mode_view_list" model="ir.ui.view">
+        <field name="name">mart369.home.mode.list</field>
+        <field name="model">mart369.home.mode</field>
+        <field name="arch" type="xml">
+            <list default_order="sequence">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="key"/>
+                <field name="free_delivery_at"/>
+                <field name="active" string="Show" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+</odoo>

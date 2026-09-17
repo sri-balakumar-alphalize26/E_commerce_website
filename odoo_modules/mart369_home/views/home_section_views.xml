@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- The home page, top to bottom. One drag handle orders product rows
+         and banner strips together, because that is how the app reads it. -->
+    <record id="mart369_home_section_view_list" model="ir.ui.view">
+        <field name="name">mart369.home.section.list</field>
+        <field name="model">mart369.home.section</field>
+        <field name="arch" type="xml">
+            <list default_order="sequence">
+                <field name="sequence" widget="handle"/>
+                <field name="kind"/>
+                <field name="name" string="Title"/>
+                <field name="source" string="Products from"
+                       invisible="kind != 'rail'"/>
+                <field name="product_count" string="Products"/>
+                <field name="mode_id" optional="show"/>
+                <field name="key" optional="hide"/>
+                <field name="active" string="Show" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="mart369_home_section_view_form" model="ir.ui.view">
+        <field name="name">mart369.home.section.form</field>
+        <field name="model">mart369.home.section</field>
+        <field name="arch" type="xml">
+            <form string="Home Section">
+                <header>
+                    <button name="action_restore" type="object" string="Put back"
+                            class="btn-primary" icon="fa-undo" invisible="not deleted_at"/>
+                    <button name="action_toggle_active" type="object"
+                            string="Turn on (show in the app)" class="btn-primary"
+                            icon="fa-toggle-off" invisible="active"/>
+                    <button name="action_toggle_active" type="object"
+                            string="Turn off (hide from the app)" class="btn-secondary"
+                            icon="fa-toggle-on" invisible="not active"/>
+                </header>
+                <sheet>
+                    <div class="alert alert-warning" role="alert" invisible="not deleted_at">
+                        This is in the Trash. It is not shown in the app.
+                        <field name="trash_days_left" readonly="1" class="oe_inline"/> day(s) left before it is deleted for good.
+                        <field name="deleted_at" invisible="1"/>
+                    </div>
+                    <widget name="web_ribbon" title="Hidden" bg_color="text-bg-danger"
+                            invisible="active"/>
+                    <group>
+                        <field name="kind" widget="radio" options="{'horizontal': true}"/>
+                        <field name="mode_id"/>
+                        <field name="active" invisible="1"/>
+                    </group>
+
+                    <group invisible="kind != 'rail'">
+                        <group string="Heading">
+                            <field name="name" placeholder="e.g. Fresh fruits"
+                                   required="kind == 'rail'"/>
+                            <field name="subtitle" placeholder="e.g. Picked this morning"/>
+                            <field name="key" placeholder="e.g. fruits"/>
+                            <field name="view_all_route"
+                                   placeholder="e.g. fruits-vegetables/fresh-fruits"/>
+                        </group>
+                        <group string="Where the products come from">
+                            <field name="source" widget="radio"
+                                   required="kind == 'rail'"/>
+                            <field name="public_categ_id"
+                                   invisible="source != 'category'"
+                                   required="kind == 'rail' and source == 'category'"/>
+                            <field name="include_child_categs"
+                                   invisible="source != 'category'"/>
+                            <field name="product_tag_id"
+                                   invisible="source != 'tag'"
+                                   required="kind == 'rail' and source == 'tag'"/>
+                            <field name="rule"
+                                   invisible="source != 'rule'"
+                                   required="kind == 'rail' and source == 'rule'"/>
+                            <field name="rule_days"
+                                   invisible="source != 'rule' or rule != 'best'"/>
+                            <field name="limit"/>
+                            <field name="product_count" string="Will show"/>
+                        </group>
+                    </group>
+
+                    <group string="The products, in order - drag to rearrange"
+                           invisible="kind != 'rail' or source != 'manual'">
+                        <field name="picked_product_ids" nolabel="1" colspan="2">
+                            <list editable="bottom" default_order="sequence">
+                                <field name="sequence" widget="handle"/>
+                                <field name="product_tmpl_id"/>
+                                <field name="name_override" optional="hide"/>
+                                <field name="unit_override" optional="show"/>
+                                <field name="tag_override" optional="show"/>
+                                <field name="label_override" optional="hide"/>
+                                <field name="note_override" optional="hide"/>
+                                <field name="delivery_override" optional="hide"/>
+                                <field name="art_override" optional="hide"/>
+                                <field name="color_override" widget="color" optional="hide"/>
+                            </list>
+                        </field>
+                        <div colspan="2" class="text-muted small">
+                            The extra columns change the wording for this row only.
+                            The product itself is never touched, so the same product
+                            can read differently in another row.
+                        </div>
+                    </group>
+
+                    <group string="The banners, in order - drag to rearrange"
+                           invisible="kind != 'banner_row'">
+                        <field name="banner_line_ids" nolabel="1" colspan="2">
+                            <list editable="bottom" default_order="sequence">
+                                <field name="sequence" widget="handle"/>
+                                <field name="banner_id"/>
+                            </list>
+                        </field>
+                    </group>
+
+                    <separator string="How it looks in the app"/>
+                    <field name="preview_html" nolabel="1" readonly="1"/>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="mart369_home_section_view_search" model="ir.ui.view">
+        <field name="name">mart369.home.section.search</field>
+        <field name="model">mart369.home.section</field>
+        <field name="arch" type="xml">
+            <search>
+                <filter string="In the Trash" name="trashed" domain="[('deleted_at', '!=', False)]"/>
+                <filter string="Not in the Trash" name="kept" domain="[('deleted_at', '=', False)]"/>
+                <field name="name"/>
+                <filter string="Product rows" name="rails"
+                        domain="[('kind', '=', 'rail')]"/>
+                <filter string="Banner strips" name="strips"
+                        domain="[('kind', '=', 'banner_row')]"/>
+                <separator/>
+                <filter string="Hidden" name="inactive" domain="[('active', '=', False)]"/>
+                <filter string="App mode" name="group_mode" context="{'group_by': 'mode_id'}"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_mart369_home_section" model="ir.actions.act_window">
+        <field name="name">Home Sections</field>
+        <field name="res_model">mart369.home.section</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{'active_test': False, 'search_default_kept': 1, 'search_default_group_mode': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Build your home page</p>
+            <p>
+                Each row here is one band of the app's home page, in the order
+                the customer scrolls through them. Drag a row to move that band
+                up or down - a banner strip can sit anywhere between two product
+                rows.
+            </p>
+            <p>
+                A product row can follow a category, follow a tag, fill itself
+                by a rule, or hold products you pick by hand.
+            </p>
+        </field>
+    </record>
+
+</odoo>

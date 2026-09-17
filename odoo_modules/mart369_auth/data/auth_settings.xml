@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <!-- Free sign up: anyone may create an account from the storefront.
+         auth_signup calls this "b2c". Set once on install; an operator can
+         still change it under Settings -> General Settings -> Customer Account. -->
+    <function model="ir.config_parameter" name="set_param"
+              eval="['auth_signup.invitation_scope', 'b2c']"/>
+</odoo>

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Sits inside the 369 Mart app, under Home Page (10) and before
+         Customers (20, added by mart369_auth). -->
+    <menuitem id="menu_mart369_product_builder"
+              name="Product Page"
+              parent="mart369_home.menu_mart369_root"
+              action="action_mart369_product_builder"
+              sequence="15"/>
+
+    <menuitem id="menu_mart369_product_fields"
+              name="Product Page Fields"
+              parent="mart369_home.menu_mart369_advanced"
+              action="action_mart369_product_field"
+              sequence="60"/>
+
+    <menuitem id="menu_mart369_product_sections"
+              name="Product Page Sections"
+              parent="mart369_home.menu_mart369_advanced"
+              action="action_mart369_product_section"
+              sequence="70"/>
+
+    <menuitem id="menu_mart369_product_category_value"
+              name="Wording by Category"
+              parent="mart369_home.menu_mart369_advanced"
+              action="action_mart369_product_category_value"
+              sequence="80"/>
+
+</odoo>

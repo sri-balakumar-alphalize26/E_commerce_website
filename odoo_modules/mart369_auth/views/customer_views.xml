@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- A 369 Mart page on the user form: the mobile we collect at signup and
+         the stored password fingerprint, for administrators only. -->
+    <record id="view_users_form_mart369" model="ir.ui.view">
+        <field name="name">res.users.form.mart369</field>
+        <field name="model">res.users</field>
+        <field name="inherit_id" ref="base.view_users_form"/>
+        <field name="arch" type="xml">
+            <notebook position="inside">
+                <page string="369 Mart" name="mart369" invisible="not share">
+                    <group>
+                        <group string="Contact">
+                            <field name="phone" string="Mobile"
+                                   placeholder="The number a rider can call"/>
+                        </group>
+                        <group string="Password" groups="base.group_system">
+                            <field name="mart369_password_hash" readonly="1"
+                                   class="font-monospace text-muted"/>
+                        </group>
+                    </group>
+                </page>
+            </notebook>
+        </field>
+    </record>
+
+    <!-- Who has signed up from the storefront: portal users only. -->
+    <record id="action_mart369_customers" model="ir.actions.act_window">
+        <field name="name">Customers</field>
+        <field name="res_model">res.users</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('share', '=', True)]</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No customer has signed up yet</p>
+            <p>Accounts created from the 369 Mart storefront appear here.
+               Each one can only see its own orders and details.</p>
+        </field>
+    </record>
+
+    <menuitem id="menu_mart369_customers"
+              name="Customers"
+              parent="mart369_home.menu_mart369_root"
+              action="action_mart369_customers"
+              groups="base.group_system"
+              sequence="20"/>
+
+</odoo>

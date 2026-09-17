@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+
+        <!-- Empties the Trash of anything past the retention set in
+             Home Page Settings. Until then a removed banner, tile, tab or
+             row can be put back unchanged. -->
+        <record id="ir_cron_purge_trash" model="ir.cron">
+            <field name="name">369 Mart: empty the home page Trash</field>
+            <field name="model_id" ref="model_mart369_home_config"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_purge_trash()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+            <field name="active" eval="True"/>
+        </record>
+
+    </data>
+</odoo>

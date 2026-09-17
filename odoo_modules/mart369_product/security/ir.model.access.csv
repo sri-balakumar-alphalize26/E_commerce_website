@@ -1,0 +1,13 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_mart369_psection_user,mart369.product.section user,model_mart369_product_section,base.group_user,1,0,0,0
+access_mart369_psection_designer,mart369.product.section designer,model_mart369_product_section,website.group_website_designer,1,1,1,1
+access_mart369_psection_manager,mart369.product.section manager,model_mart369_product_section,base.group_system,1,1,1,1
+access_mart369_pfield_user,mart369.product.field user,model_mart369_product_field,base.group_user,1,0,0,0
+access_mart369_pfield_designer,mart369.product.field designer,model_mart369_product_field,website.group_website_designer,1,1,1,1
+access_mart369_pfield_manager,mart369.product.field manager,model_mart369_product_field,base.group_system,1,1,1,1
+access_mart369_pcatval_user,mart369.product.category.value user,model_mart369_product_category_value,base.group_user,1,0,0,0
+access_mart369_pcatval_designer,mart369.product.category.value designer,model_mart369_product_category_value,website.group_website_designer,1,1,1,1
+access_mart369_pcatval_manager,mart369.product.category.value manager,model_mart369_product_category_value,base.group_system,1,1,1,1
+access_mart369_poverride_user,mart369.product.override user,model_mart369_product_override,base.group_user,1,0,0,0
+access_mart369_poverride_designer,mart369.product.override designer,model_mart369_product_override,website.group_website_designer,1,1,1,1
+access_mart369_poverride_manager,mart369.product.override manager,model_mart369_product_override,base.group_system,1,1,1,1

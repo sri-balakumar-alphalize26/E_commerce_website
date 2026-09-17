@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ============================ list ============================ -->
+    <record id="mart369_address_view_list" model="ir.ui.view">
+        <field name="name">mart369.address.list</field>
+        <field name="model">res.partner</field>
+        <field name="arch" type="xml">
+            <list string="Delivery addresses" create="false"
+                  decoration-success="mart369_default"
+                  decoration-muted="not active">
+                <field name="parent_id" string="Customer"/>
+                <field name="mart369_label" string="Type"/>
+                <field name="name" string="Delivered to"/>
+                <field name="phone" string="Mobile"/>
+                <field name="street" string="Flat / building"/>
+                <field name="street2" string="Area" optional="hide"/>
+                <field name="city"/>
+                <field name="zip" string="Pincode"/>
+                <field name="state_id" optional="hide"/>
+                <field name="mart369_alt_phone" string="Alternate" optional="hide"/>
+                <field name="partner_latitude" string="Latitude" optional="hide"/>
+                <field name="partner_longitude" string="Longitude" optional="hide"/>
+                <field name="mart369_default" string="Default" widget="boolean_toggle"/>
+                <field name="active" column_invisible="1"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- =========================== kanban ===========================
+         Drawn like the label a packer reads off the parcel. -->
+    <record id="mart369_address_view_kanban" model="ir.ui.view">
+        <field name="name">mart369.address.kanban</field>
+        <field name="model">res.partner</field>
+        <field name="arch" type="xml">
+            <kanban create="false" default_order="parent_id, mart369_default desc">
+                <field name="mart369_default"/>
+                <t t-name="card">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <span class="fw-bold"><field name="name"/></span>
+                        <span class="badge rounded-pill text-bg-light border">
+                            <field name="mart369_label"/>
+                        </span>
+                    </div>
+                    <div class="text-muted small font-monospace"><field name="phone"/></div>
+                    <div class="mt-1">
+                        <field name="street"/>
+                        <div t-if="record.street2.raw_value" class="text-muted">
+                            <field name="street2"/>
+                        </div>
+                        <div><field name="city"/> <field name="zip"/></div>
+                    </div>
+                    <div class="mt-2 d-flex justify-content-between align-items-center">
+                        <span t-if="record.mart369_default.raw_value"
+                              class="badge text-bg-success">&#10003; Default</span>
+                        <button t-if="!record.mart369_default.raw_value"
+                                name="action_mart369_make_default" type="object"
+                                class="btn btn-sm btn-secondary"
+                                confirm="Use this as the customer's default delivery address?">
+                            Make default
+                        </button>
+                    </div>
+                </t>
+            </kanban>
+        </field>
+    </record>
+
+    <!-- =========================== search =========================== -->
+    <record id="mart369_address_view_search" model="ir.ui.view">
+        <field name="name">mart369.address.search</field>
+        <field name="model">res.partner</field>
+        <field name="arch" type="xml">
+            <search string="Delivery addresses">
+                <field name="parent_id" string="Customer"/>
+                <field name="name"/>
+                <field name="phone"/>
+                <field name="city"/>
+                <field name="zip"/>
+                <filter name="is_default" string="Default only"
+                        domain="[('mart369_default', '=', True)]"/>
+                <separator/>
+                <filter name="no_pincode" string="Missing pincode"
+                        domain="[('zip', 'in', [False, ''])]"/>
+                <filter name="no_mobile" string="Missing mobile"
+                        domain="[('phone', 'in', [False, ''])]"/>
+                <filter name="no_location" string="No map location"
+                        domain="[('partner_latitude', '=', 0)]"/>
+                <separator/>
+                <filter name="archived" string="Archived" domain="[('active', '=', False)]"/>
+                <group name="group_by">
+                    <filter name="by_customer" string="Customer" context="{'group_by': 'parent_id'}"/>
+                    <filter name="by_city" string="City" context="{'group_by': 'city'}"/>
+                    <filter name="by_label" string="Type" context="{'group_by': 'mart369_label'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_mart369_addresses" model="ir.actions.act_window">
+        <field name="name">Addresses</field>
+        <field name="res_model">res.partner</field>
+        <field name="view_mode">kanban,list,form</field>
+        <field name="domain">[('type', 'in', ['delivery', 'other']), ('parent_id.user_ids.share', '=', True)]</field>
+        <field name="search_view_id" ref="mart369_address_view_search"/>
+        <field name="context">{'default_type': 'other'}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No delivery address yet</p>
+            <p>Addresses customers save in the 369 Mart app appear here. Each one
+               belongs to the customer who created it.</p>
+        </field>
+    </record>
+
+    <menuitem id="menu_mart369_addresses"
+              name="Addresses"
+              parent="mart369_home.menu_mart369_root"
+              action="action_mart369_addresses"
+              groups="base.group_system"
+              sequence="30"/>
+
+    <!-- The customer's own addresses, on their user form, editable in place. -->
+    <record id="view_users_form_mart369_addresses" model="ir.ui.view">
+        <field name="name">res.users.form.mart369.addresses</field>
+        <field name="model">res.users</field>
+        <field name="inherit_id" ref="mart369_auth.view_users_form_mart369"/>
+        <field name="arch" type="xml">
+            <xpath expr="//page[@name='mart369']" position="inside">
+                <separator string="Delivery addresses"/>
+                <field name="mart369_address_ids" nolabel="1">
+                    <list editable="bottom">
+                        <field name="mart369_label" string="Type"/>
+                        <field name="name" string="Delivered to"/>
+                        <field name="phone" string="Mobile"/>
+                        <field name="street" string="Flat / building"/>
+                        <field name="street2" string="Area" optional="hide"/>
+                        <field name="city"/>
+                        <field name="zip" string="Pincode"/>
+                        <field name="mart369_default" string="Default" widget="boolean_toggle"/>
+                    </list>
+                </field>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

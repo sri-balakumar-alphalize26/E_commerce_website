@@ -1,0 +1,193 @@
+// Live previews inside the Odoo forms, drawn the way the phone app draws them.
+// Tokens copied from components/home/home.css in the storefront so what an
+// operator sees here matches what a customer gets.
+
+.mart-pv {
+    --mart-ink: #0f1c24;
+    --mart-muted: #5b6b76;
+    --mart-line: #e4eaee;
+    --mart-radius: 16px;
+
+    font-family: Inter, "Segoe UI", system-ui, sans-serif;
+    color: var(--mart-ink);
+    max-width: 720px;
+
+    // Same six gradients as .hm-tone-* in home.css.
+    .mart-pv-tone-green  { background: linear-gradient(120deg, #13613c, #2d9a5a); }
+    .mart-pv-tone-navy   { background: linear-gradient(120deg, #083b59, #0a78ab); }
+    .mart-pv-tone-brown  { background: linear-gradient(120deg, #7a4326, #b8774a); }
+    .mart-pv-tone-orange { background: linear-gradient(120deg, #d86a0c, #f7a23a); }
+    .mart-pv-tone-teal   { background: linear-gradient(120deg, #0e5a63, #1c8c8f); }
+    .mart-pv-tone-indigo { background: linear-gradient(120deg, #26306b, #4a5bb0); }
+
+    // ---- banner ----
+    .mart-pv-banner {
+        position: relative;
+        border-radius: var(--mart-radius);
+        overflow: hidden;
+        aspect-ratio: 5 / 2;
+        min-height: 150px;
+        background-size: cover;
+        background-position: center;
+    }
+
+    .mart-pv-banner-in {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 6px;
+        height: 100%;
+        padding: 0 28px;
+        background: linear-gradient(
+            90deg,
+            rgba(8, 20, 28, 0.45) 0%,
+            rgba(8, 20, 28, 0.12) 65%,
+            transparent 100%
+        );
+    }
+
+    .mart-pv-kicker {
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.82);
+    }
+
+    .mart-pv-title {
+        font-size: 22px;
+        font-weight: 800;
+        line-height: 1.15;
+        color: #fff;
+    }
+
+    .mart-pv-note {
+        font-size: 13px;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.9);
+    }
+
+    // ---- banner strip ----
+    .mart-pv-strip {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 12px;
+    }
+
+    .mart-pv-strip-card {
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        gap: 4px;
+        min-height: 96px;
+        padding: 14px 16px;
+        border-radius: var(--mart-radius);
+
+        .mart-pv-title { font-size: 15px; }
+    }
+
+    // ---- product row ----
+    .mart-pv-head {
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+        margin-bottom: 10px;
+    }
+
+    .mart-pv-h1 {
+        font-size: 17px;
+        font-weight: 800;
+        letter-spacing: -0.01em;
+    }
+
+    .mart-pv-h2 {
+        font-size: 12px;
+        color: var(--mart-muted);
+    }
+
+    .mart-pv-all {
+        margin-left: auto;
+        font-size: 12px;
+        font-weight: 700;
+        color: #12805a;
+        white-space: nowrap;
+    }
+
+    .mart-pv-rail {
+        display: flex;
+        gap: 10px;
+        overflow-x: auto;
+        padding-bottom: 6px;
+    }
+
+    .mart-pv-card {
+        flex: 0 0 116px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding: 8px;
+        border: 1px solid var(--mart-line);
+        border-radius: 12px;
+        background: #fff;
+    }
+
+    .mart-pv-card-img {
+        display: block;
+        height: 72px;
+        border-radius: 8px;
+        background: #f1f4f6;
+    }
+
+    .mart-pv-card-name {
+        font-size: 11px;
+        line-height: 1.3;
+        color: var(--mart-ink);
+        // Two lines, then ellipsis - same clamp the app uses.
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .mart-pv-card-price {
+        font-size: 13px;
+        font-weight: 800;
+    }
+
+    // ---- category tile ----
+    .mart-pv-tile {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        width: 92px;
+    }
+
+    .mart-pv-tile-art {
+        display: grid;
+        place-items: center;
+        width: 72px;
+        height: 72px;
+        border-radius: 18px;
+        font-size: 11px;
+        font-weight: 800;
+    }
+
+    .mart-pv-tile-label {
+        font-size: 11px;
+        text-align: center;
+        line-height: 1.25;
+        color: var(--mart-muted);
+    }
+
+    // ---- nothing to show ----
+    .mart-pv-empty {
+        padding: 18px;
+        border: 1px dashed var(--mart-line);
+        border-radius: 12px;
+        font-size: 12px;
+        color: var(--mart-muted);
+    }
+}

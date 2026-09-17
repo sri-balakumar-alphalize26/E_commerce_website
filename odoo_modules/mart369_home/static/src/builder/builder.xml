@@ -1,0 +1,699 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="mart369_home.Icon">
+        <svg class="hm-ic" t-att-class="props.class" t-att-width="props.size" t-att-height="props.size"
+             viewBox="0 0 24 24" aria-hidden="true" t-out="paths"/>
+    </t>
+
+    <!-- ================================================================ root -->
+    <t t-name="mart369_home.HomeBuilder">
+        <Layout display="{ controlPanel: {} }" className="'o_mart369_builder h-100'">
+            <t t-set-slot="layout-buttons">
+                <div class="mart-topbar">
+                    <div class="mart-modes" t-if="d" t-att-data-mode="state.modeKey">
+                        <button t-foreach="d.modes" t-as="m" t-key="m.id"
+                                t-attf-class="{{ m.key === state.modeKey ? 'mart-on' : '' }}"
+                                t-on-click="() => this.switchMode(m.key)">
+                            <t t-esc="m.name"/>
+                        </button>
+                    </div>
+                    <button class="mart-trash-chip" t-if="d and d.trash and d.trash.length"
+                            t-att-class="{ 'mart-on': state.sel.type === 'trash' }"
+                            t-on-click="() => this.openTrash()"
+                            title="Items you removed, kept so you can put them back">
+                        🗑 <t t-esc="d.trash.length"/>
+                    </button>
+                    <span class="mart-status" t-att-data-state="state.status">
+                        <i/>
+                        <t t-if="state.status === 'saving'">Saving…</t>
+                        <t t-elif="state.status === 'error'">Not saved</t>
+                        <t t-else="">Saved</t>
+                    </span>
+                </div>
+            </t>
+            <div class="mart-builder" t-if="d">
+                <div class="mart-stage">
+                    <t t-call="mart369_home.Phone"/>
+                    <div class="mart-legend">
+                        <span><b>⣿</b> drag to reorder</span>
+                        <span><b>click</b> a band to edit it</span>
+                        <span><b>👁</b> hides it from the app</span>
+                    </div>
+                </div>
+                <t t-call="mart369_home.Panel"/>
+            </div>
+        </Layout>
+    </t>
+
+    <!-- ================================================================ phone -->
+    <t t-name="mart369_home.Phone">
+        <div class="mart-phone">
+            <div class="mart-phone-screen">
+                <div class="mart-notch"/>
+                <div class="mart-phone-scroll" t-ref="phone">
+                    <div class="hm-page hm-has-cart" t-att-data-mode="state.modeKey">
+                        <t t-call="mart369_home.MockHeader"/>
+
+                        <!-- tabs -->
+                        <div t-attf-class="mart-band {{ isSelected('tabs') ? 'mart-selected' : '' }}"
+                             t-on-click="() => this.select('tabs')">
+                            <span class="mart-band-label">Tabs</span>
+                            <div class="mart-band-tools">
+                                <button class="mart-tool" title="Edit the tabs">⚙</button>
+                            </div>
+                            <div class="mart-band-body">
+                                <div class="hm-tabs-bar"><div class="hm-wrap"><div class="hm-tabs" role="tablist">
+                                    <button t-foreach="activeTabs" t-as="tab" t-key="tab.id"
+                                            t-att-aria-selected="tab_first ? 'true' : 'false'"
+                                            t-attf-style="--i:{{ tab_index }}">
+                                        <Icon n="tab.icon" size="17"/><t t-esc="tab.name"/>
+                                    </button>
+                                    <span t-if="!activeTabs.length" class="text-muted small p-2">No tabs yet</span>
+                                </div></div></div>
+                            </div>
+                        </div>
+
+                        <main class="hm-wrap hm-main hm-view-home">
+                            <!-- banners -->
+                            <div t-attf-class="mart-band {{ isSelected('banners') ? 'mart-selected' : '' }}"
+                                 t-on-click="() => this.select('banners')">
+                                <span class="mart-band-label">Banners</span>
+                                <div class="mart-band-tools">
+                                    <button class="mart-tool" title="Edit the banners">⚙</button>
+                                </div>
+                                <div class="mart-band-body">
+                                    <section class="hm-banners">
+                                        <div class="hm-banner-track">
+                                            <t t-foreach="activeBanners" t-as="b" t-key="b.id">
+                                                <t t-call="mart369_home.MockBanner"/>
+                                            </t>
+                                            <div t-if="!activeBanners.length" class="hm-banner hm-tone-navy">
+                                                <div class="hm-banner-copy"><strong>No banners yet</strong><span class="hm-note">Add one on the right</span></div>
+                                            </div>
+                                        </div>
+                                    </section>
+                                </div>
+                            </div>
+
+                            <!-- tiles -->
+                            <div t-attf-class="mart-band {{ isSelected('tiles') ? 'mart-selected' : '' }}"
+                                 t-on-click="() => this.select('tiles')">
+                                <span class="mart-band-label">Category tiles</span>
+                                <div class="mart-band-tools">
+                                    <button class="mart-tool" title="Edit the tiles">⚙</button>
+                                </div>
+                                <div class="mart-band-body">
+                                    <section class="hm-cats hm-in">
+                                        <a t-foreach="activeTiles" t-as="tile" t-key="tile.id" class="hm-cat" t-attf-style="--i:{{ tile_index }}">
+                                            <span class="hm-cat-img" t-att-style="tileStyle(tile)">
+                                                <img t-if="tile.image_path" t-att-src="tile.image_path" alt=""/>
+                                                <span t-else="" class="mart-art" t-att-style="tile.color ? 'color:' + tile.color : ''">
+                                                    <t t-esc="tile.badge || tile.art"/>
+                                                </span>
+                                            </span>
+                                            <span t-esc="tile.name"/>
+                                        </a>
+                                    </section>
+                                </div>
+                            </div>
+
+                            <!-- the bands -->
+                            <div class="mart-bands">
+                                <t t-foreach="d.bands" t-as="band" t-key="band.id">
+                                    <div t-attf-class="mart-band {{ isSelected('band', band.id) ? 'mart-selected' : '' }} {{ band.active ? '' : 'mart-hidden' }}"
+                                         t-att-data-band-id="band.id"
+                                         t-on-click="() => this.select('band', band.id)">
+                                        <span class="mart-handle" title="Drag to reorder">⣿</span>
+                                        <span class="mart-band-label"><t t-if="!band.active">Hidden · </t><t t-esc="band.kind === 'rail' ? 'Product row' : 'Banner strip'"/></span>
+                                        <div class="mart-band-tools">
+                                            <button class="mart-tool" t-att-title="band.active ? 'Hide from the app' : 'Show in the app'"
+                                                    t-on-click.stop="() => this.toggleActive('mart369.home.section', band)">
+                                                <t t-esc="band.active ? '👁' : '🚫'"/>
+                                            </button>
+                                            <button class="mart-tool mart-tool-danger" title="Remove"
+                                                    t-on-click.stop="() => this.remove('mart369.home.section', band, band.name || 'This band')">✕</button>
+                                        </div>
+                                        <div class="mart-band-body">
+                                            <t t-if="band.kind === 'rail'" t-call="mart369_home.MockRail"/>
+                                            <t t-else="" t-call="mart369_home.MockStrip"/>
+                                        </div>
+                                    </div>
+                                </t>
+                            </div>
+
+                            <div class="mart-add-band">
+                                <button t-on-click="() => this.addBand('rail')">+ Product row</button>
+                                <button t-on-click="() => this.addBand('banner_row')">+ Banner strip</button>
+                            </div>
+                        </main>
+
+                        <!-- free-delivery nudge -->
+                        <div class="hm-free hm-show" t-on-click="() => this.select('mode')">
+                            <span class="hm-free-ic"><Icon n="'scooter'" size="18"/></span>
+                            <span class="hm-free-txt">
+                                <span>Shop for <b>₹<input class="mart-nudge-input" type="number" min="0" step="1"
+                                        t-att-value="d.mode.free_delivery_at"
+                                        t-on-click.stop="() => {}"
+                                        t-on-input="(ev) => this.onField('mart369.home.mode', d.mode, 'free_delivery_at', ev)"/></b> to unlock free delivery</span>
+                                <span class="hm-free-bar"><i style="width:35%"/></span>
+                            </span>
+                        </div>
+
+                        <!-- cart pill (decorative) -->
+                        <button class="mc mc-pill mc-show" type="button">
+                            <span class="mc-thumbs"><span class="mc-thumb" style="--i:0"/><span class="mc-thumb" style="--i:1"/></span>
+                            <span class="mc-pill-txt"><b>2 items</b><small>₹388 · View cart</small></span>
+                            <span class="mc-go"><Icon n="'right'" size="18"/></span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </t>
+
+    <t t-name="mart369_home.MockHeader">
+        <header class="hm-hdr">
+            <div class="hm-wrap hm-hdr-row">
+                <a class="hm-logo"><span class="hm-logo-mark">369</span>
+                    <svg viewBox="0 0 24 24" class="hm-logo-arrow" aria-hidden="true"><path d="M6 18 18 6M9 6h9v9"/></svg>
+                    <span>Mart</span></a>
+                <div class="hm-mode" role="tablist" t-att-data-mode="state.modeKey">
+                    <button t-att-aria-selected="state.modeKey === 'quick' ? 'true' : 'false'"><Icon n="'bolt'" size="13" class="'hm-fill'"/><i>Quick</i></button>
+                    <button t-att-aria-selected="state.modeKey === 'all' ? 'true' : 'false'"><Icon n="'grid'" size="13"/>Express</button>
+                </div>
+                <button class="hm-loc">
+                    <span class="hm-loc-ic"><Icon n="state.modeKey === 'quick' ? 'bolt' : 'truck'" size="18" class="state.modeKey === 'quick' ? 'hm-fill' : ''"/></span>
+                    <span class="hm-loc-txt">
+                        <b><t t-esc="state.modeKey === 'quick' ? 'Home' : 'Deliver to Home'"/> <Icon n="'chev'" size="14"/></b>
+                        <small>12, MG Road, Chennai</small>
+                    </span>
+                </button>
+                <button class="hm-search"><Icon n="'search'" size="18"/><span class="hm-search-ph">Search for 'atta'</span></button>
+                <nav class="hm-icons">
+                    <button class="hm-iconbtn"><Icon n="'cart'"/><span class="hm-badge">2</span></button>
+                    <button class="hm-avatar"><Icon n="'user'" size="18"/></button>
+                </nav>
+            </div>
+        </header>
+    </t>
+
+    <t t-name="mart369_home.MockBanner">
+        <a t-attf-class="hm-banner hm-tone-{{ b.tone }}" t-attf-style="--i:{{ b_index }};{{ bannerStyle(b) }}">
+            <div class="hm-banner-copy">
+                <span class="hm-kicker" t-esc="b.kicker"/>
+                <strong t-esc="b.name"/>
+                <span class="hm-note" t-esc="b.note"/>
+                <span class="hm-shop">Shop now <Icon n="'right'" size="14"/></span>
+            </div>
+        </a>
+    </t>
+
+    <t t-name="mart369_home.MockRail">
+        <section class="hm-rail hm-in">
+            <div class="hm-rail-head">
+                <div>
+                    <h2 t-esc="band.name || 'Untitled row'"/>
+                    <p t-if="band.subtitle" t-esc="band.subtitle"/>
+                </div>
+                <a t-if="band.view_all_route" class="hm-viewall">View all <Icon n="'right'" size="15"/></a>
+            </div>
+            <div class="hm-rail-box">
+                <div class="hm-rail-track" t-if="band.preview and band.preview.items.length">
+                    <t t-foreach="band.preview.items" t-as="item" t-key="item.id">
+                        <t t-call="mart369_home.MockCard"/>
+                    </t>
+                </div>
+                <div t-else="" class="hm-rail-track">
+                    <div class="hm-card" style="opacity:1; flex-basis: 100%; padding: 22px; text-align:center; color: var(--hm-muted); font-size: 12.5px;">
+                        <b style="display:block; color: var(--hm-ink); margin-bottom: 4px;">Nothing to show yet</b>
+                        <t t-if="band.source === 'category' and !band.public_categ_id">Pick a category on the right.</t>
+                        <t t-elif="band.source === 'category'">No published products in <t t-esc="band.public_categ_name"/> yet.</t>
+                        <t t-elif="band.source === 'manual'">Search and add products on the right.</t>
+                        <t t-elif="band.source === 'tag' and !band.product_tag_id">Pick a tag on the right.</t>
+                        <t t-else="">No products match this rule yet.</t>
+                        <div style="margin-top:6px; font-size: 11px;">This row stays out of the app until it has products.</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </t>
+
+    <t t-name="mart369_home.MockCard">
+        <article t-attf-class="hm-card {{ item.stock === 0 ? 'hm-oos' : '' }}" t-attf-style="--i:{{ item_index }}">
+            <div class="hm-card-img">
+                <div class="hm-gal-one"><img t-att-src="item.images[0]" alt="" loading="lazy"/></div>
+                <button class="hm-heart"><Icon n="'heart'" size="18"/></button>
+                <div class="hm-card-cta">
+                    <button t-if="item.stock === 0" class="hm-notify">Notify me</button>
+                    <button t-else="" class="hm-add">+ Add</button>
+                </div>
+                <span t-if="item.tag" class="hm-off hm-new" t-esc="item.tag"/>
+                <span t-elif="offPct(item) >= 10 and item.stock !== 0" class="hm-off"><t t-esc="offPct(item)"/>% OFF</span>
+                <span t-if="item.veg" class="hm-veg"><i/></span>
+                <span t-if="item.stock === 0" class="hm-oos-tag">Out of stock</span>
+            </div>
+            <div class="hm-card-body">
+                <div class="hm-unit" t-esc="item.unit"/>
+                <h3 class="hm-name" t-esc="item.name"/>
+                <div t-if="item.note" class="hm-subnote">(<t t-esc="item.note"/>)</div>
+                <div class="hm-price">
+                    <b t-esc="inr(item.price)"/>
+                    <s t-if="item.mrp" t-esc="inr(item.mrp)"/>
+                    <small t-if="item.perUnit">(<t t-esc="item.perUnit"/>)</small>
+                </div>
+                <div class="hm-meta">
+                    <span t-if="item.delivery" class="hm-quick hm-ship"><Icon n="'truck'" size="12"/> <t t-esc="item.delivery"/></span>
+                    <span t-else="" class="hm-quick"><Icon n="'bolt'" size="11" class="'hm-fill'"/> Quick</span>
+                    <span t-if="item.low" class="hm-low">Only <t t-esc="item.low"/> left</span>
+                </div>
+            </div>
+        </article>
+    </t>
+
+    <t t-name="mart369_home.MockStrip">
+        <div class="hm-inline-banners" t-if="stripBanners(band).length">
+            <t t-foreach="stripBanners(band)" t-as="b" t-key="b.id">
+                <t t-call="mart369_home.MockBanner"/>
+            </t>
+        </div>
+        <div t-else="" class="hm-inline-banners">
+            <div class="hm-banner hm-tone-indigo" style="min-height: 110px;">
+                <div class="hm-banner-copy"><span class="hm-kicker">Banner strip</span><strong>No banners chosen</strong><span class="hm-note">Pick some on the right</span></div>
+            </div>
+        </div>
+    </t>
+
+    <!-- ================================================================ panel -->
+    <t t-name="mart369_home.Panel">
+        <aside class="mart-panel">
+            <t t-if="state.sel.type === 'band' and selectedBand" t-call="mart369_home.BandPanel"/>
+            <t t-elif="state.sel.type === 'banners'" t-call="mart369_home.BannersPanel"/>
+            <t t-elif="state.sel.type === 'tiles'" t-call="mart369_home.TilesPanel"/>
+            <t t-elif="state.sel.type === 'tabs'" t-call="mart369_home.TabsPanel"/>
+            <t t-elif="state.sel.type === 'mode'" t-call="mart369_home.ModePanel"/>
+            <t t-elif="state.sel.type === 'trash'" t-call="mart369_home.TrashPanel"/>
+            <div t-else="" class="mart-panel-empty">
+                <div class="mart-empty-ic">📱</div>
+                <b>Tap anything on the phone to edit it</b>
+                A product row, the banners, the tiles, the tabs — even the free-delivery amount.
+                <br/><br/>
+                Drag the <kbd>⣿</kbd> handle to move a band up or down.
+                Every change saves on its own.
+            </div>
+        </aside>
+    </t>
+
+    <t t-name="mart369_home.ModePanel">
+        <div class="mart-panel-head"><h3>Free delivery</h3></div>
+        <div class="mart-panel-body">
+            <div class="mart-field">
+                <label>Free delivery above</label>
+                <input type="number" min="0" step="1" t-att-value="d.mode.free_delivery_at"
+                       t-on-input="(ev) => this.onField('mart369.home.mode', d.mode, 'free_delivery_at', ev)"/>
+                <span class="mart-hint">The app nudges the customer to add more until the basket reaches this amount.</span>
+            </div>
+        </div>
+    </t>
+
+    <!-- ============================================================ band -->
+    <t t-name="mart369_home.BandPanel">
+        <t t-set="band" t-value="selectedBand"/>
+        <div class="mart-panel-head">
+            <h3><span class="mart-panel-kicker"><t t-esc="band.kind === 'rail' ? 'Product row' : 'Banner strip'"/></span><t t-esc="band.name || (band.kind === 'rail' ? 'Untitled row' : 'Mid-page banners')"/></h3>
+            <button class="mart-btn mart-btn-sm" t-on-click="() => this.toggleActive('mart369.home.section', band)">
+                <t t-esc="band.active ? 'Hide' : 'Show'"/>
+            </button>
+        </div>
+        <div class="mart-panel-body">
+            <t t-if="band.kind === 'rail'">
+                <div class="mart-field">
+                    <label>Title</label>
+                    <input type="text" t-att-value="band.name" placeholder="e.g. Fresh fruits"
+                           t-on-input="(ev) => this.onField('mart369.home.section', band, 'name', ev)"/>
+                </div>
+                <div class="mart-field">
+                    <label>Subtitle</label>
+                    <input type="text" t-att-value="band.subtitle" placeholder="e.g. Picked this morning"
+                           t-on-input="(ev) => this.onField('mart369.home.section', band, 'subtitle', ev)"/>
+                </div>
+                <div class="mart-field">
+                    <label>"View all" opens</label>
+                    <input type="text" t-att-value="band.view_all_route" placeholder="e.g. fruits-vegetables/fresh-fruits"
+                           t-on-input="(ev) => this.onField('mart369.home.section', band, 'view_all_route', ev)"/>
+                    <span class="mart-hint">Leave empty and no "View all" link is shown.</span>
+                </div>
+
+                <div class="mart-field">
+                    <label>Products from</label>
+                    <div class="mart-radios">
+                        <label t-foreach="SOURCES" t-as="s" t-key="s[0]" t-attf-class="{{ band.source === s[0] ? 'mart-on' : '' }}">
+                            <input type="radio" name="mart-source" t-att-value="s[0]" t-att-checked="band.source === s[0]"
+                                   t-on-change="() => this.edit('mart369.home.section', band, 'source', s[0])"/>
+                            <t t-esc="s[1]"/>
+                        </label>
+                    </div>
+                </div>
+
+                <t t-if="band.source === 'category'">
+                    <div class="mart-field">
+                        <label>Category</label>
+                        <select t-on-change="(ev) => this.edit('mart369.home.section', band, 'public_categ_id', parseInt(ev.target.value) || false)">
+                            <option value="" t-att-selected="!band.public_categ_id">— choose a category —</option>
+                            <option t-foreach="d.categories" t-as="c" t-key="c.id" t-att-value="c.id" t-att-selected="band.public_categ_id === c.id" t-esc="c.name"/>
+                        </select>
+                    </div>
+                    <div class="mart-field">
+                        <label class="mart-switch">
+                            <input type="checkbox" t-att-checked="band.include_child_categs"
+                                   t-on-change="(ev) => this.onField('mart369.home.section', band, 'include_child_categs', ev)"/>
+                            Include sub-categories
+                        </label>
+                    </div>
+                </t>
+
+                <t t-if="band.source === 'tag'">
+                    <div class="mart-field">
+                        <label>Tag</label>
+                        <select t-on-change="(ev) => this.edit('mart369.home.section', band, 'product_tag_id', parseInt(ev.target.value) || false)">
+                            <option value="" t-att-selected="!band.product_tag_id">— choose a tag —</option>
+                            <option t-foreach="d.tags" t-as="tg" t-key="tg.id" t-att-value="tg.id" t-att-selected="band.product_tag_id === tg.id" t-esc="tg.name"/>
+                        </select>
+                    </div>
+                </t>
+
+                <t t-if="band.source === 'rule'">
+                    <div class="mart-field">
+                        <label>Rule</label>
+                        <select t-on-change="(ev) => this.edit('mart369.home.section', band, 'rule', ev.target.value)">
+                            <option t-foreach="RULES" t-as="r" t-key="r[0]" t-att-value="r[0]" t-att-selected="band.rule === r[0]" t-esc="r[1]"/>
+                        </select>
+                    </div>
+                    <div class="mart-field" t-if="band.rule === 'best'">
+                        <label>Count sales from the last (days)</label>
+                        <input type="number" min="1" t-att-value="band.rule_days"
+                               t-on-input="(ev) => this.onField('mart369.home.section', band, 'rule_days', ev)"/>
+                    </div>
+                </t>
+
+                <t t-if="band.source === 'manual'">
+                    <div class="mart-field">
+                        <label>Add a product</label>
+                        <input type="text" t-att-value="state.search.q" placeholder="Type a product name…"
+                               t-on-input="(ev) => this.onSearchInput(ev)"/>
+                    </div>
+                    <div class="mart-search-results" t-if="state.search.results.length">
+                        <button t-foreach="state.search.results" t-as="p" t-key="p.id" t-on-click="() => this.addPicked(band, p)">
+                            <span t-esc="p.display_name"/><small t-esc="inr(p.list_price)"/>
+                        </button>
+                    </div>
+                    <div class="mart-items" t-ref="panelList" data-model="mart369.home.section.product">
+                        <t t-foreach="band.picked" t-as="line" t-key="line.id">
+                            <div t-attf-class="mart-item {{ state.editItem === line.id ? 'mart-selected' : '' }}" t-att-data-id="line.id">
+                                <span class="mart-item-handle">⣿</span>
+                                <div class="mart-item-txt" t-on-click="() => this.toggleEditItem(line.id)">
+                                    <b t-esc="line.name_override || line.product_name"/>
+                                    <small t-if="line.tag_override || line.unit_override"><t t-esc="[line.unit_override, line.tag_override].filter(Boolean).join(' · ')"/></small>
+                                </div>
+                                <div class="mart-item-tools">
+                                    <button class="mart-tool" title="Wording for this row" t-on-click="() => this.toggleEditItem(line.id)">✎</button>
+                                    <button class="mart-tool mart-tool-danger" title="Remove from this row" t-on-click="() => this.removePicked(line)">✕</button>
+                                </div>
+                            </div>
+                            <div t-if="state.editItem === line.id" class="mart-item-edit">
+                                <div class="mart-row">
+                                    <div class="mart-field"><label>Show as</label><input type="text" t-att-value="line.name_override" t-att-placeholder="line.product_name" t-on-input="(ev) => this.onField('mart369.home.section.product', line, 'name_override', ev)"/></div>
+                                    <div class="mart-field"><label>Size</label><input type="text" t-att-value="line.unit_override" placeholder="e.g. 1 kg" t-on-input="(ev) => this.onField('mart369.home.section.product', line, 'unit_override', ev)"/></div>
+                                </div>
+                                <div class="mart-row">
+                                    <div class="mart-field"><label>Badge</label><input type="text" t-att-value="line.tag_override" placeholder="e.g. New" t-on-input="(ev) => this.onField('mart369.home.section.product', line, 'tag_override', ev)"/></div>
+                                    <div class="mart-field"><label>Small note</label><input type="text" t-att-value="line.note_override" placeholder="e.g. Approx 250-400 g" t-on-input="(ev) => this.onField('mart369.home.section.product', line, 'note_override', ev)"/></div>
+                                </div>
+                                <div class="mart-row" t-if="state.modeKey === 'all'">
+                                    <div class="mart-field"><label>Delivery</label><input type="text" t-att-value="line.delivery_override" placeholder="e.g. 3-5 days" t-on-input="(ev) => this.onField('mart369.home.section.product', line, 'delivery_override', ev)"/></div>
+                                </div>
+                            </div>
+                        </t>
+                        <div t-if="!band.picked.length" class="mart-hint">No products chosen yet — search above.</div>
+                    </div>
+                </t>
+
+                <div class="mart-field">
+                    <label>Show at most</label>
+                    <input type="number" min="1" max="50" t-att-value="band.limit"
+                           t-on-input="(ev) => this.onField('mart369.home.section', band, 'limit', ev)"/>
+                </div>
+
+                <div t-attf-class="mart-count {{ band.product_count ? '' : 'mart-count-zero' }}">
+                    <t t-if="band.product_count">Will show <b><t t-esc="band.product_count"/></b> product<t t-if="band.product_count !== 1">s</t> in the app.</t>
+                    <t t-else="">Nothing to show yet — this row stays out of the app.</t>
+                </div>
+            </t>
+
+            <t t-else="">
+                <div class="mart-field">
+                    <label>Banners in this strip — drag to reorder</label>
+                </div>
+                <div class="mart-items" t-ref="panelList" data-model="mart369.home.section.banner">
+                    <t t-foreach="band.lines" t-as="line" t-key="line.id">
+                        <div t-attf-class="mart-item {{ line.banner_active ? '' : 'mart-hidden' }}" t-att-data-id="line.id">
+                            <span class="mart-item-handle">⣿</span>
+                            <span class="mart-item-swatch" t-att-style="toneStyle((bannerByKey(line.banner_key) || {}).tone)"/>
+                            <div class="mart-item-txt"><b t-esc="line.banner_name"/><small t-if="!line.banner_active">hidden banner — not shown</small></div>
+                            <div class="mart-item-tools">
+                                <button class="mart-tool mart-tool-danger" title="Take out of this strip" t-on-click="() => this.removeLine(line)">✕</button>
+                            </div>
+                        </div>
+                    </t>
+                </div>
+                <t t-set="used" t-value="linedBannerIds(band)"/>
+                <t t-set="available" t-value="d.banners.filter((b) => !used.has(b.id))"/>
+                <div class="mart-field" t-if="available.length">
+                    <label>Add a banner</label>
+                    <div class="mart-items">
+                        <div t-foreach="available" t-as="b" t-key="b.id" class="mart-item">
+                            <span class="mart-item-swatch" t-att-style="toneStyle(b.tone)"/>
+                            <div class="mart-item-txt"><b t-esc="b.name || b.key"/><small t-esc="b.kicker"/></div>
+                            <button class="mart-btn mart-btn-sm" t-on-click="() => this.addLine(band, b)">Add</button>
+                        </div>
+                    </div>
+                </div>
+                <div t-else="" class="mart-hint">Every banner is already in this strip. Add more under Banners.</div>
+            </t>
+
+            <div class="mart-actions">
+                <button class="mart-btn mart-btn-danger" t-on-click="() => this.remove('mart369.home.section', band, band.name || 'This band')">Remove this band</button>
+            </div>
+        </div>
+    </t>
+
+    <!-- ============================================================== trash -->
+    <t t-name="mart369_home.TrashPanel">
+        <div class="mart-panel-head">
+            <h3><span class="mart-panel-kicker">Removed</span>Trash</h3>
+            <small t-if="d.trash_days"><t t-esc="d.trash_days"/> day<t t-if="d.trash_days !== 1">s</t></small>
+            <button class="mart-btn mart-btn-sm mart-btn-danger" t-if="(d.trash || []).length"
+                    t-on-click="() => this.emptyTrash()">Empty</button>
+        </div>
+        <div class="mart-panel-body">
+            <p class="mart-hint mb-3">
+                <t t-if="d.trash_days">
+                    Anything you remove waits here for <b><t t-esc="d.trash_days"/> days</b>,
+                    then goes for good. Put something back and it returns exactly as it was.
+                </t>
+                <t t-else="">
+                    Removed items are kept here until you empty the Trash.
+                </t>
+                Change how long under <b>Advanced → Home Page Settings</b>.
+            </p>
+            <div class="mart-items">
+                <div t-foreach="d.trash || []" t-as="row" t-key="row.model + row.id" class="mart-item mart-trash-row">
+                    <span class="mart-trash-ic">🗑</span>
+                    <div class="mart-item-txt">
+                        <b t-esc="row.name"/>
+                        <small>
+                            <t t-esc="row.what"/>
+                            <t t-if="d.trash_days"> · <t t-esc="row.days_left"/> day<t t-if="row.days_left !== 1">s</t> left</t>
+                        </small>
+                    </div>
+                    <div class="mart-item-tools">
+                        <button class="mart-btn mart-btn-sm" t-on-click="() => this.restore(row)">Put back</button>
+                        <button class="mart-tool mart-tool-danger" title="Delete for good"
+                                t-on-click="() => this.deleteForever(row)">✕</button>
+                    </div>
+                </div>
+                <div t-if="!(d.trash || []).length" class="mart-panel-empty">
+                    <div class="mart-empty-ic">🗑</div>
+                    <b>The Trash is empty</b>
+                    Anything you remove from the home page lands here first.
+                </div>
+            </div>
+        </div>
+    </t>
+
+    <!-- ============================================================ banners -->
+    <t t-name="mart369_home.BannersPanel">
+        <div class="mart-panel-head">
+            <h3>Banners</h3><small><t t-esc="activeBanners.length"/> shown</small>
+            <button class="mart-btn mart-btn-sm mart-btn-primary" t-on-click="() => this.addBanner()">+ Add</button>
+        </div>
+        <div class="mart-panel-body">
+            <div class="mart-items" t-ref="panelList" data-model="mart369.home.banner">
+                <t t-foreach="d.banners" t-as="b" t-key="b.id">
+                    <div t-attf-class="mart-item {{ state.editItem === b.id ? 'mart-selected' : '' }} {{ b.active ? '' : 'mart-hidden' }}" t-att-data-id="b.id">
+                        <span class="mart-item-handle">⣿</span>
+                        <span class="mart-item-swatch" t-att-style="b.image_url ? bannerStyle(b) : toneStyle(b.tone)"/>
+                        <div class="mart-item-txt" t-on-click="() => this.toggleEditItem(b.id)">
+                            <b t-esc="b.name || b.key"/>
+                            <small><t t-esc="b.kicker"/><t t-if="b.usage_count"> · in <t t-esc="b.usage_count"/> strip<t t-if="b.usage_count > 1">s</t></t></small>
+                        </div>
+                        <div class="mart-item-tools">
+                            <button class="mart-tool" t-att-title="b.active ? 'Hide' : 'Show'" t-on-click="() => this.toggleActive('mart369.home.banner', b)"><t t-esc="b.active ? '👁' : '🚫'"/></button>
+                            <button class="mart-tool" title="Edit" t-on-click="() => this.toggleEditItem(b.id)">✎</button>
+                            <button class="mart-tool mart-tool-danger" title="Remove" t-on-click="() => this.remove('mart369.home.banner', b, b.name || b.key)">✕</button>
+                        </div>
+                    </div>
+                    <div t-if="state.editItem === b.id" class="mart-item-edit">
+                        <div class="mart-field"><label>Small line above</label><input type="text" t-att-value="b.kicker" placeholder="e.g. Fresh fruit week" t-on-input="(ev) => this.onField('mart369.home.banner', b, 'kicker', ev)"/></div>
+                        <div class="mart-field"><label>Headline</label><input type="text" t-att-value="b.name" placeholder="e.g. Fruits picked this morning" t-on-input="(ev) => this.onField('mart369.home.banner', b, 'name', ev)"/></div>
+                        <div class="mart-field"><label>Offer line</label><input type="text" t-att-value="b.note" placeholder="e.g. Up to 30% off" t-on-input="(ev) => this.onField('mart369.home.banner', b, 'note', ev)"/></div>
+                        <div class="mart-row">
+                            <div class="mart-field">
+                                <label>Colour</label>
+                                <select t-on-change="(ev) => this.edit('mart369.home.banner', b, 'tone', ev.target.value)">
+                                    <option t-foreach="d.vocab.tones" t-as="tn" t-key="tn[0]" t-att-value="tn[0]" t-att-selected="b.tone === tn[0]" t-esc="tn[1]"/>
+                                </select>
+                            </div>
+                            <div class="mart-field"><label>Opens</label><input type="text" t-att-value="b.href" placeholder="e.g. /category/fruits-vegetables" t-on-input="(ev) => this.onField('mart369.home.banner', b, 'href', ev)"/></div>
+                        </div>
+                        <div class="mart-field">
+                            <label>Picture (1200 × 480 works best)</label>
+                            <div class="mart-upload">
+                                <span class="mart-upload-prev" t-att-style="b.image_url ? bannerStyle(b) : toneStyle(b.tone)"/>
+                                <label class="mart-btn mart-btn-sm">Upload<input type="file" accept="image/*" t-on-change="(ev) => this.onUpload('mart369.home.banner', b, ev)"/></label>
+                                <button t-if="b.image_url" class="mart-btn mart-btn-sm" t-on-click="() => this.clearImage('mart369.home.banner', b)">Remove picture</button>
+                            </div>
+                        </div>
+                        <div class="mart-field" t-if="!b.image_url">
+                            <label>Drawings, one per line (used when there is no picture)</label>
+                            <textarea t-att-value="b.art_lines" placeholder="Apple&#10;Orange&#10;Banana" t-on-input="(ev) => this.onField('mart369.home.banner', b, 'art_lines', ev)"/>
+                            <span class="mart-hint">Names: <t t-esc="d.vocab.art.map((a) => a[0]).join(', ')"/></span>
+                        </div>
+                    </div>
+                </t>
+                <div t-if="!d.banners.length" class="mart-hint">No banners yet. Add one above.</div>
+            </div>
+        </div>
+    </t>
+
+    <!-- ============================================================ tiles -->
+    <t t-name="mart369_home.TilesPanel">
+        <div class="mart-panel-head">
+            <h3>Category tiles</h3><small><t t-esc="activeTiles.length"/> shown</small>
+            <button class="mart-btn mart-btn-sm mart-btn-primary" t-on-click="() => this.addTile()">+ Add</button>
+        </div>
+        <div class="mart-panel-body">
+            <div class="mart-items" t-ref="panelList" data-model="mart369.home.tile">
+                <t t-foreach="d.tiles" t-as="tl" t-key="tl.id">
+                    <div t-attf-class="mart-item {{ state.editItem === tl.id ? 'mart-selected' : '' }} {{ tl.active ? '' : 'mart-hidden' }}" t-att-data-id="tl.id">
+                        <span class="mart-item-handle">⣿</span>
+                        <span class="mart-item-swatch" t-att-style="tl.image_path ? 'background-image:url(' + tl.image_path + ')' : tileStyle(tl)"/>
+                        <div class="mart-item-txt" t-on-click="() => this.toggleEditItem(tl.id)"><b t-esc="tl.name"/><small t-esc="tl.route"/></div>
+                        <div class="mart-item-tools">
+                            <button class="mart-tool" t-att-title="tl.active ? 'Hide' : 'Show'" t-on-click="() => this.toggleActive('mart369.home.tile', tl)"><t t-esc="tl.active ? '👁' : '🚫'"/></button>
+                            <button class="mart-tool" title="Edit" t-on-click="() => this.toggleEditItem(tl.id)">✎</button>
+                            <button class="mart-tool mart-tool-danger" title="Remove" t-on-click="() => this.remove('mart369.home.tile', tl, tl.name)">✕</button>
+                        </div>
+                    </div>
+                    <div t-if="state.editItem === tl.id" class="mart-item-edit">
+                        <div class="mart-row">
+                            <div class="mart-field"><label>Label</label><input type="text" t-att-value="tl.name" t-on-input="(ev) => this.onField('mart369.home.tile', tl, 'name', ev)"/></div>
+                            <div class="mart-field"><label>Opens</label><input type="text" t-att-value="tl.route" placeholder="e.g. fruits-vegetables/fresh-fruits" t-on-input="(ev) => this.onField('mart369.home.tile', tl, 'route', ev)"/></div>
+                        </div>
+                        <div class="mart-field">
+                            <label>Category (optional)</label>
+                            <select t-on-change="(ev) => this.edit('mart369.home.tile', tl, 'public_categ_id', parseInt(ev.target.value) || false)">
+                                <option value="" t-att-selected="!tl.public_categ_id">— none —</option>
+                                <option t-foreach="d.categories" t-as="c" t-key="c.id" t-att-value="c.id" t-att-selected="tl.public_categ_id === c.id" t-esc="c.name"/>
+                            </select>
+                        </div>
+                        <div class="mart-field">
+                            <label>Picture</label>
+                            <div class="mart-upload">
+                                <span class="mart-upload-prev" t-att-style="tl.image_path ? 'background-image:url(' + tl.image_path + ')' : tileStyle(tl)"/>
+                                <label class="mart-btn mart-btn-sm">Upload<input type="file" accept="image/*" t-on-change="(ev) => this.onUpload('mart369.home.tile', tl, ev)"/></label>
+                                <button t-if="tl.has_image" class="mart-btn mart-btn-sm" t-on-click="() => this.clearImage('mart369.home.tile', tl)">Use drawing instead</button>
+                            </div>
+                        </div>
+                        <div class="mart-row">
+                            <div class="mart-field">
+                                <label>Drawing</label>
+                                <select t-on-change="(ev) => this.edit('mart369.home.tile', tl, 'art', ev.target.value)">
+                                    <option t-foreach="d.vocab.art" t-as="a" t-key="a[0]" t-att-value="a[0]" t-att-selected="tl.art === a[0]" t-esc="a[1]"/>
+                                </select>
+                            </div>
+                            <div class="mart-field"><label>Text on it</label><input type="text" t-att-value="tl.badge" placeholder="e.g. ATTA" t-on-input="(ev) => this.onField('mart369.home.tile', tl, 'badge', ev)"/></div>
+                        </div>
+                        <div class="mart-row">
+                            <div class="mart-field"><label>Tile background</label><input type="color" t-att-value="tl.bg || '#f1f4f6'" t-on-input="(ev) => this.onField('mart369.home.tile', tl, 'bg', ev)"/></div>
+                            <div class="mart-field"><label>Drawing colour</label><input type="color" t-att-value="tl.color || '#5b6b76'" t-on-input="(ev) => this.onField('mart369.home.tile', tl, 'color', ev)"/></div>
+                        </div>
+                    </div>
+                </t>
+                <div t-if="!d.tiles.length" class="mart-hint">No tiles yet. Add one above.</div>
+            </div>
+        </div>
+    </t>
+
+    <!-- ============================================================ tabs -->
+    <t t-name="mart369_home.TabsPanel">
+        <div class="mart-panel-head">
+            <h3>Tabs</h3><small><t t-esc="activeTabs.length"/> shown</small>
+            <button class="mart-btn mart-btn-sm mart-btn-primary" t-on-click="() => this.addTab()">+ Add</button>
+        </div>
+        <div class="mart-panel-body">
+            <div class="mart-items" t-ref="panelList" data-model="mart369.home.tab">
+                <t t-foreach="d.tabs" t-as="tb" t-key="tb.id">
+                    <div t-attf-class="mart-item {{ state.editItem === tb.id ? 'mart-selected' : '' }} {{ tb.active ? '' : 'mart-hidden' }}" t-att-data-id="tb.id">
+                        <span class="mart-item-handle">⣿</span>
+                        <span class="mart-item-swatch" style="display:grid;place-items:center;background:#f4f6f8;"><Icon n="tb.icon" size="18"/></span>
+                        <div class="mart-item-txt" t-on-click="() => this.toggleEditItem(tb.id)">
+                            <b t-esc="tb.name"/>
+                            <small><t t-esc="labelOf(ROUTE_VIEWS, tb.route_view)"/><t t-if="tb.route_param"> · <t t-esc="tb.route_param"/></t></small>
+                        </div>
+                        <div class="mart-item-tools">
+                            <button class="mart-tool" t-att-title="tb.active ? 'Hide' : 'Show'" t-on-click="() => this.toggleActive('mart369.home.tab', tb)"><t t-esc="tb.active ? '👁' : '🚫'"/></button>
+                            <button class="mart-tool" title="Edit" t-on-click="() => this.toggleEditItem(tb.id)">✎</button>
+                            <button class="mart-tool mart-tool-danger" title="Remove" t-on-click="() => this.remove('mart369.home.tab', tb, tb.name)">✕</button>
+                        </div>
+                    </div>
+                    <div t-if="state.editItem === tb.id" class="mart-item-edit">
+                        <div class="mart-row">
+                            <div class="mart-field"><label>Label</label><input type="text" t-att-value="tb.name" t-on-input="(ev) => this.onField('mart369.home.tab', tb, 'name', ev)"/></div>
+                            <div class="mart-field">
+                                <label>Icon</label>
+                                <select t-on-change="(ev) => this.edit('mart369.home.tab', tb, 'icon', ev.target.value)">
+                                    <option t-foreach="d.vocab.icons" t-as="ic" t-key="ic[0]" t-att-value="ic[0]" t-att-selected="tb.icon === ic[0]" t-esc="ic[1]"/>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mart-row">
+                            <div class="mart-field">
+                                <label>Opens</label>
+                                <select t-on-change="(ev) => this.edit('mart369.home.tab', tb, 'route_view', ev.target.value)">
+                                    <option t-foreach="ROUTE_VIEWS" t-as="rv" t-key="rv[0]" t-att-value="rv[0]" t-att-selected="tb.route_view === rv[0]" t-esc="rv[1]"/>
+                                </select>
+                            </div>
+                            <div class="mart-field" t-if="tb.route_view === 'category'">
+                                <label>Category address</label>
+                                <input type="text" t-att-value="tb.route_param" placeholder="e.g. fruits-vegetables" t-on-input="(ev) => this.onField('mart369.home.tab', tb, 'route_param', ev)"/>
+                            </div>
+                        </div>
+                    </div>
+                </t>
+                <div t-if="!d.tabs.length" class="mart-hint">No tabs yet. Add one above.</div>
+            </div>
+        </div>
+    </t>
+
+</templates>

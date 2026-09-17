@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- The bands of the product page, top to bottom, exactly as the app
+         draws them. noupdate="1": once installed, an upgrade never undoes
+         what the shop has switched off. -->
+    <data noupdate="1">
+
+        <record id="sec_gallery" model="mart369.product.section">
+            <field name="key">gallery</field>
+            <field name="name">Photos</field>
+            <field name="note">The picture carousel at the top.</field>
+            <field name="sequence">10</field>
+        </record>
+
+        <record id="sec_buy" model="mart369.product.section">
+            <field name="key">buy</field>
+            <field name="name">Price and buy box</field>
+            <field name="note">Name, price, pack sizes and the Add to cart button.</field>
+            <field name="sequence">20</field>
+        </record>
+
+        <record id="sec_features" model="mart369.product.section">
+            <field name="key">features</field>
+            <field name="name">Key features</field>
+            <field name="note">The ticked bullet list.</field>
+            <field name="sequence">30</field>
+        </record>
+
+        <record id="sec_info" model="mart369.product.section">
+            <field name="key">info</field>
+            <field name="name">Product information</field>
+            <field name="note">The two-column table: brand, sold by, manufacturer, size, weight.</field>
+            <field name="sequence">40</field>
+        </record>
+
+        <record id="sec_specs" model="mart369.product.section">
+            <field name="key">specs</field>
+            <field name="name">Item specifications</field>
+            <field name="note">The grid: net quantity, warranty, material, shelf life.</field>
+            <field name="sequence">50</field>
+        </record>
+
+        <record id="sec_description" model="mart369.product.section">
+            <field name="key">description</field>
+            <field name="name">Description</field>
+            <field name="note">The long text and the disclaimer under it.</field>
+            <field name="sequence">60</field>
+        </record>
+
+        <record id="sec_returns" model="mart369.product.section">
+            <field name="key">returns</field>
+            <field name="name">Return policy</field>
+            <field name="sequence">70</field>
+        </record>
+
+        <record id="sec_reviews" model="mart369.product.section">
+            <field name="key">reviews</field>
+            <field name="name">Ratings and reviews</field>
+            <field name="note">Real reviews written by customers who bought it.</field>
+            <field name="sequence">80</field>
+        </record>
+
+        <record id="sec_delivery" model="mart369.product.section">
+            <field name="key">delivery</field>
+            <field name="name">Delivery address</field>
+            <field name="sequence">90</field>
+        </record>
+
+        <record id="sec_bundle" model="mart369.product.section">
+            <field name="key">bundle</field>
+            <field name="name">Frequently bought together</field>
+            <field name="sequence">100</field>
+        </record>
+
+        <record id="sec_similar" model="mart369.product.section">
+            <field name="key">similar</field>
+            <field name="name">Similar and related products</field>
+            <field name="sequence">110</field>
+        </record>
+
+    </data>
+</odoo>

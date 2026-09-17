@@ -1,0 +1,378 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="mart369_product.ProductBuilder">
+        <Layout display="{ controlPanel: {} }" className="'o_mart369_builder h-100'">
+            <t t-set-slot="layout-buttons">
+                <div class="mart-topbar">
+                    <div class="mart-modes">
+                        <button t-attf-class="{{ state.tab === 'global' ? 'mart-on' : '' }}"
+                                t-on-click="() => this.switchTab('global')">Whole shop</button>
+                        <button t-attf-class="{{ state.tab === 'product' ? 'mart-on' : '' }}"
+                                t-on-click="() => this.switchTab('product')">One product</button>
+                    </div>
+                    <span class="mart-status" t-att-data-state="state.status">
+                        <i/>
+                        <t t-if="state.status === 'saving'">Saving…</t>
+                        <t t-elif="state.status === 'error'">Not saved</t>
+                        <t t-else="">Saved</t>
+                    </span>
+                </div>
+            </t>
+
+            <div class="mart-builder" t-if="d">
+                <div class="mart-stage">
+                    <t t-call="mart369_product.Phone"/>
+                    <div class="mart-legend">
+                        <span t-if="state.tab === 'global'">Editing <b>every product</b></span>
+                        <span t-else="">Editing <b>this product only</b></span>
+                        <span><b>Click</b> a band to open its fields</span>
+                        <span><b>Greyed</b> = hidden from customers</span>
+                    </div>
+                </div>
+                <t t-call="mart369_product.Panel"/>
+            </div>
+        </Layout>
+    </t>
+
+    <!-- ============================================ the page, drawn as a phone
+         Uses the storefront's own .pd-* markup and stylesheet, so this is the
+         real page - with hidden fields greyed rather than removed, so an
+         employee can see what they are switching off. -->
+    <t t-name="mart369_product.Phone">
+        <div class="mart-phone">
+            <div class="mart-phone-screen">
+                <div class="mart-notch"/>
+                <div class="mart-phone-scroll">
+                    <div class="hm-page" data-mode="quick">
+                        <div class="hm-wrap hm-view-product">
+                            <div class="pd-page">
+
+                                <t t-set="card" t-value="d.card || {}"/>
+                                <div class="ls-crumbs">
+                                    <span>Home</span><span>›</span>
+                                    <span t-esc="card.name || 'Product'"/>
+                                </div>
+
+                                <t t-set="gallery" t-value="sectionByKey('gallery')"/>
+                                <t t-if="gallery" t-call="mart369_product.Band">
+                                    <t t-set="section" t-value="gallery"/>
+                                    <t t-set="body" t-value="'mart369_product.MockGallery'"/>
+                                </t>
+
+                                <t t-set="buy" t-value="sectionByKey('buy')"/>
+                                <t t-if="buy" t-call="mart369_product.Band">
+                                    <t t-set="section" t-value="buy"/>
+                                    <t t-set="body" t-value="'mart369_product.MockBuy'"/>
+                                </t>
+
+                                <div class="pd-card pd-buy" style="margin-top: 10px;">
+                                    <div class="pd-secs">
+                                        <t t-foreach="accordionSections" t-as="section" t-key="section.id">
+                                            <t t-call="mart369_product.Band">
+                                                <t t-set="body" t-value="'mart369_product.MockSection'"/>
+                                            </t>
+                                        </t>
+                                    </div>
+                                </div>
+
+                                <t t-set="reviews" t-value="sectionByKey('reviews')"/>
+                                <t t-if="reviews" t-call="mart369_product.Band">
+                                    <t t-set="section" t-value="reviews"/>
+                                    <t t-set="body" t-value="'mart369_product.MockReviews'"/>
+                                </t>
+
+                                <t t-foreach="tailSections" t-as="section" t-key="section.id">
+                                    <t t-call="mart369_product.Band">
+                                        <t t-set="body" t-value="'mart369_product.MockTail'"/>
+                                    </t>
+                                </t>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </t>
+
+    <!-- One editable band: the overlay controls plus whichever body it draws -->
+    <t t-name="mart369_product.Band">
+        <div t-attf-class="mart-band {{ state.openSection === section.id ? 'mart-selected' : '' }} {{ section.show ? '' : 'mart-hidden' }}"
+             t-on-click="() => this.openSection(section)">
+            <span class="mart-band-label">
+                <t t-if="!section.show">Hidden · </t><t t-esc="section.name"/>
+            </span>
+            <div class="mart-band-tools">
+                <span class="mart-count-chip" t-if="differing(section)">
+                    <t t-esc="differing(section)"/> differ
+                </span>
+                <button class="mart-tool"
+                        t-att-title="section.show ? 'Hide this whole section' : 'Show this whole section'"
+                        t-on-click.stop="() => this.toggleSection(section)">
+                    <t t-esc="section.show ? '👁' : '🚫'"/>
+                </button>
+            </div>
+            <div class="mart-band-body">
+                <t t-call="{{ body }}"/>
+            </div>
+        </div>
+    </t>
+
+    <t t-name="mart369_product.MockGallery">
+        <div class="pd-stage" style="aspect-ratio: 1.4;">
+            <t t-set="img" t-value="(d.card &amp;&amp; d.card.images &amp;&amp; d.card.images[0]) || ''"/>
+            <div class="pd-slide pd-cur" style="position:absolute; inset:0; display:grid; place-items:center;">
+                <img t-if="img" t-att-src="img" alt="" style="max-width:70%; max-height:70%; object-fit:contain;"/>
+                <span t-else="" class="mart-pdp-auto">no photo yet</span>
+            </div>
+            <span class="pd-unit-tag" t-if="rowVisible('buy', 'unit_tag') and d.card"
+                  t-esc="d.card.unit"/>
+        </div>
+    </t>
+
+    <t t-name="mart369_product.MockBuy">
+        <div class="pd-card pd-buy">
+            <t t-set="card" t-value="d.card || {}"/>
+            <a class="pd-brand" t-attf-class="{{ rowVisible('buy','brand') ? '' : 'mart-pdp-off' }}"
+               t-esc="rowValue('buy', 'brand') || 'Brand'"/>
+            <h1 class="pd-name" t-esc="card.name || 'Product name'"/>
+            <button class="pd-rating" t-if="rowVisible('buy', 'rating_summary')">
+                <b t-esc="ratingText"/>
+                <span class="pd-stars"><Icon n="'grid'" size="13"/></span>
+                <span t-esc="ratingCountText"/>
+            </button>
+            <div class="pd-price">
+                <b t-esc="'₹' + (card.price || 0)"/>
+                <t t-if="card.mrp and rowVisible('buy', 'mrp')">
+                    <s t-esc="'MRP ₹' + card.mrp"/>
+                    <em t-esc="offPct + '% OFF'"/>
+                </t>
+                <small t-else="">MRP incl. of all taxes</small>
+            </div>
+            <div class="pd-cta"><button class="pd-add">Add to cart</button></div>
+        </div>
+    </t>
+
+    <!-- Key features, product information, specifications, description,
+         returns - each drawn the way the app draws it. -->
+    <t t-name="mart369_product.MockSection">
+        <section class="pd-sec pd-open">
+            <button class="pd-sec-head" t-esc="section.name"/>
+            <div class="pd-collapse"><div><div class="pd-sec-body">
+
+                <ul class="pd-features" t-if="section.key === 'features'">
+                    <t t-set="rows" t-value="visibleRows(section)"/>
+                    <li t-foreach="rows" t-as="row" t-key="row.id"
+                        t-attf-class="{{ row.visible ? '' : 'mart-pdp-off' }}">
+                        <Icon n="'grid'" size="14"/>
+                        <t t-esc="row.value || row.name"/>
+                    </li>
+                    <li t-if="!rows.length" class="mart-pdp-auto">Nothing set yet</li>
+                </ul>
+
+                <dl class="pd-table" t-elif="section.key === 'info'">
+                    <div t-foreach="section.rows" t-as="row" t-key="row.id"
+                         t-attf-class="{{ row.visible ? '' : 'mart-pdp-off' }}">
+                        <dt t-esc="row.name"/>
+                        <dd>
+                            <t t-if="!row.visible">hidden</t>
+                            <t t-elif="row.value" t-esc="row.value"/>
+                            <span t-else="" class="mart-pdp-auto">from the product</span>
+                        </dd>
+                    </div>
+                </dl>
+
+                <dl class="pd-grid" t-elif="section.key === 'specs'">
+                    <div t-foreach="section.rows" t-as="row" t-key="row.id"
+                         t-attf-class="{{ row.visible ? '' : 'mart-pdp-off' }}">
+                        <dt t-esc="row.name"/>
+                        <dd>
+                            <t t-if="!row.visible">hidden</t>
+                            <t t-elif="row.value" t-esc="row.value"/>
+                            <span t-else="" class="mart-pdp-auto">from the product</span>
+                        </dd>
+                    </div>
+                </dl>
+
+                <div class="pd-desc pd-full" t-elif="section.key === 'description'">
+                    <t t-foreach="section.rows" t-as="row" t-key="row.id">
+                        <h4 t-if="row.key === 'disclaimer'">Disclaimer</h4>
+                        <p t-attf-class="{{ row.visible ? '' : 'mart-pdp-off' }}">
+                            <t t-if="!row.visible">— <t t-esc="row.name"/> hidden —</t>
+                            <t t-elif="row.value" t-esc="row.value"/>
+                            <span t-else="" class="mart-pdp-auto">from the product</span>
+                        </p>
+                    </t>
+                </div>
+
+                <t t-elif="section.key === 'returns'">
+                    <p class="pd-return" t-foreach="section.rows" t-as="row" t-key="row.id"
+                       t-attf-class="{{ row.visible ? 'pd-return' : 'pd-return mart-pdp-off' }}">
+                        <Icon n="'grid'" size="16"/>
+                        <t t-if="!row.visible">— <t t-esc="row.name"/> hidden —</t>
+                        <t t-else="" t-esc="row.value || row.name"/>
+                    </p>
+                </t>
+
+                <dl class="pd-table" t-else="">
+                    <div t-foreach="section.rows" t-as="row" t-key="row.id"
+                         t-attf-class="{{ row.visible ? '' : 'mart-pdp-off' }}">
+                        <dt t-esc="row.name"/>
+                        <dd t-esc="row.visible ? (row.value || 'from the product') : 'hidden'"/>
+                    </div>
+                </dl>
+
+            </div></div></div>
+        </section>
+    </t>
+
+    <t t-name="mart369_product.MockReviews">
+        <section class="pd-card pd-reviews">
+            <button class="pd-sec-head">Ratings &amp; reviews
+                <span class="pd-mini"><b t-esc="ratingText"/></span>
+            </button>
+            <div class="pd-collapse pd-show"><div><div class="pd-rev-body">
+                <div class="pd-rev-summary">
+                    <div class="pd-rev-score">
+                        <b t-esc="ratingText"/>
+                        <small t-esc="ratingCountText"/>
+                    </div>
+                    <div class="pd-bars">
+                        <div t-foreach="[5,4,3,2,1]" t-as="star" t-key="star" class="pd-bar"
+                             t-attf-style="--p: {{ star === 5 ? 0.6 : 0.1 }}">
+                            <span><t t-esc="star"/>★</span><i><em/></i><small/>
+                        </div>
+                    </div>
+                </div>
+                <div class="mart-pdp-auto" style="margin-top:8px;">
+                    Real customer reviews appear here once people write them.
+                </div>
+            </div></div></div>
+        </section>
+    </t>
+
+    <t t-name="mart369_product.MockTail">
+        <section class="pd-card" style="padding: 12px 14px;">
+            <b style="font-size: 14px;" t-esc="section.name"/>
+            <div class="mart-pdp-auto" style="margin-top: 4px;">
+                <t t-esc="visibleRows(section).length"/> of
+                <t t-esc="section.rows.length"/> shown
+            </div>
+        </section>
+    </t>
+
+    <!-- ============================================================== panel -->
+    <t t-name="mart369_product.Panel">
+        <aside class="mart-panel">
+            <t t-if="state.tab === 'product'" t-call="mart369_product.ProductPicker"/>
+            <t t-set="section" t-value="openSectionRecord"/>
+            <t t-if="section" t-call="mart369_product.SectionPanel"/>
+            <div t-else="" class="mart-panel-empty">
+                <div class="mart-empty-ic">🛍️</div>
+                <b>Click a band on the phone</b>
+                Every part of the product page is there. Open one to switch its
+                fields on or off.
+                <br/><br/>
+                <t t-if="state.tab === 'global'">
+                    You are editing the <b>whole shop</b>. Switch to
+                    <b>One product</b> to make a single product differ.
+                </t>
+                <t t-else="">
+                    You are editing <b>one product</b>. Anything left on
+                    <b>Follow the default</b> keeps up with the shop-wide
+                    setting, now and later.
+                </t>
+            </div>
+        </aside>
+    </t>
+
+    <t t-name="mart369_product.ProductPicker">
+        <div class="mart-panel-head">
+            <h3><span class="mart-panel-kicker">Editing</span><t t-esc="d.product ? d.product.name : 'Pick a product'"/></h3>
+        </div>
+        <div class="mart-panel-body" style="padding-bottom: 4px;">
+            <div class="mart-field">
+                <label>Change product</label>
+                <input type="text" t-att-value="state.search.q" placeholder="Type a product name…"
+                       t-on-input="(ev) => this.onSearchInput(ev)"/>
+            </div>
+            <div class="mart-search-results" t-if="state.search.results.length">
+                <button t-foreach="state.search.results" t-as="p" t-key="p.id"
+                        t-on-click="() => this.pickProduct(p.id)">
+                    <span t-esc="p.display_name"/>
+                </button>
+            </div>
+        </div>
+    </t>
+
+    <t t-name="mart369_product.SectionPanel">
+        <div class="mart-panel-head">
+            <h3><span class="mart-panel-kicker" t-esc="state.tab === 'global' ? 'Whole shop' : 'This product'"/><t t-esc="section.name"/></h3>
+            <button class="mart-btn mart-btn-sm" t-on-click="() => this.toggleSection(section)">
+                <t t-esc="section.show ? 'Hide section' : 'Show section'"/>
+            </button>
+        </div>
+        <div class="mart-panel-body">
+            <p class="mart-hint mb-3" t-if="section.note" t-esc="section.note"/>
+            <div class="mart-warn" t-if="!section.show">
+                This whole section is switched off, so none of these fields
+                show — whatever they say individually.
+            </div>
+
+            <t t-foreach="section.rows" t-as="row" t-key="row.id">
+                <div class="mart-fieldrow">
+                    <div class="mart-fieldrow-head">
+                        <b t-esc="row.name"/>
+                        <label class="mart-switch" t-if="state.tab === 'global'">
+                            <input type="checkbox" t-att-checked="row.show"
+                                   t-on-change="() => this.toggleGlobal(row)"/>
+                            Show
+                        </label>
+                        <small t-if="state.tab === 'product' and row.state !== 'follow'"
+                               class="mart-differs">differs</small>
+                    </div>
+                    <div class="mart-hint" t-if="row.note" t-esc="row.note"/>
+
+                    <div class="mart-radios" t-if="state.tab === 'product'">
+                        <label t-foreach="STATES" t-as="st" t-key="st[0]"
+                               t-attf-class="{{ row.state === st[0] ? 'mart-on' : '' }}">
+                            <input type="radio" t-att-name="'st' + row.id" t-att-value="st[0]"
+                                   t-att-checked="row.state === st[0]"
+                                   t-on-change="() => this.setState(row, st[0])"/>
+                            <t t-esc="st[1]"/>
+                            <small t-if="st[0] === 'follow'" class="mart-hint">
+                                (<t t-esc="row.show ? 'shown' : 'hidden'"/> right now)
+                            </small>
+                        </label>
+                    </div>
+
+                    <div class="mart-field" t-if="state.tab === 'global' and row.source === 'text'">
+                        <label>Default wording</label>
+                        <textarea t-if="row.value_kind === 'lines'" t-att-value="row.default_value"
+                                  placeholder="One per line"
+                                  t-on-input="(ev) => this.editDefault(row, ev)"/>
+                        <input t-else="" type="text" t-att-value="row.default_value"
+                               placeholder="Used for every product unless overridden"
+                               t-on-input="(ev) => this.editDefault(row, ev)"/>
+                        <span class="mart-hint">Set it per category under
+                            <b>Advanced → Wording by Category</b>.</span>
+                    </div>
+                    <div class="mart-hint" t-if="row.source === 'odoo'">
+                        Comes from the product's own <b t-esc="row.odoo_field"/> field.
+                    </div>
+                    <div class="mart-hint" t-if="row.source === 'computed'">
+                        Worked out by the app.
+                    </div>
+                </div>
+            </t>
+
+            <div class="mart-actions" t-if="state.tab === 'product' and differing(section)">
+                <button class="mart-btn" t-on-click="() => this.resetSection(section)">
+                    Put these back to the shop default
+                </button>
+            </div>
+        </div>
+    </t>
+
+</templates>

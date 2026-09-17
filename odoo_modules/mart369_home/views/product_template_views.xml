@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="mart369_product_template_form_inherit" model="ir.ui.view">
+        <field name="name">product.template.form.mart369</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_form_view"/>
+        <field name="arch" type="xml">
+            <notebook position="inside">
+                <page string="369 Mart card" name="mart369">
+                    <div class="text-muted small mb-2">
+                        How this product reads on a card in the app. Everything
+                        here is optional - leave it empty and the app falls back
+                        to the product's own name, unit and photo.
+                    </div>
+                    <group>
+                        <group string="Wording">
+                            <field name="mart_unit_text" placeholder="e.g. 1 kg"/>
+                            <field name="mart_per_unit" placeholder="e.g. 17.25 / 250 g"/>
+                            <field name="mart_note" placeholder="e.g. Approx 250-400 g"/>
+                            <field name="mart_home_tag" placeholder="e.g. New"/>
+                        </group>
+                        <group string="Marks and stock">
+                            <field name="mart_is_veg"/>
+                            <field name="mart_low_stock_at"/>
+                            <field name="mart_delivery_text" placeholder="e.g. 3-5 days"/>
+                        </group>
+                    </group>
+                    <group string="Drawing (used only when the product has no photo)">
+                        <group>
+                            <field name="mart_art"/>
+                            <field name="mart_color" widget="color"/>
+                        </group>
+                        <group>
+                            <field name="mart_badge" placeholder="e.g. ATTA"/>
+                        </group>
+                    </group>
+                </page>
+            </notebook>
+        </field>
+    </record>
+
+</odoo>

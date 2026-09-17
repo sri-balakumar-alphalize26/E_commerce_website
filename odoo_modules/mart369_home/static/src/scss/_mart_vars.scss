@@ -1,0 +1,18 @@
+// The 369 Mart builder palette, in one place so every builder module
+// uses the same colours without depending on asset-bundle order.
+// Never @import this file: Odoo rejects local imports inside an asset
+// bundle. List it ahead of the files that use it in the manifest instead.
+
+$mart-ink: #13212b;
+$mart-muted: #6b7a86;
+$mart-line: #e7ecf0;
+$mart-soft: #f4f6f8;
+$mart-blue: #0a78ab;
+$mart-blue-deep: #0b4a6e;
+$mart-blue-soft: #e6f2f9;
+$mart-orange: #f7931e;
+$mart-orange-deep: #ef6f1a;
+$mart-green: #1f8a3c;
+$mart-amber: #c9620c;
+$mart-red: #c8433a;
+$mart-bezel: #161d26;

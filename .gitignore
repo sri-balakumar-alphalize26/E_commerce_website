@@ -3,3 +3,7 @@ node_modules
 out
 .env*.local
 .images-tmp.mjs
+
+# Odoo compiled files (modules live in odoo_modules/)
+__pycache__/
+*.pyc
