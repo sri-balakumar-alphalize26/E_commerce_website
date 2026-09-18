@@ -1,0 +1,10 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_mart369_referral_system,mart369.referral system,model_mart369_referral,base.group_system,1,1,1,1
+access_mart369_referral_sale,mart369.referral sale,model_mart369_referral,sales_team.group_sale_salesman,1,1,1,0
+access_mart369_referral_user,mart369.referral user,model_mart369_referral,base.group_user,1,0,0,0
+access_mart369_scratch_system,mart369.scratch system,model_mart369_scratch,base.group_system,1,1,1,1
+access_mart369_scratch_sale,mart369.scratch sale,model_mart369_scratch,sales_team.group_sale_salesman,1,1,1,0
+access_mart369_scratch_user,mart369.scratch user,model_mart369_scratch,base.group_user,1,0,0,0
+access_mart369_notice_system,mart369.notice system,model_mart369_notice,base.group_system,1,1,1,1
+access_mart369_notice_sale,mart369.notice sale,model_mart369_notice,sales_team.group_sale_salesman,1,1,1,0
+access_mart369_notice_user,mart369.notice user,model_mart369_notice,base.group_user,1,0,0,0

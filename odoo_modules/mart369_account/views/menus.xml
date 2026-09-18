@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--
+        Orders 5, Returns 6, Home Page 10, Product Page 15, Customers 20,
+        Addresses 30, Payments 40. These three sit after Customers, because they
+        are all about one customer rather than about a day's work.
+    -->
+
+    <menuitem id="menu_mart369_reviews"
+              name="Reviews"
+              parent="mart369_home.menu_mart369_root"
+              action="action_mart369_reviews"
+              groups="sales_team.group_sale_salesman"
+              sequence="22"/>
+
+    <menuitem id="menu_mart369_referrals"
+              name="Referrals"
+              parent="mart369_home.menu_mart369_root"
+              action="action_mart369_referrals"
+              groups="sales_team.group_sale_salesman"
+              sequence="24"/>
+
+    <menuitem id="menu_mart369_rewards"
+              name="Rewards"
+              parent="mart369_home.menu_mart369_root"
+              action="action_mart369_rewards"
+              groups="sales_team.group_sale_salesman"
+              sequence="26"/>
+
+    <menuitem id="menu_mart369_notices"
+              name="Notifications"
+              parent="mart369_home.menu_mart369_root"
+              action="action_mart369_notices"
+              groups="base.group_system"
+              sequence="28"/>
+
+</odoo>

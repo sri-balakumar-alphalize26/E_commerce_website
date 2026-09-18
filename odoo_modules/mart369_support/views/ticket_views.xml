@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_mart369_ticket_kanban" model="ir.ui.view">
+        <field name="name">mart369.ticket.kanban</field>
+        <field name="model">mart369.ticket</field>
+        <field name="arch" type="xml">
+            <kanban js_class="mart369_support_kanban" default_group_by="state"
+                    class="o_mart369_kanban o_mart369_board" quick_create="false" create="false">
+                <field name="state"/>
+                <field name="name"/>
+                <field name="subject"/>
+                <field name="opened_at"/>
+                <field name="waiting_minutes"/>
+                <field name="answered_at"/>
+                <field name="order_ref"/>
+                <templates>
+                    <t t-name="card">
+                        <div t-attf-class="o_mart369_order #{!record.answered_at.raw_value and record.waiting_minutes.raw_value > 30 ? 'o_mart369_order_late' : ''}">
+                            <div class="o_mart369_order_top">
+                                <span class="o_mart369_order_ref" t-out="record.name.value"/>
+                                <span class="o_mart369_order_when" t-out="record.opened_at.value"/>
+                            </div>
+                            <div class="o_mart369_order_who"><field name="partner_id"/></div>
+                            <div class="o_mart369_order_slot"><field name="subject"/></div>
+                            <div class="o_mart369_order_meta">
+                                <span class="o_mart369_chip" t-if="record.order_ref.value">
+                                    <i class="fa fa-shopping-basket"/> <t t-out="record.order_ref.value"/>
+                                </span>
+                                <span class="o_mart369_chip o_mart369_chip_paid" t-if="record.answered_at.raw_value">
+                                    <i class="fa fa-check"/> Answered
+                                </span>
+                                <span class="o_mart369_chip o_mart369_chip_cash" t-else="">
+                                    <i class="fa fa-clock-o"/> <t t-out="record.waiting_minutes.value"/> min
+                                </span>
+                            </div>
+                            <div class="o_mart369_order_foot">
+                                <span class="o_mart369_order_total"><field name="user_id"/></span>
+                                <button name="mart369_action_take" type="object"
+                                        class="btn o_mart369_advance"
+                                        t-if="record.state.raw_value == 'new'">
+                                    Take it <i class="fa fa-arrow-right"/>
+                                </button>
+                            </div>
+                            <div class="o_mart369_order_late_flag"
+                                 t-if="!record.answered_at.raw_value and record.waiting_minutes.raw_value > 30">
+                                <i class="fa fa-exclamation-circle"/> Waiting over 30 minutes
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <record id="view_mart369_ticket_list" model="ir.ui.view">
+        <field name="name">mart369.ticket.list</field>
+        <field name="model">mart369.ticket</field>
+        <field name="arch" type="xml">
+            <list class="o_mart369_list" create="false" default_order="opened_at desc"
+                  decoration-danger="not answered_at and waiting_minutes > 30"
+                  decoration-muted="state == 'cancelled'">
+                <field name="name" string="Ticket"/>
+                <field name="opened_at" string="Asked"/>
+                <field name="partner_id"/>
+                <field name="subject"/>
+                <field name="order_ref" string="Order" optional="show"/>
+                <field name="user_id" string="Handled by" optional="show"/>
+                <field name="waiting_minutes" string="Waited (min)"/>
+                <field name="state" widget="badge"
+                       decoration-success="state == 'done'"
+                       decoration-info="state in ('open', 'waiting')"
+                       decoration-warning="state == 'new'"
+                       decoration-danger="state == 'cancelled'"/>
+                <field name="answered_at" column_invisible="1"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_mart369_ticket_form" model="ir.ui.view">
+        <field name="name">mart369.ticket.form</field>
+        <field name="model">mart369.ticket</field>
+        <field name="arch" type="xml">
+            <form class="o_mart369_form" create="false">
+                <header>
+                    <button name="mart369_action_take" type="object" string="Take it"
+                            class="btn-primary" invisible="state != 'new'"/>
+                    <button name="mart369_action_done" type="object" string="Answered"
+                            invisible="state in ('done', 'cancelled')"/>
+                    <button name="mart369_action_drop" type="object" string="Drop"
+                            invisible="state in ('done', 'cancelled')"
+                            confirm="Drop this ticket? The customer is not told anything."/>
+                    <field name="state" widget="statusbar"
+                           statusbar_visible="new,open,waiting,done"/>
+                </header>
+                <sheet>
+                    <div class="o_mart369_hero">
+                        <div class="o_mart369_hero_txt">
+                            <h1><field name="name" readonly="1"/></h1>
+                            <div class="o_mart369_hero_meta">
+                                <field name="partner_id" readonly="1"/>
+                                <span class="o_mart369_hero_badge"
+                                      invisible="answered_at or waiting_minutes &lt;= 30">
+                                    Waiting <field name="waiting_minutes" readonly="1"/> min
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="subject" readonly="1"/>
+                            <!-- The number the customer quoted, and a way through
+                                 to the order itself. Odoo's own S00321 means
+                                 nothing to either of them. -->
+                            <field name="order_ref" readonly="1"/>
+                            <field name="order_id" string="Open order" readonly="1"/>
+                            <field name="user_id"/>
+                        </group>
+                        <group>
+                            <field name="opened_at" readonly="1"/>
+                            <field name="answered_at" readonly="1"/>
+                            <field name="waiting_minutes" readonly="1"/>
+                        </group>
+                    </group>
+                    <div class="text-muted">
+                        The conversation is below. It came from the app's chat panel, where
+                        it used to be kept only for the length of a browser tab.
+                    </div>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_mart369_ticket_search" model="ir.ui.view">
+        <field name="name">mart369.ticket.search</field>
+        <field name="model">mart369.ticket</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name" string="Ticket"/>
+                <field name="partner_id"/>
+                <field name="subject"/>
+                <!-- Named filters, because the KPI tiles switch them on by name. -->
+                <filter name="state_new" string="Waiting" domain="[('state', '=', 'new')]"/>
+                <filter name="state_open" string="Being handled" domain="[('state', '=', 'open')]"/>
+                <filter name="open" string="Still open"
+                        domain="[('state', 'in', ('new', 'open', 'waiting'))]"/>
+                <separator/>
+                <filter name="unanswered" string="Nobody has replied"
+                        domain="[('answered_at', '=', False), ('state', 'in', ('new', 'open', 'waiting'))]"/>
+                <filter name="mine" string="Mine" domain="[('user_id', '=', uid)]"/>
+                <separator/>
+                <filter name="today" string="Today"
+                        domain="[('opened_at', '&gt;=', datetime.datetime.combine(context_today(), datetime.time(0,0,0)))]"/>
+                <group>
+                    <filter name="group_state" string="Status" context="{'group_by': 'state'}"/>
+                    <filter name="group_user" string="Handled by" context="{'group_by': 'user_id'}"/>
+                    <filter name="group_day" string="Asked on" context="{'group_by': 'opened_at:day'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_mart369_tickets" model="ir.actions.act_window">
+        <field name="name">Support</field>
+        <field name="res_model">mart369.ticket</field>
+        <field name="view_mode">kanban,list,form</field>
+        <field name="search_view_id" ref="view_mart369_ticket_search"/>
+        <field name="context">{'search_default_open': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Nobody is waiting</p>
+            <p>When a customer asks the app's bot for a person, their conversation lands here.</p>
+        </field>
+    </record>
+
+    <record id="action_mart369_tickets_kanban" model="ir.actions.act_window.view">
+        <field name="sequence" eval="1"/>
+        <field name="view_mode">kanban</field>
+        <field name="view_id" ref="view_mart369_ticket_kanban"/>
+        <field name="act_window_id" ref="action_mart369_tickets"/>
+    </record>
+
+    <record id="action_mart369_tickets_list" model="ir.actions.act_window.view">
+        <field name="sequence" eval="2"/>
+        <field name="view_mode">list</field>
+        <field name="view_id" ref="view_mart369_ticket_list"/>
+        <field name="act_window_id" ref="action_mart369_tickets"/>
+    </record>
+
+    <record id="action_mart369_tickets_form" model="ir.actions.act_window.view">
+        <field name="sequence" eval="3"/>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="view_mart369_ticket_form"/>
+        <field name="act_window_id" ref="action_mart369_tickets"/>
+    </record>
+
+</odoo>

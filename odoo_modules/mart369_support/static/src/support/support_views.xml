@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="mart369_support.SupportKanbanRenderer" t-inherit="web.KanbanRenderer" t-inherit-mode="primary">
+        <xpath expr="//div[hasclass('o_kanban_renderer')]" position="before">
+            <Mart369SupportBoard list="props.list"/>
+        </xpath>
+    </t>
+
+    <t t-name="mart369_support.SupportBoard">
+        <div class="o_mart369_dash" t-if="state.data">
+            <t t-set="d" t-value="state.data"/>
+
+            <button type="button" class="o_mart369_kpi" t-on-click="() => this.applyFilter('today')"
+                    title="Show the tickets opened today">
+                <span class="o_mart369_tile o_mart369_tile_blue"><i class="fa fa-comments"/></span>
+                <span class="o_mart369_kpi_txt">
+                    <small>Asked today</small>
+                    <strong t-out="d.today"/>
+                    <span class="o_mart369_bars" aria-label="Tickets opened over the last 14 days">
+                        <t t-foreach="bars" t-as="b" t-key="b.day">
+                            <i t-att-style="'height:' + b.h + '%'"
+                               t-att-class="{'o_last': b.last, 'o_zero': !b.count}"
+                               t-att-title="b.day + ': ' + b.count"/>
+                        </t>
+                    </span>
+                </span>
+            </button>
+
+            <button type="button" class="o_mart369_kpi" t-on-click="() => this.applyFilter('state_new')"
+                    title="Show tickets nobody has picked up">
+                <span t-att-class="'o_mart369_tile' + (d.waiting ? ' o_mart369_tile_orange' : '')">
+                    <i class="fa fa-hourglass-half"/>
+                </span>
+                <span class="o_mart369_kpi_txt">
+                    <small>Waiting</small>
+                    <strong t-out="d.waiting"/>
+                    <span>nobody has taken these</span>
+                </span>
+            </button>
+
+            <button type="button" class="o_mart369_kpi" t-on-click="() => this.applyFilter('unanswered')"
+                    title="Show people nobody has replied to yet">
+                <span t-att-class="'o_mart369_tile' + (d.unanswered ? ' o_mart369_tile_red' : '')">
+                    <i class="fa fa-exclamation-circle"/>
+                </span>
+                <span class="o_mart369_kpi_txt">
+                    <small>No reply yet</small>
+                    <strong t-out="d.unanswered"/>
+                    <span t-if="d.longest">longest <t t-out="d.longest"/> min</span>
+                    <span t-else="">everyone has an answer</span>
+                </span>
+            </button>
+
+            <button type="button" class="o_mart369_kpi" t-on-click="() => this.applyFilter('open')"
+                    title="Show every open ticket">
+                <span class="o_mart369_tile o_mart369_tile_green"><i class="fa fa-clock-o"/></span>
+                <span class="o_mart369_kpi_txt">
+                    <small>Average wait</small>
+                    <strong><t t-out="d.average"/> min</strong>
+                    <span>to a first reply</span>
+                </span>
+            </button>
+
+            <button type="button" class="o_mart369_kpi" t-on-click="() => this.applyFilter('mine')"
+                    title="Show the ones you are handling">
+                <span class="o_mart369_tile"><i class="fa fa-user"/></span>
+                <span class="o_mart369_kpi_txt">
+                    <small>Yours</small>
+                    <strong t-out="d.mine"/>
+                    <span><t t-out="d.open"/> open in all</span>
+                </span>
+            </button>
+
+        </div>
+    </t>
+
+</templates>

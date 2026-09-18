@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="mart369_order.OrderListRenderer" t-inherit="web.ListRenderer" t-inherit-mode="primary">
+        <xpath expr="//div[hasclass('o_list_renderer')]" position="before">
+            <Mart369OrderBoard list="props.list"/>
+        </xpath>
+    </t>
+
+    <t t-name="mart369_order.OrderKanbanRenderer" t-inherit="web.KanbanRenderer" t-inherit-mode="primary">
+        <xpath expr="//div[hasclass('o_kanban_renderer')]" position="before">
+            <Mart369OrderBoard list="props.list"/>
+        </xpath>
+    </t>
+
+    <t t-name="mart369_order.OrderBoard">
+        <div class="o_mart369_dash" t-if="state.data">
+            <t t-set="d" t-value="state.data"/>
+
+            <button type="button" class="o_mart369_kpi"
+                    t-on-click="() => this.applyFilter('today')"
+                    title="Show the orders placed today">
+                <span class="o_mart369_tile o_mart369_tile_blue"><i class="fa fa-shopping-basket"/></span>
+                <span class="o_mart369_kpi_txt">
+                    <small>Today</small>
+                    <strong t-out="d.today"/>
+                    <span class="o_mart369_bars" aria-label="Orders placed over the last 14 days">
+                        <t t-foreach="bars" t-as="b" t-key="b.day">
+                            <i t-att-style="'height:' + b.h + '%'"
+                               t-att-class="{'o_last': b.last, 'o_zero': !b.count}"
+                               t-att-title="b.day + ': ' + b.count"/>
+                        </t>
+                    </span>
+                </span>
+            </button>
+
+            <button type="button" class="o_mart369_kpi"
+                    t-on-click="() => this.applyFilter('state_placed')"
+                    title="Show orders waiting to be packed">
+                <span class="o_mart369_tile o_mart369_tile_orange"><i class="fa fa-cube"/></span>
+                <span class="o_mart369_kpi_txt">
+                    <small>To pack</small>
+                    <strong t-out="d.packing"/>
+                    <span><t t-out="d.live"/> on their way</span>
+                </span>
+            </button>
+
+            <button type="button" class="o_mart369_kpi"
+                    t-on-click="() => this.applyFilter('state_out')"
+                    title="Show orders out for delivery">
+                <span class="o_mart369_tile o_mart369_tile_green"><i class="fa fa-motorcycle"/></span>
+                <span class="o_mart369_kpi_txt">
+                    <small>Out for delivery</small>
+                    <strong t-out="d.out"/>
+                    <span>with a rider now</span>
+                </span>
+            </button>
+
+            <!-- The one an operator is looking for. Red only when it is not zero. -->
+            <button type="button" class="o_mart369_kpi"
+                    t-on-click="() => this.applyFilter('late')"
+                    title="Show orders past the time they were promised">
+                <span t-att-class="'o_mart369_tile' + (d.late ? ' o_mart369_tile_red' : '')">
+                    <i class="fa fa-exclamation-circle"/>
+                </span>
+                <span class="o_mart369_kpi_txt">
+                    <small>Late</small>
+                    <strong t-out="d.late"/>
+                    <span t-if="d.late">past the promise</span>
+                    <span t-else="">all on time</span>
+                </span>
+            </button>
+
+            <button type="button" class="o_mart369_kpi"
+                    t-on-click="() => this.applyFilter('method_cod,state_live')"
+                    title="Show cash still to be collected at the door">
+                <span class="o_mart369_tile"><i class="fa fa-money"/></span>
+                <span class="o_mart369_kpi_txt">
+                    <small>Cash to collect</small>
+                    <strong t-out="d.cash"/>
+                    <span><t t-out="d.cash_count"/> orders</span>
+                </span>
+            </button>
+
+        </div>
+    </t>
+
+</templates>

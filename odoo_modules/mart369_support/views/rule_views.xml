@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_mart369_rule_list" model="ir.ui.view">
+        <field name="name">mart369.bot.rule.list</field>
+        <field name="model">mart369.bot.rule</field>
+        <field name="arch" type="xml">
+            <list class="o_mart369_list" default_order="sequence, id" editable="bottom">
+                <field name="sequence" widget="handle"/>
+                <field name="title"/>
+                <field name="pattern"/>
+                <field name="kind"/>
+                <field name="reply"/>
+                <field name="chips" optional="hide"/>
+                <field name="action_label" string="Button" optional="hide"/>
+                <field name="action_view" string="Opens" optional="hide"/>
+                <field name="active" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_mart369_rule_form" model="ir.ui.view">
+        <field name="name">mart369.bot.rule.form</field>
+        <field name="model">mart369.bot.rule</field>
+        <field name="arch" type="xml">
+            <form class="o_mart369_form">
+                <sheet>
+                    <div class="o_mart369_hero">
+                        <div class="o_mart369_hero_txt">
+                            <h1><field name="title" placeholder="What this answer covers"/></h1>
+                        </div>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="pattern"/>
+                            <field name="kind"/>
+                            <field name="sequence"/>
+                            <field name="active"/>
+                        </group>
+                        <group>
+                            <field name="action_label"/>
+                            <field name="action_view"/>
+                            <field name="action_param"/>
+                            <field name="chips"/>
+                        </group>
+                    </group>
+                    <group string="Says">
+                        <field name="reply" nolabel="1" colspan="2"/>
+                    </group>
+                    <group string="Says instead" invisible="kind == 'static'">
+                        <field name="reply_alt" nolabel="1" colspan="2"/>
+                    </group>
+                    <div class="text-muted">
+                        First match wins, so order matters: a broad pattern placed high will
+                        swallow the narrower ones under it. A computed answer looks its
+                        numbers up, so delivery charges and coupon codes cannot drift from
+                        the ones the cart really uses.
+                    </div>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_mart369_rules" model="ir.actions.act_window">
+        <field name="name">Bot answers</field>
+        <field name="res_model">mart369.bot.rule</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No answers yet</p>
+            <p>These are what the app's support bot says. Reorder them to change which one wins.</p>
+        </field>
+    </record>
+
+    <record id="action_mart369_rules_list" model="ir.actions.act_window.view">
+        <field name="sequence" eval="1"/>
+        <field name="view_mode">list</field>
+        <field name="view_id" ref="view_mart369_rule_list"/>
+        <field name="act_window_id" ref="action_mart369_rules"/>
+    </record>
+
+    <record id="action_mart369_rules_form" model="ir.actions.act_window.view">
+        <field name="sequence" eval="2"/>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="view_mart369_rule_form"/>
+        <field name="act_window_id" ref="action_mart369_rules"/>
+    </record>
+
+</odoo>

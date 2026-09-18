@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--
+        The two service products a fee or a discount line hangs off. An order
+        line needs a product, and these are not things anyone sells - so they
+        are kept off the website and out of the catalogue, and exist only to
+        give the bill's own rows somewhere to live.
+    -->
+    <record id="product_delivery_fee" model="product.template">
+        <field name="name">Delivery</field>
+        <field name="type">service</field>
+        <field name="list_price">0.0</field>
+        <field name="sale_ok" eval="False"/>
+        <field name="purchase_ok" eval="False"/>
+        <field name="is_published" eval="False"/>
+        <field name="description_sale">What the app shows as the delivery fee.</field>
+    </record>
+
+    <record id="product_coupon" model="product.template">
+        <field name="name">Coupon discount</field>
+        <field name="type">service</field>
+        <field name="list_price">0.0</field>
+        <field name="sale_ok" eval="False"/>
+        <field name="purchase_ok" eval="False"/>
+        <field name="is_published" eval="False"/>
+        <field name="description_sale">A 369 Mart coupon, applied to the order.</field>
+    </record>
+
+</odoo>

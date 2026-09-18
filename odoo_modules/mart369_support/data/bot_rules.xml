@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="seq_mart369_ticket" model="ir.sequence">
+        <field name="name">369 Mart Support Ticket</field>
+        <field name="code">mart369.ticket</field>
+        <field name="prefix">369S-</field>
+        <field name="padding">5</field>
+        <field name="company_id" eval="False"/>
+    </record>
+
+    <record id="param_return_days" model="ir.config_parameter">
+        <field name="key">mart369_support.return_days</field>
+        <field name="value">7</field>
+    </record>
+
+    <record id="param_track_url" model="ir.config_parameter">
+        <field name="key">mart369_support.track_url</field>
+        <field name="value">https://369mart.in/track/%s</field>
+    </record>
+
+    <!--
+        The answers, in the order they are tried. First match wins, so the
+        narrow rules come first and the broad ones last.
+
+        Ported from botReplies.js and from the second bot inside OrderTrack.jsx,
+        which had drifted apart. Where the two disagreed the order page's
+        wording lost, because the other bot is the one the customer meets first.
+
+        The numbers that used to be typed into these strings - delivery fees,
+        minimums, coupon codes, the return window - are not here any more. Those
+        rules have a `kind` and look them up, so they cannot drift again.
+    -->
+
+    <record id="rule_hello" model="mart369.bot.rule">
+        <field name="sequence">10</field>
+        <field name="title">Saying hello</field>
+        <field name="pattern">^(hi|hello|hey|hai|namaste)\b</field>
+        <field name="kind">static</field>
+        <field name="reply">Hello! How can I help you today?</field>
+        <field name="chips">Track my order,Refund status,Cancel an order,Payment issue,Delivery charges,Talk to an agent</field>
+    </record>
+
+    <record id="rule_thanks" model="mart369.bot.rule">
+        <field name="sequence">20</field>
+        <field name="title">Thanks, that is all</field>
+        <field name="pattern">^(no,? that|that's all|thanks|thank you|thankyou)\b</field>
+        <field name="kind">static</field>
+        <field name="reply">Happy to help! Tap the bot any time you need us.</field>
+    </record>
+
+    <record id="rule_order_number" model="mart369.bot.rule">
+        <field name="sequence">30</field>
+        <field name="title">They typed an order number</field>
+        <field name="pattern">369[me]-?\d{3,}</field>
+        <field name="kind">order</field>
+        <field name="reply_alt">I couldn't find that order number on your account. Check the digits, or I can connect you to an agent.</field>
+        <field name="chips">Talk to an agent</field>
+    </record>
+
+    <record id="rule_agent" model="mart369.bot.rule">
+        <field name="sequence">40</field>
+        <field name="title">Asking for a person</field>
+        <!--
+            No bare "call": it swallowed "recall" and "called". The old rule sat
+            above every topic, so anyone who typed "you called me about my
+            refund" was handed to an agent instead of being answered.
+        -->
+        <field name="pattern">\b(agent|human|person|executive|customer care|talk to someone|speak to)\b</field>
+        <field name="kind">agent</field>
+        <field name="reply">Connecting you to a support agent…</field>
+    </record>
+
+    <record id="rule_refund" model="mart369.bot.rule">
+        <field name="sequence">50</field>
+        <field name="title">Where is my refund</field>
+        <field name="pattern">refund|money back|returned money</field>
+        <field name="kind">refund</field>
+        <field name="action_label">Open 369 Wallet</field>
+        <field name="action_view">account</field>
+        <field name="action_param">wallet</field>
+    </record>
+
+    <record id="rule_return" model="mart369.bot.rule">
+        <field name="sequence">60</field>
+        <field name="title">Returns and replacements</field>
+        <field name="pattern">return|replace|damaged|missing|wrong item|broken|spoil|rotten</field>
+        <field name="kind">return</field>
+    </record>
+
+    <record id="rule_cancel" model="mart369.bot.rule">
+        <field name="sequence">70</field>
+        <field name="title">Cancelling an order</field>
+        <field name="pattern">\bcancel</field>
+        <field name="kind">cancel</field>
+        <field name="reply_alt">You have no orders that could be cancelled right now.</field>
+    </record>
+
+    <record id="rule_track" model="mart369.bot.rule">
+        <field name="sequence">80</field>
+        <field name="title">Where is my order</field>
+        <field name="pattern">track|where|status|late|arriv|when will|how long</field>
+        <field name="kind">track</field>
+        <field name="reply_alt">You have no orders on the way right now.</field>
+    </record>
+
+    <record id="rule_payment" model="mart369.bot.rule">
+        <field name="sequence">90</field>
+        <field name="title">Money taken but no order</field>
+        <field name="pattern">debited|deduct|charged|payment failed|money.*(gone|taken)|upi|otp|card declined</field>
+        <field name="kind">payment</field>
+        <field name="reply">If money left your account but the order did not go through, your bank releases it automatically within 48 hours. Nothing is ever charged twice.</field>
+        <field name="chips">Talk to an agent</field>
+        <field name="action_label">Saved payments</field>
+        <field name="action_view">account</field>
+        <field name="action_param">payments</field>
+    </record>
+
+    <record id="rule_delivery" model="mart369.bot.rule">
+        <field name="sequence">100</field>
+        <field name="title">Delivery charges and minimums</field>
+        <field name="pattern">deliver|charge|\bfee|free|minimum|express|quick|how fast|area|pincode</field>
+        <field name="kind">delivery</field>
+        <field name="reply_alt">Delivery charges are not set up yet.</field>
+    </record>
+
+    <record id="rule_coupons" model="mart369.bot.rule">
+        <field name="sequence">110</field>
+        <field name="title">Coupon codes</field>
+        <field name="pattern">coupon|offer|discount|promo|code</field>
+        <field name="kind">coupons</field>
+        <field name="reply_alt">There are no coupon codes running right now.</field>
+        <field name="action_label">See all offers</field>
+        <field name="action_view">offers</field>
+    </record>
+
+    <record id="rule_wallet" model="mart369.bot.rule">
+        <field name="sequence">120</field>
+        <field name="title">Wallet balance</field>
+        <field name="pattern">wallet|balance|cashback</field>
+        <field name="kind">wallet</field>
+        <field name="action_label">Open 369 Wallet</field>
+        <field name="action_view">account</field>
+        <field name="action_param">wallet</field>
+    </record>
+
+    <record id="rule_address" model="mart369.bot.rule">
+        <field name="sequence">130</field>
+        <field name="title">Delivery addresses</field>
+        <field name="pattern">address|location</field>
+        <field name="kind">static</field>
+        <field name="reply">You can add or change delivery addresses from your account, and pick one at checkout.</field>
+        <field name="action_label">My addresses</field>
+        <field name="action_view">account</field>
+        <field name="action_param">address</field>
+    </record>
+
+</odoo>

@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_mart369_referral_kanban" model="ir.ui.view">
+        <field name="name">mart369.referral.kanban</field>
+        <field name="model">mart369.referral</field>
+        <field name="arch" type="xml">
+            <kanban js_class="mart369_referrals_kanban" default_group_by="state"
+                    class="o_mart369_kanban" quick_create="false" create="false">
+                <!-- Declared because the card reads them through `record.`,
+                     which does not auto-detect the way a plain <field/> does. -->
+                <field name="state"/>
+                <field name="name"/>
+                <field name="create_date"/>
+                <field name="reward"/>
+                <field name="currency_id"/>
+                <templates>
+                    <t t-name="card">
+                        <div class="o_mart369_order">
+                            <div class="o_mart369_order_top">
+                                <span class="o_mart369_order_ref" t-out="record.name.value"/>
+                                <span class="o_mart369_order_when" t-out="record.create_date.value"/>
+                            </div>
+                            <div class="o_mart369_order_who">
+                                Invited by <field name="partner_id"/>
+                            </div>
+                            <div class="o_mart369_order_meta">
+                                <span class="o_mart369_chip o_mart369_chip_paid"
+                                      t-if="record.state.raw_value == 'ordered'">
+                                    <i class="fa fa-check"/> Rewarded
+                                </span>
+                                <span class="o_mart369_chip" t-elif="record.state.raw_value == 'joined'">
+                                    <i class="fa fa-user-plus"/> Signed up
+                                </span>
+                                <span class="o_mart369_chip" t-else="">
+                                    <i class="fa fa-paper-plane-o"/> Waiting
+                                </span>
+                            </div>
+                            <div class="o_mart369_order_foot" t-if="record.reward.raw_value">
+                                <span class="o_mart369_order_total">
+                                    <field name="reward" widget="monetary"/>
+                                </span>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <record id="view_mart369_referral_list" model="ir.ui.view">
+        <field name="name">mart369.referral.list</field>
+        <field name="model">mart369.referral</field>
+        <field name="arch" type="xml">
+            <list class="o_mart369_list" create="false" default_order="create_date desc"
+                  decoration-success="state == 'ordered'" decoration-muted="state == 'invited'">
+                <field name="create_date" string="Invited"/>
+                <field name="partner_id" string="Invited by"/>
+                <field name="name" string="Friend"/>
+                <field name="contact" optional="hide"/>
+                <field name="joined_partner_id" string="Signed up as" optional="show"/>
+                <field name="order_id" string="First order" optional="show"/>
+                <field name="reward" widget="monetary" sum="Paid out"/>
+                <field name="state" widget="badge"
+                       decoration-success="state == 'ordered'"
+                       decoration-info="state == 'joined'"/>
+                <field name="currency_id" column_invisible="1"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_mart369_referral_search" model="ir.ui.view">
+        <field name="name">mart369.referral.search</field>
+        <field name="model">mart369.referral</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name" string="Friend"/>
+                <field name="partner_id" string="Invited by"/>
+                <filter name="state_invited" string="Waiting" domain="[('state', '=', 'invited')]"/>
+                <filter name="state_joined" string="Signed up" domain="[('state', '=', 'joined')]"/>
+                <filter name="state_ordered" string="Rewarded" domain="[('state', '=', 'ordered')]"/>
+                <group>
+                    <filter name="group_state" string="Status" context="{'group_by': 'state'}"/>
+                    <filter name="group_partner" string="Invited by" context="{'group_by': 'partner_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_mart369_referrals" model="ir.actions.act_window">
+        <field name="name">Referrals</field>
+        <field name="res_model">mart369.referral</field>
+        <field name="view_mode">kanban,list</field>
+        <field name="search_view_id" ref="view_mart369_referral_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No invites yet</p>
+            <p>When a customer invites a friend from the app, it appears here.</p>
+        </field>
+    </record>
+
+    <record id="action_mart369_referrals_kanban" model="ir.actions.act_window.view">
+        <field name="sequence" eval="1"/>
+        <field name="view_mode">kanban</field>
+        <field name="view_id" ref="view_mart369_referral_kanban"/>
+        <field name="act_window_id" ref="action_mart369_referrals"/>
+    </record>
+
+    <record id="action_mart369_referrals_list" model="ir.actions.act_window.view">
+        <field name="sequence" eval="2"/>
+        <field name="view_mode">list</field>
+        <field name="view_id" ref="view_mart369_referral_list"/>
+        <field name="act_window_id" ref="action_mart369_referrals"/>
+    </record>
+
+</odoo>

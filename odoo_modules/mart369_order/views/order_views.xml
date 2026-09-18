@@ -1,0 +1,289 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--
+        The board is the default view, not the list. Orders are worked
+        continuously rather than looked up, so the day's work should read left
+        to right: placed -> packed/shipped -> out -> delivered.
+    -->
+    <record id="view_mart369_order_kanban" model="ir.ui.view">
+        <field name="name">mart369.order.kanban</field>
+        <field name="model">sale.order</field>
+        <field name="arch" type="xml">
+            <!-- No default_order. Odoo orders the *columns* by it as well as
+                 the cards, which scrambled the flow into "Out, Packed, Order
+                 placed, Shipped". Left off, the columns follow STATE_CHOICES,
+                 which is the order the order really moves in - and reading the
+                 day left to right is the point of the board. -->
+            <kanban js_class="mart369_orders_kanban" default_group_by="mart369_state"
+                    class="o_mart369_kanban o_mart369_board" quick_create="false" create="false">
+                <!-- Declared because the card reads them through `record.`,
+                     which does not auto-detect the way a plain <field/> does. -->
+                <field name="mart369_state"/>
+                <field name="mart369_late"/>
+                <field name="mart369_return_count"/>
+                <field name="mart369_ref"/>
+                <field name="mart369_placed_at"/>
+                <field name="mart369_mode"/>
+                <field name="mart369_method"/>
+                <field name="mart369_slot_label"/>
+                <field name="currency_id"/>
+                <templates>
+                    <t t-name="card">
+                        <div t-attf-class="o_mart369_order #{record.mart369_late.raw_value ? 'o_mart369_order_late' : ''}">
+
+                            <div class="o_mart369_order_top">
+                                <span class="o_mart369_order_ref" t-out="record.mart369_ref.value"/>
+                                <span class="o_mart369_order_when" t-out="record.mart369_placed_at.value"/>
+                            </div>
+
+                            <div class="o_mart369_order_who">
+                                <field name="partner_id"/>
+                            </div>
+
+                            <div class="o_mart369_order_meta">
+                                <span class="o_mart369_chip" t-if="record.mart369_mode.raw_value == 'quick'">
+                                    <i class="fa fa-bolt"/> Quick
+                                </span>
+                                <span class="o_mart369_chip" t-else="">
+                                    <i class="fa fa-truck"/> Express
+                                </span>
+                                <span class="o_mart369_chip o_mart369_chip_cash"
+                                      t-if="record.mart369_method.raw_value == 'cod'">
+                                    <i class="fa fa-money"/> Cash
+                                </span>
+                                <span class="o_mart369_chip o_mart369_chip_paid" t-else="">
+                                    <i class="fa fa-check"/> Paid
+                                </span>
+                                <span class="o_mart369_chip o_mart369_chip_return"
+                                      t-if="record.mart369_return_count.raw_value">
+                                    <i class="fa fa-undo"/> Return
+                                </span>
+                            </div>
+
+                            <div class="o_mart369_order_slot" t-if="record.mart369_slot_label.value">
+                                <i class="fa fa-clock-o"/>
+                                <span t-out="record.mart369_slot_label.value"/>
+                            </div>
+
+                            <div class="o_mart369_order_foot">
+                                <span class="o_mart369_order_total">
+                                    <field name="amount_total" widget="monetary"/>
+                                </span>
+                                <!--
+                                    The common action, on the card. An operator
+                                    should never have to open a form to say an
+                                    order moved on.
+                                -->
+                                <button name="mart369_action_advance" type="object"
+                                        class="btn o_mart369_advance"
+                                        t-if="record.mart369_state.raw_value != 'delivered' and record.mart369_state.raw_value != 'cancelled'">
+                                    Move on <i class="fa fa-arrow-right"/>
+                                </button>
+                            </div>
+
+                            <div class="o_mart369_order_late_flag" t-if="record.mart369_late.raw_value">
+                                <i class="fa fa-exclamation-circle"/> Past its promise
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <record id="view_mart369_order_list" model="ir.ui.view">
+        <field name="name">mart369.order.list</field>
+        <field name="model">sale.order</field>
+        <field name="arch" type="xml">
+            <list js_class="mart369_orders_list" class="o_mart369_list" create="false"
+                  default_order="mart369_placed_at desc"
+                  decoration-danger="mart369_late" decoration-muted="mart369_state == 'cancelled'">
+                <field name="mart369_ref" string="Order"/>
+                <field name="partner_id"/>
+                <field name="mart369_placed_at" string="Placed"/>
+                <field name="mart369_mode" string="Storefront"/>
+                <field name="mart369_slot_label" string="Slot" optional="show"/>
+                <field name="mart369_due_at" string="Due" optional="hide"/>
+                <field name="mart369_method" string="Paid by" optional="show"/>
+                <field name="amount_total" widget="monetary" sum="Total"/>
+                <field name="mart369_state" widget="badge"
+                       decoration-success="mart369_state == 'delivered'"
+                       decoration-info="mart369_state in ('placed', 'packed', 'shipped')"
+                       decoration-warning="mart369_state == 'out'"
+                       decoration-danger="mart369_state == 'cancelled'"/>
+                <field name="mart369_late" string="Late" optional="hide"/>
+                <field name="currency_id" column_invisible="1"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_mart369_order_form" model="ir.ui.view">
+        <field name="name">mart369.order.form</field>
+        <field name="model">sale.order</field>
+        <field name="arch" type="xml">
+            <form class="o_mart369_form" create="false">
+                <header>
+                    <button name="mart369_action_advance" type="object" string="Move on"
+                            class="btn-primary"
+                            invisible="mart369_state in ('delivered', 'cancelled', 'draft', False)"/>
+                    <field name="mart369_state" widget="statusbar"
+                           statusbar_visible="placed,packed,shipped,out,delivered"/>
+                </header>
+                <sheet>
+                    <div class="o_mart369_hero">
+                        <div class="o_mart369_hero_txt">
+                            <h1><field name="mart369_ref" readonly="1"/></h1>
+                            <div class="o_mart369_hero_meta">
+                                <field name="partner_id" readonly="1"/>
+                                <span class="o_mart369_hero_badge" invisible="not mart369_late">Late</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <group>
+                        <group string="Delivery">
+                            <field name="mart369_mode" readonly="1"/>
+                            <field name="mart369_slot_label" readonly="1"/>
+                            <field name="mart369_eta" readonly="1"/>
+                            <field name="mart369_due_at" readonly="1"/>
+                            <field name="partner_shipping_id" readonly="1"/>
+                            <field name="mart369_instructions" readonly="1"/>
+                            <field name="mart369_whatsapp" readonly="1"/>
+                        </group>
+                        <group string="Payment">
+                            <field name="mart369_method" readonly="1"/>
+                            <field name="mart369_pay_note" readonly="1"/>
+                            <field name="mart369_txn" readonly="1"/>
+                            <field name="mart369_paid" readonly="1"/>
+                            <field name="mart369_wallet_used" readonly="1"/>
+                            <field name="mart369_coupon_id" readonly="1"/>
+                            <field name="mart369_coupon_off" readonly="1"/>
+                            <field name="currency_id" invisible="1"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page string="Basket">
+                            <field name="order_line" readonly="1">
+                                <list>
+                                    <field name="product_id"/>
+                                    <field name="name"/>
+                                    <field name="product_uom_qty" string="Qty"/>
+                                    <field name="mart369_mrp" string="Was" optional="hide"/>
+                                    <field name="price_unit"/>
+                                    <field name="price_subtotal" sum="Total"/>
+                                    <field name="mart369_kind" string="Line" optional="hide"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Timeline">
+                            <field name="mart369_stamp_ids" readonly="1" class="o_mart369_timeline">
+                                <list>
+                                    <field name="at" string="When"/>
+                                    <field name="state" string="Step"/>
+                                    <field name="user_id" string="By"/>
+                                    <field name="note"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Returns" invisible="not mart369_return_count">
+                            <field name="mart369_return_ids" readonly="1">
+                                <list>
+                                    <field name="create_date" string="Asked"/>
+                                    <field name="kind"/>
+                                    <field name="reason"/>
+                                    <field name="photo_count" string="Photos"/>
+                                    <field name="amount"/>
+                                    <field name="state" widget="badge"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Doorstep">
+                            <group>
+                                <field name="mart369_otp_at" readonly="1"/>
+                                <field name="mart369_otp_used_at" readonly="1"/>
+                            </group>
+                            <div class="text-muted">
+                                The delivery code itself is never shown here. It is issued once
+                                to the customer's app and kept only as a hash.
+                            </div>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_mart369_order_search" model="ir.ui.view">
+        <field name="name">mart369.order.search</field>
+        <field name="model">sale.order</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="mart369_ref" string="Order number"/>
+                <field name="partner_id"/>
+                <!-- Named filters, because the KPI tiles switch them on by name. -->
+                <filter name="today" string="Today"
+                        domain="[('mart369_placed_at', '&gt;=', datetime.datetime.combine(context_today(), datetime.time(0,0,0)))]"/>
+                <filter name="late" string="Late" domain="[('mart369_late', '=', True)]"/>
+                <separator/>
+                <filter name="state_placed" string="To pack" domain="[('mart369_state', '=', 'placed')]"/>
+                <filter name="state_out" string="Out for delivery" domain="[('mart369_state', '=', 'out')]"/>
+                <filter name="state_live" string="On its way"
+                        domain="[('mart369_state', 'in', ('placed', 'packed', 'shipped', 'out'))]"/>
+                <filter name="state_delivered" string="Delivered" domain="[('mart369_state', '=', 'delivered')]"/>
+                <separator/>
+                <filter name="method_cod" string="Cash on delivery" domain="[('mart369_method', '=', 'cod')]"/>
+                <filter name="has_return" string="Has a return" domain="[('mart369_return_count', '>', 0)]"/>
+                <separator/>
+                <filter name="mode_quick" string="Quick" domain="[('mart369_mode', '=', 'quick')]"/>
+                <filter name="mode_all" string="Express" domain="[('mart369_mode', '=', 'all')]"/>
+                <group>
+                    <filter name="group_state" string="Status" context="{'group_by': 'mart369_state'}"/>
+                    <filter name="group_mode" string="Storefront" context="{'group_by': 'mart369_mode'}"/>
+                    <filter name="group_slot" string="Slot" context="{'group_by': 'mart369_slot_key'}"/>
+                    <filter name="group_day" string="Placed on" context="{'group_by': 'mart369_placed_at:day'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_mart369_orders" model="ir.actions.act_window">
+        <field name="name">Orders</field>
+        <field name="res_model">sale.order</field>
+        <field name="view_mode">kanban,list,form</field>
+        <field name="search_view_id" ref="view_mart369_order_search"/>
+        <field name="domain">[('mart369_ref', '!=', False), ('mart369_state', 'not in', (False, 'draft'))]</field>
+        <field name="context">{'search_default_state_live': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No 369 Mart orders yet</p>
+            <p>Orders placed in the app land here. Move one on with the button on its card.</p>
+        </field>
+    </record>
+
+    <!--
+        Without these, an act_window on sale.order silently uses Odoo's own
+        kanban and list instead of the ones above.
+    -->
+    <record id="action_mart369_orders_kanban" model="ir.actions.act_window.view">
+        <field name="sequence" eval="1"/>
+        <field name="view_mode">kanban</field>
+        <field name="view_id" ref="view_mart369_order_kanban"/>
+        <field name="act_window_id" ref="action_mart369_orders"/>
+    </record>
+
+    <record id="action_mart369_orders_list" model="ir.actions.act_window.view">
+        <field name="sequence" eval="2"/>
+        <field name="view_mode">list</field>
+        <field name="view_id" ref="view_mart369_order_list"/>
+        <field name="act_window_id" ref="action_mart369_orders"/>
+    </record>
+
+    <record id="action_mart369_orders_form" model="ir.actions.act_window.view">
+        <field name="sequence" eval="3"/>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="view_mart369_order_form"/>
+        <field name="act_window_id" ref="action_mart369_orders"/>
+    </record>
+
+</odoo>

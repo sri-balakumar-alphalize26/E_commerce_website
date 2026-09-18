@@ -1,0 +1,177 @@
+// 369 Mart -> Orders.
+//
+// No @import. The $m369-* tokens and the m369-card mixin come from
+// mart369_auth's customer_views.scss, which is listed earlier in
+// web.assets_backend - and one @import of a local partial fails the entire
+// bundle, which shows up as "Style error" on every backend page rather than as
+// anything to do with this file.
+//
+// Nothing here restates a colour that already has a token.
+
+// ------------------------------------------------------------------ the board
+
+.o_mart369_board {
+    .o_kanban_group {
+        // Columns read left to right as the day does, so they need to stay
+        // narrow enough that four fit without scrolling on a shop laptop.
+        min-width: 280px;
+    }
+
+    .o_column_title {
+        font-weight: 800;
+        letter-spacing: 0.01em;
+        color: $m369-ink;
+    }
+}
+
+// ------------------------------------------------------------------- the card
+
+.o_mart369_order {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    width: 100%;
+    animation: m369-rise 380ms $m369-ease backwards;
+
+    &.o_mart369_order_late {
+        // A late order should be findable without reading anything.
+        box-shadow: inset 3px 0 0 $m369-red;
+        padding-left: 9px;
+        margin-left: -3px;
+    }
+}
+
+.o_mart369_order_top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.o_mart369_order_ref {
+    font-weight: 800;
+    font-size: 13.5px;
+    color: $m369-navy;
+    letter-spacing: 0.01em;
+}
+
+.o_mart369_order_when {
+    font-size: 11px;
+    color: $m369-muted;
+    white-space: nowrap;
+}
+
+.o_mart369_order_who {
+    font-weight: 600;
+    font-size: 13px;
+    color: $m369-ink;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.o_mart369_order_meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.o_mart369_chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10.5px;
+    font-weight: 700;
+    line-height: 18px;
+    padding: 0 7px;
+    border-radius: 999px;
+    background: $m369-soft;
+    color: $m369-ink-2;
+
+    .fa { font-size: 10px; }
+
+    // Cash is the one that changes what happens at the door, so it is the one
+    // that carries a colour.
+    &.o_mart369_chip_cash { background: $m369-orange-soft; color: $m369-orange-ink; }
+    &.o_mart369_chip_paid { background: $m369-green-soft; color: $m369-green; }
+    &.o_mart369_chip_return { background: $m369-red-soft; color: $m369-red; }
+}
+
+.o_mart369_order_slot {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11.5px;
+    color: $m369-muted;
+
+    .fa { font-size: 11px; }
+}
+
+.o_mart369_order_foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 2px;
+    padding-top: 7px;
+    border-top: 1px solid $m369-line;
+}
+
+.o_mart369_order_total {
+    font-weight: 800;
+    font-size: 14px;
+    color: $m369-ink;
+}
+
+// The whole point of the board: the common action is one click, on the card.
+.o_mart369_advance {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11.5px;
+    font-weight: 700;
+    line-height: 1;
+    padding: 7px 11px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    background: $m369-blue-soft;
+    color: $m369-blue-d;
+    transition: background 200ms, color 200ms, transform 200ms $m369-spring;
+
+    .fa { font-size: 10px; transition: transform 200ms $m369-ease; }
+
+    &:hover {
+        background: $m369-blue;
+        color: #fff;
+        .fa { transform: translateX(2px); }
+    }
+    &:active { transform: scale(0.96); }
+    &:focus-visible { outline: 2px solid $m369-orange; outline-offset: 2px; }
+}
+
+.o_mart369_order_late_flag {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 10.5px;
+    font-weight: 700;
+    color: $m369-red;
+
+    .fa { font-size: 11px; }
+}
+
+// -------------------------------------------------------------------- the form
+
+.o_mart369_form {
+    .o_mart369_hero_badge {
+        display: inline-block;
+        font-size: 11px;
+        font-weight: 800;
+        line-height: 20px;
+        padding: 0 9px;
+        border-radius: 999px;
+        background: $m369-red-soft;
+        color: $m369-red;
+        animation: m369-pop 320ms $m369-spring backwards;
+    }
+}

@@ -1,0 +1,20 @@
+// 369 Mart -> Reviews, Referrals and Rewards.
+//
+// No @import. The $m369-* tokens come from mart369_auth's customer_views.scss,
+// which is listed earlier in web.assets_backend - and one @import of a local
+// partial fails the entire bundle, which shows as "Style error" on every
+// backend page rather than as anything to do with this file.
+//
+// The card, chip and board classes are mart369_order's; only the two things
+// those screens do not have are defined here.
+
+// The star row under the average rating.
+.o_mart369_stars {
+    display: inline-flex;
+    gap: 2px;
+    margin-top: 3px;
+    color: $m369-orange;
+    font-size: 11px;
+
+    .fa-star-o { color: $m369-line; }
+}

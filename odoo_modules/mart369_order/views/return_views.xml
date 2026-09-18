@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_mart369_return_list" model="ir.ui.view">
+        <field name="name">mart369.order.return.list</field>
+        <field name="model">mart369.order.return</field>
+        <field name="arch" type="xml">
+            <list class="o_mart369_list" create="false" default_order="create_date desc"
+                  decoration-muted="state == 'refused'" decoration-success="state == 'done'">
+                <field name="create_date" string="Asked"/>
+                <field name="order_ref" string="Order"/>
+                <field name="partner_id"/>
+                <field name="kind"/>
+                <field name="reason"/>
+                <field name="photo_count" string="Photos"/>
+                <field name="amount" widget="monetary"/>
+                <field name="state" widget="badge"
+                       decoration-success="state == 'done'"
+                       decoration-info="state in ('requested', 'pickup', 'picked')"
+                       decoration-danger="state == 'refused'"/>
+                <field name="currency_id" column_invisible="1"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_mart369_return_kanban" model="ir.ui.view">
+        <field name="name">mart369.order.return.kanban</field>
+        <field name="model">mart369.order.return</field>
+        <field name="arch" type="xml">
+            <kanban default_group_by="state" class="o_mart369_kanban" quick_create="false" create="false">
+                <!-- Declared because the card reads them through `record.`,
+                     which does not auto-detect the way a plain <field/> does.
+                     create_date missing here threw the whole kanban. -->
+                <field name="state"/>
+                <field name="order_ref"/>
+                <field name="kind"/>
+                <field name="photo_count"/>
+                <field name="currency_id"/>
+                <field name="create_date"/>
+                <templates>
+                    <t t-name="card">
+                        <div class="o_mart369_order">
+                            <div class="o_mart369_order_top">
+                                <span class="o_mart369_order_ref" t-out="record.order_ref.value"/>
+                                <span class="o_mart369_order_when" t-out="record.create_date.value"/>
+                            </div>
+                            <div class="o_mart369_order_who"><field name="partner_id"/></div>
+                            <div class="o_mart369_order_meta">
+                                <span class="o_mart369_chip">
+                                    <i t-attf-class="fa #{record.kind.raw_value == 'replace' ? 'fa-refresh' : 'fa-inr'}"/>
+                                    <t t-out="record.kind.value"/>
+                                </span>
+                                <span class="o_mart369_chip" t-if="record.photo_count.raw_value">
+                                    <i class="fa fa-camera"/> <t t-out="record.photo_count.value"/>
+                                </span>
+                            </div>
+                            <div class="o_mart369_order_slot"><field name="reason"/></div>
+                            <div class="o_mart369_order_foot">
+                                <span class="o_mart369_order_total">
+                                    <field name="amount" widget="monetary"/>
+                                </span>
+                                <button name="mart369_action_advance" type="object"
+                                        class="btn o_mart369_advance"
+                                        t-if="record.state.raw_value != 'done' and record.state.raw_value != 'refused'">
+                                    Move on <i class="fa fa-arrow-right"/>
+                                </button>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <record id="view_mart369_return_form" model="ir.ui.view">
+        <field name="name">mart369.order.return.form</field>
+        <field name="model">mart369.order.return</field>
+        <field name="arch" type="xml">
+            <form class="o_mart369_form" create="false">
+                <header>
+                    <button name="mart369_action_advance" type="object" string="Move on"
+                            class="btn-primary" invisible="state in ('done', 'refused')"/>
+                    <button name="mart369_action_refuse" type="object" string="Refuse"
+                            invisible="state in ('done', 'refused')"
+                            confirm="Refuse this return? The customer is told it was turned down."/>
+                    <field name="state" widget="statusbar"
+                           statusbar_visible="requested,pickup,picked,done"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="order_id" readonly="1"/>
+                            <field name="partner_id" readonly="1"/>
+                            <field name="kind"/>
+                            <field name="amount"/>
+                            <field name="currency_id" invisible="1"/>
+                        </group>
+                        <group>
+                            <field name="reason"/>
+                            <field name="create_date" readonly="1" string="Asked"/>
+                        </group>
+                    </group>
+                    <group string="What happened">
+                        <field name="detail" nolabel="1" colspan="2"/>
+                    </group>
+                    <group string="Photos">
+                        <field name="photo_ids" widget="many2many_binary" nolabel="1" colspan="2"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_mart369_returns" model="ir.actions.act_window">
+        <field name="name">Returns</field>
+        <field name="res_model">mart369.order.return</field>
+        <field name="view_mode">kanban,list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No returns</p>
+            <p>When a customer asks for a refund or a replacement it appears here.</p>
+        </field>
+    </record>
+
+    <record id="action_mart369_returns_kanban" model="ir.actions.act_window.view">
+        <field name="sequence" eval="1"/>
+        <field name="view_mode">kanban</field>
+        <field name="view_id" ref="view_mart369_return_kanban"/>
+        <field name="act_window_id" ref="action_mart369_returns"/>
+    </record>
+
+    <record id="action_mart369_returns_list" model="ir.actions.act_window.view">
+        <field name="sequence" eval="2"/>
+        <field name="view_mode">list</field>
+        <field name="view_id" ref="view_mart369_return_list"/>
+        <field name="act_window_id" ref="action_mart369_returns"/>
+    </record>
+
+    <record id="action_mart369_returns_form" model="ir.actions.act_window.view">
+        <field name="sequence" eval="3"/>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="view_mart369_return_form"/>
+        <field name="act_window_id" ref="action_mart369_returns"/>
+    </record>
+
+</odoo>

@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="mart369_account.ReviewListRenderer" t-inherit="web.ListRenderer" t-inherit-mode="primary">
+        <xpath expr="//div[hasclass('o_list_renderer')]" position="before">
+            <Mart369ReviewBoard list="props.list"/>
+        </xpath>
+    </t>
+
+    <t t-name="mart369_account.ReferralKanbanRenderer" t-inherit="web.KanbanRenderer" t-inherit-mode="primary">
+        <xpath expr="//div[hasclass('o_kanban_renderer')]" position="before">
+            <Mart369ReferralBoard list="props.list"/>
+        </xpath>
+    </t>
+
+    <t t-name="mart369_account.RewardListRenderer" t-inherit="web.ListRenderer" t-inherit-mode="primary">
+        <xpath expr="//div[hasclass('o_list_renderer')]" position="before">
+            <Mart369RewardBoard list="props.list"/>
+        </xpath>
+    </t>
+
+    <!--  reviews -->
+
+    <t t-name="mart369_account.ReviewBoard">
+        <div class="o_mart369_dash" t-if="state.data">
+            <t t-set="d" t-value="state.data"/>
+
+            <button type="button" class="o_mart369_kpi" t-on-click="() => this.applyFilter('recent')"
+                    title="Show reviews written in the last 30 days">
+                <span class="o_mart369_tile o_mart369_tile_blue"><i class="fa fa-comments-o"/></span>
+                <span class="o_mart369_kpi_txt">
+                    <small>Reviews</small>
+                    <strong t-out="d.total"/>
+                    <span class="o_mart369_bars" aria-label="Reviews written over the last 14 days">
+                        <t t-foreach="bars" t-as="b" t-key="b.day">
+                            <i t-att-style="'height:' + b.h + '%'"
+                               t-att-class="{'o_last': b.last, 'o_zero': !b.count}"
+                               t-att-title="b.day + ': ' + b.count"/>
+                        </t>
+                    </span>
+                </span>
+            </button>
+
+            <button type="button" class="o_mart369_kpi" t-on-click="() => this.applyFilter('happy')"
+                    title="Show the happy ones">
+                <span class="o_mart369_tile o_mart369_tile_orange"><i class="fa fa-star"/></span>
+                <span class="o_mart369_kpi_txt">
+                    <small>Average</small>
+                    <strong t-out="d.average"/>
+                    <span class="o_mart369_stars">
+                        <t t-foreach="stars" t-as="s" t-key="s.n">
+                            <i t-att-class="'fa ' + (s.on ? 'fa-star' : 'fa-star-o')"/>
+                        </t>
+                    </span>
+                </span>
+            </button>
+
+            <!-- The one an operator opens the screen for. Red only when it is not zero. -->
+            <button type="button" class="o_mart369_kpi" t-on-click="() => this.applyFilter('unhappy')"
+                    title="Show reviews of two stars or fewer">
+                <span t-att-class="'o_mart369_tile' + (d.unhappy ? ' o_mart369_tile_red' : '')">
+                    <i class="fa fa-frown-o"/>
+                </span>
+                <span class="o_mart369_kpi_txt">
+                    <small>Unhappy</small>
+                    <strong t-out="d.unhappy"/>
+                    <span t-if="d.unhappy">two stars or fewer</span>
+                    <span t-else="">nobody is unhappy</span>
+                </span>
+            </button>
+
+            <button type="button" class="o_mart369_kpi" t-on-click="() => this.applyFilter('verified')"
+                    title="Show reviews from customers who really bought the product">
+                <span class="o_mart369_tile o_mart369_tile_green"><i class="fa fa-check-circle"/></span>
+                <span class="o_mart369_kpi_txt">
+                    <small>Verified purchase</small>
+                    <strong><t t-out="d.verified"/> <em>of <t t-out="d.total"/></em></strong>
+                    <span class="o_mart369_meter"><i t-att-style="'width:' + d.verified_pct + '%'"/></span>
+                </span>
+            </button>
+
+            <button type="button" class="o_mart369_kpi" t-on-click="() => this.applyFilter('with_photos')"
+                    title="Show reviews that came with photos">
+                <span class="o_mart369_tile"><i class="fa fa-camera"/></span>
+                <span class="o_mart369_kpi_txt">
+                    <small>With photos</small>
+                    <strong t-out="d.with_photos"/>
+                    <span>sent by customers</span>
+                </span>
+            </button>
+
+        </div>
+    </t>
+
+    <!--  referrals -->
+
+    <t t-name="mart369_account.ReferralBoard">
+        <div class="o_mart369_dash" t-if="state.data">
+            <t t-set="d" t-value="state.data"/>
+
+            <button type="button" class="o_mart369_kpi" t-on-click="() => this.applyFilter('state_invited')"
+                    title="Show invites nobody has acted on yet">
+                <span class="o_mart369_tile"><i class="fa fa-paper-plane-o"/></span>
+                <span class="o_mart369_kpi_txt">
+                    <small>Waiting</small>
+                    <strong t-out="d.invited"/>
+                    <span><t t-out="d.total"/> invites in all</span>
+                </span>
+            </button>
+
+            <button type="button" class="o_mart369_kpi" t-on-click="() => this.applyFilter('state_joined')"
+                    title="Show friends who signed up but have not ordered">
+                <span class="o_mart369_tile o_mart369_tile_blue"><i class="fa fa-user-plus"/></span>
+                <span class="o_mart369_kpi_txt">
+                    <small>Signed up</small>
+                    <strong t-out="d.joined"/>
+                    <span>not ordered yet</span>
+                </span>
+            </button>
+
+            <button type="button" class="o_mart369_kpi" t-on-click="() => this.applyFilter('state_ordered')"
+                    title="Show referrals that turned into an order">
+                <span class="o_mart369_tile o_mart369_tile_green"><i class="fa fa-shopping-bag"/></span>
+                <span class="o_mart369_kpi_txt">
+                    <small>Ordered</small>
+                    <strong t-out="d.ordered"/>
+                    <span class="o_mart369_meter"><i t-att-style="'width:' + d.conversion + '%'"/></span>
+                </span>
+            </button>
+
+            <button type="button" class="o_mart369_kpi" t-on-click="() => this.applyFilter('state_ordered')"
+                    title="Show what has been paid out">
+                <span class="o_mart369_tile o_mart369_tile_orange"><i class="fa fa-gift"/></span>
+                <span class="o_mart369_kpi_txt">
+                    <small>Paid out</small>
+                    <strong t-out="d.paid"/>
+                    <span><t t-out="d.reward"/> each</span>
+                </span>
+            </button>
+
+            <button type="button" class="o_mart369_kpi" t-on-click="() => this.applyFilter('state_ordered')"
+                    title="How many invites end in an order">
+                <span class="o_mart369_tile o_mart369_tile_blue"><i class="fa fa-line-chart"/></span>
+                <span class="o_mart369_kpi_txt">
+                    <small>Invites that buy</small>
+                    <strong><t t-out="d.conversion"/>%</strong>
+                    <span>of everyone invited</span>
+                </span>
+            </button>
+
+        </div>
+    </t>
+
+    <!--  rewards -->
+
+    <t t-name="mart369_account.RewardBoard">
+        <div class="o_mart369_dash" t-if="state.data">
+            <t t-set="d" t-value="state.data"/>
+
+            <button type="button" class="o_mart369_kpi" t-on-click="() => this.applyFilter('scratched')"
+                    title="Show cards that have been scratched">
+                <span class="o_mart369_tile o_mart369_tile_blue"><i class="fa fa-ticket"/></span>
+                <span class="o_mart369_kpi_txt">
+                    <small>Cards</small>
+                    <strong t-out="d.total"/>
+                    <span><t t-out="d.scratched"/> scratched</span>
+                </span>
+            </button>
+
+            <button type="button" class="o_mart369_kpi" t-on-click="() => this.applyFilter('unscratched')"
+                    title="Show cards nobody has scratched yet">
+                <span class="o_mart369_tile o_mart369_tile_orange"><i class="fa fa-hand-pointer-o"/></span>
+                <span class="o_mart369_kpi_txt">
+                    <small>Not scratched</small>
+                    <strong t-out="d.unscratched"/>
+                    <span>still to be opened</span>
+                </span>
+            </button>
+
+            <button type="button" class="o_mart369_kpi" t-on-click="() => this.applyFilter('type_cash,scratched')"
+                    title="Show cards that paid wallet cash">
+                <span class="o_mart369_tile o_mart369_tile_green"><i class="fa fa-money"/></span>
+                <span class="o_mart369_kpi_txt">
+                    <small>Paid to wallets</small>
+                    <strong t-out="d.paid"/>
+                    <span><t t-out="d.paid_count"/> cards</span>
+                </span>
+            </button>
+
+            <button type="button" class="o_mart369_kpi" t-on-click="() => this.applyFilter('type_coupon,scratched')"
+                    title="Show cards that won a coupon">
+                <span class="o_mart369_tile"><i class="fa fa-tags"/></span>
+                <span class="o_mart369_kpi_txt">
+                    <small>Coupons won</small>
+                    <strong t-out="d.coupons"/>
+                    <span>claimed by customers</span>
+                </span>
+            </button>
+
+            <button type="button" class="o_mart369_kpi" t-on-click="() => this.applyFilter('type_none,scratched')"
+                    title="Show cards that won nothing">
+                <span class="o_mart369_tile"><i class="fa fa-meh-o"/></span>
+                <span class="o_mart369_kpi_txt">
+                    <small>Won nothing</small>
+                    <strong t-out="d.nothing"/>
+                    <span>better luck next time</span>
+                </span>
+            </button>
+
+        </div>
+    </t>
+
+</templates>

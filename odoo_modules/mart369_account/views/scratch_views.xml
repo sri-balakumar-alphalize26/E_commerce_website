@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_mart369_scratch_list" model="ir.ui.view">
+        <field name="name">mart369.scratch.list</field>
+        <field name="model">mart369.scratch</field>
+        <field name="arch" type="xml">
+            <list js_class="mart369_rewards_list" class="o_mart369_list" create="false"
+                  default_order="create_date desc"
+                  decoration-muted="reward_type == 'none'" decoration-success="reward_type == 'cash' and scratched">
+                <field name="create_date" string="Minted"/>
+                <field name="partner_id" string="Customer"/>
+                <field name="origin" string="From"/>
+                <field name="reward_type" string="Reward"/>
+                <field name="amount" widget="monetary" sum="Paid out"/>
+                <field name="coupon_id" string="Coupon" optional="show"/>
+                <field name="scratched" widget="boolean_toggle" readonly="1"/>
+                <field name="scratched_at" string="Scratched" optional="hide"/>
+                <field name="currency_id" column_invisible="1"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_mart369_scratch_form" model="ir.ui.view">
+        <field name="name">mart369.scratch.form</field>
+        <field name="model">mart369.scratch</field>
+        <field name="arch" type="xml">
+            <form class="o_mart369_form" create="false">
+                <sheet>
+                    <div class="o_mart369_hero">
+                        <div class="o_mart369_hero_txt">
+                            <h1><field name="origin" readonly="1"/></h1>
+                            <div class="o_mart369_hero_meta">
+                                <field name="partner_id" readonly="1"/>
+                                <span class="o_mart369_hero_badge" invisible="scratched">Not scratched</span>
+                            </div>
+                        </div>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="reward_type" readonly="1"/>
+                            <field name="amount" invisible="reward_type != 'cash'" readonly="1"/>
+                            <field name="coupon_id" invisible="reward_type != 'coupon'" readonly="1"/>
+                            <field name="currency_id" invisible="1"/>
+                        </group>
+                        <group>
+                            <field name="order_id" readonly="1"/>
+                            <field name="scratched" readonly="1"/>
+                            <field name="scratched_at" readonly="1"/>
+                        </group>
+                    </group>
+                    <div class="text-muted">
+                        What a card is worth is decided when it is minted, not when it is
+                        scratched, so the prize cannot change depending on when someone looks.
+                    </div>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_mart369_scratch_search" model="ir.ui.view">
+        <field name="name">mart369.scratch.search</field>
+        <field name="model">mart369.scratch</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="partner_id"/>
+                <field name="origin"/>
+                <filter name="unscratched" string="Not scratched" domain="[('scratched', '=', False)]"/>
+                <filter name="scratched" string="Scratched" domain="[('scratched', '=', True)]"/>
+                <separator/>
+                <filter name="type_cash" string="Wallet cash" domain="[('reward_type', '=', 'cash')]"/>
+                <filter name="type_coupon" string="Coupon" domain="[('reward_type', '=', 'coupon')]"/>
+                <filter name="type_none" string="Nothing" domain="[('reward_type', '=', 'none')]"/>
+                <group>
+                    <filter name="group_type" string="Reward" context="{'group_by': 'reward_type'}"/>
+                    <filter name="group_partner" string="Customer" context="{'group_by': 'partner_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_mart369_rewards" model="ir.actions.act_window">
+        <field name="name">Rewards</field>
+        <field name="res_model">mart369.scratch</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_mart369_scratch_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No scratch cards yet</p>
+            <p>A delivered order mints one. They appear here as they are won and scratched.</p>
+        </field>
+    </record>
+
+    <record id="action_mart369_rewards_list" model="ir.actions.act_window.view">
+        <field name="sequence" eval="1"/>
+        <field name="view_mode">list</field>
+        <field name="view_id" ref="view_mart369_scratch_list"/>
+        <field name="act_window_id" ref="action_mart369_rewards"/>
+    </record>
+
+    <record id="action_mart369_rewards_form" model="ir.actions.act_window.view">
+        <field name="sequence" eval="2"/>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="view_mart369_scratch_form"/>
+        <field name="act_window_id" ref="action_mart369_rewards"/>
+    </record>
+
+    <!-- The promotional notifications, so somebody can write one. -->
+    <record id="view_mart369_notice_list" model="ir.ui.view">
+        <field name="name">mart369.notice.list</field>
+        <field name="model">mart369.notice</field>
+        <field name="arch" type="xml">
+            <list class="o_mart369_list" default_order="publish_at desc" editable="top">
+                <field name="publish_at" string="Show from"/>
+                <field name="until" string="Show until"/>
+                <field name="kind"/>
+                <field name="name" string="Title"/>
+                <field name="text"/>
+                <field name="go_view" string="Opens"/>
+                <field name="go_param" string="With"/>
+                <field name="active" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_mart369_notices" model="ir.actions.act_window">
+        <field name="name">Notifications</field>
+        <field name="res_model">mart369.notice</field>
+        <field name="view_mode">list</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No notifications</p>
+            <p>Write one and it appears in every customer's app, unless they have turned that kind off.</p>
+        </field>
+    </record>
+
+    <record id="action_mart369_notices_list" model="ir.actions.act_window.view">
+        <field name="sequence" eval="1"/>
+        <field name="view_mode">list</field>
+        <field name="view_id" ref="view_mart369_notice_list"/>
+        <field name="act_window_id" ref="action_mart369_notices"/>
+    </record>
+
+</odoo>

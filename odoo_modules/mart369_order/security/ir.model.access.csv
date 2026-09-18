@@ -1,0 +1,7 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_mart369_order_stamp_system,mart369.order.stamp system,model_mart369_order_stamp,base.group_system,1,1,1,1
+access_mart369_order_stamp_sale,mart369.order.stamp sale,model_mart369_order_stamp,sales_team.group_sale_salesman,1,1,1,0
+access_mart369_order_stamp_user,mart369.order.stamp user,model_mart369_order_stamp,base.group_user,1,0,0,0
+access_mart369_order_return_system,mart369.order.return system,model_mart369_order_return,base.group_system,1,1,1,1
+access_mart369_order_return_sale,mart369.order.return sale,model_mart369_order_return,sales_team.group_sale_salesman,1,1,1,0
+access_mart369_order_return_user,mart369.order.return user,model_mart369_order_return,base.group_user,1,0,0,0
