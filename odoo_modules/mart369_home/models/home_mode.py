@@ -1,7 +1,7 @@
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 
-from .serializers import ART_CHOICES, ICON_CHOICES, TONE_CHOICES
+from odoo.addons.mart369.models.serializers import ART_CHOICES, ICON_CHOICES, TONE_CHOICES
 
 
 class Mart369HomeMode(models.Model):
@@ -9,11 +9,11 @@ class Mart369HomeMode(models.Model):
 
     _name = 'mart369.home.mode'
     _description = '369 Mart App Mode'
-    _inherit = ['mart369.home.serializable']
+    _inherit = ['mart369.serializable']
     _order = 'sequence, id'
 
     config_id = fields.Many2one(
-        'mart369.home.config', string='Settings',
+        'mart369.config', string='Settings',
         required=True, ondelete='cascade', index=True)
     key = fields.Selection([
         ('quick', 'Quick - delivery in minutes'),
@@ -75,7 +75,7 @@ class Mart369HomeMode(models.Model):
         templates = Template.browse()
         for section in sections:
             templates |= section._resolve_products()
-        return self.env['mart369.home.serializable']._price_context_for(
+        return self.env['mart369.serializable']._price_context_for(
             templates)
 
     # ---------------------------------------------------------- the builder
@@ -130,7 +130,7 @@ class Mart369HomeMode(models.Model):
             'tabs': [t._builder_vals()
                      for t in mode.tab_ids._kept().sorted('sequence')],
             'trash': mode._trash_list(),
-            'trash_days': self.env['mart369.home.config'].sudo()._get()._trash_days(),
+            'trash_days': self.env['mart369.config'].sudo()._get()._trash_days(),
             'categories': [{'id': c.id, 'name': c.display_name}
                            for c in Category.search([])],
             'tags': [{'id': t.id, 'name': t.name} for t in Tag.search([], order='name')],

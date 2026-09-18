@@ -8,14 +8,14 @@
 
     <menuitem id="menu_mart369_payments"
               name="Payments"
-              parent="mart369_home.menu_mart369_root"
+              parent="mart369.menu_mart369_root"
               action="action_mart369_payments"
               groups="base.group_system"
               sequence="40"/>
 
     <menuitem id="menu_mart369_wallets"
               name="Wallets"
-              parent="mart369_home.menu_mart369_root"
+              parent="mart369.menu_mart369_root"
               action="action_mart369_wallets"
               groups="base.group_system"
               sequence="45"/>

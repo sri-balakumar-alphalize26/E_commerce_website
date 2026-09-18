@@ -76,7 +76,7 @@ class Mart369Cart(models.AbstractModel):
         rules = Rule._mart369_rules()
         lines = self._mart369_resolve(items)
 
-        price_ctx = self.env['mart369.home.serializable'].sudo()._price_context_for(
+        price_ctx = self.env['mart369.serializable'].sudo()._price_context_for(
             self.env['product.template'].sudo().browse([t.id for t, __ in lines]))
 
         mrp = gross = 0.0

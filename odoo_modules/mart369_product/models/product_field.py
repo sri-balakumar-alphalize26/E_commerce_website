@@ -249,7 +249,7 @@ class Mart369ProductField(models.Model):
                     [('product_tmpl_id', '=', product.id)])
             }
             cat_values = fields_all[:1]._category_values(product) if fields_all else {}
-            helper = self.env['mart369.home.serializable'].sudo()
+            helper = self.env['mart369.serializable'].sudo()
             ctx = helper._price_context_for(product)
             card = helper._serialize_product(
                 product, None, ctx,

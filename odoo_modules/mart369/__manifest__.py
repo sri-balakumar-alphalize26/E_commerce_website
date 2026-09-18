@@ -1,63 +1,51 @@
 {
     'name': '369 Mart',
-    'version': '19.0.1.0.0',
+    'version': '19.0.2.0.0',
     'category': 'Website',
-    'summary': 'Installs the whole 369 Mart backend in one go.',
+    'summary': 'The foundation every 369 Mart module is built on.',
     'description': """
 369 Mart
 ========
 
-The whole thing, in one install.
+The base. It holds the few things the whole suite shares and nothing else:
 
-369 Mart is ten modules that build on each other: the home page needs the
-product page, the cart needs the catalogue and the address book, orders need
-the cart and payments, and the account and support screens need orders. Picking
-them out of the Apps list one at a time works, but only if you happen to know
-that order.
+* the **369 Mart menu** every module hangs its own screens off;
+* the **settings** they all read - where images are served from, and how long
+  the app may reuse an answer;
+* the **JSON helpers** that turn a product into the shape the app expects, so
+  the cart, the catalogue, the product page and orders all describe a product
+  identically;
+* the **colours** the builder screens are drawn with.
 
-This module contains no code of its own. It exists so that installing **369
-Mart** installs the other ten and gets the order right, and so that the suite
-has one obvious thing to look for.
+Every other 369 Mart module depends on this one and can be installed or removed
+on its own. This used to be the home page's job, which meant removing the home
+page took the menu - and every other module's screens - with it.
 
-What comes with it:
-
-* **Home page** - banners, sections and tiles, editable without code
-* **Product page** - what each product page shows, field by field
-* **Catalog** - categories, browsing and search
-* **Sign in** - customers create their own accounts
-* **Delivery addresses** - found from the customer's live location
-* **Delivery & pricing** - the bill, fees, coupons, service areas and slots
-* **Payments & wallet** - real payments, saved methods, the 369 Wallet
-* **Orders** - placed, packed, delivered, returned, invoiced
-* **Account** - profile, reviews, notifications, referrals, wishlist, rewards
-* **Support** - the bot, real tickets, and order updates on WhatsApp
-
-Removing this module does **not** remove the ten. Uninstall those individually
-if that is what you want.
+Install **369 Mart Suite** to get the whole thing in one go, or pick the pieces
+you want from the Apps list.
 """,
     'author': '369 Mart',
     'license': 'LGPL-3',
-    # Every module by name rather than just the two leaves. The leaves alone
-    # would pull the rest in, but then this list would quietly stop describing
-    # the suite the moment somebody changed a dependency in the middle of it.
-    'depends': [
-        'mart369_home',
-        'mart369_product',
-        'mart369_catalog',
-        'mart369_auth',
-        'mart369_address',
-        'mart369_cart',
-        'mart369_payment',
-        'mart369_order',
-        'mart369_account',
-        'mart369_support',
+    'depends': ['base', 'web', 'product'],
+    'data': [
+        'security/ir.model.access.csv',
+        'views/menus.xml',
+        'views/config_views.xml',
+        'views/product_template_views.xml',
     ],
-    'data': [],
+    'assets': {
+        'web.assets_backend': [
+            # Listed first so the modules after it can use $mart-*. Never
+            # @import this file: Odoo rejects local imports inside a bundle.
+            'mart369/static/src/scss/_mart_vars.scss',
+            # The builder chrome - the phone frame, the panel, the buttons.
+            # Both builder screens (home and product) draw with these.
+            'mart369/static/src/builder/builder.scss',
+        ],
+    },
     'installable': True,
-    # Shows up as an app in the Apps list, which is where somebody looking for
-    # "369 Mart" will actually look.
+    # An application so it is findable in Apps, and so uninstalling it offers
+    # the whole suite - everything depends on this one.
     'application': True,
-    # Deliberately NOT auto_install: this should arrive because somebody asked
-    # for it, not because its dependencies happened to line up.
     'auto_install': False,
 }

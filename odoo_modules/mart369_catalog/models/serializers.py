@@ -17,7 +17,7 @@ from odoo import models
 
 
 class Mart369Serializable(models.AbstractModel):
-    _inherit = 'mart369.home.serializable'
+    _inherit = 'mart369.serializable'
 
     def _price_context_for(self, templates):
         """The prices, plus the three values the app used to fake."""

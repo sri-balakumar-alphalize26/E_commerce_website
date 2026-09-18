@@ -24,7 +24,8 @@ The app reads it from ``/369mart/catalog``, ``/369mart/browse/<category>`` and
 """,
     'author': '369 Mart',
     'license': 'LGPL-3',
-    'depends': ['mart369_product'],
+    'depends': [
+        'mart369','mart369_product'],
     'data': [
         'security/ir.model.access.csv',
         'views/category_views.xml',

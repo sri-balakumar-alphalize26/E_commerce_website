@@ -122,7 +122,7 @@ class SaleOrder(models.Model):
         Cart = self.env['mart369.cart'].sudo()
         lines = Cart._mart369_resolve(items)
         templates = self.env['product.template'].sudo().browse([t.id for t, __ in lines])
-        prices = self.env['mart369.home.serializable'].sudo()._price_context_for(templates)
+        prices = self.env['mart369.serializable'].sudo()._price_context_for(templates)
         tax = self._mart369_tax()
 
         values = []

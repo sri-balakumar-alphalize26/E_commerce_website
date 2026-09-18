@@ -1,6 +1,6 @@
 from odoo import api, fields, models
 
-from .serializers import ICON_CHOICES, slugify
+from odoo.addons.mart369.models.serializers import ICON_CHOICES, slugify
 
 
 class Mart369HomeTab(models.Model):
@@ -8,7 +8,7 @@ class Mart369HomeTab(models.Model):
 
     _name = 'mart369.home.tab'
     _description = '369 Mart Home Tab'
-    _inherit = ['mart369.home.serializable', 'mart369.home.trashable']
+    _inherit = ['mart369.serializable', 'mart369.home.trashable']
     _order = 'sequence, id'
     _trash_what = 'Tab'
 

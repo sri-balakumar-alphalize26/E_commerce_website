@@ -37,6 +37,7 @@ Operators work these in **369 Mart -> Support**.
     # ticket below does the job without it. WhatsApp is found at runtime rather
     # than depended on - see models/whatsapp.py for why.
     'depends': [
+        'mart369',
         'mart369_order',
         'mail',
     ],

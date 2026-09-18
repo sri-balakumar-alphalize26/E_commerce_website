@@ -53,7 +53,7 @@
 
     <menuitem id="menu_mart369_searches"
               name="Searches"
-              parent="mart369_home.menu_mart369_root"
+              parent="mart369.menu_mart369_root"
               action="action_mart369_searches"
               groups="base.group_system"
               sequence="45"/>

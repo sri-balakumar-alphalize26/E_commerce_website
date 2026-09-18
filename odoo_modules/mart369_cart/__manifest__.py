@@ -26,7 +26,8 @@ them in **369 Mart -> Delivery & Pricing**.
 """,
     'author': '369 Mart',
     'license': 'LGPL-3',
-    'depends': ['mart369_catalog', 'mart369_address', 'delivery'],
+    'depends': [
+        'mart369', 'mart369_catalog', 'mart369_address', 'delivery'],
     'data': [
         'security/ir.model.access.csv',
         'data/cart_data.xml',

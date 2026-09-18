@@ -1,4 +1,3 @@
-from . import serializers
 from . import trashable
 from . import home_config
 from . import home_mode

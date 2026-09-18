@@ -13,7 +13,7 @@ import logging
 from odoo import http
 from odoo.http import request
 
-from odoo.addons.mart369_home.controllers.home_api import _PUBLIC_JSON
+from odoo.addons.mart369.controllers.public import _PUBLIC_JSON
 
 _logger = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ class Mart369CartApi(http.Controller):
         return data if isinstance(data, dict) else {}
 
     def _cached(self, payload):
-        config = request.env['mart369.home.config'].sudo()._get()
+        config = request.env['mart369.config'].sudo()._get()
         return request.make_json_response(payload, headers=[
             ('Cache-Control', 'public, max-age=%d' % max(config.cache_seconds or 0, 0)),
         ])

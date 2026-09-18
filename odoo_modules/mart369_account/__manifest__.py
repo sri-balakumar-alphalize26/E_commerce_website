@@ -32,6 +32,7 @@ Operators work these in **369 Mart -> Reviews**, **Referrals** and **Rewards**.
     'author': '369 Mart',
     'license': 'LGPL-3',
     'depends': [
+        'mart369',
         'mart369_order',
         'rating',
         'website_sale_wishlist',

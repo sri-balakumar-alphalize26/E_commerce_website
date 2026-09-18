@@ -8,14 +8,14 @@
 
     <menuitem id="menu_mart369_support"
               name="Support"
-              parent="mart369_home.menu_mart369_root"
+              parent="mart369.menu_mart369_root"
               action="action_mart369_tickets"
               groups="sales_team.group_sale_salesman"
               sequence="7"/>
 
     <menuitem id="menu_mart369_bot_rules"
               name="Bot answers"
-              parent="mart369_home.menu_mart369_root"
+              parent="mart369.menu_mart369_root"
               action="action_mart369_rules"
               groups="base.group_system"
               sequence="29"/>

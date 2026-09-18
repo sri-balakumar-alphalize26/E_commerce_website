@@ -20,7 +20,8 @@ where a missing pincode, mobile or map fix is called out in red.
 """,
     'author': '369 Mart',
     'license': 'LGPL-3',
-    'depends': ['mart369_auth', 'base_geolocalize'],
+    'depends': [
+        'mart369','mart369_auth', 'base_geolocalize'],
     'data': [
         'security/ir.model.access.csv',
         'views/address_views.xml',

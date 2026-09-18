@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--
+        The 369 Mart tab on a product, and nothing inside it.
+
+        Both the home page and the product page put fields here. While the tab
+        belonged to the home page, the product page had to depend on it just to
+        find somewhere to put them - and two modules each adding their own page
+        would have given the product form two competing 369 Mart tabs.
+
+        Owning the empty container here lets either module be installed without
+        the other.
+    -->
+    <record id="view_product_template_form_mart369" model="ir.ui.view">
+        <field name="name">product.template.form.mart369</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_form_view"/>
+        <field name="arch" type="xml">
+            <notebook position="inside">
+                <page string="369 Mart" name="mart369"/>
+            </notebook>
+        </field>
+    </record>
+
+</odoo>

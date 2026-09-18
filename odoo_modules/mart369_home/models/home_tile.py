@@ -2,7 +2,7 @@ from markupsafe import Markup, escape
 
 from odoo import api, fields, models
 
-from .serializers import ART_CHOICES, slugify
+from odoo.addons.mart369.models.serializers import ART_CHOICES, slugify
 
 
 class Mart369HomeTile(models.Model):
@@ -10,7 +10,7 @@ class Mart369HomeTile(models.Model):
 
     _name = 'mart369.home.tile'
     _description = '369 Mart Category Tile'
-    _inherit = ['image.mixin', 'mart369.home.serializable',
+    _inherit = ['image.mixin', 'mart369.serializable',
                 'mart369.home.trashable']
     _order = 'sequence, id'
     _trash_what = 'Category tile'

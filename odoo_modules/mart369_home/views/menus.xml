@@ -1,52 +1,41 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-    <!-- Its own app in the main menu. -->
-    <menuitem id="menu_mart369_root"
-              name="369 Mart"
-              web_icon="mart369_home,static/description/icon.png"
-              sequence="45"/>
-
     <!-- The front door: the visual builder. Opens first. -->
     <menuitem id="menu_mart369_home_builder"
               name="Home Page"
-              parent="menu_mart369_root"
+              parent="mart369.menu_mart369_root"
               action="action_mart369_home_builder"
               sequence="10"/>
 
     <!-- The form-based screens, for anything the builder does not expose. -->
-    <menuitem id="menu_mart369_advanced"
-              name="Advanced"
-              parent="menu_mart369_root"
-              sequence="90"/>
-
     <menuitem id="menu_mart369_home_config"
               name="Home Page Settings"
-              parent="menu_mart369_advanced"
+              parent="mart369.menu_mart369_advanced"
               action="action_mart369_home_config"
               sequence="10"/>
 
     <menuitem id="menu_mart369_home_section"
               name="Home Sections"
-              parent="menu_mart369_advanced"
+              parent="mart369.menu_mart369_advanced"
               action="action_mart369_home_section"
               sequence="20"/>
 
     <menuitem id="menu_mart369_home_banner"
               name="Banners"
-              parent="menu_mart369_advanced"
+              parent="mart369.menu_mart369_advanced"
               action="action_mart369_home_banner"
               sequence="30"/>
 
     <menuitem id="menu_mart369_home_tile"
               name="Category Tiles"
-              parent="menu_mart369_advanced"
+              parent="mart369.menu_mart369_advanced"
               action="action_mart369_home_tile"
               sequence="40"/>
 
     <menuitem id="menu_mart369_home_tab"
               name="Tabs"
-              parent="menu_mart369_advanced"
+              parent="mart369.menu_mart369_advanced"
               action="action_mart369_home_tab"
               sequence="50"/>
 

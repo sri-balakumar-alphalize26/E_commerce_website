@@ -33,6 +33,7 @@ on in one click.
     'author': '369 Mart',
     'license': 'LGPL-3',
     'depends': [
+        'mart369',
         'mart369_cart',
         'mart369_payment',
         'stock',

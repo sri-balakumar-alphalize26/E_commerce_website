@@ -146,7 +146,7 @@
 
     <menuitem id="menu_mart369_catalog"
               name="Catalog"
-              parent="mart369_home.menu_mart369_root"
+              parent="mart369.menu_mart369_root"
               action="action_mart369_catalog"
               groups="base.group_system"
               sequence="40"/>
@@ -155,7 +155,7 @@
     <record id="view_product_template_form_mart369_catalog" model="ir.ui.view">
         <field name="name">product.template.form.mart369.catalog</field>
         <field name="model">product.template</field>
-        <field name="inherit_id" ref="mart369_home.mart369_product_template_form_inherit"/>
+        <field name="inherit_id" ref="mart369.view_product_template_form_mart369"/>
         <field name="arch" type="xml">
             <field name="mart_unit_text" position="before">
                 <field name="mart_brand" placeholder="369 Fresh"/>

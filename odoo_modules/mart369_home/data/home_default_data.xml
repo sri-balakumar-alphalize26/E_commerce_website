@@ -32,7 +32,7 @@
 
         <!-- ══════════════════════ Settings ══════════════════════ -->
 
-        <record id="home_config" model="mart369.home.config">
+        <record id="home_config" model="mart369.config">
             <field name="name">Home Page Settings</field>
             <field name="default_rail_limit">12</field>
             <field name="cache_seconds">60</field>

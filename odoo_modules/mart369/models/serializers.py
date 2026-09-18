@@ -87,9 +87,14 @@ def slugify(value):
 
 
 class Mart369Serializable(models.AbstractModel):
-    """Helpers every home-page model shares."""
+    """Helpers every 369 Mart model shares.
 
-    _name = 'mart369.home.serializable'
+    Lived in mart369_home until the home page stopped being the foundation.
+    Four modules outside home use it - cart, catalog, order and product - so it
+    belongs in the base rather than in one of the options.
+    """
+
+    _name = 'mart369.serializable'
     _description = '369 Mart JSON helpers'
 
     def _lines_to_list(self, text):
@@ -99,7 +104,7 @@ class Mart369Serializable(models.AbstractModel):
     def _api_base(self):
         """Prefix for image URLs. Empty means relative, which is what you
         want whenever the app can proxy /web/image to Odoo."""
-        return self.env['mart369.home.config'].sudo()._get().image_base_url or ''
+        return self.env['mart369.config'].sudo()._get().image_base_url or ''
 
     def _image_url(self, field='image_512', size='256x256', record=None):
         """A /web/image URL the phone app can load without logging in."""

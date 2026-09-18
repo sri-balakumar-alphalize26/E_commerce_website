@@ -19,7 +19,8 @@ grouped by status (New / Active / Dormant) and a full profile per customer.
 """,
     'author': '369 Mart',
     'license': 'LGPL-3',
-    'depends': ['auth_signup', 'website_sale', 'phone_validation', 'mart369_home'],
+    'depends': [
+        'mart369','auth_signup', 'website_sale', 'phone_validation'],
     'data': [
         'security/ir.model.access.csv',
         'data/auth_settings.xml',

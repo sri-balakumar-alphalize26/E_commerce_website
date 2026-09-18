@@ -34,7 +34,7 @@ class Mart369Trashable(models.AbstractModel):
 
     @api.depends('deleted_at')
     def _compute_trash_days_left(self):
-        keep = self.env['mart369.home.config'].sudo()._trash_days()
+        keep = self.env['mart369.config'].sudo()._trash_days()
         now = fields.Datetime.now()
         for rec in self:
             if not rec.deleted_at:

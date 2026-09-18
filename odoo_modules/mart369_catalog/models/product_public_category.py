@@ -17,7 +17,7 @@ for Fashion and Books, which have no products yet.
 from odoo import api, fields, models
 from odoo.exceptions import ValidationError
 
-from odoo.addons.mart369_home.models.serializers import slugify
+from odoo.addons.mart369.models.serializers import slugify
 
 # Which of the app's two storefronts a category belongs to. Quick is the
 # 10-minute grocery run; Express is everything that ships over days.

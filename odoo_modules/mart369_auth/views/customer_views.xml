@@ -419,7 +419,7 @@
 
     <menuitem id="menu_mart369_customers"
               name="Customers"
-              parent="mart369_home.menu_mart369_root"
+              parent="mart369.menu_mart369_root"
               action="action_mart369_customers"
               groups="base.group_system"
               sequence="20"/>

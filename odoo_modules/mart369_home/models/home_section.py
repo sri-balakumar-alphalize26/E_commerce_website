@@ -5,7 +5,7 @@ from markupsafe import Markup, escape
 from odoo import api, fields, models
 from odoo.fields import Domain
 
-from .serializers import ART_CHOICES, slugify
+from odoo.addons.mart369.models.serializers import ART_CHOICES, slugify
 
 
 class Mart369HomeSection(models.Model):
@@ -18,7 +18,7 @@ class Mart369HomeSection(models.Model):
 
     _name = 'mart369.home.section'
     _description = '369 Mart Home Section'
-    _inherit = ['mart369.home.serializable', 'mart369.home.trashable']
+    _inherit = ['mart369.serializable', 'mart369.home.trashable']
     _order = 'sequence, id'
     _trash_what = 'Home section'
 
@@ -124,7 +124,7 @@ class Mart369HomeSection(models.Model):
     def _base_domain(self):
         """Products a row may ever show: published, and in stock if asked."""
         domain = Domain([('is_published', '=', True)])
-        config = self.env['mart369.home.config'].sudo()._get()
+        config = self.env['mart369.config'].sudo()._get()
         Template = self.env['product.template']
         if config.hide_out_of_stock and 'free_qty' in Template._fields:
             domain &= Domain([('free_qty', '>', 0)])
@@ -346,7 +346,7 @@ class Mart369HomeSection(models.Model):
         """One product card. Delegates to the shared helper so the home
         page and the product page cannot drift apart."""
         self.ensure_one()
-        return self.env['mart369.home.serializable']._serialize_product(
+        return self.env['mart369.serializable']._serialize_product(
             product, line, price_ctx, self.mode_id.key)
 
     # ---------------------------------------------------------- the builder

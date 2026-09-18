@@ -7,12 +7,14 @@ _logger = logging.getLogger(__name__)
 
 
 class Mart369HomeConfig(models.Model):
-    """The one settings record. Global switches plus the two app modes."""
+    """The home page's own settings, added to the shared ones.
 
-    _name = 'mart369.home.config'
-    _description = '369 Mart Home Page Settings'
+    `image_base_url`, `cache_seconds` and `_get()` live on `mart369.config` in
+    the base module, because the cart, the catalogue and the product page read
+    them too. What is left here is genuinely about home pages.
+    """
 
-    name = fields.Char(default='Home Page Settings', readonly=True)
+    _inherit = 'mart369.config'
 
     mode_ids = fields.One2many(
         'mart369.home.mode', 'config_id', string='App Modes',
@@ -20,23 +22,11 @@ class Mart369HomeConfig(models.Model):
              'and Express. Each one has its own banners, tiles and sections.')
 
     # ── How the app reaches the images ──
-    image_base_url = fields.Char(
-        string='Image address',
-        help='Leave this empty in almost every case: the app then gets short '
-             'addresses like /web/image/... and loads them through itself.\n'
-             'Only fill it in (e.g. https://shop.example.com) when the app '
-             'cannot pass image requests through to Odoo.')
-
     # ── Defaults and behaviour ──
     default_rail_limit = fields.Integer(
         string='Products per row', default=12,
         help='How many products a new row shows before the customer scrolls. '
              'Each row can override this.')
-    cache_seconds = fields.Integer(
-        string='Remember for (seconds)', default=60,
-        help='How long the app may reuse the last home page it fetched before '
-             'asking again. 60 is a good balance. Set 0 while you are making '
-             'changes and want to see them instantly.')
     trash_days = fields.Integer(
         string='Keep removed items for (days)', default=30,
         help='Removing a banner, tile, tab or row puts it in the Trash '
@@ -85,14 +75,6 @@ class Mart369HomeConfig(models.Model):
         if gone:
             _logger.info('369 Mart: emptied %s item(s) from the Trash', gone)
         return gone
-
-    @api.model
-    def _get(self):
-        """The settings record, created on first use."""
-        rec = self.search([], limit=1)
-        if not rec:
-            rec = self.create({})
-        return rec
 
     # ------------------------------------------------------------- serialise
 

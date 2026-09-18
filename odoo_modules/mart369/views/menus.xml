@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--
+        The root menu every 369 Mart module hangs its own entry off. It lived in
+        mart369_home while the home page was the foundation, which meant the
+        menu disappeared if you uninstalled the home page - taking every other
+        module's screens with it.
+    -->
+    <menuitem id="menu_mart369_root"
+              name="369 Mart"
+              web_icon="mart369,static/description/icon.png"
+              sequence="45"/>
+
+    <!--
+        A container for the settings screens each module adds. Generic, so it
+        belongs with the root menu rather than inside the home page.
+    -->
+    <menuitem id="menu_mart369_advanced"
+              name="Advanced"
+              parent="menu_mart369_root"
+              sequence="90"/>
+
+</odoo>

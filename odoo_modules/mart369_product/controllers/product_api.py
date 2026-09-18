@@ -12,7 +12,7 @@ mart369.product.page so the tests and the builder preview share it.
 from odoo import http
 from odoo.http import request
 
-from odoo.addons.mart369_home.controllers.home_api import _PUBLIC_JSON
+from odoo.addons.mart369.controllers.public import _PUBLIC_JSON
 
 
 class Mart369ProductApi(http.Controller):
@@ -26,7 +26,7 @@ class Mart369ProductApi(http.Controller):
                 {'error': 'not_found', 'id': product_id}, status=404)
 
         payload = env['mart369.product.page'].sudo().payload(product)
-        config = env['mart369.home.config'].sudo()._get()
+        config = env['mart369.config'].sudo()._get()
         return request.make_json_response(payload, headers=[
             ('Cache-Control',
              'public, max-age=%d' % max(config.cache_seconds or 0, 0)),

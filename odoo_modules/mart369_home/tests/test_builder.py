@@ -129,7 +129,7 @@ class TestTrash(TransactionCase):
                              self.Mode.builder_load('quick')['banners']])
 
     def test_days_left_counts_down_and_rounds_up(self):
-        config = self.env['mart369.home.config']._get()
+        config = self.env['mart369.config']._get()
         config.trash_days = 30
         self.banner.action_trash()
         self.assertEqual(self.banner.trash_days_left, 30)
@@ -139,24 +139,24 @@ class TestTrash(TransactionCase):
                          'Two hours left is one day left, not zero.')
 
     def test_cron_empties_only_what_is_past_its_time(self):
-        config = self.env['mart369.home.config']._get()
+        config = self.env['mart369.config']._get()
         config.trash_days = 30
         fresh = self.env.ref('mart369_home.banner_b4')
         fresh.action_trash()
         self.banner.action_trash()
         self.banner.deleted_at = fields.Datetime.now() - timedelta(days=31)
 
-        gone = self.env['mart369.home.config']._cron_purge_trash()
+        gone = self.env['mart369.config']._cron_purge_trash()
         self.assertEqual(gone, 1)
         self.assertFalse(self.banner.exists(), 'The expired one is gone.')
         self.assertTrue(fresh.exists(), 'The fresh one stays.')
 
     def test_zero_days_keeps_everything(self):
-        config = self.env['mart369.home.config']._get()
+        config = self.env['mart369.config']._get()
         config.trash_days = 0
         self.banner.action_trash()
         self.banner.deleted_at = fields.Datetime.now() - timedelta(days=999)
-        self.assertEqual(self.env['mart369.home.config']._cron_purge_trash(), 0)
+        self.assertEqual(self.env['mart369.config']._cron_purge_trash(), 0)
         self.assertTrue(self.banner.exists())
 
     def test_a_trashed_row_leaves_the_page(self):

@@ -1,7 +1,4 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_mart369_config_user,mart369.home.config user,model_mart369_home_config,base.group_user,1,0,0,0
-access_mart369_config_designer,mart369.home.config designer,model_mart369_home_config,website.group_website_designer,1,1,1,0
-access_mart369_config_manager,mart369.home.config manager,model_mart369_home_config,base.group_system,1,1,1,1
 access_mart369_mode_user,mart369.home.mode user,model_mart369_home_mode,base.group_user,1,0,0,0
 access_mart369_mode_designer,mart369.home.mode designer,model_mart369_home_mode,website.group_website_designer,1,1,1,0
 access_mart369_mode_manager,mart369.home.mode manager,model_mart369_home_mode,base.group_system,1,1,1,1

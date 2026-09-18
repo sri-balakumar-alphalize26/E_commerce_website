@@ -1,6 +1,6 @@
 from odoo import fields, models
 
-from .serializers import ART_CHOICES
+from odoo.addons.mart369.models.serializers import ART_CHOICES
 
 
 class ProductTemplate(models.Model):

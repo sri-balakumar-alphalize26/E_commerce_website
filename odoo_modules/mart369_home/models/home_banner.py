@@ -2,7 +2,7 @@ from markupsafe import Markup, escape
 
 from odoo import api, fields, models
 
-from .serializers import TONE_CHOICES, TONE_CSS, slugify
+from odoo.addons.mart369.models.serializers import TONE_CHOICES, TONE_CSS, slugify
 
 
 class Mart369HomeBanner(models.Model):
@@ -11,7 +11,7 @@ class Mart369HomeBanner(models.Model):
 
     _name = 'mart369.home.banner'
     _description = '369 Mart Home Banner'
-    _inherit = ['image.mixin', 'mart369.home.serializable',
+    _inherit = ['image.mixin', 'mart369.serializable',
                 'mart369.home.trashable']
     _order = 'sequence, id'
     _trash_what = 'Banner'

@@ -15,7 +15,7 @@ import logging
 from odoo import http
 from odoo.http import request
 
-from odoo.addons.mart369_home.controllers.home_api import _PUBLIC_JSON
+from odoo.addons.mart369.controllers.public import _PUBLIC_JSON
 
 _logger = logging.getLogger(__name__)
 
@@ -45,7 +45,7 @@ class Mart369CatalogApi(http.Controller):
 
     def _cached(self, payload):
         """Answer with the same cache window the home feed uses."""
-        config = request.env['mart369.home.config'].sudo()._get()
+        config = request.env['mart369.config'].sudo()._get()
         max_age = max(config.cache_seconds or 0, 0)
         return request.make_json_response(payload, headers=[
             ('Cache-Control', 'public, max-age=%d' % max_age),
@@ -53,7 +53,7 @@ class Mart369CatalogApi(http.Controller):
 
     def _cards(self, templates, mode_key=None):
         """Product cards, priced and signalled in one pass for the whole page."""
-        mixin = request.env['mart369.home.serializable'].sudo()
+        mixin = request.env['mart369.serializable'].sudo()
         templates = templates.sudo()
         price_ctx = mixin._price_context_for(templates)
         return [mixin._serialize_product(t, None, price_ctx, mode_key)

@@ -40,7 +40,7 @@ class TestProductApi(HttpCase):
     def test_the_card_matches_the_home_page(self):
         """The product page and the home page must describe a product
         identically, or the app shows two different prices for one thing."""
-        helper = self.env['mart369.home.serializable'].sudo()
+        helper = self.env['mart369.serializable'].sudo()
         ctx = helper._price_context_for(self.product)
         mode = 'all' if self.product.mart_delivery_text else 'quick'
         expected = helper._serialize_product(self.product, None, ctx, mode)

@@ -11,14 +11,14 @@
 
     <menuitem id="menu_mart369_orders"
               name="Orders"
-              parent="mart369_home.menu_mart369_root"
+              parent="mart369.menu_mart369_root"
               action="action_mart369_orders"
               groups="sales_team.group_sale_salesman"
               sequence="5"/>
 
     <menuitem id="menu_mart369_returns"
               name="Returns"
-              parent="mart369_home.menu_mart369_root"
+              parent="mart369.menu_mart369_root"
               action="action_mart369_returns"
               groups="sales_team.group_sale_salesman"
               sequence="6"/>

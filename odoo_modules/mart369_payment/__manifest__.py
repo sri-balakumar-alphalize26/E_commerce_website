@@ -23,6 +23,7 @@ Staff see every payment and every wallet under **369 Mart -> Payments** and
     'author': '369 Mart',
     'license': 'LGPL-3',
     'depends': [
+        'mart369',
         'mart369_auth',
         'sale',
         'payment',

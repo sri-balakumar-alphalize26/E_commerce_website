@@ -151,7 +151,7 @@
 
     <menuitem id="menu_mart369_addresses"
               name="Addresses"
-              parent="mart369_home.menu_mart369_root"
+              parent="mart369.menu_mart369_root"
               action="action_mart369_addresses"
               groups="base.group_system"
               sequence="30"/>

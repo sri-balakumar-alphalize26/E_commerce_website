@@ -25,7 +25,7 @@ class Mart369ProductPage(models.AbstractModel):
     @api.model
     def payload(self, product):
         """Exactly what components/home/ProductDetail.jsx consumes."""
-        helper = self.env['mart369.home.serializable'].sudo()
+        helper = self.env['mart369.serializable'].sudo()
         Field = self.env['mart369.product.field'].sudo()
 
         shown = Field._resolve_sections(product)
@@ -63,7 +63,7 @@ class Mart369ProductPage(models.AbstractModel):
             keys = {f.key for rows in shown.values() for f, _v in rows}
 
         values = {f.key: v for rows in shown.values() for f, v in rows}
-        helper = self.env['mart369.home.serializable'].sudo()
+        helper = self.env['mart369.serializable'].sudo()
         d = {}
 
         if 'brand' in keys and values.get('brand'):

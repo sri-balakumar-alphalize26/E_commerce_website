@@ -25,7 +25,8 @@ The app reads it all from ``/369mart/home`` as JSON.
 """,
     'author': '369 Mart',
     'license': 'LGPL-3',
-    'depends': ['website_sale'],
+    'depends': [
+        'mart369','website_sale'],
     'data': [
         'security/ir.model.access.csv',
         'views/home_banner_views.xml',
@@ -45,7 +46,6 @@ The app reads it all from ``/369mart/home`` as JSON.
         # verbatim, so the builder's phone mock looks exactly like the app.
         'web.assets_backend': [
             # the shared palette must come first - siblings import it too
-            'mart369_home/static/src/scss/_mart_vars.scss',
             'mart369_home/static/src/scss/home_preview.scss',
             'mart369_home/static/src/scss/storefront.scss',
             'mart369_home/static/src/builder/**/*',
@@ -55,6 +55,6 @@ The app reads it all from ``/369mart/home`` as JSON.
         ],
     },
     'installable': True,
-    'application': True,
+    'application': False,
     'auto_install': False,
 }

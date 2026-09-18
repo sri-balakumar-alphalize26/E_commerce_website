@@ -26,7 +26,8 @@ real page. The app reads the result from ``/369mart/product/<id>``.
 """,
     'author': '369 Mart',
     'license': 'LGPL-3',
-    'depends': ['website_sale', 'rating', 'portal_rating', 'mart369_home'],
+    'depends': [
+        'mart369','website_sale', 'rating', 'portal_rating'],
     'data': [
         'security/ir.model.access.csv',
         'views/registry_views.xml',

@@ -2,8 +2,8 @@
 <odoo>
 
     <record id="mart369_home_config_view_form" model="ir.ui.view">
-        <field name="name">mart369.home.config.form</field>
-        <field name="model">mart369.home.config</field>
+        <field name="name">mart369.config.form.home</field>
+        <field name="model">mart369.config</field>
         <field name="arch" type="xml">
             <form string="Home Page Settings" create="false" delete="false">
                 <header>
@@ -53,12 +53,12 @@
          holding a single row. -->
     <record id="action_mart369_home_config" model="ir.actions.server">
         <field name="name">Home Page Settings</field>
-        <field name="model_id" ref="model_mart369_home_config"/>
+        <field name="model_id" ref="mart369.model_mart369_config"/>
         <field name="state">code</field>
         <field name="code">action = {
     'type': 'ir.actions.act_window',
     'name': 'Home Page Settings',
-    'res_model': 'mart369.home.config',
+    'res_model': 'mart369.config',
     'view_mode': 'form',
     'res_id': model._get().id,
     'target': 'current',

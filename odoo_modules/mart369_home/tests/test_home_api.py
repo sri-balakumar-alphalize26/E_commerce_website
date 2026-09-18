@@ -9,7 +9,7 @@ class TestMart369HomeApi(HttpCase):
 
     def setUp(self):
         super().setUp()
-        self.config = self.env['mart369.home.config']._get()
+        self.config = self.env['mart369.config']._get()
         self.mode = self.env['mart369.home.mode']._get('quick')
 
     def _fetch(self, path='/369mart/home'):
