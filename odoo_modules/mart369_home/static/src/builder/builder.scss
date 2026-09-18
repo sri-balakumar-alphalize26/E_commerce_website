@@ -113,6 +113,25 @@
     50% { transform: scale(0.7); opacity: 0.6; }
 }
 
+// Odoo hands .o_content `height: 100%` of the action manager, but .o_content
+// sits *below* the control panel inside it - so on these two screens it came
+// out 65px taller than the room it had, hung off the bottom of the window, and
+// .o_action_manager clips with overflow:hidden. Nothing inside could be
+// scrolled to, which is why the legend under the phone was unreachable.
+//
+// The action manager is display:block, so this makes it a column - scoped with
+// :has() to our own screens, because it is Odoo's element and every other view
+// in the backend uses it too.
+.o_action_manager:has(> .o_mart369_builder) {
+    display: flex;
+    flex-direction: column;
+}
+
+.o_content.o_mart369_builder {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
 // ================================================================== stage
 .mart-builder {
     display: flex;
@@ -129,11 +148,15 @@
     color: $mart-ink;
 
     .mart-stage {
+        // Full height of the builder, so the phone can be told to take
+        // whatever is left after the legend below it rather than guessing.
         flex: 0 0 auto;
         display: flex;
         flex-direction: column;
         gap: 16px;
         align-items: center;
+        height: 100%;
+        min-height: 0;
     }
 
     .mart-legend {
@@ -164,9 +187,17 @@
         container: mart-phone / inline-size;
         position: relative;
         width: 390px;
-        height: calc(100vh - 170px);
+        // Take the room the stage has left, not the room the window has.
+        // This was `calc(100vh - 170px)` with a 600px floor, but the builder
+        // renders below Odoo's navbar and control panel - so 100vh overshot
+        // the space it actually had, pushed the legend below the fold, and
+        // the only scroll that could reach it belonged to a container the
+        // wheel never lands on. Shrinking is right here: the phone is a
+        // preview frame, and the controls under it have to stay reachable.
+        flex: 1 1 auto;
+        height: auto;
         max-height: 860px;
-        min-height: 600px;
+        min-height: 0;
         padding: 14px;
         border-radius: 48px;
         background: linear-gradient(160deg, #2a3442, $mart-bezel 55%);

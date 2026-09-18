@@ -2,7 +2,7 @@
 <templates xml:space="preserve">
 
     <t t-name="mart369_product.ProductBuilder">
-        <Layout display="{ controlPanel: {} }" className="'o_mart369_builder h-100'">
+        <Layout display="{ controlPanel: {} }" className="'o_mart369_builder'">
             <t t-set-slot="layout-buttons">
                 <div class="mart-topbar">
                     <div class="mart-modes">
