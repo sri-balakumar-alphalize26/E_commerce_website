@@ -11,4 +11,4 @@ export function middleware(req) {
   return NextResponse.redirect(url);
 }
 
-export const config = { matcher: ["/account/:path*", "/checkout", "/order/:path*", "/track/:path*"] };
+export const config = { matcher: ["/account/:path*", "/admin/:path*", "/checkout", "/order/:path*", "/track/:path*"] };

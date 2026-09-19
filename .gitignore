@@ -7,3 +7,7 @@ out
 # Odoo compiled files (modules live in odoo_modules/)
 __pycache__/
 *.pyc
+
+# Playwright
+/test-results/
+/playwright-report/
