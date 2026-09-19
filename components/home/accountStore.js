@@ -37,11 +37,10 @@ export function useRemote(path, { enabled = true } = {}) {
 
 export const STAR_WORDS = ["", "Terrible", "Bad", "Okay", "Good", "Excellent"];
 
-/* Referral arithmetic the shop also sends with the invite list; these are the
-   labels the page prints before it has an answer. */
-export const REFER_REWARD = 100;
+/* How many friends the progress bar draws. Not money and not a promise: what
+   a referral pays is the shop's setting and arrives with the invite list.
+   There was a REFER_BONUS = 500 here for a milestone nothing pays. */
 export const REFER_GOAL = 5;
-export const REFER_BONUS = 500;
 
 /* ---------- time labels ---------- */
 export function ago(t, now = Date.now()) {

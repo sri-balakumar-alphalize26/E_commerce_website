@@ -201,7 +201,12 @@ class ResPartner(models.Model):
         return self.sudo().search([('mart369_referral_code', '=', code)], limit=1)
 
     def _mart369_referral_stats(self):
-        """The four numbers the referrals screen prints."""
+        """The numbers the referrals screen prints.
+
+        `reward` is included because the screen was printing a hardcoded 100
+        beside these - so changing the setting moved the totals and left the
+        promise saying something else.
+        """
         self.ensure_one()
         rows = self.mart369_referral_ids
         ordered = len(rows.filtered(lambda r: r.state == 'ordered'))
@@ -210,6 +215,7 @@ class ResPartner(models.Model):
         return {
             'ordered': ordered,
             'joined': joined,
+            'reward': reward,
             'earned': ordered * reward,
             'pending': (joined - ordered) * reward,
         }

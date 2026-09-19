@@ -24,7 +24,7 @@ import { Icon, Thumb, money } from "./shared";
 import { Amount, useRules } from "./Cart";
 import { BRAND_LABEL, UPI_APPS, upiOk } from "./payment";
 import {
-  REFER_BONUS, REFER_GOAL, REFER_REWARD, STAR_WORDS, ago, fmtDate, fmtDateTime, useRemote,
+  REFER_GOAL, STAR_WORDS, ago, fmtDate, fmtDateTime, useRemote,
 } from "./accountStore";
 
 const reduced = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
@@ -410,7 +410,7 @@ function ScratchSheet({ card, onClose, onReveal }) {
         )}
         {!started && !done && <span className="ax-hand" aria-hidden="true"><Icon n="pen" size={22} /></span>}
       </div>
-      <p className="ax-fine ax-center">{done ? (card.reward.type === "cash" ? "Cashback is in your 369 Wallet and never expires." : card.reward.type === "coupon" ? "Find it under Your coupons below." : "Every order above ₹199 earns a scratch card.") : "Drag your finger or mouse across the card."}</p>
+      <p className="ax-fine ax-center">{done ? (card.reward.type === "cash" ? "Cashback is in your 369 Wallet and never expires." : card.reward.type === "coupon" ? "Find it under Your coupons below." : "Every delivered order earns a scratch card.") : "Drag your finger or mouse across the card."}</p>
     </Sheet>
   );
 }
@@ -443,7 +443,7 @@ export function RewardsSec({ onNav, flash }) {
       </div>
 
       <section className="ac-card ax-block">
-        <div className="ac-card-head"><div><h3>Scratch cards</h3><p>Earned on orders above ₹199 and on referrals.</p></div></div>
+        <div className="ac-card-head"><div><h3>Scratch cards</h3><p>One for every order delivered.</p></div></div>
         <div className="ax-scratchgrid">
           {rw.scratch.map((s, i) => {
             const t = rewardText(s.reward);
@@ -733,9 +733,9 @@ export function NotifsSec({ orders, onNav, goSection }) {
    Refer & earn
    ========================================================================== */
 const REF_STATUS = {
-  ordered: { label: "Ordered", note: `${money(REFER_REWARD)} earned`, tone: "green" },
-  joined: { label: "Joined", note: "First order pending", tone: "blue" },
-  invited: { label: "Invited", note: "Hasn't joined yet", tone: "grey" },
+  ordered: { label: "Ordered", note: (reward) => `${money(reward)} earned`, tone: "green" },
+  joined: { label: "Joined", note: () => "First order pending", tone: "blue" },
+  invited: { label: "Invited", note: () => "Hasn't joined yet", tone: "grey" },
 };
 
 export function ReferSec({ user, flash }) {
@@ -750,11 +750,14 @@ export function ReferSec({ user, flash }) {
   const [freshId, setFreshId] = useState(null);
   const code = data?.code || "";
   const link = data?.link || "";
-  const message = `Get ${money(REFER_REWARD)} off your first 369 Mart order with my code ${code}. Computer parts, fast: ${link}`;
+  /* The shop's setting. It was a 100 written in here, so moving the setting
+     moved the totals and left the promise beside them saying something else. */
+  const reward = data?.reward ?? 0;
+  const message = `Shop computer parts at 369 Mart with my code ${code} - fast delivery: ${link}`;
   const ordered = refs.filter((r) => r.status === "ordered").length;
   const joined = refs.filter((r) => r.status !== "invited").length;
-  const earned = data?.earned ?? ordered * REFER_REWARD;
-  const pending = data?.pending ?? refs.filter((r) => r.status === "joined").length * REFER_REWARD;
+  const earned = data?.earned ?? 0;
+  const pending = data?.pending ?? 0;
 
   const copy = async () => { if (await copyText(code)) { setCopied(true); flash?.("Code copied"); setTimeout(() => setCopied(false), 1800); } };
   const share = async () => {
@@ -776,12 +779,12 @@ export function ReferSec({ user, flash }) {
       <section className="ax-refer">
         <div className="ax-refer-copy">
           <small>Refer & earn</small>
-          <h3>Invite friends, earn {money(REFER_REWARD)} each</h3>
-          <p>Your friend gets {money(REFER_REWARD)} off their first order above ₹299. You get {money(REFER_REWARD)} in your wallet when it's delivered.</p>
+          <h3>Invite friends, earn {money(reward)} each</h3>
+          <p>Share your code. When a friend signs up with it and places their first order, {money(reward)} goes into your 369 Wallet.</p>
         </div>
         <span className="ax-giftbox" aria-hidden="true">
           <i className="ax-gift-lid" /><i className="ax-gift-body" /><i className="ax-gift-ribbon" />
-          <b className="ax-gift-coin c1">₹</b><b className="ax-gift-coin c2">₹</b><b className="ax-gift-coin c3">₹</b>
+          <b className="ax-gift-coin c1">★</b><b className="ax-gift-coin c2">★</b><b className="ax-gift-coin c3">★</b>
         </span>
         <div className="ax-code">
           <span className="ax-code-box" aria-label={`Your code ${code}`}>
@@ -802,16 +805,18 @@ export function ReferSec({ user, flash }) {
           <span><small>Pending</small><b>{money(pending)}</b></span>
           <span><small>Friends joined</small><b>{joined}</b></span>
         </div>
+        {/* The bar counts friends. It used to promise a bonus at five that
+            nothing in the shop pays - a progress bar towards nothing. */}
         <div className="ax-goal" style={{ "--p": Math.min(1, joined / REFER_GOAL) }}>
-          <div className="ax-goal-bar"><i />{Array.from({ length: REFER_GOAL }, (_, k) => <b key={k} className={k < joined ? "ax-hit" : ""} style={{ "--k": k, left: `${((k + 1) / REFER_GOAL) * 100}%` }}>{k + 1 === REFER_GOAL ? <Icon n="gift" size={12} /> : k + 1}</b>)}</div>
-          <p>{joined >= REFER_GOAL ? `Bonus unlocked! ${money(REFER_BONUS)} is on its way.` : <>Invite <b>{REFER_GOAL - joined} more</b> friend{REFER_GOAL - joined > 1 ? "s" : ""} to unlock a <b>{money(REFER_BONUS)}</b> bonus</>}</p>
+          <div className="ax-goal-bar"><i />{Array.from({ length: REFER_GOAL }, (_, k) => <b key={k} className={k < joined ? "ax-hit" : ""} style={{ "--k": k, left: `${((k + 1) / REFER_GOAL) * 100}%` }}>{k + 1}</b>)}</div>
+          <p>{joined ? <>{joined} friend{joined > 1 ? "s have" : " has"} joined with your code. {money(reward)} for each first order.</> : <>Nobody has used your code yet. {money(reward)} lands in your wallet for each friend's first order.</>}</p>
         </div>
       </section>
 
       <section className="ac-card ax-block" style={{ "--i": 2 }}>
         <div className="ac-card-head"><div><h3>How it works</h3></div></div>
         <ol className="ax-steps">
-          {[["share", "Share your code", "Send it on WhatsApp or anywhere"], ["user", "Friend orders", `They get ${money(REFER_REWARD)} off above ₹299`], ["wallet", "You earn", `${money(REFER_REWARD)} lands in your wallet`]].map(([ic, t, d], k) => (
+          {[["share", "Share your code", "Send it on WhatsApp or anywhere"], ["user", "Friend orders", "They sign up with your code and place a first order"], ["wallet", "You earn", `${money(reward)} lands in your wallet`]].map(([ic, t, d], k) => (
             <li key={t} style={{ "--k": k }}><span><Icon n={ic} size={19} /></span><b>{t}</b><small>{d}</small></li>
           ))}
         </ol>
@@ -829,7 +834,7 @@ export function ReferSec({ user, flash }) {
             return (
               <li key={r.id} className={freshId === r.id ? "ax-fresh" : ""} style={{ "--i": i }}>
                 <span className={"ax-av ax-" + s.tone}>{r.name.split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase()}</span>
-                <span className="ax-friend-txt"><b>{r.name}</b><small>{s.note}</small></span>
+                <span className="ax-friend-txt"><b>{r.name}</b><small>{s.note(reward)}</small></span>
                 <span className={"ax-pill ax-" + s.tone}>{s.label}</span>
                 {r.status !== "ordered" && (
                   reminded[r.id] ? <span className="ax-reminded"><Icon n="check" size={13} />Reminded</span>

@@ -154,6 +154,10 @@ class Mart369Serializable(models.AbstractModel):
             'symbol': currency.symbol or currency.name or '',
             'position': currency.position or 'before',
             'decimals': currency.decimal_places,
+            # How the digits group is the shop's too. Left to the browser, the
+            # same rupee price reads 189,000 in one country and 1,89,000 in
+            # another - and only one of those is how the shop writes it.
+            'locale': (self.env.lang or 'en_US').replace('_', '-'),
         }
 
     @api.model
