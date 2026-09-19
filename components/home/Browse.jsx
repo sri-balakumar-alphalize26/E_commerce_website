@@ -18,6 +18,7 @@ import { CATALOG, categoryBySlug, listable } from "./catalog";
 import { COUPONS } from "./Cart";
 import { SAMPLE_ORDERS } from "./Account";
 import { NavContext } from "./nav";
+import { useResource } from "@/lib/useFetch";
 
 const PAGE = 12;
 const SORTS = [
@@ -637,7 +638,7 @@ export function SearchResults({ q, byId, cart, setQty, mode = "quick" }) {
           <h3>{term ? <>No results for “{q}”</> : "Search 369 Mart"}</h3>
           {suggestion
             ? <p className="sp-dym">Did you mean <button onClick={() => nav("search", suggestion)}>“{suggestion}”</button>?</p>
-            : <p>{term ? "Check the spelling, or try a more general word like “soap”, “rice” or “charger”." : "Find groceries, personal care, electronics and more."}</p>}
+            : <p>{term ? "Check the spelling, or try a more general word like “ssd”, “keyboard” or “router”." : "Find processors, monitors, peripherals and more."}</p>}
           <div className="cg-soon-links">
             {CATALOG.filter((c) => c.subs.length).slice(0, 5).map((c, k) => <button key={c.slug} style={{ "--k": k }} onClick={() => nav("category", c.slug)}>{c.name}<Icon n="right" size={14} /></button>)}
           </div>
@@ -861,8 +862,14 @@ export function SiteFooter() {
     io.observe(ref);
     return () => io.disconnect();
   }, [ref]);
+  /* The shop's own sections, from the shop. Hard-coding them here is how the
+     footer ended up advertising groceries long after the shop stopped selling
+     them - rename a section in Odoo and this follows. If it cannot be reached
+     the column is simply shorter; it never guesses. */
+  const { data: catalog } = useResource("/catalog");
+  const shop = (catalog?.categories || []).map((c) => [c.name, () => nav("category", c.slug)]);
   const cols = [
-    ["Shop", CATALOG.filter((c) => c.subs.length).map((c) => [c.name, () => nav("category", c.slug)]).concat([["Offers", () => nav("offers")]])],
+    ["Shop", shop.concat([["Offers", () => nav("offers")]])],
     ["Help", [["Track your order", () => nav("account")], ["Cancellations & returns", null], ["Delivery areas", null], ["FAQs", () => nav("account")], ["Contact us", null]]],
     ["Company", [["About 369 Mart", null], ["Careers", null], ["Sell on 369 Mart", null], ["Press", null]]],
     ["Policies", [["Terms of use", null], ["Privacy policy", null], ["Shipping policy", null], ["Grievance redressal", null]]],
@@ -873,7 +880,7 @@ export function SiteFooter() {
         <div className="ft-top">
           <div className="ft-brand">
             <a className="ft-logo" href="/" onClick={(e) => { e.preventDefault(); nav("home"); }}>369<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18 18 6M9 6h9v9" /></svg>Mart</a>
-            <p>Groceries in minutes, everything else in days.</p>
+            <p>Computer parts and gear. In minutes, or in days.</p>
             <div className="ft-apps">
               <a href="#" onClick={(e) => e.preventDefault()}><Icon n="phone" size={16} /><span><small>Get it for</small>Android</span></a>
               <a href="#" onClick={(e) => e.preventDefault()}><Icon n="phone" size={16} /><span><small>Get it for</small>iPhone</span></a>

@@ -189,7 +189,7 @@ function CategoryStrip({ cats, onPick }) {
   return (
     <section className={"hm-cats" + (inView ? " hm-in" : "")} ref={ref} aria-label="Shop by category">
       {cats.map((c, i) => (
-        <a key={c.key} href={TILE_TO_ROUTE[c.key] ? "/category/" + TILE_TO_ROUTE[c.key] : "#"} onClick={(e) => { e.preventDefault(); onPick?.(c); }} className="hm-cat" style={{ "--i": i }}>
+        <a key={c.key} href={c.route || TILE_TO_ROUTE[c.key] ? "/category/" + (c.route || TILE_TO_ROUTE[c.key]) : "#"} onClick={(e) => { e.preventDefault(); onPick?.(c); }} className="hm-cat" style={{ "--i": i }}>
           <span className="hm-cat-img" style={{ background: c.bg }}>{c.image ? <img src={c.image} alt="" loading="lazy" /> : <ProductArt art={c.art} color={c.color} label={c.t} />}</span>
           <span>{c.label}</span>
         </a>
@@ -507,7 +507,10 @@ export default function Home({
     });
     return hit?.key || null;
   }, [view, route.param, tabs]);
-  const pickTab = (key) => { const r = TAB_TO_ROUTE[key]; if (r) nav(r[0], r[1] ?? null); };
+  /* A tab only tells us its key, so the key has to be the category's address.
+     The old map is kept for the handful of keys that are not categories at all
+     - home, offers - and anything it does not know is taken at face value. */
+  const pickTab = (key) => { const r = TAB_TO_ROUTE[key] || ["category", key]; nav(r[0], r[1] ?? null); };
 
   const quickPicks = useMemo(() => liveModes[mode].sections.flatMap((s) => s.items || []).map((p) => byId[p.id] || p).filter((p) => p.stock !== 0).slice(0, 6), [mode, liveModes, byId]);
   useEffect(() => {
@@ -524,7 +527,7 @@ export default function Home({
 
   const withTabs = view === "home" || view === "category" || view === "offers";
   const browsing = ["home", "product", "category", "search", "offers", "buyagain", "track"].includes(view);
-  const viewAll = (s) => SECTION_TO_ROUTE[s.key] && nav("category", SECTION_TO_ROUTE[s.key]);
+  const viewAll = (s) => (s.route || SECTION_TO_ROUTE[s.key]) && nav("category", s.route || SECTION_TO_ROUTE[s.key]);
   const common = { byId, cart, setQty };
 
   let body;
@@ -634,14 +637,14 @@ export default function Home({
           </p>
         )}
         <BannerCarousel banners={banners} />
-        <CategoryStrip cats={categories} onPick={(c) => TILE_TO_ROUTE[c.key] && nav("category", TILE_TO_ROUTE[c.key])} />
+        <CategoryStrip cats={categories} onPick={(c) => (c.route || TILE_TO_ROUTE[c.key]) && nav("category", c.route || TILE_TO_ROUTE[c.key])} />
         {sections.map((s, i) =>
           s.banner ? (
             <div className="hm-inline-banners" key={"bn" + i}>
               {s.banner.map((id, k) => bannerById[id] && <Banner key={id} b={bannerById[id]} i={k} />)}
             </div>
           ) : (
-            <Rail key={s.key} section={{ ...s, items: s.items.map((p) => byId[p.id] || p) }} cart={cart} setQty={setQty} onViewAll={SECTION_TO_ROUTE[s.key] ? viewAll : undefined} />
+            <Rail key={s.key} section={{ ...s, items: s.items.map((p) => byId[p.id] || p) }} cart={cart} setQty={setQty} onViewAll={s.route || SECTION_TO_ROUTE[s.key] ? viewAll : undefined} />
           )
         )}
         {recent.length > 1 && <Rail key="recent" section={{ key: "recent", title: "Recently viewed", subtitle: "Pick up where you left off", items: recent }} cart={cart} setQty={setQty} />}

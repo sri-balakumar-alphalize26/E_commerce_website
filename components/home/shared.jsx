@@ -9,7 +9,7 @@ export const OpenContext = createContext(null);
 import ProductArt from "./art";
 
 export const inr = (n) => "₹" + Number(n).toLocaleString("en-IN");
-export const SEARCH_WORDS = ["Atta", "Bananas", "Coffee beans", "Headphones", "Green tea", "Dinner set"];
+export const SEARCH_WORDS = ["RTX 4060", "Mechanical keyboard", "1TB SSD", "Wi-Fi router", "27 inch monitor", "USB-C cable"];
 
 /* ---------- icons ---------- */
 const P = {
