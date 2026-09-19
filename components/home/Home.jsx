@@ -31,10 +31,9 @@ import { liveStatus } from "./orderState";
 import { installAudioUnlock } from "./sound";
 import { SAMPLE_ORDERS } from "./Account";
 import { WALLET_BALANCE } from "./payment";
-import { ALL_BANNERS, ALL_CATEGORIES, ALL_SECTIONS, ALL_TABS, BANNERS, CATEGORIES, SECTIONS, TABS } from "./sampleData";
 import { SECTION_TO_ROUTE, TAB_TO_ROUTE, TILE_TO_ROUTE, buildIndex, enrich, listable, variantsOf } from "./catalog";
 import { NavContext, pathToRoute, routeToPath } from "./nav";
-import { api } from "@/lib/api";
+import { useResource } from "@/lib/useFetch";
 import { BuyAgainPage, CategoryPage, NotFoundView, OffersPage, SearchResults, SiteFooter } from "./Browse";
 
 /* ---------- header ---------- */
@@ -263,10 +262,20 @@ function ModeSwitchOverlay({ fx }) {
 }
 
 /* ---------- page ---------- */
-const DEFAULT_MODES = {
-  quick: { tabs: TABS, banners: BANNERS, categories: CATEGORIES, sections: SECTIONS, freeDeliveryAt: 499 },
-  all: { tabs: ALL_TABS, banners: ALL_BANNERS, categories: ALL_CATEGORIES, sections: ALL_SECTIONS, freeDeliveryAt: 999 },
-};
+
+/* What the page is made of before the shop's own home feed arrives.
+
+   It used to be a full sample catalogue, which meant that when the backend
+   could not be reached the shop quietly showed a different shop - groceries in
+   a computer store - with no sign anything was wrong. An empty frame that
+   admits it knows nothing is the honest version.
+
+   It must stay an object with both mode keys. `liveModes[mode]` is destructured
+   without a guard below, and `pick("quick")` / `pick("all")` name both modes
+   outright, so null here white-screens the page before any error state could
+   render. */
+const EMPTY_MODE = { tabs: [], banners: [], categories: [], sections: [], freeDeliveryAt: 0 };
+const DEFAULT_MODES = { quick: EMPTY_MODE, all: EMPTY_MODE };
 const RECENT_KEY = "369mart.recent";
 
 export default function Home({
@@ -330,16 +339,11 @@ export default function Home({
       return next;
     }),
   }), [wishIds]);
-  /* The home feed, from Odoo. It arrives in exactly the shape DEFAULT_MODES
-     has — one key per active mode — so it drops straight in. Merged over the
-     prop rather than replacing it, so a mode the server does not send still
-     renders, and so the page is never blank while the request is in flight. */
-  const [feed, setFeed] = useState(null);
-  useEffect(() => {
-    let alive = true;
-    api("/home").then((d) => { if (alive && d && typeof d === "object") setFeed(d); }).catch(() => {});
-    return () => { alive = false; };
-  }, []);
+  /* The home feed, from Odoo: one key per active mode, in the shape the page
+     already reads. `stale` is how many seconds old the answer is when the shop
+     could not be reached and the proxy handed back the last one it kept - the
+     page still shows real products, and says so. */
+  const { data: feed, error: feedError, loading: feedLoading, stale: feedStale, reload: reloadFeed } = useResource("/home");
   const liveModes = useMemo(() => (feed ? { ...modes, ...feed } : modes), [feed, modes]);
 
   const { tabs, banners, categories, sections, freeDeliveryAt } = liveModes[mode];
@@ -611,6 +615,24 @@ export default function Home({
   } else {
     body = (
       <main className="hm-wrap hm-main hm-view-home" key={"m" + mode}>
+        {feedLoading && !sections.length ? (
+          /* Nothing to show yet. A frame, not a guess. */
+          <div className="co-skel" aria-label="Loading the shop"><span /><span /><span /></div>
+        ) : feedError && !sections.length ? (
+          /* Nothing kept either. Say so plainly and offer the one useful action. */
+          <div className="ls-empty" role="alert">
+            <div className="ls-empty-art"><ProductArt art="Router" color="#1f3b4d" /></div>
+            <h3>We can&apos;t reach the store</h3>
+            <p>{feedError.message}</p>
+            <button className="ls-primary" onClick={reloadFeed}>Try again</button>
+          </div>
+        ) : null}
+        {feedStale > 0 && (
+          <p className="hm-stale" role="status">
+            Showing the last update from {new Date(Date.now() - feedStale * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+            {" "}&mdash; we can&apos;t reach the store right now.
+          </p>
+        )}
         <BannerCarousel banners={banners} />
         <CategoryStrip cats={categories} onPick={(c) => TILE_TO_ROUTE[c.key] && nav("category", TILE_TO_ROUTE[c.key])} />
         {sections.map((s, i) =>
@@ -638,7 +660,7 @@ export default function Home({
       {withTabs && <Tabs key={"t" + mode} tabs={tabs} active={activeTab} onChange={pickTab} />}
       {body}
       {!["cart", "checkout", "order"].includes(view) && <SiteFooter />}
-      {view === "home" && <FreeDelivery total={total} threshold={freeDeliveryAt} />}
+      {view === "home" && freeDeliveryAt > 0 && <FreeDelivery total={total} threshold={freeDeliveryAt} />}
       {browsing && (
         <MiniCart lines={lines} count={count} total={total} freeAt={freeDeliveryAt} setQty={setQty}
           onViewCart={() => nav("cart")} onCheckout={() => startCheckout({ how: "online" })} hidden={!!fx} />

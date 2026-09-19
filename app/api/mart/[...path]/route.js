@@ -39,6 +39,37 @@ function outward(status, location = "") {
   return status;
 }
 
+/* ---------------------------------------------------------------- last good
+
+   When Odoo stops answering, the shop should show the last real answer it gave
+   — not nothing, and certainly not something made up. This is the same trick a
+   CDN does with stale-if-error, one hop closer.
+
+   Only these feeds are kept. They are all auth='public' with save_session off,
+   so every visitor gets a byte-identical body and there is nothing personal to
+   leak by handing one visitor's copy to the next. Everything absent from this
+   list — orders, wallet, payment, addresses, account, support — is never
+   stored and never served from here. */
+const KEEPABLE = new Set([
+  "home", "catalog", "browse", "product", "search",
+  "cart", "slots", "serviceability", "products", "offers",
+]);
+const LAST_GOOD = new Map(); /* url -> { body, at } */
+const KEEP_MAX = 200;
+
+function keepable(method, path) {
+  if (method !== "GET" || !KEEPABLE.has(path[0])) return false;
+  /* One exception inside an allowed prefix: a customer's own search history. */
+  return !(path[0] === "search" && path[1] === "recent");
+}
+
+function remember(url, body) {
+  if (LAST_GOOD.size >= KEEP_MAX && !LAST_GOOD.has(url)) {
+    LAST_GOOD.delete(LAST_GOOD.keys().next().value); /* oldest out */
+  }
+  LAST_GOOD.set(url, { body, at: Date.now() });
+}
+
 async function handle(req, ctx) {
   const { path } = await ctx.params;
   if (badPath(path)) return NextResponse.json({ ok: false, error: "Unknown request." }, { status: 404 });
@@ -69,6 +100,23 @@ async function handle(req, ctx) {
   const body = method === "POST" || method === "PATCH" ? await req.json().catch(() => undefined) : undefined;
   const { status, data, session: rotated, location } = await odooFetch(target, { method, body, session });
   const out = outward(status, location);
+  const keep = keepable(method, path);
+
+  /* Odoo could not answer at all. Hand back the last thing it did say, rather
+     than let the shop fall back to something invented. Only 502 and 503 count:
+     a 404 is a real answer and has to reach the app, or a product page loses
+     its ability to say the product is not there. */
+  if ((out === 502 || out === 503) && keep) {
+    const held = LAST_GOOD.get(target);
+    if (held) {
+      const res = NextResponse.json(held.body, { status: 200 });
+      res.headers.set("Cache-Control", "no-store");
+      res.headers.set("x-mart-stale-age", String(Math.round((Date.now() - held.at) / 1000)));
+      return res;
+    }
+  }
+
+  if (out >= 200 && out < 300 && keep) remember(target, data);
 
   const res = NextResponse.json(data, { status: out });
   /* Never let a shared cache hold an answer that was fetched as this customer.

@@ -380,3 +380,17 @@
   .hm-page *, .hm-page *::before, .hm-page *::after { animation: none !important; transition: none !important; }
   .hm-card, .hm-cat { opacity: 1 !important; transform: none !important; }
 }
+
+/* Shown when the shop could not be reached and the page is drawn from the last
+   answer that was kept. A quiet line, not a blocker: the products below are
+   real, they are simply not fresh. */
+.hm-stale {
+  display: flex; align-items: center; gap: 8px;
+  margin: 0 0 12px; padding: 9px 14px; border-radius: 12px;
+  background: #fdf4e6; border: 1px solid #f0ddbe; color: #7a5312;
+  font-size: 13px; font-weight: 600;
+}
+.hm-stale::before {
+  content: ""; flex: none; width: 8px; height: 8px; border-radius: 50%;
+  background: #d9911f; box-shadow: 0 0 0 3px rgba(217, 145, 31, 0.18);
+}

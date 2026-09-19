@@ -195,7 +195,7 @@ export default function MiniCart({ lines, count, total, freeAt = 499, setQty, on
                 <Row key={l.p.id} p={l.p} qty={l.qty} setQty={setQty} i={i} onOpen={(p) => close(() => openProduct?.(p, null))} />
               ))}
             </ul>
-            <FreeCheck total={total} threshold={freeAt} open={phase === "open"} />
+            {freeAt > 0 && <FreeCheck total={total} threshold={freeAt} open={phase === "open"} />}
             <div className="mc-sub"><span>Subtotal</span><b><Amount value={total} /></b></div>
             <div className="mc-actions">
               <button className="mc-view" onClick={() => close(onViewCart)}>View cart</button>
