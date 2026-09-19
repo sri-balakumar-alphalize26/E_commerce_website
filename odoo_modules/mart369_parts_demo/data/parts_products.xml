@@ -1,0 +1,1102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- A sample catalogue: 92 parts across 23 subcategories.
+
+         Two fields decide whether a product exists as far as the app is
+         concerned: is_published, and at least one public category. Without
+         both it is invisible on every screen.
+
+         mart_brand is set on every one. Left empty the storefront falls
+         back to the pack size, and a headset ends up branded "1 unit".
+
+         Roughly a third carry compare_list_price above list_price, which is
+         what the "Biggest savings" row ranks on - with none set that row
+         serialises to nothing and disappears from the page. -->
+    <data>
+        <record id="prod_cpus_1" model="product.template">
+        <field name="name">Intel Core i5-14400F</field>
+        <field name="list_price">16500</field>
+        <field name="compare_list_price">18900</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_cpus')])]"/>
+        <field name="mart_brand">Intel</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Cpu</field>
+        <field name="mart_color">#1f6f8b</field>
+        <field name="mart_badge">i5</field>
+        <field name="mart_features">10 cores, 16 threads
+Boost up to 4.7 GHz
+No integrated graphics - needs a graphics card
+LGA1700 socket</field>
+        <field name="mart_in_the_box">Processor, stock cooler, manual</field>
+        </record>
+        <record id="prod_cpus_2" model="product.template">
+        <field name="name">Intel Core i7-14700K</field>
+        <field name="list_price">34500</field>
+        <field name="compare_list_price">38900</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_cpus')])]"/>
+        <field name="mart_brand">Intel</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Cpu</field>
+        <field name="mart_color">#1f6f8b</field>
+        <field name="mart_badge">i7</field>
+        </record>
+        <record id="prod_cpus_3" model="product.template">
+        <field name="name">AMD Ryzen 5 7600X</field>
+        <field name="list_price">19800</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_cpus')])]"/>
+        <field name="mart_brand">AMD</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Cpu</field>
+        <field name="mart_color">#1f6f8b</field>
+        <field name="mart_badge">R5</field>
+        </record>
+        <record id="prod_cpus_4" model="product.template">
+        <field name="name">AMD Ryzen 7 7800X3D</field>
+        <field name="list_price">36900</field>
+        <field name="compare_list_price">41500</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_cpus')])]"/>
+        <field name="mart_brand">AMD</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Cpu</field>
+        <field name="mart_color">#1f6f8b</field>
+        <field name="mart_badge">R7</field>
+        </record>
+        <record id="prod_motherboards_1" model="product.template">
+        <field name="name">ASUS TUF Gaming B760M-Plus</field>
+        <field name="list_price">14200</field>
+        <field name="compare_list_price">16500</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_motherboards')])]"/>
+        <field name="mart_brand">ASUS</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Motherboard</field>
+        <field name="mart_color">#14532d</field>
+        <field name="mart_badge">B760</field>
+        </record>
+        <record id="prod_motherboards_2" model="product.template">
+        <field name="name">MSI MAG B650 Tomahawk</field>
+        <field name="list_price">19500</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_motherboards')])]"/>
+        <field name="mart_brand">MSI</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Motherboard</field>
+        <field name="mart_color">#14532d</field>
+        <field name="mart_badge">B650</field>
+        </record>
+        <record id="prod_motherboards_3" model="product.template">
+        <field name="name">Gigabyte Z790 Aorus Elite</field>
+        <field name="list_price">26400</field>
+        <field name="compare_list_price">29900</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_motherboards')])]"/>
+        <field name="mart_brand">Gigabyte</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Motherboard</field>
+        <field name="mart_color">#14532d</field>
+        <field name="mart_badge">Z790</field>
+        </record>
+        <record id="prod_motherboards_4" model="product.template">
+        <field name="name">ASRock A620M-HDV</field>
+        <field name="list_price">8900</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_motherboards')])]"/>
+        <field name="mart_brand">ASRock</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Motherboard</field>
+        <field name="mart_color">#14532d</field>
+        <field name="mart_badge">A620</field>
+        </record>
+        <record id="prod_graphics_cards_1" model="product.template">
+        <field name="name">NVIDIA GeForce RTX 4060 8GB</field>
+        <field name="list_price">27500</field>
+        <field name="compare_list_price">31000</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_graphics_cards')])]"/>
+        <field name="mart_brand">NVIDIA</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Gpu</field>
+        <field name="mart_color">#1c2b3a</field>
+        <field name="mart_badge">4060</field>
+        </record>
+        <record id="prod_graphics_cards_2" model="product.template">
+        <field name="name">NVIDIA GeForce RTX 4070 SUPER 12GB</field>
+        <field name="list_price">56900</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_graphics_cards')])]"/>
+        <field name="mart_brand">NVIDIA</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Gpu</field>
+        <field name="mart_color">#1c2b3a</field>
+        <field name="mart_badge">4070</field>
+        </record>
+        <record id="prod_graphics_cards_3" model="product.template">
+        <field name="name">AMD Radeon RX 7600 8GB</field>
+        <field name="list_price">23900</field>
+        <field name="compare_list_price">26500</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_graphics_cards')])]"/>
+        <field name="mart_brand">AMD</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Gpu</field>
+        <field name="mart_color">#1c2b3a</field>
+        <field name="mart_badge">7600</field>
+        </record>
+        <record id="prod_graphics_cards_4" model="product.template">
+        <field name="name">NVIDIA GeForce RTX 4090 24GB</field>
+        <field name="list_price">189000</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_graphics_cards')])]"/>
+        <field name="mart_brand">NVIDIA</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Gpu</field>
+        <field name="mart_color">#1c2b3a</field>
+        <field name="mart_badge">4090</field>
+        </record>
+        <record id="prod_memory_1" model="product.template">
+        <field name="name">Corsair Vengeance 16GB DDR5-5600</field>
+        <field name="list_price">5400</field>
+        <field name="compare_list_price">6200</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_memory')])]"/>
+        <field name="mart_brand">Corsair</field>
+        <field name="mart_unit_text">2 x 8 GB</field>
+        <field name="mart_art">Ram</field>
+        <field name="mart_color">#0f5f4a</field>
+        <field name="mart_badge">16GB</field>
+        </record>
+        <record id="prod_memory_2" model="product.template">
+        <field name="name">G.Skill Trident Z5 32GB DDR5-6000</field>
+        <field name="list_price">11200</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_memory')])]"/>
+        <field name="mart_brand">G.Skill</field>
+        <field name="mart_unit_text">2 x 16 GB</field>
+        <field name="mart_art">Ram</field>
+        <field name="mart_color">#0f5f4a</field>
+        <field name="mart_badge">32GB</field>
+        </record>
+        <record id="prod_memory_3" model="product.template">
+        <field name="name">Crucial 16GB DDR4-3200</field>
+        <field name="list_price">3100</field>
+        <field name="compare_list_price">3800</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_memory')])]"/>
+        <field name="mart_brand">Crucial</field>
+        <field name="mart_unit_text">1 x 16 GB</field>
+        <field name="mart_art">Ram</field>
+        <field name="mart_color">#0f5f4a</field>
+        <field name="mart_badge">16GB</field>
+        </record>
+        <record id="prod_memory_4" model="product.template">
+        <field name="name">Kingston Fury Beast 32GB DDR5</field>
+        <field name="list_price">9800</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_memory')])]"/>
+        <field name="mart_brand">Kingston</field>
+        <field name="mart_unit_text">2 x 16 GB</field>
+        <field name="mart_art">Ram</field>
+        <field name="mart_color">#0f5f4a</field>
+        <field name="mart_badge">32GB</field>
+        </record>
+        <record id="prod_storage_1" model="product.template">
+        <field name="name">Samsung 990 PRO 1TB NVMe</field>
+        <field name="list_price">9800</field>
+        <field name="compare_list_price">11500</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_storage')])]"/>
+        <field name="mart_brand">Samsung</field>
+        <field name="mart_unit_text">1 TB</field>
+        <field name="mart_art">Ssd</field>
+        <field name="mart_color">#155c86</field>
+        <field name="mart_badge">1TB</field>
+        <field name="mart_features">Reads up to 7450 MB/s
+PCIe 4.0 x4, M.2 2280
+Nickel-coated controller keeps heat down
+5-year warranty</field>
+        <field name="mart_in_the_box">SSD, screw, manual</field>
+        </record>
+        <record id="prod_storage_2" model="product.template">
+        <field name="name">WD Blue SN580 500GB NVMe</field>
+        <field name="list_price">3400</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_storage')])]"/>
+        <field name="mart_brand">WD</field>
+        <field name="mart_unit_text">500 GB</field>
+        <field name="mart_art">Ssd</field>
+        <field name="mart_color">#155c86</field>
+        <field name="mart_badge">500GB</field>
+        </record>
+        <record id="prod_storage_3" model="product.template">
+        <field name="name">Seagate BarraCuda 2TB HDD</field>
+        <field name="list_price">4900</field>
+        <field name="compare_list_price">5800</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_storage')])]"/>
+        <field name="mart_brand">Seagate</field>
+        <field name="mart_unit_text">2 TB</field>
+        <field name="mart_art">Ssd</field>
+        <field name="mart_color">#155c86</field>
+        <field name="mart_badge">2TB</field>
+        </record>
+        <record id="prod_storage_4" model="product.template">
+        <field name="name">Crucial P3 Plus 2TB NVMe</field>
+        <field name="list_price">11400</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_storage')])]"/>
+        <field name="mart_brand">Crucial</field>
+        <field name="mart_unit_text">2 TB</field>
+        <field name="mart_art">Ssd</field>
+        <field name="mart_color">#155c86</field>
+        <field name="mart_badge">2TB</field>
+        </record>
+        <record id="prod_power_supplies_1" model="product.template">
+        <field name="name">Corsair RM750e 750W Gold</field>
+        <field name="list_price">8900</field>
+        <field name="compare_list_price">10400</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_power_supplies')])]"/>
+        <field name="mart_brand">Corsair</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Psu</field>
+        <field name="mart_color">#37424a</field>
+        <field name="mart_badge">750W</field>
+        </record>
+        <record id="prod_power_supplies_2" model="product.template">
+        <field name="name">Cooler Master MWE 650W Bronze</field>
+        <field name="list_price">4600</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_power_supplies')])]"/>
+        <field name="mart_brand">Cooler Master</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Psu</field>
+        <field name="mart_color">#37424a</field>
+        <field name="mart_badge">650W</field>
+        </record>
+        <record id="prod_power_supplies_3" model="product.template">
+        <field name="name">Seasonic Focus GX-850 850W</field>
+        <field name="list_price">13500</field>
+        <field name="compare_list_price">15200</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_power_supplies')])]"/>
+        <field name="mart_brand">Seasonic</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Psu</field>
+        <field name="mart_color">#37424a</field>
+        <field name="mart_badge">850W</field>
+        </record>
+        <record id="prod_power_supplies_4" model="product.template">
+        <field name="name">Antec NeoECO 550W</field>
+        <field name="list_price">3900</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_power_supplies')])]"/>
+        <field name="mart_brand">Antec</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Psu</field>
+        <field name="mart_color">#37424a</field>
+        <field name="mart_badge">550W</field>
+        </record>
+        <record id="prod_cooling_1" model="product.template">
+        <field name="name">Cooler Master Hyper 212 Black</field>
+        <field name="list_price">2400</field>
+        <field name="compare_list_price">2900</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_cooling')])]"/>
+        <field name="mart_brand">Cooler Master</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Cooler</field>
+        <field name="mart_color">#4a5a66</field>
+        <field name="mart_badge">212</field>
+        </record>
+        <record id="prod_cooling_2" model="product.template">
+        <field name="name">Noctua NH-D15 chromax.black</field>
+        <field name="list_price">9800</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_cooling')])]"/>
+        <field name="mart_brand">Noctua</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Cooler</field>
+        <field name="mart_color">#4a5a66</field>
+        <field name="mart_badge">D15</field>
+        </record>
+        <record id="prod_cooling_3" model="product.template">
+        <field name="name">Corsair iCUE H100i 240mm</field>
+        <field name="list_price">12400</field>
+        <field name="compare_list_price">14200</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_cooling')])]"/>
+        <field name="mart_brand">Corsair</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Cooler</field>
+        <field name="mart_color">#4a5a66</field>
+        <field name="mart_badge">240</field>
+        </record>
+        <record id="prod_cooling_4" model="product.template">
+        <field name="name">Arctic P12 Case Fan</field>
+        <field name="list_price">1450</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_cooling')])]"/>
+        <field name="mart_brand">Arctic</field>
+        <field name="mart_unit_text">3 fans</field>
+        <field name="mart_art">Cooler</field>
+        <field name="mart_color">#4a5a66</field>
+        <field name="mart_badge">P12</field>
+        </record>
+        <record id="prod_cabinets_1" model="product.template">
+        <field name="name">NZXT H5 Flow</field>
+        <field name="list_price">7900</field>
+        <field name="compare_list_price">8900</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_cabinets')])]"/>
+        <field name="mart_brand">NZXT</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Cabinet</field>
+        <field name="mart_color">#222b33</field>
+        <field name="mart_badge">H5</field>
+        </record>
+        <record id="prod_cabinets_2" model="product.template">
+        <field name="name">Corsair 4000D Airflow</field>
+        <field name="list_price">8400</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_cabinets')])]"/>
+        <field name="mart_brand">Corsair</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Cabinet</field>
+        <field name="mart_color">#222b33</field>
+        <field name="mart_badge">4000D</field>
+        </record>
+        <record id="prod_cabinets_3" model="product.template">
+        <field name="name">Ant Esports 211 Air</field>
+        <field name="list_price">2700</field>
+        <field name="compare_list_price">3400</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_cabinets')])]"/>
+        <field name="mart_brand">Ant Esports</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Cabinet</field>
+        <field name="mart_color">#222b33</field>
+        <field name="mart_badge">211</field>
+        </record>
+        <record id="prod_cabinets_4" model="product.template">
+        <field name="name">Lian Li O11 Dynamic</field>
+        <field name="list_price">13900</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_cabinets')])]"/>
+        <field name="mart_brand">Lian Li</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Cabinet</field>
+        <field name="mart_color">#222b33</field>
+        <field name="mart_badge">O11</field>
+        </record>
+        <record id="prod_keyboards_1" model="product.template">
+        <field name="name">Logitech MX Keys S</field>
+        <field name="list_price">9500</field>
+        <field name="compare_list_price">11000</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_keyboards')])]"/>
+        <field name="mart_brand">Logitech</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Keyboard</field>
+        <field name="mart_color">#26323a</field>
+        <field name="mart_badge">MX</field>
+        </record>
+        <record id="prod_keyboards_2" model="product.template">
+        <field name="name">Keychron K2 Pro Wireless</field>
+        <field name="list_price">8900</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_keyboards')])]"/>
+        <field name="mart_brand">Keychron</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Keyboard</field>
+        <field name="mart_color">#26323a</field>
+        <field name="mart_badge">K2</field>
+        </record>
+        <record id="prod_keyboards_3" model="product.template">
+        <field name="name">Redragon Kumara K552</field>
+        <field name="list_price">2200</field>
+        <field name="compare_list_price">2800</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_keyboards')])]"/>
+        <field name="mart_brand">Redragon</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Keyboard</field>
+        <field name="mart_color">#26323a</field>
+        <field name="mart_badge">K552</field>
+        </record>
+        <record id="prod_keyboards_4" model="product.template">
+        <field name="name">Logitech K380 Multi-Device</field>
+        <field name="list_price">2900</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_keyboards')])]"/>
+        <field name="mart_brand">Logitech</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Keyboard</field>
+        <field name="mart_color">#26323a</field>
+        <field name="mart_badge">K380</field>
+        </record>
+        <record id="prod_mice_1" model="product.template">
+        <field name="name">Logitech MX Master 3S</field>
+        <field name="list_price">8200</field>
+        <field name="compare_list_price">9500</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_mice')])]"/>
+        <field name="mart_brand">Logitech</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Mouse</field>
+        <field name="mart_color">#2b3a42</field>
+        <field name="mart_badge">MX3</field>
+        <field name="mart_features">Quiet clicks, 90% less noise
+MagSpeed wheel scrolls 1000 lines a second
+Works on glass
+USB-C, 70 days per charge</field>
+        <field name="mart_in_the_box">Mouse, USB receiver, USB-C cable</field>
+        </record>
+        <record id="prod_mice_2" model="product.template">
+        <field name="name">Razer DeathAdder V3</field>
+        <field name="list_price">5400</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_mice')])]"/>
+        <field name="mart_brand">Razer</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Mouse</field>
+        <field name="mart_color">#2b3a42</field>
+        <field name="mart_badge">V3</field>
+        </record>
+        <record id="prod_mice_3" model="product.template">
+        <field name="name">Logitech G102 Lightsync</field>
+        <field name="list_price">1450</field>
+        <field name="compare_list_price">1900</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_mice')])]"/>
+        <field name="mart_brand">Logitech</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Mouse</field>
+        <field name="mart_color">#2b3a42</field>
+        <field name="mart_badge">G102</field>
+        </record>
+        <record id="prod_mice_4" model="product.template">
+        <field name="name">Zebronics Zeb-Transformer</field>
+        <field name="list_price">650</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_mice')])]"/>
+        <field name="mart_brand">Zebronics</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Mouse</field>
+        <field name="mart_color">#2b3a42</field>
+        <field name="mart_badge">ZEB</field>
+        </record>
+        <record id="prod_headsets_1" model="product.template">
+        <field name="name">HyperX Cloud II</field>
+        <field name="list_price">6400</field>
+        <field name="compare_list_price">7500</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_headsets')])]"/>
+        <field name="mart_brand">HyperX</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Headphones</field>
+        <field name="mart_color">#1b3a55</field>
+        <field name="mart_badge">CLOUD</field>
+        </record>
+        <record id="prod_headsets_2" model="product.template">
+        <field name="name">Logitech G335 Wired</field>
+        <field name="list_price">4200</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_headsets')])]"/>
+        <field name="mart_brand">Logitech</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Headphones</field>
+        <field name="mart_color">#1b3a55</field>
+        <field name="mart_badge">G335</field>
+        </record>
+        <record id="prod_headsets_3" model="product.template">
+        <field name="name">Sony WH-CH720N</field>
+        <field name="list_price">8900</field>
+        <field name="compare_list_price">10900</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_headsets')])]"/>
+        <field name="mart_brand">Sony</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Headphones</field>
+        <field name="mart_color">#1b3a55</field>
+        <field name="mart_badge">720N</field>
+        </record>
+        <record id="prod_headsets_4" model="product.template">
+        <field name="name">boAt Rockerz 550</field>
+        <field name="list_price">1799</field>
+        <field name="compare_list_price">2499</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_headsets')])]"/>
+        <field name="mart_brand">boAt</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Headphones</field>
+        <field name="mart_color">#1b3a55</field>
+        <field name="mart_badge">550</field>
+        </record>
+        <record id="prod_webcams_1" model="product.template">
+        <field name="name">Logitech C920 HD Pro</field>
+        <field name="list_price">6200</field>
+        <field name="compare_list_price">7400</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_webcams')])]"/>
+        <field name="mart_brand">Logitech</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Webcam</field>
+        <field name="mart_color">#1f2a31</field>
+        <field name="mart_badge">C920</field>
+        </record>
+        <record id="prod_webcams_2" model="product.template">
+        <field name="name">Logitech Brio 4K</field>
+        <field name="list_price">15900</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_webcams')])]"/>
+        <field name="mart_brand">Logitech</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Webcam</field>
+        <field name="mart_color">#1f2a31</field>
+        <field name="mart_badge">BRIO</field>
+        </record>
+        <record id="prod_webcams_3" model="product.template">
+        <field name="name">Zebronics Zeb-Crisp Pro</field>
+        <field name="list_price">1250</field>
+        <field name="compare_list_price">1650</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_webcams')])]"/>
+        <field name="mart_brand">Zebronics</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Webcam</field>
+        <field name="mart_color">#1f2a31</field>
+        <field name="mart_badge">CRISP</field>
+        </record>
+        <record id="prod_webcams_4" model="product.template">
+        <field name="name">Anker PowerConf C200</field>
+        <field name="list_price">5400</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_webcams')])]"/>
+        <field name="mart_brand">Anker</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Webcam</field>
+        <field name="mart_color">#1f2a31</field>
+        <field name="mart_badge">C200</field>
+        </record>
+        <record id="prod_monitors_1" model="product.template">
+        <field name="name">LG 24MR400 24 inch IPS 100Hz</field>
+        <field name="list_price">9200</field>
+        <field name="compare_list_price">10900</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_monitors')])]"/>
+        <field name="mart_brand">LG</field>
+        <field name="mart_unit_text">24 inch</field>
+        <field name="mart_art">Monitor</field>
+        <field name="mart_color">#1b2a35</field>
+        <field name="mart_badge">24IN</field>
+        <field name="mart_features">24 inch Full HD IPS panel
+100Hz refresh, 5ms response
+HDMI and D-Sub in
+VESA 100x100 mount</field>
+        <field name="mart_in_the_box">Monitor, stand, power adapter, HDMI cable</field>
+        </record>
+        <record id="prod_monitors_2" model="product.template">
+        <field name="name">Samsung Odyssey G5 27 inch QHD</field>
+        <field name="list_price">21500</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_monitors')])]"/>
+        <field name="mart_brand">Samsung</field>
+        <field name="mart_unit_text">27 inch</field>
+        <field name="mart_art">Monitor</field>
+        <field name="mart_color">#1b2a35</field>
+        <field name="mart_badge">27IN</field>
+        </record>
+        <record id="prod_monitors_3" model="product.template">
+        <field name="name">Dell S2722DC 27 inch USB-C</field>
+        <field name="list_price">27900</field>
+        <field name="compare_list_price">31500</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_monitors')])]"/>
+        <field name="mart_brand">Dell</field>
+        <field name="mart_unit_text">27 inch</field>
+        <field name="mart_art">Monitor</field>
+        <field name="mart_color">#1b2a35</field>
+        <field name="mart_badge">S2722</field>
+        </record>
+        <record id="prod_monitors_4" model="product.template">
+        <field name="name">Acer Nitro 31.5 inch 165Hz</field>
+        <field name="list_price">18400</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_monitors')])]"/>
+        <field name="mart_brand">Acer</field>
+        <field name="mart_unit_text">31.5 inch</field>
+        <field name="mart_art">Monitor</field>
+        <field name="mart_color">#1b2a35</field>
+        <field name="mart_badge">32IN</field>
+        </record>
+        <record id="prod_mounts_arms_1" model="product.template">
+        <field name="name">Ergotron LX Desk Mount Arm</field>
+        <field name="list_price">14500</field>
+        <field name="compare_list_price">16900</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_mounts_arms')])]"/>
+        <field name="mart_brand">Ergotron</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Lamp</field>
+        <field name="mart_color">#5a6b76</field>
+        <field name="mart_badge">LX</field>
+        </record>
+        <record id="prod_mounts_arms_2" model="product.template">
+        <field name="name">AmazonBasics Single Monitor Arm</field>
+        <field name="list_price">3400</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_mounts_arms')])]"/>
+        <field name="mart_brand">AmazonBasics</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Lamp</field>
+        <field name="mart_color">#5a6b76</field>
+        <field name="mart_badge">ARM</field>
+        </record>
+        <record id="prod_mounts_arms_3" model="product.template">
+        <field name="name">Dual Monitor Desk Mount</field>
+        <field name="list_price">4200</field>
+        <field name="compare_list_price">5200</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_mounts_arms')])]"/>
+        <field name="mart_brand">Rife</field>
+        <field name="mart_unit_text">2 arms</field>
+        <field name="mart_art">Lamp</field>
+        <field name="mart_color">#5a6b76</field>
+        <field name="mart_badge">DUAL</field>
+        </record>
+        <record id="prod_mounts_arms_4" model="product.template">
+        <field name="name">VESA Adapter Plate 100x100</field>
+        <field name="list_price">890</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_mounts_arms')])]"/>
+        <field name="mart_brand">Rife</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Lamp</field>
+        <field name="mart_color">#5a6b76</field>
+        <field name="mart_badge">VESA</field>
+        </record>
+        <record id="prod_routers_1" model="product.template">
+        <field name="name">TP-Link Archer AX55 AX3000</field>
+        <field name="list_price">6400</field>
+        <field name="compare_list_price">7500</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_routers')])]"/>
+        <field name="mart_brand">TP-Link</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Router</field>
+        <field name="mart_color">#1f3b4d</field>
+        <field name="mart_badge">AX55</field>
+        <field name="mart_features">Wi-Fi 6, up to 2402 Mbps on 5GHz
+Four high-gain antennas
+OneMesh ready
+WPA3 security</field>
+        <field name="mart_in_the_box">Router, power adapter, LAN cable</field>
+        </record>
+        <record id="prod_routers_2" model="product.template">
+        <field name="name">ASUS RT-AX1800S Dual Band</field>
+        <field name="list_price">5900</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_routers')])]"/>
+        <field name="mart_brand">ASUS</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Router</field>
+        <field name="mart_color">#1f3b4d</field>
+        <field name="mart_badge">AX1800</field>
+        </record>
+        <record id="prod_routers_3" model="product.template">
+        <field name="name">TP-Link Deco X20 Mesh</field>
+        <field name="list_price">14900</field>
+        <field name="compare_list_price">17500</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_routers')])]"/>
+        <field name="mart_brand">TP-Link</field>
+        <field name="mart_unit_text">3 units</field>
+        <field name="mart_art">Router</field>
+        <field name="mart_color">#1f3b4d</field>
+        <field name="mart_badge">DECO</field>
+        </record>
+        <record id="prod_routers_4" model="product.template">
+        <field name="name">Netgear Nighthawk RAX50</field>
+        <field name="list_price">18900</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_routers')])]"/>
+        <field name="mart_brand">Netgear</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Router</field>
+        <field name="mart_color">#1f3b4d</field>
+        <field name="mart_badge">RAX50</field>
+        </record>
+        <record id="prod_switches_1" model="product.template">
+        <field name="name">TP-Link TL-SG108 8-Port Gigabit</field>
+        <field name="list_price">1750</field>
+        <field name="compare_list_price">2100</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_switches')])]"/>
+        <field name="mart_brand">TP-Link</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Router</field>
+        <field name="mart_color">#2a4a5e</field>
+        <field name="mart_badge">8PORT</field>
+        </record>
+        <record id="prod_switches_2" model="product.template">
+        <field name="name">Netgear GS305 5-Port Gigabit</field>
+        <field name="list_price">1450</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_switches')])]"/>
+        <field name="mart_brand">Netgear</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Router</field>
+        <field name="mart_color">#2a4a5e</field>
+        <field name="mart_badge">5PORT</field>
+        </record>
+        <record id="prod_switches_3" model="product.template">
+        <field name="name">D-Link DGS-1016A 16-Port</field>
+        <field name="list_price">6900</field>
+        <field name="compare_list_price">7900</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_switches')])]"/>
+        <field name="mart_brand">D-Link</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Router</field>
+        <field name="mart_color">#2a4a5e</field>
+        <field name="mart_badge">16PORT</field>
+        </record>
+        <record id="prod_switches_4" model="product.template">
+        <field name="name">TP-Link TL-SG1024D 24-Port</field>
+        <field name="list_price">11400</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_switches')])]"/>
+        <field name="mart_brand">TP-Link</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Router</field>
+        <field name="mart_color">#2a4a5e</field>
+        <field name="mart_badge">24PORT</field>
+        </record>
+        <record id="prod_network_adapters_1" model="product.template">
+        <field name="name">TP-Link Archer T3U USB Wi-Fi</field>
+        <field name="list_price">1250</field>
+        <field name="compare_list_price">1600</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_network_adapters')])]"/>
+        <field name="mart_brand">TP-Link</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Adapter</field>
+        <field name="mart_color">#2f7fb8</field>
+        <field name="mart_badge">T3U</field>
+        </record>
+        <record id="prod_network_adapters_2" model="product.template">
+        <field name="name">Intel AX210 Wi-Fi 6E Card</field>
+        <field name="list_price">2400</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_network_adapters')])]"/>
+        <field name="mart_brand">Intel</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Adapter</field>
+        <field name="mart_color">#2f7fb8</field>
+        <field name="mart_badge">AX210</field>
+        </record>
+        <record id="prod_network_adapters_3" model="product.template">
+        <field name="name">TP-Link UE300 USB to Ethernet</field>
+        <field name="list_price">1100</field>
+        <field name="compare_list_price">1400</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_network_adapters')])]"/>
+        <field name="mart_brand">TP-Link</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Adapter</field>
+        <field name="mart_color">#2f7fb8</field>
+        <field name="mart_badge">UE300</field>
+        </record>
+        <record id="prod_network_adapters_4" model="product.template">
+        <field name="name">ASUS PCE-AX58BT PCIe Wi-Fi</field>
+        <field name="list_price">5400</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_network_adapters')])]"/>
+        <field name="mart_brand">ASUS</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Adapter</field>
+        <field name="mart_color">#2f7fb8</field>
+        <field name="mart_badge">AX58</field>
+        </record>
+        <record id="prod_laptops_1" model="product.template">
+        <field name="name">Lenovo IdeaPad Slim 3 15 inch</field>
+        <field name="list_price">42900</field>
+        <field name="compare_list_price">47900</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_laptops')])]"/>
+        <field name="mart_brand">Lenovo</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Laptop</field>
+        <field name="mart_color">#37424a</field>
+        <field name="mart_badge">SLIM3</field>
+        </record>
+        <record id="prod_laptops_2" model="product.template">
+        <field name="name">HP Pavilion 14 Core i5</field>
+        <field name="list_price">58900</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_laptops')])]"/>
+        <field name="mart_brand">HP</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Laptop</field>
+        <field name="mart_color">#37424a</field>
+        <field name="mart_badge">PAV14</field>
+        </record>
+        <record id="prod_laptops_3" model="product.template">
+        <field name="name">ASUS TUF Gaming A15 Ryzen 7</field>
+        <field name="list_price">74900</field>
+        <field name="compare_list_price">82900</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_laptops')])]"/>
+        <field name="mart_brand">ASUS</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Laptop</field>
+        <field name="mart_color">#37424a</field>
+        <field name="mart_badge">TUF</field>
+        </record>
+        <record id="prod_laptops_4" model="product.template">
+        <field name="name">Acer Aspire Lite 14</field>
+        <field name="list_price">31900</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_laptops')])]"/>
+        <field name="mart_brand">Acer</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Laptop</field>
+        <field name="mart_color">#37424a</field>
+        <field name="mart_badge">LITE</field>
+        </record>
+        <record id="prod_desktops_1" model="product.template">
+        <field name="name">369 Build Starter - i5 / 16GB</field>
+        <field name="list_price">48900</field>
+        <field name="compare_list_price">53900</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_desktops')])]"/>
+        <field name="mart_brand">369 Mart</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Cabinet</field>
+        <field name="mart_color">#2b3a47</field>
+        <field name="mart_badge">START</field>
+        </record>
+        <record id="prod_desktops_2" model="product.template">
+        <field name="name">369 Build Gamer - R5 / RTX 4060</field>
+        <field name="list_price">78900</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_desktops')])]"/>
+        <field name="mart_brand">369 Mart</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Cabinet</field>
+        <field name="mart_color">#2b3a47</field>
+        <field name="mart_badge">GAMER</field>
+        </record>
+        <record id="prod_desktops_3" model="product.template">
+        <field name="name">369 Build Creator - i7 / 32GB</field>
+        <field name="list_price">124900</field>
+        <field name="compare_list_price">134900</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_desktops')])]"/>
+        <field name="mart_brand">369 Mart</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Cabinet</field>
+        <field name="mart_color">#2b3a47</field>
+        <field name="mart_badge">CREATE</field>
+        </record>
+        <record id="prod_desktops_4" model="product.template">
+        <field name="name">369 Build Office - i3 / 8GB</field>
+        <field name="list_price">27900</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_desktops')])]"/>
+        <field name="mart_brand">369 Mart</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Cabinet</field>
+        <field name="mart_color">#2b3a47</field>
+        <field name="mart_badge">OFFICE</field>
+        </record>
+        <record id="prod_mini_pcs_1" model="product.template">
+        <field name="name">Intel NUC 13 Pro Core i5</field>
+        <field name="list_price">54900</field>
+        <field name="compare_list_price">59900</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_mini_pcs')])]"/>
+        <field name="mart_brand">Intel</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Box</field>
+        <field name="mart_color">#3f4a54</field>
+        <field name="mart_badge">NUC13</field>
+        </record>
+        <record id="prod_mini_pcs_2" model="product.template">
+        <field name="name">Beelink SER5 Ryzen 5</field>
+        <field name="list_price">32900</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_mini_pcs')])]"/>
+        <field name="mart_brand">Beelink</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Box</field>
+        <field name="mart_color">#3f4a54</field>
+        <field name="mart_badge">SER5</field>
+        </record>
+        <record id="prod_mini_pcs_3" model="product.template">
+        <field name="name">ASUS PN53 Barebone</field>
+        <field name="list_price">38900</field>
+        <field name="compare_list_price">42900</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_mini_pcs')])]"/>
+        <field name="mart_brand">ASUS</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Box</field>
+        <field name="mart_color">#3f4a54</field>
+        <field name="mart_badge">PN53</field>
+        </record>
+        <record id="prod_mini_pcs_4" model="product.template">
+        <field name="name">Raspberry Pi 5 8GB Kit</field>
+        <field name="list_price">9800</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_mini_pcs')])]"/>
+        <field name="mart_brand">Raspberry Pi</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Box</field>
+        <field name="mart_color">#3f4a54</field>
+        <field name="mart_badge">PI5</field>
+        </record>
+        <record id="prod_cables_1" model="product.template">
+        <field name="name">Ugreen HDMI 2.1 8K Cable</field>
+        <field name="list_price">1250</field>
+        <field name="compare_list_price">1600</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_cables')])]"/>
+        <field name="mart_brand">Ugreen</field>
+        <field name="mart_unit_text">2 m</field>
+        <field name="mart_art">Cable</field>
+        <field name="mart_color">#2b3a42</field>
+        <field name="mart_badge">HDMI</field>
+        </record>
+        <record id="prod_cables_2" model="product.template">
+        <field name="name">D-Link Cat6 LAN Cable</field>
+        <field name="list_price">499</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_cables')])]"/>
+        <field name="mart_brand">D-Link</field>
+        <field name="mart_unit_text">10 m</field>
+        <field name="mart_art">Cable</field>
+        <field name="mart_color">#2b3a42</field>
+        <field name="mart_badge">CAT6</field>
+        </record>
+        <record id="prod_cables_3" model="product.template">
+        <field name="name">Anker USB-C to USB-C 100W</field>
+        <field name="list_price">1450</field>
+        <field name="compare_list_price">1850</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_cables')])]"/>
+        <field name="mart_brand">Anker</field>
+        <field name="mart_unit_text">1.5 m</field>
+        <field name="mart_art">Cable</field>
+        <field name="mart_color">#2b3a42</field>
+        <field name="mart_badge">100W</field>
+        </record>
+        <record id="prod_cables_4" model="product.template">
+        <field name="name">Ugreen DisplayPort 1.4 Cable</field>
+        <field name="list_price">1100</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_cables')])]"/>
+        <field name="mart_brand">Ugreen</field>
+        <field name="mart_unit_text">2 m</field>
+        <field name="mart_art">Cable</field>
+        <field name="mart_color">#2b3a42</field>
+        <field name="mart_badge">DP</field>
+        </record>
+        <record id="prod_chargers_1" model="product.template">
+        <field name="name">Anker 65W GaN USB-C Charger</field>
+        <field name="list_price">3400</field>
+        <field name="compare_list_price">3900</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_chargers')])]"/>
+        <field name="mart_brand">Anker</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Charger</field>
+        <field name="mart_color">#1a7f9a</field>
+        <field name="mart_badge">65W</field>
+        </record>
+        <record id="prod_chargers_2" model="product.template">
+        <field name="name">Ugreen 100W 4-Port GaN</field>
+        <field name="list_price">5900</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_chargers')])]"/>
+        <field name="mart_brand">Ugreen</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Charger</field>
+        <field name="mart_color">#1a7f9a</field>
+        <field name="mart_badge">100W</field>
+        </record>
+        <record id="prod_chargers_3" model="product.template">
+        <field name="name">Universal Laptop Charger 90W</field>
+        <field name="list_price">1750</field>
+        <field name="compare_list_price">2200</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_chargers')])]"/>
+        <field name="mart_brand">Rife</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Charger</field>
+        <field name="mart_color">#1a7f9a</field>
+        <field name="mart_badge">90W</field>
+        </record>
+        <record id="prod_chargers_4" model="product.template">
+        <field name="name">Anker PowerCore 20000mAh</field>
+        <field name="list_price">3900</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_chargers')])]"/>
+        <field name="mart_brand">Anker</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Charger</field>
+        <field name="mart_color">#1a7f9a</field>
+        <field name="mart_badge">20K</field>
+        </record>
+        <record id="prod_ups_surge_1" model="product.template">
+        <field name="name">APC BX600C-IN 600VA UPS</field>
+        <field name="list_price">3900</field>
+        <field name="compare_list_price">4600</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_ups_surge')])]"/>
+        <field name="mart_brand">APC</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Psu</field>
+        <field name="mart_color">#4a4a5a</field>
+        <field name="mart_badge">600VA</field>
+        </record>
+        <record id="prod_ups_surge_2" model="product.template">
+        <field name="name">Zebronics ZEB-U775 UPS</field>
+        <field name="list_price">2900</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_ups_surge')])]"/>
+        <field name="mart_brand">Zebronics</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Psu</field>
+        <field name="mart_color">#4a4a5a</field>
+        <field name="mart_badge">775VA</field>
+        </record>
+        <record id="prod_ups_surge_3" model="product.template">
+        <field name="name">Belkin 6-Socket Surge Protector</field>
+        <field name="list_price">1450</field>
+        <field name="compare_list_price">1800</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_ups_surge')])]"/>
+        <field name="mart_brand">Belkin</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Psu</field>
+        <field name="mart_color">#4a4a5a</field>
+        <field name="mart_badge">SURGE</field>
+        </record>
+        <record id="prod_ups_surge_4" model="product.template">
+        <field name="name">APC Back-UPS 1100VA</field>
+        <field name="list_price">9400</field>
+        <field name="is_published" eval="True"/>
+        <field name="public_categ_ids" eval="[(6, 0, [ref('categ_ups_surge')])]"/>
+        <field name="mart_brand">APC</field>
+        <field name="mart_unit_text">1 unit</field>
+        <field name="mart_art">Psu</field>
+        <field name="mart_color">#4a4a5a</field>
+        <field name="mart_badge">1100VA</field>
+        </record>
+    </data>
+</odoo>

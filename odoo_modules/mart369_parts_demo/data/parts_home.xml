@@ -1,0 +1,560 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- The home page for both modes.
+
+         Quick is the small stuff that can arrive in minutes; Express the
+         big-ticket parts. Every route string below points at a real slug
+         from parts_categories.xml - the grocery seed this replaces pointed
+         at categories that never existed, so half its links dead-ended.
+
+         A row with no products serialises to nothing and vanishes, so each
+         one is aimed at a category that is actually stocked. -->
+    <data>
+
+        <!-- ===== Quick ===== -->
+        <record id="tab_q_home" model="mart369.home.tab">
+        <field name="mode_id" ref="mart369_home.mode_quick"/>
+        <field name="key">home</field>
+        <field name="name">My Home</field>
+        <field name="icon">bag</field>
+        <field name="route_view">home</field>
+        <field name="sequence">10</field>
+        </record>
+        <record id="tab_q_peripherals" model="mart369.home.tab">
+        <field name="mode_id" ref="mart369_home.mode_quick"/>
+        <field name="key">peripherals</field>
+        <field name="name">Peripherals</field>
+        <field name="icon">keyboard</field>
+        <field name="route_view">category</field>
+        <field name="route_param">peripherals</field>
+        <field name="sequence">20</field>
+        </record>
+        <record id="tab_q_accessories" model="mart369.home.tab">
+        <field name="mode_id" ref="mart369_home.mode_quick"/>
+        <field name="key">accessories</field>
+        <field name="name">Accessories</field>
+        <field name="icon">plug</field>
+        <field name="route_view">category</field>
+        <field name="route_param">accessories</field>
+        <field name="sequence">30</field>
+        </record>
+        <record id="tab_q_networking" model="mart369.home.tab">
+        <field name="mode_id" ref="mart369_home.mode_quick"/>
+        <field name="key">networking</field>
+        <field name="name">Networking</field>
+        <field name="icon">wifi</field>
+        <field name="route_view">category</field>
+        <field name="route_param">networking</field>
+        <field name="sequence">40</field>
+        </record>
+        <record id="tab_q_components" model="mart369.home.tab">
+        <field name="mode_id" ref="mart369_home.mode_quick"/>
+        <field name="key">components</field>
+        <field name="name">Components</field>
+        <field name="icon">cpu</field>
+        <field name="route_view">category</field>
+        <field name="route_param">components</field>
+        <field name="sequence">50</field>
+        </record>
+        <record id="tab_q_computers" model="mart369.home.tab">
+        <field name="mode_id" ref="mart369_home.mode_quick"/>
+        <field name="key">computers</field>
+        <field name="name">Computers</field>
+        <field name="icon">laptop</field>
+        <field name="route_view">category</field>
+        <field name="route_param">computers</field>
+        <field name="sequence">60</field>
+        </record>
+        <record id="tab_q_offers" model="mart369.home.tab">
+        <field name="mode_id" ref="mart369_home.mode_quick"/>
+        <field name="key">offers</field>
+        <field name="name">Offers</field>
+        <field name="icon">ticket</field>
+        <field name="route_view">offers</field>
+        <field name="sequence">70</field>
+        </record>
+        <record id="banner_q1" model="mart369.home.banner">
+        <field name="mode_id" ref="mart369_home.mode_quick"/>
+        <field name="key">q1</field>
+        <field name="kicker">Desk upgrade week</field>
+        <field name="name">Keyboards and mice, delivered fast</field>
+        <field name="note">Up to 30% off</field>
+        <field name="tone">navy</field>
+            <field name="art_lines">Keyboard
+Mouse</field>
+        <field name="sequence">10</field>
+        </record>
+        <record id="banner_q2" model="mart369.home.banner">
+        <field name="mode_id" ref="mart369_home.mode_quick"/>
+        <field name="key">q2</field>
+        <field name="kicker">Work from anywhere</field>
+        <field name="name">Headsets and webcams</field>
+        <field name="note">From 1,250</field>
+        <field name="tone">teal</field>
+            <field name="art_lines">Headphones
+Webcam</field>
+        <field name="sequence">20</field>
+        </record>
+        <record id="banner_q3" model="mart369.home.banner">
+        <field name="mode_id" ref="mart369_home.mode_quick"/>
+        <field name="key">q3</field>
+        <field name="kicker">Never drop a call</field>
+        <field name="name">Wi-Fi that reaches every room</field>
+        <field name="note">Mesh from 14,900</field>
+        <field name="tone">indigo</field>
+            <field name="art_lines">Router
+Adapter</field>
+        <field name="sequence">30</field>
+        </record>
+        <record id="banner_q4" model="mart369.home.banner">
+        <field name="mode_id" ref="mart369_home.mode_quick"/>
+        <field name="key">q4</field>
+        <field name="kicker">Power and protect</field>
+        <field name="name">Chargers, cables and UPS</field>
+        <field name="note">Up to 25% off</field>
+        <field name="tone">orange</field>
+            <field name="art_lines">Charger
+Cable</field>
+        <field name="sequence">40</field>
+        </record>
+        <record id="tile_q_keyboards" model="mart369.home.tile">
+        <field name="mode_id" ref="mart369_home.mode_quick"/>
+        <field name="key">keyboards</field>
+        <field name="name">Keyboards</field>
+        <field name="public_categ_id" ref="categ_keyboards"/>
+        <field name="route">peripherals/keyboards</field>
+        <field name="image_source">art</field>
+        <field name="art">Keyboard</field>
+        <field name="color">#26323a</field>
+        <field name="badge">KEYS</field>
+        <field name="bg">#eef2f5</field>
+        <field name="sequence">10</field>
+        </record>
+        <record id="tile_q_mice" model="mart369.home.tile">
+        <field name="mode_id" ref="mart369_home.mode_quick"/>
+        <field name="key">mice</field>
+        <field name="name">Mice</field>
+        <field name="public_categ_id" ref="categ_mice"/>
+        <field name="route">peripherals/mice</field>
+        <field name="image_source">art</field>
+        <field name="art">Mouse</field>
+        <field name="color">#2b3a42</field>
+        <field name="bg">#f0f3f6</field>
+        <field name="sequence">20</field>
+        </record>
+        <record id="tile_q_headsets" model="mart369.home.tile">
+        <field name="mode_id" ref="mart369_home.mode_quick"/>
+        <field name="key">headsets</field>
+        <field name="name">Headsets</field>
+        <field name="public_categ_id" ref="categ_headsets"/>
+        <field name="route">peripherals/headsets</field>
+        <field name="image_source">art</field>
+        <field name="art">Headphones</field>
+        <field name="color">#1b3a55</field>
+        <field name="bg">#eaf1f7</field>
+        <field name="sequence">30</field>
+        </record>
+        <record id="tile_q_webcams" model="mart369.home.tile">
+        <field name="mode_id" ref="mart369_home.mode_quick"/>
+        <field name="key">webcams</field>
+        <field name="name">Webcams</field>
+        <field name="public_categ_id" ref="categ_webcams"/>
+        <field name="route">peripherals/webcams</field>
+        <field name="image_source">art</field>
+        <field name="art">Webcam</field>
+        <field name="color">#1f2a31</field>
+        <field name="badge">HD</field>
+        <field name="bg">#eef1f4</field>
+        <field name="sequence">40</field>
+        </record>
+        <record id="tile_q_cables" model="mart369.home.tile">
+        <field name="mode_id" ref="mart369_home.mode_quick"/>
+        <field name="key">cables</field>
+        <field name="name">Cables</field>
+        <field name="public_categ_id" ref="categ_cables"/>
+        <field name="route">accessories/cables</field>
+        <field name="image_source">art</field>
+        <field name="art">Cable</field>
+        <field name="color">#2b3a42</field>
+        <field name="bg">#f1f4f6</field>
+        <field name="sequence">50</field>
+        </record>
+        <record id="tile_q_chargers" model="mart369.home.tile">
+        <field name="mode_id" ref="mart369_home.mode_quick"/>
+        <field name="key">chargers</field>
+        <field name="name">Chargers</field>
+        <field name="public_categ_id" ref="categ_chargers"/>
+        <field name="route">accessories/chargers</field>
+        <field name="image_source">art</field>
+        <field name="art">Charger</field>
+        <field name="color">#1a7f9a</field>
+        <field name="badge">65W</field>
+        <field name="bg">#e9f5f8</field>
+        <field name="sequence">60</field>
+        </record>
+        <record id="tile_q_routers" model="mart369.home.tile">
+        <field name="mode_id" ref="mart369_home.mode_quick"/>
+        <field name="key">routers</field>
+        <field name="name">Wi-Fi routers</field>
+        <field name="public_categ_id" ref="categ_routers"/>
+        <field name="route">networking/routers</field>
+        <field name="image_source">art</field>
+        <field name="art">Router</field>
+        <field name="color">#1f3b4d</field>
+        <field name="bg">#eaf2f6</field>
+        <field name="sequence">70</field>
+        </record>
+        <record id="tile_q_ups_surge" model="mart369.home.tile">
+        <field name="mode_id" ref="mart369_home.mode_quick"/>
+        <field name="key">ups-surge</field>
+        <field name="name">UPS &amp; power</field>
+        <field name="public_categ_id" ref="categ_ups_surge"/>
+        <field name="route">accessories/ups-surge</field>
+        <field name="image_source">art</field>
+        <field name="art">Psu</field>
+        <field name="color">#4a4a5a</field>
+        <field name="bg">#f0eff5</field>
+        <field name="sequence">80</field>
+        </record>
+        <record id="section_q_peripherals" model="mart369.home.section">
+        <field name="mode_id" ref="mart369_home.mode_quick"/>
+        <field name="kind">rail</field>
+        <field name="key">peripherals</field>
+        <field name="name">Desk essentials</field>
+        <field name="subtitle">Keyboards, mice and headsets</field>
+        <field name="source">category</field>
+        <field name="public_categ_id" ref="categ_peripherals"/>
+        <field name="include_child_categs" eval="True"/>
+        <field name="view_all_route">peripherals</field>
+        <field name="limit">12</field>
+        <field name="sequence">20</field>
+        </record>
+        <record id="section_q_accessories" model="mart369.home.section">
+        <field name="mode_id" ref="mart369_home.mode_quick"/>
+        <field name="kind">rail</field>
+        <field name="key">accessories</field>
+        <field name="name">Cables and power</field>
+        <field name="subtitle">The small things that finish the job</field>
+        <field name="source">category</field>
+        <field name="public_categ_id" ref="categ_accessories"/>
+        <field name="include_child_categs" eval="True"/>
+        <field name="view_all_route">accessories</field>
+        <field name="limit">12</field>
+        <field name="sequence">30</field>
+        </record>
+        <record id="section_q_networking" model="mart369.home.section">
+        <field name="mode_id" ref="mart369_home.mode_quick"/>
+        <field name="kind">rail</field>
+        <field name="key">networking</field>
+        <field name="name">Get online</field>
+        <field name="subtitle">Routers, switches and adapters</field>
+        <field name="source">category</field>
+        <field name="public_categ_id" ref="categ_networking"/>
+        <field name="include_child_categs" eval="True"/>
+        <field name="view_all_route">networking</field>
+        <field name="limit">12</field>
+        <field name="sequence">40</field>
+        </record>
+        <record id="section_q_strip" model="mart369.home.section">
+        <field name="mode_id" ref="mart369_home.mode_quick"/>
+        <field name="kind">banner_row</field>
+        <field name="name">Mid-page banners</field>
+        <field name="sequence">50</field>
+        </record>
+        <record id="strip_q_1" model="mart369.home.section.banner">
+        <field name="section_id" ref="section_q_strip"/>
+        <field name="banner_id" ref="banner_q3"/>
+        <field name="sequence">10</field>
+        </record>
+        <record id="strip_q_2" model="mart369.home.section.banner">
+        <field name="section_id" ref="section_q_strip"/>
+        <field name="banner_id" ref="banner_q4"/>
+        <field name="sequence">20</field>
+        </record>
+        <record id="section_q_new" model="mart369.home.section">
+        <field name="mode_id" ref="mart369_home.mode_quick"/>
+        <field name="kind">rail</field>
+        <field name="key">new</field>
+        <field name="name">New this week</field>
+        <field name="subtitle">Just landed in store</field>
+        <field name="source">rule</field>
+        <field name="rule">new</field>
+        <field name="limit">12</field>
+        <field name="sequence">60</field>
+        </record>
+
+        <!-- ===== Express ===== -->
+        <record id="tab_a_home" model="mart369.home.tab">
+        <field name="mode_id" ref="mart369_home.mode_all"/>
+        <field name="key">home</field>
+        <field name="name">My Home</field>
+        <field name="icon">bag</field>
+        <field name="route_view">home</field>
+        <field name="sequence">10</field>
+        </record>
+        <record id="tab_a_components" model="mart369.home.tab">
+        <field name="mode_id" ref="mart369_home.mode_all"/>
+        <field name="key">components</field>
+        <field name="name">Components</field>
+        <field name="icon">cpu</field>
+        <field name="route_view">category</field>
+        <field name="route_param">components</field>
+        <field name="sequence">20</field>
+        </record>
+        <record id="tab_a_displays" model="mart369.home.tab">
+        <field name="mode_id" ref="mart369_home.mode_all"/>
+        <field name="key">displays</field>
+        <field name="name">Displays</field>
+        <field name="icon">monitor</field>
+        <field name="route_view">category</field>
+        <field name="route_param">displays</field>
+        <field name="sequence">30</field>
+        </record>
+        <record id="tab_a_computers" model="mart369.home.tab">
+        <field name="mode_id" ref="mart369_home.mode_all"/>
+        <field name="key">computers</field>
+        <field name="name">Computers</field>
+        <field name="icon">laptop</field>
+        <field name="route_view">category</field>
+        <field name="route_param">computers</field>
+        <field name="sequence">40</field>
+        </record>
+        <record id="tab_a_networking" model="mart369.home.tab">
+        <field name="mode_id" ref="mart369_home.mode_all"/>
+        <field name="key">networking</field>
+        <field name="name">Networking</field>
+        <field name="icon">wifi</field>
+        <field name="route_view">category</field>
+        <field name="route_param">networking</field>
+        <field name="sequence">50</field>
+        </record>
+        <record id="tab_a_peripherals" model="mart369.home.tab">
+        <field name="mode_id" ref="mart369_home.mode_all"/>
+        <field name="key">peripherals</field>
+        <field name="name">Peripherals</field>
+        <field name="icon">keyboard</field>
+        <field name="route_view">category</field>
+        <field name="route_param">peripherals</field>
+        <field name="sequence">60</field>
+        </record>
+        <record id="tab_a_offers" model="mart369.home.tab">
+        <field name="mode_id" ref="mart369_home.mode_all"/>
+        <field name="key">offers</field>
+        <field name="name">Offers</field>
+        <field name="icon">ticket</field>
+        <field name="route_view">offers</field>
+        <field name="sequence">70</field>
+        </record>
+        <record id="banner_a1" model="mart369.home.banner">
+        <field name="mode_id" ref="mart369_home.mode_all"/>
+        <field name="key">a1</field>
+        <field name="kicker">Build season</field>
+        <field name="name">Pick your parts, we ship the lot</field>
+        <field name="note">Up to 20% off</field>
+        <field name="tone">navy</field>
+            <field name="art_lines">Cpu
+Gpu
+Ram</field>
+        <field name="sequence">10</field>
+        </record>
+        <record id="banner_a2" model="mart369.home.banner">
+        <field name="mode_id" ref="mart369_home.mode_all"/>
+        <field name="key">a2</field>
+        <field name="kicker">Frames win games</field>
+        <field name="name">Graphics cards back in stock</field>
+        <field name="note">RTX from 23,900</field>
+        <field name="tone">indigo</field>
+            <field name="art_lines">Gpu
+Cooler</field>
+        <field name="sequence">20</field>
+        </record>
+        <record id="banner_a3" model="mart369.home.banner">
+        <field name="mode_id" ref="mart369_home.mode_all"/>
+        <field name="key">a3</field>
+        <field name="kicker">Two screens, one desk</field>
+        <field name="name">Monitors and arms</field>
+        <field name="note">From 9,200</field>
+        <field name="tone">teal</field>
+            <field name="art_lines">Monitor
+Lamp</field>
+        <field name="sequence">30</field>
+        </record>
+        <record id="banner_a4" model="mart369.home.banner">
+        <field name="mode_id" ref="mart369_home.mode_all"/>
+        <field name="key">a4</field>
+        <field name="kicker">Ready to go</field>
+        <field name="name">Laptops and prebuilt desktops</field>
+        <field name="note">EMI available</field>
+        <field name="tone">brown</field>
+            <field name="art_lines">Laptop
+Cabinet</field>
+        <field name="sequence">40</field>
+        </record>
+        <record id="tile_a_cpus" model="mart369.home.tile">
+        <field name="mode_id" ref="mart369_home.mode_all"/>
+        <field name="key">cpus</field>
+        <field name="name">Processors</field>
+        <field name="public_categ_id" ref="categ_cpus"/>
+        <field name="route">components/cpus</field>
+        <field name="image_source">art</field>
+        <field name="art">Cpu</field>
+        <field name="color">#1f6f8b</field>
+        <field name="badge">CPU</field>
+        <field name="bg">#e9f3f7</field>
+        <field name="sequence">10</field>
+        </record>
+        <record id="tile_a_graphics_cards" model="mart369.home.tile">
+        <field name="mode_id" ref="mart369_home.mode_all"/>
+        <field name="key">graphics-cards</field>
+        <field name="name">Graphics cards</field>
+        <field name="public_categ_id" ref="categ_graphics_cards"/>
+        <field name="route">components/graphics-cards</field>
+        <field name="image_source">art</field>
+        <field name="art">Gpu</field>
+        <field name="color">#1c2b3a</field>
+        <field name="badge">GPU</field>
+        <field name="bg">#eceff3</field>
+        <field name="sequence">20</field>
+        </record>
+        <record id="tile_a_motherboards" model="mart369.home.tile">
+        <field name="mode_id" ref="mart369_home.mode_all"/>
+        <field name="key">motherboards</field>
+        <field name="name">Motherboards</field>
+        <field name="public_categ_id" ref="categ_motherboards"/>
+        <field name="route">components/motherboards</field>
+        <field name="image_source">art</field>
+        <field name="art">Motherboard</field>
+        <field name="color">#14532d</field>
+        <field name="bg">#eaf4ee</field>
+        <field name="sequence">30</field>
+        </record>
+        <record id="tile_a_memory" model="mart369.home.tile">
+        <field name="mode_id" ref="mart369_home.mode_all"/>
+        <field name="key">memory</field>
+        <field name="name">Memory</field>
+        <field name="public_categ_id" ref="categ_memory"/>
+        <field name="route">components/memory</field>
+        <field name="image_source">art</field>
+        <field name="art">Ram</field>
+        <field name="color">#0f5f4a</field>
+        <field name="badge">DDR5</field>
+        <field name="bg">#e9f4f0</field>
+        <field name="sequence">40</field>
+        </record>
+        <record id="tile_a_storage" model="mart369.home.tile">
+        <field name="mode_id" ref="mart369_home.mode_all"/>
+        <field name="key">storage</field>
+        <field name="name">Storage</field>
+        <field name="public_categ_id" ref="categ_storage"/>
+        <field name="route">components/storage</field>
+        <field name="image_source">art</field>
+        <field name="art">Ssd</field>
+        <field name="color">#155c86</field>
+        <field name="badge">NVMe</field>
+        <field name="bg">#e9f1f7</field>
+        <field name="sequence">50</field>
+        </record>
+        <record id="tile_a_monitors" model="mart369.home.tile">
+        <field name="mode_id" ref="mart369_home.mode_all"/>
+        <field name="key">monitors</field>
+        <field name="name">Monitors</field>
+        <field name="public_categ_id" ref="categ_monitors"/>
+        <field name="route">displays/monitors</field>
+        <field name="image_source">art</field>
+        <field name="art">Monitor</field>
+        <field name="color">#1b2a35</field>
+        <field name="bg">#edeff3</field>
+        <field name="sequence">60</field>
+        </record>
+        <record id="tile_a_laptops" model="mart369.home.tile">
+        <field name="mode_id" ref="mart369_home.mode_all"/>
+        <field name="key">laptops</field>
+        <field name="name">Laptops</field>
+        <field name="public_categ_id" ref="categ_laptops"/>
+        <field name="route">computers/laptops</field>
+        <field name="image_source">art</field>
+        <field name="art">Laptop</field>
+        <field name="color">#37424a</field>
+        <field name="bg">#f0f1f4</field>
+        <field name="sequence">70</field>
+        </record>
+        <record id="tile_a_cabinets" model="mart369.home.tile">
+        <field name="mode_id" ref="mart369_home.mode_all"/>
+        <field name="key">cabinets</field>
+        <field name="name">Cabinets</field>
+        <field name="public_categ_id" ref="categ_cabinets"/>
+        <field name="route">components/cabinets</field>
+        <field name="image_source">art</field>
+        <field name="art">Cabinet</field>
+        <field name="color">#222b33</field>
+        <field name="bg">#eef0f2</field>
+        <field name="sequence">80</field>
+        </record>
+        <record id="section_a_components" model="mart369.home.section">
+        <field name="mode_id" ref="mart369_home.mode_all"/>
+        <field name="kind">rail</field>
+        <field name="key">components</field>
+        <field name="name">Build your PC</field>
+        <field name="subtitle">Processors, boards, memory and more</field>
+        <field name="source">category</field>
+        <field name="public_categ_id" ref="categ_components"/>
+        <field name="include_child_categs" eval="True"/>
+        <field name="view_all_route">components</field>
+        <field name="limit">12</field>
+        <field name="sequence">20</field>
+        </record>
+        <record id="section_a_displays" model="mart369.home.section">
+        <field name="mode_id" ref="mart369_home.mode_all"/>
+        <field name="kind">rail</field>
+        <field name="key">displays</field>
+        <field name="name">Screens worth looking at</field>
+        <field name="subtitle">Monitors and the arms that hold them</field>
+        <field name="source">category</field>
+        <field name="public_categ_id" ref="categ_displays"/>
+        <field name="include_child_categs" eval="True"/>
+        <field name="view_all_route">displays</field>
+        <field name="limit">12</field>
+        <field name="sequence">30</field>
+        </record>
+        <record id="section_a_computers" model="mart369.home.section">
+        <field name="mode_id" ref="mart369_home.mode_all"/>
+        <field name="kind">rail</field>
+        <field name="key">computers</field>
+        <field name="name">Ready to go</field>
+        <field name="subtitle">Laptops, desktops and mini PCs</field>
+        <field name="source">category</field>
+        <field name="public_categ_id" ref="categ_computers"/>
+        <field name="include_child_categs" eval="True"/>
+        <field name="view_all_route">computers</field>
+        <field name="limit">12</field>
+        <field name="sequence">40</field>
+        </record>
+        <record id="section_a_strip" model="mart369.home.section">
+        <field name="mode_id" ref="mart369_home.mode_all"/>
+        <field name="kind">banner_row</field>
+        <field name="name">Mid-page banners</field>
+        <field name="sequence">50</field>
+        </record>
+        <record id="strip_a_1" model="mart369.home.section.banner">
+        <field name="section_id" ref="section_a_strip"/>
+        <field name="banner_id" ref="banner_a3"/>
+        <field name="sequence">10</field>
+        </record>
+        <record id="strip_a_2" model="mart369.home.section.banner">
+        <field name="section_id" ref="section_a_strip"/>
+        <field name="banner_id" ref="banner_a4"/>
+        <field name="sequence">20</field>
+        </record>
+        <record id="section_a_deals" model="mart369.home.section">
+        <field name="mode_id" ref="mart369_home.mode_all"/>
+        <field name="kind">rail</field>
+        <field name="key">deals</field>
+        <field name="name">Biggest savings</field>
+        <field name="subtitle">The deepest discounts in store right now</field>
+        <field name="source">rule</field>
+        <field name="rule">discount</field>
+        <field name="limit">12</field>
+        <field name="sequence">60</field>
+        </record>
+    </data>
+</odoo>

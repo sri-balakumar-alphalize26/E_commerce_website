@@ -16,6 +16,7 @@ from odoo import models
 
 # Drawn artwork, used when no photo is uploaded. Names must match ART exactly.
 ART_CHOICES = [
+    ('Adapter', 'Adapter / dongle'),
     ('Apple', 'Apple'),
     ('Banana', 'Banana'),
     ('Bar', 'Bar (chocolate)'),
@@ -23,18 +24,31 @@ ART_CHOICES = [
     ('Board', 'Board (chopping)'),
     ('Bottle', 'Bottle'),
     ('Box', 'Box'),
+    ('Cabinet', 'Cabinet (PC case)'),
+    ('Cable', 'Cable'),
     ('Charger', 'Charger'),
+    ('Cooler', 'Cooler / CPU fan'),
+    ('Cpu', 'Processor'),
     ('Flask', 'Flask'),
+    ('Gpu', 'Graphics card'),
     ('Grapes', 'Grapes'),
     ('Headphones', 'Headphones'),
     ('Jar', 'Jar'),
+    ('Keyboard', 'Keyboard'),
     ('Lamp', 'Lamp'),
+    ('Laptop', 'Laptop'),
     ('Leafy', 'Leafy greens'),
+    ('Monitor', 'Monitor'),
+    ('Motherboard', 'Motherboard'),
+    ('Mouse', 'Mouse'),
     ('Onion', 'Onion'),
     ('Orange', 'Orange'),
     ('Pack', 'Pack (staples)'),
     ('Plates', 'Plates'),
     ('Pomegranate', 'Pomegranate'),
+    ('Psu', 'Power supply'),
+    ('Ram', 'Memory (RAM)'),
+    ('Router', 'Router'),
     ('Soap', 'Soap bottle'),
     ('SoapBar', 'Soap bar'),
     ('Speaker', 'Speaker'),
@@ -56,6 +70,11 @@ ICON_CHOICES = [
     ('grid', 'Grid (everything)'),
     ('shirt', 'Shirt (fashion)'),
     ('book', 'Book'),
+    ('cpu', 'Chip (components)'),
+    ('monitor', 'Monitor (displays)'),
+    ('keyboard', 'Keyboard (peripherals)'),
+    ('wifi', 'Wi-Fi (networking)'),
+    ('laptop', 'Laptop (computers)'),
 ]
 
 # Banner background gradients.
@@ -132,9 +151,17 @@ class Mart369Serializable(models.AbstractModel):
             price = product.list_price
         mrp = prices.get('mrp')
 
-        images = [self._image_url('image_512', '512x512', record=product)]
+        # Only picture URLs that lead somewhere. The app draws its placeholder
+        # artwork when a card arrives with no images, but an address that
+        # 404s is not the same as no address: it renders as an empty frame,
+        # and the drawing never gets its turn. A product without a photograph
+        # must therefore send no photograph at all.
+        images = []
+        if product.image_512:
+            images.append(self._image_url('image_512', '512x512', record=product))
         for extra in product.product_template_image_ids[:3]:
-            images.append(self._image_url('image_512', '512x512', record=extra))
+            if extra.image_512:
+                images.append(self._image_url('image_512', '512x512', record=extra))
 
         def pick(field, fallback):
             """A line override beats the product's own value."""
