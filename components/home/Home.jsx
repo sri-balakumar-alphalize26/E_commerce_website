@@ -505,7 +505,12 @@ export default function Home({
      just strings, and nothing seeds them any more. Fetch the ones we have not
      been told about; whatever the shop no longer has quietly stays unresolved
      and is not drawn. */
-  useEffect(() => { ensure([...recentIds, ...Object.keys(cart), ...wishIds]); }, [recentIds, cart, wishIds]);
+  useEffect(() => {
+    ensure([
+      ...(view === "product" && route.param ? [route.param] : []), /* a shared link lands here knowing nothing */
+      ...recentIds, ...Object.keys(cart), ...wishIds,
+    ]);
+  }, [view, route.param, recentIds, cart, wishIds]);
   const recent = recentIds.map((id) => byId[id]).filter(Boolean);
 
   /* ---- tabs follow the route ---- */
