@@ -722,7 +722,7 @@ export default function Home({
         <MiniCart lines={lines} count={count} total={total} freeAt={freeDeliveryAt} setQty={setQty}
           onViewCart={() => nav("cart")} onCheckout={() => startCheckout({ how: "online" })} hidden={!!fx} />
       )}
-      <SupportBot orders={orders} wallet={wallet} onNav={nav}
+      <SupportBot onNav={nav}
         hidden={!!fx || ["checkout", "order", "track"].includes(view)}
         lift={view === "cart" ? 3 : browsing && count > 0 ? (view === "home" ? 2 : 1) : 0} />
       <ModeSwitchOverlay fx={fx} />

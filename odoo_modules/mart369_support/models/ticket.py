@@ -17,6 +17,7 @@ status, an owner and a thread is most of what one would have given us anyway.
 """
 
 from odoo import api, fields, models
+from odoo.tools import html2plaintext
 
 STATE_CHOICES = [
     ('new', 'Waiting'),
@@ -163,16 +164,24 @@ class Mart369Ticket(models.Model):
     # --------------------------------------------------------- serializing
 
     def _mart369_transcript(self, limit=60):
-        """The conversation, oldest first, as the panel draws it."""
+        """The conversation, oldest first, as the panel draws it.
+
+        Plain text, because that is what the panel draws: it puts the text
+        into a bubble as a string, so a body handed over as mail HTML came
+        back on screen with its paragraph tags showing.
+        """
         self.ensure_one()
         messages = self.sudo().message_ids.filtered(
             lambda m: m.message_type == 'comment' and m.body)
         rows = []
         for message in reversed(messages[:limit]):
             mine = message.author_id == self.partner_id
+            said = html2plaintext(message.body).strip()
+            if not said:
+                continue
             rows.append({
                 'from': 'me' if mine else 'agent',
-                'text': message.body,
+                'text': said,
                 'at': int(message.date.timestamp() * 1000) if message.date else None,
             })
         return rows

@@ -11,11 +11,12 @@
            action buttons that open the order / wallet / offers, and a
            "Talk to an agent" hand-off with a queue bar.
            Esc / close / backdrop (phones) shrinks it back into the button.
-   Brain   botReplies.js — replace reply() with your helpdesk or LLM endpoint.
+   Brain   the shop's own helpdesk, through support.js. Asking for a person
+           opens a real ticket and everything said after that is kept on it.
    ========================================================================== */
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Icon } from "./shared";
-import { AGENT_NAME, BOT_NAME, agentReply, greeting, reply } from "./botReplies";
+import { AGENT_NAME, BOT_NAME, ask, callAgent, greeting, tellAgent } from "./support";
 
 const reduced = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 const CHAT_KEY = "369mart.chat";
@@ -82,7 +83,7 @@ function Msg({ m, onChip, onAction, last }) {
   );
 }
 
-export default function SupportBot({ orders = [], wallet = 0, onNav, hidden = false, lift = 0 }) {
+export default function SupportBot({ onNav, hidden = false, lift = 0 }) {
   const [phase, setPhase] = useState("closed"); /* closed | open | closing */
   const [msgs, setMsgs] = useState([]);
   const [typing, setTyping] = useState(false);
@@ -96,7 +97,6 @@ export default function SupportBot({ orders = [], wallet = 0, onNav, hidden = fa
   const list = useRef(null);
   const input = useRef(null);
   const timers = useRef([]);
-  const ctx = { orders, wallet };
   const later = (fn, ms) => { const t = setTimeout(fn, reduced() ? Math.min(ms, 60) : ms); timers.current.push(t); return t; };
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
 
@@ -115,14 +115,33 @@ export default function SupportBot({ orders = [], wallet = 0, onNav, hidden = fa
 
   const push = (m) => setMsgs((l) => [...l, { at: Date.now(), ...m }]);
 
+  /* The shop cannot answer someone it does not know - every support route
+     needs an account - so a guest is told that rather than being left with a
+     panel that says nothing. */
+  const offline = (e) =>
+    push({ from: "sys", text: e?.status === 401
+      ? "Sign in and I can help with your orders, refunds and payments."
+      : "I couldn't reach support just now. Try again in a moment." });
+
   const open = () => {
     if (phase !== "closed") return;
     setHint(false); setUnread(false); ss.set(HINT_KEY, true);
-    if (!msgs.length) {
-      setTyping(true);
-      later(() => { setTyping(false); push({ from: "bot", ...greeting(ctx) }); }, 650);
-    }
     setPhase("open");
+    if (msgs.length) return;
+    setTyping(true);
+    greeting()
+      .then((g) => {
+        setTyping(false);
+        /* They asked for a person earlier; the ticket is the transcript. */
+        if (g.agent && g.ticket) {
+          setAgent(true);
+          const said = (g.ticket.messages || []).map((m) => ({ ...m, at: m.at || Date.now() }));
+          setMsgs(said.length ? said : [{ at: Date.now(), from: "agent", text: g.text }]);
+          return;
+        }
+        push({ from: "bot", text: g.text, chips: g.chips });
+      })
+      .catch((e) => { setTyping(false); offline(e); });
   };
   useLayoutEffect(() => {
     if (phase !== "open" || !panel.current) return;
@@ -146,14 +165,18 @@ export default function SupportBot({ orders = [], wallet = 0, onNav, hidden = fa
   }); // eslint-disable-line
   useEffect(() => { if (hidden && phase !== "closed") setPhase("closed"); }, [hidden]); // eslint-disable-line
 
-  const connectAgent = () => {
+  /* This is where a ticket is really opened. The queue bar stays, because
+     there is now something to wait for. */
+  const connectAgent = (about) => {
     push({ from: "sys", text: "Finding an available agent…", queue: true });
-    later(() => {
-      setAgent(true);
-      push({ from: "sys", text: `${AGENT_NAME} joined the chat` });
-      setTyping(true);
-      later(() => { setTyping(false); push({ from: "agent", text: `Hi, I'm ${AGENT_NAME} from 369 Mart support. I can see your recent orders — tell me what went wrong.` }); }, 1100);
-    }, 2600);
+    callAgent(about)
+      .then((r) => {
+        setAgent(true);
+        push({ from: "sys", text: `${AGENT_NAME} joined the chat` });
+        setTyping(true);
+        later(() => { setTyping(false); push({ from: "agent", text: r.reply }); }, 900);
+      })
+      .catch((e) => offline(e));
   };
 
   const send = (raw) => {
@@ -162,19 +185,24 @@ export default function SupportBot({ orders = [], wallet = 0, onNav, hidden = fa
     setText("");
     push({ from: "me", text: q });
     setTyping(true);
-    later(() => {
-      setTyping(false);
-      if (agent) { push({ from: "agent", text: agentReply(q, ctx) }); return; }
-      const r = reply(q, ctx);
-      push({ from: "bot", text: r.text, actions: r.actions, chips: r.chips });
-      if (r.agent) later(connectAgent, 400);
-    }, 700 + Math.min(900, q.length * 12));
+    const answer = agent ? tellAgent(q) : ask(q);
+    answer
+      .then((r) => {
+        setTyping(false);
+        if (agent) { push({ from: "agent", text: r.reply }); return; }
+        push({ from: "bot", text: r.text, actions: r.actions, chips: r.chips });
+        if (r.agent) later(() => connectAgent(q), 400);
+      })
+      .catch((e) => { setTyping(false); offline(e); });
   };
   const onAction = (a) => close(() => onNav?.(a.go[0], a.go[1] ?? null));
   const restart = () => {
     timers.current.forEach(clearTimeout); timers.current = [];
     setAgent(false); setTyping(false); ss.set(CHAT_KEY, null);
-    setMsgs([{ at: Date.now(), from: "bot", ...greeting(ctx) }]);
+    setMsgs([]); setTyping(true);
+    greeting()
+      .then((g) => { setTyping(false); setMsgs([{ at: Date.now(), from: "bot", text: g.text, chips: g.chips }]); })
+      .catch((e) => { setTyping(false); setMsgs([]); offline(e); });
   };
 
   const isOpen = phase !== "closed";
@@ -223,7 +251,7 @@ export default function SupportBot({ orders = [], wallet = 0, onNav, hidden = fa
               <input ref={input} value={text} onChange={(e) => setText(e.target.value)} placeholder={agent ? `Message ${AGENT_NAME}` : "Type your question"} aria-label="Message" maxLength={300} />
               <button type="submit" className={text.trim() ? "sb-ready" : ""} disabled={!text.trim() || typing} aria-label="Send"><Icon n="right" size={18} /></button>
             </form>
-            <p className="sb-foot"><Icon n="lock" size={11} />Chats are saved for this visit only</p>
+            <p className="sb-foot"><Icon n="lock" size={11} />{agent ? "Kept with your support ticket" : "Chats are saved for this visit only"}</p>
           </section>
         </>
       )}
