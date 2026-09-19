@@ -34,6 +34,7 @@ import { WALLET_BALANCE } from "./payment";
 import { ALL_BANNERS, ALL_CATEGORIES, ALL_SECTIONS, ALL_TABS, BANNERS, CATEGORIES, SECTIONS, TABS } from "./sampleData";
 import { SECTION_TO_ROUTE, TAB_TO_ROUTE, TILE_TO_ROUTE, buildIndex, enrich, listable, variantsOf } from "./catalog";
 import { NavContext, pathToRoute, routeToPath } from "./nav";
+import { api } from "@/lib/api";
 import { BuyAgainPage, CategoryPage, NotFoundView, OffersPage, SearchResults, SiteFooter } from "./Browse";
 
 /* ---------- header ---------- */
@@ -329,16 +330,28 @@ export default function Home({
       return next;
     }),
   }), [wishIds]);
-  const { tabs, banners, categories, sections, freeDeliveryAt } = modes[mode];
+  /* The home feed, from Odoo. It arrives in exactly the shape DEFAULT_MODES
+     has — one key per active mode — so it drops straight in. Merged over the
+     prop rather than replacing it, so a mode the server does not send still
+     renders, and so the page is never blank while the request is in flight. */
+  const [feed, setFeed] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    api("/home").then((d) => { if (alive && d && typeof d === "object") setFeed(d); }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
+  const liveModes = useMemo(() => (feed ? { ...modes, ...feed } : modes), [feed, modes]);
+
+  const { tabs, banners, categories, sections, freeDeliveryAt } = liveModes[mode];
   const [cart, setCart] = useState(initialCart);
   const [fx, runSwitch] = useModeSwitch();
 
   /* one index for every view: home rails + browse catalogue + pack-size variants */
   const byId = useMemo(() => {
     const m = buildIndex();
-    Object.values(modes).forEach((md) => md.sections.forEach((s) => s.items?.forEach((p) => { m[p.id] = enrich({ ...m[p.id], ...p }); })));
+    Object.values(liveModes).forEach((md) => md.sections.forEach((s) => s.items?.forEach((p) => { m[p.id] = enrich({ ...m[p.id], ...p }); })));
     return m;
-  }, [modes]);
+  }, [liveModes]);
   const products = useMemo(() => listable(byId), [byId]);
 
   /* ---- navigation ---- */
@@ -492,7 +505,7 @@ export default function Home({
   }, [view, route.param, tabs]);
   const pickTab = (key) => { const r = TAB_TO_ROUTE[key]; if (r) nav(r[0], r[1] ?? null); };
 
-  const quickPicks = useMemo(() => modes[mode].sections.flatMap((s) => s.items || []).map((p) => byId[p.id] || p).filter((p) => p.stock !== 0).slice(0, 6), [mode, modes, byId]);
+  const quickPicks = useMemo(() => liveModes[mode].sections.flatMap((s) => s.items || []).map((p) => byId[p.id] || p).filter((p) => p.stock !== 0).slice(0, 6), [mode, liveModes, byId]);
   useEffect(() => {
     const k = (e) => {
       const tag = document.activeElement?.tagName || "";
@@ -501,7 +514,7 @@ export default function Home({
     window.addEventListener("keydown", k);
     return () => window.removeEventListener("keydown", k);
   }, []);
-  const pick = (md) => modes[md].sections.flatMap((s) => s.items || []).map((p) => byId[p.id] || p).filter((p) => !cart[p.id] && p.stock !== 0);
+  const pick = (md) => liveModes[md].sections.flatMap((s) => s.items || []).map((p) => byId[p.id] || p).filter((p) => !cart[p.id] && p.stock !== 0);
   const recommended = useMemo(() => pick("quick").slice(0, 8), [view]); // eslint-disable-line
   const alsoLike = useMemo(() => pick("all").slice(0, 8), [view]); // eslint-disable-line
 
