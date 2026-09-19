@@ -155,14 +155,17 @@ function ListSec({ byId, cart, setQty, onBrowse }) {
   );
 }
 
-function AddressSec({ addresses, setAddresses, selected, onSelect }) {
+function AddressSec({ addresses, onAddAddress, onRemoveAddress, selected, onSelect, busy, error }) {
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState({ label: "Home", line: "", city: "" });
-  const add = (e) => {
+  const add = async (e) => {
     e.preventDefault();
     if (!draft.line.trim() || !draft.city.trim()) return;
-    const a = { id: "a" + Date.now(), icon: draft.label === "Work" ? "brief" : draft.label === "Home" ? "home" : "pin", ...draft };
-    setAddresses([a, ...addresses]); onSelect(a); setAdding(false); setDraft({ label: "Home", line: "", city: "" });
+    /* The shop mints the id, works out the icon and splits the pincode off the
+       city. A locally invented id could never be ordered against. */
+    const saved = await onAddAddress(draft);
+    if (!saved) return; /* the error is shown under the form */
+    setAdding(false); setDraft({ label: "Home", line: "", city: "" });
   };
   return (
     <div className="ac-stack">
@@ -179,7 +182,8 @@ function AddressSec({ addresses, setAddresses, selected, onSelect }) {
           </div>
           <input placeholder="House / flat, street, area" value={draft.line} onChange={(e) => setDraft({ ...draft, line: e.target.value })} tabIndex={adding ? 0 : -1} />
           <input placeholder="City and pincode" value={draft.city} onChange={(e) => setDraft({ ...draft, city: e.target.value })} tabIndex={adding ? 0 : -1} />
-          <button className="ac-primary" type="submit" tabIndex={adding ? 0 : -1}>Save address</button>
+          {error && <p className="co-error" key={error}>{error}</p>}
+          <button className="ac-primary" type="submit" tabIndex={adding ? 0 : -1} disabled={busy}>{busy ? "Saving…" : "Save address"}</button>
         </form>
         </div>
       </div>
@@ -194,7 +198,7 @@ function AddressSec({ addresses, setAddresses, selected, onSelect }) {
             </div>
             <div className="ac-addr-act">
               {!on && <button className="ac-link" onClick={() => onSelect(a)}>Set as default</button>}
-              <button className="ac-link ac-danger" onClick={() => setAddresses(addresses.filter((x) => x.id !== a.id))}>Remove</button>
+              <button className="ac-link ac-danger" onClick={() => onRemoveAddress(a)}>Remove</button>
             </div>
           </div>
         );
@@ -350,7 +354,7 @@ function LegalSec() {
 export default function AccountPage({
   user: initialUser = { name: "Demo", email: "abc", phone: "" },
   section: initialSection = "list",
-  byId, cart, setQty, addresses, setAddresses, selectedAddress, onSelectAddress,
+  byId, cart, setQty, addresses, onAddAddress, onRemoveAddress, selectedAddress, onSelectAddress, addrBusy, addrError,
   orders = SAMPLE_ORDERS, onBrowse, onReorder, onTrack, onSignOut,
   wallet = 0, onWallet, onNav, onSection,
 }) {
@@ -398,7 +402,7 @@ export default function AccountPage({
   let body;
   if (section === "profile") body = <ProfileSec user={user} onSave={setUser} />;
   else if (section === "list") body = <ListSec byId={byId} cart={cart} setQty={setQty} onBrowse={onBrowse} />;
-  else if (section === "address") body = <AddressSec addresses={addresses} setAddresses={setAddresses} selected={selectedAddress} onSelect={onSelectAddress} />;
+  else if (section === "address") body = <AddressSec addresses={addresses} onAddAddress={onAddAddress} onRemoveAddress={onRemoveAddress} selected={selectedAddress} onSelect={onSelectAddress} busy={addrBusy} error={addrError} />;
   else if (section === "orders") body = <OrdersSec orders={orders} byId={byId} onReorder={onReorder} onTrack={onTrack} />;
   else if (section === "reviews") body = <ReviewsSec orders={orders} byId={byId} onOpen={openProduct} flash={flash} />;
   else if (section === "notifications") body = <NotifsSec orders={orders} onNav={onNav} goSection={go} />;

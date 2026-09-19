@@ -78,22 +78,33 @@ function Radio({ on }) {
 }
 
 /* ---------------- 1 address ---------------- */
-function AddressStep({ addresses, setAddresses, selected, onSelect, onContinue }) {
+function AddressStep({ addresses, onAddAddress, selected, onSelect, onContinue, phoneHint }) {
   const [adding, setAdding] = useState(!addresses.length);
   const [d, setD] = useState({ label: "Home", name: "", phone: "", line: "", city: "", pin: "" });
   const [err, setErr] = useState({});
-  const save = (e) => {
+  const [saving, setSaving] = useState(false);
+  const save = async (e) => {
     e.preventDefault();
     const x = {};
     if (!d.name.trim()) x.name = "Enter the receiver's name";
-    if (!/^[6-9]\d{9}$/.test(d.phone)) x.phone = "Enter a 10-digit mobile number";
+    /* The shop knows what a phone number looks like where it trades, and sends
+       the rule with the address book. A hard-coded 10-digit Indian number was
+       rejecting numbers the shop itself would have accepted. */
+    const len = phoneHint?.length || 10;
+    if (!new RegExp("^\\d{" + len + "}$").test(d.phone)) x.phone = `Enter a ${len}-digit mobile number`;
     if (d.line.trim().length < 6) x.line = "Add house / flat and street";
     if (!d.city.trim()) x.city = "Enter city";
     if (!/^\d{6}$/.test(d.pin)) x.pin = "6-digit pincode";
     setErr(x);
     if (Object.keys(x).length) return;
-    const a = { id: "a" + Date.now(), label: d.label, name: d.name.trim(), phone: d.phone, line: d.line.trim(), city: `${d.city.trim()} ${d.pin}`, icon: d.label === "Work" ? "brief" : d.label === "Home" ? "home" : "pin" };
-    setAddresses([a, ...addresses]); onSelect(a); setAdding(false);
+    setSaving(true);
+    const a = await onAddAddress({
+      label: d.label, name: d.name.trim(), phone: d.phone,
+      line: d.line.trim(), city: `${d.city.trim()} ${d.pin}`,
+    });
+    setSaving(false);
+    if (!a) { setErr({ line: "Could not save that address. Try again." }); return; }
+    onSelect(a); setAdding(false);
     setD({ label: "Home", name: "", phone: "", line: "", city: "", pin: "" });
   };
   const field = (k, label, props = {}) => (
@@ -544,7 +555,7 @@ function PaySheet({ job, amount, onDone, onFail, onCancel, onRetry, onChangeMeth
 
 /* ---------------- page ---------------- */
 export default function CheckoutPage({
-  cart, byId, rules = CART_RULES, draft = {}, addresses, setAddresses, address, onSelectAddress,
+  cart, byId, rules = CART_RULES, draft = {}, addresses, onAddAddress, address, onSelectAddress, phoneHint,
   walletBalance = 0, onBack, onPlaced, ready = true,
 }) {
   const coupon = draft.coupon || null;
@@ -669,7 +680,8 @@ export default function CheckoutPage({
         <div className="co-main">
           <Step n={1} icon="pin" title="Delivery address" open={step === 1} done={!!address && step > 1}
             summary={address ? `${address.label} · ${address.line}${address.city ? ", " + address.city : ""}` : ""} onEdit={() => setStep(1)}>
-            <AddressStep addresses={addresses} setAddresses={setAddresses} selected={address} onSelect={onSelectAddress} onContinue={() => setStep(2)} />
+            <AddressStep addresses={addresses} onAddAddress={onAddAddress} selected={address} onSelect={onSelectAddress}
+              onContinue={() => setStep(2)} phoneHint={phoneHint} />
           </Step>
           <Step n={2} icon="clock" title="Delivery slot" open={step === 2} done={step > 2} summary={step > 2 ? slotLabel : ""} onEdit={() => setStep(2)}>
             <SlotStep bill={bill} slots={slots} slot={slot} setSlot={setSlot} onContinue={() => setStep(3)} />

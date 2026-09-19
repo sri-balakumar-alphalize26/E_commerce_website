@@ -20,7 +20,7 @@ import AccountPage from "./Account";
 import { useNotifications } from "./AccountExtras";
 import ProductDetail from "./ProductDetail";
 import SearchOverlay from "./SearchOverlay";
-import LocationPicker, { SAMPLE_ADDRESSES } from "./LocationPicker";
+import LocationPicker from "./LocationPicker";
 import CartPage from "./Cart";
 import CheckoutPage from "./Checkout";
 import MiniCart from "./MiniCart";
@@ -33,8 +33,9 @@ import { SAMPLE_ORDERS } from "./Account";
 import { WALLET_BALANCE } from "./payment";
 import { SECTION_TO_ROUTE, TAB_TO_ROUTE, TILE_TO_ROUTE, listable } from "./catalog";
 import { NavContext, pathToRoute, routeToPath } from "./nav";
-import { useResource } from "@/lib/useFetch";
+import { useAction, useResource } from "@/lib/useFetch";
 import { absorb, ensure, useProducts } from "@/lib/products";
+import { ApiError, api } from "@/lib/api";
 import { BuyAgainPage, CategoryPage, NotFoundView, OffersPage, SearchResults, SiteFooter } from "./Browse";
 
 /* ---------- header ---------- */
@@ -302,8 +303,13 @@ export default function Home({
   const fromRect = useRef(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [locOpen, setLocOpen] = useState(false);
-  const [address, setAddress] = useState(null);
-  const [addresses, setAddresses] = useState(SAMPLE_ADDRESSES);
+  /* The address book lives on the account. Which one is the default is the
+     shop's answer too - it is what an order will actually ship to, so a copy
+     kept in this browser could only ever disagree with it. */
+  const { data: addrData, reload: reloadAddresses } = useResource("/addresses");
+  const addresses = useMemo(() => addrData?.addresses || [], [addrData]);
+  const address = useMemo(() => addresses.find((a) => a.id === addrData?.selected) || null, [addresses, addrData]);
+  const addrAct = useAction();
   const [wishIds, setWishIds] = useState([]);
   const [recentIds, setRecentIds] = useState([]);
   const [orders, setOrders] = useState(SAMPLE_ORDERS);
@@ -325,12 +331,28 @@ export default function Home({
     const list = [...(Array.isArray(o) ? o : []), ...SAMPLE_ORDERS].map((x) => (patches[x.id] ? { ...x, ...patches[x.id] } : x));
     setOrders(list);
     const wb = load("369mart.wallet", null); if (typeof wb === "number") setWallet(wb);
-    const ad = load("369mart.addresses", null); if (Array.isArray(ad) && ad.length) setAddresses(ad);
-    const sel = load("369mart.address", null); if (sel && sel.id) setAddress(sel);
     try { const d = JSON.parse(sessionStorage.getItem("369mart.checkout") || "null"); if (d) setDraft(d); } catch (e) {}
   }, []);
-  const pickAddress = (a) => { setAddress(a); save("369mart.address", a); };
-  const updateAddresses = (list) => { setAddresses(list); save("369mart.addresses", list); };
+  /* Choosing an address is telling the shop which one to ship to. */
+  const pickAddress = (a) =>
+    addrAct.run(async () => { await api(`/addresses/${a.id}/default`, { method: "POST" }); api.invalidate("/addresses"); await reloadAddresses(); });
+  const addAddress = (draft) =>
+    addrAct.run(async () => {
+      /* The shop needs a name and a number to deliver to. The account form asks
+         for neither, so they default to whoever is signed in - which is what
+         "the name this is delivered to" means for all but a gift. */
+      const body = { name: me?.name || "", phone: me?.phone || "", ...draft };
+      if (!body.name.trim()) {
+        /* Signed out, or the account has not finished loading. Sending a blank
+           name just earns a 400 from the shop a moment later. */
+        throw new ApiError("We need a name to deliver to. Sign in, or try again in a moment.", { field: "name" });
+      }
+      const r = await api("/addresses", { method: "POST", body });
+      api.invalidate("/addresses"); await reloadAddresses();
+      return r?.address || null;
+    });
+  const removeAddress = (a) =>
+    addrAct.run(async () => { await api(`/addresses/${a.id}`, { method: "DELETE" }); api.invalidate("/addresses"); await reloadAddresses(); });
   const wish = useMemo(() => ({
     ids: wishIds,
     has: (id) => wishIds.includes(id),
@@ -576,7 +598,8 @@ export default function Home({
     body = (
       <main className="hm-wrap hm-view-account" key={"account-" + (route.param || "")}>
         <AccountPage user={me || undefined} byId={byId} cart={cart} setQty={setQty} section={route.param || undefined}
-          addresses={addresses} setAddresses={updateAddresses} selectedAddress={address} onSelectAddress={pickAddress} orders={ordersView}
+          addresses={addresses} onAddAddress={addAddress} onRemoveAddress={removeAddress}
+          selectedAddress={address} onSelectAddress={pickAddress} addrBusy={addrAct.busy} addrError={addrAct.error?.message} orders={ordersView}
           onBrowse={() => nav("home")}
           onReorder={reorder} onTrack={(o) => nav("track", o.id)}
           wallet={wallet} onWallet={walletMove} onNav={nav}
@@ -595,7 +618,7 @@ export default function Home({
     body = (
       <main className="hm-wrap hm-view-checkout" key="checkout">
         <CheckoutPage cart={cart} byId={byId} draft={draft} ready={ready}
-          addresses={addresses} setAddresses={updateAddresses} address={address} onSelectAddress={pickAddress}
+          addresses={addresses} onAddAddress={addAddress} address={address} onSelectAddress={pickAddress} phoneHint={addrData?.phone}
           walletBalance={wallet} onBack={() => nav("cart")} onPlaced={orderPlaced} />
       </main>
     );
@@ -695,7 +718,16 @@ export default function Home({
       <SearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} products={products} picks={quickPicks} cart={cart} setQty={setQty}
         initialQuery={view === "search" ? route.param || "" : ""}
         onSubmit={(term) => nav("search", term)} />
-      <LocationPicker open={locOpen} onClose={() => setLocOpen(false)} selected={address} onSelect={pickAddress} addresses={addresses} />
+      <LocationPicker open={locOpen} onClose={() => setLocOpen(false)} selected={address} onSelect={pickAddress} addresses={addresses}
+        onAddAddress={() => { setLocOpen(false); nav("account", "address"); }}
+        onCheckPincode={(pin) => api(`/serviceability?pin=${encodeURIComponent(pin)}`, { raw: true })}
+        onLocate={async (c) => {
+          /* Reverse geocoding gives an address, not a saved one. Save it, so the
+             thing the shopper just chose is a real address an order can ship to. */
+          const g = await api("/geocode/reverse", { method: "POST", body: { lat: c.latitude, lng: c.longitude }, raw: true });
+          if (!g?.ok) return null;
+          return addAddress({ label: "Current location", line: [g.line, g.area].filter(Boolean).join(", "), city: [g.city, g.zip].filter(Boolean).join(" ").trim() });
+        }} />
     </div>
     </OpenContext.Provider>
     </WishContext.Provider>

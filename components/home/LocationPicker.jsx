@@ -9,20 +9,9 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Icon } from "./shared";
 
-export const SAMPLE_ADDRESSES = [
-  { id: "home", label: "Home", line: "Flat 4B, Palm Grove Apartments, MG Road", city: "Kochi 682016", icon: "home" },
-  { id: "work", label: "Work", line: "3rd Floor, Tech Park Tower, Kazhakkoottam", city: "Thiruvananthapuram 695582", icon: "brief" },
-  { id: "other", label: "Parents", line: "Near Clock Tower, Chinnakada", city: "Kollam 691001", icon: "pin" },
-];
 
-/* sample serviceability: Kerala pincodes start 67–69 */
-const demoCheck = async (pin) => {
-  await new Promise((r) => setTimeout(r, 900));
-  if (!/^6[789]\d{4}$/.test(pin)) return { ok: false, error: "We don't deliver to this pincode yet." };
-  return { ok: true, quick: pin.startsWith("68") || pin.startsWith("69"), eta: "13 mins" };
-};
 
-export default function LocationPicker({ open, onClose, anchorSelector = ".hm-loc", addresses = SAMPLE_ADDRESSES, selected, onSelect, onCheckPincode = demoCheck, onLocate }) {
+export default function LocationPicker({ open, onClose, anchorSelector = ".hm-loc", addresses = [], selected, onSelect, onCheckPincode, onLocate, onAddAddress }) {
   const [phase, setPhase] = useState("closed");
   const [pos, setPos] = useState(null);
   const [pin, setPin] = useState("");
@@ -79,7 +68,7 @@ export default function LocationPicker({ open, onClose, anchorSelector = ".hm-lo
     e.preventDefault();
     if (!/^\d{6}$/.test(pin)) { setCheck({ ok: false, error: "Enter a 6-digit pincode." }); setShake((s) => s + 1); return; }
     setCheck({ busy: true });
-    const r = await onCheckPincode(pin);
+    const r = onCheckPincode ? await onCheckPincode(pin) : { ok: false, error: "Serviceability is unavailable right now." };
     setCheck(r);
     if (!r.ok) setShake((s) => s + 1);
   };
@@ -149,7 +138,7 @@ export default function LocationPicker({ open, onClose, anchorSelector = ".hm-lo
                 );
               })}
             </ul>
-            <button className="lp-add lp-in" style={{ "--i": 3 + addresses.length }}><Icon n="plus" size={16} />Add a new address</button>
+        <button className="lp-add lp-in" style={{ "--i": 3 + addresses.length }} onClick={onAddAddress}><Icon n="plus" size={16} />Add a new address</button>
           </div>
         </div>
       </div>
