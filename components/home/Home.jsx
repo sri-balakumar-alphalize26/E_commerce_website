@@ -310,7 +310,6 @@ export default function Home({
   const addresses = useMemo(() => addrData?.addresses || [], [addrData]);
   const address = useMemo(() => addresses.find((a) => a.id === addrData?.selected) || null, [addresses, addrData]);
   const addrAct = useAction();
-  const [wishIds, setWishIds] = useState([]);
   const [recentIds, setRecentIds] = useState([]);
   const [orders, setOrders] = useState(SAMPLE_ORDERS);
   const [wallet, setWallet] = useState(WALLET_BALANCE);
@@ -324,7 +323,6 @@ export default function Home({
   const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
   useEffect(() => { installAudioUnlock(); }, []); /* first tap anywhere unlocks sound for the receipt printer */
   useEffect(() => {
-    const w = load("369mart.list", null); if (Array.isArray(w)) setWishIds(w);
     const r = load(RECENT_KEY, null); if (Array.isArray(r)) setRecentIds(r);
     const o = load("369mart.orders", null);
     const patches = load("369mart.orderPatches", {});
@@ -353,15 +351,44 @@ export default function Home({
     });
   const removeAddress = (a) =>
     addrAct.run(async () => { await api(`/addresses/${a.id}`, { method: "DELETE" }); api.invalidate("/addresses"); await reloadAddresses(); });
+  /* One line for anything the page has to say back to a tap - a heart is the
+     first thing here with no screen of its own to say it on. */
+  const [notice, setNotice] = useState("");
+  const noticeT = useRef(null);
+  const notify = useCallback((m) => {
+    setNotice(m);
+    clearTimeout(noticeT.current);
+    noticeT.current = setTimeout(() => setNotice(""), 2200);
+  }, []);
+  /* The list belongs to the shopper, not to this browser, so it comes from the
+     account - which also means a guest has nowhere to put one, and is told so
+     rather than handed a list that quietly dies with the cache. Every answer
+     carries the whole list back, so a toggle needs no second trip. The heart
+     fills before the trip though: one that waits for Oman reads as broken. */
+  const { data: wishData } = useResource("/wishlist", { enabled: !!me });
+  const [wishIds, setWishIds] = useState([]);
+  const wishAct = useAction();
+  useEffect(() => { if (Array.isArray(wishData?.ids)) setWishIds(wishData.ids); }, [wishData]);
   const wish = useMemo(() => ({
     ids: wishIds,
     has: (id) => wishIds.includes(id),
-    toggle: (id) => setWishIds((w) => {
-      const next = w.includes(id) ? w.filter((x) => x !== id) : [id, ...w];
-      try { localStorage.setItem("369mart.list", JSON.stringify(next)); } catch (e) {}
-      return next;
-    }),
-  }), [wishIds]);
+    toggle: (id) => {
+      if (!me) return notify("Sign in to save this");
+      const had = wishIds.includes(id);
+      const before = wishIds;
+      setWishIds(had ? before.filter((x) => x !== id) : [id, ...before]);
+      wishAct
+        .run(async () => {
+          const r = had
+            ? await api(`/wishlist/${id}`, { method: "DELETE" })
+            : await api("/wishlist", { method: "POST", body: { id } });
+          api.invalidate("/wishlist");
+          if (Array.isArray(r?.ids)) setWishIds(r.ids);
+          notify(had ? "Removed from My List" : "Saved to My List");
+        })
+        .then((ok) => { if (ok === null) { setWishIds(before); notify("Couldn't update your list"); } });
+    },
+  }), [wishIds, me, notify, wishAct]);
   /* The home feed, from Odoo: one key per active mode, in the shape the page
      already reads. `stale` is how many seconds old the answer is when the shop
      could not be reached and the proxy handed back the last one it kept - the
@@ -715,6 +742,7 @@ export default function Home({
         hidden={!!fx || ["checkout", "order", "track"].includes(view)}
         lift={view === "cart" ? 3 : browsing && count > 0 ? (view === "home" ? 2 : 1) : 0} />
       <ModeSwitchOverlay fx={fx} />
+      <div className={"hm-toast" + (notice ? " hm-show" : "")} role="status" aria-live="polite">{notice}</div>
       <SearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} products={products} picks={quickPicks} cart={cart} setQty={setQty}
         initialQuery={view === "search" ? route.param || "" : ""}
         onSubmit={(term) => nav("search", term)} />

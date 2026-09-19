@@ -1,8 +1,10 @@
 """Profile, referrals, rewards, notifications and the wishlist."""
 
+import json
+
 from odoo.tests import tagged
 
-from .common import Mart369AccountCase
+from .common import Mart369AccountCase, Mart369AccountHttpCase
 
 
 @tagged('post_install', '-at_install')
@@ -191,3 +193,58 @@ class TestMart369Notifications(Mart369AccountCase):
         feed = self.env['mart369.notifications']._mart369_for(self._other_customer())
         self.assertNotIn(order.mart369_ref,
                          ' '.join(r['id'] for r in feed['notifications']))
+
+
+@tagged('post_install', '-at_install')
+class TestMart369Wishlist(Mart369AccountHttpCase):
+    """Over HTTP, because the bug was in the row the route writes.
+
+    `product.wishlist.website_id` is required and the route never set it, so
+    every save died on a not-null constraint. A test that created the row
+    itself would have passed - it would have supplied the website the route
+    forgot.
+    """
+
+    def _req(self, path, method='GET', body=None):
+        response = self.opener.request(
+            method, self.base_url() + path,
+            data=json.dumps(body or {}) if method != 'GET' else None,
+            headers={'Content-Type': 'application/json'}, timeout=30)
+        try:
+            payload = response.json()
+        except ValueError:
+            payload = {}
+        return response.status_code, payload
+
+    def setUp(self):
+        super().setUp()
+        self.authenticate('order.tester@369mart.test', 'order-tester-369')
+
+    def test_saving_one_puts_it_on_the_list(self):
+        status, payload = self._req(
+            '/369mart/wishlist', 'POST', {'id': str(self.quick_product.id)})
+        self.assertEqual(status, 201, payload.get('error'))
+        self.assertEqual(payload['ids'], [str(self.quick_product.id)])
+
+    def test_the_list_comes_back_on_the_next_visit(self):
+        self._req('/369mart/wishlist', 'POST', {'id': str(self.quick_product.id)})
+        status, payload = self._req('/369mart/wishlist')
+        self.assertEqual(status, 200)
+        self.assertEqual(payload['ids'], [str(self.quick_product.id)])
+
+    def test_saving_the_same_one_twice_keeps_one_row(self):
+        self._req('/369mart/wishlist', 'POST', {'id': str(self.quick_product.id)})
+        __, payload = self._req(
+            '/369mart/wishlist', 'POST', {'id': str(self.quick_product.id)})
+        self.assertEqual(payload['ids'], [str(self.quick_product.id)])
+
+    def test_removing_one_takes_it_off(self):
+        self._req('/369mart/wishlist', 'POST', {'id': str(self.quick_product.id)})
+        status, payload = self._req(
+            '/369mart/wishlist/%s' % self.quick_product.id, 'DELETE')
+        self.assertEqual(status, 200)
+        self.assertEqual(payload['ids'], [])
+
+    def test_a_product_that_is_not_there_is_not_saved(self):
+        status, __ = self._req('/369mart/wishlist', 'POST', {'id': '99999999'})
+        self.assertEqual(status, 404)

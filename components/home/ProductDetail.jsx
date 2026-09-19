@@ -311,7 +311,7 @@ export default function ProductDetail({
                 <Icon n={quick ? "bolt" : "truck"} size={12} className={quick ? "hm-fill" : ""} />{quick ? "Quick · 10–20 mins" : `Express · ${p.delivery}`}
               </span>
               <span className="pd-actions">
-                <button className={"pd-round" + (liked ? " pd-liked" : "")} onClick={() => { wish?.toggle(p.id); flash(liked ? "Removed from My List" : "Saved to My List"); }} aria-pressed={!!liked} aria-label={liked ? "Remove from My List" : "Save to My List"}>
+                <button className={"pd-round" + (liked ? " pd-liked" : "")} onClick={() => wish?.toggle(p.id)} aria-pressed={!!liked} aria-label={liked ? "Remove from My List" : "Save to My List"}>
                   <Icon n={liked ? "heartFill" : "heart"} size={18} />
                 </button>
                 <button className="pd-round" onClick={share} aria-label="Share"><Icon n="share" size={17} /></button>

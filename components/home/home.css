@@ -330,6 +330,13 @@
 .hm-fly-x, .hm-fly-y { position: fixed; left: 0; top: 0; z-index: 2147483000; pointer-events: none; }
 .hm-fly-y { width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; background: var(--hm-orange, #f7931e); box-shadow: 0 0 0 3px #fff, 0 6px 14px rgba(247, 147, 30, 0.55); }
 
+/* ---------------- toast ---------------- */
+/* One line back to a tap, for the taps with no screen of their own - a heart
+   on a card is the first of them. Same shape as the product page's toast, and
+   in front of it, so the two never argue about the same heart. */
+.hm-toast { position: fixed; left: 50%; bottom: 96px; z-index: 140; transform: translate(-50%, 30px); opacity: 0; pointer-events: none; background: #13212b; color: #fff; font-size: 14px; font-weight: 600; padding: 10px 18px; border-radius: 999px; transition: transform 360ms var(--hm-spring), opacity 220ms; white-space: nowrap; }
+.hm-toast.hm-show { transform: translate(-50%, 0); opacity: 1; }
+
 /* ---------------- responsive ---------------- */
 @media (max-width: 1100px) {
   .hm-cats { grid-template-columns: repeat(4, minmax(0, 1fr)); }

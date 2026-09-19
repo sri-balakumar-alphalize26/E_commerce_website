@@ -47,6 +47,22 @@ class Mart369AccountApi(http.Controller):
     def _me(self):
         return request.env.user.partner_id
 
+    def _website(self):
+        """The shop a wishlist row belongs to.
+
+        `product.wishlist.website_id` is required, and these routes are not
+        website routes - there is no `request.website` to inherit one from, so
+        `get_current_website()` is asked and the only website there is serves
+        as the answer when it cannot say. Without this the insert fails on a
+        not-null constraint, which is a 422 the storefront can do nothing with.
+        """
+        Website = request.env['website'].sudo()
+        try:
+            website = Website.get_current_website()
+        except Exception:
+            website = Website.browse()
+        return website or Website.search([], limit=1)
+
     def _product(self, product_id):
         """A published product, or nothing."""
         try:
@@ -230,6 +246,9 @@ class Mart369AccountApi(http.Controller):
         product = self._product(self._body().get('id'))
         if not product:
             return self._fail('No such product.', status=404)
+        website = self._website()
+        if not website:
+            return self._fail('Your list is unavailable right now.', status=503)
         Wishlist = request.env['product.wishlist'].sudo()
         existing = Wishlist.search([
             ('partner_id', '=', self._me().id),
@@ -239,6 +258,7 @@ class Mart369AccountApi(http.Controller):
             Wishlist.create({
                 'partner_id': self._me().id,
                 'product_id': product.product_variant_id.id,
+                'website_id': website.id,
             })
         return self._json({'ok': True, 'ids': self._mart369_wish_ids()}, status=201)
 
