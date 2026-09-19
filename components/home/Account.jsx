@@ -21,6 +21,8 @@ import { useContext, useEffect, useLayoutEffect, useRef, useState } from "react"
 import { Icon, OpenContext, QtyControl, Thumb, WishContext, inr } from "./shared";
 import { NotifsSec, PaymentsSec, ReferSec, ReviewsSec, RewardsSec, WalletSec, useNotifications } from "./AccountExtras";
 import { fmtPlaced } from "./orderState";
+import { api } from "@/lib/api";
+import { useAction } from "@/lib/useFetch";
 
 const MENU = [
   { key: "profile", label: "My Profile", icon: "user" },
@@ -84,10 +86,22 @@ function ProfileSec({ user, onSave }) {
   const [form, setForm] = useState(user);
   const [edit, setEdit] = useState(false);
   const [saved, setSaved] = useState(false);
+  const act = useAction();
+  useEffect(() => { setForm(user); }, [user]);
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
-  const save = (e) => {
+  /* The screen used to say "Saved" and change nothing but its own state, so
+     the edit was gone on reload. It is a write now, and a refusal - an email
+     somebody else already uses - is a sentence the form can show. */
+  const save = async (e) => {
     e.preventDefault();
-    onSave(form); setEdit(false); setSaved(true);
+    const answer = await act.run(async () => {
+      const r = await api("/profile", { method: "PATCH", body: { name: form.name, email: form.email, phone: form.phone } });
+      api.invalidate("/profile");
+      return r;
+    });
+    if (!answer) return;
+    onSave({ name: answer.name ?? form.name, email: answer.email ?? form.email, phone: answer.phone ?? form.phone });
+    setEdit(false); setSaved(true);
     setTimeout(() => setSaved(false), 2200);
   };
   return (
@@ -105,10 +119,11 @@ function ProfileSec({ user, onSave }) {
           </label>
         ))}
       </div>
+      {act.error && <p className="co-error">{act.error.message}</p>}
       <div className={"ac-actions" + (edit ? " ac-show" : "")}>
         <div>
-          <button type="button" className="ac-ghost" onClick={() => { setForm(user); setEdit(false); }} tabIndex={edit ? 0 : -1}>Cancel</button>
-          <button type="submit" className="ac-primary" tabIndex={edit ? 0 : -1}>Save changes</button>
+          <button type="button" className="ac-ghost" onClick={() => { setForm(user); setEdit(false); act.clearError(); }} tabIndex={edit ? 0 : -1}>Cancel</button>
+          <button type="submit" className="ac-primary" disabled={act.busy} tabIndex={edit ? 0 : -1}>{act.busy ? "Saving…" : "Save changes"}</button>
         </div>
       </div>
     </form>
@@ -401,9 +416,9 @@ export default function AccountPage({
   else if (section === "orders") body = <OrdersSec orders={orders} byId={byId} onReorder={onReorder} onTrack={onTrack} />;
   else if (section === "reviews") body = <ReviewsSec orders={orders} byId={byId} onOpen={openProduct} flash={flash} />;
   else if (section === "notifications") body = <NotifsSec orders={orders} onNav={onNav} goSection={go} />;
-  else if (section === "wallet") body = <WalletSec balance={wallet} onWallet={onWallet} onNav={onNav} flash={flash} />;
+  else if (section === "wallet") body = <WalletSec onNav={onNav} />;
   else if (section === "payments") body = <PaymentsSec flash={flash} />;
-  else if (section === "rewards") body = <RewardsSec onWallet={onWallet} onNav={onNav} flash={flash} />;
+  else if (section === "rewards") body = <RewardsSec onNav={onNav} flash={flash} />;
   else if (section === "refer") body = <ReferSec user={user} flash={flash} />;
   else if (section === "help") body = <HelpSec />;
   else if (section === "about") body = <AboutSec />;

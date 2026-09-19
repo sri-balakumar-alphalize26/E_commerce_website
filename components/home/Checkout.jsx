@@ -16,7 +16,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Icon, Thumb, inr } from "./shared";
 import { Amount, computeBill, useBill, useRules } from "./Cart";
-import { KEYS, SEED_PAYMENTS, useStored } from "./accountStore";
+import { useRemote } from "./accountStore";
 import {
   BANKS, BRAND_LABEL, COD_LIMIT, UPI_APPS, cardBrand, demoGateway, expiryOk,
   formatCard, formatExpiry, luhn, newOrderId, upiOk,
@@ -572,9 +572,10 @@ export default function CheckoutPage({
   const [walletUse, setWalletUse] = useState(false);
   const [pay, setPay] = useState({
     method: draft.how === "cod" ? "cod" : "upi", upiApp: "gpay", useVpa: false, vpa: "", vpaName: "", vpaError: "",
-    cardId: SEED_PAYMENTS.cards[0]?.id || "new", savedCvv: "", cardNum: "", cardName: "", cardExp: "", cardCvv: "", saveCard: true, bank: "",
+    cardId: "new", savedCvv: "", cardNum: "", cardName: "", cardExp: "", cardCvv: "", saveCard: true, bank: "",
   });
-  const [savedPay, setSavedPay] = useStored(KEYS.payments, SEED_PAYMENTS);
+  const { data: methods, reload: reloadMethods } = useRemote("/payment/methods");
+  const savedPay = useMemo(() => ({ cards: methods?.cards || [], upis: methods?.upis || [] }), [methods]);
   const cards = useMemo(() => [...savedPay.cards].sort((a, b) => !!b.default - !!a.default), [savedPay.cards]);
   useEffect(() => { /* saved cards load after mount: keep the pick valid */
     setPay((p) => (p.cardId === "new" || cards.some((c) => c.id === p.cardId) ? p : { ...p, cardId: cards[0]?.id || "new" }));
@@ -625,11 +626,6 @@ export default function CheckoutPage({
     const app = UPI_APPS.find((a) => a.key === job.upiApp);
     const payNote = method === "upi" ? (job.vpa || `${app?.name}`) : method === "card" ? job.cardLabel : method === "netbanking" ? BANKS.find((b) => b.key === job.bank)?.name : method === "wallet" ? "369 Wallet" : "Cash on delivery";
     const at = Date.now();
-    if (method === "card" && pay.cardId === "new" && pay.saveCard) { /* shows up in Account → Saved payments */
-      const d = pay.cardNum.replace(/\D/g, "");
-      setSavedPay((sp) => sp.cards.some((c) => c.last4 === d.slice(-4) && c.exp === pay.cardExp) ? sp
-        : { ...sp, cards: [...sp.cards, { id: "c" + at, brand: cardBrand(d) || "visa", last4: d.slice(-4), name: pay.cardName.trim(), exp: pay.cardExp, bank: "Saved card", default: !sp.cards.length }] });
-    }
     const order = {
       id: newOrderId(mode), at, mode,
       placed: "Today, " + new Date(at).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" }),

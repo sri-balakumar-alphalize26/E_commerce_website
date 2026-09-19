@@ -15,7 +15,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ProductArt from "./art";
 import { Icon, OpenContext, Rail, SEARCH_WORDS, Thumb, WishContext, flyTo, inr, useInView, useRailScroll } from "./shared";
-import { logWallet } from "./accountStore";
 import AccountPage from "./Account";
 import { useNotifications } from "./AccountExtras";
 import ProductDetail from "./ProductDetail";
@@ -28,7 +27,6 @@ import SupportBot from "./SupportBot";
 import ReceiptPrinter from "./Receipt";
 import OrderTrack from "./OrderTrack";
 import { installAudioUnlock } from "./sound";
-import { WALLET_BALANCE } from "./payment";
 import { SECTION_TO_ROUTE, TAB_TO_ROUTE, TILE_TO_ROUTE, listable } from "./catalog";
 import { NavContext, pathToRoute, routeToPath } from "./nav";
 import { useAction, useResource } from "@/lib/useFetch";
@@ -309,7 +307,6 @@ export default function Home({
   const address = useMemo(() => addresses.find((a) => a.id === addrData?.selected) || null, [addresses, addrData]);
   const addrAct = useAction();
   const [recentIds, setRecentIds] = useState([]);
-  const [wallet, setWallet] = useState(WALLET_BALANCE);
   const [draft, setDraft] = useState({});
   const [me, setMe] = useState(null); /* the signed-in customer, from /api/auth/me */
   useEffect(() => {
@@ -321,7 +318,6 @@ export default function Home({
   useEffect(() => { installAudioUnlock(); }, []); /* first tap anywhere unlocks sound for the receipt printer */
   useEffect(() => {
     const r = load(RECENT_KEY, null); if (Array.isArray(r)) setRecentIds(r);
-    const wb = load("369mart.wallet", null); if (typeof wb === "number") setWallet(wb);
     try { const d = JSON.parse(sessionStorage.getItem("369mart.checkout") || "null"); if (d) setDraft(d); } catch (e) {}
   }, []);
   /* Choosing an address is telling the shop which one to ship to. */
@@ -358,6 +354,11 @@ export default function Home({
      rather than handed a list that quietly dies with the cache. Every answer
      carries the whole list back, so a toggle needs no second trip. The heart
      fills before the trip though: one that waits for Oman reads as broken. */
+  /* What the wallet holds is the shop's ledger, not a number this browser
+     keeps adding to. Spending it and topping it up are payments, and they are
+     the last thing left to move across. */
+  const { data: walletData, reload: reloadWallet } = useResource("/wallet", { enabled: !!me });
+  const wallet = walletData?.balance ?? 0;
   const { data: wishData } = useResource("/wishlist", { enabled: !!me });
   const [wishIds, setWishIds] = useState([]);
   const wishAct = useAction();
@@ -491,15 +492,12 @@ export default function Home({
   };
   const reorder = (o, el) => { flyTo(el); o.items.forEach(([id, q]) => byId[id] && byId[id].stock !== 0 && setQty(id, (cart[id] || 0) + q)); };
 
-  /* wallet credits from the account page (add money, scratch cards) and refunds */
-  const walletMove = (amount, entry) => {
-    setWallet((w) => { const n = Math.max(0, w + amount); save("369mart.wallet", n); return n; });
-    if (entry) logWallet({ amount: Math.abs(amount), ...entry });
-  };
+  /* A refund is the shop crediting the wallet, so there is nothing to add up
+     here - only the ledger to read again once it has. */
+  const walletMove = () => reloadWallet();
   const { unread } = useNotifications(orders);
   const orderPlaced = (o) => {
     setJustPlaced(o);
-    if (o.walletUsed) { const left = Math.max(0, wallet - o.walletUsed); setWallet(left); save("369mart.wallet", left); logWallet({ kind: "spend", amount: o.walletUsed, title: "Paid for order", sub: `Order #${o.id}` }); }
     order.current = []; setCart({});
     try { sessionStorage.removeItem("369mart.checkout"); } catch (e) {}
     nav("order", o.id, { replace: true });

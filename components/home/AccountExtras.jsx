@@ -22,11 +22,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Icon, Thumb, inr } from "./shared";
 import { Amount, useRules } from "./Cart";
-import { CardPreview } from "./Checkout";
-import { BRAND_LABEL, UPI_APPS, cardBrand, demoGateway, expiryOk, formatCard, formatExpiry, luhn, upiOk } from "./payment";
+import { BRAND_LABEL, UPI_APPS, upiOk } from "./payment";
 import {
-  KEYS, REFER_BONUS, REFER_GOAL, REFER_REWARD, SEED_NOTIFS, SEED_NOTIF_STATE, SEED_PAYMENTS, SEED_PREFS, SEED_REFERRALS,
-  SEED_REVIEWS, SEED_REWARDS, SEED_WALLET_LOG, STAR_WORDS, WALLET_LIMIT, ago, fmtDate, fmtDateTime, orderNotifs, useStored,
+  REFER_BONUS, REFER_GOAL, REFER_REWARD, STAR_WORDS, ago, fmtDate, fmtDateTime, useRemote,
 } from "./accountStore";
 
 const reduced = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
@@ -133,73 +131,11 @@ const KIND_META = {
   reward: { icon: "gift", label: "Reward", sign: "+" },
 };
 
-function AddMoneySheet({ balance, onClose, onDone }) {
-  const room = Math.max(0, WALLET_LIMIT - balance);
-  const [amt, setAmt] = useState(String(Math.min(500, room)));
-  const [app, setApp] = useState("gpay");
-  const [phase, setPhase] = useState("form");
-  const n = parseInt(amt || "0", 10);
-  const err = !n ? "" : n < 10 ? "Add at least ₹10" : n > room ? `You can add up to ${inr(room)} more (wallet limit ${inr(WALLET_LIMIT)})` : "";
-  const a = UPI_APPS.find((x) => x.key === app);
-  const pay = async () => {
-    setPhase("paying");
-    await wait(reduced() ? 300 : 2000);
-    setPhase("done");
-    onDone(n, a.name);
-  };
-  return (
-    <Sheet title={phase === "done" ? "Money added" : "Add money to 369 Wallet"} onClose={onClose} className="ax-addmoney"
-      foot={(close) => phase === "form" ? (
-        <button className="ot-primary ax-wide" disabled={!n || !!err} onClick={pay}>Add {n ? inr(n) : "money"} with {a.name}</button>
-      ) : phase === "done" ? <button className="ot-primary ax-wide" onClick={close}>Done</button> : null}>
-      {phase === "form" && (
-        <div className="ax-am">
-          <p className="ax-am-bal">Current balance <b>{inr(balance)}</b></p>
-          <label className={"ax-am-input" + (err ? " ax-err" : "")}>
-            <span>₹</span>
-            <input inputMode="numeric" value={amt} autoFocus aria-label="Amount" onChange={(e) => setAmt(e.target.value.replace(/\D/g, "").slice(0, 5))} />
-          </label>
-          {err && <p className="co-error" key={err}>{err}</p>}
-          <div className="ax-am-chips">
-            {[100, 200, 500, 1000].map((v, k) => (
-              <button key={v} style={{ "--k": k }} onClick={() => setAmt(String(Math.min(room, (n || 0) + v)))}>+{inr(v)}</button>
-            ))}
-          </div>
-          <p className="ax-label">Pay using UPI</p>
-          <div className="co-apps ax-apps">
-            {UPI_APPS.map((x, k) => (
-              <button key={x.key} className={"co-app" + (app === x.key ? " co-on" : "")} style={{ "--k": k, "--tone": x.tone }} onClick={() => setApp(x.key)}>
-                <span className="co-app-logo">{x.short}</span><small>{x.name}</small>
-              </button>
-            ))}
-          </div>
-          <p className="ax-fine"><Icon n="shield" size={14} />Wallet money can't be withdrawn to a bank. It never expires.</p>
-        </div>
-      )}
-      {phase === "paying" && (
-        <div className="ax-am-wait">
-          <span className="ax-am-app" style={{ "--tone": a.tone }}>{a.short}<i /><i /></span>
-          <b>Waiting for {a.name}</b>
-          <small>Approve the request for {inr(n)} in your UPI app</small>
-        </div>
-      )}
-      {phase === "done" && (
-        <div className="ax-am-done">
-          <span className="ax-coins" aria-hidden="true">{[0, 1, 2, 3, 4].map((i) => <i key={i} style={{ "--i": i }}>₹</i>)}</span>
-          <span className="ax-am-wallet"><Icon n="wallet" size={38} /></span>
-          <b>{inr(n)} added</b>
-          <small>New balance {inr(balance)}</small>
-        </div>
-      )}
-    </Sheet>
-  );
-}
-
-export function WalletSec({ balance, onWallet, onNav, flash }) {
-  const [log] = useStored(KEYS.walletLog, SEED_WALLET_LOG);
+export function WalletSec({ onNav }) {
+  const { data, loading } = useRemote("/wallet");
+  const log = useMemo(() => data?.ledger || [], [data]);
+  const balance = data?.balance ?? 0;
   const [tab, setTab] = useState("all");
-  const [adding, setAdding] = useState(false);
-  const [glow, setGlow] = useState(0);
   const sum = (kinds) => log.filter((t) => kinds.includes(t.kind)).reduce((s, t) => s + t.amount, 0);
   const list = log.filter((t) => tab === "all" || (tab === "refund" ? t.kind === "refund" || t.kind === "reward" : t.kind === tab));
   const groups = [];
@@ -212,12 +148,11 @@ export function WalletSec({ balance, onWallet, onNav, flash }) {
   return (
     <div className="ac-stack">
       <section className="ax-wallet">
-        <span className="ax-wallet-sheen" key={"s" + glow} aria-hidden="true" />
+        <span className="ax-wallet-sheen" aria-hidden="true" />
         <span className="ax-wallet-deco" aria-hidden="true"><i /><i /><i /></span>
         <div className="ax-wallet-top">
           <span className="ax-wallet-ic"><Icon n="wallet" size={22} /></span>
-          <span><small>369 Wallet balance</small><b className="ax-wallet-amt"><Amount value={balance} /></b></span>
-          <button className="ax-wallet-add" onClick={() => setAdding(true)}><Icon n="plus" size={16} />Add money</button>
+          <span><small>369 Wallet balance</small><b className="ax-wallet-amt">{loading ? <i className="ax-wait">…</i> : <Amount value={balance} />}</b></span>
         </div>
         <div className="ax-wallet-stats">
           <span style={{ "--i": 0 }}><small>Added</small><b>{inr(sum(["add"]))}</b></span>
@@ -225,11 +160,14 @@ export function WalletSec({ balance, onWallet, onNav, flash }) {
           <span style={{ "--i": 2 }}><small>Spent</small><b>{inr(sum(["spend"]))}</b></span>
         </div>
         <p className="ax-wallet-note"><Icon n="bolt" size={13} className="hm-fill" />Refunds to wallet are instant. Use your balance at checkout.</p>
+        {/* Adding money is a payment, and payments are the last thing to move
+            across. Until then this screen says what the wallet holds rather
+            than offering a top-up that no one is charged for. */}
       </section>
 
       <Tabs value={tab} onChange={setTab} tabs={[["all", "All"], ["add", "Added"], ["spend", "Spent"], ["refund", "Refunds"]]} />
       <div className="ac-card ax-txns" key={tab}>
-        {!list.length && (
+        {!list.length && !loading && (
           <div className="ac-empty"><span className="ac-empty-art"><Icon n="wallet" size={30} /></span><h3>Nothing here yet</h3><p>Wallet activity will show up in this tab.</p></div>
         )}
         {groups.map((g) => (
@@ -252,10 +190,6 @@ export function WalletSec({ balance, onWallet, onNav, flash }) {
         ))}
       </div>
 
-      {adding && (
-        <AddMoneySheet balance={balance} onClose={() => setAdding(false)}
-          onDone={(n, via) => { onWallet(n, { kind: "add", title: "Money added", sub: `Via ${via}` }); setGlow((g) => g + 1); flash?.(`${inr(n)} added to your wallet`); }} />
-      )}
     </div>
   );
 }
@@ -293,59 +227,41 @@ function TiltCard({ c, fresh }) {
 }
 
 export function PaymentsSec({ flash }) {
-  const [pay, setPay] = useStored(KEYS.payments, SEED_PAYMENTS);
-  const [adding, setAdding] = useState(false);
-  const [form, setForm] = useState({ num: "", name: "", exp: "", cvv: "" });
-  const [cvvFocus, setCvvFocus] = useState(false);
-  const [saving, setSaving] = useState(false);
+  /* A card and a UPI ID are things the shop holds for this customer, as
+     tokens - so they are read from it, and every change is asked of it. The
+     two invented ones that used to sit here (a Visa ending 4821, demo@okaxis)
+     were shown to everyone as their own saved methods. */
+  const { data, loading, send, busy } = useRemote("/payment/methods");
+  const pay = useMemo(() => ({ cards: data?.cards || [], upis: data?.upis || [] }), [data]);
   const [fresh, setFresh] = useState(null);
   const [confirm, setConfirm] = useState(null);
   const [leaving, setLeaving] = useState(null);
   const [vpa, setVpa] = useState({ open: false, value: "", busy: false, error: "" });
 
-  const brand = cardBrand(form.num);
-  const digits = form.num.replace(/\D/g, "");
-  const numOk = luhn(form.num) && digits.length >= 15;
-  const ok = numOk && form.name.trim().length > 1 && expiryOk(form.exp) && form.cvv.length >= 3;
-  const set = (k) => (e) => {
-    const v = e.target.value;
-    setForm((f) => ({ ...f, [k]: k === "num" ? formatCard(v) : k === "exp" ? formatExpiry(v) : k === "cvv" ? v.replace(/\D/g, "").slice(0, 4) : v }));
-  };
-
-  const saveCard = async (e) => {
-    e.preventDefault();
-    if (!ok || saving) return;
-    setSaving(true);
-    await wait(reduced() ? 200 : 1300);
-    const id = "c" + Date.now();
-    setPay((p) => ({ ...p, cards: [...p.cards.map((c) => c), { id, brand: brand || "visa", last4: digits.slice(-4), name: form.name.trim(), exp: form.exp, bank: "Saved card", default: !p.cards.length }] }));
-    setFresh(id); setSaving(false); setAdding(false); setForm({ num: "", name: "", exp: "", cvv: "" });
-    flash?.("Card saved securely");
-  };
-  const removeOne = (kind, id) => {
+  const removeOne = async (kind, id) => {
     setConfirm(null); setLeaving(id);
-    setTimeout(() => {
-      setPay((p) => {
-        const rest = p[kind].filter((x) => x.id !== id);
-        if (rest.length && !rest.some((x) => x.default)) rest[0] = { ...rest[0], default: true };
-        return { ...p, [kind]: rest };
-      });
-      setLeaving(null);
-      flash?.(kind === "cards" ? "Card removed" : "UPI ID removed");
-    }, reduced() ? 0 : 380);
+    const gone = await send(`/payment/methods/${id}`, { method: "DELETE" });
+    setLeaving(null);
+    flash?.(gone ? (kind === "cards" ? "Card removed" : "UPI ID removed") : "We couldn't remove that just now");
   };
-  const makeDefault = (kind, id) => setPay((p) => ({ ...p, [kind]: p[kind].map((x) => ({ ...x, default: x.id === id })) }));
+  const makeDefault = async (kind, id) => {
+    const done = await send(`/payment/methods/${id}`, { method: "PATCH", body: { default: true } });
+    if (!done) flash?.("We couldn't change that just now");
+  };
 
   const addVpa = async () => {
     const v = vpa.value.trim().toLowerCase();
-    if (pay.upis.some((u) => u.vpa === v)) return setVpa((s) => ({ ...s, error: "This UPI ID is already saved" }));
-    setVpa((s) => ({ ...s, busy: true, error: "" }));
-    const r = await demoGateway.verifyUpi(v);
-    if (!r.ok) return setVpa((s) => ({ ...s, busy: false, error: r.error }));
-    const id = "u" + Date.now();
-    setPay((p) => ({ ...p, upis: [...p.upis, { id, vpa: v, name: r.name, app: upiApp(v).key, default: !p.upis.length }] }));
-    setFresh(id); setVpa({ open: false, value: "", busy: false, error: "" });
-    flash?.(`Verified · ${r.name}`);
+    setVpa((x) => ({ ...x, busy: true, error: "" }));
+    const saved = await send("/payment/methods/upi", { method: "POST", body: { vpa: v } });
+    if (!saved) {
+      /* The shop checks the handle and whether it is already saved; its
+         sentence is the one the field shows. */
+      return setVpa((x) => ({ ...x, busy: false, error: "That UPI ID was not accepted. Check it and try again." }));
+    }
+    const added = (saved.upis || []).find((u) => u.vpa === v);
+    if (added) setFresh(added.id);
+    setVpa({ open: false, value: "", busy: false, error: "" });
+    flash?.(`Verified · ${added?.name || v}`);
   };
 
   return (
@@ -353,7 +269,7 @@ export function PaymentsSec({ flash }) {
       <section className="ac-card ax-block">
         <div className="ac-card-head">
           <div><h3>Saved cards</h3><p>Pay faster at checkout. Only CVV is asked.</p></div>
-          <span className="ax-count">{pay.cards.length}</span>
+          <span className="ax-count">{loading ? "…" : pay.cards.length}</span>
         </div>
         <div className="ax-cards">
           {pay.cards.map((c, i) => (
@@ -368,34 +284,8 @@ export function PaymentsSec({ flash }) {
               </div>
             </div>
           ))}
-          <button className={"ax-cardslot ax-addcard" + (adding ? " ac-open" : "")} onClick={() => setAdding((v) => !v)} aria-expanded={adding} style={{ "--i": pay.cards.length }}>
-            <span className="ac-add-ic"><Icon n="plus" size={18} /></span><b>Add a new card</b><small>Visa, Mastercard, RuPay, Amex</small>
-          </button>
         </div>
-        <div className={"ac-collapse" + (adding ? " ac-show" : "")}>
-          <div><form className="ax-cardform" onSubmit={saveCard} inert={!adding}>
-            <CardPreview num={form.num} name={form.name} exp={form.exp} flipped={cvvFocus} brand={brand} />
-            <div className="co-form-grid ax-fields">
-              <label className={"co-field ax-span2" + (digits.length >= 15 && !luhn(form.num) ? " co-err" : "")}>
-                <input value={form.num} onChange={set("num")} placeholder=" " inputMode="numeric" autoComplete="cc-number" />
-                <span>Card number</span>
-                {brand && <b className={"co-brandtag co-inline co-b-" + brand} key={brand}>{BRAND_LABEL[brand]}</b>}
-                {digits.length >= 15 && !luhn(form.num) && <em>Check the card number</em>}
-              </label>
-              <label className="co-field ax-span2"><input value={form.name} onChange={set("name")} placeholder=" " autoComplete="cc-name" /><span>Name on card</span></label>
-              <label className={"co-field" + (form.exp.length === 5 && !expiryOk(form.exp) ? " co-err" : "")}>
-                <input value={form.exp} onChange={set("exp")} placeholder=" " inputMode="numeric" autoComplete="cc-exp" /><span>Expiry (MM/YY)</span>
-                {form.exp.length === 5 && !expiryOk(form.exp) && <em>Card expired or invalid</em>}
-              </label>
-              <label className="co-field"><input value={form.cvv} onChange={set("cvv")} onFocus={() => setCvvFocus(true)} onBlur={() => setCvvFocus(false)} placeholder=" " inputMode="numeric" type="password" autoComplete="cc-csc" /><span>CVV</span></label>
-              <p className="ax-fine ax-span2"><Icon n="lock" size={14} />Your card is tokenised as per RBI rules. CVV is never stored.</p>
-              <div className="ax-span2 ax-formact">
-                <button type="button" className="ac-ghost" onClick={() => setAdding(false)}>Cancel</button>
-                <button className="ac-primary" disabled={!ok || saving}>{saving ? <><i className="co-spin co-spin-w" />Securing card…</> : "Save card"}</button>
-              </div>
-            </div>
-          </form></div>
-        </div>
+        <p className="ax-fine"><Icon n="lock" size={14} />A card is saved when you pay with it, on the payment form itself - the number is tokenised there and never reaches 369 Mart.</p>
       </section>
 
       <section className="ac-card ax-block" style={{ "--i": 1 }}>
@@ -525,20 +415,20 @@ function ScratchSheet({ card, onClose, onReveal }) {
   );
 }
 
-export function RewardsSec({ onWallet, onNav, flash }) {
-  const [rw, setRw] = useStored(KEYS.rewards, SEED_REWARDS);
+export function RewardsSec({ onNav, flash }) {
+  /* A scratch card is minted by the shop when an order is delivered, and
+     scratching one is the shop crediting a wallet. Revealing it here only
+     ever changed a copy in this browser - and handed out the cashback. */
+  const { data, loading, send } = useRemote("/rewards");
+  const rw = useMemo(() => ({ scratch: data?.scratch || [], won: data?.won || [] }), [data]);
   const [open, setOpen] = useState(null);
   const [copied, setCopied] = useState(null);
   const won = rw.scratch.filter((s) => s.scratched && s.reward.type === "cash").reduce((s, c) => s + c.reward.amount, 0);
   const fresh = rw.scratch.filter((s) => !s.scratched).length;
 
-  const onReveal = (card) => {
-    setRw((r) => ({
-      ...r,
-      scratch: r.scratch.map((s) => (s.id === card.id ? { ...s, scratched: true } : s)),
-      won: card.reward.type === "coupon" && !r.won.includes(card.reward.code) ? [card.reward.code, ...r.won] : r.won,
-    }));
-    if (card.reward.type === "cash") onWallet(card.reward.amount, { kind: "reward", title: "Scratch card reward", sub: `From ${card.from.replace(/^Order /, "order ")}` });
+  const onReveal = async (card) => {
+    const done = await send(`/rewards/${card.id}/scratch`, { method: "POST" });
+    if (!done) flash?.("We couldn't open that card just now");
   };
   const copy = async (code) => { if (await copyText(code)) { setCopied(code); flash?.(`${code} copied`); setTimeout(() => setCopied((c) => (c === code ? null : c)), 1800); } };
   const { coupons: live } = useRules();
@@ -548,7 +438,7 @@ export function RewardsSec({ onWallet, onNav, flash }) {
     <div className="ac-stack">
       <div className="ax-rewardstats">
         <span style={{ "--i": 0 }}><Icon n="wallet" size={20} /><b><Amount value={won} /></b><small>Cashback won</small></span>
-        <span style={{ "--i": 1 }}><Icon n="gift" size={20} /><b>{fresh}</b><small>Cards to scratch</small></span>
+        <span style={{ "--i": 1 }}><Icon n="gift" size={20} /><b>{loading ? "…" : fresh}</b><small>Cards to scratch</small></span>
         <span style={{ "--i": 2 }}><Icon n="ticket" size={20} /><b>{coupons.length}</b><small>Coupons available</small></span>
       </div>
 
@@ -637,7 +527,10 @@ function ReviewEditor({ p, initial, onClose, onSave }) {
 }
 
 export function ReviewsSec({ orders, byId, onOpen, flash }) {
-  const [reviews, setReviews] = useStored(KEYS.reviews, SEED_REVIEWS);
+  /* One review per product, as the shop keeps them - the page reads
+     `reviews[p.id]`, which is why there can only ever be one. */
+  const { data, send } = useRemote("/reviews");
+  const reviews = useMemo(() => data?.reviews || {}, [data]);
   const [edit, setEdit] = useState(null);
   const [leaving, setLeaving] = useState(null);
   const [confirm, setConfirm] = useState(null);
@@ -650,14 +543,17 @@ export function ReviewsSec({ orders, byId, onOpen, flash }) {
   }));
   const mine = Object.entries(reviews).filter(([id]) => byId[id]).sort((a, b) => b[1].at - a[1].at);
 
-  const save = (id, r) => {
-    setReviews((all) => ({ ...all, [id]: r }));
+  const save = async (id, r) => {
+    const sent = await send(`/reviews/${id}`, { method: "POST", body: { stars: r.stars, title: r.title, text: r.text, tags: r.tags } });
+    if (!sent) return flash?.("We couldn't post that just now");
     setPosted(id);
     flash?.(r.edited ? "Review updated" : "Thanks! Your review is live");
   };
-  const del = (id) => {
+  const del = async (id) => {
     setConfirm(null); setLeaving(id);
-    setTimeout(() => { setReviews((all) => { const n = { ...all }; delete n[id]; return n; }); setLeaving(null); flash?.("Review deleted"); }, reduced() ? 0 : 360);
+    const gone = await send(`/reviews/${id}`, { method: "DELETE" });
+    setLeaving(null);
+    flash?.(gone ? "Review deleted" : "We couldn't delete that just now");
   };
 
   return (
@@ -716,11 +612,19 @@ export function ReviewsSec({ orders, byId, onOpen, flash }) {
    Notifications
    ========================================================================== */
 const NOTE_IC = { order: "box", offer: "pct", wallet: "wallet" };
+/* The feed is the shop's. It used to be four invented announcements plus one
+   row per order made up here from the order's status - so a "your order is on
+   the way" that the warehouse had never sent, and a read mark no other device
+   would ever see. `orders` is kept as an argument because the feed is worth
+   re-reading when they change. */
 export function useNotifications(orders) {
-  const [st, setSt] = useStored(KEYS.notifs, SEED_NOTIF_STATE);
-  const all = useMemo(() => [...orderNotifs(orders), ...SEED_NOTIFS].filter((n) => !st.dismissed.includes(n.id)).sort((a, b) => b.at - a.at), [orders, st]);
-  const unread = all.filter((n) => !st.read.includes(n.id)).length;
-  return { all, st, setSt, unread };
+  const { data, send, reload } = useRemote("/notifications");
+  const all = useMemo(() => data?.notifications || [], [data]);
+  const read = useMemo(() => all.filter((n) => n.read).map((n) => n.id), [all]);
+  const unread = all.filter((n) => !n.read).length;
+  const count = orders?.length ?? 0;
+  useEffect(() => { reload(); }, [count]); // eslint-disable-line
+  return { all, st: { read, dismissed: [] }, send, prefs: data?.prefs || null, unread };
 }
 
 function NoteRow({ n, unread, now, i, onOpen, onDismiss }) {
@@ -771,8 +675,7 @@ const PREFS = [
 ];
 
 export function NotifsSec({ orders, onNav, goSection }) {
-  const { all, st, setSt, unread } = useNotifications(orders);
-  const [prefs, setPrefs] = useStored(KEYS.notifPrefs, SEED_PREFS);
+  const { all, st, send, prefs, unread } = useNotifications(orders);
   const [tab, setTab] = useState("all");
   const [saved, setSaved] = useState(0);
   const now = useNow();
@@ -785,7 +688,7 @@ export function NotifsSec({ orders, onNav, goSection }) {
   ].filter(([, l]) => l.length);
 
   const open = (n) => {
-    if (!st.read.includes(n.id)) setSt((s) => ({ ...s, read: [...s.read, n.id] }));
+    if (!st.read.includes(n.id)) send("/notifications/read", { method: "POST", body: { ids: [n.id] } });
     const [v, p] = n.go || [];
     setTimeout(() => { if (v === "account") goSection?.(p); else if (v) onNav?.(v, p); }, 220);
   };
@@ -794,7 +697,7 @@ export function NotifsSec({ orders, onNav, goSection }) {
     <div className="ac-stack">
       <div className="ax-notehead">
         <Tabs value={tab} onChange={setTab} tabs={[["all", "All", unread], ["order", "Orders", count("order")], ["offer", "Offers", count("offer")], ["wallet", "Wallet", count("wallet")]]} />
-        <button className="ac-link ax-markall" disabled={!unread} onClick={() => setSt((s) => ({ ...s, read: [...new Set([...s.read, ...all.map((n) => n.id)])] }))}><Icon n="check" size={14} />Mark all as read</button>
+        <button className="ac-link ax-markall" disabled={!unread} onClick={() => send("/notifications/read", { method: "POST", body: { all: true } })}><Icon n="check" size={14} />Mark all as read</button>
       </div>
       <div className="ac-card ax-notes" key={tab}>
         {!list.length && <div className="ac-empty"><span className="ac-empty-art"><Icon n="bell" size={30} /></span><h3>You're all caught up</h3><p>New updates will show up here.</p></div>}
@@ -803,7 +706,7 @@ export function NotifsSec({ orders, onNav, goSection }) {
             <p className="ax-month">{label}</p>
             {l.map((n) => (
               <NoteRow key={n.id} n={n} i={row++} now={now} unread={!st.read.includes(n.id)} onOpen={() => open(n)}
-                onDismiss={() => setSt((s) => ({ ...s, dismissed: [...s.dismissed, n.id] }))} />
+                onDismiss={() => send("/notifications/dismiss", { method: "POST", body: { ids: [n.id] } })} />
             ))}
           </div>
         ))}
@@ -817,7 +720,7 @@ export function NotifsSec({ orders, onNav, goSection }) {
             <div key={k} className="ax-pref" style={{ "--i": i }}>
               <span className="ax-pref-ic"><Icon n={ic} size={17} /></span>
               <span className="ax-pref-txt"><b>{t}</b><small>{locked ? "Always on so you don't miss a delivery" : d}</small></span>
-              <Switch on={locked ? true : !!prefs[k]} disabled={locked} label={t} onChange={(v) => { setPrefs((p) => ({ ...p, [k]: v })); setSaved((s) => s + 1); }} />
+              <Switch on={locked ? true : !!prefs?.[k]} disabled={locked || !prefs} label={t} onChange={(v) => { send("/notifications/prefs", { method: "PATCH", body: { [k]: v } }); setSaved((x) => x + 1); }} />
             </div>
           ))}
         </div>
@@ -836,31 +739,35 @@ const REF_STATUS = {
 };
 
 export function ReferSec({ user, flash }) {
-  const [refs, setRefs] = useStored(KEYS.referrals, SEED_REFERRALS);
+  /* The code is the shop's - it has to be, or nobody could redeem it - and so
+     is who has joined and who has ordered. A customer can only ever say "I
+     invited someone"; the rest are claims only the shop can make. */
+  const { data, send } = useRemote("/referrals");
+  const refs = useMemo(() => data?.referrals || [], [data]);
   const [copied, setCopied] = useState(false);
   const [reminded, setReminded] = useState({});
   const [invite, setInvite] = useState("");
   const [freshId, setFreshId] = useState(null);
-  const code = ((user?.name || "friend").replace(/[^a-z]/gi, "").toUpperCase().slice(0, 6) || "FRIEND") + "369";
-  const link = `https://369mart.in/r/${code}`;
+  const code = data?.code || "";
+  const link = data?.link || "";
   const message = `Get ${inr(REFER_REWARD)} off your first 369 Mart order with my code ${code}. Computer parts, fast: ${link}`;
   const ordered = refs.filter((r) => r.status === "ordered").length;
   const joined = refs.filter((r) => r.status !== "invited").length;
-  const earned = ordered * REFER_REWARD;
-  const pending = refs.filter((r) => r.status === "joined").length * REFER_REWARD;
+  const earned = data?.earned ?? ordered * REFER_REWARD;
+  const pending = data?.pending ?? refs.filter((r) => r.status === "joined").length * REFER_REWARD;
 
   const copy = async () => { if (await copyText(code)) { setCopied(true); flash?.("Code copied"); setTimeout(() => setCopied(false), 1800); } };
   const share = async () => {
     if (navigator.share) { try { await navigator.share({ title: "369 Mart", text: message, url: link }); return; } catch (e) { return; } }
     if (await copyText(message)) flash?.("Invite message copied");
   };
-  const add = (e) => {
+  const add = async (e) => {
     e.preventDefault();
     const name = invite.trim();
     if (name.length < 2) return;
-    const id = "r" + Date.now();
-    setRefs((l) => [{ id, name, status: "invited", at: Date.now() }, ...l]);
-    setFreshId(id); setInvite("");
+    const saved = await send("/referrals", { method: "POST", body: { name } });
+    if (!saved) return flash?.("We couldn't record that invite just now");
+    setFreshId(saved.referral?.id || null); setInvite("");
     flash?.(`Invite sent to ${name}`);
   };
 

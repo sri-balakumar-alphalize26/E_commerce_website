@@ -25,7 +25,7 @@ import ProductArt from "./art";
 import { Icon, OpenContext, Rail, Thumb, WishContext, flyTo, flyToCart, inr } from "./shared";
 import { getDetails } from "./productDetails";
 import { Crumbs } from "./Browse";
-import { KEYS, SEED_REVIEWS, STAR_WORDS, fmtDate, useStored } from "./accountStore";
+import { STAR_WORDS, fmtDate, useRemote } from "./accountStore";
 
 const ZOOM = 2.6;
 
@@ -265,7 +265,8 @@ export default function ProductDetail({
   related = [], variants = [], onVariant, bundle = [], similar = [], recent = [], onViewSimilar, onEditReview,
 }) {
   const d = useMemo(() => getDetails(p), [p]);
-  const [myReviews] = useStored(KEYS.reviews, SEED_REVIEWS);
+  const { data: reviewData } = useRemote("/reviews");
+  const myReviews = reviewData?.reviews || {};
   const mine = myReviews[p.id];
   const wish = useContext(WishContext);
   const liked = wish?.has(p.id);
