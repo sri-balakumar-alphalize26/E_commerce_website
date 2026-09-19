@@ -31,9 +31,10 @@ import { liveStatus } from "./orderState";
 import { installAudioUnlock } from "./sound";
 import { SAMPLE_ORDERS } from "./Account";
 import { WALLET_BALANCE } from "./payment";
-import { SECTION_TO_ROUTE, TAB_TO_ROUTE, TILE_TO_ROUTE, buildIndex, enrich, listable, variantsOf } from "./catalog";
+import { SECTION_TO_ROUTE, TAB_TO_ROUTE, TILE_TO_ROUTE, listable, variantsOf } from "./catalog";
 import { NavContext, pathToRoute, routeToPath } from "./nav";
 import { useResource } from "@/lib/useFetch";
+import { absorb, ensure, useProducts } from "@/lib/products";
 import { BuyAgainPage, CategoryPage, NotFoundView, OffersPage, SearchResults, SiteFooter } from "./Browse";
 
 /* ---------- header ---------- */
@@ -350,12 +351,18 @@ export default function Home({
   const [cart, setCart] = useState(initialCart);
   const [fx, runSwitch] = useModeSwitch();
 
-  /* one index for every view: home rails + browse catalogue + pack-size variants */
-  const byId = useMemo(() => {
-    const m = buildIndex();
-    Object.values(liveModes).forEach((md) => md.sections.forEach((s) => s.items?.forEach((p) => { m[p.id] = enrich({ ...m[p.id], ...p }); })));
-    return m;
-  }, [liveModes]);
+  /* Every product this session has actually been told about, and nothing else.
+
+     It used to start from buildIndex(), the sample catalogue, which is why a
+     basket or a recently-viewed row could still be holding groceries months
+     after the shop stopped selling them: the ids were stale, but the sample
+     data still had something to resolve them to. Now an id the shop has never
+     mentioned resolves to nothing, and nothing is what gets drawn. */
+  const byId = useProducts();
+  useEffect(() => {
+    if (!feed) return;
+    Object.values(feed).forEach((md) => (md?.sections || []).forEach((s) => absorb(s.items || [])));
+  }, [feed]);
   const products = useMemo(() => listable(byId), [byId]);
 
   /* ---- navigation ---- */
@@ -494,6 +501,11 @@ export default function Home({
     const also = [...sameCat, ...sameMode].filter((x) => !bundle.includes(x)).slice(0, 10);
     return { variants: variantsOf(product, byId), similar, bundle, also };
   }, [product, byId, products]);
+  /* The ids the browser kept - recently viewed, the basket, the wishlist - are
+     just strings, and nothing seeds them any more. Fetch the ones we have not
+     been told about; whatever the shop no longer has quietly stays unresolved
+     and is not drawn. */
+  useEffect(() => { ensure([...recentIds, ...Object.keys(cart), ...wishIds]); }, [recentIds, cart, wishIds]);
   const recent = recentIds.map((id) => byId[id]).filter(Boolean);
 
   /* ---- tabs follow the route ---- */
