@@ -27,9 +27,7 @@ import MiniCart from "./MiniCart";
 import SupportBot from "./SupportBot";
 import ReceiptPrinter from "./Receipt";
 import OrderTrack from "./OrderTrack";
-import { liveStatus } from "./orderState";
 import { installAudioUnlock } from "./sound";
-import { SAMPLE_ORDERS } from "./Account";
 import { WALLET_BALANCE } from "./payment";
 import { SECTION_TO_ROUTE, TAB_TO_ROUTE, TILE_TO_ROUTE, listable } from "./catalog";
 import { NavContext, pathToRoute, routeToPath } from "./nav";
@@ -311,7 +309,6 @@ export default function Home({
   const address = useMemo(() => addresses.find((a) => a.id === addrData?.selected) || null, [addresses, addrData]);
   const addrAct = useAction();
   const [recentIds, setRecentIds] = useState([]);
-  const [orders, setOrders] = useState(SAMPLE_ORDERS);
   const [wallet, setWallet] = useState(WALLET_BALANCE);
   const [draft, setDraft] = useState({});
   const [me, setMe] = useState(null); /* the signed-in customer, from /api/auth/me */
@@ -324,10 +321,6 @@ export default function Home({
   useEffect(() => { installAudioUnlock(); }, []); /* first tap anywhere unlocks sound for the receipt printer */
   useEffect(() => {
     const r = load(RECENT_KEY, null); if (Array.isArray(r)) setRecentIds(r);
-    const o = load("369mart.orders", null);
-    const patches = load("369mart.orderPatches", {});
-    const list = [...(Array.isArray(o) ? o : []), ...SAMPLE_ORDERS].map((x) => (patches[x.id] ? { ...x, ...patches[x.id] } : x));
-    setOrders(list);
     const wb = load("369mart.wallet", null); if (typeof wb === "number") setWallet(wb);
     try { const d = JSON.parse(sessionStorage.getItem("369mart.checkout") || "null"); if (d) setDraft(d); } catch (e) {}
   }, []);
@@ -369,6 +362,20 @@ export default function Home({
   const [wishIds, setWishIds] = useState([]);
   const wishAct = useAction();
   useEffect(() => { if (Array.isArray(wishData?.ids)) setWishIds(wishData.ids); }, [wishData]);
+  /* The orders are the shop's record, not this browser's. There is no seeded
+     history any more, and nothing here decides that an order has moved on -
+     it is polled while a screen is showing one, because a rider setting off
+     is news that arrives from the warehouse, not from a timer in a page. */
+  const { data: ordersData, reload: reloadOrders } = useResource("/orders", { enabled: !!me, pollMs: view === "track" || view === "account" ? 20000 : 0 });
+  /* An order placed in this browser has not been sent to the shop yet - that
+     is the last thing left to move - so it is held here just long enough to
+     show the receipt, and is gone on reload, which is the truth. */
+  const [justPlaced, setJustPlaced] = useState(null);
+  const orders = useMemo(() => {
+    const live = ordersData?.orders || [];
+    return justPlaced && !live.some((x) => x.id === justPlaced.id) ? [justPlaced, ...live] : live;
+  }, [ordersData, justPlaced]);
+
   const wish = useMemo(() => ({
     ids: wishIds,
     has: (id) => wishIds.includes(id),
@@ -482,37 +489,16 @@ export default function Home({
     try { sessionStorage.setItem("369mart.checkout", JSON.stringify(payload)); } catch (e) {}
     nav("checkout");
   };
-  /* after-order changes (cancel, rating, return, demo skip) are stored as patches per order id */
-  const patchOrder = useCallback((id, patch) => {
-    setOrders((list) => list.map((x) => (x.id === id ? { ...x, ...patch } : x)));
-    const all = load("369mart.orderPatches", {});
-    all[id] = { ...(all[id] || {}), ...patch };
-    save("369mart.orderPatches", all);
-  }, []); // eslint-disable-line
   const reorder = (o, el) => { flyTo(el); o.items.forEach(([id, q]) => byId[id] && byId[id].stock !== 0 && setQty(id, (cart[id] || 0) + q)); };
-  /* account + buy again show the live status of demo orders */
-  const [tick, setTick] = useState(0);
-  useEffect(() => {
-    if (view !== "account" && view !== "buyagain") return;
-    const t = setInterval(() => setTick((n) => n + 1), 5000);
-    return () => clearInterval(t);
-  }, [view]);
-  const ordersView = useMemo(() => orders.map((x) => {
-    if (!x.at || x.status === "cancelled") return x;
-    const st = liveStatus(x);
-    return st.key === x.status ? x : { ...x, status: st.key, eta: st.key === "delivered" ? "Delivered" : st.mode === "quick" ? `${st.etaMin} mins` : x.eta };
-  }), [orders, tick]); // eslint-disable-line
 
   /* wallet credits from the account page (add money, scratch cards) and refunds */
   const walletMove = (amount, entry) => {
     setWallet((w) => { const n = Math.max(0, w + amount); save("369mart.wallet", n); return n; });
     if (entry) logWallet({ amount: Math.abs(amount), ...entry });
   };
-  const { unread } = useNotifications(ordersView);
+  const { unread } = useNotifications(orders);
   const orderPlaced = (o) => {
-    const saved = load("369mart.orders", []);
-    save("369mart.orders", [o, ...(Array.isArray(saved) ? saved : [])].slice(0, 30));
-    setOrders((list) => [o, ...list]);
+    setJustPlaced(o);
     if (o.walletUsed) { const left = Math.max(0, wallet - o.walletUsed); setWallet(left); save("369mart.wallet", left); logWallet({ kind: "spend", amount: o.walletUsed, title: "Paid for order", sub: `Order #${o.id}` }); }
     order.current = []; setCart({});
     try { sessionStorage.removeItem("369mart.checkout"); } catch (e) {}
@@ -626,7 +612,7 @@ export default function Home({
       <main className="hm-wrap hm-view-account" key={"account-" + (route.param || "")}>
         <AccountPage user={me || undefined} byId={byId} cart={cart} setQty={setQty} section={route.param || undefined}
           addresses={addresses} onAddAddress={addAddress} onRemoveAddress={removeAddress}
-          selectedAddress={address} onSelectAddress={pickAddress} addrBusy={addrAct.busy} addrError={addrAct.error?.message} orders={ordersView}
+          selectedAddress={address} onSelectAddress={pickAddress} addrBusy={addrAct.busy} addrError={addrAct.error?.message} orders={orders}
           onBrowse={() => nav("home")}
           onReorder={reorder} onTrack={(o) => nav("track", o.id)}
           wallet={wallet} onWallet={walletMove} onNav={nav}
@@ -654,7 +640,7 @@ export default function Home({
     body = (
       <main className="hm-wrap hm-view-track" key={"track-" + route.param}>
         {o ? (
-          <OrderTrack order={o} byId={byId} patchOrder={patchOrder}
+          <OrderTrack order={o} byId={byId} onChanged={reloadOrders}
             onBack={() => nav("account", "orders")} onReceipt={() => nav("order", o.id)} onShop={() => nav("home")}
             onReorder={reorder}
             onRefundWallet={(amt) => walletMove(amt, { kind: "refund", title: "Refund for cancelled order", sub: `Order #${o.id}` })} />
@@ -682,7 +668,7 @@ export default function Home({
   } else if (view === "offers") {
     body = <main className="hm-wrap hm-view-browse" key="offers"><OffersPage {...common} /></main>;
   } else if (view === "buyagain") {
-    body = <main className="hm-wrap hm-view-browse" key="buyagain"><BuyAgainPage {...common} orders={ordersView} /></main>;
+    body = <main className="hm-wrap hm-view-browse" key="buyagain"><BuyAgainPage {...common} orders={orders} /></main>;
   } else if (view === "notfound") {
     body = <main className="hm-wrap hm-view-browse" key="nf"><NotFoundView /></main>;
   } else {
@@ -738,7 +724,7 @@ export default function Home({
         <MiniCart lines={lines} count={count} total={total} freeAt={freeDeliveryAt} setQty={setQty}
           onViewCart={() => nav("cart")} onCheckout={() => startCheckout({ how: "online" })} hidden={!!fx} />
       )}
-      <SupportBot orders={ordersView} wallet={wallet} onNav={nav}
+      <SupportBot orders={orders} wallet={wallet} onNav={nav}
         hidden={!!fx || ["checkout", "order", "track"].includes(view)}
         lift={view === "cart" ? 3 : browsing && count > 0 ? (view === "home" ? 2 : 1) : 0} />
       <ModeSwitchOverlay fx={fx} />

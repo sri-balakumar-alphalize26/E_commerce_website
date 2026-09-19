@@ -20,6 +20,7 @@
 import { useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Icon, OpenContext, QtyControl, Thumb, WishContext, inr } from "./shared";
 import { NotifsSec, PaymentsSec, ReferSec, ReviewsSec, RewardsSec, WalletSec, useNotifications } from "./AccountExtras";
+import { fmtPlaced } from "./orderState";
 
 const MENU = [
   { key: "profile", label: "My Profile", icon: "user" },
@@ -42,12 +43,6 @@ const ORDER = MENU.filter((m) => m.key).map((m) => m.key);
 const TITLES = Object.fromEntries(MENU.filter((m) => m.key).map((m) => [m.key, m.label]));
 export const ACCOUNT_SECTIONS = ORDER;
 
-export const SAMPLE_ORDERS = [
-  { id: "369M-24091612", placed: "Today, 11:42 am", mode: "quick", status: "out", eta: "9 mins", items: [["f3", 1], ["d6", 2], ["f2", 1]], total: 796, pay: "UPI" },
-  { id: "369E-24091408", placed: "14 Sep 2026", mode: "all", status: "shipped", eta: "Arrives Thu, 18 Sep", items: [["a1", 1], ["b2", 1]], total: 11398, pay: "Card •••• 4821" },
-  { id: "369M-24090931", placed: "9 Sep 2026", mode: "quick", status: "delivered", eta: "Delivered 9 Sep, 7:18 pm", items: [["d2", 1], ["d1", 1], ["d7", 1]], total: 1117, pay: "Cash on delivery" },
-  { id: "369E-24090205", placed: "2 Sep 2026", mode: "all", status: "cancelled", eta: "Refunded to original payment", items: [["t5", 1]], total: 2499, pay: "UPI" },
-];
 const STEPS = { quick: ["Placed", "Packed", "Out for delivery", "Delivered"], all: ["Placed", "Shipped", "Out for delivery", "Delivered"] };
 const STEP_OF = { placed: 0, packed: 1, shipped: 1, out: 2, delivered: 3 };
 
@@ -235,7 +230,7 @@ function OrdersSec({ orders, byId, onReorder, onTrack }) {
                 <span className="ac-order-txt">
                   <b>{o.mode === "quick" ? <Icon n="bolt" size={13} className="hm-fill ac-q" /> : <Icon n="truck" size={14} className="ac-e" />}
                     Order #{o.id}</b>
-                  <small>{o.placed} · {inr(o.total)}</small>
+                  <small>{fmtPlaced(o.at)} · {inr(o.total)}</small>
                 </span>
                 <span className={"ac-status ac-s-" + o.status}>{cancelled ? "Cancelled" : o.status === "delivered" ? "Delivered" : o.status === "out" ? `Arriving in ${o.eta}` : steps[at]}</span>
                 <Icon n="chev" size={18} className="ac-chev" />
@@ -355,7 +350,7 @@ export default function AccountPage({
   user: initialUser = { name: "Demo", email: "abc", phone: "" },
   section: initialSection = "list",
   byId, cart, setQty, addresses, onAddAddress, onRemoveAddress, selectedAddress, onSelectAddress, addrBusy, addrError,
-  orders = SAMPLE_ORDERS, onBrowse, onReorder, onTrack, onSignOut,
+  orders = [], onBrowse, onReorder, onTrack, onSignOut,
   wallet = 0, onWallet, onNav, onSection,
 }) {
   const [user, setUser] = useState(initialUser);

@@ -17,18 +17,14 @@ import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } fro
 import { createPortal } from "react-dom";
 import { Icon, OpenContext, Thumb, inr } from "./shared";
 import {
-  RETURN_STEPS, cancellable, deliveryOtp, fmtDay, fmtTime, liveStatus, returnStatus, returnable, riderFor, skipAmount,
+  RETURN_STEPS, cancellable, deliveryOtp, fmtDay, fmtPlaced, fmtTime, liveStatus, returnStatus, returnable, riderFor,
 } from "./orderState";
+import { api } from "@/lib/api";
+import { useAction } from "@/lib/useFetch";
 
 const reduced = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 const lineName = (o, byId, id) => byId[id]?.name || o.snap?.[id]?.name || "Item";
 const linePrice = (o, byId, id) => byId[id]?.price ?? o.snap?.[id]?.price ?? 0;
-
-function useNow(active, ms = 1000) {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => { if (!active) return; const t = setInterval(() => setNow(Date.now()), ms); return () => clearInterval(t); }, [active, ms]);
-  return now;
-}
 
 /* ---------------- bottom sheet / dialog ---------------- */
 function Sheet({ title, onClose, children, foot, wide }) {
@@ -173,7 +169,7 @@ function Timeline({ s, o }) {
   if (s.key === "cancelled") {
     return (
       <ol className="ot-steps ot-cancelled">
-        <li className="ot-done"><i><Icon n="check" size={12} /></i><div><b>Order placed</b><small>{o.placed}</small></div></li>
+        <li className="ot-done"><i><Icon n="check" size={12} /></i><div><b>Order placed</b><small>{fmtPlaced(o.at)}</small></div></li>
         <li className="ot-done ot-red"><i><Icon n="x" size={12} /></i><div><b>Cancelled</b><small>{o.cancel?.reason || "Cancelled"}{o.cancel?.at ? ` · ${fmtTime(o.cancel.at)}` : ""}</small></div></li>
       </ol>
     );
@@ -186,7 +182,7 @@ function Timeline({ s, o }) {
           <i key={i <= s.idx ? "d" : "p"}>{i < s.idx || s.idx === 3 ? <Icon n="check" size={12} /> : i === s.idx ? <b /> : null}</i>
           <div>
             <b>{st.label}</b>
-            <small>{i <= s.idx ? ((o.stamps?.[st.key] || s.times[i]) ? fmtTime(o.stamps?.[st.key] || s.times[i]) + " · " : "") + st.sub : i === 3 && s.mode === "quick" ? `Expected by ${fmtTime(Date.now() + (s.etaMin || 12) * 60000)}` : i === 3 ? `Expected ${fmtDay(o.at, 3)}` : "Pending"}</small>
+            <small>{i <= s.idx ? (s.times[i] ? fmtTime(s.times[i]) + " · " : "") + st.sub : i === 3 ? (o.eta || `Expected ${fmtDay(o.at, 3)}`) : "Pending"}</small>
           </div>
         </li>
       ))}
@@ -308,11 +304,13 @@ function ReturnSheet({ o, byId, onClose, onSubmit }) {
   const [step, setStep] = useState(0);
   const [pick, setPick] = useState({});
   const [reason, setReason] = useState("");
-  const [photos, setPhotos] = useState(0);
   const [mode, setMode] = useState("refund");
   const [slot, setSlot] = useState("today");
   const chosen = Object.entries(pick).filter(([, q]) => q > 0);
-  const amount = chosen.reduce((s, [id, q]) => s + linePrice(o, byId, id) * q, 0);
+  /* A return is settled against the order total, not line by line - that is
+     what the shop records and pays back. Quoting the picked lines here would
+     promise a different refund from the one that actually arrives. */
+  const amount = o.total;
   const canNext = step === 0 ? chosen.length > 0 : step === 1 ? !!reason : true;
   const titles = ["Select items", "What's wrong?", "Refund or replace"];
   return (
@@ -323,7 +321,7 @@ function ReturnSheet({ o, byId, onClose, onSubmit }) {
           {step > 0 && <button className="ot-ghost" onClick={() => setStep(step - 1)}>Back</button>}
           <button className="ot-primary" disabled={!canNext} onClick={() => {
             if (step < 2) return setStep(step + 1);
-            onSubmit({ items: chosen.map(([id, q]) => [id, q]), reason, photos, resolution: mode, slot, amount, at: Date.now() });
+            onSubmit({ items: chosen.map(([id, q]) => [id, q]), reason, resolution: mode, slot, amount });
             close();
           }}>{step < 2 ? "Continue" : mode === "refund" ? `Request refund of ${inr(amount)}` : "Request replacement"}</button>
         </>
@@ -350,22 +348,13 @@ function ReturnSheet({ o, byId, onClose, onSubmit }) {
           </ul>
         )}
         {step === 1 && (
-          <>
-            <div className="ot-radios">
-              {RETURN_REASONS.map((r, i) => (
-                <label key={r} className={"ot-radio" + (reason === r ? " ot-on" : "")} style={{ "--i": i }}>
-                  <input type="radio" name="rr" checked={reason === r} onChange={() => setReason(r)} /><span className="ot-dot"><i /></span>{r}
-                </label>
-              ))}
-            </div>
-            <div className="ot-photos">
-              <span>Add photos <small>(helps us approve faster)</small></span>
-              <div>
-                {Array.from({ length: photos }, (_, i) => <span key={i} className="ot-photo"><Icon n="check" size={16} /></span>)}
-                {photos < 3 && <button className="ot-photo-add" onClick={() => setPhotos(photos + 1)}><Icon n="plus" size={18} /><small>Photo</small></button>}
-              </div>
-            </div>
-          </>
+          <div className="ot-radios">
+            {RETURN_REASONS.map((r, i) => (
+              <label key={r} className={"ot-radio" + (reason === r ? " ot-on" : "")} style={{ "--i": i }}>
+                <input type="radio" name="rr" checked={reason === r} onChange={() => setReason(r)} /><span className="ot-dot"><i /></span>{r}
+              </label>
+            ))}
+          </div>
         )}
         {step === 2 && (
           <>
@@ -387,20 +376,22 @@ function ReturnSheet({ o, byId, onClose, onSubmit }) {
   );
 }
 
-function ReturnTracker({ o, byId, now, onSkip }) {
-  const r = returnStatus(o.ret, now);
-  const steps = RETURN_STEPS.map((x, i) => (i === 3 ? { ...x, label: o.ret.resolution === "replace" ? "Replacement delivered" : "Refund issued" } : x));
+function ReturnTracker({ ret }) {
+  const r = returnStatus(ret);
+  const replace = ret.kind === "replace";
+  const steps = RETURN_STEPS.map((x, i) => (i === 3 ? { ...x, label: replace ? "Replacement delivered" : "Refund issued" } : x));
   return (
     <section className="ot-card ot-return">
-      <header><h3><Icon n="reorder" size={17} />{o.ret.resolution === "replace" ? "Replacement" : "Return"} in progress</h3>
-        {r.idx < 3 && <button className="ot-link" onClick={onSkip}>Skip ahead (demo)</button>}</header>
-      <div className="ot-hsteps" style={{ "--p": r.idx / 3 }}>
-        <i className="ot-hline"><b /></i>
-        {steps.map((st, i) => <span key={st.key} className={(i <= r.idx ? "ot-on" : "") + (i === r.idx && i < 3 ? " ot-now" : "")}><i>{i <= r.idx ? <Icon n="check" size={11} /> : null}</i>{st.label}</span>)}
-      </div>
+      <header><h3><Icon n="reorder" size={17} />{replace ? "Replacement" : "Return"} {r.refused ? "refused" : "in progress"}</h3></header>
+      {!r.refused && (
+        <div className="ot-hsteps" style={{ "--p": r.idx / 3 }}>
+          <i className="ot-hline"><b /></i>
+          {steps.map((st, i) => <span key={st.key} className={(i <= r.idx ? "ot-on" : "") + (i === r.idx && i < 3 ? " ot-now" : "")}><i>{i <= r.idx ? <Icon n="check" size={11} /> : null}</i>{st.label}</span>)}
+        </div>
+      )}
       <p className="ot-return-meta">
-        {o.ret.items.map(([id, q]) => `${q} × ${lineName(o, byId, id)}`).join(", ")} · {o.ret.reason}
-        {o.ret.resolution === "refund" ? <> · <b>{inr(o.ret.amount)}</b> {r.idx === 3 ? "refunded" : "refund"}</> : null}
+        {ret.reason}{ret.detail ? ` · ${ret.detail}` : ""}
+        {!replace && ret.amount ? <> · <b>{inr(ret.amount)}</b> {r.idx === 3 ? "refunded" : "refund"}</> : null}
       </p>
     </section>
   );
@@ -415,7 +406,7 @@ function HelpSheet({ o, s, rider, onClose, onCancel }) {
   useEffect(() => { list.current?.scrollTo({ top: list.current.scrollHeight, behavior: "smooth" }); }, [msgs, typing]);
   const answer = (q) => {
     const low = q.toLowerCase();
-    if (/where|status|late|when/.test(low)) return s.key === "out" ? `${rider.name} is on the way and should reach you in about ${s.etaMin} min. Share OTP ${deliveryOtp(o)} at the door.` : s.key === "delivered" ? "This order was delivered. If something's wrong you can return or replace items from this page." : s.key === "cancelled" ? "This order was cancelled. Your refund status is shown on the order page." : `Your order is ${{ placed: "confirmed and being prepared", packed: "packed and waiting for a rider", shipped: "shipped and on its way to your city" }[s.key] || "on the way"}. ${s.mode === "quick" ? `It should arrive in about ${s.etaMin} min.` : "We'll notify you when it ships."}`;
+    if (/where|status|late|when/.test(low)) return s.key === "out" ? `${rider.name} is on the way. ${o.eta || "It should reach you shortly."} Share OTP ${deliveryOtp(o)} at the door.` : s.key === "delivered" ? "This order was delivered. If something's wrong you can return or replace items from this page." : s.key === "cancelled" ? "This order was cancelled. Your refund status is shown on the order page." : `Your order is ${{ placed: "confirmed and being prepared", packed: "packed and waiting for a rider", shipped: "shipped and on its way to your city" }[s.key] || "on the way"}. ${o.eta || "We'll notify you when it moves on."}`;
     if (/missing|damaged|wrong/.test(low)) return "Sorry about that! Tap “Return or replace” on the order page, choose the items and we'll arrange a pickup and a refund or replacement.";
     if (/payment|refund|charged|money/.test(low)) return o.method === "cod" ? "This is a cash on delivery order, so nothing has been charged yet." : `Payment of ${inr(o.paid ?? o.total)} was received via ${o.pay}. Refunds reach the source in 3–5 working days, or instantly to 369 Wallet.`;
     if (/cancel/.test(low)) return cancellable(o, s) ? "You can still cancel — I've opened the cancellation for you." : "This order can't be cancelled any more because it's already been packed. You can return items after delivery.";
@@ -449,12 +440,18 @@ function HelpSheet({ o, s, rider, onClose, onCancel }) {
 }
 
 /* ---------------- page ---------------- */
-export default function OrderTrack({ order: o, byId, patchOrder, onBack, onReceipt, onReorder, onRefundWallet, onShop }) {
-  const mountAt = useRef(Date.now());
-  const base = o.at ?? (o.status === "out" ? mountAt.current - 18000 - 22000 - 30000 : undefined);
-  const live = o.status !== "cancelled" && (!!base || !!o.ret);
-  const now = useNow(live, 1000);
-  const s = useMemo(() => liveStatus(o, now, base), [o, now, base]);
+export default function OrderTrack({ order: o, byId, onChanged, onBack, onReceipt, onReorder, onRefundWallet, onShop }) {
+  const s = useMemo(() => liveStatus(o), [o]);
+  const ret = (o.returns || [])[0] || null;
+  const act = useAction();
+  /* Every write here is the shop's to make. The page asks, then re-reads the
+     order rather than patching its own copy - the reply is the record. */
+  const ask = (path, body) => act.run(async () => {
+    const r = await api(`/orders/${encodeURIComponent(o.id)}${path}`, { method: "POST", body });
+    api.invalidate("/orders");
+    await onChanged?.();
+    return r;
+  });
   const rider = riderFor(o);
   const open = useContext(OpenContext);
   const [sheet, setSheet] = useState(null); // cancel | return | help
@@ -463,29 +460,27 @@ export default function OrderTrack({ order: o, byId, patchOrder, onBack, onRecei
   const rateRef = useRef(null);
   const flash = (m) => { setToast(m); clearTimeout(flash.t); flash.t = setTimeout(() => setToast(""), 2600); };
 
-  /* keep the stored status in step with the live one */
+  /* The shop moved the order on while this page was open - say so. */
   const lastKey = useRef(s.key);
   useEffect(() => {
-    if (lastKey.current !== s.key) {
-      lastKey.current = s.key;
-      if (s.key !== "cancelled") patchOrder(o.id, { ...(o.at ? { status: s.key, eta: s.key === "delivered" ? `Delivered ${fmtTime(Date.now())}` : o.eta } : {}), stamps: { ...(o.stamps || {}), [s.key]: Date.now() } });
-      if (s.key === "delivered") flash("Your order has been delivered");
-      if (s.key === "out") flash(`${rider.name} picked up your order`);
-    }
+    if (lastKey.current === s.key) return;
+    lastKey.current = s.key;
+    if (s.key === "delivered") flash("Your order has been delivered");
+    if (s.key === "out") flash(`${rider.name} picked up your order`);
   }, [s.key]); // eslint-disable-line
 
   const cancelled = s.key === "cancelled";
   const title = cancelled ? "Order cancelled" : s.key === "delivered" ? "Order delivered" : s.key === "out" ? (s.mode === "quick" ? "On the way" : "Out for delivery") : s.key === "placed" ? "Order confirmed" : s.mode === "quick" ? "Packing your order" : "Shipped";
   const sub = cancelled ? (o.cancel?.refundTo === "wallet" ? `${inr(o.cancel.amount)} added to your 369 Wallet` : o.cancel?.refundTo ? `Refund of ${inr(o.cancel.amount)} to ${o.pay} in 3–5 working days` : "No payment was taken for this order")
-    : s.key === "delivered" ? `Delivered ${o.stamps?.delivered || s.times[3] ? "at " + fmtTime(o.stamps?.delivered || s.times[3]) : ""} · ${o.address?.label || "Home"}`
-    : s.mode === "quick" ? `Arriving in ${s.etaMin} min` : s.key === "out" ? "Arriving today by 9 PM" : `Expected ${fmtDay(o.at, 3)}`;
+    : s.key === "delivered" ? `Delivered ${s.times[3] ? "at " + fmtTime(s.times[3]) : ""} · ${o.address?.label || "Home"}`
+    : o.eta || (s.key === "out" ? "Arriving today" : `Expected ${fmtDay(o.at, 3)}`);
   const itemsTotal = o.items.reduce((sum, [id, q]) => sum + linePrice(o, byId, id) * q, 0);
 
   return (
     <div className={"ot-page ot-st-" + s.key}>
       <div className="ot-titlebar">
         <button className="ot-back" onClick={onBack} aria-label="Back to orders"><Icon n="left" size={20} /></button>
-        <div><h1>Order #{o.id}</h1><small>{o.placed} · {o.items.reduce((n, [, q]) => n + q, 0)} items · {inr(o.total)}</small></div>
+        <div><h1>Order #{o.id}</h1><small>{fmtPlaced(o.at)} · {o.items.reduce((n, [, q]) => n + q, 0)} items · {inr(o.total)}</small></div>
         <button className="ot-helpbtn" onClick={() => setSheet("help")}><Icon n="chat" size={16} />Help</button>
       </div>
 
@@ -496,13 +491,15 @@ export default function OrderTrack({ order: o, byId, patchOrder, onBack, onRecei
             <div className="ot-hero-txt">
               <span className={"ot-mode ot-mode-" + s.mode}><Icon n={s.mode === "quick" ? "bolt" : "truck"} size={12} className={s.mode === "quick" ? "hm-fill" : ""} />{s.mode === "quick" ? "Quick" : "Express"}</span>
               <h2 key={title}>{title}</h2>
-              <p key={sub}>{s.mode === "quick" && !cancelled && s.key !== "delivered" ? <>Arriving in <b className="ot-eta" key={s.etaMin}>{s.etaMin} min</b></> : sub}</p>
+              <p key={sub}>{sub}</p>
             </div>
-            {!cancelled && s.idx < 3 && base && <button className="ot-link ot-skip" onClick={() => patchOrder(o.id, { skip: (o.skip || 0) + skipAmount(o, Date.now(), base) })}>Skip ahead (demo)</button>}
           </section>
 
-          {!cancelled && s.key === "delivered" && <div ref={rateRef}><RateCard o={o} byId={byId} rider={rider} onSubmit={(r) => { patchOrder(o.id, { rating: r }); flash(r.tip ? `Thanks! ${inr(r.tip)} tip sent` : "Thanks for your feedback"); }} /></div>}
-          {o.ret && <ReturnTracker o={o} byId={byId} now={now} onSkip={() => patchOrder(o.id, { ret: { ...o.ret, skip: (o.ret.skip || 0) + returnStatus(o.ret, Date.now()).nextIn + 50 } })} />}
+          {!cancelled && s.key === "delivered" && <div ref={rateRef}><RateCard o={o} byId={byId} rider={rider} onSubmit={async (r) => {
+            const sent = await ask("/rate", { stars: r.stars, tags: r.tags, comment: r.comment, tip: r.tip });
+            flash(sent ? (r.tip ? `Thanks! ${inr(r.tip)} tip sent` : "Thanks for your feedback") : act.error?.message || "We couldn't send that just now");
+          }} /></div>}
+          {ret && <ReturnTracker ret={ret} />}
 
           {!cancelled && (
             <section className="ot-card ot-tracker">
@@ -535,7 +532,7 @@ export default function OrderTrack({ order: o, byId, patchOrder, onBack, onRecei
         <aside className="ot-side">
           <section className="ot-card ot-actions">
             {cancellable(o, s) && <button className="ot-act ot-act-red" onClick={() => setSheet("cancel")}><Icon n="x" size={17} />Cancel order<small>Before it's packed</small></button>}
-            {returnable(o, s, now) && <button className="ot-act" onClick={() => setSheet("return")}><Icon n="reorder" size={17} />Return or replace<small>Within 7 days</small></button>}
+            {returnable(o, s) && <button className="ot-act" onClick={() => setSheet("return")}><Icon n="reorder" size={17} />Return or replace<small>Within 7 days</small></button>}
             {s.key === "delivered" && !o.rating && <button className="ot-act" onClick={() => rateRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })}><Icon n="star" size={17} />Rate order<small>Takes 10 seconds</small></button>}
             {o.bill && <button className="ot-act" onClick={onReceipt}><Icon n="printer" size={17} />View receipt<small>Print or download</small></button>}
             <button className="ot-act" onClick={() => setSheet("help")}><Icon n="chat" size={17} />Need help?<small>Chat with us</small></button>
@@ -572,14 +569,22 @@ export default function OrderTrack({ order: o, byId, patchOrder, onBack, onRecei
       </div>
 
       {sheet === "cancel" && (
-        <CancelSheet o={o} onClose={() => setSheet(null)} onConfirm={(c) => {
-          patchOrder(o.id, { status: "cancelled", eta: "Cancelled", cancel: { ...c, at: Date.now() } });
+        <CancelSheet o={o} onClose={() => setSheet(null)} onConfirm={async (c) => {
+          const done = await ask("/cancel", { reason: c.reason });
+          if (!done) { flash(act.error?.message || "We couldn't cancel that just now"); return; }
           if (c.refundTo === "wallet" && c.amount) onRefundWallet?.(c.amount);
           flash(c.refundTo === "wallet" ? `Order cancelled · ${inr(c.amount)} added to wallet` : "Order cancelled");
         }} />
       )}
       {sheet === "return" && (
-        <ReturnSheet o={o} byId={byId} onClose={() => setSheet(null)} onSubmit={(r) => { patchOrder(o.id, { ret: r }); flash(r.resolution === "refund" ? "Return requested · pickup scheduled" : "Replacement requested"); }} />
+        <ReturnSheet o={o} byId={byId} onClose={() => setSheet(null)} onSubmit={async (r) => {
+          const going = (r.items || []).map(([id, q]) => `${q} × ${lineName(o, byId, id)}`).join(", ");
+          const sent = await ask("/return", {
+            kind: r.resolution, reason: r.reason,
+            detail: [going && `Sending back: ${going}`, r.slot && `Pickup: ${r.slot}`].filter(Boolean).join(" · "),
+          });
+          flash(sent ? (r.resolution === "refund" ? "Return requested · pickup scheduled" : "Replacement requested") : act.error?.message || "We couldn't send that just now");
+        }} />
       )}
       {sheet === "help" && <HelpSheet o={o} s={s} rider={rider} onClose={() => setSheet(null)} onCancel={() => setSheet("cancel")} />}
 

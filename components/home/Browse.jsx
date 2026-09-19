@@ -16,7 +16,7 @@ import ProductArt from "./art";
 import { Icon, ProductCard, Thumb, flyTo, inr } from "./shared";
 import { listable } from "./catalog";
 import { useRules } from "./Cart";
-import { SAMPLE_ORDERS } from "./Account";
+import { fmtPlaced } from "./orderState";
 import { NavContext } from "./nav";
 import { useResource } from "@/lib/useFetch";
 import { absorb, cards } from "@/lib/products";
@@ -845,13 +845,13 @@ export function OffersPage({ cart, setQty }) {
 }
 
 /* ---------------- buy again ---------------- */
-export function BuyAgainPage({ byId, cart, setQty, orders = SAMPLE_ORDERS }) {
+export function BuyAgainPage({ byId, cart, setQty, orders = [] }) {
   const nav = useContext(NavContext);
   const bought = useMemo(() => {
     const m = {};
     orders.filter((o) => o.status !== "cancelled").forEach((o) => o.items.forEach(([id, q]) => {
       if (!byId[id]) return;
-      m[id] = m[id] || { p: byId[id], times: 0, qty: 0, last: o.placed };
+      m[id] = m[id] || { p: byId[id], times: 0, qty: 0, last: o.at };
       m[id].times += 1; m[id].qty += q;
     }));
     return Object.values(m);
@@ -869,7 +869,7 @@ export function BuyAgainPage({ byId, cart, setQty, orders = SAMPLE_ORDERS }) {
         {last && (
           <div className="ba-last">
             <span className="ba-thumbs">{last.items.slice(0, 3).map(([id]) => byId[id] && <span key={id}><Thumb p={byId[id]} /></span>)}</span>
-            <span className="ba-last-txt"><b>Last order · {last.placed}</b><small>{last.items.length} items · {inr(last.total)}</small></span>
+            <span className="ba-last-txt"><b>Last order · {fmtPlaced(last.at)}</b><small>{last.items.length} items · {inr(last.total)}</small></span>
             <button className="ls-primary" onClick={(e) => reorderAll(e.currentTarget)}>Reorder all</button>
           </div>
         )}
