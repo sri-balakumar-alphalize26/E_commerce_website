@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata = {
   title: "369 Mart",
-  description: "Groceries in minutes, everything else in days.",
+  description: "Computer parts and gear. In minutes, or in days.",
 };
 
 export const viewport = { width: "device-width", initialScale: 1, viewportFit: "cover", themeColor: "#ffffff" };

@@ -842,7 +842,7 @@ export function ReferSec({ user, flash }) {
   const [freshId, setFreshId] = useState(null);
   const code = ((user?.name || "friend").replace(/[^a-z]/gi, "").toUpperCase().slice(0, 6) || "FRIEND") + "369";
   const link = `https://369mart.in/r/${code}`;
-  const message = `Get ${inr(REFER_REWARD)} off your first 369 Mart order with my code ${code}. Groceries in minutes: ${link}`;
+  const message = `Get ${inr(REFER_REWARD)} off your first 369 Mart order with my code ${code}. Computer parts, fast: ${link}`;
   const ordered = refs.filter((r) => r.status === "ordered").length;
   const joined = refs.filter((r) => r.status !== "invited").length;
   const earned = ordered * REFER_REWARD;

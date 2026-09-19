@@ -99,7 +99,7 @@ export function reply(input, ctx) {
   }
 
   if (has(t, /deliver|charge|fee|free|minimum|express|quick|how fast|area|pincode/)) {
-    return { text: "Quick: groceries in 10–20 min, ₹30 delivery, free above ₹499, minimum order ₹99. Express: electronics and home items in 2–5 days, ₹49 delivery, free above ₹999." };
+    return { text: "Quick: parts and peripherals in 10–20 min, ₹30 delivery, free above ₹499, minimum order ₹99. Express: components, displays and computers in 2–5 days, ₹49 delivery, free above ₹999." };
   }
   if (has(t, /coupon|offer|discount|promo|code/)) return { text: "Current codes: QUICK20 (20% off Quick, up to ₹60), WELCOME50 (₹50 off above ₹499), FREEDEL (free delivery above ₹299).", actions: [{ label: "See all offers", go: ["offers"] }] };
   if (has(t, /wallet|balance|cashback/)) return { text: `Your 369 Wallet balance is ${inr(wallet)}. It can be used at checkout and never expires.`, actions: [{ label: "Open 369 Wallet", go: ["account", "wallet"] }] };

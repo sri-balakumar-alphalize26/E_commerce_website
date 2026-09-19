@@ -2,13 +2,12 @@
   "name": "369mart-store",
   "version": "1.0.0",
   "private": true,
-  "description": "369 Mart storefront \u2014 home (Quick / Shop all), cart and sign-in. Next.js + React.",
+  "description": "369 Mart storefront — home (Quick / Shop all), cart and sign-in. Next.js + React.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "images": "node scripts/export-images.mjs"
+    "lint": "next lint"
   },
   "engines": {
     "node": ">=18.18"
@@ -17,8 +16,5 @@
     "next": "15.5.3",
     "react": "19.1.1",
     "react-dom": "19.1.1"
-  },
-  "devDependencies": {
-    "esbuild": "0.25.9"
   }
 }

@@ -164,6 +164,62 @@ class Mart369CatalogApi(http.Controller):
             'trending': request.env['mart369.search.term'].sudo()._mart369_trending(),
         })
 
+
+    # ------------------------------------------------ products by id, offers
+
+    @http.route('/369mart/products', **_PUBLIC_JSON)
+    def products(self, ids=None, **kwargs):
+        """Cards for a list of ids: /369mart/products?ids=12,40,7
+
+        The app keeps ids in the browser - the basket, the wishlist, recently
+        viewed - and on a cold load it knows nothing else about them. Without
+        this it has to ask for each one separately, and a twenty line basket
+        becomes twenty requests for twenty full product pages.
+
+        Ids that no longer exist, or were never published, are simply absent
+        from the answer. That is the point: the app draws what comes back and
+        nothing else, so a product that has gone away leaves a gap rather than
+        a stale card.
+        """
+        wanted = [i for i in (ids or '').split(',') if i.strip().isdigit()][:BROWSE_LIMIT]
+        if not wanted:
+            return self._cached({'ok': True, 'items': []})
+        templates = request.env['product.template'].sudo().search([
+            ('id', 'in', [int(i) for i in wanted]),
+            ('is_published', '=', True),
+        ])
+        return self._cached({'ok': True, 'items': self._cards(templates)})
+
+    @http.route('/369mart/offers', **_PUBLIC_JSON)
+    def offers(self, **kwargs):
+        """Everything on offer, biggest saving first, plus the coupons.
+
+        Shape: {"deals": [card, ...], "coupons": [...]} - what the offers page
+        shows. A deal is a published product whose struck-through price is
+        genuinely above what it sells for; the ordering is the same one the
+        "Biggest savings" home row uses, so the two agree.
+        """
+        Template = request.env['product.template'].sudo()
+        # Narrow in SQL first: most of the catalogue has no compare price at all.
+        candidates = Template.search([
+            ('is_published', '=', True),
+            ('compare_list_price', '>', 0.0),
+        ], limit=max(BROWSE_LIMIT * 2, 240))
+        deals = candidates.filtered(
+            lambda t: t.compare_list_price > t.list_price > 0
+        ).sorted(
+            key=lambda t: (t.compare_list_price - t.list_price) / t.compare_list_price,
+            reverse=True,
+        )[:BROWSE_LIMIT]
+        payload = {'deals': self._cards(deals)}
+        # The cart module owns coupons; offers only borrows them to show. Same
+        # live-window filter /369mart/cart/rules uses, so the two never disagree.
+        if 'mart369.coupon' in request.env:
+            Coupon = request.env['mart369.coupon'].sudo()
+            payload['coupons'] = [c._mart369_serialize() for c in Coupon.search([])
+                                  if c._mart369_live()]
+        return self._cached(payload)
+
     # -------------------------------------------------- my recent searches
 
     def _me(self):

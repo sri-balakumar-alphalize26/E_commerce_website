@@ -309,7 +309,7 @@ export function SignInCard({
 const TILES = [
   { i: "AC", name: "Arabica Coffee Beans", price: "₹649", col: "#1f7a4c" },
   { i: "BS", name: "Bluetooth Speaker 20W", price: "₹1,899", col: "#1b6ea3" },
-  { i: "OW", name: "Organic Whole Wheat Atta", price: "₹359", col: "#b85a1c" },
+  { i: "SSD", name: "Samsung 990 PRO 1TB NVMe", price: "₹9,800", col: "#155c86" },
 ];
 
 export function SignInAside() {

@@ -9,9 +9,16 @@
 import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import ProductArt from "./art";
 import { Icon, OpenContext, QtyControl, SEARCH_WORDS, Thumb, inr } from "./shared";
+import { useResource } from "@/lib/useFetch";
+import { api } from "@/lib/api";
+import { absorb, cards } from "@/lib/products";
 
-const TRENDING = ["Coffee beans", "Fast charger", "Bananas", "Bath towels", "Dry fruits", "Headphones"];
+/* Recent searches live on the shopper's account when there is one. This key
+   is the signed-out fallback: a search box is no place for a 401. */
 const STORE_KEY = "369mart.searches";
+/* A signed-out shopper has no account history, and asking again every time
+   the search box opens just fills the log with 401s. Ask once. */
+let accountHistory = true;
 const reducedMotion = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
 function insetOf(bar, p) {
@@ -30,7 +37,7 @@ function Highlight({ text, q }) {
 export default function SearchOverlay({ open, onClose, products, picks, cart, setQty, onSubmit, initialQuery = "", triggerSelector = ".hm-search" }) {
   const [phase, setPhase] = useState("closed"); // closed | open | closing
   const [q, setQ] = useState("");
-  const [past, setPast] = useState(["atta", "headphones", "dark chocolate", "portable ssd", "green tea"]);
+  const [past, setPast] = useState([]);
   const [clearing, setClearing] = useState(false);
   const [word, setWord] = useState(0);
   const [place, setPlace] = useState(null);
@@ -42,10 +49,24 @@ export default function SearchOverlay({ open, onClose, products, picks, cart, se
 
   /* restore / persist past searches */
   useEffect(() => {
-    try { const s = JSON.parse(localStorage.getItem(STORE_KEY) || "null"); if (Array.isArray(s)) setPast(s); } catch (e) {}
-  }, []);
+    if (!open) return; /* nothing to restore until the box is actually opened */
+    let alive = true;
+    const local = () => { try { const s = JSON.parse(localStorage.getItem(STORE_KEY) || "null"); if (Array.isArray(s)) setPast(s); } catch (e) {} };
+    if (!accountHistory) { local(); return; }
+    api("/search/recent").then((r) => { if (alive && Array.isArray(r?.recent)) setPast(r.recent); }).catch((e) => {
+      if (e?.status === 401) accountHistory = false;
+      /* signed out: fall back to what this browser remembers */
+      local();
+    });
+    return () => { alive = false; };
+  }, [open]);
   const savePast = (list) => { setPast(list); try { localStorage.setItem(STORE_KEY, JSON.stringify(list)); } catch (e) {} };
-  const remember = (t) => { t = t.trim().toLowerCase(); if (t) savePast([t, ...past.filter((x) => x !== t)].slice(0, 8)); };
+  const remember = (t) => {
+    t = t.trim().toLowerCase();
+    if (!t) return;
+    savePast([t, ...past.filter((x) => x !== t)].slice(0, 8));
+    if (accountHistory) api("/search/recent", { method: "POST", body: { q: t } }).catch(() => {});
+  };
 
   /* rolling placeholder */
   useEffect(() => {
@@ -134,18 +155,26 @@ export default function SearchOverlay({ open, onClose, products, picks, cart, se
   }); // eslint-disable-line
 
   const term = q.trim();
-  const matches = useMemo(() => {
-    if (!term) return [];
-    const words = term.toLowerCase().split(/\s+/);
-    return products.filter((p) => { const hay = `${p.name} ${p.unit || ""} ${p.brand || ""} ${p.subName || ""}`.toLowerCase(); return words.every((w) => hay.includes(w)); });
-  }, [term, products]);
+  /* Eight rows, matched by the shop rather than by whatever the browser has
+     already seen - which could only ever suggest what was already on screen. */
+  const [debounced, setDebounced] = useState("");
+  useEffect(() => { const t = setTimeout(() => setDebounced(term), 220); return () => clearTimeout(t); }, [term]);
+  const { data: sugg } = useResource(debounced ? `/search/suggest?q=${encodeURIComponent(debounced)}` : null, { enabled: !!debounced, deps: [debounced] });
+  const { data: trend } = useResource("/search/trending");
+  const TRENDING = useMemo(() => (trend?.trending || []).slice(0, 6), [trend]);
+  const matches = useMemo(() => cards(sugg?.items), [sugg]);
+  useEffect(() => { if (matches.length) absorb(matches); }, [matches]);
   const results = matches.slice(0, 8);
   /* Enter / "See all" → full results page (when the app provides one) */
   const submit = (t) => { remember(t); if (onSubmit) { close(); onSubmit(t); } };
 
   if (phase === "closed") return null;
 
-  const clearPast = () => { setClearing(true); setTimeout(() => { setClearing(false); savePast([]); }, Math.min(past.length, 12) * 22 + 260); };
+  const clearPast = () => {
+    if (accountHistory) api("/search/recent", { method: "DELETE" }).catch(() => {});
+    setClearing(true);
+    setTimeout(() => { setClearing(false); savePast([]); }, Math.min(past.length, 12) * 22 + 260);
+  };
   const roll = (
     <span className="sr-roll" aria-hidden="true">
       {SEARCH_WORDS.map((w, i) => {
@@ -246,7 +275,7 @@ export default function SearchOverlay({ open, onClose, products, picks, cart, se
               <div className="sr-empty">
                 <Icon n="search" size={28} />
                 <b>Nothing matches “{term}”</b>
-                <span>Try “atta”, “charger” or “towels”.</span>
+                <span>Try “ssd”, “keyboard” or “router”.</span>
               </div>
             )}
           </div>

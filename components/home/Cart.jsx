@@ -207,7 +207,7 @@ export default function CartPage({ cart, setQty, byId, recommended = [], alsoLik
         <div className="ct-empty">
           <span className="ct-empty-art"><ProductArt art="Basket" /></span>
           <h1>Your cart is empty</h1>
-          <p>Fresh groceries in minutes, everything else in a couple of days.</p>
+          <p>Parts and peripherals in minutes, everything else in a couple of days.</p>
           <button className="ct-primary" onClick={onBack}>Start shopping</button>
         </div>
       </div>

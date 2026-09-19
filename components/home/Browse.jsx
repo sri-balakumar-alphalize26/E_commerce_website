@@ -14,11 +14,12 @@ import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } fro
 import { createPortal } from "react-dom";
 import ProductArt from "./art";
 import { Icon, ProductCard, Thumb, flyTo, inr } from "./shared";
-import { CATALOG, categoryBySlug, listable } from "./catalog";
+import { listable } from "./catalog";
 import { COUPONS } from "./Cart";
 import { SAMPLE_ORDERS } from "./Account";
 import { NavContext } from "./nav";
 import { useResource } from "@/lib/useFetch";
+import { absorb, cards } from "@/lib/products";
 
 const PAGE = 12;
 const SORTS = [
@@ -195,7 +196,7 @@ export function useProductFilters(items) {
 }
 
 /* ---------------- listing ---------------- */
-export function Listing({ items, cart, setQty, heading, sub, emptyTitle = "No products match these filters", emptyText, onEmptyAction, emptyAction, query }) {
+export function Listing({ items, cart, setQty, heading, sub, loading: busy, emptyTitle = "No products match these filters", emptyText, onEmptyAction, emptyAction, query }) {
   const { sig, facets, f, setF, clear, sort, setSort, pulse, active, results, chips } = useProductFilters(items);
   const [shown, setShown] = useState(PAGE);
   const [loading, setLoading] = useState(true);
@@ -204,7 +205,12 @@ export function Listing({ items, cart, setQty, heading, sub, emptyTitle = "No pr
   const top = useRef(null);
 
   useEffect(() => { setShown(PAGE); }, [pulse, sig]);
-  useEffect(() => { setLoading(true); const t = setTimeout(() => setLoading(false), 450); return () => clearTimeout(t); }, [sig]);
+  /* A caller that fetches its own list tells us when it is waiting. The timer
+     is only for lists that are already in hand. */
+  useEffect(() => {
+    if (busy !== undefined) { setLoading(busy); return; }
+    setLoading(true); const t = setTimeout(() => setLoading(false), 450); return () => clearTimeout(t);
+  }, [sig, busy]);
 
   /* infinite scroll */
   const [more, setMore] = useState(false);
@@ -319,64 +325,91 @@ export function Listing({ items, cart, setQty, heading, sub, emptyTitle = "No pr
 }
 
 /* ---------------- category page ---------------- */
-export function CategoryPage({ slug, subSlug, byId, cart, setQty }) {
+export function CategoryPage({ slug, subSlug, cart, setQty }) {
   const nav = useContext(NavContext);
-  const c = categoryBySlug(slug);
-  const [sub, setSub] = useState(subSlug || "all");
   const listRef = useRef(null);
-  useEffect(() => { setSub(subSlug || "all"); }, [slug, subSlug]);
+  const path = subSlug ? `/browse/${slug}/${subSlug}` : `/browse/${slug}`;
+  /* Every hook has to run before the not-found return below, so the fetch
+     lives up here rather than next to the thing it feeds. */
+  const { data, loading, error } = useResource(path, { deps: [slug, subSlug] });
+  const { data: catalog } = useResource("/catalog");
+  const items = useMemo(() => cards(data?.items), [data]);
+  useEffect(() => { if (items.length) absorb(items); }, [items]);
 
-  const subs = useMemo(() => (c ? c.subs.map((s) => ({ ...s, items: s.ids.map((id) => byId[id]).filter((p) => p && !p.hidden) })) : []), [c, byId]);
-  const all = useMemo(() => subs.flatMap((s) => s.items), [subs]);
-  const items = useMemo(() => (sub === "all" ? all : subs.find((s) => s.slug === sub)?.items || []), [sub, all, subs]);
+  const c = data?.category;
+  const subs = c?.subs || [];
+  const sub = subSlug || "all";
+
+  /* A 404 is the shop saying the category is not there. Anything else - still
+     loading, or the shop unreachable - is not, and must not be dressed up as
+     one, or every category flashes "not found" on its way in. */
+  if (error?.status === 404) return <NotFoundView title="Category not found" text="The category you're looking for doesn't exist." />;
+  if (error) {
+    return (
+      <div className="ls-empty" role="alert">
+        <div className="ls-empty-art"><ProductArt art="Router" color="#1f3b4d" /></div>
+        <h3>We can&apos;t reach the store</h3>
+        <p>{error.message}</p>
+        <button className="ls-primary" onClick={() => nav("category", slug)}>Try again</button>
+      </div>
+    );
+  }
+  if (!c && loading) return <div className="co-skel" aria-label="Loading"><span /><span /><span /></div>;
   if (!c) return <NotFoundView title="Category not found" text="The category you're looking for doesn't exist." />;
 
   const pick = (s) => {
-    setSub(s);
     nav("category", s === "all" ? c.slug : `${c.slug}/${s}`, { replace: true, keepScroll: true });
     setTimeout(() => listRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
   };
-  const others = CATALOG.filter((x) => x.slug !== c.slug && x.subs.length);
+  const others = (catalog?.categories || []).filter((x) => x.slug !== c.slug);
+  const subName = subs.find((s) => s.slug === sub)?.name;
 
   return (
     <div className="cg-page" style={{ "--tone": c.tone, "--accent": c.accent }}>
-      <Crumbs items={[["Home", ["home"]], [c.name, sub === "all" ? null : ["category", c.slug]], ...(sub !== "all" ? [[subs.find((s) => s.slug === sub)?.name]] : [])]} />
+      <Crumbs items={[["Home", ["home"]], [c.name, sub === "all" ? null : ["category", c.slug]], ...(sub !== "all" ? [[subName]] : [])]} />
       <header className="cg-hero">
         <div>
           <span className="cg-mode">{c.mode === "quick" ? <><Icon n="bolt" size={12} className="hm-fill" />Quick delivery</> : <><Icon n="truck" size={12} />Express delivery</>}</span>
           <h1>{c.name}</h1>
-          <p>{c.blurb}{all.length ? ` · ${all.length} products` : ""}</p>
+          <p>{c.blurb}{sub === "all" && items.length ? ` · ${items.length} products` : ""}</p>
         </div>
         <div className="cg-hero-art" aria-hidden="true">
-          {all.slice(0, 3).map((p, k) => <span key={p.id} style={{ "--k": k }}><Thumb p={p} /></span>)}
+          {items.slice(0, 3).map((p, k) => <span key={p.id} style={{ "--k": k }}><Thumb p={p} /></span>)}
         </div>
       </header>
 
-      {!c.subs.length ? (
+      {!subs.length && !items.length && !loading ? (
         <div className="ls-empty cg-soon">
           <span className="ls-empty-art cg-soon-art"><Icon n="gift" size={40} /></span>
           <h3>{c.name} is coming soon</h3>
-          <p>We're adding products to this category. Explore what's available today.</p>
+          <p>We&apos;re adding products to this category. Explore what&apos;s available today.</p>
           <div className="cg-soon-links">{others.slice(0, 4).map((o, k) => <button key={o.slug} style={{ "--k": k }} onClick={() => nav("category", o.slug)}>{o.name}<Icon n="right" size={14} /></button>)}</div>
         </div>
       ) : (
         <>
-          <section className="cg-subs" aria-label="Subcategories">
-            <button className={"cg-sub" + (sub === "all" ? " cg-on" : "")} style={{ "--k": 0 }} onClick={() => pick("all")}>
-              <span className="cg-sub-img cg-all"><Icon n="grid" size={26} /></span><span>All</span>
-            </button>
-            {subs.map((s, k) => (
-              <button key={s.slug} className={"cg-sub" + (sub === s.slug ? " cg-on" : "")} style={{ "--k": k + 1 }} onClick={() => pick(s.slug)}>
-                <span className="cg-sub-img">
-                  {s.items.slice(0, 2).map((p, n) => <span key={p.id} className={"cg-sub-pic cg-p" + n}><Thumb p={p} /></span>)}
-                </span>
-                <span>{s.name}</span>
+          {subs.length > 0 && (
+            <section className="cg-subs" aria-label="Subcategories">
+              <button className={"cg-sub" + (sub === "all" ? " cg-on" : "")} style={{ "--k": 0 }} onClick={() => pick("all")}>
+                <span className="cg-sub-img cg-all"><Icon n="grid" size={26} /></span><span>All</span>
               </button>
-            ))}
-          </section>
+              {subs.map((s, k) => (
+                <button key={s.slug} className={"cg-sub" + (sub === s.slug ? " cg-on" : "")} style={{ "--k": k + 1 }} onClick={() => pick(s.slug)}>
+                  {/* Only the subcategory being viewed has its products loaded, so
+                      the others show the same placeholder the "All" tile uses
+                      rather than borrowing somebody else's picture. */}
+                  <span className={"cg-sub-img" + (sub === s.slug ? "" : " cg-all")}>
+                    {sub === s.slug
+                      ? items.slice(0, 2).map((p, n) => <span key={p.id} className={"cg-sub-pic cg-p" + n}><Thumb p={p} /></span>)
+                      : <Icon n="box" size={24} />}
+                  </span>
+                  <span>{s.name}</span>
+                </button>
+              ))}
+            </section>
+          )}
           <div ref={listRef} className="cg-list-anchor" />
-          <Listing key={c.slug + "/" + sub} items={items} cart={cart} setQty={setQty}
-            heading={sub === "all" ? `All ${c.name}` : subs.find((s) => s.slug === sub)?.name} />
+          <Listing key={c.slug + "/" + sub} items={items} loading={loading} cart={cart} setQty={setQty}
+            heading={sub === "all" ? `All ${c.name}` : subName} />
         </>
       )}
     </div>
@@ -580,10 +613,16 @@ function FilterDrawer({ F, onClose }) {
   );
 }
 
-export function SearchResults({ q, byId, cart, setQty, mode = "quick" }) {
+export function SearchResults({ q, cart, setQty, mode = "quick" }) {
   const nav = useContext(NavContext);
-  const all = useMemo(() => listable(byId), [byId]);
   const term = q.trim();
+  /* The corpus is what the shop returned for this search, not whatever the
+     browser happens to be holding - which could only ever find what was
+     already on screen. */
+  const { data, loading: fetching, error: searchError } = useResource(term ? `/search?q=${encodeURIComponent(term)}` : null, { enabled: !!term, deps: [term] });
+  const { data: catalog } = useResource("/catalog");
+  const all = useMemo(() => cards(data?.items), [data]);
+  useEffect(() => { if (all.length) absorb(all); }, [all]);
   const found = useMemo(() => searchCatalog(all, term), [all, term]);
   const pref = mode === "all" ? "express" : "quick";
   const firstScope = found[pref].length || !found[otherScope(pref)].length ? pref : otherScope(pref);
@@ -598,7 +637,7 @@ export function SearchResults({ q, byId, cart, setQty, mode = "quick" }) {
   const [more, setMore] = useState(false);
   const [drawer, setDrawer] = useState(false);
   useEffect(() => { setShown(PAGE); }, [F.pulse, F.sig]);
-  useEffect(() => { setLoading(true); const t = setTimeout(() => setLoading(false), 420); return () => clearTimeout(t); }, [F.sig]);
+  useEffect(() => { setLoading(fetching); }, [fetching, F.sig]);
 
   /* sliding thumb behind the Quick / Express pills */
   const seg = useRef(null);
@@ -640,7 +679,7 @@ export function SearchResults({ q, byId, cart, setQty, mode = "quick" }) {
             ? <p className="sp-dym">Did you mean <button onClick={() => nav("search", suggestion)}>“{suggestion}”</button>?</p>
             : <p>{term ? "Check the spelling, or try a more general word like “ssd”, “keyboard” or “router”." : "Find processors, monitors, peripherals and more."}</p>}
           <div className="cg-soon-links">
-            {CATALOG.filter((c) => c.subs.length).slice(0, 5).map((c, k) => <button key={c.slug} style={{ "--k": k }} onClick={() => nav("category", c.slug)}>{c.name}<Icon n="right" size={14} /></button>)}
+            {(catalog?.categories || []).slice(0, 5).map((c, k) => <button key={c.slug} style={{ "--k": k }} onClick={() => nav("category", c.slug)}>{c.name}<Icon n="right" size={14} /></button>)}
           </div>
         </div>
       </div>
@@ -741,11 +780,15 @@ function useCountdown() {
   return [Math.floor(s / 3600), Math.floor((s % 3600) / 60), s % 60].map((n) => String(n).padStart(2, "0"));
 }
 
-export function OffersPage({ byId, cart, setQty }) {
+export function OffersPage({ cart, setQty }) {
   const [h, m, s] = useCountdown();
   const [min, setMin] = useState(0);
   const [copied, setCopied] = useState("");
-  const deals = useMemo(() => listable(byId).filter((p) => p.off >= 10).sort((a, b) => b.off - a.off), [byId]);
+  /* Deriving this from the browsed store would show a shopper only the deals
+     they had already walked past. The shop knows them all. */
+  const { data, loading: fetching } = useResource("/offers");
+  const deals = useMemo(() => cards(data?.deals), [data]);
+  useEffect(() => { if (deals.length) absorb(deals); }, [deals]);
   const shown = deals.filter((p) => p.off >= min);
   const copy = async (code) => {
     try { await navigator.clipboard.writeText(code); } catch (e) { /* clipboard blocked: still show the state */ }

@@ -31,7 +31,7 @@ import { liveStatus } from "./orderState";
 import { installAudioUnlock } from "./sound";
 import { SAMPLE_ORDERS } from "./Account";
 import { WALLET_BALANCE } from "./payment";
-import { SECTION_TO_ROUTE, TAB_TO_ROUTE, TILE_TO_ROUTE, listable, variantsOf } from "./catalog";
+import { SECTION_TO_ROUTE, TAB_TO_ROUTE, TILE_TO_ROUTE, listable } from "./catalog";
 import { NavContext, pathToRoute, routeToPath } from "./nav";
 import { useResource } from "@/lib/useFetch";
 import { absorb, ensure, useProducts } from "@/lib/products";
@@ -218,7 +218,7 @@ function FreeDelivery({ total, threshold }) {
 
 /* ---------- Quick <-> Express transition ---------- */
 const MODE_COPY = {
-  quick: { icon: "bolt", title: "Quick", sub: "Groceries & essentials in minutes" },
+  quick: { icon: "bolt", title: "Quick", sub: "Parts & peripherals in minutes" },
   all: { icon: "grid", title: "Express", sub: "Electronics, home & more · 2–5 day delivery" },
 };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -489,7 +489,10 @@ export default function Home({
   }, [product?.id]); // eslint-disable-line
   const pd = useMemo(() => {
     if (!product) return null;
-    const self = new Set([product.id, ...variantsOf(product, byId).map((v) => v.id)]);
+    /* Pack sizes come from the shop with the product page. They used to be
+       read out of a hand-written table of grocery sizes. */
+    const variants = [];
+    const self = new Set([product.id, ...variants.map((v) => v.id)]);
     const pool = products.filter((x) => !self.has(x.id));
     const similar = pool.filter((x) => product.sub && x.cat === product.cat && x.sub === product.sub);
     const sameCat = pool.filter((x) => product.cat && x.cat === product.cat && x.sub !== product.sub);
@@ -499,7 +502,7 @@ export default function Home({
     const perSub = Object.values(byPop(sameCat).reduce((m, x) => { if (!m[x.sub] || x.price < m[x.sub].price) m[x.sub] = x; return m; }, {})).sort((a, b) => a.price - b.price);
     const bundle = [...perSub, ...byPop(sameMode)].slice(0, 2);
     const also = [...sameCat, ...sameMode].filter((x) => !bundle.includes(x)).slice(0, 10);
-    return { variants: variantsOf(product, byId), similar, bundle, also };
+    return { variants, similar, bundle, also };
   }, [product, byId, products]);
   /* The ids the browser kept - recently viewed, the basket, the wishlist - are
      just strings, and nothing seeds them any more. Fetch the ones we have not
