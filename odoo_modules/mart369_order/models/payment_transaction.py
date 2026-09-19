@@ -96,6 +96,33 @@ class PaymentTransaction(models.Model):
             order._mart369_issue_otp()
         return True
 
+    def _mart369_on_accepted(self):
+        """Cash on delivery: placed now, collected at the door.
+
+        The paid fields stay where they are - nobody has handed over anything
+        - but the rest of placing happens exactly as it does for a payment
+        that went through, because from the warehouse's side it is the same
+        order. `_mart369_mark_cod_collected` later sets the transaction done,
+        which runs `_mart369_on_paid` over this same order and fills them in.
+        """
+        self.ensure_one()
+        super()._mart369_on_accepted()
+        order = self.mart369_order_id
+        if not order or order.mart369_state not in ('draft', False):
+            return False
+        order = order.sudo()
+        order.write({
+            'mart369_txn': self.mart369_txn or self.reference,
+            'mart369_method': self.mart369_app_method or '',
+            'mart369_pay_note': self._mart369_pay_note(),
+            'mart369_placed_at': fields.Datetime.now(),
+        })
+        order._mart369_set_state('placed')
+        order._mart369_spend_coupon()
+        order._mart369_confirm()
+        order._mart369_issue_otp()
+        return True
+
     def _mart369_on_failed(self):
         """Cancelled or errored: hand the wallet leg back, free what was held.
 

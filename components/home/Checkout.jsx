@@ -17,12 +17,21 @@ import { createPortal } from "react-dom";
 import { Icon, Thumb, inr } from "./shared";
 import { Amount, computeBill, useBill, useRules } from "./Cart";
 import { useRemote } from "./accountStore";
-import {
-  BANKS, BRAND_LABEL, COD_LIMIT, UPI_APPS, cardBrand, demoGateway, expiryOk,
-  formatCard, formatExpiry, luhn, newOrderId, upiOk,
-} from "./payment";
+import { BANKS, BRAND_LABEL, UPI_APPS, newOrderId } from "./payment";
+import { api } from "@/lib/api";
+import { useAction, useResource } from "@/lib/useFetch";
 
 const PRIORITY_FEE = 49;
+
+/* The cart collects these as toggles and a note; the order keeps one line of
+   text, because that is what gets printed on a picking slip. */
+const INSTRUCTION_WORDS = { nocall: "Avoid calling", nobell: "Don't ring the bell", pet: "Pet at home" };
+function instructionLine(instructions) {
+  if (!instructions || typeof instructions !== "object") return instructions || "";
+  const said = Object.entries(INSTRUCTION_WORDS).filter(([k]) => instructions[k]).map(([, w]) => w);
+  const note = (instructions.note || "").trim();
+  return [...said, note].filter(Boolean).join(" · ");
+}
 const reduced = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
 /* ---------------- slots ---------------- */
@@ -192,42 +201,19 @@ function SlotStep({ bill, slots, slot, setSlot, onContinue }) {
 }
 
 /* ---------------- 3 payment ---------------- */
-export function CardPreview({ num, name, exp, flipped, brand }) {
-  const digits = num.replace(/\D/g, "");
-  const shown = (formatCard(digits) || "").padEnd(19, "•").replace(/ /g, " ");
-  return (
-    <div className={"co-cc" + (flipped ? " co-flip" : "") + (brand ? " co-cc-" + brand : "")} aria-hidden="true">
-      <div className="co-cc-in">
-        <div className="co-cc-front">
-          <span className="co-cc-chip" />
-          <span className="co-cc-brand" key={brand || "none"}>{BRAND_LABEL[brand] || ""}</span>
-          <span className="co-cc-num">{shown.split("").map((c, i) => <i key={i + c} className={c !== "•" && c !== " " ? "co-typed" : ""}>{c}</i>)}</span>
-          <span className="co-cc-row"><span><small>Card holder</small>{name || "YOUR NAME"}</span><span><small>Expires</small>{exp || "MM/YY"}</span></span>
-        </div>
-        <div className="co-cc-back"><span className="co-cc-strip" /><span className="co-cc-cvv"><small>CVV</small>•••</span></div>
-      </div>
-    </div>
-  );
-}
-
-function PaymentStep({ payable, pay, setPay, wallet, walletUse, setWalletUse, walletBal, codAllowed, cards = [], upis = [] }) {
-  const [verifying, setVerifying] = useState(false);
-  const [cvvFocus, setCvvFocus] = useState(false);
+function PaymentStep({ payable, pay, setPay, wallet, walletUse, setWalletUse, walletBal, offered, codLimit, cards = [], upis = [] }) {
   const set = (patch) => setPay((p) => ({ ...p, ...patch }));
-  const verify = async () => {
-    setVerifying(true);
-    const r = await demoGateway.verifyUpi(pay.vpa);
-    setVerifying(false);
-    set({ vpaName: r.ok ? r.name : "", vpaError: r.ok ? "" : r.error });
-  };
-  const brand = cardBrand(pay.cardNum);
 
-  const methods = [
-    { key: "upi", icon: "upi", title: "UPI", sub: "Google Pay, PhonePe, Paytm or any UPI ID", badge: "Recommended" },
-    { key: "card", icon: "card", title: "Credit / debit card", sub: "Visa, Mastercard, RuPay, Amex" },
-    { key: "netbanking", icon: "bank", title: "Net banking", sub: "All major Indian banks" },
-    { key: "cod", icon: "cash", title: "Cash on delivery", sub: codAllowed ? "Pay by cash or UPI at your door" : `Available on orders up to ${inr(COD_LIMIT)}`, disabled: !codAllowed },
+  /* Only what the shop can actually take. It used to offer all four and find
+     out at the last step - the worst possible moment to learn that a way of
+     paying is not switched on. */
+  const ALL = [
+    { key: "upi", icon: "upi", title: "UPI", sub: "Approve the request in your UPI app" },
+    { key: "card", icon: "card", title: "Credit / debit card", sub: "Verified on your bank's own page" },
+    { key: "netbanking", icon: "bank", title: "Net banking", sub: "Authorise on your bank's page" },
+    { key: "cod", icon: "cash", title: "Cash on delivery", sub: codLimit ? `Pay at your door · up to ${inr(codLimit)}` : "Pay at your door" },
   ];
+  const methods = ALL.filter((m) => offered.includes(m.key));
 
   return (
     <>
@@ -275,21 +261,7 @@ function PaymentStep({ payable, pay, setPay, wallet, walletUse, setWalletUse, wa
                           </button>
                         ))}
                       </div>
-                      <div className="co-or"><span>or pay with UPI ID</span></div>
-                      <div className={"co-vpa" + (pay.vpaName ? " co-ok" : "") + (pay.vpaError ? " co-err" : "")}>
-                        <label className="co-field">
-                          <input value={pay.vpa} placeholder=" " autoComplete="off" autoCapitalize="none" tabIndex={on ? 0 : -1}
-                            onFocus={() => set({ useVpa: true })}
-                            onChange={(e) => set({ vpa: e.target.value.trim(), useVpa: true, vpaName: "", vpaError: "" })}
-                            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); if (upiOk(pay.vpa)) verify(); } }} />
-                          <span>UPI ID (e.g. name@okaxis)</span>
-                        </label>
-                        <button className="co-verify" disabled={!upiOk(pay.vpa) || verifying || !!pay.vpaName} onClick={verify} tabIndex={on ? 0 : -1}>
-                          {verifying ? <i className="co-spin" /> : pay.vpaName ? <><Icon n="check" size={14} />Verified</> : "Verify"}
-                        </button>
-                      </div>
-                      {pay.vpaName && <p className="co-vpa-name" key={pay.vpaName}><Icon n="user" size={13} />{pay.vpaName}</p>}
-                      {pay.vpaError && <p className="co-error" key={pay.vpaError}>{pay.vpaError}</p>}
+                      <p className="co-codnote"><Icon n="info" size={16} />Add a UPI ID in your account to pay with it here. Otherwise pick an app and approve the request when it arrives.</p>
                     </>
                   )}
 
@@ -303,44 +275,14 @@ function PaymentStep({ payable, pay, setPay, wallet, walletUse, setWalletUse, wa
                             <span><b>•••• {c.last4}</b><small>{c.bank} · expires {c.exp}</small></span>
                           </button>
                         ))}
-                        <button className={"co-savedcard" + (pay.cardId === "new" ? " co-on" : "")} onClick={() => set({ cardId: "new" })} tabIndex={on ? 0 : -1}>
-                          <Radio on={pay.cardId === "new"} /><span className="co-brandtag"><Icon n="plus" size={13} /></span><span><b>Add a new card</b><small>Saved securely for next time</small></span>
-                        </button>
                       </div>
-                      {pay.cardId !== "new" ? (
-                        <label className="co-field co-cvv-only">
-                          <input value={pay.savedCvv} placeholder=" " inputMode="numeric" type="password" autoComplete="cc-csc" tabIndex={on ? 0 : -1} onChange={(e) => set({ savedCvv: e.target.value.replace(/\D/g, "").slice(0, 4) })} />
-                          <span>CVV</span>
-                        </label>
-                      ) : (
-                        <div className="co-newcard">
-                          <CardPreview num={pay.cardNum} name={pay.cardName} exp={pay.cardExp} flipped={cvvFocus} brand={brand} />
-                          <div className="co-form-grid">
-                            <label className={"co-field co-span2" + (pay.cardNum.replace(/\D/g, "").length >= 15 && !luhn(pay.cardNum) ? " co-err" : "")}>
-                              <input value={pay.cardNum} placeholder=" " inputMode="numeric" autoComplete="cc-number" tabIndex={on ? 0 : -1} onChange={(e) => set({ cardNum: formatCard(e.target.value) })} />
-                              <span>Card number</span>
-                              {brand && <b className={"co-brandtag co-inline co-b-" + brand} key={brand}>{BRAND_LABEL[brand]}</b>}
-                              {pay.cardNum.replace(/\D/g, "").length >= 15 && !luhn(pay.cardNum) && <em>Check the card number</em>}
-                            </label>
-                            <label className="co-field co-span2">
-                              <input value={pay.cardName} placeholder=" " autoComplete="cc-name" tabIndex={on ? 0 : -1} onChange={(e) => set({ cardName: e.target.value.toUpperCase().slice(0, 26) })} />
-                              <span>Name on card</span>
-                            </label>
-                            <label className={"co-field" + (pay.cardExp.length === 5 && !expiryOk(pay.cardExp) ? " co-err" : "")}>
-                              <input value={pay.cardExp} placeholder=" " inputMode="numeric" autoComplete="cc-exp" tabIndex={on ? 0 : -1} onChange={(e) => set({ cardExp: formatExpiry(e.target.value) })} />
-                              <span>Expiry (MM/YY)</span>
-                              {pay.cardExp.length === 5 && !expiryOk(pay.cardExp) && <em>Invalid expiry</em>}
-                            </label>
-                            <label className="co-field">
-                              <input value={pay.cardCvv} placeholder=" " inputMode="numeric" type="password" autoComplete="cc-csc" tabIndex={on ? 0 : -1}
-                                onFocus={() => setCvvFocus(true)} onBlur={() => setCvvFocus(false)}
-                                onChange={(e) => set({ cardCvv: e.target.value.replace(/\D/g, "").slice(0, brand === "amex" ? 4 : 3) })} />
-                              <span>CVV</span>
-                            </label>
-                          </div>
-                          <label className="co-check"><input type="checkbox" checked={pay.saveCard} onChange={(e) => set({ saveCard: e.target.checked })} tabIndex={on ? 0 : -1} /><span className="co-box"><Icon n="check" size={11} /></span>Save this card as per RBI guidelines</label>
-                        </div>
-                      )}
+                      {/* The number is typed on the provider's own field and
+                          tokenised there; /pay refuses one posted to us. */}
+                      <p className="co-codnote"><Icon n="lock" size={16} />
+                        {cards.length
+                          ? "You'll confirm this on your bank's secure page."
+                          : "No saved card yet. You'll enter it on your bank's secure page and can save it for next time."}
+                      </p>
                     </>
                   )}
 
@@ -388,46 +330,9 @@ function CountdownRing({ secs, total }) {
   );
 }
 
-function OtpBoxes({ value, onChange, disabled, shake }) {
-  const refs = useRef([]);
-  /* focus the next empty box on open, after a wrong OTP and when verification ends */
-  useEffect(() => { if (!disabled) refs.current[Math.min(value.length, 5)]?.focus(); }, [disabled]); // eslint-disable-line
-  const put = (i, v) => {
-    const digits = v.replace(/\D/g, "");
-    if (!digits) return;
-    const arr = value.padEnd(6, " ").split("");
-    digits.split("").forEach((d, k) => { if (i + k < 6) arr[i + k] = d; });
-    const next = arr.join("").replace(/\s+$/, "");
-    onChange(next);
-    refs.current[Math.min(i + digits.length, 5)]?.focus();
-  };
-  return (
-    <div className={"co-otp" + (shake ? " co-shake" : "")} key={shake}>
-      {Array.from({ length: 6 }, (_, i) => (
-        <input key={i} ref={(el) => (refs.current[i] = el)} value={value[i] || ""} inputMode="numeric" autoComplete={i === 0 ? "one-time-code" : "off"} maxLength={6} disabled={disabled}
-          className={value[i] ? "co-filled" : ""} aria-label={`OTP digit ${i + 1}`}
-          onChange={(e) => put(i, e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Backspace") {
-              e.preventDefault();
-              const arr = value.split("");
-              if (arr[i]) { arr[i] = ""; onChange(arr.join("").slice(0, i) + arr.slice(i + 1).join("")); }
-              else if (i > 0) { onChange(value.slice(0, i - 1)); refs.current[i - 1]?.focus(); }
-            }
-          }} />
-      ))}
-    </div>
-  );
-}
-
 function PaySheet({ job, amount, onDone, onFail, onCancel, onRetry, onChangeMethod }) {
-  const [state, setState] = useState("working"); // working | otp | success | failed
+  const [state, setState] = useState("working"); // working | success | failed
   const [secs, setSecs] = useState(300);
-  const [otp, setOtp] = useState("");
-  const [otpBusy, setOtpBusy] = useState(false);
-  const [otpErr, setOtpErr] = useState("");
-  const [shake, setShake] = useState(0);
-  const [resend, setResend] = useState(30);
   const [error, setError] = useState("");
   const [redirect, setRedirect] = useState(0);
   const alive = useRef(true);
@@ -443,42 +348,39 @@ function PaySheet({ job, amount, onDone, onFail, onCancel, onRetry, onChangeMeth
     else { setError(r.error || "Payment could not be completed."); setState("failed"); onFail?.(); }
   };
 
+  /* The payment is the shop's to settle: it was started before this sheet
+     opened, and all this does is ask how it is going. A UPI approval happens
+     in another app entirely and a bank page in another tab, so there is
+     nothing here to await - only a state to watch until it stops being
+     pending. */
   useEffect(() => {
-    let t;
-    (async () => {
-      if (job.method === "upi") {
-        t = setInterval(() => setSecs((s) => Math.max(0, s - 1)), 1000);
-        finish(await demoGateway.collectUpi({ vpa: job.vpa }));
-      } else if (job.method === "card") {
-        await new Promise((r) => setTimeout(r, 1200));
-        if (alive.current) setState("otp");
-      } else if (job.method === "netbanking") {
-        t = setInterval(() => setRedirect((n) => Math.min(3, n + 1)), 800);
-        finish(await demoGateway.netbanking());
-      } else if (job.method === "wallet") finish(await demoGateway.wallet());
-      else finish(await demoGateway.cod());
-    })();
-    return () => clearInterval(t);
+    let stopped = false;
+    const tick = job.method === "upi" ? setInterval(() => setSecs((x) => Math.max(0, x - 1)), 1000)
+      : job.method === "netbanking" ? setInterval(() => setRedirect((n) => Math.min(3, n + 1)), 800)
+      : null;
+    const poll = async () => {
+      if (stopped || !alive.current) return;
+      try {
+        const r = await api(`/payment/status/${encodeURIComponent(job.reference)}`, { raw: true, fresh: true });
+        if (stopped || !alive.current) return;
+        if (r?.state === "pending") return;
+        finish(r || { ok: false });
+        stopped = true;
+      } catch (e) {
+        /* A dropped connection is not a declined payment - keep asking. */
+      }
+    };
+    poll();
+    const id = setInterval(poll, 2000);
+    return () => { stopped = true; clearInterval(id); if (tick) clearInterval(tick); };
   }, []); // eslint-disable-line
-
-  useEffect(() => {
-    if (state !== "otp") return;
-    const t = setInterval(() => setResend((s) => Math.max(0, s - 1)), 1000);
-    return () => clearInterval(t);
-  }, [state]);
-
-  const submitOtp = async (code) => {
-    setOtpBusy(true); setOtpErr("");
-    const r = await demoGateway.verifyOtp({ otp: code, card: job.card });
-    if (!alive.current) return;
-    setOtpBusy(false);
-    if (!r.ok && r.retry) { setOtpErr(r.error); setOtp(""); setShake((n) => n + 1); return; }
-    finish(r);
-  };
-  useEffect(() => { if (state === "otp" && otp.length === 6 && !otpBusy) submitOtp(otp); }, [otp]); // eslint-disable-line
 
   const app = UPI_APPS.find((a) => a.key === job.upiApp);
   const bank = BANKS.find((b) => b.key === job.bank);
+  const giveUp = async () => {
+    try { await api(`/payment/${encodeURIComponent(job.reference)}/cancel`, { method: "POST", raw: true }); } catch (e) {}
+    onCancel?.();
+  };
 
   /* portalled to .hm-page: the animated page wrapper would otherwise trap the fixed sheet under the header */
   return createPortal(
@@ -502,20 +404,6 @@ function PaySheet({ job, amount, onDone, onFail, onCancel, onRetry, onChangeMeth
               <button className="co-primary" onClick={onRetry}>Retry payment</button>
             </div>
           </div>
-        ) : state === "otp" ? (
-          <div className="co-otp-wrap" key="otp">
-            <div className="co-bankbar"><Icon n="lock" size={14} />Secure verification · {job.cardLabel}</div>
-            <h3>Enter OTP</h3>
-            <p>Sent to the mobile number registered with your bank, ending ••••3210</p>
-            <div className="co-otp-amt"><span>Amount</span><b>{inr(amount)}</b></div>
-            <OtpBoxes value={otp} onChange={(v) => { setOtp(v); setOtpErr(""); }} disabled={otpBusy} shake={shake} />
-            {otpErr ? <p className="co-error" key={otpErr + shake}>{otpErr}</p> : <p className="co-hint">Demo: any 6 digits (000000 shows a wrong OTP)</p>}
-            <div className="co-row-between">
-              <button className="co-link" disabled={resend > 0} onClick={() => setResend(30)}>{resend > 0 ? `Resend OTP in ${resend}s` : "Resend OTP"}</button>
-              <button className="co-primary" disabled={otp.length < 6 || otpBusy} onClick={() => submitOtp(otp)}>{otpBusy ? <i className="co-spin co-spin-w" /> : "Verify & pay"}</button>
-            </div>
-            <button className="co-cancel" onClick={onCancel}>Cancel payment</button>
-          </div>
         ) : job.method === "upi" ? (
           <div className="co-upi-wait" key="upi">
             <div className="co-phone" aria-hidden="true">
@@ -528,8 +416,8 @@ function PaySheet({ job, amount, onDone, onFail, onCancel, onRetry, onChangeMeth
             <h3>Approve {inr(amount)} in {job.vpa && !job.upiApp ? "your UPI app" : app?.name || "your UPI app"}</h3>
             <p>{job.vpa ? <>Request sent to <b>{job.vpa}</b></> : "Open the app and approve the payment request"}</p>
             <CountdownRing secs={secs} total={300} />
-            <p className="co-hint">Don't press back or close this page{job.vpa ? " · Demo: a UPI ID with “fail” is declined" : ""}</p>
-            <button className="co-cancel" onClick={onCancel}>Cancel payment</button>
+            <p className="co-hint">Don't press back or close this page</p>
+            <button className="co-cancel" onClick={giveUp}>Cancel payment</button>
           </div>
         ) : job.method === "netbanking" ? (
           <div className="co-redirect" key="nb">
@@ -571,8 +459,7 @@ export default function CheckoutPage({
   const bill = useBill({ cart, byId, rules, coupon, slotFee: priority });
   const [walletUse, setWalletUse] = useState(false);
   const [pay, setPay] = useState({
-    method: draft.how === "cod" ? "cod" : "upi", upiApp: "gpay", useVpa: false, vpa: "", vpaName: "", vpaError: "",
-    cardId: "new", savedCvv: "", cardNum: "", cardName: "", cardExp: "", cardCvv: "", saveCard: true, bank: "",
+    method: "", upiApp: "gpay", useVpa: false, vpa: "", cardId: "", bank: "",
   });
   const { data: methods, reload: reloadMethods } = useRemote("/payment/methods");
   const savedPay = useMemo(() => ({ cards: methods?.cards || [], upis: methods?.upis || [] }), [methods]);
@@ -581,6 +468,7 @@ export default function CheckoutPage({
     setPay((p) => (p.cardId === "new" || cards.some((c) => c.id === p.cardId) ? p : { ...p, cardId: cards[0]?.id || "new" }));
   }, [cards]);
   const [job, setJob] = useState(null);
+  const place = useAction();
   const [attempt, setAttempt] = useState(0);
   const [nudge, setNudge] = useState(0);
   const [summaryOpen, setSummaryOpen] = useState(false);
@@ -590,58 +478,105 @@ export default function CheckoutPage({
   const walletUsed = walletUse ? Math.min(walletBalance, gross) : 0;
   const payable = gross - walletUsed;
   const wallet = { used: walletUsed, covers: walletUse && walletUsed >= gross, total: gross };
-  const codAllowed = payable <= COD_LIMIT;
-  useEffect(() => { if (pay.method === "cod" && !codAllowed) setPay((p) => ({ ...p, method: "upi" })); }, [codAllowed]); // eslint-disable-line
-
-  const methodReady = (() => {
-    if (wallet.covers) return true;
-    if (pay.method === "upi") return pay.useVpa ? !!pay.vpaName : !!pay.upiApp;
-    if (pay.method === "card") return pay.cardId === "new" ? luhn(pay.cardNum) && expiryOk(pay.cardExp) && pay.cardCvv.length >= 3 && pay.cardName.trim().length > 1 : pay.savedCvv.length >= 3;
-    if (pay.method === "netbanking") return !!pay.bank;
-    return pay.method === "cod";
-  })();
-  const hint = !methodReady && (pay.method === "upi" ? "Verify your UPI ID to continue" : pay.method === "card" ? (pay.cardId === "new" ? "Complete the card details" : "Enter the CVV") : pay.method === "netbanking" ? "Choose your bank" : "");
-
   const slotLabel = [
     bill.groups.quick.length ? slots.quick.find((s) => s.key === slot.quick)?.label : null,
     bill.groups.all.length ? slots.all.find((s) => s.key === slot.all)?.label : null,
   ].filter(Boolean).join(" · ");
 
+  /* The order is written before a way of paying is chosen, because whether
+     cash is allowed is a question about the order - Odoo asks the order's own
+     delivery method - and there is no honest way to answer it for a basket
+     that does not exist yet. It is a draft until it is paid for: it is in
+     nobody's list and nobody has been asked to pack it, and coming back to
+     change the slot rewrites it rather than making a second one.
+
+     The reference is the app's, and that is what makes paying twice safe. */
+  const ref = useRef(null);
+  const [ordered, setOrdered] = useState(null);
+  const { data: options } = useResource(`/payment/options?amount=${Math.round(payable)}&order_ref=${encodeURIComponent(ordered || "")}`, { enabled: !!ordered });
+
+  /* Which ways of paying the shop can take for this amount, from the shop.
+     A ceiling is part of it - cash on delivery drops off a large basket by
+     itself rather than by a constant kept here. */
+  const offered = useMemo(() => options?.methods || [], [options]);
+  useEffect(() => {
+    if (!offered.length) return;
+    setPay((p) => (offered.includes(p.method) ? p : { ...p, method: draft.how === "cod" && offered.includes("cod") ? "cod" : offered[0] }));
+  }, [offered]); // eslint-disable-line
+
+  const methodReady = (() => {
+    if (wallet.covers) return true;
+    if (!offered.includes(pay.method)) return false;
+    if (pay.method === "netbanking") return !!pay.bank;
+    return true;
+  })();
+  const hint = !methodReady && (offered.length
+    ? (pay.method === "netbanking" ? "Choose your bank" : "Choose how you'd like to pay")
+    : "No way of paying is switched on yet — please contact the shop.");
+
+
+  const draftOrder = () => {
+    if (!ref.current) ref.current = newOrderId(bill.groups.quick.length ? "quick" : "all");
+    return place.run(async () => {
+      await api("/orders", {
+        method: "POST",
+        body: {
+          ref: ref.current,
+          items: cart,
+          address_id: address?.id,
+          coupon: coupon || "",
+          mode: bill.groups.quick.length ? "quick" : "all",
+          slot_key: bill.groups.all.length ? slot.all : slot.quick,
+          slot: slotLabel,
+          eta: bill.groups.quick.length && slot.quick === "now" ? "Arriving in 10–20 mins" : slotLabel,
+          instructions: instructionLine(draft.instructions),
+          whatsapp: !!draft.whatsapp,
+        },
+      });
+      setOrdered(ref.current);
+      return ref.current;
+    });
+  };
+
+  /* The amount is not sent. The shop prices the basket it already holds and
+     debits the wallet itself before asking a gateway for the rest - the app
+     used to write the order and then debit, which made a crash between the
+     two lines a free order, and let the browser claim a balance it did not
+     have to drag the remainder under the cash-on-delivery ceiling. */
   const startPay = () => {
     if (!methodReady) { setNudge((n) => n + 1); return; }
     const method = wallet.covers ? "wallet" : pay.method;
     const saved = cards.find((c) => c.id === pay.cardId);
-    const last4 = pay.cardId === "new" ? pay.cardNum.replace(/\D/g, "").slice(-4) : saved?.last4;
-    setJob({
-      method, upiApp: pay.useVpa ? null : pay.upiApp, vpa: pay.useVpa ? pay.vpa : "", bank: pay.bank,
-      card: pay.cardId === "new" ? pay.cardNum : "0000" + (saved?.last4 || ""),
-      cardLabel: `${BRAND_LABEL[pay.cardId === "new" ? cardBrand(pay.cardNum) : saved?.brand] || "Card"} •••• ${last4}`,
+    const token = method === "card" ? saved : method === "upi" && pay.useVpa ? upis.find((u) => u.vpa === pay.vpa) : null;
+
+    place.run(async () => {
+      const started = await api("/payment/pay", {
+        method: "POST",
+        body: {
+          order_ref: ref.current,
+          method,
+          wallet_use: walletUse || method === "wallet",
+          token_id: token ? Number(token.id) : undefined,
+        },
+      });
+      setJob({
+        method, reference: started.reference,
+        upiApp: pay.useVpa ? null : pay.upiApp, vpa: pay.useVpa ? pay.vpa : "", bank: pay.bank,
+        cardLabel: saved ? `${BRAND_LABEL[saved.brand] || "Card"} •••• ${saved.last4}` : "",
+      });
+      setAttempt((n) => n + 1);
+      return true;
     });
-    setAttempt((n) => n + 1);
   };
 
-  const placed = (r) => {
-    const mode = bill.groups.quick.length ? "quick" : "all";
-    const method = job.method;
-    const app = UPI_APPS.find((a) => a.key === job.upiApp);
-    const payNote = method === "upi" ? (job.vpa || `${app?.name}`) : method === "card" ? job.cardLabel : method === "netbanking" ? BANKS.find((b) => b.key === job.bank)?.name : method === "wallet" ? "369 Wallet" : "Cash on delivery";
-    const at = Date.now();
-    const order = {
-      id: newOrderId(mode), at, mode,
-      placed: "Today, " + new Date(at).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" }),
-      status: "placed",
-      eta: bill.groups.quick.length && slot.quick === "now" ? "Arriving in 10–20 mins" : slotLabel,
-      items: bill.lines.map((l) => [l.p.id, l.qty]),
-      snap: Object.fromEntries(bill.lines.map((l) => [l.p.id, { name: l.p.name, price: l.p.price }])),
-      total: gross,
-      paid: payable, /* charged through the chosen method (cash on delivery: collected at the door) */
-      walletUsed,
-      pay: method === "cod" ? "Cash on delivery" : payNote,
-      method, payNote, txn: r.txn, coupon: bill.couponValid ? coupon : null,
-      bill: { items: bill.items, mrp: bill.mrp, fees: bill.fees, couponOff: bill.couponOff, total: gross },
-      address, slot: slotLabel, instructions: draft.instructions, whatsapp: draft.whatsapp,
-    };
-    onPlaced(order);
+  /* The receipt is the order the shop wrote, read back. Building one here
+     from what the page happened to be holding is how a receipt ends up
+     disagreeing with the invoice. */
+  const placed = async () => {
+    const answer = await api(`/orders/${encodeURIComponent(ref.current)}`, { raw: true, fresh: true });
+    api.invalidate("/orders");
+    if (answer?.order) onPlaced(answer.order);
+    ref.current = null;
   };
 
   if (!ready) return <div className="co-page"><div className="co-skel"><span /><span /><span /></div></div>;
@@ -661,7 +596,7 @@ export default function CheckoutPage({
 
   const cta = step === 1
     ? { label: "Deliver here", disabled: !address, go: () => setStep(2) }
-    : step === 2 ? { label: "Continue to payment", go: () => setStep(3) }
+    : step === 2 ? { label: "Continue to payment", go: async () => { if (await draftOrder()) setStep(3); } }
     : { label: wallet.covers ? "Pay with wallet" : pay.method === "cod" ? "Place order" : `Pay ${inr(payable)}`, go: startPay };
 
   return (
@@ -685,11 +620,11 @@ export default function CheckoutPage({
               onContinue={() => setStep(2)} phoneHint={phoneHint} />
           </Step>
           <Step n={2} icon="clock" title="Delivery slot" open={step === 2} done={step > 2} summary={step > 2 ? slotLabel : ""} onEdit={() => setStep(2)}>
-            <SlotStep bill={bill} slots={slots} slot={slot} setSlot={setSlot} onContinue={() => setStep(3)} />
+            <SlotStep bill={bill} slots={slots} slot={slot} setSlot={setSlot} onContinue={async () => { if (await draftOrder()) setStep(3); }} />
           </Step>
           <Step n={3} icon="card" title="Payment" open={step === 3} done={false}>
             <div key={nudge} className={nudge ? "co-nudge" : ""}>
-              <PaymentStep payable={payable} pay={pay} setPay={setPay} wallet={wallet} walletUse={walletUse} setWalletUse={setWalletUse} walletBal={walletBalance} codAllowed={codAllowed} cards={cards} upis={savedPay.upis} />
+              <PaymentStep payable={payable} pay={pay} setPay={setPay} wallet={wallet} walletUse={walletUse} setWalletUse={setWalletUse} walletBal={walletBalance} offered={offered} codLimit={options?.codLimit || 0} cards={cards} upis={savedPay.upis} />
             </div>
           </Step>
         </div>
@@ -716,7 +651,7 @@ export default function CheckoutPage({
               <div className="co-total"><dt>{pay.method === "cod" && !wallet.covers ? "To pay on delivery" : "To pay"}</dt><dd><Amount value={payable} /></dd></div>
             </dl>
             {bill.saved > 0 && <p className="co-saving" key={bill.saved}><Icon n="gift" size={15} />You're saving {inr(bill.saved)} on this order</p>}
-            <button className={"co-primary co-paybtn" + (step === 3 && !methodReady ? " co-soft" : "")} disabled={step === 1 && !address || bill.blocked || !bill.priced || !!job} onClick={cta.go}>
+            <button className={"co-primary co-paybtn" + (step === 3 && !methodReady ? " co-soft" : "")} disabled={step === 1 && !address || bill.blocked || !bill.priced || !!job || place.busy} onClick={cta.go}>
               {job ? <i className="co-spin co-spin-w" /> : <>{step === 3 && <Icon n="lock" size={15} />}{cta.label}</>}
             </button>
             {step === 3 && hint && <p className="co-hintline" key={hint}>{hint}</p>}
@@ -728,12 +663,12 @@ export default function CheckoutPage({
 
       <div className="co-mbar">
         <div><small>{step === 3 ? "To pay" : "Total"}</small><Amount value={step === 3 ? payable : gross} /></div>
-        <button className="co-primary" disabled={(step === 1 && !address) || bill.blocked || !bill.priced || !!job} onClick={cta.go}>{job ? <i className="co-spin co-spin-w" /> : cta.label}</button>
+        <button className="co-primary" disabled={(step === 1 && !address) || bill.blocked || !bill.priced || !!job || place.busy} onClick={cta.go}>{job || place.busy ? <i className="co-spin co-spin-w" /> : cta.label}</button>
       </div>
 
       {job && (
         <PaySheet key={attempt} job={job} amount={payable}
-          onDone={(r) => placed(r)}
+          onDone={() => placed()}
           onCancel={() => setJob(null)}
           onRetry={() => { setJob(null); setTimeout(startPay, 60); }}
           onChangeMethod={() => { setJob(null); setStep(3); }} />

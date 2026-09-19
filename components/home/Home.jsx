@@ -368,14 +368,7 @@ export default function Home({
      it is polled while a screen is showing one, because a rider setting off
      is news that arrives from the warehouse, not from a timer in a page. */
   const { data: ordersData, reload: reloadOrders } = useResource("/orders", { enabled: !!me, pollMs: view === "track" || view === "account" ? 20000 : 0 });
-  /* An order placed in this browser has not been sent to the shop yet - that
-     is the last thing left to move - so it is held here just long enough to
-     show the receipt, and is gone on reload, which is the truth. */
-  const [justPlaced, setJustPlaced] = useState(null);
-  const orders = useMemo(() => {
-    const live = ordersData?.orders || [];
-    return justPlaced && !live.some((x) => x.id === justPlaced.id) ? [justPlaced, ...live] : live;
-  }, [ordersData, justPlaced]);
+  const orders = useMemo(() => ordersData?.orders || [], [ordersData]);
 
   const wish = useMemo(() => ({
     ids: wishIds,
@@ -496,8 +489,10 @@ export default function Home({
      here - only the ledger to read again once it has. */
   const walletMove = () => reloadWallet();
   const { unread } = useNotifications(orders);
+  /* The order is the shop's now; there is nothing to keep here but the
+     knowledge that the basket it came from is spent. */
   const orderPlaced = (o) => {
-    setJustPlaced(o);
+    reloadOrders();
     order.current = []; setCart({});
     try { sessionStorage.removeItem("369mart.checkout"); } catch (e) {}
     nav("order", o.id, { replace: true });

@@ -59,6 +59,84 @@ class TestMart369Place(Mart369OrderCase):
         self.assertEqual(
             self.env['sale.order'].search_count([('mart369_ref', '=', '369M-TEST1')]), 1)
 
+    def test_a_draft_is_rewritten_rather_than_duplicated(self):
+        """The app asks for the order before choosing how to pay, because
+        whether cash is allowed is a question about the order - so the
+        customer can still go back and change the slot afterwards."""
+        first = self._place(items={str(self.quick_product.id): 4})
+        self.assertEqual(first.mart369_state, 'draft')
+        again = self._place(items={str(self.quick_product.id): 7})
+        self.assertEqual(first, again, 'the same draft, rewritten')
+        self.assertEqual(
+            sum(again.order_line.filtered(
+                lambda l: not l.mart369_kind and not l.is_delivery).mapped('product_uom_qty')),
+            7.0)
+
+    def test_an_order_already_paid_for_is_never_rewritten(self):
+        """Past the draft, the same number is a retry - someone may already
+        be packing it."""
+        order = self._place()
+        self._pay(order)
+        self.assertEqual(order.mart369_state, 'placed')
+        again = self._place(items={str(self.quick_product.id): 11})
+        self.assertEqual(order, again)
+        self.assertEqual(
+            sum(again.order_line.filtered(
+                lambda l: not l.mart369_kind and not l.is_delivery).mapped('product_uom_qty')),
+            4.0, 'the basket it was paid for, untouched')
+
+    # ---------------------------------------------------- cash on delivery
+
+    def _cash(self, order):
+        """A cash payment the way /pay makes one: pending, never confirmed
+        by anyone before the door."""
+        cod = self.env.ref('delivery.payment_provider_cod').sudo()
+        cod.write({'state': 'test'})
+        tx = self.env['payment.transaction'].sudo().create({
+            'provider_id': cod.id,
+            'payment_method_id': cod.payment_method_ids[:1].id,
+            'partner_id': self.partner.id,
+            'amount': order.amount_total,
+            'currency_id': order.currency_id.id,
+            'operation': 'online_direct',
+            'mart369_kind': 'order',
+            'mart369_order_ref': order.mart369_ref,
+        })
+        tx._set_pending()
+        tx._post_process()
+        return tx
+
+    def test_a_cash_order_is_placed_before_the_money_arrives(self):
+        """Nobody confirms a cash payment before the door. Waiting for one
+        left the order a draft: in no list, and in front of nobody who
+        could pack it."""
+        order = self._place()
+        self._cash(order)
+        self.assertEqual(order.mart369_state, 'placed')
+
+    def test_a_cash_order_is_not_recorded_as_paid(self):
+        """It is owed, not paid - the receipt says "to pay on delivery"."""
+        order = self._place()
+        self._cash(order)
+        self.assertEqual(order.mart369_paid, 0.0)
+
+    def test_collecting_the_cash_is_what_marks_it_paid(self):
+        order = self._place()
+        tx = self._cash(order)
+        tx._mart369_mark_cod_collected()
+        self.assertEqual(tx.state, 'done')
+        self.assertEqual(
+            order.currency_id.compare_amounts(order.mart369_paid, order.amount_total), 0)
+
+    # ------------------------------------------------------------ delivery
+
+    def test_an_order_is_given_a_delivery_method(self):
+        """Without one, Odoo refuses cash on delivery on every basket: the
+        rule is the carrier's, and an order with no carrier has no rule."""
+        order = self._place()
+        self.assertTrue(order.carrier_id,
+                        'an order nobody is delivering cannot be paid for in cash')
+
     def test_one_customer_cannot_take_over_anothers_order_number(self):
         self._place()
         with self.assertRaises(UserError):

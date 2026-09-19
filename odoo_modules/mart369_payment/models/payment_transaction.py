@@ -92,6 +92,8 @@ class PaymentTransaction(models.Model):
                     tx._mart369_credit_wallet()
                 elif tx.state == 'done':
                     tx._mart369_on_paid()
+                elif tx.state == 'pending' and tx.provider_id.mart369_is_cod:
+                    tx._mart369_on_accepted()
                 elif tx.state in ('cancel', 'error'):
                     tx._mart369_on_failed()
             except Exception:  # noqa: BLE001 - one bad transaction must not stop the rest
@@ -105,6 +107,19 @@ class PaymentTransaction(models.Model):
         transaction from _post_process, after the provider's signature check.
 
         Must stay idempotent - a webhook can repeat, and providers do resend.
+        """
+        self.ensure_one()
+        return False
+
+    def _mart369_on_accepted(self):
+        """Taken on, but not paid for yet: cash on delivery.
+
+        SEAM: mart369_order overrides this to place the order. Nothing has
+        been collected, so nothing may be written as paid - but an order
+        nobody has been asked to pack is not an order, and cash is collected
+        at the door precisely because it was accepted first.
+
+        Must stay idempotent: placing again does nothing.
         """
         self.ensure_one()
         return False
@@ -302,6 +317,12 @@ class PaymentTransaction(models.Model):
         self.ensure_one()
         if self.state == 'done':
             return {'ok': True, 'state': 'done', 'txn': self.mart369_txn}
+        if self.state == 'pending' and self.provider_id.mart369_is_cod:
+            # Nothing has been collected and nothing will be until the door,
+            # but the order has been taken on - which is what the app is
+            # waiting to hear. Saying 'pending' here leaves it waiting for
+            # money that is not coming until delivery.
+            return {'ok': True, 'state': 'accepted', 'txn': self.mart369_txn}
         if self.state in ('error', 'cancel'):
             payload = {
                 'ok': False,

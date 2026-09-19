@@ -56,13 +56,20 @@ class SaleOrder(models.Model):
         if not ref:
             raise UserError(self.env._('That order is missing its order number.'))
 
-        # 1. Placed already? Then this is a retry, not a second order.
+        # 1. Seen this number before?
         existing = self.sudo().search([('mart369_ref', '=', ref)], limit=1)
         if existing:
             if existing.partner_id != partner:
                 # Someone else's number. Say nothing useful about it.
                 raise UserError(self.env._('That order number is not available.'))
-            return existing
+            if existing.mart369_state not in ('draft', False):
+                # Paid for, or on its way. This is a retry, not a second order.
+                return existing
+            # Still a draft: nobody has been asked to pack it and no money has
+            # moved, so it is the same basket being settled - rewrite it. The
+            # app asks for the order before choosing how to pay, because
+            # whether cash is allowed is a question about the order, and the
+            # customer can still go back and change the slot after that.
 
         # 2. The address, and that it is really theirs.
         address = self._mart369_address_for(partner, body.get('address_id'))
@@ -93,7 +100,8 @@ class SaleOrder(models.Model):
         mode = body.get('mode') or self._mart369_mode_of_bill(bill)
 
         # 4. The order.
-        order = self.sudo().create({
+        values = {
+            'carrier_id': self._mart369_carrier(partner).id or False,
             'partner_id': partner.id,
             'partner_shipping_id': address.id if address else partner.id,
             'partner_invoice_id': partner.id,
@@ -109,10 +117,36 @@ class SaleOrder(models.Model):
             'mart369_coupon_id': coupon.id if coupon else False,
             'mart369_coupon_off': bill['couponOff'] if coupon else 0.0,
             'mart369_due_at': self._mart369_due_at(slot, mode),
-        })
+        }
+        if existing:
+            order = existing
+            order.order_line.sudo().unlink()
+            order.write(values)
+        else:
+            order = self.sudo().create(values)
         order._mart369_write_lines(items, bill, coupon)
         order._mart369_check_total(bill)
         return order
+
+    @api.model
+    def _mart369_carrier(self, partner):
+        """How this order is being delivered.
+
+        Nothing set one before, and an order with no delivery method is an
+        order Odoo will not take cash for: `delivery` refuses cash unless the
+        carrier allows it, so every basket was quietly refused at the moment
+        of paying. Prefer a carrier that does allow cash - which is the one
+        the shop's own delivery is - and settle for any if none does.
+        """
+        Carrier = self.env['delivery.carrier'].sudo()
+        usable = Carrier.search([
+            '|', ('company_id', '=', False),
+            ('company_id', '=', self.env.company.id),
+        ])
+        return next(
+            (c for c in usable if c.allow_cash_on_delivery),
+            usable[:1] or Carrier.browse(),
+        )
 
     # -------------------------------------------------------------- the lines
 

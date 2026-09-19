@@ -93,6 +93,24 @@ class Mart369PaymentApi(http.Controller):
             return empty
         return tx
 
+    def _order(self, ref):
+        """This customer's order by the reference the app made, or nothing.
+
+        Cash on delivery is the reason this exists: Odoo's delivery module
+        decides whether cash is allowed from the order's own carrier, so
+        asking which providers are compatible without handing over the order
+        quietly drops cash from every basket.
+        """
+        ref = (ref or '').strip()
+        if not ref:
+            return request.env['sale.order'].browse()
+        order = request.env['sale.order'].sudo().search([
+            ('mart369_ref', '=', ref),
+        ], limit=1)
+        if not order or order.partner_id != self._me():
+            return request.env['sale.order'].browse()
+        return order
+
     def _methods(self):
         """Both lists, in the shape `369mart.payments` already holds."""
         tokens = request.env['payment.token'].sudo().search([
@@ -106,6 +124,43 @@ class Mart369PaymentApi(http.Controller):
             'cards': [t._mart369_serialize() for t in cards],
             'upis': [t._mart369_serialize() for t in upis],
         }
+
+    # ------------------------------------------------------ what we can take
+
+    @http.route('/369mart/payment/options', **_GET)
+    def options(self, **kwargs):
+        """The ways this customer can actually pay, right now.
+
+        Without this the checkout offers every method it has a button for
+        and finds out at the last step that the shop cannot take it, which
+        is the worst possible moment. Enable a provider and its methods
+        appear here, and in the app, without a line changing there.
+
+        The amount matters: a provider's ceiling is part of whether it is
+        compatible, which is how cash on delivery drops off a large basket.
+        """
+        currency = self._wallet().currency_id or request.env.company.currency_id
+        try:
+            amount = currency.round(float(kwargs.get('amount') or 0.0))
+        except (TypeError, ValueError):
+            amount = 0.0
+
+        order = self._order(kwargs.get('order_ref'))
+        Provider = request.env['payment.provider']
+        available = []
+        for code in ('upi', 'card', 'netbanking', 'cod', 'wallet'):
+            if Provider._mart369_provider_for(
+                    code, self._me(), amount, currency, order=order or None):
+                available.append(code)
+
+        cod = request.env.ref(
+            'delivery.payment_provider_cod', raise_if_not_found=False)
+        return self._json({
+            'ok': True,
+            'methods': available,
+            'codLimit': cod.sudo().maximum_amount if cod else 0.0,
+            'walletBalance': self._wallet()._mart369_balance(),
+        })
 
     # -------------------------------------------------------- saved methods
 
@@ -360,7 +415,9 @@ class Mart369PaymentApi(http.Controller):
                 return self._fail(_("The 369 Wallet is not switched on yet."))
             provider = settle_provider
         else:
-            provider = provider._mart369_provider_for(method, self._me(), payable, currency)
+            provider = provider._mart369_provider_for(
+                method, self._me(), payable, currency,
+                order=self._order(body.get('order_ref')) or None)
             if not provider:
                 if method == 'cod':
                     return self._fail(_(
@@ -391,6 +448,10 @@ class Mart369PaymentApi(http.Controller):
             tx._post_process()
         else:
             tx._set_pending()
+            if provider.mart369_is_cod:
+                # No provider will ever confirm a cash payment before the
+                # door, and the order still has to reach the warehouse.
+                tx._post_process()
 
         payload = {
             'ok': True,
