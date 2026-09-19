@@ -9,41 +9,70 @@
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import ProductArt from "./art";
 import { Icon, OpenContext, Rail, Thumb, inr } from "./shared";
+import { useResource } from "@/lib/useFetch";
+import { api } from "@/lib/api";
 
-export const CART_RULES = {
-  quick: { label: "Quick", eta: "Delivery in 13 mins", minOrder: 99, freeAbove: 499, fee: 30 },
-  all: { label: "Express", eta: "Delivery in 2–3 days", minOrder: 0, freeAbove: 999, fee: 49 },
-};
+/* The delivery rules and the coupons are the shop's, not a copy of them kept
+   here. Both pages that spend money ask for them, and so do the two that only
+   list the codes - `api` caches a GET for a minute, so asking is cheap and
+   nobody has to thread them through a tree that does not care. */
+export function useRules() {
+  const { data } = useResource("/cart/rules");
+  return {
+    rules: data?.rules || null,
+    coupons: useMemo(() => data?.coupons || [], [data]),
+  };
+}
 
-export const COUPONS = [
-  { code: "QUICK20", title: "20% off on Quick orders", note: "Up to ₹60 · Quick items above ₹199", group: "quick", min: 199, calc: (s) => Math.min(60, Math.round(s.quick * 0.2)) },
-  { code: "WELCOME50", title: "Flat ₹50 off", note: "On orders above ₹499", group: null, min: 499, calc: () => 50 },
-  { code: "FREEDEL", title: "Free delivery", note: "Waives delivery fees on orders above ₹299", group: null, min: 299, calc: (s) => s.fees },
-];
-
-/* One bill for cart and checkout: groups, fees, coupon, totals. */
-export function computeBill({ cart, byId, rules = CART_RULES, coupon = null }) {
+/* What is in the basket, and which storefront each line ships from. This is
+   layout, not money: which lines sit under "Delivery in 13 mins" and which
+   under "2-3 days", and how many things there are in total. */
+export function computeBill({ cart, byId }) {
   const groups = { quick: [], all: [] };
   Object.entries(cart).forEach(([id, qty]) => {
     const p = byId[id];
     if (p && qty > 0) groups[p.delivery ? "all" : "quick"].push({ p, qty });
   });
   const lines = [...groups.quick, ...groups.all];
-  const mrp = lines.reduce((s, l) => s + (l.p.mrp || l.p.price) * l.qty, 0);
-  const items = lines.reduce((s, l) => s + l.p.price * l.qty, 0);
-  const sub = { quick: groups.quick.reduce((s, l) => s + l.p.price * l.qty, 0), all: groups.all.reduce((s, l) => s + l.p.price * l.qty, 0) };
-  const feeFor = (g) => (groups[g].length && sub[g] < rules[g].freeAbove ? rules[g].fee : 0);
-  const fees = feeFor("quick") + feeFor("all");
-  const sums = { items, quick: sub.quick, all: sub.all, fees };
-  const active = COUPONS.find((c) => c.code === coupon);
-  const couponValid = !!active && (active.group ? sub[active.group] : items) >= active.min;
-  const couponOff = couponValid ? Math.min(active.calc(sums), items + fees) : 0;
-  const total = Math.max(0, items + fees - couponOff);
+  return { groups, lines, count: lines.reduce((s, l) => s + l.qty, 0) };
+}
+
+/* The bill itself comes from the shop. What a basket costs is the one number
+   the browser must never decide: an app that works out its own total can only
+   ever disagree with the till, and the customer reads the disagreement as the
+   shop overcharging. `priced` is false until the answer arrives - the page
+   shows no amounts and will not start a payment before then.
+
+   `feeFor` stays here because it is a function, which no JSON can carry, but
+   it is the shop's rule applied to the shop's subtotal, not a second opinion
+   about either. */
+export function useBill({ cart, byId, rules, coupon = null, slotFee = 0 }) {
+  const shape = useMemo(() => computeBill({ cart, byId }), [cart, byId]);
+  const [money, setMoney] = useState(null);
+  const [error, setError] = useState(null);
+  const tick = useRef(0);
+  const key = JSON.stringify([cart, coupon || "", slotFee]);
+
+  useEffect(() => {
+    if (!shape.count) { setMoney(null); setError(null); return undefined; }
+    const mine = ++tick.current;
+    /* A stepper is held down, not tapped once. Wait for the hand to stop. */
+    const timer = setTimeout(() => {
+      api("/cart/bill", { method: "POST", body: { items: cart, coupon: coupon || "", slotFee } })
+        .then((r) => { if (mine === tick.current) { setMoney(r); setError(null); } })
+        .catch((e) => { if (mine === tick.current) { setMoney(null); setError(e); } });
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [key, shape.count]); // eslint-disable-line
+
+  const sub = money?.sub || { quick: 0, all: 0 };
+  const feeFor = (g) => (shape.groups[g].length && rules?.[g] && sub[g] < rules[g].freeAbove ? rules[g].fee : 0);
   return {
-    groups, lines, mrp, items, sub, fees, feeFor, sums, couponValid, couponOff, total,
-    saved: mrp - items + couponOff,
-    count: lines.reduce((s, l) => s + l.qty, 0),
-    blocked: groups.quick.length > 0 && sub.quick < rules.quick.minOrder,
+    ...shape,
+    mrp: 0, items: 0, fees: 0, couponOff: 0, total: 0, saved: 0,
+    couponValid: false, blocked: false, coupons: [], unknown: [],
+    ...(money || {}),
+    sub, feeFor, priced: !!money, error,
   };
 }
 
@@ -104,7 +133,8 @@ function LineItem({ p, qty, setQty, i }) {
 function DeliveryGroup({ group, lines, setQty, rules, onAddMore }) {
   const subtotal = lines.reduce((s, l) => s + l.p.price * l.qty, 0);
   const count = lines.reduce((s, l) => s + l.qty, 0);
-  const short = Math.max(0, rules.minOrder - subtotal);
+  const short = rules ? Math.max(0, rules.minOrder - subtotal) : 0;
+  rules = rules || { label: group === "quick" ? "Quick" : "Express", eta: "", minOrder: 0 };
   return (
     <section className={"ct-card ct-group ct-group-" + group}>
       <header className="ct-group-head">
@@ -128,7 +158,7 @@ function DeliveryGroup({ group, lines, setQty, rules, onAddMore }) {
   );
 }
 
-function CouponSheet({ open, onClose, sums, applied, onApply }) {
+function CouponSheet({ open, onClose, coupons, offers, applied, onApply }) {
   useEffect(() => {
     if (!open) return;
     const k = (e) => e.key === "Escape" && onClose();
@@ -144,10 +174,10 @@ function CouponSheet({ open, onClose, sums, applied, onApply }) {
           <button className="ct-x" onClick={onClose} aria-label="Close"><Icon n="x" size={18} /></button>
         </header>
         <ul className="ct-coupons">
-          {COUPONS.map((c, i) => {
-            const base = c.group ? sums[c.group] : sums.items;
-            const need = Math.max(0, c.min - base);
-            const save = c.calc(sums);
+          {coupons.map((c, i) => {
+            const priced = offers.find((o) => o.code === c.code) || { off: 0, need: 0 };
+            const need = priced.need;
+            const save = priced.off;
             const on = applied === c.code;
             return (
               <li key={c.code} className={"ct-coupon" + (need ? " ct-locked" : "") + (on ? " ct-on" : "")} style={{ "--i": i }}>
@@ -176,7 +206,7 @@ const INSTRUCTIONS = [
   { key: "pet", label: "Pet at home", icon: "paw" },
 ];
 
-export default function CartPage({ cart, setQty, byId, recommended = [], alsoLike = [], onBack, onCheckout, rules = CART_RULES }) {
+export default function CartPage({ cart, setQty, byId, recommended = [], alsoLike = [], onBack, onCheckout }) {
   const [couponOpen, setCouponOpen] = useState(false);
   const [coupon, setCoupon] = useState(null);
   const [whatsapp, setWhatsapp] = useState(true);
@@ -185,16 +215,18 @@ export default function CartPage({ cart, setQty, byId, recommended = [], alsoLik
   const [toast, setToast] = useState("");
   const [paying, setPaying] = useState("");
 
-  const bill = useMemo(() => computeBill({ cart, byId, rules, coupon }), [cart, byId, rules, coupon]);
-  const { groups, mrp, items, sub, fees, feeFor, sums, couponValid, couponOff, total, saved, blocked, count } = bill;
-  useEffect(() => { if (coupon && !couponValid) { setCoupon(null); flash(`${coupon} removed — cart no longer qualifies`); } }, [couponValid]); // eslint-disable-line
+  const { rules, coupons } = useRules();
+  const bill = useBill({ cart, byId, rules, coupon });
+  const { groups, mrp, items, sub, feeFor, couponValid, couponOff, total, saved, blocked, count, priced } = bill;
+  /* The shop decides a coupon no longer applies, not the page. */
+  useEffect(() => { if (priced && coupon && !couponValid) { setCoupon(null); flash(`${coupon} removed — cart no longer qualifies`); } }, [couponValid, priced]); // eslint-disable-line
 
-  const nextFree = groups.quick.length && sub.quick < rules.quick.freeAbove ? rules.quick.freeAbove - sub.quick : 0;
+  const nextFree = rules && groups.quick.length && sub.quick < rules.quick.freeAbove ? rules.quick.freeAbove - sub.quick : 0;
 
   function flash(msg) { setToast(msg); clearTimeout(flash.t); flash.t = setTimeout(() => setToast(""), 2600); }
   const applyCoupon = (code) => {
     setCoupon(code); setCouponOpen(false);
-    if (code) { const c = COUPONS.find((x) => x.code === code); flash(`${code} applied · You save ${inr(c.calc(sums))}`); }
+    if (code) { const o = bill.coupons.find((x) => x.code === code); flash(`${code} applied${o ? ` · You save ${inr(o.off)}` : ""}`); }
   };
   const pay = (how) => {
     setPaying(how);
@@ -224,7 +256,7 @@ export default function CartPage({ cart, setQty, byId, recommended = [], alsoLik
       <div className="ct-grid">
         <div className="ct-main">
           {["quick", "all"].map((g) => groups[g].length > 0 && (
-            <DeliveryGroup key={g} group={g} lines={groups[g]} setQty={setQty} rules={rules[g]} onAddMore={onBack} />
+            <DeliveryGroup key={g} group={g} lines={groups[g]} setQty={setQty} rules={rules?.[g]} onAddMore={onBack} />
           ))}
           {recommended.length > 0 && (
             <div className="ct-card ct-railcard">
@@ -268,11 +300,12 @@ export default function CartPage({ cart, setQty, byId, recommended = [], alsoLik
           <section className="ct-card ct-bill">
             {saved > 0 && <div className="ct-saving" key={saved}><Icon n="gift" size={15} />You're saving <Amount value={saved} /> on this order</div>}
             <h2>Payment details</h2>
-            <dl>
+            {!priced && <p className="ct-pending">{bill.error ? "We couldn't reach the shop for a total. Try again in a moment." : "Working out your total…"}</p>}
+            {priced && <dl>
               <div><dt>MRP total</dt><dd><Amount value={mrp} /></dd></div>
               {mrp > items && <div className="ct-green"><dt>Product discount</dt><dd><Amount value={mrp - items} prefix="−" /></dd></div>}
               <div><dt>Subtotal</dt><dd><Amount value={items} /></dd></div>
-              {["quick", "all"].map((g) => groups[g].length > 0 && (
+              {["quick", "all"].map((g) => groups[g].length > 0 && rules?.[g] && (
                 <div key={g} className="ct-fee">
                   <dt>Delivery fee ({rules[g].label})<small>{feeFor(g) ? `Free above ${inr(rules[g].freeAbove)}` : "Free on this order"}</small></dt>
                   <dd>{feeFor(g) ? inr(feeFor(g)) : <><s>{inr(rules[g].fee)}</s> <span className="ct-free-tag">FREE</span></>}</dd>
@@ -280,19 +313,19 @@ export default function CartPage({ cart, setQty, byId, recommended = [], alsoLik
               ))}
               {couponOff > 0 && <div className="ct-green ct-coupon-row"><dt>Coupon ({coupon})</dt><dd><Amount value={couponOff} prefix="−" /></dd></div>}
               <div className="ct-total"><dt>Total</dt><dd><Amount value={total} /></dd></div>
-            </dl>
+            </dl>}
             {saved > 0 && <p className="ct-saved">You saved <Amount value={saved} /></p>}
           </section>
 
           <div className="ct-card ct-pay">
-            <div className="ct-topay"><small>To pay</small><Amount value={total} /></div>
-            <button className="ct-cod" disabled={blocked || !!paying} onClick={() => pay("cod")}>
+            <div className="ct-topay"><small>To pay</small>{priced ? <Amount value={total} /> : <span className="ct-amt ct-amt-wait">…</span>}</div>
+            <button className="ct-cod" disabled={blocked || !priced || !!paying} onClick={() => pay("cod")}>
               {paying === "cod" ? <span className="ct-spin" /> : <><b>Pay cash</b><small>on delivery</small></>}
             </button>
-            <button className="ct-primary" disabled={blocked || !!paying} onClick={() => pay("online")}>
+            <button className="ct-primary" disabled={blocked || !priced || !!paying} onClick={() => pay("online")}>
               {paying === "online" ? <span className="ct-spin" /> : "Pay online"}
             </button>
-            {blocked && <p className="ct-blocked">Add {inr(rules.quick.minOrder - sub.quick)} more to your Quick items to continue</p>}
+            {blocked && rules && <p className="ct-blocked">Add {inr(rules.quick.minOrder - sub.quick)} more to your Quick items to continue</p>}
           </div>
 
           <div className="ct-card ct-policy">
@@ -328,7 +361,7 @@ export default function CartPage({ cart, setQty, byId, recommended = [], alsoLik
         <button className="ct-primary" disabled={blocked || !!paying} onClick={() => pay("online")}>{paying ? <span className="ct-spin" /> : "Pay online"}</button>
       </div>
 
-      <CouponSheet open={couponOpen} onClose={() => setCouponOpen(false)} sums={sums} applied={couponValid ? coupon : null} onApply={applyCoupon} />
+      <CouponSheet open={couponOpen} onClose={() => setCouponOpen(false)} coupons={coupons} offers={bill.coupons} applied={couponValid ? coupon : null} onApply={applyCoupon} />
       <div className={"ct-toast" + (toast ? " ct-show" : "")} role="status" aria-live="polite">{toast}</div>
     </div>
   );

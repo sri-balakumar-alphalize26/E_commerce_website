@@ -15,7 +15,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Icon, Thumb, inr } from "./shared";
-import { Amount, CART_RULES, COUPONS, computeBill } from "./Cart";
+import { Amount, computeBill, useBill, useRules } from "./Cart";
 import { KEYS, SEED_PAYMENTS, useStored } from "./accountStore";
 import {
   BANKS, BRAND_LABEL, COD_LIMIT, UPI_APPS, cardBrand, demoGateway, expiryOk,
@@ -555,14 +555,20 @@ function PaySheet({ job, amount, onDone, onFail, onCancel, onRetry, onChangeMeth
 
 /* ---------------- page ---------------- */
 export default function CheckoutPage({
-  cart, byId, rules = CART_RULES, draft = {}, addresses, onAddAddress, address, onSelectAddress, phoneHint,
+  cart, byId, draft = {}, addresses, onAddAddress, address, onSelectAddress, phoneHint,
   walletBalance = 0, onBack, onPlaced, ready = true,
 }) {
   const coupon = draft.coupon || null;
-  const bill = useMemo(() => computeBill({ cart, byId, rules, coupon }), [cart, byId, rules, coupon]);
+  const { rules, coupons } = useRules();
   const slots = useSlots();
   const [step, setStep] = useState(address ? 2 : 1);
   const [slot, setSlot] = useState({ quick: "now", all: "std" });
+  /* Priority is a line on the bill, so the shop adds it, not this page. The
+     chip's own price is still the browser's (the slots come from its clock,
+     not from /369mart/slots yet) - but only one side works out the total. */
+  const shape = useMemo(() => computeBill({ cart, byId }), [cart, byId]);
+  const priority = shape.groups.all.length && slot.all === "pri" ? PRIORITY_FEE : 0;
+  const bill = useBill({ cart, byId, rules, coupon, slotFee: priority });
   const [walletUse, setWalletUse] = useState(false);
   const [pay, setPay] = useState({
     method: draft.how === "cod" ? "cod" : "upi", upiApp: "gpay", useVpa: false, vpa: "", vpaName: "", vpaError: "",
@@ -579,8 +585,7 @@ export default function CheckoutPage({
   const [summaryOpen, setSummaryOpen] = useState(false);
   useEffect(() => { if (!address && addresses.length === 0) setStep(1); }, [address, addresses.length]);
 
-  const priority = bill.groups.all.length && slot.all === "pri" ? PRIORITY_FEE : 0;
-  const gross = bill.total + priority;
+  const gross = bill.total;
   const walletUsed = walletUse ? Math.min(walletBalance, gross) : 0;
   const payable = gross - walletUsed;
   const wallet = { used: walletUsed, covers: walletUse && walletUsed >= gross, total: gross };
@@ -637,7 +642,7 @@ export default function CheckoutPage({
       walletUsed,
       pay: method === "cod" ? "Cash on delivery" : payNote,
       method, payNote, txn: r.txn, coupon: bill.couponValid ? coupon : null,
-      bill: { items: bill.items, mrp: bill.mrp, fees: bill.fees + priority, couponOff: bill.couponOff, total: gross },
+      bill: { items: bill.items, mrp: bill.mrp, fees: bill.fees, couponOff: bill.couponOff, total: gross },
       address, slot: slotLabel, instructions: draft.instructions, whatsapp: draft.whatsapp,
     };
     onPlaced(order);
@@ -708,18 +713,18 @@ export default function CheckoutPage({
             <dl className="co-bill">
               <div><dt>MRP total</dt><dd><Amount value={bill.mrp} /></dd></div>
               {bill.mrp > bill.items && <div className="co-green"><dt>Product discount</dt><dd><Amount value={bill.mrp - bill.items} prefix="−" /></dd></div>}
-              <div><dt>Delivery</dt><dd>{bill.fees ? <Amount value={bill.fees} /> : <span className="co-free">FREE</span>}</dd></div>
+              <div><dt>Delivery</dt><dd>{bill.fees - priority > 0 ? <Amount value={bill.fees - priority} /> : <span className="co-free">FREE</span>}</dd></div>
               {priority > 0 && <div className="co-rowin"><dt>Priority delivery</dt><dd>{inr(priority)}</dd></div>}
               {bill.couponOff > 0 && <div className="co-green"><dt>Coupon {coupon}</dt><dd><Amount value={bill.couponOff} prefix="−" /></dd></div>}
               {walletUsed > 0 && <div className="co-green co-rowin"><dt>369 Wallet</dt><dd><Amount value={walletUsed} prefix="−" /></dd></div>}
               <div className="co-total"><dt>{pay.method === "cod" && !wallet.covers ? "To pay on delivery" : "To pay"}</dt><dd><Amount value={payable} /></dd></div>
             </dl>
             {bill.saved > 0 && <p className="co-saving" key={bill.saved}><Icon n="gift" size={15} />You're saving {inr(bill.saved)} on this order</p>}
-            <button className={"co-primary co-paybtn" + (step === 3 && !methodReady ? " co-soft" : "")} disabled={step === 1 && !address || bill.blocked || !!job} onClick={cta.go}>
+            <button className={"co-primary co-paybtn" + (step === 3 && !methodReady ? " co-soft" : "")} disabled={step === 1 && !address || bill.blocked || !bill.priced || !!job} onClick={cta.go}>
               {job ? <i className="co-spin co-spin-w" /> : <>{step === 3 && <Icon n="lock" size={15} />}{cta.label}</>}
             </button>
             {step === 3 && hint && <p className="co-hintline" key={hint}>{hint}</p>}
-            {COUPONS.length > 0 && !coupon && <p className="co-muted co-small">Have a coupon? <button className="co-link" onClick={onBack}>Apply it in the cart</button></p>}
+            {coupons.length > 0 && !coupon && <p className="co-muted co-small">Have a coupon? <button className="co-link" onClick={onBack}>Apply it in the cart</button></p>}
             <p className="co-trust"><Icon n="shield" size={14} />Payments are encrypted and processed by a PCI DSS compliant gateway.</p>
           </section>
         </aside>
@@ -727,7 +732,7 @@ export default function CheckoutPage({
 
       <div className="co-mbar">
         <div><small>{step === 3 ? "To pay" : "Total"}</small><Amount value={step === 3 ? payable : gross} /></div>
-        <button className="co-primary" disabled={(step === 1 && !address) || bill.blocked || !!job} onClick={cta.go}>{job ? <i className="co-spin co-spin-w" /> : cta.label}</button>
+        <button className="co-primary" disabled={(step === 1 && !address) || bill.blocked || !bill.priced || !!job} onClick={cta.go}>{job ? <i className="co-spin co-spin-w" /> : cta.label}</button>
       </div>
 
       {job && (

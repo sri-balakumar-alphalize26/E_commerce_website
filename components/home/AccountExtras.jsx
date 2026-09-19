@@ -21,7 +21,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Icon, Thumb, inr } from "./shared";
-import { Amount, COUPONS } from "./Cart";
+import { Amount, useRules } from "./Cart";
 import { CardPreview } from "./Checkout";
 import { BRAND_LABEL, UPI_APPS, cardBrand, demoGateway, expiryOk, formatCard, formatExpiry, luhn, upiOk } from "./payment";
 import {
@@ -541,14 +541,15 @@ export function RewardsSec({ onWallet, onNav, flash }) {
     if (card.reward.type === "cash") onWallet(card.reward.amount, { kind: "reward", title: "Scratch card reward", sub: `From ${card.from.replace(/^Order /, "order ")}` });
   };
   const copy = async (code) => { if (await copyText(code)) { setCopied(code); flash?.(`${code} copied`); setTimeout(() => setCopied((c) => (c === code ? null : c)), 1800); } };
-  const coupons = [...COUPONS].sort((a, b) => rw.won.includes(b.code) - rw.won.includes(a.code));
+  const { coupons: live } = useRules();
+  const coupons = [...live].sort((a, b) => rw.won.includes(b.code) - rw.won.includes(a.code));
 
   return (
     <div className="ac-stack">
       <div className="ax-rewardstats">
         <span style={{ "--i": 0 }}><Icon n="wallet" size={20} /><b><Amount value={won} /></b><small>Cashback won</small></span>
         <span style={{ "--i": 1 }}><Icon n="gift" size={20} /><b>{fresh}</b><small>Cards to scratch</small></span>
-        <span style={{ "--i": 2 }}><Icon n="ticket" size={20} /><b>{COUPONS.length}</b><small>Coupons available</small></span>
+        <span style={{ "--i": 2 }}><Icon n="ticket" size={20} /><b>{coupons.length}</b><small>Coupons available</small></span>
       </div>
 
       <section className="ac-card ax-block">

@@ -182,6 +182,36 @@ class TestMart369CartApi(HttpCase):
             data=json.dumps({'coupon': 'QUICK20'}), headers=HEADERS)
         self.assertEqual(response.status_code, 400)
 
+    # --------------------------------------------------- the coupon sheet
+
+    def test_every_live_code_is_priced_against_this_basket(self):
+        """The sheet used to run each coupon's `calc` in the browser. It asks
+        now, so the bill has to answer for all of them at once - one trip, not
+        one per code."""
+        status, bill = self._bill({self._id(self.apple): 3})  # 300, Quick
+        self.assertEqual(status, 200)
+        priced = {c['code']: c for c in bill['coupons']}
+        self.assertLessEqual({'QUICK20', 'WELCOME50', 'FREEDEL'}, set(priced))
+        # 20% of 300 is 60, which is also the cap.
+        self.assertEqual(priced['QUICK20']['off'], 60.0)
+        self.assertEqual(priced['QUICK20']['need'], 0.0)
+
+    def test_a_code_the_basket_has_not_earned_says_how_far_off_it_is(self):
+        status, bill = self._bill({self._id(self.apple): 1})  # 100
+        priced = {c['code']: c for c in bill['coupons']}
+        self.assertEqual(priced['WELCOME50']['off'], 0.0,
+                         'below its minimum, so it saves nothing')
+        self.assertEqual(priced['WELCOME50']['need'], 399.0,
+                         '499 minimum less the 100 in the basket')
+
+    def test_the_priced_codes_agree_with_the_one_that_is_applied(self):
+        """Two answers about the same coupon in one payload is two chances to
+        disagree - the sheet says "You save X", the bill takes X off."""
+        status, bill = self._bill({self._id(self.apple): 3}, coupon='QUICK20')
+        priced = {c['code']: c for c in bill['coupons']}
+        self.assertTrue(bill['couponValid'])
+        self.assertEqual(bill['couponOff'], priced['QUICK20']['off'])
+
     # ------------------------------------------------------------ the rules
 
     def test_rules_and_coupons_match_what_the_app_had(self):

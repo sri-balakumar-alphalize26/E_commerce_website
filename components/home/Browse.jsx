@@ -15,7 +15,7 @@ import { createPortal } from "react-dom";
 import ProductArt from "./art";
 import { Icon, ProductCard, Thumb, flyTo, inr } from "./shared";
 import { listable } from "./catalog";
-import { COUPONS } from "./Cart";
+import { useRules } from "./Cart";
 import { SAMPLE_ORDERS } from "./Account";
 import { NavContext } from "./nav";
 import { useResource } from "@/lib/useFetch";
@@ -787,6 +787,7 @@ export function OffersPage({ cart, setQty }) {
   /* Deriving this from the browsed store would show a shopper only the deals
      they had already walked past. The shop knows them all. */
   const { data, loading: fetching } = useResource("/offers");
+  const { coupons } = useRules();
   const deals = useMemo(() => cards(data?.deals), [data]);
   useEffect(() => { if (deals.length) absorb(deals); }, [deals]);
   const shown = deals.filter((p) => p.off >= min);
@@ -813,7 +814,7 @@ export function OffersPage({ cart, setQty }) {
       <section className="of-coupons" aria-label="Coupons">
         <h2>Coupons for you</h2>
         <div className="of-coupon-row">
-          {COUPONS.map((c, k) => (
+          {coupons.map((c, k) => (
             <article key={c.code} className="of-coupon" style={{ "--k": k }}>
               <div className="of-coupon-l"><Icon n="ticket" size={22} /></div>
               <div className="of-coupon-r">

@@ -110,6 +110,21 @@ class Mart369Cart(models.AbstractModel):
 
         sums = {'items': gross, QUICK: sub[QUICK], EXPRESS: sub[EXPRESS], 'fees': fees}
 
+        # Every live code priced against this basket, so the coupon sheet can
+        # say what each one saves without the browser knowing how a discount
+        # is worked out - the same reason `calc` is not in a coupon's payload.
+        Coupon = self.env['mart369.coupon'].sudo()
+        offers = []
+        for record in Coupon.search([]):
+            if not record._mart369_live():
+                continue
+            offers.append({
+                'code': record.code or '',
+                'off': round(record._mart369_discount(sums), 2),
+                'need': round(max(0.0, (record.min_spend or 0.0)
+                                  - record._mart369_base(sums)), 2),
+            })
+
         coupon_record = self.env['mart369.coupon']._mart369_find(coupon)
         coupon_off = coupon_record._mart369_discount(sums) if coupon_record else 0.0
         coupon_valid = bool(coupon_record) and coupon_off > 0
@@ -124,6 +139,7 @@ class Mart369Cart(models.AbstractModel):
             'items': round(gross, 2),
             'sub': {'quick': round(sub[QUICK], 2), 'all': round(sub[EXPRESS], 2)},
             'fees': round(fees, 2),
+            'coupons': offers,
             'couponValid': coupon_valid,
             'couponOff': round(coupon_off, 2),
             'total': round(total, 2),
