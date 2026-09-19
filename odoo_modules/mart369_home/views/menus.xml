@@ -9,6 +9,12 @@
               sequence="10"/>
 
     <!-- The form-based screens, for anything the builder does not expose. -->
+    <menuitem id="menu_mart369_home_version"
+              name="Saved Home Pages"
+              parent="mart369.menu_mart369_advanced"
+              action="action_mart369_home_version"
+              sequence="5"/>
+
     <menuitem id="menu_mart369_home_config"
               name="Home Page Settings"
               parent="mart369.menu_mart369_advanced"

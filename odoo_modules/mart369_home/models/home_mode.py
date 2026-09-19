@@ -15,6 +15,12 @@ class Mart369HomeMode(models.Model):
     config_id = fields.Many2one(
         'mart369.config', string='Settings',
         required=True, ondelete='cascade', index=True)
+    version_id = fields.Many2one(
+        'mart369.home.version', string='Saved page',
+        ondelete='cascade', index=True,
+        help='Which saved home page this tab belongs to. Every saved page has '
+             'its own Quick and its own Express, which is what makes a '
+             'festival page a copy rather than an edit of the live one.')
     key = fields.Selection([
         ('quick', 'Quick - delivery in minutes'),
         ('all', 'Express - delivery in days'),
@@ -24,6 +30,31 @@ class Mart369HomeMode(models.Model):
     name = fields.Char(
         string='Name', required=True,
         help='Only used here in Odoo, to tell the two apart.')
+
+    # ── What the shopper is told this tab is ──
+    #
+    # These three used to be hard-coded in the app - "Parts & peripherals in
+    # minutes" and "Electronics, home & more · 2-5 day delivery" were written
+    # into the storefront. Delivery promises change, and changing one meant a
+    # developer and a deploy. They are the shop's words about its own service,
+    # so they belong to the shop.
+    label = fields.Char(
+        string='Shown as',
+        help='What the tab is called in the app: "Quick", "Express".')
+    tagline = fields.Char(
+        string='Promise',
+        help='The line the app shows when someone switches to this tab, e.g. '
+             '"Parts & peripherals in minutes" or "2-5 day delivery". This is '
+             'a promise to the customer - keep it true.')
+    # No default on purpose. A blanket one would have put a grid on Quick,
+    # whose icon has always been a lightning bolt, and there would be no way
+    # afterwards to tell "the default filled this in" from "somebody chose a
+    # grid". Empty means "use this tab's own default", which `_copy_vals`
+    # decides per key.
+    icon = fields.Selection(
+        ICON_CHOICES, string='Icon',
+        help='The small icon beside the tab name. Left empty, each tab uses '
+             'its own: a lightning bolt for Quick, a grid for Express.')
     sequence = fields.Integer(default=10)
     active = fields.Boolean(
         default=True,
@@ -34,29 +65,81 @@ class Mart369HomeMode(models.Model):
         help='The app nudges the customer with "add X more for free delivery" '
              'until the basket reaches this amount.')
 
-    tab_ids = fields.One2many('mart369.home.tab', 'mode_id', string='Tabs')
-    banner_ids = fields.One2many('mart369.home.banner', 'mode_id', string='Banners')
-    tile_ids = fields.One2many('mart369.home.tile', 'mode_id', string='Category Tiles')
-    section_ids = fields.One2many('mart369.home.section', 'mode_id', string='Sections')
+    # copy=True throughout: Odoo does not copy one-to-many fields by default,
+    # and duplicating a saved home page that arrives empty is worse than not
+    # being able to duplicate one at all.
+    tab_ids = fields.One2many(
+        'mart369.home.tab', 'mode_id', string='Tabs', copy=True)
+    banner_ids = fields.One2many(
+        'mart369.home.banner', 'mode_id', string='Banners', copy=True)
+    tile_ids = fields.One2many(
+        'mart369.home.tile', 'mode_id', string='Category Tiles', copy=True)
+    section_ids = fields.One2many(
+        'mart369.home.section', 'mode_id', string='Sections', copy=True)
 
     _key_uniq = models.Constraint(
-        'unique (key)',
-        'There can only be one setup per app mode.')
+        'unique (version_id, key)',
+        'A saved home page can only have one setup per app mode.')
 
     @api.model
-    def _get(self, key):
-        return self.search([('key', '=', key)], limit=1)
+    def _get(self, key, version=None):
+        """The Quick or Express setup of one saved home page.
+
+        Since pages are saved under a name there is one `quick` per saved
+        page, so matching on the key alone returns an arbitrary one - and the
+        builder would open a festival page's bands while the shop serves the
+        everyday one. So resolve the page first: the one asked for, else
+        whichever is live right now, which is the same choice
+        `_serialize_modes()` makes for the app's own feed.
+
+        Searching rather than walking `version.mode_ids`, so that the caller's
+        context reaches the query - `builder_load` asks with
+        `active_test=False` precisely to find a switched-off mode.
+        """
+        version = version or self.env['mart369.home.version']._mart369_live()
+        mode = self.browse()
+        if version:
+            mode = self.search(
+                [('key', '=', key), ('version_id', '=', version.id)], limit=1)
+        if not mode:
+            # A saved page with no modes can only happen mid-upgrade, and a
+            # blank home page is never the right answer to that: fall back to
+            # the modes still hanging off the settings, as the feed does.
+            mode = self.search(
+                [('key', '=', key), ('version_id', '=', False)], limit=1)
+        return mode
 
     # ------------------------------------------------------------- serialise
 
+    # What the app falls back to when the shop has not been asked yet. The
+    # exact words the storefront used to have written into it, so an upgrade
+    # changes nothing until somebody edits them on purpose.
+    _DEFAULT_COPY = {
+        'quick': ('Quick', 'bolt', 'Parts & peripherals in minutes'),
+        'all': ('Express', 'grid', 'Electronics, home & more · 2–5 day delivery'),
+    }
+
+    def _copy_vals(self):
+        """Label, icon and promise, with the app's old defaults behind them."""
+        self.ensure_one()
+        label, icon, tagline = self._DEFAULT_COPY.get(
+            self.key, (self.name or '', 'grid', ''))
+        return {
+            'label': self.label or label,
+            'icon': self.icon or icon,
+            'tagline': self.tagline or tagline,
+        }
+
     def _serialize(self):
-        """One mode: {tabs, banners, categories, sections, freeDeliveryAt}."""
+        """One mode: {label, icon, tagline, tabs, banners, categories,
+        sections, freeDeliveryAt}."""
         self.ensure_one()
         sections = self.section_ids._live().sorted('sequence')
         # Resolve every product on the page once, so prices cost one query
         # instead of one per product.
         price_ctx = self._price_context(sections)
         return {
+            **self._copy_vals(),
             'tabs': [t._serialize() for t in
                      self.tab_ids._live().sorted('sequence')],
             'banners': [b._serialize() for b in
@@ -90,7 +173,7 @@ class Mart369HomeMode(models.Model):
         return sorted(rows, key=lambda r: r['deleted_at'] or '', reverse=True)
 
     @api.model
-    def builder_load(self, key):
+    def builder_load(self, key, version_id=None):
         """Everything the visual builder screen needs for one mode, in one call.
 
         The mock on that screen is drawn from the same _serialize() the app
@@ -98,7 +181,9 @@ class Mart369HomeMode(models.Model):
         records are included (with active=False) so they can be shown greyed
         out and switched back on.
         """
-        mode = self.with_context(active_test=False)._get(key)
+        version = self.env['mart369.home.version'].browse(
+            version_id).exists() if version_id else None
+        mode = self.with_context(active_test=False)._get(key, version=version)
         if not mode:
             raise UserError(_("There is no home page set up for '%s'.", key))
 
@@ -108,15 +193,22 @@ class Mart369HomeMode(models.Model):
         Tag = self.env['product.tag']
 
         return {
-            'mode': {
-                'id': mode.id,
-                'key': mode.key,
-                'name': mode.name,
-                'free_delivery_at': mode.free_delivery_at,
-                'active': mode.active,
-            },
-            'modes': [{'id': m.id, 'key': m.key, 'name': m.name, 'active': m.active}
-                      for m in self.with_context(active_test=False).search([])],
+            'mode': dict(
+                mode._copy_vals(),
+                id=mode.id,
+                key=mode.key,
+                name=mode.name,
+                free_delivery_at=mode.free_delivery_at,
+                active=mode.active,
+            ),
+            # This page's own tabs, not every saved page's - the switcher at the
+            # top of the builder offers Quick and Express, and offering six
+            # would be offering to edit a page nobody opened.
+            'modes': [dict(m._copy_vals(), id=m.id, key=m.key, name=m.name,
+                           active=m.active)
+                      for m in self.with_context(active_test=False).search(
+                          [('version_id', '=', mode.version_id.id)],
+                          order='sequence, id')],
             'vocab': {
                 'art': ART_CHOICES,
                 'icons': ICON_CHOICES,

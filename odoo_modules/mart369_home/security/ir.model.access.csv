@@ -20,3 +20,6 @@ access_mart369_section_product_manager,mart369.home.section.product manager,mode
 access_mart369_section_banner_user,mart369.home.section.banner user,model_mart369_home_section_banner,base.group_user,1,0,0,0
 access_mart369_section_banner_designer,mart369.home.section.banner designer,model_mart369_home_section_banner,website.group_website_designer,1,1,1,1
 access_mart369_section_banner_manager,mart369.home.section.banner manager,model_mart369_home_section_banner,base.group_system,1,1,1,1
+access_mart369_version_user,mart369.home.version user,model_mart369_home_version,base.group_user,1,0,0,0
+access_mart369_version_designer,mart369.home.version designer,model_mart369_home_version,website.group_website_designer,1,1,1,1
+access_mart369_version_manager,mart369.home.version manager,model_mart369_home_version,base.group_system,1,1,1,1

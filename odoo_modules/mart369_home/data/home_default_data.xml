@@ -39,8 +39,19 @@
             <field name="hide_out_of_stock" eval="False"/>
         </record>
 
+        <!-- The everyday home page. Every saved page owns its own Quick and
+             Express, so a festival page is a copy of this rather than an edit
+             of the live one. -->
+        <record id="home_version_everyday" model="mart369.home.version">
+            <field name="name">Everyday</field>
+            <field name="note">The page the app shows when nothing is scheduled.</field>
+            <field name="config_id" ref="home_config"/>
+            <field name="is_current" eval="True"/>
+        </record>
+
         <record id="mode_quick" model="mart369.home.mode">
             <field name="config_id" ref="home_config"/>
+            <field name="version_id" ref="home_version_everyday"/>
             <field name="key">quick</field>
             <field name="name">Quick</field>
             <field name="sequence">10</field>
@@ -49,6 +60,7 @@
 
         <record id="mode_all" model="mart369.home.mode">
             <field name="config_id" ref="home_config"/>
+            <field name="version_id" ref="home_version_everyday"/>
             <field name="key">all</field>
             <field name="name">Express</field>
             <field name="sequence">20</field>

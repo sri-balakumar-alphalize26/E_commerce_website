@@ -88,10 +88,14 @@ class Mart369HomeSection(models.Model):
         string='Show at most', default=12,
         help='How many products the row holds before the customer scrolls.')
 
+    # copy=True: a duplicated row must bring the products and banners that
+    # were chosen for it, or the copy is a row with nothing in it.
     picked_product_ids = fields.One2many(
-        'mart369.home.section.product', 'section_id', string='Chosen products')
+        'mart369.home.section.product', 'section_id',
+        string='Chosen products', copy=True)
     banner_line_ids = fields.One2many(
-        'mart369.home.section.banner', 'section_id', string='Banners')
+        'mart369.home.section.banner', 'section_id',
+        string='Banners', copy=True)
 
     # -- What will actually show --
     preview_product_ids = fields.Many2many(

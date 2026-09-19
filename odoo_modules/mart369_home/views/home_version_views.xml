@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--
+        The saved home pages. The screen people will actually use is the app's
+        own admin; this is the plain view behind it, so the records can be
+        inspected and fixed from Odoo when something looks wrong.
+    -->
+
+    <record id="view_mart369_home_version_list" model="ir.ui.view">
+        <field name="name">mart369.home.version.list</field>
+        <field name="model">mart369.home.version</field>
+        <field name="arch" type="xml">
+            <list string="Saved home pages">
+                <field name="name"/>
+                <field name="state" widget="badge"
+                       decoration-success="state == 'live'"
+                       decoration-info="state == 'scheduled'"
+                       decoration-muted="state in ('off', 'ended')"/>
+                <field name="state_note"/>
+                <field name="starts_on"/>
+                <field name="ends_on"/>
+                <field name="is_current" string="Everyday"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_mart369_home_version_form" model="ir.ui.view">
+        <field name="name">mart369.home.version.form</field>
+        <field name="model">mart369.home.version</field>
+        <field name="arch" type="xml">
+            <form string="Saved home page">
+                <header>
+                    <button name="action_mart369_make_current" type="object"
+                            string="Switch this on" class="btn-primary"
+                            invisible="is_current"/>
+                    <button name="action_mart369_duplicate" type="object"
+                            string="Duplicate"/>
+                    <field name="state" widget="statusbar"
+                           statusbar_visible="live,scheduled,off,ended"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="name" placeholder="Diwali 2026"/></h1>
+                        <field name="note" placeholder="What this page is for"/>
+                    </div>
+                    <group>
+                        <group string="When">
+                            <field name="is_current"/>
+                            <field name="starts_on"/>
+                            <field name="ends_on"/>
+                            <field name="state_note" readonly="1"/>
+                        </group>
+                        <group string="Settings">
+                            <field name="config_id"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="What is on this page">
+                            <field name="mode_ids">
+                                <list>
+                                    <field name="key"/>
+                                    <field name="name"/>
+                                    <field name="active"/>
+                                    <field name="free_delivery_at"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_mart369_home_version" model="ir.actions.act_window">
+        <field name="name">Saved home pages</field>
+        <field name="res_model">mart369.home.version</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Save a home page</p>
+            <p>
+                Build a page for a festival, keep it, and switch it on when the
+                time comes - or give it a window and let it switch itself.
+            </p>
+        </field>
+    </record>
+
+</odoo>

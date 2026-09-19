@@ -60,6 +60,7 @@ ART_CHOICES = [
 
 # Tab icons.
 ICON_CHOICES = [
+    ('bolt', 'Lightning (quick)'),
     ('bag', 'Shopping bag'),
     ('basket', 'Basket'),
     ('leaf', 'Leaf (fresh)'),

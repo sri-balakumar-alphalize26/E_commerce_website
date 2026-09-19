@@ -79,9 +79,20 @@ class Mart369HomeConfig(models.Model):
     # ------------------------------------------------------------- serialise
 
     def _serialize_modes(self):
-        """The whole payload: {'quick': {...}, 'all': {...}}."""
+        """The whole payload: {'quick': {...}, 'all': {...}}.
+
+        Served from whichever saved page is live: one that is inside its
+        scheduled window, or the everyday one. Which is how a festival page
+        takes over on time and hands back afterwards without anybody being
+        awake for either.
+        """
         self.ensure_one()
-        modes = self.mode_ids.filtered('active').sorted('sequence')
+        version = self.env['mart369.home.version']._mart369_live()
+        # A saved page with no modes would serve an empty home page. That can
+        # only happen mid-upgrade, and a blank shop is never the right answer
+        # to it - fall back to whatever the settings still hold.
+        modes = version.mode_ids if version.mode_ids else self.mode_ids
+        modes = modes.filtered('active').sorted('sequence')
         return {m.key: m._serialize() for m in modes}
 
     # --------------------------------------------------------------- buttons

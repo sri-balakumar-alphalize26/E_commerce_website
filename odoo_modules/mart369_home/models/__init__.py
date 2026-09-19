@@ -1,5 +1,6 @@
 from . import trashable
 from . import home_config
+from . import home_version
 from . import home_mode
 from . import home_tab
 from . import home_banner
