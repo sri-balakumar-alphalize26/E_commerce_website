@@ -8,7 +8,7 @@
    ========================================================================== */
 import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import ProductArt from "./art";
-import { Icon, OpenContext, QtyControl, SEARCH_WORDS, Thumb, inr } from "./shared";
+import { Icon, OpenContext, QtyControl, SEARCH_WORDS, Thumb, money } from "./shared";
 import { useResource } from "@/lib/useFetch";
 import { api } from "@/lib/api";
 import { absorb, cards } from "@/lib/products";
@@ -237,7 +237,7 @@ export default function SearchOverlay({ open, onClose, products, picks, cart, se
                       </div>
                     </div>
                     <b>{p.name}</b>
-                    <span className="sr-price">{inr(p.price)}{p.mrp ? <s>{inr(p.mrp)}</s> : null}</span>
+                    <span className="sr-price">{money(p.price)}{p.mrp ? <s>{money(p.mrp)}</s> : null}</span>
                   </article>
                 ))}
               </div>
@@ -260,7 +260,7 @@ export default function SearchOverlay({ open, onClose, products, picks, cart, se
                       <b><Highlight text={p.name} q={term} /></b>
                       <small>{p.unit}{p.delivery ? ` · ${p.delivery}` : " · Quick"}{p.stock === 0 ? " · out of stock" : ""}</small>
                     </span>
-                    <span className="sr-row-price">{inr(p.price)}</span>
+                    <span className="sr-row-price">{money(p.price)}</span>
                     {p.stock === 0 ? <span className="sr-sold">Sold out</span> : <QtyControl qty={cart[p.id] || 0} id={p.id} name={p.name} onChange={(n) => { remember(term); setQty(p.id, n); }} />}
                   </li>
                 ))}

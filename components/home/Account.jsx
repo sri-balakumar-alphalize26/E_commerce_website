@@ -18,7 +18,7 @@
    - sign out: confirm dialog pops, then the page fades out
    ========================================================================== */
 import { useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Icon, OpenContext, QtyControl, Thumb, WishContext, inr } from "./shared";
+import { Icon, OpenContext, QtyControl, Thumb, WishContext, money } from "./shared";
 import { NotifsSec, PaymentsSec, ReferSec, ReviewsSec, RewardsSec, WalletSec, useNotifications } from "./AccountExtras";
 import { fmtPlaced } from "./orderState";
 import { api } from "@/lib/api";
@@ -155,7 +155,7 @@ function ListSec({ byId, cart, setQty, onBrowse }) {
             <b>{p.name}</b>
             <small>{p.unit}</small>
             <div className="ac-wish-foot">
-              <span className="ac-price">{inr(p.price)}{p.mrp ? <s>{inr(p.mrp)}</s> : null}</span>
+              <span className="ac-price">{money(p.price)}{p.mrp ? <s>{money(p.mrp)}</s> : null}</span>
               {p.stock === 0 ? <span className="ac-muted">Sold out</span> : <QtyControl qty={cart[p.id] || 0} id={p.id} name={p.name} onChange={(n) => setQty(p.id, n)} />}
             </div>
           </article>
@@ -245,7 +245,7 @@ function OrdersSec({ orders, byId, onReorder, onTrack }) {
                 <span className="ac-order-txt">
                   <b>{o.mode === "quick" ? <Icon n="bolt" size={13} className="hm-fill ac-q" /> : <Icon n="truck" size={14} className="ac-e" />}
                     Order #{o.id}</b>
-                  <small>{fmtPlaced(o.at)} · {inr(o.total)}</small>
+                  <small>{fmtPlaced(o.at)} · {money(o.total)}</small>
                 </span>
                 <span className={"ac-status ac-s-" + o.status}>{cancelled ? "Cancelled" : o.status === "delivered" ? "Delivered" : o.status === "out" ? `Arriving in ${o.eta}` : steps[at]}</span>
                 <Icon n="chev" size={18} className="ac-chev" />
@@ -265,13 +265,13 @@ function OrdersSec({ orders, byId, onReorder, onTrack }) {
                 <div className="ac-order-body">
                   <ul>
                     {o.items.map(([id, q]) => byId[id] && (
-                      <li key={id}><span className="ac-thumb"><Thumb p={byId[id]} /></span><span>{byId[id].name}<small> × {q}</small></span><b>{inr(byId[id].price * q)}</b></li>
+                      <li key={id}><span className="ac-thumb"><Thumb p={byId[id]} /></span><span>{byId[id].name}<small> × {q}</small></span><b>{money(byId[id].price * q)}</b></li>
                     ))}
                   </ul>
                   <div className="ac-order-meta">
                     <span><small>Status</small>{o.eta}</span>
                     <span><small>Paid with</small>{o.pay}</span>
-                    <span><small>Total</small><b>{inr(o.total)}</b></span>
+                    <span><small>Total</small><b>{money(o.total)}</b></span>
                   </div>
                   <div className="ac-order-act">
                     {onTrack && <button className="ac-ghost" onClick={() => onTrack(o)} tabIndex={isOpen ? 0 : -1}><Icon n={cancelled || o.status === "delivered" ? "note" : "pin"} size={15} />{cancelled || o.status === "delivered" ? "Order details" : "Track order"}</button>}
@@ -442,7 +442,7 @@ export default function AccountPage({
               {m.label}
               {m.key === "orders" && orders.some((o) => o.status === "out") && <em className="ac-live">Live</em>}
               {m.key === "notifications" && unread > 0 && <em className="ax-badge" key={unread}>{unread}</em>}
-              {m.key === "wallet" && <em className="ax-navamt">{inr(wallet)}</em>}
+              {m.key === "wallet" && <em className="ax-navamt">{money(wallet)}</em>}
             </button>
           ))}
           <hr />

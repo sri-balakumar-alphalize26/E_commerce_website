@@ -14,7 +14,7 @@
    ========================================================================== */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ProductArt from "./art";
-import { Icon, OpenContext, Rail, SEARCH_WORDS, Thumb, WishContext, flyTo, inr, useInView, useRailScroll } from "./shared";
+import { Icon, OpenContext, Rail, SEARCH_WORDS, Thumb, WishContext, flyTo, money, useInView, useRailScroll } from "./shared";
 import AccountPage from "./Account";
 import { useNotifications } from "./AccountExtras";
 import ProductDetail from "./ProductDetail";
@@ -31,6 +31,7 @@ import { SECTION_TO_ROUTE, TAB_TO_ROUTE, TILE_TO_ROUTE, listable } from "./catal
 import { NavContext, pathToRoute, routeToPath } from "./nav";
 import { useAction, useResource } from "@/lib/useFetch";
 import { absorb, ensure, useProducts } from "@/lib/products";
+import { setCurrency, useCurrency } from "@/lib/money";
 import { ApiError, api } from "@/lib/api";
 import { BuyAgainPage, CategoryPage, NotFoundView, OffersPage, SearchResults, SiteFooter } from "./Browse";
 
@@ -205,7 +206,7 @@ function FreeDelivery({ total, threshold }) {
     <div className={"hm-free" + (total > 0 ? " hm-show" : "") + (done ? " hm-free-done" : "")} aria-live="polite">
       <span className="hm-free-ic"><Icon n={done ? "check" : "scooter"} size={18} /></span>
       <span className="hm-free-txt">
-        <span>{done ? <><b>Free delivery unlocked</b> on this order</> : <>Shop for <b>{inr(left)}</b> more to unlock <b>free delivery</b></>}</span>
+        <span>{done ? <><b>Free delivery unlocked</b> on this order</> : <>Shop for <b>{money(left)}</b> more to unlock <b>free delivery</b></>}</span>
         <span className="hm-free-bar"><i style={{ width: pct + "%" }} /></span>
       </span>
     </div>
@@ -395,7 +396,15 @@ export default function Home({
      could not be reached and the proxy handed back the last one it kept - the
      page still shows real products, and says so. */
   const { data: feed, error: feedError, loading: feedLoading, stale: feedStale, reload: reloadFeed } = useResource("/home");
-  const liveModes = useMemo(() => (feed ? { ...modes, ...feed } : modes), [feed, modes]);
+  /* The shop says what its money looks like on the feed every screen loads.
+     Kept out of the merge below, which is a map of modes and nothing else. */
+  useEffect(() => { if (feed?.currency) setCurrency(feed.currency); }, [feed]);
+  useCurrency(); /* redraw the tree the moment it arrives */
+  const liveModes = useMemo(() => {
+    if (!feed) return modes;
+    const { currency, ...byMode } = feed;
+    return { ...modes, ...byMode };
+  }, [feed, modes]);
 
   const { tabs, banners, categories, sections, freeDeliveryAt } = liveModes[mode];
   const [cart, setCart] = useState(initialCart);

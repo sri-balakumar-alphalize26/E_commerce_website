@@ -14,7 +14,7 @@
    ========================================================================== */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Icon, Thumb, inr } from "./shared";
+import { Icon, Thumb, money } from "./shared";
 import { Amount, computeBill, useBill, useRules } from "./Cart";
 import { useRemote } from "./accountStore";
 import { BANKS, BRAND_LABEL, UPI_APPS, newOrderId } from "./payment";
@@ -188,7 +188,7 @@ function SlotStep({ bill, slots, slot, setSlot, onContinue }) {
               return (
                 <button key={s.key} role="radio" aria-checked={on} className={"co-slot" + (on ? " co-on" : "")} style={{ "--k": k }} onClick={() => setSlot({ ...slot, [g]: s.key })}>
                   <b>{s.top}</b><span>{s.sub}</span>
-                  <small>{s.fee ? `+${inr(s.fee)}` : g === "quick" && s.key === "now" ? "Fastest" : "Free"}</small>
+                  <small>{s.fee ? `+${money(s.fee)}` : g === "quick" && s.key === "now" ? "Fastest" : "Free"}</small>
                 </button>
               );
             })}
@@ -211,7 +211,7 @@ function PaymentStep({ payable, pay, setPay, wallet, walletUse, setWalletUse, wa
     { key: "upi", icon: "upi", title: "UPI", sub: "Approve the request in your UPI app" },
     { key: "card", icon: "card", title: "Credit / debit card", sub: "Verified on your bank's own page" },
     { key: "netbanking", icon: "bank", title: "Net banking", sub: "Authorise on your bank's page" },
-    { key: "cod", icon: "cash", title: "Cash on delivery", sub: codLimit ? `Pay at your door · up to ${inr(codLimit)}` : "Pay at your door" },
+    { key: "cod", icon: "cash", title: "Cash on delivery", sub: codLimit ? `Pay at your door · up to ${money(codLimit)}` : "Pay at your door" },
   ];
   const methods = ALL.filter((m) => offered.includes(m.key));
 
@@ -220,7 +220,7 @@ function PaymentStep({ payable, pay, setPay, wallet, walletUse, setWalletUse, wa
       <label className={"co-wallet" + (walletUse ? " co-on" : "")}>
         <span className="co-wallet-ic"><Icon n="wallet" size={20} /></span>
         <span className="co-wallet-txt"><b>369 Wallet</b><small>Balance <Amount value={walletUse ? Math.max(0, walletBal - wallet.used) : walletBal} /></small></span>
-        {walletUse && wallet.used > 0 && <em key={wallet.used} className="co-wallet-used">−{inr(wallet.used)}</em>}
+        {walletUse && wallet.used > 0 && <em key={wallet.used} className="co-wallet-used">−{money(wallet.used)}</em>}
         <input type="checkbox" checked={walletUse} disabled={walletBal <= 0} onChange={(e) => setWalletUse(e.target.checked)} />
         <i className="co-switch" aria-hidden="true" />
       </label>
@@ -391,7 +391,7 @@ function PaySheet({ job, amount, onDone, onFail, onCancel, onRetry, onChangeMeth
             <span className="co-burst" aria-hidden="true">{Array.from({ length: 10 }, (_, k) => <i key={k} style={{ "--k": k }} />)}</span>
             <svg className="co-tick" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="29" /><path d="M20 33l8 8 16-17" /></svg>
             <h3>{job.method === "cod" ? "Order placed" : "Payment successful"}</h3>
-            <p>{job.method === "cod" ? `Pay ${inr(amount)} when your order arrives` : `${inr(amount)} paid`}</p>
+            <p>{job.method === "cod" ? `Pay ${money(amount)} when your order arrives` : `${money(amount)} paid`}</p>
           </div>
         ) : state === "failed" ? (
           <div className="co-result co-fail" key="fail">
@@ -409,11 +409,11 @@ function PaySheet({ job, amount, onDone, onFail, onCancel, onRetry, onChangeMeth
             <div className="co-phone" aria-hidden="true">
               <span className="co-phone-notch" />
               <span className="co-notif" style={{ "--tone": app?.tone || "#0a78ab" }}>
-                <b>{app?.short || "UPI"}</b><span><strong>Payment request</strong>369 Mart · {inr(amount)}</span>
+                <b>{app?.short || "UPI"}</b><span><strong>Payment request</strong>369 Mart · {money(amount)}</span>
               </span>
               <span className="co-phone-pulse" />
             </div>
-            <h3>Approve {inr(amount)} in {job.vpa && !job.upiApp ? "your UPI app" : app?.name || "your UPI app"}</h3>
+            <h3>Approve {money(amount)} in {job.vpa && !job.upiApp ? "your UPI app" : app?.name || "your UPI app"}</h3>
             <p>{job.vpa ? <>Request sent to <b>{job.vpa}</b></> : "Open the app and approve the payment request"}</p>
             <CountdownRing secs={secs} total={300} />
             <p className="co-hint">Don't press back or close this page</p>
@@ -423,7 +423,7 @@ function PaySheet({ job, amount, onDone, onFail, onCancel, onRetry, onChangeMeth
           <div className="co-redirect" key="nb">
             <span className="co-bank-logo co-big" style={{ "--tone": bank?.tone }}>{bank?.short || "BANK"}</span>
             <h3>{redirect < 2 ? `Redirecting to ${bank?.name || "your bank"}` : "Waiting for your bank"}</h3>
-            <p>Log in and authorise {inr(amount)} on your bank's secure page.</p>
+            <p>Log in and authorise {money(amount)} on your bank's secure page.</p>
             <div className="co-steps3">{["Connecting", "Secure page", "Authorising"].map((l, k) => <span key={l} className={k <= redirect ? "co-on" : ""}><i />{l}</span>)}</div>
             <p className="co-hint"><Icon n="lock" size={12} />256-bit encrypted</p>
           </div>
@@ -597,7 +597,7 @@ export default function CheckoutPage({
   const cta = step === 1
     ? { label: "Deliver here", disabled: !address, go: () => setStep(2) }
     : step === 2 ? { label: "Continue to payment", go: async () => { if (await draftOrder()) setStep(3); } }
-    : { label: wallet.covers ? "Pay with wallet" : pay.method === "cod" ? "Place order" : `Pay ${inr(payable)}`, go: startPay };
+    : { label: wallet.covers ? "Pay with wallet" : pay.method === "cod" ? "Place order" : `Pay ${money(payable)}`, go: startPay };
 
   return (
     <div className="co-page">
@@ -609,7 +609,7 @@ export default function CheckoutPage({
       <Progress step={step} />
 
       {bill.blocked && (
-        <div className="co-card co-warn"><Icon n="info" size={18} /><p>Your Quick items are below the {inr(rules.quick.minOrder)} minimum.</p><button className="co-link" onClick={onBack}>Edit cart</button></div>
+        <div className="co-card co-warn"><Icon n="info" size={18} /><p>Your Quick items are below the {money(rules.quick.minOrder)} minimum.</p><button className="co-link" onClick={onBack}>Edit cart</button></div>
       )}
 
       <div className="co-grid">
@@ -638,19 +638,19 @@ export default function CheckoutPage({
             </button>
             <div className="co-collapse"><div inert={!summaryOpen}>
               <ul className="co-lines">
-                {bill.lines.map((l) => <li key={l.p.id}><span className="co-line-img"><Thumb p={l.p} /></span><span className="co-line-name">{l.p.name}<small>{l.qty} × {inr(l.p.price)}</small></span><b>{inr(l.p.price * l.qty)}</b></li>)}
+                {bill.lines.map((l) => <li key={l.p.id}><span className="co-line-img"><Thumb p={l.p} /></span><span className="co-line-name">{l.p.name}<small>{l.qty} × {money(l.p.price)}</small></span><b>{money(l.p.price * l.qty)}</b></li>)}
               </ul>
             </div></div>
             <dl className="co-bill">
               <div><dt>MRP total</dt><dd><Amount value={bill.mrp} /></dd></div>
               {bill.mrp > bill.items && <div className="co-green"><dt>Product discount</dt><dd><Amount value={bill.mrp - bill.items} prefix="−" /></dd></div>}
               <div><dt>Delivery</dt><dd>{bill.fees - priority > 0 ? <Amount value={bill.fees - priority} /> : <span className="co-free">FREE</span>}</dd></div>
-              {priority > 0 && <div className="co-rowin"><dt>Priority delivery</dt><dd>{inr(priority)}</dd></div>}
+              {priority > 0 && <div className="co-rowin"><dt>Priority delivery</dt><dd>{money(priority)}</dd></div>}
               {bill.couponOff > 0 && <div className="co-green"><dt>Coupon {coupon}</dt><dd><Amount value={bill.couponOff} prefix="−" /></dd></div>}
               {walletUsed > 0 && <div className="co-green co-rowin"><dt>369 Wallet</dt><dd><Amount value={walletUsed} prefix="−" /></dd></div>}
               <div className="co-total"><dt>{pay.method === "cod" && !wallet.covers ? "To pay on delivery" : "To pay"}</dt><dd><Amount value={payable} /></dd></div>
             </dl>
-            {bill.saved > 0 && <p className="co-saving" key={bill.saved}><Icon n="gift" size={15} />You're saving {inr(bill.saved)} on this order</p>}
+            {bill.saved > 0 && <p className="co-saving" key={bill.saved}><Icon n="gift" size={15} />You're saving {money(bill.saved)} on this order</p>}
             <button className={"co-primary co-paybtn" + (step === 3 && !methodReady ? " co-soft" : "")} disabled={step === 1 && !address || bill.blocked || !bill.priced || !!job || place.busy} onClick={cta.go}>
               {job ? <i className="co-spin co-spin-w" /> : <>{step === 3 && <Icon n="lock" size={15} />}{cta.label}</>}
             </button>

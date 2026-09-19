@@ -22,7 +22,7 @@
    ========================================================================== */
 import { Fragment, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import ProductArt from "./art";
-import { Icon, OpenContext, Rail, Thumb, WishContext, flyTo, flyToCart, inr } from "./shared";
+import { Icon, OpenContext, Rail, Thumb, WishContext, flyTo, flyToCart, money } from "./shared";
 import { getDetails } from "./productDetails";
 import { Crumbs } from "./Browse";
 import { STAR_WORDS, fmtDate, useRemote } from "./accountStore";
@@ -201,15 +201,15 @@ function BoughtTogether({ p, items, cart, setQty }) {
                   <span className="pd-fbt-box"><Icon n="check" size={11} /></span>
                   <span className="pd-fbt-name">{k === 0 && <em>This item · </em>}{x.name}</span>
                 </label>
-                <b className="pd-fbt-price">{inr(x.price)}{x.stock === 0 && <small> · out of stock</small>}</b>
+                <b className="pd-fbt-price">{money(x.price)}{x.stock === 0 && <small> · out of stock</small>}</b>
               </div>
             </Fragment>
           ))}
         </div>
         <div className="pd-fbt-total">
           <small>Total for {chosen.length} {chosen.length === 1 ? "item" : "items"}</small>
-          <span className="pd-fbt-sum"><b key={sum}>{inr(sum)}</b>{mrp > sum && <s>{inr(mrp)}</s>}</span>
-          {mrp > sum && <em className="pd-fbt-save" key={"s" + sum}>You save {inr(mrp - sum)}</em>}
+          <span className="pd-fbt-sum"><b key={sum}>{money(sum)}</b>{mrp > sum && <s>{money(mrp)}</s>}</span>
+          {mrp > sum && <em className="pd-fbt-save" key={"s" + sum}>You save {money(mrp - sum)}</em>}
           <button ref={btn} className={"pd-add" + (added || allIn ? " pd-added" : "")} disabled={!chosen.length || allIn} onClick={addAll}>
             {added || allIn ? <><Icon n="check" size={16} />{allIn && !added ? "All in cart" : "Added"}</> : `Add ${chosen.length} to cart`}
           </button>
@@ -240,7 +240,7 @@ function PackSizes({ p, variants, cart, onVariant }) {
               className={"pd-size" + (v.id === p.id ? " pd-on" : "") + (v.stock === 0 ? " pd-size-oos" : "")}
               onClick={() => v.id !== p.id && onVariant?.(v)}>
               <b>{v.size}</b>
-              <span className="pd-size-price">{inr(v.price)}{v.mrp ? <s>{inr(v.mrp)}</s> : null}</span>
+              <span className="pd-size-price">{money(v.price)}{v.mrp ? <s>{money(v.mrp)}</s> : null}</span>
               {v.stock === 0 ? <small className="pd-size-note">Out of stock</small> : vo ? <small className="pd-size-off">{vo}% off</small> : per ? <small className="pd-size-note">{per}</small> : <small className="pd-size-note">&nbsp;</small>}
               {cart[v.id] ? <i className="pd-size-in" aria-label={`${cart[v.id]} in cart`}>{cart[v.id]}</i> : null}
             </button>
@@ -256,7 +256,7 @@ function unitPrice(v) {
   if (!m) return "";
   const n = parseFloat(m[1]), u = m[2].toLowerCase();
   const base = u === "g" || u === "ml" ? n / 1000 : n;
-  return `${inr(Math.round(v.price / base))} / ${u === "g" || u === "kg" ? "kg" : "L"}`;
+  return `${money(Math.round(v.price / base))} / ${u === "g" || u === "kg" ? "kg" : "L"}`;
 }
 
 /* ---------------- page ---------------- */
@@ -325,8 +325,8 @@ export default function ProductDetail({
             </button>
 
             <div className="pd-price">
-              <b key={"p" + p.id} className={variants.length > 1 ? "pd-roll" : undefined}>{inr(p.price)}</b>
-              {p.mrp ? <><s>MRP {inr(p.mrp)}</s><em key={"o" + p.id}>{off}% OFF</em></> : <small>MRP incl. of all taxes</small>}
+              <b key={"p" + p.id} className={variants.length > 1 ? "pd-roll" : undefined}>{money(p.price)}</b>
+              {p.mrp ? <><s>MRP {money(p.mrp)}</s><em key={"o" + p.id}>{off}% OFF</em></> : <small>MRP incl. of all taxes</small>}
             </div>
             {p.low ? <p className="pd-low">Only {p.low} left — order soon</p> : null}
             {variants.length > 1 && <PackSizes p={p} variants={variants} cart={cart} onVariant={onVariant} />}

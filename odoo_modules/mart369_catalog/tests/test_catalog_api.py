@@ -106,6 +106,19 @@ class TestMart369CatalogApi(HttpCase):
         self.assertNotIn('test-hidden-aisle', tree, 'hidden means hidden')
         self.assertIn('test-fresh-fruits', [s['slug'] for s in fruit['subs']])
 
+    def test_the_tree_says_what_money_the_prices_are_in(self):
+        """The app printed a rupee sign in front of every number it was
+        handed, whatever the shop was pricing in. It formats what it is
+        told now, so it has to be told."""
+        status, data = self._get('/369mart/catalog')
+        self.assertEqual(status, 200)
+        money = data['currency']
+        company = self.env.company.currency_id
+        self.assertEqual(money['code'], company.name)
+        self.assertEqual(money['decimals'], company.decimal_places)
+        self.assertIn(money['position'], ('before', 'after'))
+        self.assertTrue(money['symbol'], 'something has to go beside the number')
+
     def test_a_category_with_nothing_in_it_is_not_an_error(self):
         """Fashion and Books say "Launching soon"; that is a state, not a 404."""
         status, data = self._get('/369mart/browse/test-launching-soon')

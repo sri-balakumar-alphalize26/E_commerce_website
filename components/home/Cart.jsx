@@ -8,7 +8,7 @@
    ========================================================================== */
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import ProductArt from "./art";
-import { Icon, OpenContext, Rail, Thumb, inr } from "./shared";
+import { Icon, OpenContext, Rail, Thumb, money } from "./shared";
 import { useResource } from "@/lib/useFetch";
 import { api } from "@/lib/api";
 
@@ -92,7 +92,7 @@ export function Amount({ value, prefix = "" }) {
     raf = requestAnimationFrame(tick);
     return () => { cancelAnimationFrame(raf); from.current = end; };
   }, [value]);
-  return <span className="ct-amt">{prefix}{inr(shown)}</span>;
+  return <span className="ct-amt">{prefix}{money(shown)}</span>;
 }
 
 function Stepper({ qty, onChange, name }) {
@@ -124,7 +124,7 @@ function LineItem({ p, qty, setQty, i }) {
       <Stepper qty={qty} onChange={change} name={p.name} />
       <div className="ct-line-price">
         <Amount value={p.price * qty} />
-        {p.mrp ? <s>{inr(p.mrp * qty)}</s> : null}
+        {p.mrp ? <s>{money(p.mrp * qty)}</s> : null}
       </div>
     </li>
   );
@@ -150,7 +150,7 @@ function DeliveryGroup({ group, lines, setQty, rules, onAddMore }) {
       <div className={"ct-minorder" + (short > 0 ? " ct-show" : "")} aria-hidden={short === 0}>
         <div className="ct-minorder-in">
           <span className="ct-minorder-ic"><Icon n="info" size={18} /></span>
-          <p><b>Minimum order value is {inr(rules.minOrder)}</b><br />Add items worth <Amount value={short} /> from {rules.label} to place this order</p>
+          <p><b>Minimum order value is {money(rules.minOrder)}</b><br />Add items worth <Amount value={short} /> from {rules.label} to place this order</p>
           <button onClick={onAddMore} tabIndex={short ? 0 : -1}>Add items</button>
         </div>
       </div>
@@ -188,8 +188,8 @@ function CouponSheet({ open, onClose, coupons, offers, applied, onApply }) {
                 </div>
                 <b>{c.title}</b>
                 <small>{c.note}</small>
-                {need ? <em className="ct-need">Add {inr(need)} more to unlock</em>
-                  : save > 0 ? <em className="ct-save">You save {inr(save)}</em> : <em className="ct-need">Nothing to save on this cart yet</em>}
+                {need ? <em className="ct-need">Add {money(need)} more to unlock</em>
+                  : save > 0 ? <em className="ct-save">You save {money(save)}</em> : <em className="ct-need">Nothing to save on this cart yet</em>}
               </li>
             );
           })}
@@ -226,7 +226,7 @@ export default function CartPage({ cart, setQty, byId, recommended = [], alsoLik
   function flash(msg) { setToast(msg); clearTimeout(flash.t); flash.t = setTimeout(() => setToast(""), 2600); }
   const applyCoupon = (code) => {
     setCoupon(code); setCouponOpen(false);
-    if (code) { const o = bill.coupons.find((x) => x.code === code); flash(`${code} applied${o ? ` · You save ${inr(o.off)}` : ""}`); }
+    if (code) { const o = bill.coupons.find((x) => x.code === code); flash(`${code} applied${o ? ` · You save ${money(o.off)}` : ""}`); }
   };
   const pay = (how) => {
     setPaying(how);
@@ -274,7 +274,7 @@ export default function CartPage({ cart, setQty, byId, recommended = [], alsoLik
           <button className={"ct-card ct-coupon-btn" + (couponValid ? " ct-applied" : "")} onClick={() => setCouponOpen(true)}>
             <span className="ct-coupon-ic"><Icon n={couponValid ? "check" : "ticket"} size={18} /></span>
             <span className="ct-coupon-txt">
-              {couponValid ? <><b key={coupon}>{coupon} applied</b><small>You save {inr(couponOff)}</small></>
+              {couponValid ? <><b key={coupon}>{coupon} applied</b><small>You save {money(couponOff)}</small></>
                 : <><b>Apply a coupon</b><small className="ct-blue">View all coupons</small></>}
             </span>
             <Icon n="right" size={18} />
@@ -307,8 +307,8 @@ export default function CartPage({ cart, setQty, byId, recommended = [], alsoLik
               <div><dt>Subtotal</dt><dd><Amount value={items} /></dd></div>
               {["quick", "all"].map((g) => groups[g].length > 0 && rules?.[g] && (
                 <div key={g} className="ct-fee">
-                  <dt>Delivery fee ({rules[g].label})<small>{feeFor(g) ? `Free above ${inr(rules[g].freeAbove)}` : "Free on this order"}</small></dt>
-                  <dd>{feeFor(g) ? inr(feeFor(g)) : <><s>{inr(rules[g].fee)}</s> <span className="ct-free-tag">FREE</span></>}</dd>
+                  <dt>Delivery fee ({rules[g].label})<small>{feeFor(g) ? `Free above ${money(rules[g].freeAbove)}` : "Free on this order"}</small></dt>
+                  <dd>{feeFor(g) ? money(feeFor(g)) : <><s>{money(rules[g].fee)}</s> <span className="ct-free-tag">FREE</span></>}</dd>
                 </div>
               ))}
               {couponOff > 0 && <div className="ct-green ct-coupon-row"><dt>Coupon ({coupon})</dt><dd><Amount value={couponOff} prefix="−" /></dd></div>}
@@ -325,7 +325,7 @@ export default function CartPage({ cart, setQty, byId, recommended = [], alsoLik
             <button className="ct-primary" disabled={blocked || !priced || !!paying} onClick={() => pay("online")}>
               {paying === "online" ? <span className="ct-spin" /> : "Pay online"}
             </button>
-            {blocked && rules && <p className="ct-blocked">Add {inr(rules.quick.minOrder - sub.quick)} more to your Quick items to continue</p>}
+            {blocked && rules && <p className="ct-blocked">Add {money(rules.quick.minOrder - sub.quick)} more to your Quick items to continue</p>}
           </div>
 
           <div className="ct-card ct-policy">

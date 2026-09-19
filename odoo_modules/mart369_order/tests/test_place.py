@@ -85,6 +85,18 @@ class TestMart369Place(Mart369OrderCase):
                 lambda l: not l.mart369_kind and not l.is_delivery).mapped('product_uom_qty')),
             4.0, 'the basket it was paid for, untouched')
 
+    # ---------------------------------------------------------- the money
+
+    def test_an_order_carries_the_money_it_was_charged_in(self):
+        """A receipt is a record. If the shop changes pricelist
+        tomorrow, an old order must not be reprinted in a currency it was
+        never charged in."""
+        order = self._place()
+        payload = order._mart369_serialize()
+        self.assertEqual(payload['currency']['code'], order.currency_id.name)
+        self.assertEqual(payload['currency']['decimals'],
+                         order.currency_id.decimal_places)
+
     # ---------------------------------------------------- cash on delivery
 
     def _cash(self, order):

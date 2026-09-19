@@ -84,6 +84,9 @@ class Mart369CatalogApi(http.Controller):
         ], order='sequence, id')
         return self._cached({
             'categories': [c._mart369_serialize() for c in tops],
+            # Every page loads this one, and every page prints prices.
+            'currency': request.env['mart369.serializable'].sudo()
+                                                           ._mart369_shop_currency(),
         })
 
     # ------------------------------------------------------ a category page

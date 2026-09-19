@@ -15,7 +15,7 @@
    ========================================================================== */
 import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Icon, OpenContext, Thumb, inr } from "./shared";
+import { Icon, OpenContext, Thumb, money } from "./shared";
 import {
   RETURN_STEPS, cancellable, deliveryOtp, fmtDay, fmtPlaced, fmtTime, liveStatus, returnStatus, returnable, riderFor,
 } from "./orderState";
@@ -24,6 +24,9 @@ import { useAction } from "@/lib/useFetch";
 
 const reduced = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 const lineName = (o, byId, id) => byId[id]?.name || o.snap?.[id]?.name || "Item";
+/* An amount off this order, printed in the money that order was charged
+   in - not whatever the shop happens to be quoting today. */
+const moneyOf = (o) => (n) => money(n, o?.currency);
 const linePrice = (o, byId, id) => byId[id]?.price ?? o.snap?.[id]?.price ?? 0;
 
 /* ---------------- bottom sheet / dialog ---------------- */
@@ -193,6 +196,7 @@ function Timeline({ s, o }) {
 /* ---------------- cancel ---------------- */
 const CANCEL_REASONS = ["Ordered by mistake", "Want to change items or quantity", "Delivery is taking too long", "Found a better price elsewhere", "Want to change the address or slot", "Other"];
 function CancelSheet({ o, onClose, onConfirm }) {
+  const m = moneyOf(o);
   const [reason, setReason] = useState("");
   const [note, setNote] = useState("");
   const cod = o.method === "cod";
@@ -217,7 +221,7 @@ function CancelSheet({ o, onClose, onConfirm }) {
       {reason === "Other" && <textarea className="ot-note" rows={2} placeholder="Tell us a little more" value={note} onChange={(e) => setNote(e.target.value)} autoFocus />}
       {!cod && paid > 0 && (
         <div className="ot-refund-pick">
-          <b>Refund {inr(paid)} to</b>
+          <b>Refund {m(paid)} to</b>
           <div className="ot-chips">
             <button className={to === "source" ? "ot-on" : ""} onClick={() => setTo("source")}><Icon n="card" size={15} />{o.pay || "Original payment"}<small>3–5 working days</small></button>
             <button className={to === "wallet" ? "ot-on" : ""} onClick={() => setTo("wallet")}><Icon n="wallet" size={15} />369 Wallet<small>Instant</small></button>
@@ -233,6 +237,7 @@ const MOODS = ["", "Terrible", "Bad", "Okay", "Good", "Loved it!"];
 const GOOD = ["On-time delivery", "Polite rider", "Fresh items", "Well packed", "Great prices"];
 const BAD = ["Late delivery", "Damaged items", "Missing items", "Poor packaging", "Rude rider"];
 function RateCard({ o, byId, rider, onSubmit }) {
+  const m = moneyOf(o);
   const [stars, setStars] = useState(0);
   const [hover, setHover] = useState(0);
   const [tags, setTags] = useState([]);
@@ -249,7 +254,7 @@ function RateCard({ o, byId, rider, onSubmit }) {
         <span className="ot-hearts" aria-hidden="true">{Array.from({ length: 8 }, (_, i) => <i key={i} style={{ "--k": i }}><Icon n="star" size={14} /></i>)}</span>
         <div className="ot-rated-stars">{[1, 2, 3, 4, 5].map((n) => <Icon key={n} n="star" size={18} className={n <= r.stars ? "ot-lit" : ""} />)}</div>
         <b>Thanks for rating your order!</b>
-        <small>{r.tip ? `${inr(r.tip)} tip sent to ${rider.name.split(" ")[0]} · ` : ""}Your feedback helps {rider.name.split(" ")[0]} and the store.</small>
+        <small>{r.tip ? `${m(r.tip)} tip sent to ${rider.name.split(" ")[0]} · ` : ""}Your feedback helps {rider.name.split(" ")[0]} and the store.</small>
       </section>
     );
   }
@@ -287,7 +292,7 @@ function RateCard({ o, byId, rider, onSubmit }) {
           {o.mode !== "all" && (
             <div className="ot-tip">
               <span><b>Tip {rider.name.split(" ")[0]}</b><small>100% of the tip goes to your rider</small></span>
-              <div className="ot-chips">{[10, 20, 30, 50].map((t) => <button key={t} className={tip === t ? "ot-on" : ""} onClick={() => setTip(tip === t ? 0 : t)}>{inr(t)}</button>)}</div>
+              <div className="ot-chips">{[10, 20, 30, 50].map((t) => <button key={t} className={tip === t ? "ot-on" : ""} onClick={() => setTip(tip === t ? 0 : t)}>{money(t)}</button>)}</div>
             </div>
           )}
           <textarea className="ot-note" rows={2} maxLength={300} placeholder="Add a comment (optional)" value={comment} onChange={(e) => setComment(e.target.value)} />
@@ -301,6 +306,7 @@ function RateCard({ o, byId, rider, onSubmit }) {
 /* ---------------- return / replace ---------------- */
 const RETURN_REASONS = ["Item damaged or leaking", "Wrong item delivered", "Item missing from the order", "Quality not as expected", "Expired or near expiry"];
 function ReturnSheet({ o, byId, onClose, onSubmit }) {
+  const m = moneyOf(o);
   const [step, setStep] = useState(0);
   const [pick, setPick] = useState({});
   const [reason, setReason] = useState("");
@@ -323,7 +329,7 @@ function ReturnSheet({ o, byId, onClose, onSubmit }) {
             if (step < 2) return setStep(step + 1);
             onSubmit({ items: chosen.map(([id, q]) => [id, q]), reason, resolution: mode, slot, amount });
             close();
-          }}>{step < 2 ? "Continue" : mode === "refund" ? `Request refund of ${inr(amount)}` : "Request replacement"}</button>
+          }}>{step < 2 ? "Continue" : mode === "refund" ? `Request refund of ${m(amount)}` : "Request replacement"}</button>
         </>
       )}>
       <div className="ot-flow" key={step}>
@@ -335,7 +341,7 @@ function ReturnSheet({ o, byId, onClose, onSubmit }) {
                 <li key={id} className={n ? "ot-on" : ""} style={{ "--i": i }}>
                   <button className="ot-pick-check" onClick={() => setPick((x) => ({ ...x, [id]: n ? 0 : 1 }))} aria-pressed={!!n} aria-label={`Select ${lineName(o, byId, id)}`}><Icon n="check" size={12} /></button>
                   <span className="ot-mini">{byId[id] ? <Thumb p={byId[id]} /> : <Icon n="box" size={16} />}</span>
-                  <span className="ot-pick-txt"><b>{lineName(o, byId, id)}</b><small>{inr(linePrice(o, byId, id))} · bought {q}</small></span>
+                  <span className="ot-pick-txt"><b>{lineName(o, byId, id)}</b><small>{m(linePrice(o, byId, id))} · bought {q}</small></span>
                   {n > 0 && q > 1 && (
                     <span className="ot-qty">
                       <button onClick={() => setPick((x) => ({ ...x, [id]: Math.max(0, n - 1) }))} aria-label="Less">−</button><b key={n}>{n}</b>
@@ -359,7 +365,7 @@ function ReturnSheet({ o, byId, onClose, onSubmit }) {
         {step === 2 && (
           <>
             <div className="ot-choice">
-              <button className={mode === "refund" ? "ot-on" : ""} onClick={() => setMode("refund")}><Icon n="wallet" size={20} /><b>Refund {inr(amount)}</b><small>To {o.method === "cod" ? "369 Wallet" : o.pay || "original payment"}</small></button>
+              <button className={mode === "refund" ? "ot-on" : ""} onClick={() => setMode("refund")}><Icon n="wallet" size={20} /><b>Refund {m(amount)}</b><small>To {o.method === "cod" ? "369 Wallet" : o.pay || "original payment"}</small></button>
               <button className={mode === "replace" ? "ot-on" : ""} onClick={() => setMode("replace")}><Icon n="reorder" size={20} /><b>Replace items</b><small>Same items, delivered with pickup</small></button>
             </div>
             <span className="ot-sub">Pickup slot</span>
@@ -376,7 +382,8 @@ function ReturnSheet({ o, byId, onClose, onSubmit }) {
   );
 }
 
-function ReturnTracker({ ret }) {
+function ReturnTracker({ ret, cur }) {
+  const m = (n) => money(n, cur);
   const r = returnStatus(ret);
   const replace = ret.kind === "replace";
   const steps = RETURN_STEPS.map((x, i) => (i === 3 ? { ...x, label: replace ? "Replacement delivered" : "Refund issued" } : x));
@@ -391,7 +398,7 @@ function ReturnTracker({ ret }) {
       )}
       <p className="ot-return-meta">
         {ret.reason}{ret.detail ? ` · ${ret.detail}` : ""}
-        {!replace && ret.amount ? <> · <b>{inr(ret.amount)}</b> {r.idx === 3 ? "refunded" : "refund"}</> : null}
+        {!replace && ret.amount ? <> · <b>{m(ret.amount)}</b> {r.idx === 3 ? "refunded" : "refund"}</> : null}
       </p>
     </section>
   );
@@ -399,6 +406,7 @@ function ReturnTracker({ ret }) {
 
 /* ---------------- help chat ---------------- */
 function HelpSheet({ o, s, rider, onClose, onCancel }) {
+  const m = moneyOf(o);
   const [msgs, setMsgs] = useState([{ me: false, t: `Hi! I'm Mitra from 369 Mart. How can I help with order #${o.id}?` }]);
   const [typing, setTyping] = useState(false);
   const [text, setText] = useState("");
@@ -408,7 +416,7 @@ function HelpSheet({ o, s, rider, onClose, onCancel }) {
     const low = q.toLowerCase();
     if (/where|status|late|when/.test(low)) return s.key === "out" ? `${rider.name} is on the way. ${o.eta || "It should reach you shortly."} Share OTP ${deliveryOtp(o)} at the door.` : s.key === "delivered" ? "This order was delivered. If something's wrong you can return or replace items from this page." : s.key === "cancelled" ? "This order was cancelled. Your refund status is shown on the order page." : `Your order is ${{ placed: "confirmed and being prepared", packed: "packed and waiting for a rider", shipped: "shipped and on its way to your city" }[s.key] || "on the way"}. ${o.eta || "We'll notify you when it moves on."}`;
     if (/missing|damaged|wrong/.test(low)) return "Sorry about that! Tap “Return or replace” on the order page, choose the items and we'll arrange a pickup and a refund or replacement.";
-    if (/payment|refund|charged|money/.test(low)) return o.method === "cod" ? "This is a cash on delivery order, so nothing has been charged yet." : `Payment of ${inr(o.paid ?? o.total)} was received via ${o.pay}. Refunds reach the source in 3–5 working days, or instantly to 369 Wallet.`;
+    if (/payment|refund|charged|money/.test(low)) return o.method === "cod" ? "This is a cash on delivery order, so nothing has been charged yet." : `Payment of ${m(o.paid || o.total)} was received via ${o.pay}. Refunds reach the source in 3–5 working days, or instantly to 369 Wallet.`;
     if (/cancel/.test(low)) return cancellable(o, s) ? "You can still cancel — I've opened the cancellation for you." : "This order can't be cancelled any more because it's already been packed. You can return items after delivery.";
     if (/agent|human|call/.test(low)) return "Connecting you to a support agent… Typical wait is under 2 minutes. You can keep browsing; we'll notify you.";
     return "Got it. A support agent will look into this and reply here shortly.";
@@ -441,6 +449,7 @@ function HelpSheet({ o, s, rider, onClose, onCancel }) {
 
 /* ---------------- page ---------------- */
 export default function OrderTrack({ order: o, byId, onChanged, onBack, onReceipt, onReorder, onRefundWallet, onShop }) {
+  const m = moneyOf(o);
   const s = useMemo(() => liveStatus(o), [o]);
   const ret = (o.returns || [])[0] || null;
   const act = useAction();
@@ -471,7 +480,7 @@ export default function OrderTrack({ order: o, byId, onChanged, onBack, onReceip
 
   const cancelled = s.key === "cancelled";
   const title = cancelled ? "Order cancelled" : s.key === "delivered" ? "Order delivered" : s.key === "out" ? (s.mode === "quick" ? "On the way" : "Out for delivery") : s.key === "placed" ? "Order confirmed" : s.mode === "quick" ? "Packing your order" : "Shipped";
-  const sub = cancelled ? (o.cancel?.refundTo === "wallet" ? `${inr(o.cancel.amount)} added to your 369 Wallet` : o.cancel?.refundTo ? `Refund of ${inr(o.cancel.amount)} to ${o.pay} in 3–5 working days` : "No payment was taken for this order")
+  const sub = cancelled ? (o.cancel?.refundTo === "wallet" ? `${m(o.cancel.amount)} added to your 369 Wallet` : o.cancel?.refundTo ? `Refund of ${m(o.cancel.amount)} to ${o.pay} in 3–5 working days` : "No payment was taken for this order")
     : s.key === "delivered" ? `Delivered ${s.times[3] ? "at " + fmtTime(s.times[3]) : ""} · ${o.address?.label || "Home"}`
     : o.eta || (s.key === "out" ? "Arriving today" : `Expected ${fmtDay(o.at, 3)}`);
   const itemsTotal = o.items.reduce((sum, [id, q]) => sum + linePrice(o, byId, id) * q, 0);
@@ -480,7 +489,7 @@ export default function OrderTrack({ order: o, byId, onChanged, onBack, onReceip
     <div className={"ot-page ot-st-" + s.key}>
       <div className="ot-titlebar">
         <button className="ot-back" onClick={onBack} aria-label="Back to orders"><Icon n="left" size={20} /></button>
-        <div><h1>Order #{o.id}</h1><small>{fmtPlaced(o.at)} · {o.items.reduce((n, [, q]) => n + q, 0)} items · {inr(o.total)}</small></div>
+        <div><h1>Order #{o.id}</h1><small>{fmtPlaced(o.at)} · {o.items.reduce((n, [, q]) => n + q, 0)} items · {m(o.total)}</small></div>
         <button className="ot-helpbtn" onClick={() => setSheet("help")}><Icon n="chat" size={16} />Help</button>
       </div>
 
@@ -497,9 +506,9 @@ export default function OrderTrack({ order: o, byId, onChanged, onBack, onReceip
 
           {!cancelled && s.key === "delivered" && <div ref={rateRef}><RateCard o={o} byId={byId} rider={rider} onSubmit={async (r) => {
             const sent = await ask("/rate", { stars: r.stars, tags: r.tags, comment: r.comment, tip: r.tip });
-            flash(sent ? (r.tip ? `Thanks! ${inr(r.tip)} tip sent` : "Thanks for your feedback") : act.error?.message || "We couldn't send that just now");
+            flash(sent ? (r.tip ? `Thanks! ${m(r.tip)} tip sent` : "Thanks for your feedback") : act.error?.message || "We couldn't send that just now");
           }} /></div>}
-          {ret && <ReturnTracker ret={ret} />}
+          {ret && <ReturnTracker ret={ret} cur={o.currency} />}
 
           {!cancelled && (
             <section className="ot-card ot-tracker">
@@ -545,17 +554,17 @@ export default function OrderTrack({ order: o, byId, onChanged, onBack, onReceip
               {o.items.map(([id, q], i) => (
                 <li key={id} style={{ "--i": i }}>
                   <button className="ot-mini" onClick={() => byId[id] && open?.(byId[id], null)} aria-label={`Open ${lineName(o, byId, id)}`}>{byId[id] ? <Thumb p={byId[id]} /> : <Icon n="box" size={16} />}</button>
-                  <span><b>{lineName(o, byId, id)}</b><small>{q} × {inr(linePrice(o, byId, id))}</small></span>
-                  <em>{inr(linePrice(o, byId, id) * q)}</em>
+                  <span><b>{lineName(o, byId, id)}</b><small>{q} × {m(linePrice(o, byId, id))}</small></span>
+                  <em>{m(linePrice(o, byId, id) * q)}</em>
                 </li>
               ))}
             </ul>
             <dl className="ot-bill">
-              <div><dt>Items</dt><dd>{inr(o.bill?.items ?? itemsTotal)}</dd></div>
-              {o.bill?.mrp > o.bill?.items && <div className="ot-green"><dt>You saved</dt><dd>−{inr(o.bill.mrp - o.bill.items + (o.bill.couponOff || 0))}</dd></div>}
-              {o.bill && <div><dt>Delivery</dt><dd>{o.bill.fees ? inr(o.bill.fees) : "FREE"}</dd></div>}
-              {o.walletUsed > 0 && <div className="ot-green"><dt>369 Wallet</dt><dd>−{inr(o.walletUsed)}</dd></div>}
-              <div className="ot-total"><dt>{o.method === "cod" && s.key !== "delivered" && !cancelled ? "To pay on delivery" : "Paid"}</dt><dd>{inr(o.paid ?? o.total)}</dd></div>
+              <div><dt>Items</dt><dd>{m(o.bill?.items ?? itemsTotal)}</dd></div>
+              {o.bill?.mrp > o.bill?.items && <div className="ot-green"><dt>You saved</dt><dd>−{m(o.bill.mrp - o.bill.items + (o.bill.couponOff || 0))}</dd></div>}
+              {o.bill && <div><dt>Delivery</dt><dd>{o.bill.fees ? m(o.bill.fees) : "FREE"}</dd></div>}
+              {o.walletUsed > 0 && <div className="ot-green"><dt>369 Wallet</dt><dd>−{m(o.walletUsed)}</dd></div>}
+              <div className="ot-total"><dt>{o.method === "cod" && s.key !== "delivered" && !cancelled ? "To pay on delivery" : "Paid"}</dt><dd>{m(o.paid || o.total)}</dd></div>
             </dl>
           </section>
 
@@ -573,7 +582,7 @@ export default function OrderTrack({ order: o, byId, onChanged, onBack, onReceip
           const done = await ask("/cancel", { reason: c.reason });
           if (!done) { flash(act.error?.message || "We couldn't cancel that just now"); return; }
           if (c.refundTo === "wallet" && c.amount) onRefundWallet?.(c.amount);
-          flash(c.refundTo === "wallet" ? `Order cancelled · ${inr(c.amount)} added to wallet` : "Order cancelled");
+          flash(c.refundTo === "wallet" ? `Order cancelled · ${m(c.amount)} added to wallet` : "Order cancelled");
         }} />
       )}
       {sheet === "return" && (

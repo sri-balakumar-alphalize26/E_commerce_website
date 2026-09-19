@@ -365,6 +365,9 @@ class SaleOrder(models.Model):
                 str(tmpl_id): snap for tmpl_id, __, snap in lines
             },
             'total': currency.round(self.amount_total),
+            # What this order was charged in. A later pricelist change must
+            # not rewrite the currency on an old receipt.
+            'currency': self.env['mart369.serializable']._mart369_currency(currency),
             'paid': currency.round(self.mart369_paid or 0.0),
             'walletUsed': currency.round(self.mart369_wallet_used or 0.0),
             'pay': self.mart369_pay_note or '',

@@ -13,7 +13,7 @@
 import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import ProductArt from "./art";
-import { Icon, ProductCard, Thumb, flyTo, inr } from "./shared";
+import { Icon, ProductCard, Thumb, flyTo, money } from "./shared";
 import { listable } from "./catalog";
 import { useRules } from "./Cart";
 import { fmtPlaced } from "./orderState";
@@ -95,7 +95,7 @@ function Filters({ facets, f, setF, onClear }) {
           <input type="range" min={facets.min} max={facets.max} step={1} value={f.price[1]} aria-label="Maximum price"
             onChange={(e) => setF({ price: [f.price[0], Math.max(+e.target.value, f.price[0])] })} />
         </div>
-        <div className="ls-range-vals"><span>{inr(f.price[0])}</span><span>{inr(f.price[1])}</span></div>
+        <div className="ls-range-vals"><span>{money(f.price[0])}</span><span>{money(f.price[1])}</span></div>
       </FilterGroup>
 
       <FilterGroup title="Discount" {...g("discount")}>
@@ -184,7 +184,7 @@ export function useProductFilters(items) {
 
   const chips = [
     ...f.brands.map((b) => [b, () => setF({ brands: f.brands.filter((x) => x !== b) })]),
-    ...(priceOn ? [[`${inr(f.price[0])} – ${inr(f.price[1])}`, () => setF({ price: [facets.min, facets.max] })]] : []),
+    ...(priceOn ? [[`${money(f.price[0])} – ${money(f.price[1])}`, () => setF({ price: [facets.min, facets.max] })]] : []),
     ...(f.discount ? [[`${f.discount}%+ off`, () => setF({ discount: 0 })]] : []),
     ...(f.rating ? [[`${f.rating}★ & up`, () => setF({ rating: 0 })]] : []),
     ...(f.veg ? [["Veg only", () => setF({ veg: false })]] : []),
@@ -471,7 +471,12 @@ function ScopeWord({ scope }) {
 
 /* JioMart-style chip bar: Sort by · Brands · Price · Discount · All filters.
    Chips open a popover (bottom sheet on phones); results update live. */
-const PRICE_BUCKETS = [[0, 99, "Under ₹100"], [100, 499, "₹100 – ₹499"], [500, 999, "₹500 – ₹999"], [1000, Infinity, "₹1,000 & above"]];
+/* The bounds are this page's own choice of bands; the labels are not -
+   they name real prices, so they are printed in the money those prices are
+   quoted in. They read "Under ₹100" against an Omani shelf before. */
+const PRICE_BANDS = [[0, 99], [100, 499], [500, 999], [1000, Infinity]];
+const bandLabel = ([lo, hi]) =>
+  (hi === Infinity ? `${money(lo)} & above` : lo === 0 ? `Under ${money(hi + 1)}` : `${money(lo)} – ${money(hi)}`);
 
 function FilterBar({ F, onAll }) {
   const { facets, f, setF, clear, sort, setSort, active, priceOn, results } = F;
@@ -499,7 +504,10 @@ function FilterBar({ F, onAll }) {
   };
   const sortLabel = SORTS.find(([k]) => k === sort)?.[1];
   const pct = (v) => ((v - facets.min) / Math.max(1, facets.max - facets.min)) * 100;
-  const buckets = PRICE_BUCKETS.filter(([a, b]) => b >= facets.min && a <= facets.max);
+  /* Labelled at render, not at import: the shop says what money looks like
+     a moment after the page starts. */
+  const buckets = PRICE_BANDS.filter(([a, b]) => b >= facets.min && a <= facets.max)
+    .map((b) => [b[0], b[1], bandLabel(b)]);
   const brands = facets.brands.filter(([b]) => b.toLowerCase().includes(brandQ.toLowerCase()));
 
   const chip = (k, label, on, extra) => (
@@ -543,7 +551,7 @@ function FilterBar({ F, onAll }) {
           <input type="range" min={facets.min} max={facets.max} value={f.price[0]} aria-label="Minimum price" onChange={(e) => setF({ price: [Math.min(+e.target.value, f.price[1]), f.price[1]] })} />
           <input type="range" min={facets.min} max={facets.max} value={f.price[1]} aria-label="Maximum price" onChange={(e) => setF({ price: [f.price[0], Math.max(+e.target.value, f.price[0])] })} />
         </div>
-        <div className="ls-range-vals"><span>{inr(f.price[0])}</span><span>{inr(f.price[1])}</span></div>
+        <div className="ls-range-vals"><span>{money(f.price[0])}</span><span>{money(f.price[1])}</span></div>
       </div>
     ),
     discount: (
@@ -869,7 +877,7 @@ export function BuyAgainPage({ byId, cart, setQty, orders = [] }) {
         {last && (
           <div className="ba-last">
             <span className="ba-thumbs">{last.items.slice(0, 3).map(([id]) => byId[id] && <span key={id}><Thumb p={byId[id]} /></span>)}</span>
-            <span className="ba-last-txt"><b>Last order · {fmtPlaced(last.at)}</b><small>{last.items.length} items · {inr(last.total)}</small></span>
+            <span className="ba-last-txt"><b>Last order · {fmtPlaced(last.at)}</b><small>{last.items.length} items · {money(last.total)}</small></span>
             <button className="ls-primary" onClick={(e) => reorderAll(e.currentTarget)}>Reorder all</button>
           </div>
         )}

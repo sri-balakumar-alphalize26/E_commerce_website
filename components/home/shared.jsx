@@ -8,7 +8,11 @@ export const WishContext = createContext(null);
 export const OpenContext = createContext(null);
 import ProductArt from "./art";
 
-export const inr = (n) => "₹" + Number(n).toLocaleString("en-IN");
+/* Re-exported so the eighty-odd call sites that already import it from
+   here keep working. What it prints is the shop's answer now, not a rupee
+   sign glued to whatever number it was handed - see lib/money.js. */
+import { money } from "@/lib/money";
+export { money };
 export const SEARCH_WORDS = ["RTX 4060", "Mechanical keyboard", "1TB SSD", "Wi-Fi router", "27 inch monitor", "USB-C cable"];
 
 /* ---------- icons ---------- */
@@ -368,8 +372,8 @@ export function ProductCard({ p, qty, setQty, i }) {
         <h3 className="hm-name" title={p.name}>{open ? <a href={`/product/${p.id}`} onClick={(e) => { e.preventDefault(); open(p, e.currentTarget.closest(".hm-card")?.querySelector(".hm-card-img")?.getBoundingClientRect()); }}>{p.name}</a> : p.name}</h3>
         {p.note && <div className="hm-subnote">({p.note})</div>}
         <div className="hm-price">
-          <b>{inr(p.price)}</b>
-          {p.mrp ? <s>{inr(p.mrp)}</s> : null}
+          <b>{money(p.price)}</b>
+          {p.mrp ? <s>{money(p.mrp)}</s> : null}
           {p.perUnit && <small>({p.perUnit})</small>}
         </div>
         <div className="hm-meta">

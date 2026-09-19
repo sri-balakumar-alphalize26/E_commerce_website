@@ -11,7 +11,7 @@
           Checkout. Close / Esc / backdrop → shrinks back into the pill.
    ========================================================================== */
 import { useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Icon, OpenContext, Thumb, inr, useFlying } from "./shared";
+import { Icon, OpenContext, Thumb, money, useFlying } from "./shared";
 import { Amount } from "./Cart";
 
 const reduced = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;

@@ -10,7 +10,7 @@
    with Download / Track order).
    ========================================================================== */
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Icon, inr } from "./shared";
+import { Icon, money } from "./shared";
 import { audioRunning, onAudioState, playPrint, playRewind, playRip, playTug, unlockAudio } from "./sound";
 
 const SOUND_KEY = "369mart.sound";
@@ -56,6 +56,7 @@ function ReceiptPaper({ order, byId, paperRef, torn }) {
   const date = when.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }).toUpperCase();
   const time = when.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }).toUpperCase();
   const cod = order.method === "cod";
+  const cur = order.currency; /* what this order was charged in, not what the shop quotes today */
   return (
     <div className="rc-paper" ref={paperRef} style={{ clipPath: edges(torn) }}>
       <div className="rc-top">
@@ -65,7 +66,7 @@ function ReceiptPaper({ order, byId, paperRef, torn }) {
         </div>
         <span className="rc-seal" aria-hidden="true"><Icon n={cod ? "cash" : "check"} size={18} /></span>
       </div>
-      <div className="rc-amount">{inr(order.paid)}.00</div>
+      <div className="rc-amount">{money(order.paid || order.total, cur)}</div>
       <div className="rc-sub">{date} | {cod ? "PAY ON DELIVERY" : "PAID"} · {METHOD_LABEL[order.method] || "ONLINE"}</div>
       <div className="rc-meta">
         <span>ORDER</span><span>{order.id}</span>
@@ -77,20 +78,20 @@ function ReceiptPaper({ order, byId, paperRef, torn }) {
         {order.items.map(([id, q]) => {
           const p = byId[id] || order.snap?.[id];
           if (!p) return null;
-          return <li key={id}><span>{q}X {p.name}</span><span>{inr(p.price * q)}.00</span></li>;
+          return <li key={id}><span>{q}X {p.name}</span><span>{money(p.price * q, cur)}</span></li>;
         })}
       </ul>
       <hr />
       <dl className="rc-bill">
-        <div><dt>Item total (MRP)</dt><dd>{inr(b.mrp)}.00</dd></div>
-        {b.mrp > b.items && <div><dt>Discount</dt><dd>-{inr(b.mrp - b.items)}.00</dd></div>}
-        <div><dt>Delivery</dt><dd>{b.fees ? inr(b.fees) + ".00" : "FREE"}</dd></div>
-        {b.couponOff > 0 && <div><dt>Coupon {order.coupon}</dt><dd>-{inr(b.couponOff)}.00</dd></div>}
-        {order.walletUsed > 0 && <div><dt>369 Wallet</dt><dd>-{inr(order.walletUsed)}.00</dd></div>}
+        <div><dt>Item total (MRP)</dt><dd>{money(b.mrp, cur)}</dd></div>
+        {b.mrp > b.items && <div><dt>Discount</dt><dd>-{money(b.mrp - b.items, cur)}</dd></div>}
+        <div><dt>Delivery</dt><dd>{b.fees ? money(b.fees, cur) : "FREE"}</dd></div>
+        {b.couponOff > 0 && <div><dt>Coupon {order.coupon}</dt><dd>-{money(b.couponOff, cur)}</dd></div>}
+        {order.walletUsed > 0 && <div><dt>369 Wallet</dt><dd>-{money(order.walletUsed, cur)}</dd></div>}
       </dl>
       <hr className="rc-solid" />
-      <div className="rc-total"><span>{cod ? "TO PAY ON DELIVERY" : "TOTAL PAID"}</span><span>{inr(order.paid)}.00</span></div>
-      {order.bill.mrp - order.bill.items + (b.couponOff || 0) > 0 && <p className="rc-saved">YOU SAVED {inr(order.bill.mrp - order.bill.items + (b.couponOff || 0))}.00 ON THIS ORDER</p>}
+      <div className="rc-total"><span>{cod ? "TO PAY ON DELIVERY" : "TOTAL PAID"}</span><span>{money(order.paid || order.total, cur)}</span></div>
+      {order.bill.mrp - order.bill.items + (b.couponOff || 0) > 0 && <p className="rc-saved">YOU SAVED {money(order.bill.mrp - order.bill.items + (b.couponOff || 0), cur)} ON THIS ORDER</p>}
       <div className="rc-deliver">
         <b>DELIVER TO {order.address?.label?.toUpperCase()}</b>
         <span>{order.address?.line}{order.address?.city ? ", " + order.address.city : ""}</span>
@@ -240,10 +241,11 @@ export default function ReceiptPrinter({ order, byId, onTrack, onShop }) {
 
   const busy = phase === "printing" || phase === "rewinding" || phase === "tearing";
   const cod = order.method === "cod";
+  const cur = order.currency; /* what this order was charged in, not what the shop quotes today */
 
   return (
     <div className={"rc rc-" + phase}>
-      <div className="rc-chip"><span className="rc-chip-ic"><Icon n="check" size={14} /></span>{cod ? `Order placed · pay ${inr(order.paid)} on delivery` : `${inr(order.paid)} paid · ${order.payNote || METHOD_LABEL[order.method]}`}</div>
+      <div className="rc-chip"><span className="rc-chip-ic"><Icon n="check" size={14} /></span>{cod ? `Order placed · pay ${money(order.paid || order.total, cur)} on delivery` : `${money(order.paid || order.total, cur)} paid · ${order.payNote || METHOD_LABEL[order.method]}`}</div>
 
       <div className="rc-stage">
         <div className="rc-printer" ref={printer} aria-hidden="true">

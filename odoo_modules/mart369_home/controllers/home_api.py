@@ -49,6 +49,12 @@ class Mart369HomeApi(http.Controller):
         # Do not set Access-Control-Allow-Origin here. Odoo already set it from
         # cors='*' above, and the response headers are extended rather than
         # replaced - setting it again emits it twice and browsers reject that.
+        # The app loads this feed on every screen, so it is where the shop
+        # says what its money looks like. The app used to print a rupee sign
+        # in front of whatever number it held, whatever the shop was pricing
+        # in.
+        payload = dict(payload, currency=request.env['mart369.serializable']
+                       .sudo()._mart369_shop_currency())
         max_age = max(config.cache_seconds or 0, 0)
         return request.make_json_response(payload, headers=[
             ('Cache-Control', 'public, max-age=%d' % max_age),

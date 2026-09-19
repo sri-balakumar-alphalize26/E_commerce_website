@@ -20,7 +20,7 @@
    ========================================================================== */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Icon, Thumb, inr } from "./shared";
+import { Icon, Thumb, money } from "./shared";
 import { Amount, useRules } from "./Cart";
 import { BRAND_LABEL, UPI_APPS, upiOk } from "./payment";
 import {
@@ -155,9 +155,9 @@ export function WalletSec({ onNav }) {
           <span><small>369 Wallet balance</small><b className="ax-wallet-amt">{loading ? <i className="ax-wait">…</i> : <Amount value={balance} />}</b></span>
         </div>
         <div className="ax-wallet-stats">
-          <span style={{ "--i": 0 }}><small>Added</small><b>{inr(sum(["add"]))}</b></span>
-          <span style={{ "--i": 1 }}><small>Refunds & rewards</small><b>{inr(sum(["refund", "reward"]))}</b></span>
-          <span style={{ "--i": 2 }}><small>Spent</small><b>{inr(sum(["spend"]))}</b></span>
+          <span style={{ "--i": 0 }}><small>Added</small><b>{money(sum(["add"]))}</b></span>
+          <span style={{ "--i": 1 }}><small>Refunds & rewards</small><b>{money(sum(["refund", "reward"]))}</b></span>
+          <span style={{ "--i": 2 }}><small>Spent</small><b>{money(sum(["spend"]))}</b></span>
         </div>
         <p className="ax-wallet-note"><Icon n="bolt" size={13} className="hm-fill" />Refunds to wallet are instant. Use your balance at checkout.</p>
         {/* Adding money is a payment, and payments are the last thing to move
@@ -181,7 +181,7 @@ export function WalletSec({ onNav }) {
                 <button key={t.id} className={"ax-txn ax-k-" + t.kind} style={{ "--i": i }} disabled={!order} onClick={() => order && onNav?.("track", order[1])}>
                   <span className="ax-txn-ic"><Icon n={m.icon} size={17} /></span>
                   <span className="ax-txn-txt"><b>{t.title}</b><small>{t.sub ? t.sub + " · " : ""}{fmtDateTime(t.at)}</small></span>
-                  <span className="ax-txn-amt">{m.sign}{inr(t.amount)}</span>
+                  <span className="ax-txn-amt">{m.sign}{money(t.amount)}</span>
                   {order && <Icon n="right" size={15} className="ax-go" />}
                 </button>
               );
@@ -341,7 +341,7 @@ export function PaymentsSec({ flash }) {
    Coupons & rewards
    ========================================================================== */
 function rewardText(r) {
-  if (r.type === "cash") return { big: inr(r.amount), small: "Cashback added to wallet" };
+  if (r.type === "cash") return { big: money(r.amount), small: "Cashback added to wallet" };
   if (r.type === "coupon") return { big: r.title, small: `Coupon ${r.code} unlocked` };
   return { big: "Better luck next time", small: "Keep ordering to win more" };
 }
@@ -733,7 +733,7 @@ export function NotifsSec({ orders, onNav, goSection }) {
    Refer & earn
    ========================================================================== */
 const REF_STATUS = {
-  ordered: { label: "Ordered", note: `${inr(REFER_REWARD)} earned`, tone: "green" },
+  ordered: { label: "Ordered", note: `${money(REFER_REWARD)} earned`, tone: "green" },
   joined: { label: "Joined", note: "First order pending", tone: "blue" },
   invited: { label: "Invited", note: "Hasn't joined yet", tone: "grey" },
 };
@@ -750,7 +750,7 @@ export function ReferSec({ user, flash }) {
   const [freshId, setFreshId] = useState(null);
   const code = data?.code || "";
   const link = data?.link || "";
-  const message = `Get ${inr(REFER_REWARD)} off your first 369 Mart order with my code ${code}. Computer parts, fast: ${link}`;
+  const message = `Get ${money(REFER_REWARD)} off your first 369 Mart order with my code ${code}. Computer parts, fast: ${link}`;
   const ordered = refs.filter((r) => r.status === "ordered").length;
   const joined = refs.filter((r) => r.status !== "invited").length;
   const earned = data?.earned ?? ordered * REFER_REWARD;
@@ -776,8 +776,8 @@ export function ReferSec({ user, flash }) {
       <section className="ax-refer">
         <div className="ax-refer-copy">
           <small>Refer & earn</small>
-          <h3>Invite friends, earn {inr(REFER_REWARD)} each</h3>
-          <p>Your friend gets {inr(REFER_REWARD)} off their first order above ₹299. You get {inr(REFER_REWARD)} in your wallet when it's delivered.</p>
+          <h3>Invite friends, earn {money(REFER_REWARD)} each</h3>
+          <p>Your friend gets {money(REFER_REWARD)} off their first order above ₹299. You get {money(REFER_REWARD)} in your wallet when it's delivered.</p>
         </div>
         <span className="ax-giftbox" aria-hidden="true">
           <i className="ax-gift-lid" /><i className="ax-gift-body" /><i className="ax-gift-ribbon" />
@@ -799,19 +799,19 @@ export function ReferSec({ user, flash }) {
       <section className="ac-card ax-block" style={{ "--i": 1 }}>
         <div className="ax-refstats">
           <span><small>Earned</small><b><Amount value={earned} /></b></span>
-          <span><small>Pending</small><b>{inr(pending)}</b></span>
+          <span><small>Pending</small><b>{money(pending)}</b></span>
           <span><small>Friends joined</small><b>{joined}</b></span>
         </div>
         <div className="ax-goal" style={{ "--p": Math.min(1, joined / REFER_GOAL) }}>
           <div className="ax-goal-bar"><i />{Array.from({ length: REFER_GOAL }, (_, k) => <b key={k} className={k < joined ? "ax-hit" : ""} style={{ "--k": k, left: `${((k + 1) / REFER_GOAL) * 100}%` }}>{k + 1 === REFER_GOAL ? <Icon n="gift" size={12} /> : k + 1}</b>)}</div>
-          <p>{joined >= REFER_GOAL ? `Bonus unlocked! ${inr(REFER_BONUS)} is on its way.` : <>Invite <b>{REFER_GOAL - joined} more</b> friend{REFER_GOAL - joined > 1 ? "s" : ""} to unlock a <b>{inr(REFER_BONUS)}</b> bonus</>}</p>
+          <p>{joined >= REFER_GOAL ? `Bonus unlocked! ${money(REFER_BONUS)} is on its way.` : <>Invite <b>{REFER_GOAL - joined} more</b> friend{REFER_GOAL - joined > 1 ? "s" : ""} to unlock a <b>{money(REFER_BONUS)}</b> bonus</>}</p>
         </div>
       </section>
 
       <section className="ac-card ax-block" style={{ "--i": 2 }}>
         <div className="ac-card-head"><div><h3>How it works</h3></div></div>
         <ol className="ax-steps">
-          {[["share", "Share your code", "Send it on WhatsApp or anywhere"], ["user", "Friend orders", `They get ${inr(REFER_REWARD)} off above ₹299`], ["wallet", "You earn", `${inr(REFER_REWARD)} lands in your wallet`]].map(([ic, t, d], k) => (
+          {[["share", "Share your code", "Send it on WhatsApp or anywhere"], ["user", "Friend orders", `They get ${money(REFER_REWARD)} off above ₹299`], ["wallet", "You earn", `${money(REFER_REWARD)} lands in your wallet`]].map(([ic, t, d], k) => (
             <li key={t} style={{ "--k": k }}><span><Icon n={ic} size={19} /></span><b>{t}</b><small>{d}</small></li>
           ))}
         </ol>

@@ -12,7 +12,7 @@ Keep these lists in step with the storefront:
 
 import re
 
-from odoo import models
+from odoo import api, models
 
 # Drawn artwork, used when no photo is uploaded. Names must match ART exactly.
 ART_CHOICES = [
@@ -131,6 +131,49 @@ class Mart369Serializable(models.AbstractModel):
         record.ensure_one()
         return '%s/web/image/%s/%s/%s/%s' % (
             self._api_base(), record._name, record.id, field, size)
+
+    # ---------------------------------------------------- the money
+
+    @api.model
+    def _mart369_currency(self, currency=None):
+        """Which money the amounts beside this are in.
+
+        The app printed every price through an `inr()` that put a rupee
+        sign in front of whatever it was handed, so an Omani shop pricing
+        in dollars showed all three at once. It formats what it is told to
+        now, and this is the telling - field for field off res.currency, so
+        a screen and the invoice for the same order agree.
+
+        It travels with the amounts rather than being asked for once: the
+        catalogue is priced by the website's pricelist and an order by its
+        own, and an old order keeps the one it was charged in.
+        """
+        currency = currency or self.env.company.currency_id
+        return {
+            'code': currency.name or '',
+            'symbol': currency.symbol or currency.name or '',
+            'position': currency.position or 'before',
+            'decimals': currency.decimal_places,
+        }
+
+    @api.model
+    def _mart369_shop_currency(self):
+        """The money a browsing shopper is being quoted in.
+
+        The same source `_price_context_for` prices from, so the symbol on a
+        card cannot disagree with the number beside it. Outside a website
+        request - tests, cron, the shell - that falls back to the company's,
+        exactly as the pricing does.
+        """
+        if 'website' in self.env:
+            try:
+                website = self.env['website'].get_current_website()
+                currency = website.currency_id or website.company_id.currency_id
+                if currency:
+                    return self._mart369_currency(currency)
+            except Exception:  # noqa: BLE001 - not a website request
+                pass
+        return self._mart369_currency()
 
     # ------------------------------------------------- the product card
 

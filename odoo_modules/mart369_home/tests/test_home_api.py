@@ -55,13 +55,28 @@ class TestMart369HomeApi(HttpCase):
     # ------------------------------------------------------------ the shape
 
     def test_top_level_shape(self):
-        """Exactly what <Home modes={...} /> expects."""
+        """Exactly what <Home modes={...} /> expects, plus the currency.
+
+        The app loads this feed on every screen, so it is where the shop says
+        what its money looks like. Home takes `currency` out before merging
+        the rest into its map of modes.
+        """
         payload = self._fetch().json()
-        self.assertEqual(set(payload), {'quick', 'all'})
-        for mode in payload.values():
+        self.assertEqual(set(payload), {'quick', 'all', 'currency'})
+        for mode in payload['quick'], payload['all']:
             self.assertEqual(
                 set(mode),
                 {'tabs', 'banners', 'categories', 'sections', 'freeDeliveryAt'})
+
+    def test_the_feed_says_what_money_the_prices_are_in(self):
+        """The app printed a rupee sign in front of every number it was
+        handed, whatever the shop was pricing in."""
+        money = self._fetch().json()['currency']
+        company = self.env.company.currency_id
+        self.assertEqual(money['code'], company.name)
+        self.assertEqual(money['decimals'], company.decimal_places)
+        self.assertIn(money['position'], ('before', 'after'))
+        self.assertTrue(money['symbol'])
 
     def test_tabs_and_banners_shape(self):
         mode = self._fetch().json()['quick']
