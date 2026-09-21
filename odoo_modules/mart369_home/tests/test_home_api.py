@@ -66,7 +66,21 @@ class TestMart369HomeApi(HttpCase):
         for mode in payload['quick'], payload['all']:
             self.assertEqual(
                 set(mode),
-                {'tabs', 'banners', 'categories', 'sections', 'freeDeliveryAt'})
+                # `label`, `icon` and `tagline` are what the app calls this tab
+                # and what it promises for it. They used to be written into the
+                # storefront, which meant "2-5 day delivery" could only be
+                # corrected by a deploy.
+                {'label', 'icon', 'tagline',
+                 'tabs', 'banners', 'categories', 'sections', 'freeDeliveryAt'})
+
+    def test_the_feed_says_what_each_tab_is_called_and_promises(self):
+        """Never blank: an empty promise is worse than the app's own wording,
+        so the serializer falls back rather than sending nothing."""
+        payload = self._fetch().json()
+        for key in ('quick', 'all'):
+            for field in ('label', 'icon', 'tagline'):
+                self.assertTrue(payload[key][field],
+                                '%s.%s came back empty' % (key, field))
 
     def test_the_feed_says_what_money_the_prices_are_in(self):
         """The app printed a rupee sign in front of every number it was
