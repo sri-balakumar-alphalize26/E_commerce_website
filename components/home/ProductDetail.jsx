@@ -159,9 +159,15 @@ function Stars({ value, size = 14 }) {
   );
 }
 
-function Section({ title, open, onToggle, children, i }) {
+/* `sec` names the band for anything that needs to find it from outside - the
+   admin console draws its handles over these. An attribute rather than
+   nth-of-type, because these five become conditional the moment the shop
+   starts switching them off, and a positional selector would then point at
+   whichever one happened to survive. */
+function Section({ title, open, onToggle, children, i, sec }) {
   return (
-    <section className={"pd-sec" + (open ? " pd-open" : "")} style={{ "--i": i }}>
+    <section className={"pd-sec" + (open ? " pd-open" : "")} style={{ "--i": i }}
+      data-sec={sec}>
       <button className="pd-sec-head" onClick={onToggle} aria-expanded={open}>{title}<Icon n="chev" size={18} className="pd-chev" /></button>
       <div className="pd-collapse"><div><div className="pd-sec-body">{children}</div></div></div>
     </section>
@@ -352,10 +358,10 @@ export default function ProductDetail({
             <div className={"pd-collapse pd-all" + (showAll ? " pd-show" : "")}>
               <div>
                 <div className="pd-secs">
-                  <Section i={0} title="Key features" open={open.features} onToggle={() => toggle("features")}>
+                  <Section i={0} sec="features" title="Key features" open={open.features} onToggle={() => toggle("features")}>
                     <ul className="pd-features">{d.features.map((f, k) => <li key={k} style={{ "--k": k }}><Icon n="check" size={14} />{f}</li>)}</ul>
                   </Section>
-                  <Section i={1} title="Product information" open={open.info} onToggle={() => toggle("info")}>
+                  <Section i={1} sec="info" title="Product information" open={open.info} onToggle={() => toggle("info")}>
                     <dl className="pd-table">
                       {d.info.map(([k, v], n) => (
                         <div key={k} style={{ "--k": n }}>
@@ -365,12 +371,12 @@ export default function ProductDetail({
                       ))}
                     </dl>
                   </Section>
-                  <Section i={2} title="Item specifications" open={open.specs} onToggle={() => toggle("specs")}>
+                  <Section i={2} sec="specs" title="Item specifications" open={open.specs} onToggle={() => toggle("specs")}>
                     <dl className="pd-grid">
                       {Object.entries(d.specs).map(([k, v], n) => <div key={k} style={{ "--k": n }}><dt>{k}</dt><dd>{v}</dd></div>)}
                     </dl>
                   </Section>
-                  <Section i={3} title="Product description" open={open.desc} onToggle={() => toggle("desc")}>
+                  <Section i={3} sec="description" title="Product description" open={open.desc} onToggle={() => toggle("desc")}>
                     <div className={"pd-desc" + (fullDesc ? " pd-full" : "")}>
                       <p>{d.description}</p>
                       <h4>Disclaimer</h4>
@@ -378,7 +384,7 @@ export default function ProductDetail({
                     </div>
                     <button className="pd-more" onClick={() => setFullDesc((v) => !v)}>{fullDesc ? "Show less" : "View full description"}<Icon n="chev" size={14} className="pd-chev" /></button>
                   </Section>
-                  <Section i={4} title="Return policy" open={open.returns} onToggle={() => toggle("returns")}>
+                  <Section i={4} sec="returns" title="Return policy" open={open.returns} onToggle={() => toggle("returns")}>
                     <p className="pd-return"><Icon n={d.returnable ? "check" : "info"} size={16} />{d.returnText}</p>
                     <a className="pd-link" href="/cancellation-policy">View policy</a>
                   </Section>

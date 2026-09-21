@@ -1,0 +1,170 @@
+/* ==========================================================================
+   369 Mart — Admin · the product page screen
+
+   Same rule as editor.css: nothing here restyles a storefront class. The
+   three `.pd-*` selectors below are the whole budget, they are all scoped
+   under .pp-stage, and each one only undoes a piece of page layout that
+   assumes a browser window rather than a box on an admin screen. No colour,
+   no type, no spacing.
+   ========================================================================== */
+
+.pp-canvas-holder { position: relative; }
+
+/* The page is a drawing. Its own buttons and links must not answer, or a
+   click meant for the band underneath opens a lightbox instead. The hotspots
+   put pointer events back for themselves. */
+.pp-stage { position: relative; pointer-events: none; }
+
+/* 1. The gallery sticks to the site header, which is not here. */
+.pp-stage .pd-gallery { position: static; top: auto; }
+/* 2. The thumbnail rail is sized in viewport units, not container units. */
+.pp-stage .pd-thumbs-wrap { max-height: 320px; }
+/* 3. The toast is fixed to the window and would float over the console. */
+.pp-stage .pd-toast { position: absolute; }
+
+/* ------------------------------------------------------------- the hotspots */
+
+.pp-hot {
+  position: absolute;
+  margin: 0;
+  pointer-events: auto;
+  border-radius: 10px;
+  background: transparent;
+}
+.pp-hot .pe-band-in { display: none; }
+.pp-hot .pe-tools { top: 4px; right: 4px; left: auto; }
+
+/* A field sits inside its section, so it has to read as the smaller thing. */
+.pp-hot-sub { border-radius: 7px; }
+.pp-hot-sub .pe-tools { transform: scale(0.9); transform-origin: top right; }
+
+/* --------------------------------------------------------------- the panel */
+
+.pp-secs, .pp-fields { list-style: none; margin: 0; padding: 0; }
+
+.pp-sec-row, .pp-field-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 14px;
+  border: 0;
+  border-bottom: 1px solid var(--ad-line);
+  background: none;
+  font: inherit;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+}
+.pp-sec-row:hover, .pp-field-row:hover { background: var(--ad-ground); }
+
+.pp-sec-name { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.pp-sec-name b { font-size: 13.5px; }
+.pp-sec-name em { font-style: normal; font-size: 11.5px; color: var(--ad-muted); }
+
+.pp-fields li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-left: 10px;
+  border-bottom: 1px solid var(--ad-line);
+}
+.pp-fields li .pp-field-row { border-bottom: 0; padding-left: 4px; }
+.pp-fields li.pp-off .pp-field-name { color: var(--ad-muted); text-decoration: line-through; }
+
+.pp-field-name { flex: 1; min-width: 0; font-size: 13px; }
+
+/* Where the words come from. Three editors for one field are
+   indistinguishable without it. */
+.pp-src {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--ad-muted);
+}
+
+/* A master switch that is off makes every switch under it a no-op. Say so,
+   and stop them being pressed. */
+.pp-fields-off { opacity: 0.5; }
+.pp-master-off { margin: 0 0 8px; }
+
+.pp-switch-lbl, .pp-switch-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--ad-muted);
+}
+.pp-switch-row {
+  justify-content: space-between;
+  grid-column: 1 / -1;
+  padding: 2px 0 8px;
+  font-size: 13px;
+  color: var(--ad-ink);
+}
+
+.pp-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-bottom: 4px;
+  padding: 0;
+  font-size: 11.5px;
+}
+.pp-key {
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 11px;
+  color: var(--ad-muted);
+}
+.pp-source { margin: 0; grid-column: 1 / -1; }
+
+.pp-radios {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--ad-line);
+  border-radius: 10px;
+}
+.pp-radios legend {
+  padding: 0 4px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ad-muted);
+}
+.pp-radios[disabled] { opacity: 0.55; }
+.pp-radio { display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; }
+
+/* ------------------------------------------------------- the product search */
+
+.pp-search { position: relative; min-width: 240px; }
+.pp-search-menu {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--ad-line);
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 10px 30px -18px rgba(16, 28, 36, 0.5);
+}
+.pp-search-empty { margin: 0; font-size: 12px; color: var(--ad-muted); line-height: 1.5; }
+
+.pp-prod {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 4px 12px;
+  border-radius: 999px;
+  background: var(--ad-ground);
+  border: 1px solid var(--ad-line);
+  font-size: 12.5px;
+  font-weight: 600;
+}

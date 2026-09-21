@@ -21,6 +21,7 @@ import OrdersSection from "./AdminOrders";
 import { CustomersSection, ProductsSection } from "./AdminCatalog";
 import { OffersSection, ReviewsSection, SettingsSection } from "./AdminMore";
 import HomeSection from "./HomeSection";
+import ProductPageSection from "./ProductPageSection";
 
 /* `live` marks a section that reads the shop. Everything else still runs on
    adminData.js and says so across the top of itself, because staff acting on
@@ -33,6 +34,10 @@ import HomeSection from "./HomeSection";
 export const SECTIONS = [
   { key: "dashboard", label: "Dashboard", icon: "dash", group: "Overview", live: true },
   { key: "home", label: "Home page", icon: "layers", group: "Store", live: true },
+  // Not live yet on purpose: the screen is real and the parts on it are the
+  // shop's own, but mart369_product has no admin route, so nothing it shows
+  // can be saved. The banner says so rather than the screen pretending.
+  { key: "product-page", label: "Product page", icon: "note", group: "Store" },
   { key: "orders", label: "Orders", icon: "box", group: "Sales" },
   { key: "customers", label: "Customers", icon: "users", group: "Sales" },
   { key: "offers", label: "Offers", icon: "ticket", group: "Sales" },
@@ -230,6 +235,7 @@ export default function AdminApp({ section: initial = "dashboard", onSection, on
   let body;
   if (section === "dashboard") body = <Dashboard go={go} />;
   else if (section === "home") body = <HomeSection flash={flash} />;
+  else if (section === "product-page") body = <ProductPageSection flash={flash} />;
   else if (section === "orders") body = <OrdersSection orders={orders} openId={openId} setOpenId={setOpenId} advance={advance} cancelOrder={cancelOrder} assign={assign} flash={flash} />;
   else if (section === "products") body = <ProductsSection stock={stock} setQty={setQty} setPrice={setPrice} toggleProduct={toggleProduct} addProduct={addProduct} flash={flash} />;
   else if (section === "customers") body = <CustomersSection orders={orders} flash={flash} />;
