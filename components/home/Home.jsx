@@ -36,7 +36,7 @@ import { ApiError, api } from "@/lib/api";
 import { BuyAgainPage, CategoryPage, NotFoundView, OffersPage, SearchResults, SiteFooter } from "./Browse";
 
 /* ---------- header ---------- */
-function ModeToggle({ mode, onMode }) {
+function ModeToggle({ mode, onMode, copy }) {
   const wrap = useRef(null);
   const [thumb, setThumb] = useState(null);
   useEffect(() => {
@@ -51,17 +51,21 @@ function ModeToggle({ mode, onMode }) {
   return (
     <div className="hm-mode" role="tablist" aria-label="Shopping mode" data-mode={mode} ref={wrap}>
       {thumb && <span className="hm-mode-thumb" style={{ transform: `translateX(${thumb.x}px)`, width: thumb.w }} aria-hidden="true" />}
+      {/* The shop's own words for its two tabs, with the app's originals
+          behind them. `title` reads as italic on Quick because that is how the
+          toggle has always drawn it, not because of anything in the text. */}
       <button role="tab" data-m="quick" aria-selected={mode === "quick"} onClick={(e) => onMode("quick", e.currentTarget)}>
-        <Icon n="bolt" size={13} className="hm-fill" /><i>Quick</i>
+        <Icon n={copy?.quick?.icon || "bolt"} size={13} className="hm-fill" />
+        <i>{copy?.quick?.title || "Quick"}</i>
       </button>
       <button role="tab" data-m="all" aria-selected={mode === "all"} onClick={(e) => onMode("all", e.currentTarget)}>
-        <Icon n="grid" size={13} />Express
+        <Icon n={copy?.all?.icon || "grid"} size={13} />{copy?.all?.title || "Express"}
       </button>
     </div>
   );
 }
 
-function StoreHeader({ unread = 0, count, mode, onMode, onCart, onAccount, address, onLoc, locOpen, onSearch, onHome, onOffers, onBuyAgain, route, query }) {
+function StoreHeader({ unread = 0, count, mode, onMode, modeText, onCart, onAccount, address, onLoc, locOpen, onSearch, onHome, onOffers, onBuyAgain, route, query }) {
   const [scrolled, setScrolled] = useState(false);
   const [w, setW] = useState(0);
   useEffect(() => {
@@ -79,7 +83,7 @@ function StoreHeader({ unread = 0, count, mode, onMode, onCart, onAccount, addre
           <svg viewBox="0 0 24 24" className="hm-logo-arrow" aria-hidden="true"><path d="M6 18 18 6M9 6h9v9" /></svg>
           <span>Mart</span>
         </a>
-        <ModeToggle mode={mode} onMode={onMode} />
+        <ModeToggle mode={mode} onMode={onMode} copy={modeText} />
         <button className={"hm-loc" + (locOpen ? " hm-loc-open" : "")} onClick={onLoc} aria-haspopup="dialog" aria-expanded={!!locOpen}>
           <span className="hm-loc-ic" key={mode + (address?.id || "")}><Icon n={mode === "quick" ? "bolt" : "truck"} size={18} className={mode === "quick" ? "hm-fill" : ""} /></span>
           <span className="hm-loc-txt" key={address?.id || "none"}>
@@ -112,7 +116,7 @@ function StoreHeader({ unread = 0, count, mode, onMode, onCart, onAccount, addre
   );
 }
 
-function Tabs({ tabs, active, onChange }) {
+export function Tabs({ tabs, active, onChange }) {
   const wrap = useRef(null);
   const [ind, setInd] = useState(null);
   useEffect(() => {
@@ -143,7 +147,7 @@ function Tabs({ tabs, active, onChange }) {
 }
 
 /* ---------- banners ---------- */
-function Banner({ b, i }) {
+export function Banner({ b, i }) {
   return (
     <a className={"hm-banner hm-tone-" + b.tone} href="#" onClick={(e) => e.preventDefault()} style={{ "--i": i }}>
       <div className="hm-banner-copy">
@@ -159,7 +163,7 @@ function Banner({ b, i }) {
   );
 }
 
-function BannerCarousel({ banners, autoplay = true }) {
+export function BannerCarousel({ banners, autoplay = true }) {
   const { ref, edge, by } = useRailScroll();
   const [paused, setPaused] = useState(false);
   useEffect(() => {
@@ -183,7 +187,7 @@ function BannerCarousel({ banners, autoplay = true }) {
   );
 }
 
-function CategoryStrip({ cats, onPick }) {
+export function CategoryStrip({ cats, onPick }) {
   const [ref, inView] = useInView();
   return (
     <section className={"hm-cats" + (inView ? " hm-in" : "")} ref={ref} aria-label="Shop by category">
@@ -215,14 +219,30 @@ function FreeDelivery({ total, threshold }) {
 
 
 /* ---------- Quick <-> Express transition ---------- */
+/* What the two tabs are called and what they promise.
+ *
+ * These used to be written in here, which meant "in minutes" and "2–5 day
+ * delivery" — statements about what the shop will actually do for a customer —
+ * could only be corrected by a developer and a deploy. They come from the feed
+ * now, per saved page, so a festival page can promise something different.
+ *
+ * These stay as the fallback: the exact words the app had before, for a shop
+ * that has not been asked yet or cannot be reached. */
 const MODE_COPY = {
   quick: { icon: "bolt", title: "Quick", sub: "Parts & peripherals in minutes" },
   all: { icon: "grid", title: "Express", sub: "Electronics, home & more · 2–5 day delivery" },
 };
+
+/* The shop's own wording for one mode, falling back to the above. */
+const modeCopy = (key, feed) => ({
+  icon: feed?.icon || MODE_COPY[key].icon,
+  title: feed?.label || MODE_COPY[key].title,
+  sub: feed?.tagline || MODE_COPY[key].sub,
+});
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /* in: colour floods out of the toggle · hold: swap content underneath · out: curtain lifts */
-function useModeSwitch() {
+export function useModeSwitch() {
   const [fx, setFx] = useState(null);
   const busy = useRef(false);
   const run = useCallback(async (to, originEl, swap) => {
@@ -244,9 +264,9 @@ function useModeSwitch() {
   return [fx, run];
 }
 
-function ModeSwitchOverlay({ fx }) {
+export function ModeSwitchOverlay({ fx, copy }) {
   if (!fx) return null;
-  const c = MODE_COPY[fx.to];
+  const c = copy || MODE_COPY[fx.to];
   return (
     <div className={"hm-switch hm-switch-" + fx.phase} data-to={fx.to}
       style={{ "--x": fx.x + "px", "--y": fx.y + "px" }} role="status" aria-live="polite">
@@ -407,6 +427,12 @@ export default function Home({
   }, [feed, modes]);
 
   const { tabs, banners, categories, sections, freeDeliveryAt } = liveModes[mode];
+  /* What the shop calls its two tabs and what it promises for each. From the
+     feed, so a delivery promise can be corrected without a deploy. */
+  const modeText = useMemo(() => ({
+    quick: modeCopy("quick", liveModes.quick),
+    all: modeCopy("all", liveModes.all),
+  }), [liveModes]);
   const [cart, setCart] = useState(initialCart);
   const [fx, runSwitch] = useModeSwitch();
 
@@ -715,7 +741,7 @@ export default function Home({
     <WishContext.Provider value={wish}>
     <OpenContext.Provider value={openProduct}>
     <div className={"hm-page" + (count > 0 && browsing ? " hm-has-cart" : "") + (view !== "home" ? " hm-in-cart" : "") + " hm-at-" + view} data-mode={mode}>
-      <StoreHeader unread={unread} count={count} mode={mode} onMode={switchMode} onCart={() => nav("cart")} onAccount={onAccount || (() => nav("account"))}
+      <StoreHeader unread={unread} count={count} mode={mode} onMode={switchMode} modeText={modeText} onCart={() => nav("cart")} onAccount={onAccount || (() => nav("account"))}
         onHome={() => nav("home")} onOffers={() => nav("offers")} onBuyAgain={() => nav("buyagain")} route={view} query={view === "search" ? route.param || "" : ""}
         onSearch={() => { onSearch?.(); setSearchOpen(true); }} address={address} locOpen={locOpen} onLoc={() => setLocOpen(true)} />
       {withTabs && <Tabs key={"t" + mode} tabs={tabs} active={activeTab} onChange={pickTab} />}
@@ -729,7 +755,7 @@ export default function Home({
       <SupportBot onNav={nav}
         hidden={!!fx || ["checkout", "order", "track"].includes(view)}
         lift={view === "cart" ? 3 : browsing && count > 0 ? (view === "home" ? 2 : 1) : 0} />
-      <ModeSwitchOverlay fx={fx} />
+      <ModeSwitchOverlay fx={fx} copy={fx ? modeText[fx.to] : null} />
       <div className={"hm-toast" + (notice ? " hm-show" : "")} role="status" aria-live="polite">{notice}</div>
       <SearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} products={products} picks={quickPicks} cart={cart} setQty={setQty}
         initialQuery={view === "search" ? route.param || "" : ""}
