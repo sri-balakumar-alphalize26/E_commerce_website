@@ -1,0 +1,296 @@
+/* ==========================================================================
+   369 Mart — Admin · the home page editor (.pe-*)
+
+   Two jobs, and only two. Frame the storefront's own home page at the width
+   shoppers actually see it, and put a handle, a click target and an eye on
+   every band inside it.
+
+   Nothing here restyles a .hm-* rule. The moment this file starts correcting
+   the shop's own components, the canvas stops being the shop and the whole
+   point of drawing it this way is gone. The only .hm- rules below undo
+   container layout that a single-item band inherits from a full page — a
+   category strip of one, a tab bar of one — never colour, type or spacing.
+   ========================================================================== */
+
+.pe { display: flex; flex-direction: column; gap: 16px; }
+
+.pe-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.pe-title { flex: 1; min-width: 160px; }
+.pe-title h1 { margin: 0; font-size: 18px; font-weight: 800; letter-spacing: -0.02em; }
+.pe-title small { color: var(--ad-muted); font-size: 12.5px; }
+
+.pe-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 28px; padding: 0 11px; border-radius: 999px;
+  font-size: 12.5px; font-weight: 700;
+  background: var(--ad-ground); color: var(--ad-muted);
+  transition: background 200ms, color 200ms;
+}
+.pe-chip-saved { background: rgba(23, 146, 91, 0.12); color: #17925b; }
+.pe-chip-error { background: rgba(198, 47, 47, 0.12); color: #c62f2f; }
+
+.pe-error { align-items: center; gap: 8px; }
+.pe-error .ad-link { margin-left: auto; }
+
+/* The panel is narrow and fixed; the page gets everything else, because the
+   whole point is seeing the shop at the width a shopper sees it. */
+.pe-cols {
+  display: grid; grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 18px; align-items: start;
+}
+@media (max-width: 1180px) { .pe-cols { grid-template-columns: minmax(0, 1fr); } }
+
+/* --------------------------------------------------------- the page canvas */
+
+.pe-canvas-wrap { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.pe-canvas {
+  border: 1px solid var(--ad-line); border-radius: 14px;
+  background: #fff; overflow: hidden;
+  box-shadow: 0 2px 10px rgba(16, 28, 36, 0.06);
+}
+/* A browser bar, so it reads as "this is the shop" and not as another admin
+   card that happens to have pictures in it. */
+.pe-chrome {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px; border-bottom: 1px solid var(--ad-line);
+  background: var(--ad-ground);
+}
+.pe-dots { display: flex; gap: 5px; }
+.pe-dots i { width: 9px; height: 9px; border-radius: 50%; background: #cbd8e1; }
+.pe-url {
+  flex: 1; min-width: 0; height: 24px; padding: 0 10px;
+  display: flex; align-items: center;
+  border-radius: 7px; background: #fff; border: 1px solid var(--ad-line);
+  font-size: 11.5px; color: var(--ad-muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.pe-screen {
+  /* The shop's own components are written for a full page; containment lets
+     them lay out against this canvas instead of the browser window. */
+  container-type: inline-size;
+  min-height: 460px; padding: 10px 0 24px;
+}
+.pe-canvas-note { margin: 0; font-size: 12px; color: var(--ad-muted); line-height: 1.5; }
+.pe-loading, .pe-row-empty {
+  margin: 0; padding: 22px 16px; font-size: 13px; color: var(--ad-muted);
+}
+.pe-loading { text-align: center; }
+.pe-row-empty { display: flex; flex-direction: column; gap: 3px; }
+.pe-row-empty b { color: var(--ad-ink); font-size: 14px; }
+
+/* ------------------------------------------------------------- the bands */
+
+.pe-band {
+  position: relative; cursor: pointer;
+  border: 1.5px solid transparent; border-radius: 12px;
+  margin: 2px 0;
+  transition: border-color 160ms, background 160ms;
+}
+.pe-band:hover { border-color: #9dc4d8; background: rgba(10, 120, 171, 0.03); }
+.pe-band.pe-on { border-color: var(--ad-blue); background: rgba(10, 120, 171, 0.05); }
+.pe-band.pe-hidden .pe-band-in { opacity: 0.4; filter: grayscale(1); }
+.pe-band.pe-dragging { z-index: 5; opacity: 0.9; box-shadow: 0 10px 24px rgba(16, 28, 36, 0.18); }
+.pe-band-in { pointer-events: none; }
+
+.pe-tools {
+  position: absolute; top: 5px; right: 5px; z-index: 3;
+  display: flex; gap: 4px; opacity: 0.45; transition: opacity 150ms;
+}
+.pe-band:hover .pe-tools, .pe-band.pe-on .pe-tools,
+.pe-tools:focus-within { opacity: 1; }
+.pe-tool {
+  width: 26px; height: 26px; display: grid; place-items: center;
+  border: 1px solid var(--ad-line); border-radius: 8px;
+  background: rgba(255, 255, 255, 0.94); color: #3f5361;
+  cursor: pointer; padding: 0;
+}
+.pe-tool:hover { border-color: var(--ad-blue); color: var(--ad-blue); }
+.pe-tool:focus-visible { outline: 2px solid var(--ad-blue); outline-offset: 2px; opacity: 1; }
+.pe-grip { cursor: grab; touch-action: none; }
+.pe-grip:active { cursor: grabbing; }
+.pe-grip svg { fill: currentColor; }
+
+/* What this band is, said before anybody hovers anything. The page renders so
+   faithfully that without these it reads as a preview of the shop rather than
+   something you can change.
+
+   It rides in the same cluster as the handle and the eye. In the opposite
+   corner it landed straight on a rail's heading — covering the title of the
+   thing it is naming, which is worse than not naming it. */
+.pe-tag {
+  align-self: center;
+  padding: 3px 7px; border-radius: 7px;
+  background: rgba(16, 28, 36, 0.78); color: #fff;
+  font-size: 9.5px; font-weight: 700; letter-spacing: 0.04em;
+  text-transform: uppercase; white-space: nowrap;
+}
+.pe-tag-off { background: #b4520a; }
+
+/* On the narrow groups even this is too much furniture for a 96px tile, so
+   there the whole cluster waits for hover or selection. */
+.pe-tabs .pe-tag, .pe-tiles .pe-tag { display: none; }
+
+/* Single-item bands.
+
+   Each group container carries the shop's own class as well as its `pe-` hook
+   — `.pe-banners.hm-banner-track`, `.pe-tiles.hm-cats`, `.pe-tabs.hm-tabs` —
+   so the page is laid out by the very rules that lay out the shop: two-up
+   banners, eight tiles to a row. Nothing is approximated here, and when the
+   shop's layout changes this follows it for free.
+
+   All that is left to do is `display: contents` on the wrapper each band's
+   component renders, so its single child becomes a direct grid item of the
+   shop's container. And a band inside a grid is inset with padding, never
+   margin: a margin would shrink the track and pull the page out of line with
+   the real one. */
+.pe-tabs .hm-tabs-bar, .pe-tabs .hm-wrap,
+.pe-tiles .hm-cats { display: contents; }
+
+/* Wrap where the shop scrolls.
+
+   `.hm-banner-track` is a single scrolling column-flow row two banners wide,
+   and `BannerCarousel` gives the shop the ‹ › arrows that move it. The editor
+   renders bare Banners into that track, so it inherited the fixed width and
+   the hidden scrollbar *without* the arrows: banners three and four existed,
+   were live on the shop, and could not be seen, selected or reordered. `.hm-tabs`
+   had the same problem once "Show hidden" pushed it past seven.
+
+   A carousel is right for a shopper, who is shown one offer at a time, and
+   wrong for an operator, who has to reach everything they can change. So these
+   two wrap here. The widths stay the shop's; only the overflow differs. */
+.pe-banners {
+  grid-auto-flow: row;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  overflow-x: visible;
+  padding-block: 4px;
+}
+.pe-banners .pe-band { margin: 0; }
+.pe-banners .hm-banner { height: 100%; }
+
+.pe-tabs { flex-wrap: wrap; overflow-x: visible; }
+.pe-tabs .pe-band { margin: 0; flex: none; }
+
+.pe-tiles .pe-band { margin: 0; }
+
+.pe-sections { display: flex; flex-direction: column; }
+.pe-sections .pe-band { margin: 2px 0; }
+
+/* The canvas body sits in the shop's own 1280px gutter, so a rail is exactly
+   as wide here as it is on the shop. */
+.pe-body { padding-block: 4px 8px; }
+
+/* One strip for every control, instead of three of them loose in the corner. */
+.pe-toolbar {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  padding: 9px 14px;
+  border: 1px solid var(--ad-line); border-radius: 12px;
+  background: var(--ad-card);
+}
+.pe-toolbar-gap { flex: 1; }
+
+.pe-showhidden {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 12.5px; font-weight: 700; color: var(--ad-muted);
+  cursor: pointer; user-select: none;
+}
+.pe-showhidden input { accent-color: var(--ad-blue); width: 15px; height: 15px; }
+
+.pe-hintbar {
+  display: flex; align-items: center; gap: 8px; margin: 0;
+  font-size: 12.5px; color: #2c6b86; line-height: 1.5;
+}
+.pe-hintbar .hm-ic { flex: none; }
+
+/* ------------------------------------------------------------- the panel */
+
+.pe-panel {
+  position: sticky; top: 16px; padding: 16px 18px 18px;
+  /* Its own scrollbar, so a Row's field list can never run off the bottom of
+     the window with no way to reach the last field. */
+  max-height: calc(100vh - 32px); overflow-y: auto;
+}
+.pe-panel-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 12px; margin-bottom: 14px;
+}
+.pe-panel-head h2 { margin: 0; font-size: 16px; font-weight: 800; }
+.pe-panel-head p { margin: 2px 0 0; font-size: 12.5px; color: var(--ad-muted); }
+.ad-switch-lbl { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; color: var(--ad-muted); }
+.ad-switch-lbl .ad-switch { border: 0; padding: 0; }
+
+.pe-form { grid-template-columns: minmax(0, 1fr); }
+.pe-hint { font-style: normal; font-size: 11.5px; font-weight: 500; color: var(--ad-muted); }
+.pe-note { margin-top: 14px; }
+
+.pe-empty {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 22px 14px; min-height: 210px; justify-content: center; text-align: center;
+}
+.pe-empty span {
+  width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center;
+  background: var(--ad-ground); color: #3f5361;
+}
+.pe-empty b { font-size: 14.5px; }
+.pe-empty p { margin: 0; font-size: 12.5px; color: var(--ad-muted); line-height: 1.55; max-width: 260px; }
+
+/* Adding a band, on the page that is open. */
+.pe-adds { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.pe-adds .ad-btn { padding-inline: 9px; }
+
+.pe-panel-foot {
+  display: flex; justify-content: flex-end;
+  margin-top: 16px; padding-top: 14px;
+  border-top: 1px solid var(--ad-line);
+}
+
+/* Where the new band landed. The scroll ends on something that looks like
+   every other band, so it says so for a moment. */
+@keyframes pe-landed {
+  0%, 60% { box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.35); }
+  100% { box-shadow: 0 0 0 3px rgba(10, 120, 171, 0); }
+}
+.pe-band.pe-landed { animation: pe-landed 1600ms var(--ad-ease); }
+@media (prefers-reduced-motion: reduce) {
+  .pe-band.pe-landed { animation: none; box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.35); }
+}
+
+/* The Trash, grouped by what things are. A flat list of eleven rows reading
+   "Banner · New banner" tells you nothing at a glance; "Banners (3)" does. */
+.pe-trash-btn em { font-style: normal; font-weight: 800; color: var(--ad-muted); }
+.pe-trash-note { margin: 0 0 6px; }
+.pe-trash-group { margin-top: 18px; }
+.pe-trash-group:first-of-type { margin-top: 10px; }
+.pe-trash-group h4 {
+  display: flex; align-items: center; gap: 8px;
+  margin: 0 0 8px; font-size: 13px; font-weight: 800;
+  text-transform: uppercase; letter-spacing: 0.04em; color: var(--ad-muted);
+}
+.pe-trash-group h4 em {
+  font-style: normal; font-size: 11.5px;
+  padding: 1px 7px; border-radius: 999px;
+  background: var(--ad-ground); color: var(--ad-muted);
+}
+.pe-trash-group ul { list-style: none; margin: 0; padding: 0; }
+.pe-trash-group li {
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 0; border-bottom: 1px solid #f1f4f7;
+}
+.pe-trash-group li:last-child { border-bottom: 0; }
+.pe-trash-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.pe-trash-txt b { font-size: 14px; font-weight: 700; }
+.pe-trash-txt small { font-size: 12px; color: var(--ad-muted); }
+
+/* Each removed thing, drawn. A name on its own is not enough to decide whether
+   to put something back: two banners called "Onam" look identical in words. */
+.pe-trash-group li { flex-direction: column; align-items: stretch; gap: 10px; padding: 14px 0; }
+.pe-trash-head { display: flex; align-items: center; gap: 12px; }
+.pe-trash-preview {
+  border: 1px solid var(--ad-line); border-radius: 12px;
+  padding: 10px; background: #fff; overflow: hidden;
+  container-type: inline-size;
+}
+.pe-trash-preview .hm-banner { min-height: 0; }
+.pe-trash-tile { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.pe-trash-tab .hm-tabs-bar, .pe-trash-tab .hm-wrap { display: contents; }
+.pe-trash-gone { margin: 0; padding: 10px 2px; font-size: 12.5px; color: var(--ad-muted); }
