@@ -17,15 +17,21 @@
    that as a tab rather than a control on every row is what stops forty-eight
    fields turning into a wall.
 
-   Not connected yet: mart369_product has no admin route, so the parts below
-   come from productPageData.js and nothing is saved. The shape is the one
-   `builder_load()` already returns, so wiring it up is a change of source.
+   The parts come from the shop: one call to /admin/product/builder, which is
+   mart369.product.field.builder_load() - the same call Odoo's own builder
+   makes. Writes go back one field at a time, debounced, through the queue in
+   editorKit.
+
+   What this does NOT do yet: a shopper's page is still assembled by
+   productDetails.js from a local sample, so switching something off changes
+   this screen and the records behind it, and not yet the shop.
    ========================================================================== */
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
+import { api } from "@/lib/api";
+import { useResource } from "@/lib/useFetch";
 import { Confirm, Empty, Icon, Search, Switch } from "./AdminUI";
-import { BandShell, Eye, SaveChip, uid } from "./editorKit";
-import { SECTIONS as SEED, SAMPLE_PRODUCT } from "./productPageData";
+import { BandShell, ErrorStrip, Eye, SaveChip, uid, useAutosave } from "./editorKit";
 import ProductDetail from "@/components/home/ProductDetail";
 import { NavContext } from "@/components/home/nav";
 import { OpenContext, WishContext } from "@/components/home/shared";
@@ -88,7 +94,7 @@ const WISH_STUB = { has: () => false, toggle: noop };
    Everything inside is inert: the stage takes no pointer events, so no click
    in the preview can reach a storefront button. The hotspots put them back
    for themselves. */
-function Canvas({ stageRef, product, hiddenKeys }) {
+function Canvas({ stageRef, product, preview, hiddenKeys }) {
   return (
     <div className="pe-canvas">
       <div className="pe-chrome" aria-hidden="true">
@@ -104,7 +110,11 @@ function Canvas({ stageRef, product, hiddenKeys }) {
                   p={product}
                   cart={{}} setQty={noop}
                   address={{ label: "Home", line: "12 Residency Road", city: "Kochi" }}
-                  variants={[]} bundle={[]} similar={[]} related={[]} recent={[]}
+                  variants={preview?.variants || []}
+                  bundle={preview?.bundle || []}
+                  similar={preview?.similar || []}
+                  related={preview?.related || []}
+                  recent={[]}
                   onBack={noop} onChangeAddress={noop} onExplore={noop}
                   onViewSimilar={noop} onVariant={noop} onEditReview={null}
                 />
@@ -178,15 +188,36 @@ function HotLayer({ stageRef, spots, selected, onSelect, onToggle, tick }) {
 /* --------------------------------------------------------------- the screen */
 
 export default function ProductPageSection({ flash }) {
-  const [sections, setSections] = useState(SEED);
-  const [scope, setScope] = useState("shop");          /* shop | product */
+  const [scope, setScope] = useState("shop");           /* shop | product */
   const [product, setProduct] = useState(null);         /* the chosen product */
   const [term, setTerm] = useState("");
+  const [matches, setMatches] = useState([]);
   const [sel, setSel] = useState(null);                 /* {kind, id} */
   const [showHidden, setShowHidden] = useState(false);
   const [confirm, setConfirm] = useState(null);
   const [tick, setTick] = useState(0);                  /* forces a re-measure */
   const stageRef = useRef(null);
+
+  /* One call for the whole screen, the same one Odoo's builder makes. */
+  const { data, loading, error, reload } = useResource(
+    "/admin/product/builder" + (product ? "?product_id=" + product.id : ""),
+    { deps: [product?.id] });
+
+  /* The server's answer, with the edits made since it arrived laid on top.
+     Typing has to show under the cursor, not a moment later when the write
+     lands - but the server stays the source of truth for everything else. */
+  const [draft, setDraft] = useState({});
+  const sections = useMemo(() => {
+    const live = data?.sections || [];
+    return live.map((sec) => ({
+      ...sec,
+      ...(draft["section:" + sec.id] || {}),
+      rows: sec.rows.map((row) => ({ ...row, ...(draft["field:" + row.id] || {}) })),
+    }));
+  }, [data, draft]);
+
+  /* A fresh load is the truth again; drop what we were holding over it. */
+  useEffect(() => { setDraft({}); }, [data]);
 
   const allRows = useMemo(
     () => sections.flatMap((s) => s.rows.map((r) => ({ ...r, section: s }))),
@@ -217,44 +248,64 @@ export default function ProductPageSection({ flash }) {
 
   /* ------------------------------------------------------------- the writes */
 
-  /* Nothing is saved yet - there is no route to save to. The chip still moves,
-     because the screen's behaviour is the thing being built, and a switch that
-     does not answer is not the same screen. */
-  const [chip, setChip] = useState({ status: "idle", error: "" });
-  const touched = () => {
-    setChip({ status: "saving", error: "" });
-    setTimeout(() => setChip({
-      status: "error",
-      error: "Not saved — the shop has no product-page route yet.",
-    }), 400);
-  };
+  const save = useAutosave({ invalidate: "/product" });
+
+  /* Applied here at once, written a moment later. A switch passes `now`:
+     there is no second keystroke coming, and a toggle that looks done but is
+     not gets pressed twice. */
+  const lay = (key, vals) => setDraft((d) => ({ ...d, [key]: { ...d[key], ...vals } }));
 
   const setSectionShow = (id, show) => {
-    setSections((list) => list.map((s) => (s.id === id ? { ...s, show } : s)));
+    lay("section:" + id, { show });
     setTick((n) => n + 1);
-    touched();
+    save.queue("section:" + id, `/admin/product/sections/${id}`, { show }, { now: true });
   };
 
-  const patchRow = (id, vals) => {
-    setSections((list) => list.map((s) => ({
-      ...s, rows: s.rows.map((r) => (r.id === id ? { ...r, ...vals } : r)),
-    })));
+  const patchField = (id, vals, { now = false } = {}) => {
+    lay("field:" + id, vals);
     setTick((n) => n + 1);
-    touched();
+    save.queue("field:" + id, `/admin/product/fields/${id}`, vals, { now });
+  };
+
+  const setState = (row, state) => {
+    if (!product) return;
+    lay("field:" + row.id, { state });
+    setTick((n) => n + 1);
+    save.queue(`field:${row.id}:p:${product.id}`,
+      `/admin/product/fields/${row.id}/state`,
+      { product_id: product.id, state }, { now: true, method: "POST" });
+  };
+
+  const setProductValue = (row, value) => {
+    if (!product) return;
+    lay("field:" + row.id, { product_value: value });
+    save.queue(`field:${row.id}:v:${product.id}`,
+      `/admin/product/fields/${row.id}/value`,
+      { product_id: product.id, value });
   };
 
   const toggleRow = (row) => {
-    if (scope === "product") {
-      const on = row.state === "follow" ? row.show : row.state === "show";
-      patchRow(row.id, { state: on ? "hide" : "show" });
-    } else {
-      patchRow(row.id, { show: !row.show });
-    }
+    const sec = sections.find((x) => x.rows.some((r) => r.id === row.id));
+    const on = isOn(row, sec);
+    if (scope === "product" && product) setState(row, on ? "hide" : "show");
+    else patchField(row.id, { show: !row.show }, { now: true });
   };
 
-  const resetRow = (row) => {
-    patchRow(row.id, { state: "follow", product_value: "" });
-    flash?.("Put back to the shop default.");
+  /* Not optimistic. `override_count` and `visible` are worked out by the
+     server, and guessing them is how a panel starts lying. */
+  const resetRow = async (row) => {
+    if (!product) return;
+    try {
+      await api(`/admin/product/fields/reset`, {
+        method: "POST",
+        body: { product_id: product.id, field_ids: [row.id] },
+      });
+      api.invalidate("/product");
+      await reload();
+      flash?.("Put back to the shop default.");
+    } catch (e) {
+      flash?.(e?.message || "That did not work.", "bad");
+    }
   };
 
   /* ----------------------------------------------------------- the hotspots */
@@ -303,13 +354,25 @@ export default function ProductPageSection({ flash }) {
 
   /* ------------------------------------------------------------ the product */
 
-  const matches = useMemo(() => {
-    const q = term.trim().toLowerCase();
-    if (!q) return [];
-    /* Nothing to search yet. When the route exists this becomes one debounced
-       request; until then the box is honest about having no catalogue. */
-    return [];
+  /* One request when the typing stops, not one per keystroke. */
+  useEffect(() => {
+    const q = term.trim();
+    if (!q) { setMatches([]); return undefined; }
+    const timer = setTimeout(async () => {
+      try {
+        const r = await api("/admin/product/products?q=" + encodeURIComponent(q));
+        setMatches(r.items || []);
+      } catch { setMatches([]); }
+    }, 300);
+    return () => clearTimeout(timer);
   }, [term]);
+
+  const pick = (item) => {
+    setProduct(item);
+    setTerm("");
+    setMatches([]);
+    setSel(null);
+  };
 
   return (
     <div className="ad-stack pe pp">
@@ -327,13 +390,15 @@ export default function ProductPageSection({ flash }) {
           <Search value={term} onChange={setTerm} placeholder="Find a product" />
           {term.trim() && (
             <div className="pp-search-menu" role="listbox">
-              {matches.length === 0 && (
-                <p className="pp-search-empty">
-                  No catalogue to search yet — this needs the shop's product-page
-                  route. The page below is the real one; the product on it is a
-                  stand-in.
-                </p>
-              )}
+              {matches.length === 0 ? (
+                <p className="pp-search-empty">Nothing matches that.</p>
+              ) : matches.map((item) => (
+                <button key={item.id} className="pp-search-row" role="option"
+                  aria-selected="false" onClick={() => pick(item)}>
+                  <span>{item.name}</span>
+                  {item.ref && <em>{item.ref}</em>}
+                </button>
+              ))}
             </div>
           )}
         </div>
@@ -368,7 +433,7 @@ export default function ProductPageSection({ flash }) {
         )}
 
         <span className="pe-toolbar-gap" />
-        <SaveChip status={chip.status} error={chip.error} />
+        <SaveChip status={save.status} error={save.error} />
       </div>
 
       <p className="pe-hintbar">
@@ -377,10 +442,23 @@ export default function ProductPageSection({ flash }) {
         everything inside goes, whatever those parts say.
       </p>
 
+      <ErrorStrip error={error} onRetry={reload} />
+
       <div className="pe-cols">
         <div className="pe-canvas-wrap">
           <div className="pp-canvas-holder">
-            <Canvas stageRef={stageRef} product={SAMPLE_PRODUCT} hiddenKeys={hiddenKeys} />
+            {data?.card ? (
+              <Canvas stageRef={stageRef} product={data.card}
+                preview={data.preview} hiddenKeys={hiddenKeys} />
+            ) : (
+              <div className="pe-canvas">
+                <div className="pe-screen hm-page">
+                  <p className="pe-loading">
+                    {loading ? "Loading the page…" : "No published product to draw."}
+                  </p>
+                </div>
+              </div>
+            )}
             <HotLayer
               stageRef={stageRef} spots={spots} tick={tick}
               selected={sel ? uid(sel.kind, sel.id) : null}
@@ -398,8 +476,9 @@ export default function ProductPageSection({ flash }) {
             sections={sections} section={section} field={field} scope={scope}
             product={product} isOn={isOn}
             onSelect={setSel} onBack={() => setSel(section ? { kind: "section", id: section.id } : null)}
-            onSectionShow={setSectionShow} onRow={patchRow} onToggleRow={toggleRow}
-            onReset={(row) => setConfirm(row)}
+            onSectionShow={setSectionShow} onField={patchField}
+            onState={setState} onValue={setProductValue}
+            onToggleRow={toggleRow} onReset={(row) => setConfirm(row)}
           />
         </aside>
       </div>
@@ -423,10 +502,12 @@ export default function ProductPageSection({ flash }) {
 
 function Panel({
   sections, section, field, scope, product, isOn,
-  onSelect, onBack, onSectionShow, onRow, onToggleRow, onReset,
+  onSelect, onBack, onSectionShow, onField, onState, onValue,
+  onToggleRow, onReset,
 }) {
   if (field && section) {
-    return <FieldPanel {...{ field, section, scope, product, isOn, onBack, onRow, onToggleRow, onReset }} />;
+    return <FieldPanel {...{ field, section, scope, product, isOn, onBack,
+      onField, onState, onValue, onToggleRow, onReset }} />;
   }
   if (section) {
     return <SectionPanel {...{ section, scope, isOn, onSelect, onSectionShow, onToggleRow }} />;
@@ -514,7 +595,8 @@ function SectionPanel({ section, scope, isOn, onSelect, onSectionShow, onToggleR
 }
 
 function FieldPanel({
-  field, section, scope, product, isOn, onBack, onRow, onToggleRow, onReset,
+  field, section, scope, product, isOn, onBack,
+  onField, onState, onValue, onToggleRow, onReset,
 }) {
   const on = isOn(field, section);
   const note = SOURCE_NOTE[field.source]?.(field);
@@ -547,14 +629,14 @@ function FieldPanel({
               {field.value_kind === "lines" ? (
                 <textarea rows={5} value={field.default_value || ""}
                   placeholder="One per line"
-                  onChange={(e) => onRow(field.id, { default_value: e.target.value })} />
+                  onChange={(e) => onField(field.id, { default_value: e.target.value })} />
               ) : field.value_kind === "bool" ? (
                 <Switch on={!!field.default_value}
-                  onChange={(v) => onRow(field.id, { default_value: v ? "1" : "" })}
+                  onChange={(v) => onField(field.id, { default_value: v ? "1" : "" })}
                   label={field.name} />
               ) : (
                 <input value={field.default_value || ""}
-                  onChange={(e) => onRow(field.id, { default_value: e.target.value })} />
+                  onChange={(e) => onField(field.id, { default_value: e.target.value })} />
               )}
               {field.value_kind === "html" && (
                 <em className="pe-hint">
@@ -588,7 +670,7 @@ function FieldPanel({
               <label key={value} className="pp-radio">
                 <input type="radio" name={"state" + field.id} value={value}
                   checked={field.state === value}
-                  onChange={() => onRow(field.id, { state: value })} />
+                  onChange={() => onState(field, value)} />
                 <span>{label}</span>
               </label>
             ))}
@@ -600,7 +682,7 @@ function FieldPanel({
               <input value={field.product_value || ""}
                 placeholder={field.default_value || "Same as the shop default"}
                 disabled={!product}
-                onChange={(e) => onRow(field.id, { product_value: e.target.value })} />
+                onChange={(e) => onValue(field, e.target.value)} />
               <em className="pe-hint">Leave it empty to use the default.</em>
             </label>
           )}

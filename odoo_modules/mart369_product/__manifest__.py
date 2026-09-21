@@ -1,6 +1,6 @@
 {
     'name': '369 Mart Product Page',
-    'version': '19.0.1.0.0',
+    'version': '19.0.1.2.0',
     'category': 'Website',
     'summary': 'Decide what the 369 Mart app shows on a product page - for '
                'every product at once, or one product at a time.',
@@ -26,8 +26,12 @@ real page. The app reads the result from ``/369mart/product/<id>``.
 """,
     'author': '369 Mart',
     'license': 'LGPL-3',
+    # mart369_home is real, not incidental: product_builder.js imports Icon
+    # and useSaveQueue from it, and product_builder.scss already assumes its
+    # variables load first. It worked only because both happened to be
+    # installed and sort alphabetically.
     'depends': [
-        'mart369','website_sale', 'rating', 'portal_rating'],
+        'mart369', 'mart369_home', 'website_sale', 'rating', 'portal_rating'],
     'data': [
         'security/ir.model.access.csv',
         'views/registry_views.xml',

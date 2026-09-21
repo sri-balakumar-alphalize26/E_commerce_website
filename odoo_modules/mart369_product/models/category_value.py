@@ -31,3 +31,20 @@ class Mart369ProductCategoryValue(models.Model):
     _categ_field_uniq = models.Constraint(
         'unique (public_categ_id, field_id)',
         'That field is already set for this category.')
+
+    def set_value(self, value):
+        """Write the wording, or remove the row when it is cleared.
+
+        An empty row is worse than no row. `_value_for` asks
+        `if self.id in cat_values` - membership, not truthiness - so a stored
+        empty string beats the shop default and blanks the field for every
+        product in the category, with nothing on screen saying why. Clearing
+        the box has to mean "this category has nothing of its own".
+        """
+        self.ensure_one()
+        value = (value or '').strip()
+        if not value:
+            self.unlink()
+            return False
+        self.value = value
+        return True

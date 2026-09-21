@@ -34,10 +34,7 @@ import ProductPageSection from "./ProductPageSection";
 export const SECTIONS = [
   { key: "dashboard", label: "Dashboard", icon: "dash", group: "Overview", live: true },
   { key: "home", label: "Home page", icon: "layers", group: "Store", live: true },
-  // Not live yet on purpose: the screen is real and the parts on it are the
-  // shop's own, but mart369_product has no admin route, so nothing it shows
-  // can be saved. The banner says so rather than the screen pretending.
-  { key: "product-page", label: "Product page", icon: "note", group: "Store" },
+  { key: "product-page", label: "Product page", icon: "note", group: "Store", live: true },
   { key: "orders", label: "Orders", icon: "box", group: "Sales" },
   { key: "customers", label: "Customers", icon: "users", group: "Sales" },
   { key: "offers", label: "Offers", icon: "ticket", group: "Sales" },

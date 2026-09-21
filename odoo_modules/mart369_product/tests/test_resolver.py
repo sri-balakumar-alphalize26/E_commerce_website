@@ -145,7 +145,10 @@ class TestResolver(TransactionCase):
     def test_builder_load_shape(self):
         """One call gives the builder the page, its rows and the product card."""
         data = self.Field.builder_load(self.product.id)
-        self.assertEqual(set(data), {'sections', 'product', 'card'})
+        # The rails the page ends with come from the shopper's own payload,
+        # so the editor draws the real thing rather than inventing products.
+        self.assertEqual(set(data),
+                         {'sections', 'product', 'card', 'preview'})
         self.assertTrue(data['sections'])
         self.assertEqual(data['product']['id'], self.product.id)
         self.assertEqual(data['card']['name'], self.product.name)
@@ -155,7 +158,11 @@ class TestResolver(TransactionCase):
         row = [r for r in info['rows'] if r['key'] == 'manufacturer_address'][0]
         # Each row says what it is, what it says, and whether it shows - the
         # mock needs all three to draw a hidden field greyed rather than gone.
-        self.assertLessEqual({'key', 'name', 'value', 'visible', 'state', 'show'},
+        self.assertLessEqual({'key', 'name', 'value', 'visible', 'state', 'show',
+                              # The raw wording, kept apart from the displayed
+                              # value: that one is run through _as_text and
+                              # must never be written back.
+                              'product_value', 'value_source', 'has_override'},
                              set(row))
         self.assertEqual(row['state'], 'follow')
 

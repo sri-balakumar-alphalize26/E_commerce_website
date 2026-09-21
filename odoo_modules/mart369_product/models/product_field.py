@@ -1,6 +1,7 @@
 import operator as _op
 
 from odoo import _, api, fields, models
+from odoo.exceptions import UserError
 
 OPERATORS = {
     '=': _op.eq, '!=': _op.ne, '>': _op.gt, '>=': _op.ge,
@@ -224,6 +225,67 @@ class Mart369ProductField(models.Model):
 
     # ------------------------------------------------------- the builder
 
+    def _builder_row(self, product=None, overrides=None, cat_values=None,
+                     cat_rows=None):
+        """One field, as every screen that edits it sees it.
+
+        Extracted so `builder_load` and the routes that write a single row
+        answer with the same shape by construction. Two dicts that drift is
+        how a panel starts showing one thing and saving another.
+        """
+        self.ensure_one()
+        Page = self.env['mart369.product.page']
+        row = {
+            'id': self.id, 'key': self.key, 'name': self.name,
+            'section_id': self.section_id.id,
+            'sequence': self.sequence, 'show': self.show,
+            'source': self.source, 'odoo_field': self.odoo_field or '',
+            'default_value': self.default_value or '',
+            'value_kind': self.value_kind, 'per_product': self.per_product,
+            'note': self.note or '', 'override_count': self.override_count,
+            'state': 'follow', 'visible': self.show, 'value': '',
+            # The raw per-product wording. `value` above is run through
+            # _as_text for display, so it is not what an editor may write
+            # back - a bool would return as "Yes", html would be flattened.
+            'product_value': '', 'has_override': False,
+            'value_source': 'default',
+            'category_values': list((cat_rows or {}).get(self.id, [])),
+        }
+        if not product:
+            return row
+
+        override = (overrides or {}).get((product.id, self.id))
+        row['state'] = self._state_for(product, overrides)
+        row['visible'] = self._visible_for(product, overrides)
+        row['value'] = Page._as_text(
+            self, self._value_for(product, overrides, cat_values), product)
+        row['product_value'] = (override.value or '') if override else ''
+        row['has_override'] = bool(override)
+        row['value_source'] = self._value_source_for(
+            product, overrides, cat_values)
+        return row
+
+    def _value_source_for(self, product, overrides=None, category_values=None):
+        """Which of the four layers the value actually came from.
+
+        The console offers three editors for the same field - shop, category
+        and product - and without this they are indistinguishable: you cannot
+        tell whether the words on screen are the ones you are about to edit
+        or ones inherited from elsewhere. Same ladder as `_value_for`.
+        """
+        self.ensure_one()
+        override = (overrides or {}).get((product.id, self.id))
+        if override and override.value:
+            return 'product'
+        if self.source == 'odoo' and self.odoo_field:
+            return 'odoo'
+        cat_values = category_values
+        if cat_values is None:
+            cat_values = self._category_values(product)
+        if self.id in cat_values:
+            return 'category'
+        return 'default'
+
     @api.model
     def builder_load(self, product_id=None):
         """Everything the Product Page screen draws from, in one call.
@@ -241,7 +303,22 @@ class Mart369ProductField(models.Model):
         fields_all = self.search([])
         Page = self.env['mart369.product.page']
 
-        overrides, cat_values, card = {}, {}, None
+        # One read for the whole recordset. Touched per field inside the loop
+        # this is one _read_group each, and there are about fifty.
+        fields_all.mapped('override_count')
+
+        # Every category value, grouped by field, in one search rather than
+        # one search per field.
+        cat_rows = {}
+        for row in self.env['mart369.product.category.value'].search([]):
+            cat_rows.setdefault(row.field_id.id, []).append({
+                'id': row.id,
+                'categ_id': row.public_categ_id.id,
+                'categ_name': row.public_categ_id.display_name,
+                'value': row.value or '',
+            })
+
+        overrides, cat_values, card, page = {}, {}, None, {}
         if product:
             overrides = {
                 (product.id, o.field_id.id): o
@@ -249,29 +326,15 @@ class Mart369ProductField(models.Model):
                     [('product_tmpl_id', '=', product.id)])
             }
             cat_values = fields_all[:1]._category_values(product) if fields_all else {}
-            helper = self.env['mart369.serializable'].sudo()
-            ctx = helper._price_context_for(product)
-            card = helper._serialize_product(
-                product, None, ctx,
-                'all' if product.mart_delivery_text else 'quick')
+            # The shopper's own payload. The sudo() is the model's, for a
+            # preview read; the admin routes on top of this add none.
+            page = Page.sudo().payload(product)
+            card = page['p']
 
         by_section = {}
         for field in fields_all:
-            row = {
-                'id': field.id, 'key': field.key, 'name': field.name,
-                'sequence': field.sequence, 'show': field.show,
-                'source': field.source, 'odoo_field': field.odoo_field or '',
-                'default_value': field.default_value or '',
-                'value_kind': field.value_kind, 'per_product': field.per_product,
-                'note': field.note or '', 'override_count': field.override_count,
-                'state': 'follow', 'visible': field.show, 'value': '',
-            }
-            if product:
-                row['state'] = field._state_for(product, overrides)
-                row['visible'] = field._visible_for(product, overrides)
-                value = field._value_for(product, overrides, cat_values)
-                row['value'] = Page._as_text(field, value, product)
-            by_section.setdefault(field.section_id.id, []).append(row)
+            by_section.setdefault(field.section_id.id, []).append(
+                field._builder_row(product, overrides, cat_values, cat_rows))
 
         return {
             'sections': [{
@@ -281,8 +344,20 @@ class Mart369ProductField(models.Model):
             } for s in sections],
             'product': {
                 'id': product.id, 'name': product.display_name,
+                'is_published': product.is_published,
+                'categories': [{'id': c.id, 'name': c.display_name}
+                               for c in product.public_categ_ids],
             } if product else None,
             'card': card,
+            # The rails the page ends with. Without them the editor has no
+            # "frequently bought together" to put a handle on, and inventing
+            # products on an admin screen is not an option.
+            'preview': {
+                'variants': page.get('variants', []),
+                'bundle': page.get('bundle', []),
+                'similar': page.get('similar', []),
+                'related': page.get('related', []),
+            },
         }
 
     @api.model
@@ -293,6 +368,11 @@ class Mart369ProductField(models.Model):
         follows everywhere should have nothing of its own, so that changing a
         shop-wide default still reaches it.
         """
+        if state not in ('follow', 'show', 'hide'):
+            # Raised, not written: otherwise a bad state reaches the selection
+            # constraint and surfaces as a 500 rather than "that is not one of
+            # the three choices".
+            raise ValueError(_("'%s' is not follow, show or hide.", state))
         Override = self.env['mart369.product.override']
         row = Override.search([
             ('product_tmpl_id', '=', product_id), ('field_id', '=', field_id),
@@ -310,6 +390,50 @@ class Mart369ProductField(models.Model):
                 'product_tmpl_id': product_id,
                 'field_id': field_id,
                 'state': state,
+            })
+        return True
+
+    @api.model
+    def set_product_value(self, field_id, product_id, value):
+        """Wording for one product only.
+
+        Two rules hold this together, and both mirror `set_product_state`:
+
+        * Typing wording never forces the field visible. A new row is created
+          as 'follow', so the shop-wide switch still decides who sees it.
+        * Clearing the wording of a field that is following removes the row.
+          A 'follow' row with nothing in it is a tombstone: it makes
+          `override_count` and the "differs from the default" filter both
+          claim this product is special when it is not. An explicit show or
+          hide is a separate decision and survives the words being cleared.
+        """
+        field = self.browse(field_id).exists()
+        if not field:
+            raise ValueError(_('No such field.'))
+        if not field.per_product:
+            raise UserError(_('This field is the same for every product.'))
+
+        Override = self.env['mart369.product.override']
+        row = Override.search([
+            ('product_tmpl_id', '=', product_id), ('field_id', '=', field_id),
+        ], limit=1)
+        value = (value or '').strip()
+
+        if not value:
+            if row and row.state == 'follow':
+                row.unlink()
+            elif row:
+                row.value = False
+            return True
+
+        if row:
+            row.value = value
+        else:
+            Override.create({
+                'product_tmpl_id': product_id,
+                'field_id': field_id,
+                'value': value,
+                'state': 'follow',
             })
         return True
 
