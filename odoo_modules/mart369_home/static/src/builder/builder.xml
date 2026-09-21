@@ -11,7 +11,11 @@
         <Layout display="{ controlPanel: {} }" className="'o_mart369_builder'">
             <t t-set-slot="layout-buttons">
                 <div class="mart-topbar">
+                    <!-- The control. Captioned, because the shop's own toggle
+                         is drawn a few inches below inside the preview and the
+                         two were being mistaken for each other. -->
                     <div class="mart-modes" t-if="d" t-att-data-mode="state.modeKey">
+                        <span class="mart-modes-cap">Editing</span>
                         <button t-foreach="d.modes" t-as="m" t-key="m.id"
                                 t-attf-class="{{ m.key === state.modeKey ? 'mart-on' : '' }}"
                                 t-on-click="() => this.switchMode(m.key)">
@@ -178,9 +182,21 @@
                 <a class="hm-logo"><span class="hm-logo-mark">369</span>
                     <svg viewBox="0 0 24 24" class="hm-logo-arrow" aria-hidden="true"><path d="M6 18 18 6M9 6h9v9"/></svg>
                     <span>Mart</span></a>
-                <div class="hm-mode" role="tablist" t-att-data-mode="state.modeKey">
-                    <button t-att-aria-selected="state.modeKey === 'quick' ? 'true' : 'false'"><Icon n="'bolt'" size="13" class="'hm-fill'"/><i>Quick</i></button>
-                    <button t-att-aria-selected="state.modeKey === 'all' ? 'true' : 'false'"><Icon n="'grid'" size="13"/>Express</button>
+                <!-- The shop's own toggle, drawn. Not a control: the one that
+                     switches what you are editing is in the top bar, captioned
+                     "Editing". This one had "Quick" and "Express" written into
+                     it, which stopped being true the moment those became
+                     editable - so it reads them from the page like everything
+                     else here. -->
+                <div class="hm-mode" role="tablist" aria-hidden="true"
+                     t-att-data-mode="state.modeKey">
+                    <button t-foreach="d.modes" t-as="m" t-key="m.id"
+                            t-att-aria-selected="state.modeKey === m.key ? 'true' : 'false'">
+                        <Icon n="m.icon || (m.key === 'quick' ? 'bolt' : 'grid')" size="13"
+                              class="m.key === 'quick' ? 'hm-fill' : ''"/>
+                        <i t-if="m.key === 'quick'" t-esc="m.label || 'Quick'"/>
+                        <t t-else="" t-esc="m.label || 'Express'"/>
+                    </button>
                 </div>
                 <button class="hm-loc">
                     <span class="hm-loc-ic"><Icon n="state.modeKey === 'quick' ? 'bolt' : 'truck'" size="18" class="state.modeKey === 'quick' ? 'hm-fill' : ''"/></span>

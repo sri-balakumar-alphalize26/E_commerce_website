@@ -21,10 +21,24 @@
     --mart-thumb: linear-gradient(135deg, #{$mart-orange}, #{$mart-orange-deep});
     --mart-thumb-shadow: rgba(247, 147, 30, 0.45);
     display: inline-flex;
+    align-items: center;
     padding: 3px;
     border-radius: 999px;
     background: $mart-soft;
     border: 1px solid $mart-line;
+
+    // The shop's own Quick/Express toggle is drawn a few inches below, inside
+    // the preview, and the two were being taken for the same control. This one
+    // says what it is.
+    .mart-modes-cap {
+        padding: 0 8px 0 9px;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: $mart-muted;
+        pointer-events: none;
+    }
 
     &[data-mode="all"] {
         --mart-thumb: linear-gradient(135deg, #{$mart-blue}, #{$mart-blue-deep});
