@@ -1,6 +1,6 @@
 {
     'name': '369 Mart Home Page',
-    'version': '19.0.1.2.0',
+    'version': '19.0.1.3.0',
     'category': 'Website',
     'summary': 'Configure the 369 Mart app home page - banners, sections and tiles - without touching code.',
     'description': """
@@ -38,6 +38,7 @@ The app reads it all from ``/369mart/home`` as JSON.
         'views/home_config_views.xml',
         'views/product_template_views.xml',
         'views/builder_views.xml',
+        'views/home_pages_views.xml',
         'views/menus.xml',
         'data/home_default_data.xml',
         'data/trash_cron.xml',

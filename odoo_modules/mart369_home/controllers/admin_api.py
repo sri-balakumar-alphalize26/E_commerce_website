@@ -67,25 +67,9 @@ class Mart369HomeAdminApi(http.Controller):
         return page
 
     def _serialize(self, page):
-        return {
-            'id': str(page.id),
-            'name': page.name or '',
-            'note': page.note or '',
-            'isCurrent': page.is_current,
-            'state': page.state,
-            'stateNote': page.state_note or '',
-            'startsOn': page.starts_on.isoformat() if page.starts_on else None,
-            'endsOn': page.ends_on.isoformat() if page.ends_on else None,
-            'bands': {
-                mode.key: {
-                    'banners': len(mode.banner_ids._live()),
-                    'tabs': len(mode.tab_ids._live()),
-                    'tiles': len(mode.tile_ids._live()),
-                    'sections': len(mode.section_ids._live()),
-                }
-                for mode in page.mode_ids
-            },
-        }
+        """One saved page as a card. Shape lives on the model, so the pages
+        screen in Odoo and the console draw the same thing."""
+        return page._serialize_card()
 
     # Which fields of a band the admin may change. A list rather than "write
     # whatever arrived": a form that can set any field can set `key`, which
@@ -250,52 +234,16 @@ class Mart369HomeAdminApi(http.Controller):
                 mode, version_id=page.id)
         except (AccessError, UserError) as exc:
             return self._fail(str(exc), status=404)
+        # `preview`, `trash_preview`, `page` and each Trash row's `kind` are
+        # assembled by `builder_load` itself, so this route and Odoo's own
+        # builder cannot answer "what is on this page?" differently.
         data['ok'] = True
-        data['page'] = self._serialize(page)
-        data['preview'] = self._preview(page, mode)
-        data['trash_preview'] = self._trash_preview(page, mode)
-        # The Trash list names Odoo models; the console speaks in kinds. Say
-        # both, so the screen does not have to keep its own copy of the mapping
-        # and drift from this one.
-        by_model = {model: kind for kind, model in self.BAND_MODEL.items()}
-        for row in data.get('trash', []):
-            row['kind'] = by_model.get(row.get('model'), '')
         return self._json(data)
 
     def _drawable(self, mode, pick):
-        """Bands serialized the way the app receives them, so the console can
-        draw them with the shop's own components.
-
-        `pick` chooses which ones - `_kept()` for the page itself, `_trashed()`
-        for the Trash. Both go through here rather than through two
-        near-identical loops, because a Trash that describes a banner in words
-        while the page draws it is two different answers to "what is this?".
-        """
-        sections = pick(mode.section_ids).sorted('sequence')
-        price_ctx = mode._price_context(sections)
-
-        def rows(records, serialize, stub=None):
-            out = []
-            for record in pick(records).sorted('sequence'):
-                # A row with nothing in it serializes to None, because the app
-                # should not draw a bare heading. The editor still has to show
-                # it, or an empty row becomes invisible and unfixable.
-                vals = serialize(record) or (stub(record) if stub else None)
-                if not vals:
-                    continue
-                out.append(dict(vals, rid=record.id, active=record.active))
-            return out
-
-        return {
-            'tabs': rows(mode.tab_ids, lambda r: r._serialize()),
-            'banners': rows(mode.banner_ids, lambda r: r._serialize()),
-            'categories': rows(mode.tile_ids, lambda r: r._serialize()),
-            'sections': rows(
-                sections, lambda r: r._serialize(price_ctx),
-                stub=lambda r: {'key': r.key or 'sec%s' % r.id,
-                                'title': r.name or '', 'subtitle': r.subtitle or '',
-                                'items': [], 'empty': True}),
-        }
+        """Bands serialized the way the app receives them. Lives on the mode -
+        see `mart369.home.mode._drawable`, which the Odoo builder reads too."""
+        return mode._drawable(pick)
 
     def _preview(self, page, mode_key):
         """The app's own payload for this tab, hidden bands included."""
@@ -303,33 +251,15 @@ class Mart369HomeAdminApi(http.Controller):
             active_test=False)._get(mode_key, version=page)
         if not mode:
             return {}
-        return dict(self._drawable(mode, lambda records: records._kept()),
-                    freeDeliveryAt=mode.free_delivery_at)
+        return mode._preview_payload()
 
     def _trash_preview(self, page, mode_key):
-        """Everything in the Trash, drawn rather than described.
-
-        The Trash list on its own says "Banner - New banner", which is not
-        enough to decide whether to put something back: two banners called
-        "Onam" tell you nothing, and a row's name says nothing about what was
-        in it. So the same serialized payload the page is drawn from comes back
-        for removed bands too, keyed by kind, and the console renders them with
-        the shop's own components.
-        """
+        """Everything in the Trash, drawn rather than described."""
         mode = request.env['mart369.home.mode'].with_context(
             active_test=False)._get(mode_key, version=page)
         if not mode:
             return {}
-        drawn = self._drawable(mode, lambda records: records._trashed())
-        # Keyed by "kind:id", because the Trash list is flat and each row needs
-        # to find its own drawing without the console re-deriving the mapping.
-        group_kind = {'tabs': 'tab', 'banners': 'banner',
-                      'categories': 'tile', 'sections': 'section'}
-        out = {}
-        for group, kind in group_kind.items():
-            for vals in drawn.get(group, []):
-                out['%s:%s' % (kind, vals['rid'])] = vals
-        return out
+        return mode._trash_preview_map()
 
     # What a brand-new band is, before anybody has typed anything into it.
     #

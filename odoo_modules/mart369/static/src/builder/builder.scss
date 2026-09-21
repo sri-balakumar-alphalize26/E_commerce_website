@@ -270,6 +270,108 @@
         > .hm-page { padding-top: 34px; padding-bottom: 20px; }
     }
 
+    // ------------------------------------------------------- the desk canvas
+    //
+    // The home editor draws the page the width a shopper on a desktop sees
+    // it, in a browser frame, the way the admin console does. The phone above
+    // is untouched: the product editor and both tours still use it.
+    //
+    // The one thing that makes this cheap: the generated storefront CSS has
+    // every `@media (max-width: N)` rewritten to `@container mart-phone
+    // (max-width: N)`, and a container query resolves against the NEAREST
+    // ancestor carrying that name. So a wide box named `mart-phone` simply
+    // fails all three of the shop's breakpoints (1100 / 860 / 560) and the
+    // desktop base rules apply, with no second copy of the stylesheet.
+    //
+    // INVARIANT: never nest a .mart-canvas inside a .mart-phone or the other
+    // way round. The inner one would win the container lookup silently.
+    .mart-stage-wide {
+        // The phone is a fixed 390px, so its stage does not grow. This one
+        // must: below ~1101px of *content* the shop's 1100px rule fires and
+        // the category strip drops from eight tiles to four.
+        flex: 1 1 auto;
+        min-width: 0;
+        align-items: stretch;
+
+        .mart-legend { max-width: none; }
+    }
+
+    .mart-canvas {
+        width: 100%;
+        max-width: 1280px;   // .hm-wrap's own cap, so the page is not stretched
+        border: 1px solid $mart-line;
+        border-radius: 14px;
+        background: #fff;
+        overflow: hidden;
+        box-shadow: 0 2px 10px rgba(16, 28, 36, 0.06);
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+    }
+
+    // A browser bar, so it reads as "this is the shop" and not as another
+    // Odoo card that happens to have pictures in it.
+    .mart-chrome {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex: 0 0 auto;
+        padding: 9px 12px;
+        border-bottom: 1px solid $mart-line;
+        background: #f6f8fa;
+
+        .mart-dots {
+            display: flex;
+            gap: 5px;
+
+            i { width: 9px; height: 9px; border-radius: 50%; background: #cbd8e1; }
+        }
+
+        .mart-url {
+            flex: 1;
+            min-width: 0;
+            height: 24px;
+            padding: 0 10px;
+            display: flex;
+            align-items: center;
+            border-radius: 7px;
+            background: #fff;
+            border: 1px solid $mart-line;
+            font-size: 11.5px;
+            color: $mart-muted;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+    }
+
+    .mart-canvas-screen {
+        // The container goes here, not on the frame: this is the box whose
+        // content width is the page width, below the chrome bar.
+        container: mart-phone / inline-size;
+        position: relative;
+        flex: 1 1 auto;
+        // The generator rewrites the shop's `min-height: 100vh` to `100%`,
+        // which resolves to 0 against an auto-height parent.
+        min-height: 460px;
+        overflow: hidden;
+        background: #fff;
+        // Belt and braces. `container-type` already makes this a containing
+        // block for fixed children, but this also clips them to the rounded
+        // corners and covers .hm-toast / .hm-fly-* if they are ever drawn.
+        transform: translateZ(0);
+    }
+
+    .mart-canvas-scroll {
+        height: 100%;
+        overflow-y: auto;
+        overflow-x: hidden;
+        scrollbar-width: none;
+        &::-webkit-scrollbar { display: none; }
+
+        > .hm-page { padding: 10px 0 24px; }
+    }
+
     // The app pins these two over the page. Here they would cover a band and
     // make it unclickable, so they sit at the end of the page instead. Their
     // look is unchanged - only the positioning.
@@ -814,4 +916,495 @@
         .mart-stage { align-items: center; }
         .mart-panel { position: static; max-height: none; max-width: none; min-width: 0; }
     }
+}
+
+// ========================================================== editor chrome
+//
+// The home editor and the saved-pages screen. Both are builders, so their
+// chrome lives here with the rest of it rather than in a second stylesheet.
+// Reopening .mart-builder rather than editing the block above keeps the
+// phone builder's rules provably untouched.
+.mart-builder {
+
+    .pe-cols {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 340px;
+        gap: 18px;
+        align-items: start;
+        width: 100%;
+        min-width: 0;
+    }
+
+    .pe-canvas-wrap {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        min-width: 0;
+    }
+
+    .pe-canvas-note, .pe-hintbar {
+        margin: 0;
+        font-size: 12px;
+        color: $mart-muted;
+        line-height: 1.5;
+    }
+
+    .pe-head {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+
+        h1 { margin: 0; font-size: 19px; font-weight: 800; }
+        small { color: $mart-muted; font-size: 12px; }
+    }
+
+    .pe-toolbar {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
+
+        .pe-toolbar-gap { flex: 1 1 auto; }
+        .pe-adds { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+    }
+
+    .pe-showhidden {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin: 0;
+        font-size: 12.5px;
+        color: $mart-muted;
+        cursor: pointer;
+    }
+
+    .pe-trash-btn em {
+        font-style: normal;
+        font-weight: 800;
+        margin-left: 4px;
+        padding: 0 6px;
+        border-radius: 999px;
+        background: $mart-soft;
+        font-size: 11px;
+    }
+
+    .pe-error {
+        margin: 0;
+        padding: 9px 14px;
+        border-radius: 10px;
+        background: #fdecea;
+        border: 1px solid #f3c5c0;
+        color: #8d2b22;
+        font-size: 13px;
+    }
+
+    .pe-loading {
+        margin: 0;
+        padding: 22px 16px;
+        font-size: 13px;
+        color: $mart-muted;
+        text-align: center;
+    }
+
+    .pe-row-empty {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        padding: 22px 16px;
+        font-size: 13px;
+        color: $mart-muted;
+
+        b { color: $mart-ink; font-size: 14px; }
+    }
+
+    // A band: the thing itself, drawn, with its handles floating over it.
+    // The phone builder wraps whole regions; this one wraps each thing,
+    // because on a wide page you can reach the fifth banner, so you have to
+    // be able to click it.
+    .pe-band {
+        position: relative;
+        border-radius: 12px;
+        outline: 2px solid transparent;
+        outline-offset: 2px;
+        transition: outline-color 140ms ease, opacity 140ms ease;
+        cursor: pointer;
+
+        &:hover { outline-color: rgba(10, 120, 171, 0.35); }
+        &.pe-on { outline-color: $mart-blue; }
+        &.pe-hidden { opacity: 0.45; }
+        &.pe-band-h { flex: 0 0 auto; }
+
+        // The drawing is a drawing. Its own buttons and links must not answer.
+        .pe-band-in { pointer-events: none; }
+
+        .pe-tools {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            z-index: 5;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            opacity: 0.45;
+            transition: opacity 140ms ease;
+        }
+        &:hover .pe-tools, &.pe-on .pe-tools { opacity: 1; }
+        .pe-tools:focus-within { opacity: 1; }
+    }
+
+    .pe-tag {
+        padding: 1px 7px;
+        border-radius: 999px;
+        background: rgba(19, 33, 43, 0.72);
+        color: #fff;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.02em;
+        white-space: nowrap;
+    }
+    .pe-tag-off { background: $mart-orange; }
+
+    .pe-tool {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        padding: 0;
+        border: 1px solid $mart-line;
+        border-radius: 7px;
+        background: #fff;
+        color: $mart-ink;
+        cursor: pointer;
+        pointer-events: auto;
+
+        &:hover { border-color: $mart-blue; color: $mart-blue; }
+    }
+    .pe-grip {
+        cursor: grab;
+        &:active { cursor: grabbing; }
+
+        // The grip is drawn as six dots, so it wants a fill. Everything else
+        // in here is a stroked .hm-ic from the shop's own set - filling those
+        // turns the eye into a solid blob.
+        svg { fill: currentColor; }
+    }
+
+    // Tabs and tiles are small; a kind label would cover the thing itself.
+    .hm-tabs .pe-tag, .hm-cats .pe-tag { display: none; }
+
+    // A tab pill is barely taller than its own text, so the grip and the eye
+    // covered the word they belong to. Give them a lane of their own above the
+    // pill, and keep them hidden until the pointer or the keyboard is on that
+    // tab - seven grips floating over the tab strip is its own kind of noise.
+    .hm-tabs-bar { padding-top: 26px; }
+    .hm-tabs .pe-band {
+        .pe-tools { top: -24px; right: 2px; opacity: 0; }
+        &:hover .pe-tools, &.pe-on .pe-tools { opacity: 1; }
+        .pe-tools:focus-within { opacity: 1; }
+    }
+
+    // Something just added, found.
+    .pe-landed { animation: mart-landed 1600ms ease-out; }
+
+    .pe-switch-lbl {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0;
+        font-size: 12px;
+        color: $mart-muted;
+    }
+
+    .pe-hint {
+        font-style: normal;
+        font-size: 11.5px;
+        color: $mart-muted;
+    }
+
+    .pe-panel-foot {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 14px 16px;
+        border-top: 1px solid $mart-line;
+    }
+    .pe-panel-note {
+        margin: 0;
+        font-size: 11.5px;
+        color: $mart-muted;
+        line-height: 1.5;
+    }
+
+    .pe-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 11.5px;
+        font-weight: 700;
+        background: $mart-soft;
+        color: $mart-muted;
+    }
+    .pe-chip-saved { background: #e7f5ec; color: #1f8a3c; }
+    .pe-chip-error { background: #fdecea; color: #8d2b22; }
+
+    // ---------------------------------------------------------- the Trash
+    .pe-drawer-back {
+        position: fixed;
+        inset: 0;
+        z-index: 1040;
+        background: rgba(19, 33, 43, 0.35);
+    }
+    .pe-drawer {
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 1041;
+        // Interpolated: libsass implements min() itself and refuses to mix
+        // px with vw. The browser has no such trouble.
+        width: #{"min(460px, 92vw)"};
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding: 18px;
+        overflow-y: auto;
+        background: #fff;
+        box-shadow: -18px 0 50px -30px rgba(19, 33, 43, 0.7);
+
+        h2 { margin: 0; font-size: 17px; font-weight: 800; }
+        p { margin: 0; font-size: 12px; color: $mart-muted; }
+    }
+    .pe-drawer-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+    }
+    .pe-trash-empty {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding: 28px 16px;
+        text-align: center;
+        color: $mart-muted;
+        font-size: 13px;
+
+        b { color: $mart-ink; font-size: 14px; }
+    }
+    .pe-trash-note { font-size: 12px; color: $mart-muted; }
+    .pe-trash-group {
+        h4 {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin: 14px 0 6px;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: $mart-muted;
+
+            em {
+                font-style: normal;
+                padding: 0 6px;
+                border-radius: 999px;
+                background: $mart-soft;
+                color: $mart-ink;
+            }
+        }
+        ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: grid;
+            gap: 10px;
+        }
+        li {
+            border: 1px solid $mart-line;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #fff;
+        }
+    }
+    .pe-trash-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 10px 12px;
+
+        b { font-size: 13.5px; }
+        small { display: block; font-size: 11px; color: $mart-muted; }
+    }
+    // The removed thing, drawn. A list that only names it does not tell you
+    // whether you want it back - two banners called "Onam" look identical.
+    // Its own container, so the shop's rules lay out against this box.
+    .pe-trash-preview {
+        container: mart-phone / inline-size;
+        padding: 10px 12px 14px;
+        border-top: 1px dashed $mart-line;
+        background: #fbfcfd;
+        pointer-events: none;
+    }
+
+    // --------------------------------------------------- the pages screen
+    .mart-pages-inner {
+        width: 100%;
+        max-width: 1100px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+    .mart-pages-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+
+        h1 { margin: 0; font-size: 21px; font-weight: 800; }
+        p { margin: 4px 0 0; max-width: 60ch; font-size: 13px; color: $mart-muted; }
+    }
+    .mart-pages-error, .mart-pages-empty {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin: 0;
+        padding: 16px;
+        border-radius: 12px;
+        background: #fff;
+        border: 1px solid $mart-line;
+        font-size: 13px;
+        color: $mart-muted;
+
+        b { color: $mart-ink; font-size: 14px; }
+    }
+    .mart-pages-error {
+        background: #fdecea;
+        border-color: #f3c5c0;
+        color: #8d2b22;
+    }
+    .mart-pages-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+        gap: 14px;
+    }
+    .mart-pagecard {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding: 16px;
+        border: 1px solid $mart-line;
+        border-radius: 14px;
+        background: #fff;
+        box-shadow: 0 2px 10px rgba(16, 28, 36, 0.05);
+
+        // The page shoppers are looking at right now.
+        &.mart-pagecard-on { border-color: #1f8a3c; }
+
+        h2 { margin: 0; font-size: 16px; font-weight: 800; }
+        p { margin: 2px 0 0; font-size: 12px; color: $mart-muted; }
+    }
+    .mart-pagecard-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 10px;
+    }
+    .mart-pagecard-bands {
+        display: grid;
+        gap: 4px;
+        padding: 10px 12px;
+        border-radius: 10px;
+        background: $mart-soft;
+        font-size: 11.5px;
+
+        .mart-pagecard-mode {
+            display: flex;
+            gap: 8px;
+
+            b { min-width: 58px; }
+            span { color: $mart-muted; }
+        }
+    }
+    .mart-pagecard-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+    .mart-pill {
+        padding: 2px 9px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 700;
+        white-space: nowrap;
+        background: $mart-soft;
+        color: $mart-muted;
+    }
+    .mart-pill-green { background: #e7f5ec; color: #1f8a3c; }
+    .mart-pill-blue { background: #e6f2f8; color: #0a78ab; }
+
+    .mart-sched {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 12px;
+        border-radius: 10px;
+        background: $mart-soft;
+
+        p { margin: 0; font-size: 11.5px; color: $mart-muted; }
+    }
+    .mart-sched-row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+
+        label { display: flex; flex-direction: column; gap: 3px; font-size: 11.5px; }
+        input {
+            padding: 5px 8px;
+            border: 1px solid $mart-line;
+            border-radius: 8px;
+            font-size: 12.5px;
+        }
+    }
+    .mart-sched-actions { display: flex; gap: 6px; }
+
+    .mart-link {
+        border: 0;
+        background: none;
+        padding: 0 0 0 6px;
+        color: $mart-blue;
+        font: inherit;
+        font-weight: 700;
+        text-decoration: underline;
+        cursor: pointer;
+    }
+
+    // Below this the panel cannot sit beside the canvas without squeezing it
+    // under the shop's own 1100px rule - so it goes underneath instead.
+    @media (max-width: 1180px) {
+        .pe-cols { grid-template-columns: minmax(0, 1fr); }
+    }
+}
+
+// The phone builder is a row: phone on the left, panel on the right. These
+// two are pages - a header, a toolbar and then their own columns - so they
+// stack. Without this they inherit the row and the canvas is squeezed to a
+// few hundred pixels, which silently trips the shop's own 1100px rule and
+// draws four category tiles instead of eight.
+.mart-builder.pe,
+.mart-builder.mart-pages {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+}
+
+@keyframes mart-landed {
+    0%   { outline-color: $mart-orange; background: rgba(247, 147, 30, 0.14); }
+    100% { outline-color: $mart-blue;   background: transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .mart-builder .pe-landed { animation: none; }
 }

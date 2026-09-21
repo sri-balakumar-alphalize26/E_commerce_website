@@ -172,6 +172,86 @@ class Mart369HomeMode(models.Model):
             rows += [r._trash_vals() for r in records._trashed()]
         return sorted(rows, key=lambda r: r['deleted_at'] or '', reverse=True)
 
+    # ------------------------------------------------ drawn, not described
+
+    # Which kind each band model is called on the screens. The REST console
+    # and the builder both speak in kinds; the Trash list names models. Say it
+    # once, here, next to the records themselves.
+    BAND_KIND = {
+        'mart369.home.banner': 'banner',
+        'mart369.home.tab': 'tab',
+        'mart369.home.tile': 'tile',
+        'mart369.home.section': 'section',
+    }
+
+    def _drawable(self, pick):
+        """Bands serialized the way the app receives them, so a builder can
+        draw them with the shop's own components.
+
+        `pick` chooses which ones - `_kept()` for the page itself, `_trashed()`
+        for the Trash. Both go through here rather than through two
+        near-identical loops, because a Trash that describes a banner in words
+        while the page draws it is two different answers to "what is this?".
+
+        This sits on the mode rather than on a controller so the REST console
+        and the Odoo builder draw from one body of code. Two copies would
+        drift, and the drift would surface as "the preview looks different
+        depending on which screen you opened it from".
+        """
+        self.ensure_one()
+        sections = pick(self.section_ids).sorted('sequence')
+        price_ctx = self._price_context(sections)
+
+        def rows(records, serialize, stub=None):
+            out = []
+            for record in pick(records).sorted('sequence'):
+                # A row with nothing in it serializes to None, because the app
+                # should not draw a bare heading. The editor still has to show
+                # it, or an empty row becomes invisible and unfixable.
+                vals = serialize(record) or (stub(record) if stub else None)
+                if not vals:
+                    continue
+                out.append(dict(vals, rid=record.id, active=record.active))
+            return out
+
+        return {
+            'tabs': rows(self.tab_ids, lambda r: r._serialize()),
+            'banners': rows(self.banner_ids, lambda r: r._serialize()),
+            'categories': rows(self.tile_ids, lambda r: r._serialize()),
+            'sections': rows(
+                sections, lambda r: r._serialize(price_ctx),
+                stub=lambda r: {'key': r.key or 'sec%s' % r.id,
+                                'title': r.name or '', 'subtitle': r.subtitle or '',
+                                'items': [], 'empty': True}),
+        }
+
+    def _preview_payload(self):
+        """The app's own payload for this tab, hidden bands included."""
+        self.ensure_one()
+        return dict(self._drawable(lambda records: records._kept()),
+                    freeDeliveryAt=self.free_delivery_at)
+
+    def _trash_preview_map(self):
+        """Everything in the Trash, drawn rather than described.
+
+        The Trash list on its own says "Banner - New banner", which is not
+        enough to decide whether to put something back: two banners called
+        "Onam" tell you nothing, and a row's name says nothing about what was
+        in it. So the same serialized payload the page is drawn from comes back
+        for removed bands too, keyed by kind.
+        """
+        self.ensure_one()
+        drawn = self._drawable(lambda records: records._trashed())
+        # Keyed by "kind:id", because the Trash list is flat and each row needs
+        # to find its own drawing without the screen re-deriving the mapping.
+        group_kind = {'tabs': 'tab', 'banners': 'banner',
+                      'categories': 'tile', 'sections': 'section'}
+        out = {}
+        for group, kind in group_kind.items():
+            for vals in drawn.get(group, []):
+                out['%s:%s' % (kind, vals['rid'])] = vals
+        return out
+
     @api.model
     def builder_load(self, key, version_id=None):
         """Everything the visual builder screen needs for one mode, in one call.
@@ -192,7 +272,7 @@ class Mart369HomeMode(models.Model):
         Category = self.env['product.public.category']
         Tag = self.env['product.tag']
 
-        return {
+        data = {
             'mode': dict(
                 mode._copy_vals(),
                 id=mode.id,
@@ -227,3 +307,15 @@ class Mart369HomeMode(models.Model):
                            for c in Category.search([])],
             'tags': [{'id': t.id, 'name': t.name} for t in Tag.search([], order='name')],
         }
+
+        # The same three things the REST console gets, so a builder reading
+        # over the ORM draws exactly what a builder reading over HTTP draws.
+        data['preview'] = mode._preview_payload()
+        data['trash_preview'] = mode._trash_preview_map()
+        data['page'] = mode.version_id._serialize_card() if mode.version_id else None
+        # The Trash list names Odoo models; the screens speak in kinds. Say
+        # both, so a screen does not keep its own copy of the mapping and
+        # drift from this one.
+        for row in data.get('trash', []):
+            row['kind'] = self.BAND_KIND.get(row.get('model'), '')
+        return data

@@ -1,6 +1,7 @@
 /** Browser tour: the home page builder does what an operator expects.
  *
- *  Opens the builder on the seeded Quick page, renames a row and watches the
+ *  Opens the phone builder (/odoo/mart-home-advanced - the pages list owns
+ *  /odoo/mart-home now) on the seeded Quick page, renames a row and watches the
  *  change save and come back into the phone mock from the server, hides a
  *  row, then adds a banner from the banners panel.
  */
@@ -10,7 +11,7 @@ const FRUITS = '.mart-band[data-band-id]:contains("Fresh fruits")';
 const PICKS = '.mart-band[data-band-id]:contains("Fresh picks")';
 
 registry.category("web_tour.tours").add("mart369_home_builder", {
-    url: "/odoo/mart-home",
+    url: "/odoo/mart-home-advanced",
     steps: () => [
         {
             content: "the builder rendered the phone with the seeded page",

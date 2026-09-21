@@ -1,14 +1,47 @@
 # 369 Mart Home Page (`mart369_home`)
 
-The 369 Mart phone app gets its whole home page from this module. An
-operator edits it from **369 Mart → Home Page** — a phone-sized mock of the
-app, drawn with the app's own stylesheet, that they edit in place:
+The 369 Mart phone app gets its whole home page from this module.
 
-- drag a band (product row or banner strip) to reorder the page;
-- click a band to edit it in the side panel; every change saves on its own;
-- the eye hides a band from the app without deleting it;
-- ⚙ on the tabs / banners / tiles strip opens that strip's list;
-- Quick and Express are configured separately.
+**369 Mart → Home Page** opens the list of saved pages. You pick one, then
+edit it — and that order matters: the builder used to open straight onto
+whichever page was live, so parking a page and changing a banner quietly
+changed what shoppers were looking at. The page id now travels in the action
+context and goes into `builder_load`, so a screen can only ever edit the page
+whose Edit button you pressed.
+
+### The pages list (`mart369_home.pages`, `/odoo/mart-home`)
+
+One card per saved page: what state it is in, what is on it per tab, and
+Edit / Switch on / Schedule / Duplicate / Delete. Exactly one page is
+switched on at a time; another can be given a window and take over while it
+is open, then hand back on its own. Delete is refused for the live page and
+for the last one — by the model, and the button says so first.
+
+### The editor (`mart369_home.editor`, `/odoo/mart-home-edit`)
+
+The shop's own home page, drawn at the width a shopper on a desktop sees it,
+in a browser frame, from the same payload `/369mart/home` sends the app. So
+"what will shoppers see?" is answered by looking, not by reading a form and
+imagining.
+
+- drag the handle on anything — tab, banner, tile or row — to reorder it;
+- click it to edit it in the side panel; every change saves on its own;
+- the eye hides something from the app without deleting it, and writes at
+  once rather than after the typing pause — a toggle that looks done but is
+  not gets pressed twice;
+- **Show hidden** brings the switched-off ones back, greyed, with a Hidden tag;
+- with nothing selected the panel edits the tab itself: its name, its promise,
+  its icon and the free-delivery nudge;
+- **Trash** lists what has been removed, *drawn* rather than described — two
+  banners called "Onam" tell you nothing in a list;
+- Quick and Express are configured separately, and there is exactly one real
+  toggle for them. The one inside the canvas is the shop's, and is inert.
+
+### The phone builder (`mart369_home.builder`, `/odoo/mart-home-advanced`)
+
+The same page as a 390px phone, reached from **More settings**. It keeps the
+fields the editor deliberately leaves out: images, the products inside a row,
+banner lines, rules and route params.
 
 The app reads it all from **`GET /369mart/home`**:
 
@@ -22,8 +55,8 @@ repo already accepts. Optional keys are omitted, never `null`. A banner strip
 serialises to `{"banner": ["b3","b4"]}` and nothing else — that key alone is
 how the app tells it from a product row.
 
-**369 Mart → Advanced** keeps the plain Odoo forms for anything the builder
-does not expose (`rule_days`, `hide_out_of_stock`, `image_base_url`, …).
+**369 Mart → Advanced** keeps the plain Odoo forms for anything neither screen
+exposes (`rule_days`, `hide_out_of_stock`, `image_base_url`, …).
 
 ## Removing things: the Trash
 
@@ -76,12 +109,37 @@ gets. Four sources:
 models/        serializers.py (vocabularies + helpers), one file per model,
                product_template.py adds the mart_* card-copy fields
 controllers/   home_api.py — the public JSON route (type='http', cors='*')
-static/src/builder/   the OWL client action (builder.js / .xml / .scss)
+static/src/builder/   the OWL client actions:
+                 pages.js/.xml    the saved-pages list  (mart369_home.pages)
+                 editor.js/.xml   the desk editor       (mart369_home.editor)
+                 builder.js/.xml  the phone builder     (mart369_home.builder)
+                 save_queue.js    shared with mart369_product - change with care
+               chrome for all three lives in mart369/static/src/builder/builder.scss
 static/src/scss/storefront.scss   VERBATIM copy of the app's stylesheet (see below)
 views/         forms, the client action, menus
 data/          seed data mirroring the storefront's sampleData.js
 tests/         API contract, builder_load contract, a browser tour
 ```
+
+### One stylesheet, two widths
+
+The generated `storefront.scss` rewrites every `@media (max-width: N)` into
+`@container mart-phone (max-width: N)`. A container query resolves against the
+**nearest ancestor carrying that name**, and both frames carry it:
+
+| frame | width | what matches |
+|---|---|---|
+| `.mart-canvas` (the editor) | up to 1280px | none of them — so the desktop base rules apply |
+| `.mart-phone` (the phone builder, and `mart369_product`) | 390px | all of them |
+
+So the desk canvas cost no second copy of the stylesheet. The catch is the
+width it actually reaches: the canvas **content box must stay above 1101px**,
+or the shop's own 1100px rule fires and the category strip silently drops from
+eight tiles to four. `.mart-builder.pe` is a column for that reason — inheriting
+`.mart-builder`'s row squeezed the canvas to ~330px.
+
+Never nest a `.mart-canvas` inside a `.mart-phone` or the other way round: the
+inner one would win the container lookup, silently.
 
 ### `storefront.scss` is generated — do not hand-edit
 

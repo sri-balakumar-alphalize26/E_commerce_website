@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-    <!-- The front door: the visual builder. Opens first. -->
+    <!-- The front door: pick a page, then edit it. -->
     <menuitem id="menu_mart369_home_builder"
               name="Home Page"
               parent="mart369.menu_mart369_root"
-              action="action_mart369_home_builder"
+              action="action_mart369_home_pages"
               sequence="10"/>
 
     <!-- The form-based screens, for anything the builder does not expose. -->
@@ -49,7 +49,7 @@
     <menuitem id="menu_mart369_home_root"
               name="369 Mart Home Page"
               parent="website.menu_website_global_configuration"
-              action="action_mart369_home_builder"
+              action="action_mart369_home_pages"
               sequence="58"/>
 
 </odoo>

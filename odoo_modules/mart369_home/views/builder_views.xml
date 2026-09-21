@@ -1,12 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-    <!-- The visual home-page builder: a phone-sized mock of the app that the
-         operator edits in place. Lives at /odoo/mart-home. -->
+    <!-- The phone builder: a phone-sized mock of the app, edited in place.
+         It reaches the fields the desk editor deliberately leaves out -
+         images, the products inside a row, banner lines, rules, route params.
+
+         It no longer owns /odoo/mart-home: the pages list does, because
+         choosing which page you are editing has to come first. -->
     <record id="action_mart369_home_builder" model="ir.actions.client">
-        <field name="name">Home Page</field>
+        <field name="name">Home Page (all settings)</field>
         <field name="tag">mart369_home.builder</field>
-        <field name="path">mart-home</field>
+        <field name="path">mart-home-advanced</field>
     </record>
 
 </odoo>

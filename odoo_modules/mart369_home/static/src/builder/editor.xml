@@ -1,0 +1,519 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!-- ==================================================== the whole screen -->
+    <t t-name="mart369_home.PageEditor">
+        <Layout display="{ controlPanel: {} }" className="'o_mart369_editor h-100'">
+            <div class="mart-builder pe">
+
+                <header class="pe-head">
+                    <button class="mart-btn pe-back" t-on-click="() => this.back()">
+                        <Icon n="'left'" size="14"/> All pages
+                    </button>
+                    <div class="pe-title">
+                        <h1 t-esc="page ? page.name : 'The live home page'"/>
+                        <small t-if="page" t-esc="page.stateNote"/>
+                    </div>
+                </header>
+
+                <!-- One strip. Two of these, disagreeing about which tab you
+                     are on, would be worse than either. -->
+                <div class="pe-toolbar">
+                    <!-- The only real Quick/Express control. The shop's own
+                         toggle is drawn inside the canvas below and is inert -
+                         two of them were being taken for the same thing. -->
+                    <div class="mart-modes" role="tablist" t-att-data-mode="state.modeKey"
+                         aria-label="Which tab you are editing">
+                        <span class="mart-modes-cap">Editing</span>
+                        <button t-foreach="d ? d.modes : []" t-as="m" t-key="m.id" role="tab"
+                                t-att-aria-selected="m.key === state.modeKey ? 'true' : 'false'"
+                                t-attf-class="{{ m.key === state.modeKey ? 'mart-on' : '' }}"
+                                t-on-click="(ev) => this.switchMode(m.key, ev)">
+                            <t t-esc="m.name"/>
+                        </button>
+                    </div>
+
+                    <label t-if="hiddenCount" class="pe-showhidden">
+                        <input type="checkbox" t-model="state.showHidden"/>
+                        <span>Show hidden (<t t-esc="hiddenCount"/>)</span>
+                    </label>
+
+                    <span class="pe-toolbar-gap"/>
+
+                    <span class="pe-adds">
+                        <t t-foreach="GROUPS" t-as="kind" t-key="kind">
+                            <button class="mart-btn mart-btn-sm"
+                                    t-att-disabled="state.status === 'saving'"
+                                    t-on-click="() => this.add(kind)">
+                                <Icon n="'plus'" size="12"/> <t t-esc="KINDS[kind].title"/>
+                            </button>
+                        </t>
+                    </span>
+
+                    <button class="mart-btn mart-btn-sm pe-trash-btn"
+                            t-on-click="() => state.trashOpen = !state.trashOpen">
+                        <Icon n="'trash'" size="13"/> Trash
+                        <em t-if="d and d.trash.length" t-esc="d.trash.length"/>
+                    </button>
+
+                    <button class="mart-btn mart-btn-sm" t-on-click="() => this.moreSettings()"
+                            title="Images, the products in a row, banner lines and rules">
+                        More settings
+                    </button>
+
+                    <t t-call="mart369_home.SaveChip"/>
+                </div>
+
+                <p class="pe-hintbar">
+                    Click any part of the page to edit it. Drag the handle to reorder.
+                    The eye takes something out of the app without deleting it.
+                </p>
+
+                <p t-if="state.error" class="pe-error" role="alert">
+                    We could not reach the shop. <t t-esc="state.error"/>
+                    <button class="mart-link" t-on-click="() => this.load()">Try again</button>
+                </p>
+
+                <div class="pe-cols">
+                    <div class="pe-canvas-wrap">
+                        <div class="mart-canvas" t-ref="canvas">
+                            <div class="mart-chrome" aria-hidden="true">
+                                <span class="mart-dots"><i/><i/><i/></span>
+                                <span class="mart-url">369mart.com &#8212; the home page, as shoppers see it</span>
+                            </div>
+                            <div t-attf-class="mart-canvas-screen {{ state.switching ? 'pe-switching' : '' }}">
+                                <div class="mart-canvas-scroll">
+                                    <div class="hm-page" t-att-data-mode="state.modeKey">
+                                        <div class="hm-wrap pe-body">
+
+                                            <p t-if="state.loading and !d" class="pe-loading">Loading the page...</p>
+
+                                            <p t-elif="d and isEmpty" class="pe-loading">
+                                                This tab has nothing on it yet.
+                                            </p>
+
+                                            <p t-elif="d and allHidden" class="pe-loading">
+                                                Everything on this tab is switched off.
+                                                Turn on "Show hidden" to bring one back.
+                                            </p>
+
+                                            <t t-if="d">
+                                                <t t-call="mart369_home.PeGroups"/>
+                                            </t>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- The same curtain shoppers see when they
+                                     switch tabs, so the editor does not feel
+                                     like a different product. -->
+                                <div t-if="state.switching"
+                                     t-attf-class="hm-switch hm-switch-{{ state.switching.phase }}"
+                                     t-att-data-to="state.switching.to"
+                                     t-attf-style="--x:{{ state.switching.x }}px; --y:{{ state.switching.y }}px;">
+                                    <div class="hm-switch-card">
+                                        <strong t-esc="state.switching.label"/>
+                                        <span t-esc="state.switching.tagline"/>
+                                        <i class="hm-switch-bar"/>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="pe-canvas-note">
+                            This is the shop's own page, drawn from the payload the app is served.
+                        </p>
+                    </div>
+
+                    <aside class="mart-panel pe-panel">
+                        <t t-if="selected">
+                            <t t-call="mart369_home.PePanel"/>
+                        </t>
+                        <t t-else="">
+                            <t t-call="mart369_home.PeModePanel"/>
+                        </t>
+                    </aside>
+                </div>
+
+                <t t-if="state.trashOpen">
+                    <t t-call="mart369_home.PeTrash"/>
+                </t>
+            </div>
+        </Layout>
+    </t>
+
+    <!-- ========================================================== the canvas -->
+    <t t-name="mart369_home.PeGroups">
+        <!-- Tabs -->
+        <div class="hm-tabs-bar pe-group" t-ref="group_tab">
+            <div class="hm-tabs" role="tablist">
+                <t t-foreach="rows('tab')" t-as="row" t-key="row.rid">
+                    <t t-set="kind" t-value="'tab'"/>
+                    <t t-call="mart369_home.PeBand">
+                        <t t-set="horizontal" t-value="true"/>
+                        <t t-set="inner" t-value="'mart369_home.PeTab'"/>
+                    </t>
+                </t>
+            </div>
+        </div>
+
+        <!-- Banners -->
+        <section class="hm-banners pe-group" t-ref="group_banner">
+            <div class="hm-banner-track">
+                <t t-foreach="rows('banner')" t-as="row" t-key="row.rid">
+                    <t t-set="kind" t-value="'banner'"/>
+                    <t t-call="mart369_home.PeBand">
+                        <t t-set="horizontal" t-value="true"/>
+                        <t t-set="inner" t-value="'mart369_home.PeBanner'"/>
+                    </t>
+                </t>
+            </div>
+        </section>
+
+        <!-- Category tiles -->
+        <section class="hm-cats hm-in pe-group" t-ref="group_tile">
+            <t t-foreach="rows('tile')" t-as="row" t-key="row.rid">
+                <t t-set="kind" t-value="'tile'"/>
+                <t t-call="mart369_home.PeBand">
+                    <t t-set="horizontal" t-value="true"/>
+                    <t t-set="inner" t-value="'mart369_home.PeTile'"/>
+                </t>
+            </t>
+        </section>
+
+        <!-- Rows: product rails and banner strips -->
+        <div class="pe-sections pe-group" t-ref="group_section">
+            <t t-foreach="rows('section')" t-as="row" t-key="row.rid">
+                <t t-set="kind" t-value="'section'"/>
+                <t t-call="mart369_home.PeBand">
+                    <t t-set="horizontal" t-value="false"/>
+                    <t t-set="inner" t-value="'mart369_home.PeSection'"/>
+                </t>
+            </t>
+        </div>
+    </t>
+
+    <!-- One draggable, selectable, hideable band. The handle is a real button,
+         so the whole band stays clickable to select and a keyboard can still
+         pick it up. The body is inert: it is a drawing, not a control. -->
+    <t t-name="mart369_home.PeBand">
+        <div t-attf-class="pe-band {{ isSelected(kind, row.rid) ? 'pe-on' : '' }} {{ row.active ? '' : 'pe-hidden' }} {{ horizontal ? 'pe-band-h' : '' }}"
+             t-att-data-band="kind + ':' + row.rid"
+             t-on-click="(ev) => this.onBandClick(kind, row.rid, ev)">
+            <div class="pe-tools">
+                <span class="pe-tag" t-esc="KINDS[kind].title"/>
+                <span t-if="!row.active" class="pe-tag pe-tag-off">Hidden</span>
+                <button class="pe-tool pe-grip" t-attf-aria-label="Reorder {{ labelOf(kind, row) }}"
+                        title="Drag to reorder">
+                    <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+                        <circle cx="4" cy="2.5" r="1.1"/><circle cx="8" cy="2.5" r="1.1"/>
+                        <circle cx="4" cy="6" r="1.1"/><circle cx="8" cy="6" r="1.1"/>
+                        <circle cx="4" cy="9.5" r="1.1"/><circle cx="8" cy="9.5" r="1.1"/>
+                    </svg>
+                </button>
+                <button class="pe-tool" t-att-aria-pressed="row.active ? 'true' : 'false'"
+                        t-att-title="row.active ? 'Hide this from the app' : 'Show this in the app'"
+                        t-on-click="() => this.toggleActive(kind, row.rid)">
+                    <Icon n="row.active ? 'eye' : 'eye-off'" size="14"/>
+                </button>
+            </div>
+            <div class="pe-band-in" t-att-aria-hidden="row.active ? 'false' : 'true'">
+                <t t-call="{{ inner }}"/>
+            </div>
+        </div>
+    </t>
+
+    <t t-name="mart369_home.PeTab">
+        <button class="hm-tab" type="button" tabindex="-1">
+            <Icon n="row.icon || 'grid'" size="15"/> <t t-esc="row.label"/>
+        </button>
+    </t>
+
+    <t t-name="mart369_home.PeBanner">
+        <div t-attf-class="hm-banner hm-tone-{{ row.tone }}"
+             t-attf-style="{{ row.image ? 'background-image:url(' + row.image + ');background-size:cover;' : '' }}">
+            <div class="hm-banner-copy">
+                <span class="hm-kicker" t-esc="row.kicker"/>
+                <strong t-esc="row.title"/>
+                <span class="hm-note" t-esc="row.note"/>
+                <span class="hm-shop">Shop now <Icon n="'right'" size="14"/></span>
+            </div>
+        </div>
+    </t>
+
+    <t t-name="mart369_home.PeTile">
+        <div class="hm-cat">
+            <span class="hm-cat-img" t-attf-style="background:{{ row.bg || '#f1f4f6' }}">
+                <img t-if="row.image" t-att-src="row.image" alt="" loading="lazy"/>
+                <!-- The app draws an SVG placeholder here. The builder names
+                     it instead, the way the phone builder does - a label is
+                     more use than a picture you cannot change from here. -->
+                <span t-else="" class="mart-art" t-attf-style="{{ row.color ? 'color:' + row.color : '' }}">
+                    <t t-esc="row.t || row.art"/>
+                </span>
+            </span>
+            <span t-esc="row.label"/>
+        </div>
+    </t>
+
+    <!-- A row is either a rail of products or a strip of banners. The one key
+         `banner` is how the app tells them apart, so it is how this does too. -->
+    <t t-name="mart369_home.PeSection">
+        <t t-if="stripKeys(row)">
+            <div class="hm-inline-banners">
+                <t t-foreach="stripBanners(row)" t-as="b" t-key="b.id">
+                    <div t-attf-class="hm-banner hm-tone-{{ b.tone }}">
+                        <div class="hm-banner-copy">
+                            <span class="hm-kicker" t-esc="b.kicker"/>
+                            <strong t-esc="b.title"/>
+                            <span class="hm-note" t-esc="b.note"/>
+                        </div>
+                    </div>
+                </t>
+                <div t-if="!stripBanners(row).length" class="pe-row-empty">
+                    <b t-esc="row.title || 'Banner strip'"/>
+                    <span>A banner strip of <t t-esc="(stripKeys(row) || []).length"/>.</span>
+                </div>
+            </div>
+        </t>
+        <t t-else="">
+            <section class="hm-rail hm-in">
+                <div class="hm-rail-head">
+                    <div>
+                        <h2 t-esc="row.title || 'Untitled row'"/>
+                        <p t-if="row.subtitle" t-esc="row.subtitle"/>
+                    </div>
+                    <span t-if="row.route" class="hm-viewall">View all <Icon n="'right'" size="15"/></span>
+                </div>
+                <div class="hm-rail-box">
+                    <div t-if="row.items and row.items.length" class="hm-rail-track">
+                        <t t-foreach="row.items" t-as="item" t-key="item.id">
+                            <t t-call="mart369_home.PeCard"/>
+                        </t>
+                    </div>
+                    <div t-else="" class="pe-row-empty">
+                        <b t-esc="row.title || 'Untitled row'"/>
+                        <span>Nothing to show &#8212; no products match this row yet.</span>
+                    </div>
+                </div>
+            </section>
+        </t>
+    </t>
+
+    <t t-name="mart369_home.PeCard">
+        <article t-attf-class="hm-card {{ item.stock === 0 ? 'hm-oos' : '' }}">
+            <div class="hm-card-img">
+                <div class="hm-gal-one">
+                    <img t-if="item.images and item.images.length" t-att-src="item.images[0]" alt="" loading="lazy"/>
+                    <span t-else="" class="mart-art" t-attf-style="{{ item.color ? 'color:' + item.color : '' }}">
+                        <t t-esc="item.label || item.art || item.name"/>
+                    </span>
+                </div>
+                <span t-if="item.tag" class="hm-off hm-new" t-esc="item.tag"/>
+                <span t-elif="offPct(item) >= 10 and item.stock !== 0" class="hm-off">
+                    <t t-esc="offPct(item)"/>% OFF
+                </span>
+                <span t-if="item.veg" class="hm-veg"><i/></span>
+                <span t-if="item.stock === 0" class="hm-oos-tag">Out of stock</span>
+            </div>
+            <div class="hm-card-body">
+                <div class="hm-unit" t-esc="item.unit"/>
+                <h3 class="hm-name" t-esc="item.name"/>
+                <div t-if="item.note" class="hm-subnote">(<t t-esc="item.note"/>)</div>
+                <div class="hm-price">
+                    <b t-esc="inr(item.price)"/>
+                    <s t-if="item.mrp" t-esc="inr(item.mrp)"/>
+                    <small t-if="item.perUnit">(<t t-esc="item.perUnit"/>)</small>
+                </div>
+                <div class="hm-meta">
+                    <span t-if="item.delivery" class="hm-quick hm-ship">
+                        <Icon n="'truck'" size="12"/> <t t-esc="item.delivery"/>
+                    </span>
+                    <span t-else="" class="hm-quick">
+                        <Icon n="'bolt'" size="11" class="'hm-fill'"/> Quick
+                    </span>
+                    <span t-if="item.low" class="hm-low">Only <t t-esc="item.low"/> left</span>
+                </div>
+            </div>
+        </article>
+    </t>
+
+    <!-- =========================================================== the panel -->
+    <t t-name="mart369_home.PePanel">
+        <header class="mart-panel-head pe-panel-head">
+            <div>
+                <h2 t-esc="selected.spec.title"/>
+                <p t-esc="selected.record.name || 'Untitled'"/>
+            </div>
+            <label class="pe-switch-lbl">
+                <span t-esc="selected.record.active ? 'Shown' : 'Hidden'"/>
+                <button class="mart-switch" role="switch"
+                        t-att-aria-checked="selected.record.active ? 'true' : 'false'"
+                        t-on-click="() => this.toggleActive(selected.kind, selected.record.id)">
+                    <i/>
+                </button>
+            </label>
+        </header>
+
+        <div class="mart-panel-body pe-form">
+            <t t-foreach="selected.spec.fields" t-as="f" t-key="f[0]">
+                <label class="mart-field">
+                    <span t-esc="f[1]"/>
+                    <select t-if="f[3]"
+                            t-att-value="selected.record[f[0]]"
+                            t-on-change="(ev) => this.onField(selected.kind, selected.record.id, f[0], ev)">
+                        <t t-foreach="d.vocab[f[3]]" t-as="opt" t-key="opt">
+                            <option t-att-value="opt" t-att-selected="selected.record[f[0]] === opt"
+                                    t-esc="opt"/>
+                        </t>
+                    </select>
+                    <input t-else="" type="text"
+                           t-att-value="selected.record[f[0]] || ''"
+                           t-att-placeholder="f[2]"
+                           t-on-input="(ev) => this.onField(selected.kind, selected.record.id, f[0], ev)"/>
+                    <em t-if="f[2] and !f[3]" class="pe-hint" t-esc="f[2]"/>
+                </label>
+            </t>
+        </div>
+
+        <div class="pe-panel-foot">
+            <button class="mart-btn mart-btn-danger"
+                    t-att-disabled="state.status === 'saving'"
+                    t-on-click="() => this.remove(selected.kind, selected.record.id)">
+                <Icon n="'trash'" size="13"/> Remove
+            </button>
+            <p class="pe-panel-note">
+                Removing puts it in the Trash. Images, the products inside a row,
+                and the Trash itself are on "More settings".
+            </p>
+        </div>
+    </t>
+
+    <!-- Nothing selected is not nothing to do: this is the tab's own settings. -->
+    <t t-name="mart369_home.PeModePanel">
+        <header class="mart-panel-head">
+            <div>
+                <h2>This tab</h2>
+                <p t-esc="state.modeKey === 'quick' ? 'Quick' : 'Express'"/>
+            </div>
+        </header>
+
+        <div t-if="d" class="mart-panel-body pe-form">
+            <label class="mart-field">
+                <span>Shown as</span>
+                <input type="text" t-att-value="d.mode.label || ''"
+                       t-on-input="(ev) => this.onModeField('label', ev)"/>
+                <em class="pe-hint">What the tab is called: Quick, Express</em>
+            </label>
+            <label class="mart-field">
+                <span>Promise</span>
+                <input type="text" t-att-value="d.mode.tagline || ''"
+                       t-on-input="(ev) => this.onModeField('tagline', ev)"/>
+                <em class="pe-hint">The line shown when someone switches to this tab</em>
+            </label>
+            <label class="mart-field">
+                <span>Icon</span>
+                <select t-att-value="d.mode.icon"
+                        t-on-change="(ev) => this.onModeField('icon', ev)">
+                    <t t-foreach="d.vocab.icons" t-as="opt" t-key="opt">
+                        <option t-att-value="opt" t-att-selected="d.mode.icon === opt" t-esc="opt"/>
+                    </t>
+                </select>
+            </label>
+            <label class="mart-field">
+                <span>Free delivery above</span>
+                <input type="number" inputmode="decimal" t-att-value="d.mode.free_delivery_at"
+                       t-on-input="(ev) => this.onModeField('free_delivery_at', ev)"/>
+                <em class="pe-hint">0 for no nudge</em>
+            </label>
+        </div>
+
+        <p class="pe-panel-note">Click anything on the page to edit that instead.</p>
+    </t>
+
+    <!-- =========================================================== the trash -->
+    <t t-name="mart369_home.PeTrash">
+        <div class="pe-drawer-back" t-on-click="() => state.trashOpen = false"/>
+        <aside class="pe-drawer" role="dialog" aria-modal="true" aria-label="Trash">
+            <header class="pe-drawer-head">
+                <div>
+                    <h2>Trash</h2>
+                    <p t-if="d and d.trash.length">
+                        <t t-esc="d.trash.length"/> removed item<t t-if="d.trash.length !== 1">s</t>
+                    </p>
+                    <p t-else="">Nothing removed</p>
+                </div>
+                <button class="mart-btn mart-btn-sm" t-on-click="() => state.trashOpen = false">Close</button>
+            </header>
+
+            <div t-if="!d or !d.trash.length" class="pe-trash-empty">
+                <b>The Trash is empty</b>
+                <span>Anything you remove from this page waits here before it is deleted for good.</span>
+            </div>
+
+            <t t-else="">
+                <p class="pe-trash-note">
+                    Removed things wait <t t-esc="d.trash_days"/> days, then go for good.
+                </p>
+                <t t-foreach="trashGroups" t-as="g" t-key="g.kind">
+                    <div class="pe-trash-group">
+                        <h4><t t-esc="g.title"/><em t-esc="g.rows.length"/></h4>
+                        <ul>
+                            <t t-foreach="g.rows" t-as="row" t-key="row.id">
+                                <li>
+                                    <div class="pe-trash-head">
+                                        <div>
+                                            <b t-esc="row.name || 'Untitled'"/>
+                                            <small>
+                                                Removed <t t-esc="row.deleted_at"/>
+                                                &#183; <t t-esc="row.trash_days_left"/> days left
+                                            </small>
+                                        </div>
+                                        <button class="mart-btn mart-btn-sm"
+                                                t-on-click="() => this.restore(row)">Put back</button>
+                                    </div>
+                                    <!-- Drawn, not described. Two banners called
+                                         "Onam" tell you nothing in a list. -->
+                                    <div class="pe-trash-preview hm-page">
+                                        <t t-set="drawn" t-value="trashDrawing(row)"/>
+                                        <t t-set="kind" t-value="row.kind"/>
+                                        <t t-if="drawn">
+                                            <t t-call="mart369_home.PeDrawn">
+                                                <t t-set="row" t-value="drawn"/>
+                                            </t>
+                                        </t>
+                                        <p t-else="" class="pe-row-empty">
+                                            <span>No preview &#8212; this one can still be put back.</span>
+                                        </p>
+                                    </div>
+                                </li>
+                            </t>
+                        </ul>
+                    </div>
+                </t>
+            </t>
+        </aside>
+    </t>
+
+    <!-- Which drawing a kind gets. The Trash and the canvas go through the
+         same templates, so a banner cannot look like one thing on the page and
+         another in the Trash. -->
+    <t t-name="mart369_home.PeDrawn">
+        <t t-if="kind === 'banner'"><t t-call="mart369_home.PeBanner"/></t>
+        <t t-elif="kind === 'tile'"><t t-call="mart369_home.PeTile"/></t>
+        <t t-elif="kind === 'tab'"><t t-call="mart369_home.PeTab"/></t>
+        <t t-else=""><t t-call="mart369_home.PeSection"/></t>
+    </t>
+
+    <!-- One chip for every kind of save, so two of them can never disagree. -->
+    <t t-name="mart369_home.SaveChip">
+        <span t-if="state.status !== 'idle'"
+              t-attf-class="pe-chip pe-chip-{{ state.status }}"
+              role="status" aria-live="polite">
+            <Icon n="state.status === 'error' ? 'info' : (state.status === 'saved' ? 'check' : 'clock')" size="13"/>
+            <t t-if="state.status === 'saving'">Saving...</t>
+            <t t-elif="state.status === 'saved'">Saved</t>
+            <t t-else="">Not saved</t>
+        </span>
+    </t>
+
+</templates>

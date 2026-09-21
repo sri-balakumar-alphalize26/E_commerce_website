@@ -77,6 +77,21 @@ body = re.sub(r'@media \(max-width: (\d+px)\)', r'@container mart-phone (max-wid
 body = body.replace('2.1vw', '2.1cqw').replace('100vw', '100cqw')
 body = body.replace('min-height: 100vh;', 'min-height: 100%;')
 
+# libsass implements min()/max()/clamp() itself rather than passing them to
+# the browser, and then rejects two things CSS is perfectly happy with: a
+# calc() inside one ("is not a number for `min'"), and mixed units
+# ("Incompatible units: 'px' and 'cqw'"). Either one fails the whole
+# web.assets_web bundle and every Odoo page shows "Style error".
+#
+# home.css has no offender today - its min() calls take a var(), which passes
+# through untouched. But cartfx.css:75 is `width: min(380px, calc(100vw -
+# 32px))`, sitting just outside the section sliced above, and the 100vw ->
+# 100cqw rewrite would turn it into exactly the first failure. Interpolating
+# hands the whole expression to the browser, which is what we wanted anyway.
+# The lookbehind keeps `min-height:` / `max-width:` out of it.
+body = re.sub(r'(?<![\w-])(min|max|clamp)\(((?:[^()]|\([^()]*\))*)\)',
+              lambda m: '#{"%s(%s)"}' % (m.group(1), m.group(2)), body)
+
 if body.count('{') != body.count('}'):
     raise SystemExit('unbalanced braces in the copied CSS - refusing to write')
 
@@ -89,10 +104,16 @@ header = """// Storefront stylesheet, copied verbatim so the phone mock in the b
 //   extras.css   the "product image gallery" section (.hm-gal-*)
 //   cartfx.css   the "floating pill" section (.mc-pill) + its phone @media block
 //
-// Two mechanical rewrites were applied:
+// Three mechanical rewrites were applied:
 //   @media (max-width: N)  ->  @container mart-phone (max-width: N)
 //   vw / vh                ->  cqw / 100%
-// so the app's own phone breakpoints fire inside the 390px frame.
+//   min()/max()/clamp()    ->  #{"..."}, so libsass hands them to the browser
+//
+// so the app's own breakpoints fire against the frame rather than the window.
+// The home editor's canvas is wide (.mart-canvas), so none of them match and
+// the desktop rules apply; the product editor's phone is 390px, so they do.
+// One stylesheet, both widths - a container query resolves against the
+// nearest ancestor carrying the name, and both frames carry `mart-phone`.
 
 """
 
@@ -114,6 +135,21 @@ override = """
   /* No real scrolling happens inside the mock; let the rails show a hint of
      the next card instead of clipping hard. */
   .hm-rail-track { overflow-x: auto; }
+}
+
+/* The desk canvas only. The shop scrolls its banners and tabs sideways; an
+   editor has to show every one at once, or the fifth banner is something you
+   can change but cannot see. Rails are left scrolling on purpose - a row of
+   forty products is a rail, not a wall. */
+.mart-builder .mart-canvas .hm-page {
+  .hm-banner-track {
+    grid-auto-flow: row;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    overflow-x: visible;
+    scroll-snap-type: none;
+  }
+  .hm-banner { height: 100%; }
+  .hm-tabs { flex-wrap: wrap; overflow-x: visible; }
 }
 """
 

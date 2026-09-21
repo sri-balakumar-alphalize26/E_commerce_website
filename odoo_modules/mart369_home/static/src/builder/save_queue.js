@@ -25,11 +25,22 @@ export function useSaveQueue({ orm, notification, reload, onStatus, find, delay 
     // Pending writes, batched per record so ten keystrokes are one write.
     const pending = new Map();
     const status = (s) => onStatus && onStatus(s);
+    // One write at a time. Without this a second flush could start while the
+    // first was still inside its `await reload()`, and the reload would put
+    // the older server values back over the newer ones.
+    let busy = false;
 
     async function _flush() {
         if (!pending.size) {
             return;
         }
+        if (busy) {
+            // The edit is already merged into `pending`; all this needs is
+            // another attempt once the one in flight lands.
+            flush();
+            return;
+        }
+        busy = true;
         const batch = [...pending.values()];
         pending.clear();
         try {
@@ -39,9 +50,24 @@ export function useSaveQueue({ orm, notification, reload, onStatus, find, delay 
             await reload();
             status(pending.size ? "saving" : "saved");
         } catch (err) {
+            // Put the batch back and leave the screen as it is - no reload.
+            // Losing what somebody just typed because the server blinked is
+            // worse than an error that sits there until they try again.
+            // Anything queued while this was in flight is newer, so it wins.
+            for (const entry of batch) {
+                const key = `${entry.model}:${entry.id}`;
+                const queued = pending.get(key);
+                pending.set(key, queued
+                    ? { ...queued, vals: { ...entry.vals, ...queued.vals } }
+                    : entry);
+            }
             status("error");
             notification.add(_t("That change could not be saved."), { type: "danger" });
             throw err;
+        } finally {
+            // Always, so one request that never settles cannot pin the latch
+            // and leave every later save stuck on "Saving..." for good.
+            busy = false;
         }
     }
 
@@ -69,15 +95,23 @@ export function useSaveQueue({ orm, notification, reload, onStatus, find, delay 
         }
     }
 
-    /** Apply a field edit locally now, write it shortly. */
-    function edit(model, rec, field, value) {
+    /**
+     * Apply a field edit locally now, write it shortly.
+     *
+     * `{ now: true }` skips the wait. A switch is not typing: there is no
+     * second keystroke coming, and a toggle that looks done but is not
+     * written for another half second is a toggle people press twice.
+     */
+    function edit(model, rec, field, value, { now = false } = {}) {
         rec[field] = value;
         const key = `${model}:${rec.id}`;
         const entry = pending.get(key) || { model, id: rec.id, vals: {} };
         entry.vals[field] = value;
         pending.set(key, entry);
         status("saving");
-        flush();
+        // `_flush` has already said so through `status` and a notification;
+        // nothing awaits this, so swallow rather than leave it unhandled.
+        return now ? flushNow().catch(() => {}) : flush();
     }
 
     /** Read a field off an input event, typed the way the model wants it. */

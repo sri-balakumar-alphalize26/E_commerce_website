@@ -154,6 +154,44 @@ class Mart369HomeVersion(models.Model):
                 'This is the only saved home page. There has to be one.'))
         return super().unlink()
 
+    # ----------------------------------------------------------- the screens
+
+    def _serialize_card(self):
+        """One saved page, as the pages screen draws it.
+
+        The REST console and the Odoo pages screen show the same card, so the
+        shape is defined once here rather than in each of them.
+        """
+        self.ensure_one()
+        return {
+            'id': str(self.id),
+            'name': self.name or '',
+            'note': self.note or '',
+            'isCurrent': self.is_current,
+            'state': self.state,
+            'stateNote': self.state_note or '',
+            'startsOn': self.starts_on.isoformat() if self.starts_on else None,
+            'endsOn': self.ends_on.isoformat() if self.ends_on else None,
+            'bands': {
+                mode.key: {
+                    'banners': len(mode.banner_ids._live()),
+                    'tabs': len(mode.tab_ids._live()),
+                    'tiles': len(mode.tile_ids._live()),
+                    'sections': len(mode.section_ids._live()),
+                }
+                for mode in self.mode_ids
+            },
+        }
+
+    @api.model
+    def pages_load(self):
+        """Every saved page, for the screen that lists them."""
+        return {
+            'pages': [p._serialize_card()
+                      for p in self.search([], order='is_current desc, name')],
+            'trash_days': self.env['mart369.config'].sudo()._get()._trash_days(),
+        }
+
     # ------------------------------------------------------------- the moves
 
     def action_mart369_make_current(self):

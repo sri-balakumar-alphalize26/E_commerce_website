@@ -5,7 +5,12 @@ from odoo.tests import tagged
 from odoo.tests.common import HttpCase, TransactionCase
 
 BUILDER_KEYS = {'mode', 'modes', 'vocab', 'bands', 'banners', 'tiles', 'tabs',
-                'categories', 'tags', 'trash', 'trash_days'}
+                'categories', 'tags', 'trash', 'trash_days',
+                # Drawn, not described: the app's own payload for this tab, the
+                # same for everything in the Trash, and the saved page itself.
+                # The REST console used to add these on top of builder_load;
+                # they live here now so both builders draw the same thing.
+                'preview', 'trash_preview', 'page'}
 BAND_KEYS = {'id', 'kind', 'active', 'sequence', 'name', 'key', 'subtitle',
              'view_all_route', 'source', 'public_categ_id', 'public_categ_name',
              'include_child_categs', 'product_tag_id', 'product_tag_name',
@@ -31,6 +36,46 @@ class TestBuilderLoad(TransactionCase):
         self.assertTrue(data['bands'], 'The seed data should ship bands.')
         for band in data['bands']:
             self.assertEqual(set(band), BAND_KEYS)
+
+    def test_payload_carries_what_the_page_is_drawn_from(self):
+        """`preview` is the app's own payload, so the canvas draws the shop."""
+        data = self.Mode.builder_load('quick')
+        self.assertEqual(
+            set(data['preview']) - {'freeDeliveryAt'},
+            {'tabs', 'banners', 'categories', 'sections'})
+        self.assertEqual(data['preview']['freeDeliveryAt'],
+                         self.mode.free_delivery_at)
+        self.assertIsInstance(data['trash_preview'], dict)
+
+    def test_every_trash_row_says_its_kind(self):
+        """The Trash names models; the screens speak in kinds. Say both."""
+        for row in self.Mode.builder_load('quick')['trash']:
+            self.assertIn(row['kind'],
+                          {'banner', 'tab', 'tile', 'section'},
+                          'A Trash row with no kind cannot be drawn.')
+
+    def test_a_page_is_edited_where_it_was_opened(self):
+        """`version_id` reaches the load, so the builder cannot edit the wrong
+        page.
+
+        Without it the builder always resolved the *live* page, so opening a
+        parked page and adding a banner quietly changed what shoppers saw.
+        """
+        Version = self.env['mart369.home.version']
+        parked = Version.search([('is_current', '=', False)], limit=1)
+        if not parked:
+            parked = Version.search([('is_current', '=', True)], limit=1).copy(
+                {'name': 'Parked for the test'})
+        data = self.Mode.builder_load('quick', version_id=parked.id)
+        self.assertEqual(data['mode']['id'],
+                         parked.mode_ids.filtered(lambda m: m.key == 'quick').id)
+        self.assertEqual(data['page']['id'], str(parked.id))
+        self.assertFalse(data['page']['isCurrent'])
+
+        live = Version.search([('is_current', '=', True)], limit=1)
+        self.assertNotEqual(data['mode']['id'],
+                            live.mode_ids.filtered(lambda m: m.key == 'quick').id,
+                            'The parked page must not resolve to the live one.')
 
     def test_hidden_band_is_included_with_a_preview(self):
         """Hidden bands stay in the list, greyed, so they can be switched back on."""

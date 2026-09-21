@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="mart369_home.HomePages">
+        <Layout display="{ controlPanel: {} }" className="'o_mart369_pages h-100'">
+            <div class="mart-builder mart-pages">
+                <div class="mart-pages-inner">
+
+                    <header class="mart-pages-head">
+                        <div>
+                            <h1>Home pages</h1>
+                            <p>
+                                One page is switched on every day. Another can be given a window
+                                and take over by itself, then hand back when it closes.
+                            </p>
+                        </div>
+                        <button class="mart-btn mart-btn-primary" t-on-click="() => this.newPage()"
+                                t-att-disabled="state.busy">
+                            <Icon n="'plus'" size="14"/> New page
+                        </button>
+                    </header>
+
+                    <p t-if="state.error" class="mart-pages-error" role="alert">
+                        We could not reach the shop. <t t-esc="state.error"/>
+                        <button class="mart-link" t-on-click="() => this.load()">Try again</button>
+                    </p>
+
+                    <p t-if="state.loading and !state.pages.length" class="mart-pages-empty">
+                        Fetching your saved pages...
+                    </p>
+
+                    <p t-elif="!state.loading and !state.pages.length and !state.error" class="mart-pages-empty">
+                        <b>No saved pages yet</b>
+                        <span>Install the home page module's demo data, or make one in Odoo.</span>
+                    </p>
+
+                    <div class="mart-pages-grid">
+                        <t t-foreach="state.pages" t-as="page" t-key="page.id">
+                            <t t-call="mart369_home.PageCard"/>
+                        </t>
+                    </div>
+                </div>
+            </div>
+        </Layout>
+    </t>
+
+    <t t-name="mart369_home.PageCard">
+        <article t-attf-class="mart-pagecard {{ page.isCurrent ? 'mart-pagecard-on' : '' }}"
+                 t-att-data-page="page.id">
+
+            <div class="mart-pagecard-head">
+                <div class="mart-pagecard-title">
+                    <h2 t-esc="page.name"/>
+                    <p t-if="page.note" t-esc="page.note"/>
+                </div>
+                <span t-attf-class="mart-pill mart-pill-{{ toneOf(page) }}" t-esc="page.stateNote or page.state"/>
+            </div>
+
+            <!-- What is actually on the page, per tab. A page with nothing on
+                 it looks identical to a full one without this. -->
+            <div class="mart-pagecard-bands">
+                <t t-foreach="[['quick','Quick'],['all','Express']]" t-as="pair" t-key="pair[0]">
+                    <div class="mart-pagecard-mode">
+                        <b t-esc="pair[1]"/>
+                        <span>
+                            <t t-esc="countsOf(page, pair[0]).banners"/> banners ·
+                            <t t-esc="countsOf(page, pair[0]).tiles"/> tiles ·
+                            <t t-esc="countsOf(page, pair[0]).tabs"/> tabs ·
+                            <t t-esc="countsOf(page, pair[0]).sections"/> rows
+                        </span>
+                    </div>
+                </t>
+            </div>
+
+            <div class="mart-pagecard-actions">
+                <button class="mart-btn mart-btn-primary" t-on-click="() => this.edit(page)">
+                    Edit page
+                </button>
+                <button t-if="!page.isCurrent" class="mart-btn"
+                        t-att-disabled="state.busy"
+                        t-on-click="() => this.switchOn(page)">
+                    Switch on
+                </button>
+                <button class="mart-btn" t-att-disabled="state.busy"
+                        t-on-click="() => this.openSchedule(page)">
+                    Schedule
+                </button>
+                <button class="mart-btn" t-att-disabled="state.busy"
+                        t-on-click="() => this.duplicate(page)">
+                    Duplicate
+                </button>
+                <!-- The model refuses to delete the live page and the last one.
+                     Say so here too, rather than letting someone click and be
+                     told no. -->
+                <button class="mart-btn mart-btn-danger"
+                        t-att-disabled="state.busy or page.isCurrent"
+                        t-att-title="page.isCurrent ? 'This is the everyday page. Switch another one on first.' : ''"
+                        t-on-click="() => this.remove(page)">
+                    Delete
+                </button>
+            </div>
+
+            <div t-if="state.scheduling === page.id" class="mart-sched">
+                <p>
+                    Give it a window and it takes over while the window is open,
+                    then the everyday page comes back on its own.
+                </p>
+                <div class="mart-sched-row">
+                    <label>
+                        <span>Starts</span>
+                        <input type="datetime-local" t-model="state.draft.startsOn"/>
+                    </label>
+                    <label>
+                        <span>Ends</span>
+                        <input type="datetime-local" t-model="state.draft.endsOn"/>
+                    </label>
+                </div>
+                <div class="mart-sched-actions">
+                    <button class="mart-btn mart-btn-primary" t-att-disabled="state.busy"
+                            t-on-click="() => this.saveSchedule(page)">Save dates</button>
+                    <button class="mart-btn" t-att-disabled="state.busy"
+                            t-on-click="() => this.clearSchedule(page)">Clear dates</button>
+                </div>
+            </div>
+        </article>
+    </t>
+
+</templates>

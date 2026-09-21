@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- The front door. You pick a page, then edit it.
+
+         The builder used to open straight onto whatever page was live, and
+         from inside it there was no way to tell which page you were changing
+         - the answer was always "the one shoppers are looking at". So the
+         list comes first, and it hands the chosen page's id to the editor. -->
+    <record id="action_mart369_home_pages" model="ir.actions.client">
+        <field name="name">Home Pages</field>
+        <field name="tag">mart369_home.pages</field>
+        <field name="path">mart-home</field>
+    </record>
+
+    <!-- The editor: the shop's own home page, drawn at the width a shopper
+         sees it, with a switch on everything. Opened with a page id in the
+         context, so it cannot edit a page other than the one you chose. -->
+    <record id="action_mart369_home_editor" model="ir.actions.client">
+        <field name="name">Edit Home Page</field>
+        <field name="tag">mart369_home.editor</field>
+        <field name="path">mart-home-edit</field>
+    </record>
+
+</odoo>

@@ -6,7 +6,7 @@
  * change saves on its own, then the page is reloaded from the server so the
  * mock always shows exactly what the app will receive.
  */
-import { Component, markup, onWillStart, useRef, useState } from "@odoo/owl";
+import { Component, onMounted, onPatched, onWillStart, useRef, useState } from "@odoo/owl";
 import { _t } from "@web/core/l10n/translation";
 import { registry } from "@web/core/registry";
 import { ConfirmationDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
@@ -50,6 +50,16 @@ const ICONS = {
     book: '<path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5M8 7h7"/>',
     grid: '<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>',
     scooter: '<path d="M4 16a3 3 0 1 0 6 0 3 3 0 0 0-6 0zM14 16a3 3 0 1 0 6 0 3 3 0 0 0-6 0z"/><path d="M7 16h7l3-8h3"/>',
+    // Used by the editor's own chrome rather than by the shop.
+    left: '<path d="m15 6-6 6 6 6"/>',
+    plus: '<path d="M12 5v14M5 12h14"/>',
+    trash: '<path d="M4 7h16M10 7V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2"/><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/>',
+    eye: '<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>',
+    // The same eye with the lid drawn over it, so hidden reads as hidden.
+    'eye-off': '<path d="M3 3l18 18"/><path d="M10.6 5.2A9.8 9.8 0 0 1 12 5c6 0 10 7 10 7a17 17 0 0 1-3.3 4"/><path d="M6.2 6.4A17 17 0 0 0 2 12s4 7 10 7a9.6 9.6 0 0 0 4.3-1"/>',
+    clock: '<circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/>',
+    check: '<path d="m5 12 4.5 4.5L19 7"/>',
+    info: '<circle cx="12" cy="12" r="8"/><path d="M12 11v5M12 8h.01"/>',
 };
 
 const SOURCES = [
@@ -99,8 +109,24 @@ export class Icon extends Component {
     static template = "mart369_home.Icon";
     static props = { n: String, size: { type: Number, optional: true }, class: { type: String, optional: true } };
     static defaultProps = { size: 20, class: "" };
-    get paths() {
-        return markup(ICONS[this.props.n] || ICONS.grid);
+
+    setup() {
+        this.svg = useRef("svg");
+        // The paths are drawn by hand rather than by `t-out`.
+        //
+        // `t-out` builds its markup as HTML, so every <path> came out in the
+        // XHTML namespace - and an <svg> full of XHTML elements draws nothing
+        // at all. The box was the right size, the stroke was the right colour,
+        // and the icon was simply not there. Assigning innerHTML on the <svg>
+        // node makes the browser parse the fragment in the SVG namespace,
+        // which is the whole difference between an icon and an empty gap.
+        const draw = () => {
+            if (this.svg.el) {
+                this.svg.el.innerHTML = ICONS[this.props.n] || ICONS.grid;
+            }
+        };
+        onMounted(draw);
+        onPatched(draw);
     }
 }
 
@@ -118,6 +144,13 @@ export class HomeBuilder extends Component {
         this.RULES = RULES;
         this.ROUTE_VIEWS = ROUTE_VIEWS;
         this.TONE_CSS = TONE_CSS;
+
+        // Which saved page this screen is editing. Without it `builder_load`
+        // resolves whichever page is *live*, so opening a parked page and
+        // changing a banner quietly changed what shoppers were seeing.
+        // Null still means the live page, so the old /odoo/mart-home URL and
+        // the tour keep working.
+        this.pageId = this.props.action?.context?.mart369_page_id || null;
 
         this.state = useState({
             modeKey: this.props.action?.context?.mart369_mode || "quick",
@@ -168,7 +201,7 @@ export class HomeBuilder extends Component {
     }
 
     async load() {
-        const data = await this.orm.call(M.mode, "builder_load", [this.state.modeKey]);
+        const data = await this.orm.call(M.mode, "builder_load", [this.state.modeKey, this.pageId]);
         this.state.data = data;
         this.applyPending();
         // Keep the selection if the record still exists.
