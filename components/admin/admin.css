@@ -124,10 +124,22 @@ html.ad-lock, html.ad-lock body { overflow: hidden; }
 .ad-search:focus-within { border-color: var(--ad-blue); box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.14); }
 .ad-search input { flex: 1; min-width: 80px; border: 0; outline: 0; background: none; font: inherit; font-size: 14px; color: var(--ad-ink); }
 .ad-search button { width: 20px; height: 20px; border: 0; border-radius: 50%; background: var(--ad-ground); color: var(--ad-muted); display: grid; place-items: center; padding: 0; }
+/* Our own dropdown, so the menu is drawn by the console and not by the
+   operating system. See the comment on Select in AdminUI.jsx. */
 .ad-select { position: relative; display: inline-flex; align-items: center; }
-.ad-select select { appearance: none; height: 38px; padding: 0 32px 0 12px; border: 1px solid var(--ad-line); border-radius: 10px; background: #fff; font: inherit; font-size: 13.5px; font-weight: 600; color: var(--ad-ink); outline: none; transition: border-color 180ms, box-shadow 200ms; }
-.ad-select select:focus-visible { border-color: var(--ad-blue); box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.14); }
-.ad-select .hm-ic { position: absolute; right: 9px; pointer-events: none; color: var(--ad-muted); }
+.ad-select-btn { display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 10px 0 12px; border: 1px solid var(--ad-line); border-radius: 10px; background: #fff; font: inherit; font-size: 13.5px; font-weight: 600; color: var(--ad-ink); cursor: pointer; white-space: nowrap; transition: border-color 180ms, box-shadow 200ms; }
+.ad-select-btn:hover { border-color: #c3d4de; }
+.ad-select-btn:focus-visible { outline: none; border-color: var(--ad-blue); box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.14); }
+.ad-select-btn .hm-ic { color: var(--ad-muted); transition: transform 180ms var(--ad-ease); }
+.ad-select-open .ad-select-btn { border-color: var(--ad-blue); }
+.ad-select-open .ad-select-btn .hm-ic { transform: rotate(180deg); }
+.ad-select-menu { position: absolute; z-index: 40; top: calc(100% + 6px); left: 0; min-width: 100%; margin: 0; padding: 5px; list-style: none; background: #fff; border: 1px solid var(--ad-line); border-radius: 12px; box-shadow: 0 12px 30px rgba(16, 39, 54, 0.16); animation: ad-rise 160ms var(--ad-ease); }
+.ad-select-menu li + li { margin-top: 1px; }
+.ad-select-menu button { display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 12px 8px 8px; border: 0; border-radius: 8px; background: transparent; font: inherit; font-size: 13px; color: var(--ad-ink); text-align: left; white-space: nowrap; cursor: pointer; }
+.ad-select-menu button:hover { background: #f1f6f9; }
+.ad-select-menu button .hm-ic { color: var(--ad-blue); opacity: 0; flex: none; }
+.ad-select-menu .ad-select-on { font-weight: 700; }
+.ad-select-menu .ad-select-on .hm-ic { opacity: 1; }
 .ad-tabs { display: inline-flex; gap: 2px; padding: 3px; border-radius: 11px; background: var(--ad-ground); }
 .ad-tabs button { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 0; border-radius: 9px; background: none; font-size: 13px; font-weight: 700; color: var(--ad-muted); transition: background-color 180ms, color 180ms; }
 .ad-tabs button:hover { color: var(--ad-ink); }
@@ -487,3 +499,101 @@ html.ad-lock, html.ad-lock body { overflow: hidden; }
 .ad-danger-link { color: #c62f2f; }
 .ad-sched { border-top: 1px solid var(--ad-line); padding: 14px 18px 18px; }
 .ad-sched-act { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+
+/* ---- orders: the work queue ------------------------------------------- */
+/* Five tiles rather than four, and each one is a filter - so they need the
+   affordances of a control, not of a read-out. */
+.ad-order-tiles { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.ad-stat-btn { font: inherit; text-align: left; cursor: pointer; transition: border-color 160ms var(--ad-ease), box-shadow 160ms var(--ad-ease), transform 160ms var(--ad-ease); }
+.ad-stat-btn:hover { border-color: #c3d4de; transform: translateY(-1px); }
+.ad-stat-btn:focus-visible { outline: 2px solid var(--ad-blue, #0a78ab); outline-offset: 2px; }
+.ad-stat-on { border-color: #0a78ab; box-shadow: inset 0 0 0 1px #0a78ab; }
+.ad-stat-warn b { color: #b3350c; }
+
+.ad-orders { list-style: none; margin: 0; padding: 0; }
+.ad-orders-head { display: flex; align-items: center; gap: 12px; padding: 10px 16px; font-size: 12.5px; font-weight: 600; color: var(--ad-muted); border-bottom: 1px solid var(--ad-line); }
+
+/* Two lines per order: who and how much on top, where it is and what to do
+   next underneath. Denser than one long row at the same information, and it
+   survives a narrow window without a horizontal scrollbar. */
+.ad-order { display: flex; align-items: flex-start; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--ad-line); cursor: pointer; animation: ad-row 320ms var(--ad-ease) backwards; animation-delay: calc(var(--i, 0) * 28ms); }
+.ad-order:hover { background: #f7fafc; }
+.ad-order.ad-selected { background: #eef7fc; }
+.ad-order.ad-order-late { box-shadow: inset 3px 0 0 #e2622e; }
+.ad-order > input { margin-top: 4px; flex: none; }
+.ad-order-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.ad-order-line1, .ad-order-line2 { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.ad-order-line1 .ad-cell-person { gap: 7px; }
+.ad-order-line1 .ad-cell-person b { display: inline; }
+.ad-order-ago { font-size: 12.5px; color: var(--ad-muted); white-space: nowrap; }
+.ad-order-items { font-size: 12.5px; color: var(--ad-muted); white-space: nowrap; }
+.ad-order-total { margin-left: auto; font-size: 15px; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ad-order-promise, .ad-order-pay { font-size: 12.5px; color: var(--ad-muted); }
+.ad-order-act { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.ad-late { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 700; color: #b3350c; background: #fdeee7; border: 1px solid #f6cdbc; padding: 3px 9px; border-radius: 999px; }
+
+@media (max-width: 900px) {
+  .ad-order-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ad-order-total { margin-left: 0; }
+  .ad-order-act { width: 100%; margin-left: 0; justify-content: flex-end; }
+}
+
+/* ==========================================================================
+   Returns — the photos the customer sent
+   ========================================================================== */
+/* Small, uniform and clickable. A damage claim is looked at, so each one opens
+   full size in its own tab rather than trying to be a lightbox. */
+.ad-rt-photos { display: flex; flex-wrap: wrap; gap: 8px; }
+.ad-rt-photos a {
+  display: block;
+  width: 96px;
+  height: 96px;
+  border: 1px solid var(--ad-line);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--ad-ground);
+}
+.ad-rt-photos img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ad-rt-photos a:hover { border-color: var(--ad-blue); }
+
+/* ---- home pages: the Trash ------------------------------------------- */
+/* A page is weeks of somebody's work and the button that removes it sits
+   next to Duplicate, so removing one parks it here for 30 days instead of
+   destroying it — the same bargain every band on the page already gets. */
+.ad-head-act { display: flex; align-items: center; gap: 8px; flex: none; }
+.ad-head-act em { font-style: normal; font-weight: 800; color: var(--ad-muted); }
+.ad-trash-note { margin: 0 0 10px; }
+.ad-trash-list { list-style: none; margin: 0; padding: 0; }
+.ad-trash-list li { display: flex; align-items: center; gap: 10px; padding: 11px 0; border-bottom: 1px solid #f1f4f7; }
+.ad-trash-list li:last-child { border-bottom: 0; }
+.ad-trash-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.ad-trash-txt b { font-size: 14px; font-weight: 700; }
+.ad-trash-txt small { font-size: 12px; color: var(--ad-muted); }
+.ad-name-field { display: block; margin: 0 0 12px; text-align: left; }
+.ad-name-field input { width: 100%; }
+
+/* Coupon form: the server names the field it is refusing, so the message
+   belongs in the drawer beside the inputs, not in a toast that takes the
+   typing away with it. */
+.ad-form-error { color: #9c2f28; background: #fbe9e7; border: 1px solid #f3c4c1; border-radius: 10px; padding: 9px 12px; margin: 0 0 12px; }
+.ad-coupon-act { flex-wrap: wrap; gap: 8px; }
+.ad-coupon-body > small + small { margin-top: 1px; }
+
+/* Deals: products picked from the catalogue, so the picker needs somewhere
+   to put results and chips. */
+.ad-deals { list-style: none; margin: 0; padding: 0; }
+.ad-deals li { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--ad-line); animation: ad-row 320ms var(--ad-ease) backwards; animation-delay: calc(var(--i, 0) * 30ms); }
+.ad-deals li:last-child { border-bottom: 0; }
+.ad-deals li.ad-off { opacity: 0.6; }
+.ad-deal-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.ad-deal-body b { font-size: 14px; font-weight: 700; }
+.ad-deal-body small { font-size: 12px; color: var(--ad-muted); }
+.ad-deal-act { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ad-dim { color: var(--ad-muted); font-style: normal; }
+.ad-pick-results { list-style: none; margin: 6px 0 0; padding: 4px; border: 1px solid var(--ad-line); border-radius: 10px; max-height: 190px; overflow: auto; background: #fff; }
+.ad-pick-results button { display: flex; justify-content: space-between; gap: 10px; width: 100%; padding: 7px 10px; border: 0; border-radius: 7px; background: transparent; font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
+.ad-pick-results button:hover { background: #f1f6f9; }
+.ad-pick-results small { color: var(--ad-muted); }
+.ad-picked { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.ad-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 6px 4px 10px; border-radius: 999px; background: #eef2f5; font-size: 12.5px; }
+.ad-chip button { border: 0; background: transparent; cursor: pointer; font-size: 15px; line-height: 1; color: var(--ad-muted); padding: 0 2px; }

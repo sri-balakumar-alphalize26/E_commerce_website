@@ -28,8 +28,11 @@ export const Icon = ({ n, size = 20, className = "" }) =>
     <svg className={"hm-ic " + className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{EXTRA[n]}</svg>
   ) : <HomeIcon n={n} size={size} className={className} />;
 
-export const Pill = ({ s }) => {
-  const m = STATUS[s] || { label: s, tone: "grey" };
+/* `map` so a screen can bring its own vocabulary. Orders runs on the shop's
+   own states (placed / packed / shipped / ...), which are not the sample
+   file's; without this the pill falls through to the raw key in grey. */
+export const Pill = ({ s, map = STATUS }) => {
+  const m = map[s] || { label: s, tone: "grey" };
   return <span className={"ad-pill ad-t-" + m.tone}><i />{m.label}</span>;
 };
 
@@ -68,14 +71,64 @@ export function Tabs({ tabs, value, onChange }) {
   );
 }
 
+/* Ours, not the browser's. A native <select> draws its menu with the operating
+   system, so the same control is a grey Windows list here, a rounded sheet on a
+   Mac and a full-screen roller on a phone - three looks the rest of the console
+   does not have, and none of them can show which option is the current one
+   beyond a highlight. The API is unchanged, so every caller upgrades at once.
+
+   Same API as before: options are [value, label] pairs. */
 export function Select({ value, onChange, options, label }) {
+  const [open, setOpen] = useState(false);
+  const wrap = useRef(null);
+  const current = options.find(([v]) => v === value);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const away = (e) => { if (!wrap.current?.contains(e.target)) setOpen(false); };
+    const key = (e) => {
+      if (e.key !== "Escape") return;
+      setOpen(false);
+      wrap.current?.querySelector(".ad-select-btn")?.focus();
+    };
+    /* mousedown, not click: a click that lands on another dropdown's toggle
+       should close this one and open that one, not be swallowed closing this. */
+    document.addEventListener("mousedown", away);
+    document.addEventListener("keydown", key);
+    return () => {
+      document.removeEventListener("mousedown", away);
+      document.removeEventListener("keydown", key);
+    };
+  }, [open]);
+
+  const choose = (v) => {
+    setOpen(false);
+    if (v !== value) onChange(v);
+  };
+
   return (
-    <label className="ad-select">
-      <select value={value} onChange={(e) => onChange(e.target.value)} aria-label={label}>
-        {options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-      </select>
-      <Icon n="chev" size={16} />
-    </label>
+    <div className={"ad-select" + (open ? " ad-select-open" : "")} ref={wrap}>
+      <button type="button" className="ad-select-btn" aria-label={label}
+        aria-haspopup="listbox" aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}>
+        <span>{current ? current[1] : ""}</span>
+        <Icon n="chev" size={15} />
+      </button>
+      {open && (
+        <ul className="ad-select-menu" role="listbox" aria-label={label}>
+          {options.map(([v, l]) => (
+            <li key={v}>
+              <button type="button" role="option" aria-selected={v === value}
+                className={v === value ? "ad-select-on" : ""}
+                onClick={() => choose(v)}>
+                <Icon n="check" size={14} />
+                {l}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 

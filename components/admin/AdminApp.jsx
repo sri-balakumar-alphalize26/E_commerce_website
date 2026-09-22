@@ -14,10 +14,12 @@ import { useResource } from "@/lib/useFetch";
 import { Avatar, Confirm, Drawer, Empty, Icon, Pill, Search, Select, Switch, Tabs, useToast } from "./AdminUI";
 import { BarChart, DataTable, Legend, LineChart, RankBars, SERIES, Spark } from "./charts";
 import {
-  COUPONS, CUSTOMERS, FLOW, NEXT_LABEL, ORDERS, REVIEWS, RIDERS, SETTINGS, STOCK, TODAY,
-  categorySales, clock, dateLong, hourlyOrders, inr, isToday, revenueSeries, since,
+  CUSTOMERS, ORDERS, SETTINGS, STOCK, TODAY,
+  categorySales, hourlyOrders, isToday, revenueSeries,
 } from "./adminData";
+import { clock, dateLong, since } from "./format";
 import OrdersSection from "./AdminOrders";
+import ReturnsSection from "./AdminReturns";
 import { CustomersSection, ProductsSection } from "./AdminCatalog";
 import { OffersSection, ReviewsSection, SettingsSection } from "./AdminMore";
 import HomeSection from "./HomeSection";
@@ -35,10 +37,11 @@ export const SECTIONS = [
   { key: "dashboard", label: "Dashboard", icon: "dash", group: "Overview", live: true },
   { key: "home", label: "Home page", icon: "layers", group: "Store", live: true },
   { key: "product-page", label: "Product page", icon: "note", group: "Store", live: true },
-  { key: "orders", label: "Orders", icon: "box", group: "Sales" },
+  { key: "orders", label: "Orders", icon: "box", group: "Sales", live: true },
+  { key: "returns", label: "Returns", icon: "truck", group: "Sales", live: true },
   { key: "customers", label: "Customers", icon: "users", group: "Sales" },
-  { key: "offers", label: "Offers", icon: "ticket", group: "Sales" },
-  { key: "reviews", label: "Reviews", icon: "star", group: "Sales" },
+  { key: "offers", label: "Offers", icon: "ticket", group: "Sales", live: true },
+  { key: "reviews", label: "Reviews", icon: "star", group: "Sales", live: true },
   { key: "products", label: "Products", icon: "layers", group: "Catalogue" },
   { key: "settings", label: "Settings", icon: "gear", group: "Store" },
 ];
@@ -168,12 +171,12 @@ function SampleBanner({ label }) {
 /* ================================== shell =============================== */
 export default function AdminApp({ section: initial = "dashboard", onSection, onExit }) {
   const [section, setSection] = useState(SECTIONS.some((s) => s.key === initial) ? initial : "dashboard");
-  const [orders, setOrders] = useState(ORDERS);
   const [stock, setStock] = useState(STOCK);
-  const [coupons, setCoupons] = useState(COUPONS);
-  const [reviews, setReviews] = useState(REVIEWS);
   const [settings, setSettings] = useState(SETTINGS);
   const [openId, setOpenId] = useState(null);
+  /* What the topbar handed to Orders to search for. Orders owns its own box;
+     this only seeds it. */
+  const [orderQ, setOrderQ] = useState("");
   const [collapsed, setCollapsed] = useState(false);
   const [mobileNav, setMobileNav] = useState(false);
   const [alerts, setAlerts] = useState(false);
@@ -197,34 +200,40 @@ export default function AdminApp({ section: initial = "dashboard", onSection, on
     return () => window.removeEventListener("click", c);
   }, []);
 
-  /* ---- actions (replace with Odoo calls) ---- */
-  const patch = (id, p) => setOrders((l) => l.map((o) => (o.id === id ? { ...o, ...p } : o)));
-  const advance = (id) => {
-    const o = orders.find((x) => x.id === id);
-    const next = FLOW[FLOW.indexOf(o.status) + 1];
-    if (!next) return;
-    patch(id, { status: next, rider: next === "out" && !o.rider ? { id: RIDERS[0].id, name: RIDERS[0].name } : o.rider });
-    flash(`#${id} → ${next === "out" ? "out for delivery" : next}`);
-  };
-  const cancelOrder = (id, reason) => { patch(id, { status: "cancelled", cancelReason: reason }); flash(`#${id} cancelled`, "bad"); };
-  const assign = (id, riderId) => { const r = RIDERS.find((x) => x.id === riderId); patch(id, { rider: { id: r.id, name: r.name } }); flash(`${r.name} assigned to #${id}`); };
+  /* ---- actions (replace with Odoo calls) ----
+     Orders is not here any more: it reads and writes the shop itself, so
+     moving an order on is no longer something the shell can do to a local
+     array. What is left below still runs on adminData.js and says so on
+     screen. */
   const setQty = (id, qty) => setStock((l) => l.map((s) => (s.id === id ? { ...s, qty: Math.max(0, qty) } : s)));
   const setPrice = (id, price) => setStock((l) => l.map((s) => (s.id === id ? { ...s, price } : s)));
   const toggleProduct = (id) => setStock((l) => l.map((s) => (s.id === id ? { ...s, active: !s.active } : s)));
   const addProduct = (p) => { setStock((l) => [{ ...p, id: "np" + Date.now(), sold7: 0, reorder: 12, active: true }, ...l]); flash(`${p.name} added`); };
 
-  const live = orders.filter((o) => ["new", "packing", "ready", "out"].includes(o.status));
+  /* The sidebar badge is a real number now, so the shell asks for it rather
+     than counting a list it no longer holds. Slower than the section's own
+     poll on purpose: this one is only a badge. */
+  const orderCounts = useResource("/admin/orders/counts", { pollMs: 60000 });
+  /* Same again, and its own route for the same reason Orders has one: a badge
+     wants three numbers, not every review in the shop once a minute. */
+  const reviewCounts = useResource("/admin/reviews/counts", { pollMs: 60000 });
+  const waiting = orderCounts.data?.counts?.needs || 0;
+  const lateCount = orderCounts.data?.counts?.late || 0;
   const lowCount = stock.filter((s) => s.qty <= s.reorder).length;
-  const pendingReviews = reviews.filter((r) => r.state === "pending").length;
-  const counts = { orders: live.length, reviews: pendingReviews, products: lowCount };
+  const pendingReviews = reviewCounts.data?.counts?.pending || 0;
+  const counts = { orders: waiting, reviews: pendingReviews, products: lowCount };
+  /* One line per thing to do, not one per order. The shell has no order list
+     to name rows out of, and "2 late" is the part a manager acts on anyway. */
   const notes = useMemo(() => [
-    ...live.filter((o) => o.status === "new").slice(0, 3).map((o) => ({ id: "n" + o.id, icon: "box", text: `New order #${o.id} · ${inr(o.total)}`, at: o.at, go: ["orders", o.id] })),
+    ...(lateCount ? [{ id: "nlate", icon: "clock", text: `${lateCount} order${lateCount === 1 ? "" : "s"} past the time they were promised`, at: null, go: ["orders"] }] : []),
+    ...(waiting ? [{ id: "nord", icon: "box", text: `${waiting} order${waiting === 1 ? "" : "s"} still on their way`, at: null, go: ["orders"] }] : []),
     ...(lowCount ? [{ id: "nlow", icon: "layers", text: `${lowCount} products at or below reorder level`, at: TODAY - 3600000, go: ["products"] }] : []),
-    ...(pendingReviews ? [{ id: "nrev", icon: "star", text: `${pendingReviews} reviews waiting for approval`, at: TODAY - 7200000, go: ["reviews"] }] : []),
-  ], [live.length, lowCount, pendingReviews]); // eslint-disable-line
+    ...(pendingReviews ? [{ id: "nrev", icon: "star", text: `${pendingReviews} review${pendingReviews === 1 ? "" : "s"} nobody has looked at yet`, at: null, go: ["reviews"] }] : []),
+  ], [waiting, lateCount, lowCount, pendingReviews]); // eslint-disable-line
 
+  /* Orders are searched in the shop, not here - so this hands the term over
+     rather than pretending to have matched anything. */
   const results = q.trim().length > 1 ? {
-    orders: orders.filter((o) => (o.id + o.customer.name + o.customer.area).toLowerCase().includes(q.toLowerCase())).slice(0, 4),
     products: stock.filter((s) => s.name.toLowerCase().includes(q.toLowerCase())).slice(0, 4),
     customers: CUSTOMERS.filter((c) => c.name.toLowerCase().includes(q.toLowerCase())).slice(0, 3),
   } : null;
@@ -233,11 +242,12 @@ export default function AdminApp({ section: initial = "dashboard", onSection, on
   if (section === "dashboard") body = <Dashboard go={go} />;
   else if (section === "home") body = <HomeSection flash={flash} />;
   else if (section === "product-page") body = <ProductPageSection flash={flash} />;
-  else if (section === "orders") body = <OrdersSection orders={orders} openId={openId} setOpenId={setOpenId} advance={advance} cancelOrder={cancelOrder} assign={assign} flash={flash} />;
+  else if (section === "orders") body = <OrdersSection openId={openId} setOpenId={setOpenId} query={orderQ} flash={flash} />;
+  else if (section === "returns") body = <ReturnsSection flash={flash} />;
   else if (section === "products") body = <ProductsSection stock={stock} setQty={setQty} setPrice={setPrice} toggleProduct={toggleProduct} addProduct={addProduct} flash={flash} />;
-  else if (section === "customers") body = <CustomersSection orders={orders} flash={flash} />;
-  else if (section === "offers") body = <OffersSection coupons={coupons} setCoupons={setCoupons} flash={flash} />;
-  else if (section === "reviews") body = <ReviewsSection reviews={reviews} setReviews={setReviews} flash={flash} />;
+  else if (section === "customers") body = <CustomersSection orders={ORDERS} flash={flash} />;
+  else if (section === "offers") body = <OffersSection flash={flash} />;
+  else if (section === "reviews") body = <ReviewsSection flash={flash} />;
   else body = <SettingsSection settings={settings} setSettings={setSettings} flash={flash} />;
 
   const groups = [...new Set(SECTIONS.map((s) => s.group))];
@@ -281,10 +291,10 @@ export default function AdminApp({ section: initial = "dashboard", onSection, on
             <Search value={q} onChange={setQ} placeholder="Search orders, products, customers" wide />
             {results && (
               <div className="ad-results">
-                {results.orders.map((o) => <button key={o.id} onClick={() => { setQ(""); setOpenId(o.id); go("orders"); }}><Icon n="box" size={15} /><b>#{o.id}</b><small>{o.customer.name} · {inr(o.total)}</small></button>)}
+                <button onClick={() => { setOrderQ(q); setQ(""); go("orders"); }}><Icon n="box" size={15} /><b>Search orders for “{q}”</b><small>Order number, customer or phone</small></button>
                 {results.products.map((p) => <button key={p.id} onClick={() => { setQ(""); go("products"); }}><Icon n="layers" size={15} /><b>{p.name}</b><small>{p.qty} in stock</small></button>)}
                 {results.customers.map((c) => <button key={c.id} onClick={() => { setQ(""); go("customers"); }}><Icon n="users" size={15} /><b>{c.name}</b><small>{c.orders} orders</small></button>)}
-                {!results.orders.length && !results.products.length && !results.customers.length && <p className="ad-no-res">No matches for “{q}”</p>}
+                {!results.products.length && !results.customers.length && <p className="ad-no-res">Nothing else matches “{q}”</p>}
               </div>
             )}
           </div>
@@ -296,7 +306,7 @@ export default function AdminApp({ section: initial = "dashboard", onSection, on
                 {notes.map((n) => (
                   <button key={n.id} onClick={() => { setAlerts(false); if (n.go[1]) setOpenId(n.go[1]); go(n.go[0]); }}>
                     <span className="ad-pop-ic"><Icon n={n.icon} size={16} /></span>
-                    <span><b>{n.text}</b><small>{since(n.at)}</small></span>
+                    <span><b>{n.text}</b><small>{n.at ? since(n.at) : "now"}</small></span>
                   </button>
                 ))}
                 {!notes.length && <p className="ad-no-res">Nothing needs attention.</p>}
