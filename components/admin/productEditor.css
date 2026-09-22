@@ -41,6 +41,10 @@
 /* --------------------------------------------------------------- the panel */
 
 .pp-secs, .pp-fields { list-style: none; margin: 0; padding: 0; }
+/* The one screen with no entrance of its own: eleven parts arrived as a block.
+   Same `ad-row` and same `--i` idiom the rest of the console uses, so the list
+   reads top to bottom the way it is meant to be read. */
+.pp-secs > li, .pp-fields > li { animation: ad-row 320ms var(--ad-ease) backwards; animation-delay: calc(var(--i, 0) * 34ms + 60ms); }
 
 .pp-sec-row, .pp-field-row {
   display: flex;

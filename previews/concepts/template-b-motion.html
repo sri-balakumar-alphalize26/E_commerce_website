@@ -1,0 +1,513 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Template B — Motion</title>
+<style>
+  :root{
+    --navy:#0c2a3a; --navy-2:#081e2b; --ink:#0f1c24; --ink-2:#3d525e; --muted:#77878f;
+    --line:#e3e9ed; --line-2:#eef2f5; --bg:#f5f7f9;
+    --accent:#0a78ab; --orange:#f7931e; --pos:#137a4d; --neg:#c23a2f; --warn:#a9700c;
+    --r:10px;
+    /* one ease for entrances, one springy ease for anything a finger caused */
+    --ease:cubic-bezier(.22,1,.36,1); --spring:cubic-bezier(.34,1.4,.64,1);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;font-size:13.5px;-webkit-font-smoothing:antialiased}
+  svg{stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .app{display:grid;grid-template-columns:64px minmax(0,1fr);min-height:100vh}
+
+  /* ============ rail: the marker slides between items ============ */
+  .rail{background:linear-gradient(180deg,var(--navy),var(--navy-2));display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 0;position:sticky;top:0;height:100vh;color:#d7e6ee;z-index:40}
+  .rail .mark{width:34px;height:34px;border-radius:10px;background:rgba(255,255,255,.12);display:grid;place-items:center;font-weight:800;font-size:11.5px;color:#fff;margin-bottom:10px;animation:pop .5s var(--spring) both}
+  .navwrap{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px}
+  #marker{position:absolute;left:-12px;width:3px;height:20px;border-radius:0 3px 3px 0;background:var(--orange);transition:transform .38s var(--spring);will-change:transform}
+  .rail button.nv{position:relative;width:40px;height:40px;border:0;border-radius:11px;background:none;display:grid;place-items:center;color:rgba(215,230,238,.72);cursor:pointer;
+    transition:background-color .2s,color .2s,transform .3s var(--spring)}
+  .rail button.nv:hover{background:rgba(255,255,255,.1);color:#fff;transform:translateY(-2px)}
+  .rail button.nv:active{transform:scale(.92)}
+  .rail button.nv.cur{background:rgba(255,255,255,.16);color:#fff}
+  .rail em{position:absolute;top:-2px;right:-2px;min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:var(--orange);color:#2a1600;font-style:normal;font-size:10px;font-weight:800;display:grid;place-items:center;animation:pop .45s var(--spring) both}
+  .rail .tip{position:absolute;left:52px;white-space:nowrap;background:#0f1c24;color:#fff;font-size:12px;font-weight:600;padding:4px 9px;border-radius:7px;
+    opacity:0;transform:translateX(-6px);pointer-events:none;transition:opacity .16s,transform .16s var(--ease);z-index:9}
+  .rail button.nv:hover .tip{opacity:1;transform:translateX(0)}
+  .rail .sep{flex:1}
+  .rail svg{width:19px;height:19px}
+
+  /* ============ top bar ============ */
+  .main{min-width:0;display:flex;flex-direction:column}
+  header.top{display:flex;align-items:center;gap:12px;padding:0 22px;height:56px;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+  .crumb{font-size:12.5px;color:var(--muted)}
+  header.top h1{margin:0;font-size:17px;font-weight:700;letter-spacing:-.02em}
+  /* the title swaps with a short rise, so the change of screen is felt */
+  .swap{animation:rise .34s var(--ease) both}
+  .seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-left:18px;position:relative}
+  .seg button{border:0;background:none;font:inherit;font-size:12.5px;font-weight:600;color:var(--ink-2);padding:6px 11px;cursor:pointer;position:relative;z-index:1;transition:color .22s}
+  .seg button.on{color:#fff}
+  #segpill{position:absolute;top:0;bottom:0;left:0;background:var(--ink);border-radius:7px;transition:transform .34s var(--spring),width .34s var(--spring)}
+  .srch{margin-left:auto;display:flex;align-items:center;gap:8px;width:250px;height:32px;padding:0 10px;border:1px solid var(--line);border-radius:8px;color:var(--muted);font-size:12.5px;transition:border-color .22s,box-shadow .22s,width .3s var(--ease)}
+  .srch:hover{border-color:#c8d4db;box-shadow:0 0 0 4px rgba(10,120,171,.07);width:270px}
+  .srch kbd{margin-left:auto;font:inherit;font-size:10.5px;border:1px solid var(--line);border-radius:4px;padding:0 4px}
+  .ibtn{width:32px;height:32px;border:1px solid var(--line);border-radius:8px;background:#fff;display:grid;place-items:center;color:var(--ink-2);position:relative;cursor:pointer;transition:transform .3s var(--spring),border-color .2s}
+  .ibtn:hover{transform:translateY(-2px);border-color:#c8d4db}
+  .ibtn:hover svg{animation:ring .6s var(--ease)}
+  .ibtn i{position:absolute;top:6px;right:7px;width:6px;height:6px;border-radius:999px;background:var(--neg)}
+  .ibtn i::after{content:"";position:absolute;inset:0;border-radius:999px;background:var(--neg);animation:halo 2.4s ease-out infinite}
+  .av{width:30px;height:30px;border-radius:8px;background:var(--navy);color:#fff;display:grid;place-items:center;font-size:11px;font-weight:700}
+  main{padding:18px 22px 50px;display:flex;flex-direction:column;gap:14px}
+
+  /* ============ shared blocks ============ */
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);background:#fff;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+  .kpi{padding:14px 16px;border-right:1px solid var(--line-2);display:flex;flex-direction:column;gap:4px}
+  .kpi:last-child{border-right:0}
+  .kpi .lbl{font-size:11.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:650}
+  .kpi .num{font-size:25px;font-weight:700;letter-spacing:-.03em;font-variant-numeric:tabular-nums;display:flex;align-items:baseline;gap:8px}
+  .kpi .num s{text-decoration:none;font-size:11.5px;font-weight:700}
+  .up{color:var(--pos)} .dn{color:var(--neg)}
+  .kpi .sub{font-size:12px;color:var(--muted)}
+  .spark{height:22px;display:flex;align-items:flex-end;gap:2px;margin-top:2px}
+  .spark span{flex:1;background:#cfe0e9;border-radius:2px;transform-origin:bottom;animation:grow .55s var(--ease) both;animation-delay:calc(.35s + var(--i)*.045s)}
+  .spark span:last-child{background:var(--accent)}
+  .cols{display:grid;grid-template-columns:minmax(0,1fr) 312px;gap:14px;align-items:start}
+  .card{background:#fff;border:1px solid var(--line);border-radius:var(--r)}
+  .card>.h{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--line-2)}
+  .card h2{margin:0;font-size:13.5px;font-weight:700;letter-spacing:-.01em}
+  .card .h .r{margin-left:auto;display:flex;gap:6px;align-items:center}
+  .mini{height:28px;padding:0 9px;border:1px solid var(--line);border-radius:7px;background:#fff;font:inherit;font-size:12px;font-weight:650;color:var(--ink-2);cursor:pointer;transition:background-color .2s,color .2s,border-color .2s,transform .25s var(--spring)}
+  .mini:hover{border-color:#c8d4db;transform:translateY(-1px)}
+  .mini:active{transform:scale(.95)}
+  .mini.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .mini.pri{background:var(--accent);color:#fff;border-color:var(--accent)}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:left;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:#8d9ba3;font-weight:650;padding:8px 14px;background:#fafcfd;border-bottom:1px solid var(--line-2)}
+  td{padding:9px 14px;border-bottom:1px solid var(--line-2);color:var(--ink-2);white-space:nowrap}
+  tbody tr{transition:background-color .18s}
+  tbody tr:hover td{background:#fafcfd}
+  tbody tr:last-child td{border-bottom:0}
+  td.id{font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
+  td.amt{text-align:right;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
+  .pill{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:6px;background:var(--line-2);color:var(--ink-2)}
+  .pill.pack{background:#fff3e0;color:var(--warn)} .pill.out{background:#e6f2f8;color:#075d80}
+  .pill.done{background:#e7f4ed;color:var(--pos)} .pill.late{background:#fdecea;color:var(--neg)}
+  .pill.off{background:#f1f3f5;color:#8b98a0}
+  /* a late order keeps breathing until somebody deals with it */
+  .pill.late{animation:pulse 2.2s ease-in-out infinite}
+  .act{font-size:12px;font-weight:700;color:var(--accent);cursor:pointer;background:none;border:0;font-family:inherit;display:inline-flex;align-items:center;gap:4px}
+  .act::after{content:"→";transition:transform .25s var(--spring)}
+  .act:hover::after{transform:translateX(3px)}
+  .queue{list-style:none;margin:0;padding:8px}
+  .queue li{display:flex;gap:10px;align-items:flex-start;padding:9px 8px;border-radius:8px;transition:background-color .18s,transform .25s var(--ease)}
+  .queue li:hover{background:#f7fafb;transform:translateX(3px)}
+  .qi{flex:none;width:26px;height:26px;border-radius:7px;display:grid;place-items:center;background:#eef5f9;color:var(--accent)}
+  .qi.warn{background:#fff3e0;color:var(--warn)} .qi.bad{background:#fdecea;color:var(--neg)}
+  .queue b{display:block;font-size:12.8px;font-weight:600;color:var(--ink);line-height:1.35}
+  .queue small{font-size:11.5px;color:var(--muted)}
+  .bars{display:flex;align-items:flex-end;gap:6px;height:120px;padding:14px}
+  .bar{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:6px;height:100%}
+  .bar span{width:100%;border-radius:3px;background:#0a78ab;transform-origin:bottom;animation:grow .6s var(--ease) both;animation-delay:calc(.3s + var(--i)*.055s);transition:filter .2s}
+  .bar:hover span{filter:brightness(1.15)}
+  .bar em{font-style:normal;font-size:10px;color:var(--muted)}
+  .bar.dim span{background:#c9dae4}
+  .filters{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:10px 12px}
+  .fs{display:flex;align-items:center;gap:7px;height:30px;padding:0 10px;border:1px solid var(--line);border-radius:8px;font-size:12.5px;font-weight:600;color:var(--ink-2);background:#fff;cursor:pointer;transition:border-color .2s,transform .25s var(--spring)}
+  .fs:hover{border-color:#c8d4db;transform:translateY(-1px)}
+  .fs svg{width:13px;height:13px;color:var(--muted);transition:transform .25s var(--spring)}
+  .fs:hover svg{transform:translateY(2px)}
+  .count{margin-left:auto;font-size:12.5px;color:var(--muted)}
+  .dot{display:inline-block;width:6px;height:6px;border-radius:999px;background:var(--pos);margin-right:6px;animation:live 1.8s ease-in-out infinite}
+
+  /* ============ screens: each enters its own way ============ */
+  .screen{display:none}
+  .screen.on{display:flex;flex-direction:column;gap:14px}
+  /* every direct child of a screen rises in turn */
+  .screen.on > *{animation:rise .5s var(--ease) both;animation-delay:calc(var(--i,0)*.07s)}
+  /* dashboard: the KPI strip wipes open before its numbers count up */
+  #s-dash.on .kpis{animation:wipe .5s var(--ease) both}
+  #s-dash.on .kpi{animation:fade .45s var(--ease) both;animation-delay:calc(.12s + var(--i)*.08s)}
+  /* orders: rows deal in from the left, the detail slides in from the right */
+  #s-orders.on tbody tr{animation:slideL .45s var(--ease) both;animation-delay:calc(.14s + var(--i)*.045s)}
+  #s-orders.on .det{animation:slideR .55s var(--ease) both;animation-delay:.16s}
+  #s-orders.on .step i{transform-origin:left;animation:grow-x .5s var(--ease) both;animation-delay:calc(.4s + var(--i)*.12s)}
+  #s-orders.on .lines li{animation:fade .4s var(--ease) both;animation-delay:calc(.5s + var(--i)*.06s)}
+  /* products: rows fade up, and anything low on stock flashes once */
+  #s-products.on tbody tr{animation:rise .45s var(--ease) both;animation-delay:calc(.12s + var(--i)*.05s)}
+  #s-products.on .low{animation:flash 1.1s var(--ease) both;animation-delay:.7s}
+  /* returns: the timeline draws itself top to bottom */
+  #s-returns.on .tl li{animation:slideL .5s var(--ease) both;animation-delay:calc(.15s + var(--i)*.11s)}
+  #s-returns.on .tl::before{animation:grow-y .8s var(--ease) both;animation-delay:.1s}
+  /* reviews: cards land, then the stars fill one by one */
+  #s-reviews.on .rev{animation:pop .5s var(--spring) both;animation-delay:calc(.1s + var(--i)*.09s)}
+  #s-reviews.on .stars b{animation:pop .4s var(--spring) both;animation-delay:calc(.35s + var(--i)*.07s)}
+  /* settings: each row of the form arrives, switches settle last */
+  #s-settings.on .form{animation:rise .45s var(--ease) both;animation-delay:calc(.1s + var(--i)*.09s)}
+
+  /* ============ orders detail ============ */
+  .pane{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:14px;align-items:start}
+  .det{background:#fff;border:1px solid var(--line);border-radius:var(--r);position:sticky;top:70px}
+  .det .dh{padding:14px;border-bottom:1px solid var(--line-2)}
+  .det .dh b{font-size:15px;font-weight:700;letter-spacing:-.02em}
+  .det .dh p{margin:3px 0 0;font-size:12.5px;color:var(--muted)}
+  .steps{display:flex;gap:0;padding:12px 14px;border-bottom:1px solid var(--line-2)}
+  .step{flex:1;display:flex;flex-direction:column;gap:5px;font-size:10.5px;color:var(--muted);font-weight:650}
+  .step i{display:block;height:4px;border-radius:999px;background:var(--line);font-style:normal}
+  .step.ok i{background:var(--pos)} .step.now i{background:var(--warn);animation:shimmer 1.6s linear infinite;background-image:linear-gradient(90deg,var(--warn),#f0c274,var(--warn));background-size:200% 100%}
+  .step.ok,.step.now{color:var(--ink-2)}
+  .lines{list-style:none;margin:0;padding:8px 14px}
+  .lines li{display:flex;justify-content:space-between;gap:10px;padding:6px 0;font-size:12.8px;color:var(--ink-2);border-bottom:1px dashed var(--line-2)}
+  .lines li:last-child{border-bottom:0}
+  .lines b{color:var(--ink);font-variant-numeric:tabular-nums}
+  .tot{display:flex;justify-content:space-between;padding:10px 14px;border-top:1px solid var(--line-2);font-weight:700;font-size:14px}
+  .dactions{display:flex;gap:8px;padding:12px 14px;border-top:1px solid var(--line-2)}
+  .dactions .mini{flex:1;justify-content:center;display:inline-flex;align-items:center;height:34px}
+
+  /* ============ returns timeline ============ */
+  .tl{list-style:none;margin:0;padding:14px 14px 16px 30px;position:relative}
+  .tl::before{content:"";position:absolute;left:14px;top:18px;bottom:18px;width:2px;background:var(--line);transform-origin:top}
+  .tl li{position:relative;padding:9px 0 9px 14px}
+  .tl li::before{content:"";position:absolute;left:-21px;top:14px;width:11px;height:11px;border-radius:999px;background:#fff;border:2px solid var(--accent)}
+  .tl li.done::before{background:var(--pos);border-color:var(--pos)}
+  .tl li.wait::before{background:var(--warn);border-color:var(--warn)}
+  .tl b{display:block;font-size:13px;font-weight:650;color:var(--ink)}
+  .tl small{font-size:11.8px;color:var(--muted)}
+
+  /* ============ reviews ============ */
+  .revs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:14px}
+  .rev{border:1px solid var(--line);border-radius:var(--r);padding:13px;transition:transform .28s var(--ease),box-shadow .28s}
+  .rev:hover{transform:translateY(-3px);box-shadow:0 14px 26px -18px rgba(12,42,58,.5)}
+  .rev .who{display:flex;align-items:center;gap:9px;margin-bottom:7px}
+  .ra{width:28px;height:28px;border-radius:999px;background:#e6f2f8;color:#075d80;display:grid;place-items:center;font-size:11px;font-weight:700}
+  .stars{display:flex;gap:2px;font-size:13px;color:var(--orange);margin-left:auto}
+  .stars b{font-weight:400}
+  .rev p{margin:0 0 10px;font-size:12.8px;color:var(--ink-2);line-height:1.5}
+  .rev .ract{display:flex;gap:6px}
+
+  /* ============ settings ============ */
+  .form{display:grid;grid-template-columns:220px minmax(0,1fr);gap:24px;padding:16px 18px}
+  .form .lab b{display:block;font-size:13.5px;font-weight:700}
+  .form .lab p{margin:3px 0 0;font-size:12.3px;color:var(--muted);line-height:1.45}
+  .field{display:flex;flex-direction:column;gap:10px}
+  input[type=text],select{height:34px;border:1px solid var(--line);border-radius:8px;padding:0 10px;font:inherit;font-size:13px;color:var(--ink);background:#fff;max-width:340px;transition:border-color .2s,box-shadow .2s}
+  input[type=text]:focus,select:focus{outline:0;border-color:var(--accent);box-shadow:0 0 0 4px rgba(10,120,171,.12)}
+  .sw{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--ink-2);cursor:pointer;user-select:none}
+  .sw i{width:38px;height:22px;border-radius:999px;background:#d6dee3;position:relative;flex:none;font-style:normal;transition:background-color .26s var(--ease)}
+  .sw i::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:999px;background:#fff;transition:left .3s var(--spring),width .2s var(--ease)}
+  .sw:active i::after{width:21px}
+  .sw.on i{background:var(--accent)} .sw.on i::after{left:19px}
+  .sect{border-top:1px solid var(--line-2)}
+
+  /* ============ toast ============ */
+  #toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,80px);background:var(--ink);color:#fff;font-size:13px;font-weight:600;padding:10px 16px;border-radius:10px;box-shadow:0 18px 34px -18px rgba(0,0,0,.6);opacity:0;transition:transform .42s var(--spring),opacity .3s;z-index:50}
+  #toast.up{transform:translate(-50%,0);opacity:1}
+
+  /* ============ keyframes ============ */
+  @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  @keyframes pop{from{opacity:0;transform:scale(.86)}to{opacity:1;transform:scale(1)}}
+  @keyframes slideL{from{opacity:0;transform:translateX(-14px)}to{opacity:1;transform:none}}
+  @keyframes slideR{from{opacity:0;transform:translateX(22px)}to{opacity:1;transform:none}}
+  @keyframes grow{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+  @keyframes grow-x{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+  @keyframes grow-y{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+  @keyframes wipe{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(194,58,47,0)}50%{box-shadow:0 0 0 4px rgba(194,58,47,.14)}}
+  @keyframes flash{0%{background:#fff3e0}60%{background:#fff3e0}100%{background:transparent}}
+  @keyframes live{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.8)}}
+  @keyframes halo{0%{transform:scale(1);opacity:.7}70%,100%{transform:scale(3.4);opacity:0}}
+  @keyframes ring{0%,100%{transform:rotate(0)}20%{transform:rotate(-12deg)}40%{transform:rotate(10deg)}60%{transform:rotate(-6deg)}80%{transform:rotate(4deg)}}
+  @keyframes shimmer{to{background-position:-200% 0}}
+
+  /* somebody who asked their machine for less motion gets the layout, not the show */
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
+  }
+  @media (max-width:1040px){.kpis{grid-template-columns:repeat(2,1fr)}.cols,.pane{grid-template-columns:1fr}.form,.revs{grid-template-columns:1fr;gap:10px}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="rail">
+    <div class="mark">369</div>
+    <div class="navwrap">
+      <span id="marker"></span>
+      <button class="nv cur" data-go="dash"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="2"/><rect x="14" y="3" width="7" height="5" rx="2"/><rect x="14" y="12" width="7" height="9" rx="2"/><rect x="3" y="16" width="7" height="5" rx="2"/></svg><span class="tip">Dashboard</span></button>
+      <button class="nv" data-go="orders"><svg viewBox="0 0 24 24"><path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5"/></svg><em>14</em><span class="tip">Orders</span></button>
+      <button class="nv" data-go="products"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 10h18"/></svg><em>6</em><span class="tip">Products</span></button>
+      <button class="nv" data-go="returns"><svg viewBox="0 0 24 24"><path d="M3 7h11v10H3z"/><path d="M14 10h4l3 3v4h-7z"/><circle cx="7" cy="19" r="2"/><circle cx="17" cy="19" r="2"/></svg><span class="tip">Returns</span></button>
+      <button class="nv" data-go="reviews"><svg viewBox="0 0 24 24"><path d="M12 4l2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4L4.2 9.7l5.4-.8z"/></svg><em>3</em><span class="tip">Reviews</span></button>
+      <button class="nv" data-go="settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 14a1.7 1.7 0 00.3 1.9 2 2 0 11-2.8 2.8 1.7 1.7 0 00-2.9 1.2 2 2 0 11-4 0 1.7 1.7 0 00-2.9-1.2 2 2 0 11-2.8-2.8A1.7 1.7 0 004 14a2 2 0 110-4 1.7 1.7 0 001.2-2.9 2 2 0 112.8-2.8A1.7 1.7 0 0011 4a2 2 0 114 0 1.7 1.7 0 002.9 1.2 2 2 0 112.8 2.8A1.7 1.7 0 0020 10a2 2 0 110 4z"/></svg><span class="tip">Settings</span></button>
+    </div>
+    <div class="sep"></div>
+    <button class="nv"><svg viewBox="0 0 24 24"><path d="M4 9l2-5h12l2 5"/><path d="M4 9v11h16V9"/><path d="M4 9a3 3 0 006 0 3 3 0 006 0 3 3 0 006 0"/></svg><span class="tip">Storefront</span></button>
+  </aside>
+
+  <div class="main">
+    <header class="top">
+      <div><div class="crumb" id="crumb">Overview</div><h1 id="title">Dashboard</h1></div>
+      <div class="seg" id="seg"><span id="segpill"></span><button class="on">Today</button><button>7 days</button><button>30 days</button></div>
+      <div class="srch"><svg viewBox="0 0 24 24" style="width:14px;height:14px"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.2-3.2"/></svg>Search<kbd>⌘K</kbd></div>
+      <button class="ibtn"><svg viewBox="0 0 24 24" style="width:16px;height:16px"><path d="M18 8a6 6 0 10-12 0c0 6-2 7-2 7h16s-2-1-2-7"/><path d="M13.7 20a2 2 0 01-3.4 0"/></svg><i></i></button>
+      <span class="av">SS</span>
+    </header>
+
+    <main>
+      <!-- ===================== dashboard ===================== -->
+      <section class="screen on" id="s-dash">
+        <div class="kpis" style="--i:0">
+          <div class="kpi" style="--i:0"><div class="lbl">Orders today</div><div class="num"><span data-to="38">0</span> <s class="up">▲ 12%</s></div><div class="sub">₹24,180 taken</div>
+            <div class="spark"><span style="height:40%;--i:0"></span><span style="height:62%;--i:1"></span><span style="height:48%;--i:2"></span><span style="height:70%;--i:3"></span><span style="height:55%;--i:4"></span><span style="height:82%;--i:5"></span><span style="height:64%;--i:6"></span></div></div>
+          <div class="kpi" style="--i:1"><div class="lbl">Waiting to be packed</div><div class="num"><span data-to="14">0</span> <s class="dn">2 late</s></div><div class="sub">oldest waiting 26 min</div></div>
+          <div class="kpi" style="--i:2"><div class="lbl">Out for delivery</div><div class="num"><span data-to="9">0</span></div><div class="sub">23 live in all</div></div>
+          <div class="kpi" style="--i:3"><div class="lbl">Cash to collect</div><div class="num">₹<span data-to="6420">0</span></div><div class="sub">across 11 orders</div></div>
+        </div>
+        <div class="cols" style="--i:1">
+          <section class="card">
+            <div class="h"><h2>Order queue</h2><div class="r"><button class="mini on">Needs action 14</button><button class="mini">Out 9</button><button class="mini">All 23</button></div></div>
+            <table>
+              <thead><tr><th>Order</th><th>Customer</th><th>Items</th><th>Placed</th><th>Status</th><th style="text-align:right">Total</th><th></th></tr></thead>
+              <tbody>
+                <tr style="--i:0"><td class="id">#4821</td><td>Divya R</td><td>6</td><td>4 min</td><td><span class="pill pack">Packing</span></td><td class="amt">₹1,240</td><td><button class="act" data-go="orders">Pack</button></td></tr>
+                <tr style="--i:1"><td class="id">#4820</td><td>Arun K</td><td>2</td><td>18 min</td><td><span class="pill out">Out</span></td><td class="amt">₹640</td><td><button class="act" data-go="orders">Track</button></td></tr>
+                <tr style="--i:2"><td class="id">#4819</td><td>Meera S</td><td>11</td><td>41 min</td><td><span class="pill late">Late</span></td><td class="amt">₹2,115</td><td><button class="act" data-go="orders">Chase</button></td></tr>
+                <tr style="--i:3"><td class="id">#4818</td><td>Prakash V</td><td>1</td><td>1 hr</td><td><span class="pill done">Delivered</span></td><td class="amt">₹380</td><td><button class="act" data-go="orders">View</button></td></tr>
+                <tr style="--i:4"><td class="id">#4817</td><td>Nisha T</td><td>8</td><td>1 hr</td><td><span class="pill done">Delivered</span></td><td class="amt">₹1,860</td><td><button class="act" data-go="orders">View</button></td></tr>
+                <tr style="--i:5"><td class="id">#4816</td><td>Kavin B</td><td>3</td><td>2 hr</td><td><span class="pill pack">Packing</span></td><td class="amt">₹720</td><td><button class="act" data-go="orders">Pack</button></td></tr>
+              </tbody>
+            </table>
+          </section>
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <section class="card">
+              <div class="h"><h2>Needs you</h2></div>
+              <ul class="queue">
+                <li><span class="qi bad"><svg viewBox="0 0 24 24" style="width:14px;height:14px"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg></span><span><b>2 orders past their promised time</b><small>oldest 26 min over</small></span></li>
+                <li><span class="qi warn"><svg viewBox="0 0 24 24" style="width:14px;height:14px"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 10h18"/></svg></span><span><b>6 products at or below reorder level</b><small>an hour ago</small></span></li>
+                <li><span class="qi"><svg viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M12 4l2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4L4.2 9.7l5.4-.8z"/></svg></span><span><b>3 reviews nobody has looked at</b><small>now</small></span></li>
+                <li><span class="qi"><svg viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M3 7h11v10H3z"/><circle cx="7" cy="19" r="2"/></svg></span><span><b>3 returns waiting on a pickup or refund</b><small>now</small></span></li>
+              </ul>
+            </section>
+            <section class="card">
+              <div class="h"><h2>Orders a day</h2><div class="r"><span style="font-size:11.5px;color:var(--muted)">fortnight</span></div></div>
+              <div class="bars">
+                <div class="bar"><span style="height:46%;--i:0"></span><em>9</em></div><div class="bar"><span style="height:58%;--i:1"></span><em>11</em></div>
+                <div class="bar"><span style="height:41%;--i:2"></span><em>13</em></div><div class="bar"><span style="height:66%;--i:3"></span><em>15</em></div>
+                <div class="bar"><span style="height:72%;--i:4"></span><em>17</em></div><div class="bar"><span style="height:88%;--i:5"></span><em>19</em></div>
+                <div class="bar"><span style="height:95%;--i:6"></span><em>21</em></div><div class="bar dim"><span style="height:52%;--i:7"></span><em>22</em></div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== orders ===================== -->
+      <section class="screen" id="s-orders">
+        <div class="filters" style="--i:0">
+          <button class="mini on">Needs action 14</button><button class="mini">Packing 8</button><button class="mini">Out 9</button><button class="mini">Delivered</button>
+          <button class="fs">Slot: today <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
+          <button class="fs">Payment: any <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
+          <span class="count"><span class="dot"></span>23 orders · updated 12s ago</span>
+        </div>
+        <div class="pane" style="--i:1">
+          <section class="card">
+            <div class="h"><h2>All orders</h2><div class="r"><button class="mini">Export</button><button class="mini pri" data-toast="4 pick lists sent to the printer">Print pick lists</button></div></div>
+            <table>
+              <thead><tr><th>Order</th><th>Customer</th><th>Slot</th><th>Items</th><th>Payment</th><th>Status</th><th style="text-align:right">Total</th></tr></thead>
+              <tbody>
+                <tr style="--i:0;background:#f2f8fb"><td class="id">#4821</td><td>Divya R</td><td>10:30–11:00</td><td>6</td><td>UPI</td><td><span class="pill pack">Packing</span></td><td class="amt">₹1,240</td></tr>
+                <tr style="--i:1"><td class="id">#4820</td><td>Arun K</td><td>10:00–10:30</td><td>2</td><td>Cash</td><td><span class="pill out">Out</span></td><td class="amt">₹640</td></tr>
+                <tr style="--i:2"><td class="id">#4819</td><td>Meera S</td><td>09:30–10:00</td><td>11</td><td>Card</td><td><span class="pill late">Late</span></td><td class="amt">₹2,115</td></tr>
+                <tr style="--i:3"><td class="id">#4818</td><td>Prakash V</td><td>09:00–09:30</td><td>1</td><td>UPI</td><td><span class="pill done">Delivered</span></td><td class="amt">₹380</td></tr>
+                <tr style="--i:4"><td class="id">#4817</td><td>Nisha T</td><td>09:00–09:30</td><td>8</td><td>Cash</td><td><span class="pill done">Delivered</span></td><td class="amt">₹1,860</td></tr>
+                <tr style="--i:5"><td class="id">#4816</td><td>Kavin B</td><td>11:00–11:30</td><td>3</td><td>UPI</td><td><span class="pill pack">Packing</span></td><td class="amt">₹720</td></tr>
+                <tr style="--i:6"><td class="id">#4815</td><td>Ramya L</td><td>11:30–12:00</td><td>5</td><td>Cash</td><td><span class="pill pack">Packing</span></td><td class="amt">₹1,095</td></tr>
+                <tr style="--i:7"><td class="id">#4814</td><td>Sathya M</td><td>08:30–09:00</td><td>4</td><td>Card</td><td><span class="pill done">Delivered</span></td><td class="amt">₹540</td></tr>
+              </tbody>
+            </table>
+          </section>
+          <aside class="det">
+            <div class="dh"><b>#4821 · Divya R</b><p>6 items · UPI paid · slot 10:30–11:00</p></div>
+            <div class="steps">
+              <span class="step ok" style="--i:0"><i></i>Placed</span><span class="step ok" style="--i:1"><i></i>Accepted</span><span class="step now" style="--i:2"><i></i>Packing</span><span class="step" style="--i:3"><i></i>Out</span><span class="step" style="--i:4"><i></i>Delivered</span>
+            </div>
+            <ul class="lines">
+              <li style="--i:0">Aashirvaad atta 5 kg <b>₹285</b></li>
+              <li style="--i:1">Amul butter 500 g <b>₹265</b></li>
+              <li style="--i:2">Tomato 1 kg <b>₹42</b></li>
+              <li style="--i:3">Milk 1 L × 2 <b>₹108</b></li>
+              <li style="--i:4">Eggs, tray of 12 <b>₹96</b></li>
+              <li style="--i:5">Basmati rice 1 kg <b>₹444</b></li>
+            </ul>
+            <div class="tot"><span>Total</span><span>₹1,240</span></div>
+            <div class="dactions"><button class="mini" data-toast="Slip printed">Print slip</button><button class="mini pri" data-toast="#4821 marked packed">Mark packed</button></div>
+          </aside>
+        </div>
+      </section>
+
+      <!-- ===================== products ===================== -->
+      <section class="screen" id="s-products">
+        <div class="filters" style="--i:0">
+          <button class="mini on">All 248</button><button class="mini">Low stock 6</button><button class="mini">Out of stock 2</button><button class="mini">Hidden 4</button>
+          <button class="fs">Category: any <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
+          <span class="count">Edit price and stock inline</span>
+        </div>
+        <section class="card" style="--i:1">
+          <div class="h"><h2>Catalogue</h2><div class="r"><button class="mini">Import CSV</button><button class="mini pri" data-toast="New product sheet opened">＋ New product</button></div></div>
+          <table>
+            <thead><tr><th>Product</th><th>Category</th><th>Price</th><th>In stock</th><th>Reorder at</th><th>Sold 7d</th><th>Live</th></tr></thead>
+            <tbody>
+              <tr style="--i:0"><td class="id">Aashirvaad atta 5 kg</td><td>Staples</td><td>₹285</td><td>48</td><td>12</td><td>96</td><td><span class="pill done">On</span></td></tr>
+              <tr style="--i:1" class="low"><td class="id">Amul butter 500 g</td><td>Dairy</td><td>₹265</td><td><b style="color:var(--warn)">9</b></td><td>12</td><td>61</td><td><span class="pill done">On</span></td></tr>
+              <tr style="--i:2" class="low"><td class="id">Tomato 1 kg</td><td>Vegetables</td><td>₹42</td><td><b style="color:var(--neg)">0</b></td><td>20</td><td>142</td><td><span class="pill off">Off</span></td></tr>
+              <tr style="--i:3"><td class="id">Milk 1 L</td><td>Dairy</td><td>₹54</td><td>120</td><td>40</td><td>388</td><td><span class="pill done">On</span></td></tr>
+              <tr style="--i:4" class="low"><td class="id">Basmati rice 1 kg</td><td>Staples</td><td>₹444</td><td><b style="color:var(--warn)">11</b></td><td>12</td><td>27</td><td><span class="pill done">On</span></td></tr>
+              <tr style="--i:5"><td class="id">Eggs, tray of 12</td><td>Dairy</td><td>₹96</td><td>36</td><td>10</td><td>74</td><td><span class="pill done">On</span></td></tr>
+            </tbody>
+          </table>
+        </section>
+      </section>
+
+      <!-- ===================== returns ===================== -->
+      <section class="screen" id="s-returns">
+        <div class="kpis" style="--i:0">
+          <div class="kpi" style="--i:0"><div class="lbl">Open returns</div><div class="num"><span data-to="3">0</span></div><div class="sub">2 need a pickup</div></div>
+          <div class="kpi" style="--i:1"><div class="lbl">Refunded this week</div><div class="num">₹<span data-to="4180">0</span></div><div class="sub">across 7 orders</div></div>
+          <div class="kpi" style="--i:2"><div class="lbl">Average time to refund</div><div class="num">1.4<s class="dn">d</s></div><div class="sub">target is 1 day</div></div>
+          <div class="kpi" style="--i:3"><div class="lbl">Most returned</div><div class="num" style="font-size:18px">Tomato 1 kg</div><div class="sub">4 this month</div></div>
+        </div>
+        <section class="card" style="--i:1">
+          <div class="h"><h2>#4802 · Meera S — 2 items back</h2><div class="r"><button class="mini">Reject</button><button class="mini pri" data-toast="₹640 refunded to UPI">Refund ₹640</button></div></div>
+          <ul class="tl">
+            <li class="done" style="--i:0"><b>Return asked for</b><small>Yesterday, 18:42 · reason: bruised on arrival</small></li>
+            <li class="done" style="--i:1"><b>Accepted by the shop</b><small>Yesterday, 18:55 · by Shan S</small></li>
+            <li class="wait" style="--i:2"><b>Pickup scheduled</b><small>Today, 14:00–16:00 · rider not assigned yet</small></li>
+            <li style="--i:3"><b>Item checked back in</b><small>waiting</small></li>
+            <li style="--i:4"><b>Refund sent</b><small>waiting · ₹640 to UPI</small></li>
+          </ul>
+        </section>
+      </section>
+
+      <!-- ===================== reviews ===================== -->
+      <section class="screen" id="s-reviews">
+        <div class="filters" style="--i:0">
+          <button class="mini on">Waiting 3</button><button class="mini">Published 212</button><button class="mini">Hidden 6</button>
+          <button class="fs">Rating: any <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
+          <span class="count">Average 4.3 across 218 reviews</span>
+        </div>
+        <section class="card" style="--i:1">
+          <div class="h"><h2>Waiting on you</h2><div class="r"><button class="mini pri" data-toast="3 reviews published">Publish all</button></div></div>
+          <div class="revs">
+            <article class="rev" style="--i:0"><div class="who"><span class="ra">DR</span><b style="font-size:13px">Divya R</b><span class="stars"><b style="--i:0">★</b><b style="--i:1">★</b><b style="--i:2">★</b><b style="--i:3">★</b><b style="--i:4">★</b></span></div>
+              <p>Atta arrived sealed and the delivery was ten minutes early. No complaints at all.</p>
+              <div class="ract"><button class="mini pri" data-toast="Review published">Publish</button><button class="mini">Hide</button></div></article>
+            <article class="rev" style="--i:1"><div class="who"><span class="ra">AK</span><b style="font-size:13px">Arun K</b><span class="stars"><b style="--i:0">★</b><b style="--i:1">★</b><b style="--i:2">★</b><b style="--i:3">☆</b><b style="--i:4">☆</b></span></div>
+              <p>Tomatoes were soft. Rest of the order was fine and the rider waited while I checked.</p>
+              <div class="ract"><button class="mini pri" data-toast="Review published">Publish</button><button class="mini">Reply</button></div></article>
+            <article class="rev" style="--i:2"><div class="who"><span class="ra">NT</span><b style="font-size:13px">Nisha T</b><span class="stars"><b style="--i:0">★</b><b style="--i:1">★</b><b style="--i:2">★</b><b style="--i:3">★</b><b style="--i:4">☆</b></span></div>
+              <p>Good prices on dairy. Wish the express slot ran later in the evening.</p>
+              <div class="ract"><button class="mini pri" data-toast="Review published">Publish</button><button class="mini">Hide</button></div></article>
+          </div>
+        </section>
+      </section>
+
+      <!-- ===================== settings ===================== -->
+      <section class="screen" id="s-settings">
+        <section class="card" style="--i:0">
+          <div class="h"><h2>Store</h2><div class="r"><button class="mini">Discard</button><button class="mini pri" data-toast="Settings saved">Save changes</button></div></div>
+          <div class="form" style="--i:0">
+            <div class="lab"><b>Store name</b><p>Shown on the storefront, receipts and order emails.</p></div>
+            <div class="field"><input type="text" value="369 Mart" /></div>
+          </div>
+          <div class="form sect" style="--i:1">
+            <div class="lab"><b>Delivery slots</b><p>How far ahead a customer may book, and how many orders each slot takes.</p></div>
+            <div class="field"><select><option>Same day and next day</option><option>Same day only</option><option>Up to 3 days ahead</option></select><input type="text" value="20 orders per slot" /></div>
+          </div>
+          <div class="form sect" style="--i:2">
+            <div class="lab"><b>Payments</b><p>Turn a method off and it disappears from checkout at once.</p></div>
+            <div class="field">
+              <span class="sw on"><i></i>UPI</span><span class="sw on"><i></i>Card</span><span class="sw on"><i></i>Cash on delivery</span><span class="sw"><i></i>369 Wallet</span>
+            </div>
+          </div>
+          <div class="form sect" style="--i:3">
+            <div class="lab"><b>Express delivery</b><p>The 15-minute promise on the home page. Off outside opening hours.</p></div>
+            <div class="field"><span class="sw on"><i></i>Offer express on the storefront</span></div>
+          </div>
+        </section>
+      </section>
+    </main>
+  </div>
+</div>
+<div id="toast"></div>
+<script>
+(function(){
+  var TITLES={dash:["Overview","Dashboard"],orders:["Sales","Orders"],products:["Catalogue","Products"],
+              returns:["Sales","Returns"],reviews:["Sales","Reviews"],settings:["Store","Settings"]};
+  var reduced=matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* Numbers count up rather than appear, so a glance registers that the
+     figure is today's and not left over from the last look. */
+  function countUp(root){
+    if(reduced){root.querySelectorAll("[data-to]").forEach(function(n){n.textContent=(+n.dataset.to).toLocaleString("en-IN")});return}
+    root.querySelectorAll("[data-to]").forEach(function(n){
+      var to=+n.dataset.to,t0=null,dur=800;
+      function step(t){
+        if(!t0)t0=t;
+        var p=Math.min(1,(t-t0)/dur),e=1-Math.pow(1-p,3);
+        n.textContent=Math.round(to*e).toLocaleString("en-IN");
+        if(p<1)requestAnimationFrame(step);
+      }
+      n.textContent="0";requestAnimationFrame(step);
+    });
+  }
+
+  /* The marker is one element that travels, not a border that blinks on and
+     off: it is what tells the eye the rail moved rather than redrew. */
+  function moveMarker(btn){
+    var m=document.getElementById("marker"),wrap=document.querySelector(".navwrap");
+    m.style.transform="translateY("+(btn.offsetTop+10)+"px)";
+  }
+  function movePill(btn){
+    var p=document.getElementById("segpill");
+    p.style.width=btn.offsetWidth+"px";
+    p.style.transform="translateX("+btn.offsetLeft+"px)";
+  }
+
+  function go(k){
+    document.querySelectorAll(".screen").forEach(function(s){s.classList.remove("on")});
+    var scr=document.getElementById("s-"+k);
+    /* Re-add on the next frame so the entrance animations actually re-run
+       when somebody comes back to a screen they have already seen. */
+    requestAnimationFrame(function(){scr.classList.add("on");countUp(scr)});
+    document.querySelectorAll(".rail .nv").forEach(function(n){n.classList.toggle("cur",n.getAttribute("data-go")===k)});
+    var cur=document.querySelector('.rail .nv[data-go="'+k+'"]'); if(cur)moveMarker(cur);
+    var c=document.getElementById("crumb"),t=document.getElementById("title");
+    c.textContent=TITLES[k][0];t.textContent=TITLES[k][1];
+    t.classList.remove("swap");void t.offsetWidth;t.classList.add("swap");
+    window.scrollTo({top:0,behavior:reduced?"auto":"smooth"});
+  }
+
+  var tm;
+  function toast(msg){
+    var el=document.getElementById("toast");
+    el.textContent=msg;el.classList.add("up");
+    clearTimeout(tm);tm=setTimeout(function(){el.classList.remove("up")},2200);
+  }
+
+  document.addEventListener("click",function(e){
+    var nav=e.target.closest("[data-go]"); if(nav){go(nav.getAttribute("data-go"));return}
+    var sw=e.target.closest(".sw"); if(sw){sw.classList.toggle("on");return}
+    var seg=e.target.closest(".seg button");
+    if(seg){document.querySelectorAll(".seg button").forEach(function(b){b.classList.remove("on")});seg.classList.add("on");movePill(seg);return}
+    var chip=e.target.closest(".filters .mini, .card .h .mini:not(.pri)");
+    if(chip&&chip.parentElement.querySelector(".mini.on")){
+      chip.parentElement.querySelectorAll(".mini").forEach(function(b){b.classList.remove("on")});chip.classList.add("on");
+    }
+    var t=e.target.closest("[data-toast]"); if(t)toast(t.getAttribute("data-toast"));
+  });
+
+  /* first paint */
+  movePill(document.querySelector(".seg button.on"));
+  moveMarker(document.querySelector(".rail .nv.cur"));
+  countUp(document.getElementById("s-dash"));
+})();
+</script>
+</body>
+</html>

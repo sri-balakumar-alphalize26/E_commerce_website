@@ -308,7 +308,7 @@ export default function OrdersSection({ openId, setOpenId, query = "", flash }) 
     return "/admin/orders?" + p.toString();
   }, [tab, mode, when, sort, q, limit]);
 
-  const { data, loading, error, reload } = useResource(path, { pollMs: 30000 });
+  const { data, loading, error, reload } = useResource(path, { pollMs: 30000, keepLast: true });
   const counts = useResource("/admin/orders/counts", { pollMs: 30000 });
   const act = useAction();
 
@@ -418,15 +418,27 @@ export default function OrdersSection({ openId, setOpenId, query = "", flash }) 
           <button className="ad-link" onClick={() => setSel([])}>Clear</button>
         </div>
 
-        {error && (
+        {/* Only take the list away when there is nothing left to show. A
+            failed poll on a screen that already has orders on it keeps the
+            orders and says so in a line: a packer mid-shift needs the list
+            more than they need the error, and clearing it would also replay
+            every row's entrance when the next tick succeeds. */}
+        {error && !rows.length && (
           <Empty icon="info" title="We could not reach the shop" text={error.message}
             action="Try again" onAction={reload} />
+        )}
+        {error && !!rows.length && (
+          <p className="ad-hint" role="status">
+            <Icon n="info" size={15} />
+            <span>Could not reach the shop just now, so this is the last read.
+              <button className="ad-link" onClick={reload}>Try again</button></span>
+          </p>
         )}
         {loading && !rows.length && !error && (
           <Empty icon="box" title="Loading…" text="Fetching orders." />
         )}
 
-        {!error && !!rows.length && (
+        {!!rows.length && (
           <ul className="ad-orders">
             <li className="ad-orders-head">
               <input type="checkbox" checked={allShown} aria-label="Select all"

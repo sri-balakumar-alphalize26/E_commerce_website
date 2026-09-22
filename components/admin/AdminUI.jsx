@@ -145,7 +145,11 @@ export function Empty({ icon = "box", title, text, action, onAction }) {
 /* right-side drawer (bottom sheet on phones) */
 export function Drawer({ title, sub, onClose, children, foot, wide }) {
   const [out, setOut] = useState(false);
-  const close = () => { setOut(true); setTimeout(onClose, 220); };
+  /* 240ms, because that is how long the exit actually takes: `.ad-out
+     .ad-drawer` and `.ad-out .ad-scrim` both run their keyframe in reverse
+     over 240ms. Unmounting at 220 tore the drawer out with the last frame
+     still to play. */
+  const close = () => { setOut(true); setTimeout(onClose, 240); };
   useEffect(() => {
     const k = (e) => e.key === "Escape" && close();
     window.addEventListener("keydown", k);

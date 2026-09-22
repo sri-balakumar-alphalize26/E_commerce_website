@@ -49,10 +49,14 @@ const TITLES = Object.fromEntries(SECTIONS.map((s) => [s.key, s.label]));
 const LIVE = new Set(SECTIONS.filter((s) => s.live).map((s) => s.key));
 
 /* ================================ dashboard ============================== */
-function Stat({ label, value, delta, note, series, color, icon }) {
+/* `i` is the card's place in the strip. `.ad-stat` has staggered its entrance
+   off `var(--i)` since the drop, but nothing ever passed one, so all four
+   cards landed together on delay 0 and the sweep the CSS describes never
+   happened. */
+function Stat({ label, value, delta, note, series, color, icon, i = 0 }) {
   const up = delta >= 0;
   return (
-    <article className="ad-stat">
+    <article className="ad-stat" style={{ "--i": i }}>
       <header><span className="ad-stat-ic" style={{ "--tone": color }}><Icon n={icon} size={18} /></span>{label}</header>
       <b>{value}</b>
       <div className="ad-stat-foot">
@@ -75,11 +79,14 @@ function Stat({ label, value, delta, note, series, color, icon }) {
    There is no aggregate behind either, and a chart is the most convincing way
    there is to show somebody a number that is not true. */
 function Dashboard({ go }) {
-  const { data, loading, error, reload } = useResource("/admin/dashboard", { pollMs: 60000 });
+  const { data, loading, error, reload } = useResource("/admin/dashboard", { pollMs: 60000, keepLast: true });
   const o = data?.orders;
   const c = data?.customers;
 
-  if (error) {
+  /* Only when there is nothing to fall back on. A failed poll on a strip that
+     already has this morning's numbers keeps them and says so below, rather
+     than blanking the screen and then re-animating the lot on the next tick. */
+  if (error && !o && !c) {
     return (
       <section className="ad-card">
         <Empty icon="info" title="We could not reach the shop" text={error.message}
@@ -98,20 +105,29 @@ function Dashboard({ go }) {
 
   return (
     <div className="ad-stack">
+      {error && (o || c) && (
+        <p className="ad-hint" role="status">
+          <Icon n="info" size={15} />
+          <span>Could not reach the shop just now, so these are the last
+            numbers we read. <button className="ad-link" onClick={reload}>Try again</button></span>
+        </p>
+      )}
       {o && (
         <section className="ad-stats">
-          <Stat label="Orders today" value={o.today} note={o.today_value} color={SERIES[0]} icon="box"
+          <Stat i={0} label="Orders today" value={o.today} note={o.today_value} color={SERIES[0]} icon="box"
             series={(o.placed || []).slice(-7).map((d) => d.count)} />
-          <Stat label="Waiting to be packed" value={o.packing}
+          <Stat i={1} label="Waiting to be packed" value={o.packing}
             note={o.late ? `${o.late} running late` : "nothing late"} color={SERIES[1]} icon="clock" />
-          <Stat label="Out for delivery" value={o.out} note={`${o.live} live in all`} color={SERIES[3]} icon="truck" />
-          <Stat label="Cash to collect" value={o.cash} note={`across ${o.cash_count} orders`} color={SERIES[2]} icon="cash" />
+          <Stat i={2} label="Out for delivery" value={o.out} note={`${o.live} live in all`} color={SERIES[3]} icon="truck" />
+          <Stat i={3} label="Cash to collect" value={o.cash} note={`across ${o.cash_count} orders`} color={SERIES[2]} icon="cash" />
         </section>
       )}
 
       <div className="ad-grid-2">
         {o && (
-          <section className="ad-card">
+          /* 4 and 5 carry on from the four stat cards above, so the strip and
+             the two panels under it read as one sweep rather than two. */
+          <section className="ad-card" style={{ "--i": 4 }}>
             <header className="ad-card-head">
               <div><h2>Orders a day</h2><p>The last fortnight</p></div>
               <button className="ad-btn" onClick={() => go("orders")}>Open orders<Icon n="right" size={15} /></button>
@@ -122,7 +138,7 @@ function Dashboard({ go }) {
         )}
 
         {c && (
-          <section className="ad-card">
+          <section className="ad-card" style={{ "--i": 5 }}>
             <header className="ad-card-head">
               <div><h2>Customers</h2><p>{c.total} with an account</p></div>
             </header>
@@ -327,7 +343,11 @@ export default function AdminApp({ section: initial = "dashboard", onSection, on
           </div>
         </header>
 
-        <main className="ad-body" key={section}>
+        {/* `data-sec` lets a section tune its own entrance from the stylesheet
+            without every section file having to grow a class prop. The two
+            drag-and-drop editors use it to opt out of a translating entrance -
+            see the note by `.ad-body[data-sec]` in admin.css. */}
+        <main className="ad-body" key={section} data-sec={section}>
           {!LIVE.has(section) && <SampleBanner label={TITLES[section]} />}
           {body}
         </main>

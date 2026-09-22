@@ -759,14 +759,14 @@ export function SettingsSection({ settings, setSettings, flash }) {
 
         {tab === "payments" && (
           <div className="ad-rows">
-            {[["upi", "UPI", "Google Pay, PhonePe, Paytm, any UPI ID"], ["card", "Cards", "Visa, Mastercard, RuPay, Amex"], ["netbanking", "Net banking", "All major Indian banks"], ["cod", "Cash on delivery", `Allowed up to ${inr(s.pay.codLimit)}`], ["wallet", "369 Wallet", "Balance, refunds and cashback"]].map(([k, t, d]) => (
-              <div key={k} className="ad-row-set">
+            {[["upi", "UPI", "Google Pay, PhonePe, Paytm, any UPI ID"], ["card", "Cards", "Visa, Mastercard, RuPay, Amex"], ["netbanking", "Net banking", "All major Indian banks"], ["cod", "Cash on delivery", `Allowed up to ${inr(s.pay.codLimit)}`], ["wallet", "369 Wallet", "Balance, refunds and cashback"]].map(([k, t, d], i) => (
+              <div key={k} className="ad-row-set" style={{ "--i": i }}>
                 <span className="ad-row-ic"><Icon n={k === "upi" ? "upi" : k === "card" ? "card" : k === "netbanking" ? "bank" : k === "cod" ? "cash" : "wallet"} size={18} /></span>
                 <span className="ad-row-txt"><b>{t}</b><small>{d}</small></span>
                 <Switch on={s.pay[k]} onChange={set("pay", k)} label={t} />
               </div>
             ))}
-            <div className="ad-row-set">
+            <div className="ad-row-set" style={{ "--i": 5 }}>
               <span className="ad-row-ic"><Icon n="shield" size={18} /></span>
               <span className="ad-row-txt"><b>Cash on delivery limit</b><small>Orders above this must be paid online</small></span>
               <span className="ad-field-in ad-narrow"><input value={s.pay.codLimit} onChange={(e) => set("pay", "codLimit")(+e.target.value.replace(/\D/g, "") || 0)} aria-label="COD limit" /><em>₹</em></span>
@@ -776,8 +776,8 @@ export function SettingsSection({ settings, setSettings, flash }) {
 
         {tab === "alerts" && (
           <div className="ad-rows">
-            {[["newOrder", "New order", "Beep and badge when an order comes in"], ["lowStock", "Low stock", "When a product reaches its reorder level"], ["cancelled", "Cancellations", "When a customer cancels an order"], ["dailySummary", "Daily summary", "Sales and stock email at closing time"]].map(([k, t, d]) => (
-              <div key={k} className="ad-row-set">
+            {[["newOrder", "New order", "Beep and badge when an order comes in"], ["lowStock", "Low stock", "When a product reaches its reorder level"], ["cancelled", "Cancellations", "When a customer cancels an order"], ["dailySummary", "Daily summary", "Sales and stock email at closing time"]].map(([k, t, d], i) => (
+              <div key={k} className="ad-row-set" style={{ "--i": i }}>
                 <span className="ad-row-ic"><Icon n="bell" size={18} /></span>
                 <span className="ad-row-txt"><b>{t}</b><small>{d}</small></span>
                 <Switch on={s.alerts[k]} onChange={set("alerts", k)} label={t} />

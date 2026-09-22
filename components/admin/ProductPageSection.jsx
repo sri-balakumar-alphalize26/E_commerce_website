@@ -725,10 +725,10 @@ function WholePanel({ sections, isOn, onSelect }) {
         </div>
       </header>
       <ul className="pp-secs">
-        {sections.map((s) => {
+        {sections.map((s, i) => {
           const on = s.rows.filter((r) => isOn(r, s)).length;
           return (
-            <li key={s.id}>
+            <li key={s.id} style={{ "--i": i }}>
               <button className="pp-sec-row" onClick={() => onSelect({ kind: "section", id: s.id })}>
                 <span className="pp-sec-name">
                   <b>{s.name}</b>
@@ -770,10 +770,10 @@ function SectionPanel({ section, scope, isOn, onSelect, onSectionShow, onToggleR
       )}
 
       <ul className={"pp-fields" + (section.show ? "" : " pp-fields-off")}>
-        {section.rows.map((row) => {
+        {section.rows.map((row, i) => {
           const on = isOn(row, section);
           return (
-            <li key={row.id} className={on ? "" : "pp-off"}>
+            <li key={row.id} className={on ? "" : "pp-off"} style={{ "--i": i }}>
               <button className="pe-tool" disabled={!section.show}
                 aria-pressed={on}
                 title={on ? "Hide this" : "Show this"}

@@ -172,6 +172,17 @@ html.ad-lock, html.ad-lock body { overflow: hidden; }
 
 /* ---------------- layout + cards ---------------- */
 .ad-body { padding: 22px; animation: ad-page 420ms var(--ad-ease) both; }
+/* The home page and product page editors are @dnd-kit sortable trees, and
+   dnd-kit positions every band with an inline `transform` it computes from
+   measured rectangles. A CSS animation beats an inline style for as long as it
+   runs, so a translating entrance on any ancestor of those bands both fights
+   the drag and hands dnd-kit the wrong rect if somebody grabs a band while it
+   is still playing - the band then drops into the wrong slot. Opacity moves
+   nothing and measures the same, so these two fade instead.
+
+   The same rule applies inside these screens: never give `.pe-band`, or
+   anything above it, an animation that touches `transform`. */
+.ad-body[data-sec="home"], .ad-body[data-sec="product-page"] { animation: ad-fade 240ms var(--ad-ease) both; }
 .ad-stack { display: flex; flex-direction: column; gap: 16px; }
 .ad-card { background: var(--ad-card); border: 1px solid var(--ad-line); border-radius: 16px; box-shadow: 0 1px 2px rgba(19, 33, 43, 0.04); animation: ad-rise 420ms var(--ad-ease) backwards; animation-delay: calc(var(--i, 0) * 60ms + 40ms); }
 .ad-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; padding: 16px 18px 6px; flex-wrap: wrap; }
@@ -197,6 +208,13 @@ html.ad-lock, html.ad-lock body { overflow: hidden; }
 .ad-spark { position: absolute; right: 0; bottom: 0; width: 38%; height: 38px; opacity: 0.85; pointer-events: none; }
 .ad-mini-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
 .ad-mini-stats > span { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; background: #fff; border: 1px solid var(--ad-line); border-radius: 14px; animation: ad-rise 380ms var(--ad-ease) backwards; animation-delay: calc(var(--i, 0) * 50ms); }
+/* These strips are always four fixed tiles written straight into the JSX, so
+   nobody ever passed the `--i` the rule above reads and every tile landed at
+   once. Counting them here fixes all six strips, and any written later, with
+   no prop to remember. */
+.ad-mini-stats > span:nth-child(2) { --i: 1; }
+.ad-mini-stats > span:nth-child(3) { --i: 2; }
+.ad-mini-stats > span:nth-child(4) { --i: 3; }
 .ad-mini-stats small { font-size: 12px; color: var(--ad-muted); }
 .ad-mini-stats b { font-size: 20px; font-weight: 800; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
 .ad-mini-stats .ad-warn b { color: var(--ad-amber); } .ad-mini-stats .ad-bad b { color: var(--ad-red); }
@@ -337,7 +355,11 @@ html.ad-lock, html.ad-lock body { overflow: hidden; }
 .ad-bill-total { margin-top: 6px; padding-top: 8px; border-top: 1px solid var(--ad-line); font-weight: 800; font-size: 15px; }
 .ad-timeline { list-style: none; margin: 0; padding: 0 0 0 4px; display: flex; flex-direction: column; }
 .ad-timeline li { position: relative; display: flex; gap: 12px; padding: 0 0 16px 0; animation: ad-row 340ms var(--ad-ease) backwards; animation-delay: calc(var(--i) * 70ms + 100ms); }
-.ad-timeline li:not(:last-child)::before { content: ""; position: absolute; left: 10px; top: 20px; bottom: 0; width: 2px; background: var(--ad-line); }
+/* The connector draws downward just after its own stage has landed, so the
+   chain joins itself up top to bottom instead of appearing whole. It reads the
+   same `--i` the `li` above already carries, so Orders and Returns - which
+   both render this list - get it from one rule and neither JSX file changes. */
+.ad-timeline li:not(:last-child)::before { content: ""; position: absolute; left: 10px; top: 20px; bottom: 0; width: 2px; background: var(--ad-line); transform-origin: top; animation: ad-grow-y 320ms var(--ad-ease) backwards; animation-delay: calc(var(--i) * 70ms + 240ms); }
 .ad-timeline li.ad-done:not(:last-child)::before { background: #bfe3cc; }
 .ad-timeline i { position: relative; z-index: 1; flex: none; width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--ad-line); background: #fff; display: grid; place-items: center; color: #fff; }
 .ad-timeline .ad-done i { background: var(--ad-green); border-color: var(--ad-green); }
@@ -404,7 +426,10 @@ html.ad-lock, html.ad-lock body { overflow: hidden; }
 .ad-review-top small { font-size: 12px; color: var(--ad-muted); }
 .ad-review-body p { margin: 6px 0 0; font-size: 13.5px; line-height: 1.55; color: #3a4a55; }
 .ad-review-act { display: flex; flex-direction: column; gap: 6px; }
-.ad-stars { font-size: 12px; font-weight: 800; color: #fff; border-radius: 7px; padding: 2px 7px; background: var(--ad-green); }
+/* The rating pops once its card has settled - the same read as the stepper's
+   value at `.ad-stepper b`, and the one thing on a review worth the eye going
+   to first. `--i` comes down from the `li`, so no JSX change. */
+.ad-stars { font-size: 12px; font-weight: 800; color: #fff; border-radius: 7px; padding: 2px 7px; background: var(--ad-green); animation: ad-pop 300ms var(--ad-spring) backwards; animation-delay: calc(var(--i, 0) * 50ms + 180ms); }
 .ad-stars.ad-s3 { background: #d99400; } .ad-stars.ad-s2, .ad-stars.ad-s1 { background: var(--ad-red); }
 
 .ad-empty { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; padding: 38px 20px 42px; }
@@ -474,6 +499,23 @@ html.ad-lock, html.ad-lock body { overflow: hidden; }
 
 @media (prefers-reduced-motion: reduce) {
   .ad-app *, .ad-drawer-wrap *, .ad-modal-wrap * { animation: none !important; transition: none !important; }
+  /* `*` does not match a pseudo-element, so everything drawn in a ::before or
+     ::after - the active nav marker, the timeline connector - kept animating
+     for somebody who had asked the machine not to. They need saying out loud. */
+  .ad-app *::before, .ad-app *::after,
+  .ad-drawer-wrap *::before, .ad-drawer-wrap *::after,
+  .ad-modal-wrap *::before, .ad-modal-wrap *::after { animation: none !important; transition: none !important; }
+  /* Killing the animation is safe for every entrance above, because those all
+     start invisible and end at the element's natural state - take the
+     animation away and you are left with the end state.
+
+     It is not safe where the *base* rule holds a pre-animation value that only
+     the keyframe clears. `.ad-line` parks the path at a full 2000 dash offset
+     and relies on `ad-draw` to wind it back to 0, so with the animation gone
+     the line is drawn entirely in the gap: anybody who asked their machine for
+     less motion got an empty chart rather than a still one. Every storefront
+     sheet already guards this; this one never did. */
+  .ad-app .ad-line { stroke-dashoffset: 0 !important; }
 }
 
 /* --------------------------------------------------------------------------

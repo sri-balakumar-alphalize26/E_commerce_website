@@ -278,7 +278,7 @@ export default function ReturnsSection({ flash }) {
     return "/admin/returns?" + p.toString();
   }, [tab, kind, sort, q, limit]);
 
-  const { data, loading, error, reload } = useResource(path, { pollMs: 30000 });
+  const { data, loading, error, reload } = useResource(path, { pollMs: 30000, keepLast: true });
   const act = useAction();
 
   const rows = data?.returns || [];
@@ -325,9 +325,16 @@ export default function ReturnsSection({ flash }) {
           </div>
         </div>
 
-        {error && (
+        {error && !rows.length && (
           <Empty icon="info" title="We could not reach the shop"
             text={error.message} action="Try again" onAction={reload} />
+        )}
+        {error && !!rows.length && (
+          <p className="ad-hint" role="status">
+            <Icon n="info" size={15} />
+            <span>Could not reach the shop just now, so this is the last read.
+              <button className="ad-link" onClick={reload}>Try again</button></span>
+          </p>
         )}
 
         {/* The rows stay on screen while the next page loads: a queue that
