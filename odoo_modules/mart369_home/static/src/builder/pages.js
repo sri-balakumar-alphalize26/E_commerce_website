@@ -11,16 +11,61 @@
  * - and the answer was always "the one shoppers are looking at". Now you pick
  * a page first, and the builder is told which one.
  */
-import { Component, onWillStart, useState } from "@odoo/owl";
+import { Component, onWillStart, useRef, useState } from "@odoo/owl";
 import { registry } from "@web/core/registry";
-import { useService } from "@web/core/utils/hooks";
+import { useAutofocus, useService } from "@web/core/utils/hooks";
 import { _t } from "@web/core/l10n/translation";
 import { ConfirmationDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
+import { Dialog } from "@web/core/dialog/dialog";
 import { Layout } from "@web/search/layout";
 import { standardActionServiceProps } from "@web/webclient/actions/action_service";
 import { Icon } from "./builder";
 
 const M = { version: "mart369.home.version" };
+
+/**
+ * "What shall we call it?"
+ *
+ * `ConfirmationDialog` has no field to type into, and a page called
+ * "Everyday (copy)" that somebody meant to call "Diwali" is a page nobody
+ * renames until they are looking for it six months later.
+ */
+export class NamePrompt extends Component {
+    static template = "mart369_home.NamePrompt";
+    static components = { Dialog };
+    static props = {
+        title: String,
+        placeholder: { type: String, optional: true },
+        confirmLabel: String,
+        onConfirm: Function,
+        close: Function,
+    };
+
+    setup() {
+        this.inputRef = useRef("name");
+        useAutofocus({ refName: "name" });
+    }
+
+    get value() {
+        return (this.inputRef.el?.value || "").trim();
+    }
+
+    confirm() {
+        const name = this.value;
+        if (!name) {
+            return;
+        }
+        this.props.close();
+        this.props.onConfirm(name);
+    }
+
+    onKeydown(ev) {
+        if (ev.key === "Enter") {
+            ev.preventDefault();
+            this.confirm();
+        }
+    }
+}
 
 /** An Odoo datetime ("2026-09-21 18:30:00") <-> a datetime-local input. */
 const toInput = (v) => (v ? v.slice(0, 16).replace(" ", "T") : "");
@@ -39,6 +84,8 @@ export class HomePages extends Component {
 
         this.state = useState({
             pages: [],
+            trash: [],
+            trashOpen: false,
             trashDays: 30,
             loading: true,
             error: "",
@@ -56,6 +103,7 @@ export class HomePages extends Component {
         try {
             const data = await this.orm.call(M.version, "pages_load", []);
             this.state.pages = data.pages;
+            this.state.trash = data.trash || [];
             this.state.trashDays = data.trash_days;
             this.state.error = "";
         } catch (err) {
@@ -104,11 +152,33 @@ export class HomePages extends Component {
         });
     }
 
+    /** Whichever page shoppers are on right now - not necessarily the one
+        flagged everyday, because an open window beats the flag. */
+    get livePage() {
+        return this.state.pages.find((p) => p.state === "live");
+    }
+
     switchOn(page) {
-        this.run(
-            () => this.orm.call(M.version, "action_mart369_make_current", [parseInt(page.id, 10)]),
-            _t("Switched on. This is the everyday page now.")
-        );
+        const from = this.livePage;
+        const body = from && from.id !== page.id
+            ? _t('Shoppers are on "%(from)s". They will be on "%(to)s" straight away.',
+                 { from: from.name, to: page.name })
+            : _t('Shoppers will be on "%s" straight away.', page.name);
+        this.dialog.add(ConfirmationDialog, {
+            title: from && from.id !== page.id
+                ? _t('Switch from "%(from)s" to "%(to)s"?',
+                     { from: from.name, to: page.name })
+                : _t('Switch on "%s"?', page.name),
+            body,
+            confirmLabel: _t("Switch on"),
+            confirm: () =>
+                this.run(
+                    () => this.orm.call(M.version, "action_mart369_make_current",
+                                        [parseInt(page.id, 10)]),
+                    _t("Switched on. This is the everyday page now.")
+                ),
+            cancel: () => {},
+        });
     }
 
     duplicate(page) {
@@ -129,17 +199,63 @@ export class HomePages extends Component {
             );
             return;
         }
-        this.duplicate(from);
+        // Named up front rather than renamed later. It still starts as a copy
+        // of the everyday page - nobody wants to rebuild a home page from
+        // nothing to run a three-day sale.
+        this.dialog.add(NamePrompt, {
+            title: _t("What is this page for?"),
+            placeholder: _t("Festival sale"),
+            confirmLabel: _t("Create page"),
+            onConfirm: (name) =>
+                this.run(
+                    () => this.orm.call(M.version, "copy", [parseInt(from.id, 10)],
+                                        { default: { name } }),
+                    _t('"%s" created. Edit it, then switch it on when you are ready.',
+                       name)
+                ),
+        });
     }
 
     remove(page) {
         this.dialog.add(ConfirmationDialog, {
-            title: _t("Delete this page?"),
-            body: _t(
-                "“%s” and everything on it goes for good. This is not the Trash - there is no putting it back.",
-                page.name
-            ),
-            confirmLabel: _t("Delete page"),
+            title: _t("Remove this page?"),
+            body: this.state.trashDays
+                ? _t('"%(name)s" goes to the Trash, where you can put it back for %(days)s days.',
+                     { name: page.name, days: this.state.trashDays })
+                : _t('"%s" goes to the Trash, where you can put it back.', page.name),
+            confirmLabel: _t("Remove page"),
+            confirmClass: "btn-danger",
+            confirm: () =>
+                this.run(
+                    () => this.orm.call(M.version, "action_trash",
+                                        [parseInt(page.id, 10)]),
+                    _t("Moved to the Trash.")
+                ),
+            cancel: () => {},
+        });
+    }
+
+    // ------------------------------------------------------------- the Trash
+
+    openTrash() {
+        this.state.trashOpen = !this.state.trashOpen;
+    }
+
+    restore(page) {
+        this.run(
+            () => this.orm.call(M.version, "action_restore", [parseInt(page.id, 10)]),
+            _t('"%s" is back.', page.name)
+        );
+    }
+
+    /** Gone now rather than in thirty days. Only offered from the Trash, so
+        nothing is destroyed without having been visible there first. */
+    deleteForever(page) {
+        this.dialog.add(ConfirmationDialog, {
+            title: _t("Delete for good?"),
+            body: _t('"%s" and everything on it goes now. There is no putting it back.',
+                     page.name),
+            confirmLabel: _t("Delete for good"),
             confirmClass: "btn-danger",
             confirm: () =>
                 this.run(

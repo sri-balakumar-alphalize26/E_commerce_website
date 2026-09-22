@@ -1,6 +1,6 @@
 {
     'name': '369 Mart Home Page',
-    'version': '19.0.1.3.0',
+    'version': '19.0.1.4.0',
     'category': 'Website',
     'summary': 'Configure the 369 Mart app home page - banners, sections and tiles - without touching code.',
     'description': """

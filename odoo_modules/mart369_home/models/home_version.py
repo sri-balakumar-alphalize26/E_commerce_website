@@ -28,12 +28,14 @@ from odoo.exceptions import UserError
 class Mart369HomeVersion(models.Model):
 
     _name = 'mart369.home.version'
+    _inherit = ['mart369.home.trashable']
     _description = '369 Mart Saved Home Page'
     _order = 'is_current desc, starts_on desc, id'
+    _trash_what = 'Page'
 
     name = fields.Char(
         string='Name', required=True,
-        help='What this page is for: "Everyday", "Diwali 2026", "Clearance".')
+        help='What this page is for: "Everyday", "Festival sale", "Clearance".')
     note = fields.Char(
         string='Note',
         help='A line for whoever opens this in six months.')
@@ -70,6 +72,41 @@ class Mart369HomeVersion(models.Model):
              'must never be ambiguous.')
     state_note = fields.Char(string='Because', compute='_compute_state')
 
+    # -------------------------------------------------------------- the bin
+
+    def _live(self):
+        """Which of these pages could be served.
+
+        The mixin's own `_live()` also wants `active`, which a page does not
+        have and should not get: `state` already says whether a page is in
+        use, and a second, different "off" beside it is how somebody ends up
+        with a page that is switched on and still invisible. Being in the
+        Trash is the only thing that hides a page from here.
+        """
+        return self.filtered(lambda r: not r.deleted_at)
+
+    def _mart369_check_removable(self):
+        """The two things a page may never be removed for, trash or unlink.
+
+        Counted over *kept* pages rather than all of them. Counting the
+        trashed ones too would mean the nightly purge could never empty the
+        Trash - it would hit "this is the only saved home page" and log an
+        error every night instead.
+        """
+        if any(rec.is_current for rec in self):
+            raise UserError(self.env._(
+                'That is the everyday home page. Switch another one on first, '
+                'or the app would be left with no home page at all.'))
+        kept = self.sudo().search_count([('deleted_at', '=', False)])
+        if kept <= len(self._kept()):
+            raise UserError(self.env._(
+                'This is the only saved home page. There has to be one.'))
+
+    def action_trash(self):
+        """To the Trash, not gone. Same two refusals as deleting outright."""
+        self._mart369_check_removable()
+        return super().action_trash()
+
     # ------------------------------------------------------------ the choice
 
     @api.model
@@ -81,15 +118,19 @@ class Mart369HomeVersion(models.Model):
         month-long campaign, which is what anyone scheduling both would mean.
         """
         now = fields.Datetime.now()
-        scheduled = self.sudo().search([
+        # A page in the Trash is never served. This is the method that decides
+        # what shoppers actually get, so the filter belongs here and not only
+        # on the screens that list pages.
+        kept = [('deleted_at', '=', False)]
+        scheduled = self.sudo().search(kept + [
             '|', ('starts_on', '=', False), ('starts_on', '<=', now),
             '|', ('ends_on', '=', False), ('ends_on', '>=', now),
             '|', ('starts_on', '!=', False), ('ends_on', '!=', False),
         ], order='starts_on desc, id desc', limit=1)
         if scheduled:
             return scheduled
-        return (self.sudo().search([('is_current', '=', True)], limit=1)
-                or self.sudo().search([], limit=1))
+        return (self.sudo().search(kept + [('is_current', '=', True)], limit=1)
+                or self.sudo().search(kept, limit=1))
 
     @api.depends('is_current', 'starts_on', 'ends_on')
     def _compute_state(self):
@@ -115,12 +156,13 @@ class Mart369HomeVersion(models.Model):
 
     def _mart369_keep_one_current(self):
         """Exactly one everyday page, always."""
-        current = self.sudo().search([('is_current', '=', True)])
+        current = self.sudo().search(
+            [('is_current', '=', True), ('deleted_at', '=', False)])
         if len(current) > 1:
             (current - current[0]).with_context(
                 mart369_settling=True).write({'is_current': False})
         elif not current:
-            first = self.sudo().search([], limit=1)
+            first = self.sudo().search([('deleted_at', '=', False)], limit=1)
             if first:
                 first.with_context(
                     mart369_settling=True).write({'is_current': True})
@@ -145,13 +187,13 @@ class Mart369HomeVersion(models.Model):
         return result
 
     def unlink(self):
-        if any(rec.is_current for rec in self):
-            raise UserError(self.env._(
-                'That is the everyday home page. Switch another one on first, '
-                'or the app would be left with no home page at all.'))
-        if self.sudo().search_count([]) <= len(self):
-            raise UserError(self.env._(
-                'This is the only saved home page. There has to be one.'))
+        """Gone for good.
+
+        The guard is skipped for a page already in the Trash: removing it does
+        not reduce the number of pages the shop can serve, and this is the
+        path the nightly purge takes.
+        """
+        self._kept()._mart369_check_removable()
         return super().unlink()
 
     # ----------------------------------------------------------- the screens
@@ -172,6 +214,9 @@ class Mart369HomeVersion(models.Model):
             'stateNote': self.state_note or '',
             'startsOn': self.starts_on.isoformat() if self.starts_on else None,
             'endsOn': self.ends_on.isoformat() if self.ends_on else None,
+            'deletedAt': (fields.Datetime.to_string(self.deleted_at)
+                          if self.deleted_at else None),
+            'daysLeft': self.trash_days_left,
             'bands': {
                 mode.key: {
                     'banners': len(mode.banner_ids._live()),
@@ -185,10 +230,18 @@ class Mart369HomeVersion(models.Model):
 
     @api.model
     def pages_load(self):
-        """Every saved page, for the screen that lists them."""
+        """Every saved page, for the screen that lists them.
+
+        Kept pages and trashed ones come back apart, so neither screen has to
+        remember to filter - the same split the builder does for bands.
+        """
+        pages = self.search([], order='is_current desc, name')
         return {
-            'pages': [p._serialize_card()
-                      for p in self.search([], order='is_current desc, name')],
+            'pages': [p._serialize_card() for p in pages._kept()],
+            'trash': [p._serialize_card()
+                      for p in pages._trashed().sorted(
+                          key=lambda r: r.deleted_at or fields.Datetime.now(),
+                          reverse=True)],
             'trash_days': self.env['mart369.config'].sudo()._get()._trash_days(),
         }
 

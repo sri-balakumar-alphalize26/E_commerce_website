@@ -29,9 +29,10 @@ class Mart369HomeConfig(models.Model):
              'Each row can override this.')
     trash_days = fields.Integer(
         string='Keep removed items for (days)', default=30,
-        help='Removing a banner, tile, tab or row puts it in the Trash '
-             'instead of destroying it. This is how long it waits there '
-             'before it is deleted for good. 0 means keep forever.')
+        help='Removing a banner, tile, tab, row or a whole saved page puts '
+             'it in the Trash instead of destroying it. This is how long it '
+             'waits there before it is deleted for good. 0 means keep '
+             'forever.')
 
     hide_out_of_stock = fields.Boolean(
         string='Hide sold-out products', default=False,
@@ -67,7 +68,8 @@ class Mart369HomeConfig(models.Model):
         cutoff = fields.Datetime.now() - timedelta(days=keep)
         gone = 0
         for model in ('mart369.home.section', 'mart369.home.banner',
-                      'mart369.home.tile', 'mart369.home.tab'):
+                      'mart369.home.tile', 'mart369.home.tab',
+                      'mart369.home.version'):
             records = self.env[model].with_context(active_test=False).search(
                 [('deleted_at', '!=', False), ('deleted_at', '<', cutoff)])
             gone += len(records)

@@ -15,7 +15,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAction, useResource } from "@/lib/useFetch";
-import { Confirm, Empty, Icon } from "./AdminUI";
+import { Confirm, Drawer, Empty, Icon } from "./AdminUI";
 
 const STATE = {
   live: { label: "Live now", tone: "green" },
@@ -27,6 +27,74 @@ const STATE = {
 /* A datetime-local input wants "YYYY-MM-DDTHH:mm" and the shop speaks ISO. */
 const toInput = (iso) => (iso ? iso.slice(0, 16) : "");
 const toIso = (v) => (v ? v.replace("T", " ") + ":00" : false);
+
+/* "What shall we call it?"
+   A page called "Everyday (copy)" that somebody meant to call "Diwali" is a
+   page nobody renames until they go looking for it six months later. */
+function NamePrompt({ onCancel, onConfirm }) {
+  const [name, setName] = useState("");
+  const go = () => { if (name.trim()) onConfirm(name.trim()); };
+  return (
+    <Confirm
+      title="What is this page for?"
+      confirmLabel="Create page"
+      onCancel={onCancel}
+      onConfirm={go}
+      text={
+        <>
+          <label className="ad-field ad-name-field">
+            <span>Name</span>
+            <input autoFocus value={name} placeholder="Diwali"
+              onChange={(e) => setName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") go(); }} />
+          </label>
+          It starts as a copy of the page that is on today, so you are editing
+          something rather than building from nothing.
+        </>
+      } />
+  );
+}
+
+/* Removed pages wait here. Mirrors the band Trash in the page editor, which
+   is where an editor will have met this idea already. */
+function TrashDrawer({ rows, days, busy, onRestore, onForget, onClose }) {
+  return (
+    <Drawer title="Trash" onClose={onClose}
+      sub={rows.length
+        ? `${rows.length} removed ${rows.length === 1 ? "page" : "pages"}`
+        : "Nothing removed"}>
+      {!rows.length ? (
+        <Empty icon="trash" title="The Trash is empty"
+          text="A page you remove waits here before it is deleted for good." />
+      ) : (
+        <>
+          <p className="ad-hint ad-trash-note"><Icon n="info" size={14} />
+            {days
+              ? `A removed page waits ${days} days here, then goes for good. Putting one back returns it exactly as it was.`
+              : "Removed pages are kept until you delete them for good."}
+          </p>
+          <ul className="ad-trash-list">
+            {rows.map((page) => (
+              <li key={page.id}>
+                <span className="ad-trash-txt">
+                  <b>{page.name}</b>
+                  <small>
+                    Removed {page.deletedAt ? page.deletedAt.slice(0, 16) : ""}
+                    {days ? ` · ${page.daysLeft} day${page.daysLeft === 1 ? "" : "s"} left` : ""}
+                  </small>
+                </span>
+                <button className="ad-btn ad-sm" disabled={busy}
+                  onClick={() => onRestore(page)}>Put back</button>
+                <button className="ad-btn ad-sm ad-danger-ghost" disabled={busy}
+                  onClick={() => onForget(page)}>Delete for good</button>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </Drawer>
+  );
+}
 
 function PageCard({ page, i, busy, onSwitch, onSchedule, onDuplicate, onDelete, onEdit }) {
   const [open, setOpen] = useState(false);
@@ -65,7 +133,7 @@ function PageCard({ page, i, busy, onSwitch, onSchedule, onDuplicate, onDelete, 
         <span className="ad-page-more">
           <button className="ad-link" onClick={() => onDuplicate(page)} disabled={busy}>Duplicate</button>
           <button className="ad-link ad-danger-link" onClick={() => onDelete(page)}
-            disabled={busy || page.isCurrent}>Delete</button>
+            disabled={busy || page.isCurrent}>Remove</button>
         </span>
       </div>
 
@@ -102,7 +170,16 @@ export default function HomeSection({ flash }) {
   const { data, loading, error, reload } = useResource("/admin/home/pages");
   const act = useAction();
   const [confirm, setConfirm] = useState(null);
+  const [switching, setSwitching] = useState(null);
+  const [naming, setNaming] = useState(false);
+  const [forget, setForget] = useState(null);
+  const [trashOpen, setTrashOpen] = useState(false);
   const pages = data?.pages || [];
+  const trash = data?.trash || [];
+  const trashDays = data?.trash_days ?? 0;
+  /* Whichever page shoppers are on right now - not necessarily the one
+     flagged everyday, because an open window beats the flag. */
+  const live = pages.find((p) => p.state === "live");
 
   const run = (fn, ok) =>
     act.run(async () => {
@@ -125,12 +202,25 @@ export default function HomeSection({ flash }) {
       method: "PATCH", body: { startsOn: toIso(from), endsOn: toIso(until) },
     }), from || until ? `“${page.name}” is scheduled` : "Dates cleared");
 
-  const onDuplicate = (page) =>
-    run(() => api("/admin/home/pages", { method: "POST", body: { from: page.id } }),
-      "Copied. Edit it, then switch it on when you are ready.");
+  const onDuplicate = (page, name) =>
+    run(() => api("/admin/home/pages", {
+      method: "POST", body: { from: page.id, ...(name ? { name } : {}) },
+    }), name
+      ? `“${name}” created. Edit it, then switch it on when you are ready.`
+      : "Copied. Edit it, then switch it on when you are ready.");
 
   const onDelete = (page) =>
     run(() => api(`/admin/home/pages/${page.id}`, { method: "DELETE" }),
+      `“${page.name}” moved to the Trash`);
+
+  const onRestore = (page) =>
+    run(() => api(`/admin/home/pages/${page.id}/restore`, { method: "POST" }),
+      `“${page.name}” is back`);
+
+  /* Gone now rather than in thirty days. Only reachable from the Trash, so
+     nothing is destroyed without having been visible there first. */
+  const onForget = (page) =>
+    run(() => api(`/admin/home/pages/${page.id}/forever`, { method: "DELETE" }),
       `“${page.name}” deleted`);
 
   return (
@@ -142,10 +232,16 @@ export default function HomeSection({ flash }) {
             <p>Build a page once, switch it on when you need it — or give it
               dates and let it switch itself.</p>
           </div>
-          <button className="ad-btn ad-primary" disabled={act.busy || !pages.length}
-            onClick={() => onDuplicate(pages.find((p) => p.isCurrent) || pages[0])}>
-            <Icon n="plus" size={15} />New page
-          </button>
+          <div className="ad-head-act">
+            <button className="ad-btn" disabled={act.busy}
+              onClick={() => setTrashOpen(true)}>
+              <Icon n="trash" size={15} />Trash{trash.length ? <em>{trash.length}</em> : null}
+            </button>
+            <button className="ad-btn ad-primary" disabled={act.busy || !pages.length}
+              onClick={() => setNaming(true)}>
+              <Icon n="plus" size={15} />New page
+            </button>
+          </div>
         </header>
         <p className="ad-hint ad-form-pad"><Icon n="info" size={14} />
           Whichever page is scheduled right now is what shoppers see; otherwise
@@ -167,7 +263,8 @@ export default function HomeSection({ flash }) {
       <div className="ad-page-grid">
         {pages.map((p, i) => (
           <PageCard key={p.id} page={p} i={i} busy={act.busy}
-            onSwitch={onSwitch} onSchedule={onSchedule} onDuplicate={onDuplicate}
+            onSwitch={(page) => setSwitching(page)}
+            onSchedule={onSchedule} onDuplicate={onDuplicate}
             onDelete={(page) => setConfirm(page)}
             onEdit={(page) => router.push(`/admin/home/${page.id}`)} />
         ))}
@@ -181,11 +278,51 @@ export default function HomeSection({ flash }) {
       )}
 
       {confirm && (
-        <Confirm danger title={`Delete “${confirm.name}”?`}
-          text="Its banners, tabs, tiles and rows go with it. This cannot be undone."
-          confirmLabel="Delete page"
+        <Confirm danger title={`Remove “${confirm.name}”?`}
+          text={trashDays
+            ? `It goes to the Trash, where you can put it back for ${trashDays} days.`
+            : "It goes to the Trash, where you can put it back."}
+          confirmLabel="Remove page"
           onCancel={() => setConfirm(null)}
           onConfirm={() => { const p = confirm; setConfirm(null); onDelete(p); }} />
+      )}
+
+      {/* Switching is what shoppers see change, so it says which page they
+          are on now and which they will be on. */}
+      {switching && (
+        <Confirm
+          title={live && live.id !== switching.id
+            ? `Switch from “${live.name}” to “${switching.name}”?`
+            : `Switch on “${switching.name}”?`}
+          text={live && live.id !== switching.id
+            ? `Shoppers are on “${live.name}”. They will be on “${switching.name}” straight away.`
+            : `Shoppers will be on “${switching.name}” straight away.`}
+          confirmLabel="Switch on"
+          onCancel={() => setSwitching(null)}
+          onConfirm={() => { const p = switching; setSwitching(null); onSwitch(p); }} />
+      )}
+
+      {naming && (
+        <NamePrompt
+          onCancel={() => setNaming(false)}
+          onConfirm={(name) => {
+            setNaming(false);
+            onDuplicate(pages.find((p) => p.isCurrent) || pages[0], name);
+          }} />
+      )}
+
+      {forget && (
+        <Confirm danger title={`Delete “${forget.name}” for good?`}
+          text="It and everything on it goes now. There is no putting it back."
+          confirmLabel="Delete for good"
+          onCancel={() => setForget(null)}
+          onConfirm={() => { const p = forget; setForget(null); onForget(p); }} />
+      )}
+
+      {trashOpen && (
+        <TrashDrawer rows={trash} days={trashDays} busy={act.busy}
+          onRestore={onRestore} onForget={(page) => setForget(page)}
+          onClose={() => setTrashOpen(false)} />
       )}
     </div>
   );

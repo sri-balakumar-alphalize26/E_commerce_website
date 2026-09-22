@@ -113,11 +113,9 @@ class Mart369HomeAdminApi(http.Controller):
         """Every saved home page, for the tiles screen."""
         if not self._may_edit():
             return self._fail('You do not have access to this.', status=403)
-        pages = self._pages().search([])
-        return self._json({
-            'ok': True,
-            'pages': [self._serialize(p) for p in pages],
-        })
+        payload = self._pages().pages_load()
+        payload['ok'] = True
+        return self._json(payload)
 
     @http.route('/369mart/admin/home/pages', **_POST)
     def create_page(self, **kwargs):
@@ -533,15 +531,56 @@ class Mart369HomeAdminApi(http.Controller):
 
     @http.route('/369mart/admin/home/pages/<int:page_id>', **_DELETE)
     def delete_page(self, page_id, **kwargs):
-        """Remove a saved page. The model refuses the live one and the last."""
+        """Move a saved page to the Trash.
+
+        A page is weeks of somebody's work and the button that removes it sits
+        next to Duplicate, so this writes `deleted_at` rather than unlinking -
+        the same bargain every banner, tile, tab and row on the page already
+        gets. The model still refuses the everyday page and the last one.
+        """
         if not self._may_edit():
             return self._fail('You do not have access to this.', status=403)
         page = self._page(page_id)
         if not page:
             return self._fail('No such page.', status=404)
         try:
-            page.unlink()
+            page.action_trash()
         except (AccessError, UserError) as exc:
             # The model's own words - it knows why better than this does.
+            return self._fail(str(exc), status=409)
+        return self._json({'ok': True, 'page': self._serialize(page)})
+
+    @http.route('/369mart/admin/home/pages/<int:page_id>/restore', **_POST)
+    def restore_page(self, page_id, **kwargs):
+        """Out of the Trash, exactly as it went in."""
+        if not self._may_edit():
+            return self._fail('You do not have access to this.', status=403)
+        page = self._page(page_id)
+        if not page:
+            return self._fail('No such page.', status=404)
+        try:
+            page.action_restore()
+        except (AccessError, UserError) as exc:
+            return self._fail(str(exc), status=409)
+        return self._json({'ok': True, 'page': self._serialize(page)})
+
+    @http.route('/369mart/admin/home/pages/<int:page_id>/forever', **_DELETE)
+    def delete_page_forever(self, page_id, **kwargs):
+        """Gone now rather than in thirty days.
+
+        Only from the Trash: the way out of the pages screen is the Trash, so
+        nothing can be destroyed without passing through it and being visible
+        there first.
+        """
+        if not self._may_edit():
+            return self._fail('You do not have access to this.', status=403)
+        page = self._page(page_id)
+        if not page:
+            return self._fail('No such page.', status=404)
+        if not page.deleted_at:
+            return self._fail('Put it in the Trash first.', status=409)
+        try:
+            page.unlink()
+        except (AccessError, UserError) as exc:
             return self._fail(str(exc), status=409)
         return self._json({'ok': True})

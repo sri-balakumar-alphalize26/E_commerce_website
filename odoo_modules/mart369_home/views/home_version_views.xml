@@ -41,7 +41,7 @@
                 </header>
                 <sheet>
                     <div class="oe_title">
-                        <h1><field name="name" placeholder="Diwali 2026"/></h1>
+                        <h1><field name="name" placeholder="Festival sale"/></h1>
                         <field name="note" placeholder="What this page is for"/>
                     </div>
                     <group>
