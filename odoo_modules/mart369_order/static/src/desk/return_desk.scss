@@ -1,0 +1,532 @@
+/* The returns desk.
+ *
+ * Only what the shared sheet does not already cover. The shell, the panel, the
+ * buttons, the pills, the error bar and the loading line all come from
+ * mart369/static/src/builder/builder.scss, which is loaded earlier in the
+ * bundle because mart369 is a dependency of this module.
+ *
+ * No @import, ever. Odoo rejects a local import inside a bundle and the whole
+ * backend stylesheet fails with it - the $m369-* tokens below come from
+ * mart369_auth's customer_views.scss, loaded before this.
+ *
+ * Deliberately shaped like order_desk.scss next door: the two screens are
+ * siblings, and an operator moving between them should not have to relearn
+ * where anything is.
+ */
+
+.mart-builder.rd {
+
+    // ------------------------------------------------------------- the tiles
+    .rd-tiles {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    .rd-tile {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 12px 14px;
+        border: 1px solid $m369-line;
+        border-radius: 14px;
+        background: #fff;
+        text-align: left;
+        font: inherit;
+        cursor: pointer;
+        transition: border-color 140ms, box-shadow 140ms, transform 120ms;
+
+        b {
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            font-variant-numeric: tabular-nums;
+        }
+
+        small { font-size: 11.5px; color: $m369-muted; }
+
+        &:hover {
+            border-color: $m369-blue;
+            transform: translateY(-1px);
+            box-shadow: 0 10px 22px -18px rgba(19, 33, 43, 0.7);
+        }
+
+        &.rd-tile-on {
+            border-color: $m369-blue;
+            background: $m369-blue-soft;
+        }
+
+        // Only warns when there is something to warn about - a red nought is
+        // noise, and noise is what stops people reading the tiles at all.
+        &.rd-tile-warn b { color: $m369-red; }
+    }
+
+    .rd-tile-top {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 12px;
+        font-weight: 700;
+        color: $m369-muted;
+
+        i { color: $m369-blue; }
+    }
+
+    // ----------------------------------------------------------- the toolbar
+    .rd-toolbar { flex-wrap: wrap; }
+
+    .rd-tabs {
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+        padding: 3px;
+        border: 1px solid $m369-line;
+        border-radius: 999px;
+        background: #fff;
+
+        button {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 13px;
+            border: 0;
+            border-radius: 999px;
+            background: none;
+            font: inherit;
+            font-size: 12.5px;
+            font-weight: 700;
+            color: $m369-ink;
+            cursor: pointer;
+
+            em {
+                font-style: normal;
+                font-size: 11px;
+                font-variant-numeric: tabular-nums;
+                color: $m369-muted;
+            }
+
+            &.mart-on {
+                background: $m369-blue;
+                color: #fff;
+                em { color: rgba(255, 255, 255, 0.85); }
+            }
+        }
+    }
+
+    .rd-search {
+        min-width: 230px;
+        height: 34px;
+        padding: 0 12px;
+        border: 1px solid $m369-line;
+        border-radius: 10px;
+        background: #fff;
+        font-size: 13px;
+    }
+
+    // -------------------------------------------------------------- the list
+    // Full width. The detail used to sit in a 380px column beside this, which
+    // left neither enough room; it is a dialog now.
+    .rd-queue-wrap { min-width: 0; }
+    .rd-queue { min-width: 0; }
+
+    .rd-count {
+        margin: 0 0 8px;
+        font-size: 12px;
+        color: $m369-muted;
+    }
+
+    .rd-rows {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        border: 1px solid $m369-line;
+        border-radius: 14px;
+        background: #fff;
+        overflow: hidden;
+    }
+
+    .rd-row {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        padding: 11px 14px;
+        border-bottom: 1px solid $m369-line;
+        cursor: pointer;
+
+        &:last-child { border-bottom: 0; }
+        &:hover { background: #fafcfd; }
+
+        // Inset shadows rather than a border, so the row does not shift by a
+        // pixel when it becomes the selected one.
+        &.rd-row-on { background: $m369-blue-soft; box-shadow: inset 2px 0 0 $m369-blue; }
+    }
+
+    .rd-line1,
+    .rd-line2 {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+    }
+
+    .rd-ref {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 13.5px;
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+
+        i { color: $m369-blue; }
+    }
+
+    .rd-ago { font-size: 11.5px; color: $m369-muted; }
+
+    .rd-who {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 13px;
+    }
+
+    .rd-shots {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 1px 7px;
+        border-radius: 999px;
+        background: #f1f5f8;
+        font-size: 11px;
+        font-weight: 700;
+        color: $m369-muted;
+    }
+
+    .rd-total {
+        font-size: 13.5px;
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .rd-kind { font-size: 12px; color: $m369-muted; }
+
+    .rd-reason {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 12px;
+        color: $m369-muted;
+    }
+
+    .rd-next { margin-left: auto; }
+
+    .rd-more { margin-top: 12px; text-align: center; }
+
+    // The state, coloured the way the console colours it.
+    .rd-s-requested { background: #eaf4fa; color: $m369-blue; }
+    .rd-s-pickup { background: #fff4e5; color: #b7791f; }
+    .rd-s-picked { background: #f1ecfc; color: #6244b8; }
+    .rd-s-done { background: #e9f6ee; color: $m369-green; }
+    .rd-s-refused { background: #fdeaea; color: $m369-red; }
+
+    // ------------------------------------------------------------ the dialog
+    .rd-chips {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 14px;
+    }
+
+    .rd-h {
+        margin: 18px 0 8px;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: $m369-muted;
+
+        em {
+            font-style: normal;
+            margin-left: 4px;
+            color: $m369-ink;
+        }
+    }
+
+    .rd-kv,
+    .rd-bill {
+        margin: 0;
+        display: grid;
+        gap: 6px;
+
+        > div {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        dt { font-size: 12.5px; color: $m369-muted; }
+        dd {
+            margin: 0;
+            font-size: 13px;
+            font-weight: 700;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+    }
+
+    .rd-bill-total {
+        margin-top: 4px;
+        padding-top: 8px;
+        border-top: 1px solid $m369-line;
+
+        dt { color: $m369-ink; font-weight: 700; }
+        dd { font-size: 15px; font-weight: 800; }
+    }
+
+    /* Small, uniform and clickable. A damage claim is looked at, so each one
+       opens full size in its own tab rather than trying to be a lightbox. */
+    .rd-shots-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+
+        a {
+            display: block;
+            width: 88px;
+            height: 88px;
+            border: 1px solid $m369-line;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #f1f5f8;
+
+            &:hover { border-color: $m369-blue; }
+        }
+
+        img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    }
+
+    // The ladder. The dot is the empty <i/>; the rail joining them is a
+    // pseudo-element, so the markup stays one element per step.
+    .rd-steps {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+
+        li {
+            position: relative;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 0 0 14px 0;
+
+            &:last-child { padding-bottom: 0; }
+
+            &::before {
+                content: "";
+                position: absolute;
+                left: 5px;
+                top: 14px;
+                bottom: 0;
+                width: 2px;
+                background: $m369-line;
+            }
+            &:last-child::before { display: none; }
+
+            > i {
+                flex: none;
+                width: 12px;
+                height: 12px;
+                margin-top: 3px;
+                border-radius: 50%;
+                border: 2px solid $m369-line;
+                background: #fff;
+            }
+
+            b { font-size: 13px; font-weight: 600; color: $m369-muted; }
+        }
+
+        .rd-done > i { border-color: $m369-green; background: $m369-green; }
+        .rd-done b { color: $m369-ink; }
+
+        .rd-now > i {
+            border-color: $m369-blue;
+            background: $m369-blue;
+            box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.18);
+        }
+        .rd-now b { color: $m369-blue; font-weight: 800; }
+    }
+
+    .rd-foot {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    // ------------------------------------------------------------ small room
+    @media (max-width: 1100px) {
+        .rd-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+}
+
+/* The dialog is portalled to Odoo's own dialog container, which is outside the
+   screen's root element - so its rules cannot be nested under .mart-builder
+   and have to be spelled out here. */
+.rd-dialog {
+
+    .rd-dialog-cols {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px 28px;
+        align-items: start;
+    }
+
+    .rd-chips {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-bottom: 4px;
+    }
+
+    .mart-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 10px;
+        border-radius: 999px;
+        font-size: 11.5px;
+        font-weight: 700;
+    }
+
+    .rd-s-requested { background: #eaf4fa; color: $m369-blue; }
+    .rd-s-pickup { background: #fff4e5; color: #b7791f; }
+    .rd-s-picked { background: #f1ecfc; color: #6244b8; }
+    .rd-s-done { background: #e9f6ee; color: $m369-green; }
+    .rd-s-refused { background: #fdeaea; color: $m369-red; }
+
+    .rd-kind, .rd-ago { font-size: 12px; color: $m369-muted; }
+
+    .rd-h {
+        margin: 18px 0 8px;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: $m369-muted;
+
+        em { font-style: normal; margin-left: 4px; color: $m369-ink; }
+    }
+
+    .rd-kv,
+    .rd-bill {
+        margin: 0;
+        display: grid;
+        gap: 6px;
+
+        > div {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        dt { font-size: 12.5px; color: $m369-muted; }
+        dd {
+            margin: 0;
+            font-size: 13px;
+            font-weight: 700;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+    }
+
+    .rd-bill-total {
+        margin-top: 4px;
+        padding-top: 8px;
+        border-top: 1px solid $m369-line;
+
+        dt { color: $m369-ink; font-weight: 700; }
+        dd { font-size: 15px; font-weight: 800; }
+    }
+
+    .mart-hint { font-size: 12.5px; color: $m369-muted; line-height: 1.5; }
+
+    /* Small, uniform and clickable. A damage claim is looked at, so each one
+       opens full size in its own tab rather than trying to be a lightbox. */
+    .rd-shots-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+
+        a {
+            display: block;
+            width: 96px;
+            height: 96px;
+            border: 1px solid $m369-line;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #f1f5f8;
+
+            &:hover { border-color: $m369-blue; }
+        }
+
+        img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    }
+
+    .rd-steps {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+
+        li {
+            position: relative;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 0 0 14px 0;
+
+            &:last-child { padding-bottom: 0; }
+
+            &::before {
+                content: "";
+                position: absolute;
+                left: 5px;
+                top: 14px;
+                bottom: 0;
+                width: 2px;
+                background: $m369-line;
+            }
+            &:last-child::before { display: none; }
+
+            > i {
+                flex: none;
+                width: 12px;
+                height: 12px;
+                margin-top: 3px;
+                border-radius: 50%;
+                border: 2px solid $m369-line;
+                background: #fff;
+            }
+
+            b { font-size: 13px; font-weight: 600; color: $m369-muted; }
+        }
+
+        .rd-done > i { border-color: $m369-green; background: $m369-green; }
+        .rd-done b { color: $m369-ink; }
+
+        .rd-now > i {
+            border-color: $m369-blue;
+            background: $m369-blue;
+            box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.18);
+        }
+        .rd-now b { color: $m369-blue; font-weight: 800; }
+    }
+
+    @media (max-width: 800px) {
+        .rd-dialog-cols { grid-template-columns: minmax(0, 1fr); }
+    }
+}

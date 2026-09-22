@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- The returns desk: the front door of 369 Mart > Returns, and the twin
+         of the app's console at /admin/returns. It answers "what do I deal
+         with next". The kanban below it answers "show me the returns", and
+         keeps what the desk does not do - grouping, the form, and adding or
+         removing the photos.
+
+         `action_mart369_returns` is an act_window with no `path`, so
+         `mart-returns` is free: no ir_act_client_path_unique handover to
+         migrate, unlike the product page. -->
+    <record id="action_mart369_return_desk" model="ir.actions.client">
+        <field name="name">Returns</field>
+        <field name="tag">mart369_order.returns</field>
+        <field name="path">mart-returns</field>
+    </record>
+
+</odoo>

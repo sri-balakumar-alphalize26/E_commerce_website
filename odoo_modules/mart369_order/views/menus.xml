@@ -9,16 +9,42 @@
         Home Page 10, Product Page 15, Customers 20, Addresses 30, Payments 40.
     -->
 
+    <!--
+        Orders is the desk: what needs doing, longest wait first. The board it
+        replaces is still one click away under Advanced, because grouping,
+        export and the form live there and the desk does not try to do them.
+        The same move mart369_product made when its editor became the front
+        door.
+    -->
     <menuitem id="menu_mart369_orders"
               name="Orders"
               parent="mart369.menu_mart369_root"
+              action="action_mart369_order_desk"
+              groups="sales_team.group_sale_salesman"
+              sequence="5"/>
+
+    <menuitem id="menu_mart369_orders_all"
+              name="Orders (all views)"
+              parent="mart369.menu_mart369_advanced"
               action="action_mart369_orders"
               groups="sales_team.group_sale_salesman"
               sequence="5"/>
 
+    <!--
+        Returns is the desk too: what is waiting on somebody, longest wait
+        first. The kanban it replaces is one click away under Advanced, which
+        keeps grouping, the form and the photo widget.
+    -->
     <menuitem id="menu_mart369_returns"
               name="Returns"
               parent="mart369.menu_mart369_root"
+              action="action_mart369_return_desk"
+              groups="sales_team.group_sale_salesman"
+              sequence="6"/>
+
+    <menuitem id="menu_mart369_returns_all"
+              name="Returns (all views)"
+              parent="mart369.menu_mart369_advanced"
               action="action_mart369_returns"
               groups="sales_team.group_sale_salesman"
               sequence="6"/>

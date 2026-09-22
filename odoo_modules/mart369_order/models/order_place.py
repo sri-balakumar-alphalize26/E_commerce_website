@@ -233,12 +233,28 @@ class SaleOrder(models.Model):
         """The order and the bill must agree to the paisa.
 
         They are the same arithmetic on the same prices, so a difference means a
-        tax or a pricelist has quietly changed the number - and the customer
-        would be charged something they were never shown.
+        tax or a price has quietly changed - and the customer would be charged
+        something they were never shown.
+
+        One exception, and only one: the order came out **cheaper** than the
+        quote. That happens when a deal opens while somebody is on the payment
+        screen, and refusing it would mean telling a customer their order
+        failed because the shop decided to charge them less. The quote is
+        honoured as the ceiling and the lower price stands.
+
+        Dearer is still refused, always. That is the direction that takes money
+        somebody did not agree to.
         """
         self.ensure_one()
         currency = self.currency_id
-        if currency.compare_amounts(self.amount_total, bill['total']) != 0:
+        difference = currency.compare_amounts(self.amount_total, bill['total'])
+        if difference < 0:
+            _logger.info(
+                'mart369: order %s came to %s, under the %s quoted - a price '
+                'moved in the customer\'s favour between the two',
+                self.mart369_ref, self.amount_total, bill['total'])
+            return True
+        if difference > 0:
             _logger.error(
                 'mart369: order %s totals %s but the bill said %s',
                 self.mart369_ref, self.amount_total, bill['total'])

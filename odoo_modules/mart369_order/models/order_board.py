@@ -21,12 +21,25 @@ class SaleOrder(models.Model):
     _inherit = 'sale.order'
 
     @api.model
+    def _mart369_board_domain(self):
+        """Every real order, and nothing else.
+
+        A draft is a basket that was never paid for, and a row without a
+        reference was not placed through the app at all. Counting either would
+        make every number on every staff screen wrong, so the one definition
+        lives here and the board, the console's tiles and the console's list
+        all start from it.
+        """
+        return [('mart369_ref', '!=', False),
+                ('mart369_state', 'not in', (False, 'draft'))]
+
+    @api.model
     def mart369_order_dashboard(self):
         """Everything the strip prints, in one call."""
         today = fields.Date.context_today(self)
         start = fields.Datetime.to_datetime(today)
         currency = self.env.company.currency_id
-        mine = [('mart369_ref', '!=', False), ('mart369_state', 'not in', (False, 'draft'))]
+        mine = self._mart369_board_domain()
 
         today_orders = self.search(mine + [('mart369_placed_at', '>=', start)])
         today_value = self._mart369_in_company_currency(today_orders)

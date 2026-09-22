@@ -248,6 +248,19 @@
         </field>
     </record>
 
+    <!-- The desk: the front door of 369 Mart > Orders, and the twin of the
+         app's console at /admin/orders. It answers "what do I pack next".
+         The board below answers "show me the orders", and keeps what the desk
+         does not do - grouping, export, the form, the saved filters.
+
+         `action_mart369_orders` has no `path`, so `mart-orders` is free and
+         there is no ir_act_client_path_unique handover to migrate. -->
+    <record id="action_mart369_order_desk" model="ir.actions.client">
+        <field name="name">Orders</field>
+        <field name="tag">mart369_order.desk</field>
+        <field name="path">mart-orders</field>
+    </record>
+
     <record id="action_mart369_orders" model="ir.actions.act_window">
         <field name="name">Orders</field>
         <field name="res_model">sale.order</field>

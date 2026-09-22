@@ -1,0 +1,257 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="mart369_order.ReturnDesk">
+        <Layout display="{ controlPanel: {} }" className="'o_mart369_desk h-100'">
+            <div class="mart-builder pe rd">
+
+                <header class="pe-head">
+                    <div>
+                        <h1>Returns</h1>
+                        <p>What is waiting on somebody, longest wait first.</p>
+                    </div>
+                    <button class="mart-btn" t-on-click="() => this.moreViews()">
+                        <i class="fa fa-th-list" role="img" aria-label="Board"/>
+                        All views
+                    </button>
+                </header>
+
+                <!-- The tiles are the filter, not a read-out above one. -->
+                <div class="rd-tiles">
+                    <button t-foreach="TILES" t-as="tile" t-key="tile.tab"
+                            type="button"
+                            t-attf-class="rd-tile {{ state.tab === tile.tab ? 'rd-tile-on' : '' }} {{ tile.warn and tileValue(tile) ? 'rd-tile-warn' : '' }}"
+                            t-att-aria-pressed="state.tab === tile.tab ? 'true' : 'false'"
+                            t-on-click="() => this.pick(tile.tab)">
+                        <span class="rd-tile-top">
+                            <i t-attf-class="fa {{ tile.icon }}" aria-hidden="true"/>
+                            <t t-esc="tile.label"/>
+                        </span>
+                        <b t-esc="tileValue(tile)"/>
+                        <small>Show these</small>
+                    </button>
+                </div>
+
+                <div class="pe-toolbar rd-toolbar">
+                    <div class="rd-tabs" role="tablist">
+                        <button t-foreach="TABS" t-as="tab" t-key="tab.key"
+                                role="tab"
+                                t-att-aria-selected="state.tab === tab.key ? 'true' : 'false'"
+                                t-attf-class="{{ state.tab === tab.key ? 'mart-on' : '' }}"
+                                t-on-click="() => this.pick(tab.key)">
+                            <t t-esc="tab.label"/>
+                            <em t-if="tabCount(tab) !== null" t-esc="tabCount(tab)"/>
+                        </button>
+                    </div>
+                    <div class="pe-toolbar-gap"/>
+                    <input type="search" class="rd-search"
+                           placeholder="Order, customer or reason"
+                           aria-label="Search returns" t-on-input="search"/>
+                    <Pick label="'Wants'" value="state.kind" options="kindOptions"
+                          onChange="(v) => this.setFilter('kind', v)"/>
+                    <Pick label="'Sort'" value="state.sort" options="sortOptions"
+                          onChange="(v) => this.setFilter('sort', v)"/>
+                </div>
+
+                <p t-if="state.error" class="pe-error" role="alert">
+                    We could not reach the shop. <t t-esc="state.error"/>
+                    <button class="mart-link" t-on-click="() => this.load()">Try again</button>
+                </p>
+
+                <div class="rd-queue-wrap">
+                    <div class="rd-queue">
+
+                        <p t-if="state.loading and !state.rows.length" class="pe-loading">
+                            Loading returns...
+                        </p>
+
+                        <p t-elif="!state.rows.length and state.tab === 'needs'" class="pe-loading">
+                            Nothing is waiting on anybody. That is the queue
+                            empty, not broken.
+                        </p>
+
+                        <p t-elif="!state.rows.length" class="pe-loading">
+                            No return here. Try another tile, or a different search.
+                        </p>
+
+                        <t t-else="">
+                            <p class="rd-count">
+                                <t t-esc="state.total"/> return<t t-if="state.total !== 1">s</t>
+                            </p>
+                            <ul class="rd-rows">
+                                <li t-foreach="state.rows" t-as="row" t-key="row.id"
+                                    t-attf-class="rd-row {{ state.sel === row.id ? 'rd-row-on' : '' }}"
+                                    t-on-click="() => this.select(row.id)">
+                                    <span class="rd-line1">
+                                        <span class="rd-ref">
+                                            <i t-attf-class="fa {{ row.kind === 'replace' ? 'fa-refresh' : 'fa-money' }}"
+                                               aria-hidden="true"/>
+                                            #<t t-esc="row.ref"/>
+                                        </span>
+                                        <span class="rd-ago" t-esc="ago(row.at)"/>
+                                        <span class="rd-who" t-esc="row.who"/>
+                                        <span t-if="row.photos" class="rd-shots"
+                                              t-attf-title="{{ row.photos }} photo(s) from the customer">
+                                            <i class="fa fa-camera" aria-hidden="true"/>
+                                            <t t-esc="row.photos"/>
+                                        </span>
+                                        <b class="rd-total" t-esc="money(row.amount, row.currency)"/>
+                                    </span>
+                                    <span class="rd-line2">
+                                        <span t-attf-class="mart-pill rd-s-{{ row.state }}"
+                                              t-esc="stateLabel(row)"/>
+                                        <span class="rd-kind" t-esc="kindLabel(row.kind)"/>
+                                        <span class="rd-reason" t-esc="row.reason"/>
+                                        <button t-if="row.next" class="mart-btn mart-btn-sm rd-next"
+                                                t-att-disabled="state.busy"
+                                                t-on-click.stop="() => this.advance(row)"
+                                                t-esc="row.next.label"/>
+                                    </span>
+                                </li>
+                            </ul>
+                            <div t-if="state.rows.length &lt; state.total" class="rd-more">
+                                <button class="mart-btn" t-att-disabled="state.loading"
+                                        t-on-click="() => this.showMore()">
+                                    Show more (<t t-esc="state.total - state.rows.length"/> left)
+                                </button>
+                            </div>
+                        </t>
+                    </div>
+
+                </div>
+            </div>
+        </Layout>
+    </t>
+
+    <!-- One return, opened. A dialog rather than a panel down the side: a
+         claim carries the customer, their own words, the photos, the refund
+         split and the ladder, and 380px was not room to read any of it. -->
+    <t t-name="mart369_order.ReturnDialog">
+        <Dialog size="'lg'" contentClass="'rd-dialog'"
+                title="state.detail ? '#' + state.detail.ref : 'Return'">
+
+            <p t-if="state.loading and !state.detail" class="pe-loading">Opening it...</p>
+            <p t-elif="state.error" class="pe-error" role="alert" t-esc="state.error"/>
+
+            <t t-else="">
+                <t t-set="r" t-value="state.detail"/>
+
+                <div class="rd-chips">
+                    <span t-attf-class="mart-pill rd-s-{{ r.state }}" t-esc="stateLabel(r)"/>
+                    <span class="rd-kind" t-esc="kindLabel(r.kind)"/>
+                    <span class="rd-ago" t-esc="ago(r.at)"/>
+                    <span class="rd-ago" t-esc="when(r.at)"/>
+                </div>
+
+                <div class="rd-dialog-cols">
+                    <div>
+                        <h4 class="rd-h">Customer</h4>
+                        <dl class="rd-kv">
+                            <div><dt>Name</dt><dd t-esc="r.who"/></div>
+                            <div>
+                                <dt>Phone</dt>
+                                <dd>
+                                    <a t-if="r.phone" t-attf-href="tel:{{ r.phone }}" t-esc="r.phone"/>
+                                    <t t-else="">&#8212;</t>
+                                </dd>
+                            </div>
+                        </dl>
+
+                        <h4 class="rd-h">Why</h4>
+                        <dl class="rd-kv">
+                            <div><dt>Reason</dt><dd t-esc="r.reason or '—'"/></div>
+                            <div><dt>Wants</dt><dd t-esc="kindLabel(r.kind)"/></div>
+                        </dl>
+                        <!-- Prose, because it is prose: the app flattens the
+                             items and the pickup slot into one string, so there
+                             is nothing structured to lay out and inventing some
+                             would be a lie. -->
+                        <p t-if="r.detail" class="mart-hint" t-esc="r.detail"/>
+
+                        <h4 class="rd-h">The order</h4>
+                        <dl class="rd-kv">
+                            <div><dt>Number</dt><dd>#<t t-esc="r.order.ref"/></dd></div>
+                            <div>
+                                <dt>Order total</dt>
+                                <dd t-esc="money(r.order.total, r.currency)"/>
+                            </div>
+                        </dl>
+                    </div>
+
+                    <div>
+                        <h4 class="rd-h">Photos <em t-if="r.photos" t-esc="r.photos"/></h4>
+                        <div t-if="r.photoIds.length" class="rd-shots-grid">
+                            <a t-foreach="r.photoIds" t-as="pid" t-key="pid"
+                               t-att-href="photoUrl(pid)" target="_blank"
+                               title="Open full size">
+                                <img t-att-src="photoUrl(pid)" alt="" loading="lazy"/>
+                            </a>
+                        </div>
+                        <p t-else="" class="mart-hint">
+                            The customer sent no photos with this one.
+                        </p>
+
+                        <h4 class="rd-h">The money</h4>
+                        <dl class="rd-bill">
+                            <div>
+                                <dt>Wallet &#8212; goes back automatically</dt>
+                                <dd t-esc="money(r.refund.wallet, r.currency)"/>
+                            </div>
+                            <div>
+                                <dt>
+                                    Paid by <t t-esc="r.refund.method or 'gateway'"/>
+                                    &#8212; refund it there
+                                </dt>
+                                <dd t-esc="money(r.refund.gateway, r.currency)"/>
+                            </div>
+                            <div class="rd-bill-total">
+                                <dt>Total</dt>
+                                <dd t-esc="money(r.refund.total, r.currency)"/>
+                            </div>
+                        </dl>
+                        <!-- The refund moves the wallet leg and nothing else.
+                             Somebody has to know that before they press the
+                             button, not after. -->
+                        <p t-if="!r.refund.wallet" class="mart-hint">
+                            None of this was paid from the wallet, so marking it
+                            refunded here moves no money. The
+                            <t t-esc="r.refund.method or 'gateway'"/> refund is
+                            done in the gateway.
+                        </p>
+
+                        <h4 class="rd-h">Progress</h4>
+                        <p t-if="r.state === 'refused'" class="mart-hint">
+                            This return was refused, so it never went any further.
+                        </p>
+                        <ol t-else="" class="rd-steps">
+                            <li t-foreach="steps" t-as="step" t-key="step.key"
+                                t-attf-class="{{ step.done ? 'rd-done' : '' }} {{ step.now ? 'rd-now' : '' }}">
+                                <i/>
+                                <span><b t-esc="step.label"/></span>
+                            </li>
+                        </ol>
+                    </div>
+                </div>
+            </t>
+
+            <t t-set-slot="footer">
+                <!-- Hidden, not disabled: the model refuses a refusal once the
+                     refund has gone, so offering the button would be a trap. -->
+                <button t-if="state.detail and state.detail.next"
+                        class="btn btn-primary" t-att-disabled="state.busy"
+                        t-on-click="() => this.advance()">
+                    <t t-esc="state.detail.next.label"/>
+                </button>
+                <button t-if="state.detail and state.detail.canRefuse"
+                        class="btn btn-secondary text-danger" t-att-disabled="state.busy"
+                        t-on-click="() => this.askRefuse()">
+                    Refuse
+                </button>
+                <button class="btn btn-secondary" t-on-click="() => this.props.close()">
+                    Close
+                </button>
+            </t>
+        </Dialog>
+    </t>
+
+</templates>

@@ -1,6 +1,6 @@
 {
     'name': '369 Mart Orders',
-    'version': '19.0.1.0.0',
+    'version': '19.0.1.1.0',
     'category': 'Website',
     'summary': 'Real orders behind the app - placed, packed, delivered, returned.',
     'description': """
@@ -27,8 +27,16 @@ This module makes the order a real `sale.order`:
   document;
 * cancellations and returns, with the refund going back the way it came.
 
-Operators work orders in **369 Mart -> Orders**, on a board that moves an order
-on in one click.
+Operators work orders in **369 Mart -> Orders**: a queue that answers "what do
+I pack next" rather than "show me the orders". It opens on what is still on its
+way, longest wait first, and every row carries the button for its own next step
+- which differs between a Quick order and an Express one, so the server says
+which and what it is called. The same screen the app's admin console shows, off
+the same two methods.
+
+The kanban board, the list and the form are still there under **Advanced ->
+Orders (all views)**, for the grouping, export and saved filters the queue does
+not try to do.
 """,
     'author': '369 Mart',
     'license': 'LGPL-3',
@@ -44,6 +52,7 @@ on in one click.
         'data/order_data.xml',
         'views/order_views.xml',
         'views/return_views.xml',
+        'views/return_desk_views.xml',
         'views/menus.xml',
     ],
     'assets': {
@@ -52,9 +61,18 @@ on in one click.
             'mart369_order/static/src/orders/order_board.js',
             'mart369_order/static/src/orders/order_views.js',
             'mart369_order/static/src/orders/order_views.xml',
+            # After order_views.scss, which this leans on for the $m369-*
+            # tokens - a bundle compiles in the order it is listed.
+            'mart369_order/static/src/desk/**/*',
+        ],
+        'web.assets_tests': [
+            'mart369_order/static/tests/tours/**/*',
         ],
     },
     'images': [
+        # The desk first: it is what Orders opens on now.
+        'static/description/order_desk.png',
+        'static/description/order_desk_panel.png',
         'static/description/orders_board.png',
         'static/description/orders_list.png',
         'static/description/order_form.png',

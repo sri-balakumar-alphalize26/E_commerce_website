@@ -77,14 +77,27 @@ async function handle(req, ctx) {
   const session = (await cookies()).get(SESSION_COOKIE)?.value;
   const target = "/369mart/" + path.join("/") + new URL(req.url).search;
 
-  /* The invoice is a PDF, not JSON. Stream it through as-is. */
-  if (path[path.length - 1] === "invoice") {
+  /* A few routes answer bytes rather than JSON: an invoice is a PDF, and a
+     return's photos are images. `odooFetch` runs `await r.json()` over
+     everything, which would turn a perfectly good file into {ok:false}, so
+     these stream through untouched.
+
+     Named rather than sniffed by content-type, because the decision has to be
+     made before the body is read. Either of them can still answer JSON — an
+     invoice that has not been posted, a photo that is not there — and that
+     case is handed back to the app to read as usual. */
+  if (path.includes("invoice") || path.includes("photo")) {
     const r = await odooRaw(target, { session });
     if (!r) return NextResponse.json({ ok: false, error: "Can't reach the store. Try again in a moment." }, { status: 503 });
-    const type = r.headers.get("content-type") || "application/pdf";
-    if (!type.includes("pdf")) {
-      /* No invoice posted yet: Odoo answers JSON. Let the app read it. */
-      return NextResponse.json(await r.json().catch(() => ({ ok: false })), { status: outward(r.status) });
+    const type = r.headers.get("content-type") || "application/octet-stream";
+    if (type.includes("json") || type.includes("html")) {
+      /* Odoo answered about the file rather than with it. Let the app read it.
+         `location` matters: a signed-out request is a 303 to /web/login, and
+         without it that reads as 502 "the store broke" instead of 401 "sign in
+         again", which is the one status the app acts on. */
+      return NextResponse.json(
+        await r.json().catch(() => ({ ok: false })),
+        { status: outward(r.status, r.headers.get("location") || "") });
     }
     return new Response(r.body, {
       status: r.status,

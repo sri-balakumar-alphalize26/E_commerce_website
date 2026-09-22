@@ -1,0 +1,295 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+<t t-name="mart369_order.OrderDesk">
+    <Layout display="{ controlPanel: {} }" className="'o_mart369_desk h-100'">
+        <div class="mart-builder pe od">
+
+            <header class="pe-head">
+                <div>
+                    <h1>Orders</h1>
+                    <p>What needs doing, longest wait first.</p>
+                </div>
+                <button class="mart-btn" t-on-click="() => this.moreViews()">
+                    <i class="fa fa-th-list" role="img" aria-label="Board"/>
+                    All views
+                </button>
+            </header>
+
+            <!-- The tiles are the filter. Same numbers as the board's KPI
+                 strip next door, counted by the same method. -->
+            <div class="od-tiles">
+                <button t-foreach="TILES" t-as="tile" t-key="tile.tab"
+                        type="button"
+                        t-attf-class="od-tile {{ state.tab === tile.tab ? 'od-tile-on' : '' }} {{ tile.warn and tileValue(tile) ? 'od-tile-warn' : '' }}"
+                        t-att-aria-pressed="state.tab === tile.tab ? 'true' : 'false'"
+                        t-on-click="() => this.pick(tile.tab)">
+                    <span class="od-tile-top">
+                        <i t-attf-class="fa {{ tile.icon }}" aria-hidden="true"/>
+                        <t t-esc="tile.label"/>
+                    </span>
+                    <b t-esc="tileValue(tile)"/>
+                    <small t-if="tile.amount"><t t-esc="state.counts and state.counts.cash or 0"/> orders</small>
+                    <small t-else="">Show these</small>
+                </button>
+            </div>
+
+            <div class="pe-toolbar od-toolbar">
+                <div class="od-tabs" role="tablist">
+                    <button t-foreach="TABS" t-as="tab" t-key="tab.key"
+                            role="tab"
+                            t-att-aria-selected="state.tab === tab.key ? 'true' : 'false'"
+                            t-attf-class="{{ state.tab === tab.key ? 'mart-on' : '' }}"
+                            t-on-click="() => this.pick(tab.key)">
+                        <t t-esc="tab.label"/>
+                        <em t-if="tabCount(tab) !== null" t-esc="tabCount(tab)"/>
+                    </button>
+                </div>
+                <div class="pe-toolbar-gap"/>
+                <input type="search" class="od-search" placeholder="Order, name or phone"
+                       aria-label="Search orders" t-on-input="search"/>
+                <Pick label="'Storefront'" value="state.mode" options="modeOptions"
+                      onChange="(v) => this.setFilter('mode', v)"/>
+                <Pick label="'Period'" value="state.when" options="whenOptions"
+                      onChange="(v) => this.setFilter('when', v)"/>
+                <Pick label="'Sort'" value="state.sort" options="sortOptions"
+                      onChange="(v) => this.setFilter('sort', v)"/>
+                <button class="mart-btn od-export" t-att-disabled="!state.rows.length"
+                        t-on-click="() => this.exportCsv()">
+                    <i class="fa fa-download" aria-hidden="true"/>
+                    Export these
+                </button>
+            </div>
+
+            <p t-if="state.error" class="pe-error" role="alert">
+                We could not reach the shop. <t t-esc="state.error"/>
+                <button class="mart-link" t-on-click="() => this.load()">Try again</button>
+            </p>
+
+            <div class="od-queue-wrap">
+                <div class="od-queue">
+                    <p t-if="state.loading and !state.rows.length" class="pe-loading">
+                        Loading orders...
+                    </p>
+                    <p t-elif="!state.rows.length and state.tab === 'needs'" class="pe-loading">
+                        Nothing waiting. Every order has been dealt with, and new
+                        ones appear here on their own.
+                    </p>
+                    <p t-elif="!state.rows.length" class="pe-loading">
+                        No orders here. Try another tile, period or search.
+                    </p>
+
+                    <t t-else="">
+                        <p class="od-count">
+                            <t t-esc="state.total"/> order<t t-if="state.total !== 1">s</t>
+                        </p>
+                        <ul class="od-rows">
+                            <li t-foreach="state.rows" t-as="row" t-key="row.ref"
+                                t-attf-class="od-row {{ state.sel === row.ref ? 'od-row-on' : '' }} {{ row.late ? 'od-row-late' : '' }}"
+                                t-on-click="() => this.select(row.ref)">
+                                <span class="od-line1">
+                                    <span class="od-ref">
+                                        <i t-attf-class="fa {{ row.mode === 'quick' ? 'fa-bolt' : 'fa-truck' }}"
+                                           aria-hidden="true"/>
+                                        #<t t-esc="row.ref"/>
+                                    </span>
+                                    <span class="od-ago" t-esc="ago(row.at)"/>
+                                    <span class="od-who" t-esc="row.customer.name"/>
+                                    <small t-if="row.customer.area" class="od-area">
+                                        · <t t-esc="row.customer.area"/>
+                                    </small>
+                                    <span class="od-items">
+                                        <t t-esc="row.itemCount"/> item<t t-if="row.itemCount !== 1">s</t>
+                                    </span>
+                                    <b class="od-total" t-esc="money(row.total, row.currency)"/>
+                                </span>
+                                <span class="od-line2">
+                                    <span t-attf-class="mart-pill od-s-{{ row.state }}"
+                                          t-esc="STATUS[row.state].label"/>
+                                    <span t-if="row.late" class="od-late">
+                                        <i class="fa fa-clock-o" aria-hidden="true"/>
+                                        <t t-esc="overdue(row.dueAt)"/>
+                                    </span>
+                                    <span t-else="" class="od-promise"
+                                          t-esc="row.slot or row.eta or ''"/>
+                                    <span class="od-pay" t-esc="row.payNote or row.method or ''"/>
+                                    <!-- The label is the server's. This screen does not
+                                         know that packed follows placed on a quick order
+                                         and shipped does on an express one. -->
+                                    <button t-if="row.next" class="mart-btn mart-btn-sm od-next"
+                                            t-att-disabled="state.busy"
+                                            t-on-click.stop="() => this.advance(row)"
+                                            t-esc="row.next.label"/>
+                                </span>
+                            </li>
+                        </ul>
+                        <div t-if="state.rows.length &lt; state.total" class="od-more">
+                            <button class="mart-btn" t-att-disabled="state.loading"
+                                    t-on-click="() => this.showMore()">
+                                Show more (<t t-esc="state.total - state.rows.length"/> left)
+                            </button>
+                        </div>
+                    </t>
+                </div>
+
+            </div>
+        </div>
+    </Layout>
+</t>
+
+<t t-name="mart369_order.Pick">
+    <Dropdown position="'bottom-start'" menuClass="'od-pick-menu'">
+        <button class="od-pick" type="button" t-att-aria-label="props.label">
+            <span t-esc="current"/>
+            <i class="fa fa-angle-down" aria-hidden="true"/>
+        </button>
+        <t t-set-slot="content">
+            <DropdownItem t-foreach="props.options" t-as="opt" t-key="opt[0]"
+                          class="opt[0] === props.value ? 'od-pick-on' : ''"
+                          onSelected="() => this.choose(opt[0])">
+                <i class="fa fa-check" aria-hidden="true"/>
+                <t t-esc="opt[1]"/>
+            </DropdownItem>
+        </t>
+    </Dropdown>
+</t>
+
+    <!-- One order, opened. A dialog rather than the column beside the list:
+         a customer, an address, a basket, a bill and a timeline never fitted
+         into 380px, and the order number wrapped onto two lines to prove it.
+
+         It holds nothing of its own - `desk` is the queue component, so there
+         is one `state.detail` and every write and helper is the one that was
+         already there. -->
+    <t t-name="mart369_order.OrderDialog">
+        <Dialog size="'lg'" contentClass="'od-dialog'"
+                title="state.detail ? '#' + state.detail.ref : 'Order'">
+
+            <p t-if="!state.detail" class="pe-loading">Loading the order...</p>
+
+            <t t-else="">
+                <t t-set="o" t-value="state.detail"/>
+                <p class="od-dialog-sub">
+                    <t t-esc="desk.modeLabel(o.mode)"/> &#183; <t t-esc="desk.when(o.at)"/>
+                </p>
+                <div class="od-dialog-cols">
+                    <p class="od-chips">
+                        <span t-attf-class="mart-pill od-s-{{ o.state }}"
+                              t-esc="desk.STATUS[o.state].label"/>
+                        <span t-if="o.late" class="od-late">
+                            <i class="fa fa-clock-o" aria-hidden="true"/>
+                            <t t-esc="desk.overdue(o.dueAt)"/>
+                        </span>
+                        <span class="od-pay" t-esc="o.payNote or o.method or ''"/>
+                    </p>
+
+                    <h4 class="od-h">Customer</h4>
+                    <dl class="od-kv">
+                        <div><dt>Name</dt><dd t-esc="o.customer.name"/></div>
+                        <div t-if="o.customer.phone">
+                            <dt>Phone</dt>
+                            <dd><a t-attf-href="tel:{{ o.customer.phone }}" t-esc="o.customer.phone"/></dd>
+                        </div>
+                        <div><dt>Orders</dt><dd t-esc="o.customer.orderCount"/></div>
+                        <div t-if="desk.address"><dt>Deliver to</dt><dd t-esc="desk.address"/></div>
+                        <div t-if="o.slot"><dt>Slot</dt><dd t-esc="o.slot"/></div>
+                        <div t-if="o.dueAt"><dt>Promised</dt><dd t-esc="desk.when(o.dueAt)"/></div>
+                        <div t-if="o.instructions" class="od-kv-wide">
+                            <dt>Note</dt><dd t-esc="o.instructions"/>
+                        </div>
+                    </dl>
+
+                    <!-- Not a rider. There is no rider model behind this,
+                         and a control that saves nowhere is worse than no
+                         control. What is real is whether the customer has a
+                         door code and whether it has been used. -->
+                    <h4 class="od-h">Delivery code</h4>
+                    <p class="mart-hint" t-esc="desk.doorstep"/>
+
+                    <h4 class="od-h">Items <em t-esc="o.items.length"/></h4>
+                    <ul class="od-items-list">
+                        <li t-foreach="o.items" t-as="line" t-key="line_index">
+                            <span class="od-qty"><t t-esc="line.qty"/>x</span>
+                            <span class="od-item-name" t-esc="line.name"/>
+                            <b t-esc="desk.money(line.price * line.qty, o.currency)"/>
+                        </li>
+                    </ul>
+                    <dl class="od-bill">
+                        <div><dt>Items</dt><dd t-esc="desk.money(o.bill.items, o.currency)"/></div>
+                        <div><dt>Delivery</dt>
+                            <dd t-esc="o.bill.fees ? desk.money(o.bill.fees, o.currency) : 'Free'"/></div>
+                        <div t-if="o.bill.couponOff">
+                            <dt>Coupon <t t-if="o.coupon">· <t t-esc="o.coupon"/></t></dt>
+                            <dd>-<t t-esc="desk.money(o.bill.couponOff, o.currency)"/></dd>
+                        </div>
+                        <div t-if="o.walletUsed">
+                            <dt>From wallet</dt><dd>-<t t-esc="desk.money(o.walletUsed, o.currency)"/></dd>
+                        </div>
+                        <div class="od-bill-total"><dt>Total</dt><dd t-esc="desk.money(o.bill.total, o.currency)"/></div>
+                    </dl>
+
+                    <t t-if="o.returns.length">
+                        <h4 class="od-h">Returns <em t-esc="o.returns.length"/></h4>
+                        <ul class="od-items-list">
+                            <li t-foreach="o.returns" t-as="ret" t-key="ret.id">
+                                <span class="od-item-name">
+                                    <t t-esc="ret.reason"/>
+                                    <small> · <t t-esc="ret.state"/></small>
+                                </span>
+                                <b t-if="ret.amount" t-esc="desk.money(ret.amount, o.currency)"/>
+                            </li>
+                        </ul>
+                        <p class="mart-hint">
+                            Returns are moved on under 369 Mart &gt; Returns.
+                        </p>
+                    </t>
+
+                    <h4 class="od-h">Progress</h4>
+                    <ol class="od-steps">
+                        <li t-foreach="desk.steps" t-as="step" t-key="step.key"
+                            t-attf-class="{{ step.done ? 'od-done' : '' }} {{ step.now ? 'od-now' : '' }} {{ step.cancelled ? 'od-step-cancelled' : '' }}">
+                            <i/>
+                            <span>
+                                <b t-esc="step.label"/>
+                                <small t-esc="step.at or 'Pending'"/>
+                            </span>
+                        </li>
+                    </ol>
+                </div>
+            </t>
+
+            <t t-set-slot="footer">
+                <t t-if="state.detail">
+                    <t t-set="o" t-value="state.detail"/>
+                    <!-- Hidden rather than disabled past `placed`: the model
+                         refuses it, so offering the button is a trap. -->
+                    <t t-if="o.canCancel">
+                        <label class="mart-field od-reason">
+                            <span>If you cancel, tell the customer</span>
+                            <select t-att-value="state.reason" t-on-change="(ev) => desk.setReason(ev)">
+                                <option t-foreach="state.reasons" t-as="reason"
+                                        t-key="reason" t-esc="reason"/>
+                            </select>
+                        </label>
+                        <button class="mart-btn mart-btn-danger"
+                                t-att-disabled="state.busy"
+                                t-on-click="() => desk.askCancel(o)">
+                            Cancel order
+                        </button>
+                    </t>
+
+                    <button t-if="o.next" class="mart-btn mart-btn-primary"
+                            t-att-disabled="state.busy"
+                            t-on-click="() => desk.advance(o)">
+                        <t t-esc="o.next.label"/>
+                        <i class="fa fa-arrow-right" aria-hidden="true"/>
+                    </button>
+                </t>
+                <button class="btn btn-secondary" t-on-click="() => this.props.close()">
+                    Close
+                </button>
+            </t>
+        </Dialog>
+    </t>
+
+</templates>
