@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="mart369_account.NoticeDesk">
+        <Layout display="{ controlPanel: {} }" className="'o_mart369_desk h-100'">
+            <div class="mart-builder pe nt">
+
+                <header class="pe-head">
+                    <div>
+                        <h1>Notifications</h1>
+                        <p>What every customer sees in their notification list.</p>
+                    </div>
+                    <div class="nt-head-act">
+                        <button class="mart-btn mart-btn-primary"
+                                t-on-click="() => this.write(false)">
+                            <i class="fa fa-plus" aria-hidden="true"/>
+                            New notification
+                        </button>
+                        <button class="mart-btn" t-on-click="() => this.moreViews()">
+                            <i class="fa fa-th-list" role="img" aria-label="List"/>
+                            All views
+                        </button>
+                    </div>
+                </header>
+
+                <div class="nt-tiles">
+                    <button t-foreach="TILES" t-as="tile" t-key="tile.key"
+                            type="button"
+                            t-attf-class="nt-tile {{ state.tab === tile.tab ? 'nt-tile-on' : '' }} {{ tile.warn and tileValue(tile) ? 'nt-tile-warn' : '' }}"
+                            t-att-aria-pressed="state.tab === tile.tab ? 'true' : 'false'"
+                            t-on-click="() => this.pick(tile.tab)">
+                        <span class="nt-tile-top">
+                            <i t-attf-class="fa {{ tile.icon }}" aria-hidden="true"/>
+                            <t t-esc="tile.label"/>
+                        </span>
+                        <b t-esc="tileValue(tile)"/>
+                        <small>Show these</small>
+                    </button>
+                </div>
+
+                <div class="pe-toolbar nt-toolbar">
+                    <div class="nt-tabs" role="tablist">
+                        <button t-foreach="TABS" t-as="tab" t-key="tab.key"
+                                role="tab"
+                                t-att-aria-selected="state.tab === tab.key ? 'true' : 'false'"
+                                t-attf-class="{{ state.tab === tab.key ? 'mart-on' : '' }}"
+                                t-on-click="() => this.pick(tab.key)">
+                            <t t-esc="tab.label"/>
+                            <em t-if="tabCount(tab) !== null" t-esc="tabCount(tab)"/>
+                        </button>
+                    </div>
+                    <div class="pe-toolbar-gap"/>
+                    <input type="search" class="nt-search"
+                           placeholder="Title or words"
+                           aria-label="Search notifications" t-on-input="search"/>
+                </div>
+
+                <p t-if="state.error" class="pe-error" role="alert">
+                    We could not reach the shop. <t t-esc="state.error"/>
+                    <button class="mart-link" t-on-click="() => this.load()">Try again</button>
+                </p>
+
+                <div class="nt-queue-wrap">
+                    <div class="nt-queue">
+
+                        <p t-if="state.loading and !state.rows.length" class="pe-loading">
+                            Loading notifications...
+                        </p>
+
+                        <p t-elif="!state.rows.length and state.tab === 'live'" class="pe-loading">
+                            Nothing is showing to customers right now.
+                        </p>
+
+                        <p t-elif="!state.rows.length" class="pe-loading">
+                            None here. Try another tile, or a different search.
+                        </p>
+
+                        <t t-else="">
+                            <p class="nt-count">
+                                <t t-esc="state.total"/> notification<t t-if="state.total !== 1">s</t>
+                            </p>
+                            <ul class="nt-rows">
+                                <li t-foreach="state.rows" t-as="row" t-key="row.id"
+                                    t-attf-class="nt-row {{ row.state === 'off' ? 'nt-row-off' : '' }}">
+                                    <span class="nt-line1">
+                                        <b class="nt-title" t-esc="row.title"/>
+                                        <span t-attf-class="mart-pill nt-s-{{ row.state }}"
+                                              t-esc="row.state"/>
+                                        <span class="nt-kind" t-esc="row.kindLabel"/>
+                                    </span>
+                                    <p class="nt-text" t-esc="row.text"/>
+                                    <span class="nt-line2">
+                                        <span>
+                                            <t t-esc="row.state === 'scheduled' ? 'Starts ' : 'From '"/>
+                                            <t t-esc="when(row.from)"/>
+                                        </span>
+                                        <span t-if="row.until">until <t t-esc="when(row.until)"/></span>
+                                        <span t-else="">no end date</span>
+                                        <span class="nt-act">
+                                            <button class="mart-btn mart-btn-sm"
+                                                    t-att-disabled="state.busy"
+                                                    t-on-click="() => this.write(row)">Edit</button>
+                                            <button t-if="row.state === 'off'"
+                                                    class="mart-btn mart-btn-sm"
+                                                    t-att-disabled="state.busy"
+                                                    t-on-click="() => this.putBack(row)">Put back</button>
+                                            <button t-else=""
+                                                    class="mart-btn mart-btn-sm"
+                                                    t-att-disabled="state.busy"
+                                                    t-on-click="() => this.askTakeDown(row)">Take down</button>
+                                        </span>
+                                    </span>
+                                </li>
+                            </ul>
+
+                            <div t-if="state.rows.length &lt; state.total" class="nt-more">
+                                <button class="mart-btn" t-on-click="() => this.showMore()">
+                                    Show more (<t t-esc="state.total - state.rows.length"/> left)
+                                </button>
+                            </div>
+                        </t>
+
+                    </div>
+                </div>
+
+            </div>
+        </Layout>
+    </t>
+
+    <t t-name="mart369_account.NoticeDialog">
+        <!-- `contentClass`, because a Dialog renders in a portal outside the
+             desk wrapper: styles scoped under `.o_mart369_desk` never reach in
+             here, and the footer slot is outside this div as well. -->
+        <Dialog size="'lg'" title="title" contentClass="'o_mart369_dialog nt'">
+            <div class="mart-builder nt nt-dialog">
+
+                <p t-if="state.error" class="pe-error" role="alert" t-esc="state.error"/>
+
+                <label class="nt-field">
+                    <span>Title</span>
+                    <input type="text" t-model="state.form.name"
+                           placeholder="Weekend grocery sale is live"/>
+                </label>
+
+                <label class="nt-field">
+                    <span>Words</span>
+                    <textarea rows="3" t-model="state.form.text"
+                              placeholder="Up to 40% off on fresh picks. Ends Sunday midnight."/>
+                </label>
+
+                <label class="nt-field">
+                    <span>Kind</span>
+                    <select t-model="state.form.kind">
+                        <option t-foreach="props.kinds" t-as="kind" t-key="kind.key"
+                                t-att-value="kind.key" t-esc="kind.label"/>
+                    </select>
+                </label>
+
+                <div class="nt-when">
+                    <label class="nt-field">
+                        <span>Show from</span>
+                        <input type="datetime-local" t-model="state.form.publish_at"/>
+                    </label>
+                    <label class="nt-field">
+                        <span>Show until</span>
+                        <input type="datetime-local" t-model="state.form.until"/>
+                    </label>
+                </div>
+                <p class="mart-hint">
+                    Leave the end empty and it runs until somebody takes it down.
+                </p>
+
+                <div class="nt-when">
+                    <label class="nt-field">
+                        <span>Tapping it opens</span>
+                        <input type="text" t-model="state.form.go_view" placeholder="offers"/>
+                    </label>
+                    <label class="nt-field">
+                        <span>With</span>
+                        <input type="text" t-model="state.form.go_param" placeholder="wallet"/>
+                    </label>
+                </div>
+            </div>
+
+            <t t-set-slot="footer">
+                <button class="mart-btn mart-btn-primary" t-att-disabled="state.busy"
+                        t-on-click="() => this.save()">Save</button>
+                <button class="mart-btn" t-on-click="() => this.props.close()">Cancel</button>
+            </t>
+        </Dialog>
+    </t>
+
+</templates>

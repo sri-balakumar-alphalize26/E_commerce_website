@@ -4,5 +4,6 @@ from . import referral
 from . import scratch
 from . import scratch_admin
 from . import notification
+from . import notice_admin
 from . import sale_order
 from . import account_board

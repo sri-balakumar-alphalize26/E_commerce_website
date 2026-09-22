@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+        Four example notices, one in each state, built in Python rather than
+        written out here.
+
+        Two of them need dates relative to now - one that has not started and
+        one that has finished - and an XML record would freeze those at
+        whenever the module happened to be installed, so the example set would
+        be wrong by the next morning and the tabs it is meant to fill would be
+        empty again.
+
+        The method does nothing once a demo notice exists, so a shop that has
+        written its own never sprouts examples. The three real notices in
+        account_data.xml are left alone: those are content, not examples, and
+        they sit under noupdate for that reason.
+
+        Not noupdate: with it the function would only run on a fresh install,
+        and a shop upgrading into this feature would never see the examples.
+        The method guards itself instead, so running on every upgrade is safe
+        and seeds exactly once.
+    -->
+    <data>
+        <function model="mart369.notice" name="_mart369_load_notice_demo"/>
+    </data>
+</odoo>

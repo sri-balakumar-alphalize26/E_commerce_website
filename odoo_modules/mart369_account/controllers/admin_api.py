@@ -248,3 +248,86 @@ class Mart369RewardAdminApi(Mart369ReviewAdminApi):
             return self._fail(str(exc), status=403)
         payload['ok'] = True
         return self._json(payload)
+
+
+class Mart369NoticeAdminApi(Mart369ReviewAdminApi):
+    """The staff side of notifications.
+
+    Subclassed for the helpers and the group check only, the same way the
+    referral and reward routes above are.
+
+    A notice goes to every customer's notification list, so this writes - but
+    narrowly. Staff write the words and the window, and retire one. **Nothing
+    deletes a notice**: somebody has already read it, and deleting the record
+    does not untell them.
+    """
+
+    def _notices(self):
+        """Not sudo'd - on purpose. See the module docstring."""
+        return request.env['mart369.notice']
+
+    @http.route('/369mart/admin/notices', **_GET)
+    def notices(self, tab=None, q=None, limit=None, **kwargs):
+        """The notices, the tiles, and what a kind is called."""
+        if not self._may_edit():
+            return self._fail('You do not have access to this.', status=403)
+        try:
+            payload = self._notices().mart369_admin_list(
+                tab=tab, q=q, limit=int(limit or 30))
+        except AccessError as exc:
+            return self._fail(str(exc), status=403)
+        except (TypeError, ValueError):
+            return self._fail('That is not a number we can use.', field='limit')
+        payload['ok'] = True
+        return self._json(payload)
+
+    @http.route('/369mart/admin/notices/counts', **_GET)
+    def notice_counts(self, **kwargs):
+        """The tallies alone, for the sidebar badge.
+
+        Declared before the `<int:notice_id>` routes so 'counts' is never read
+        as an id.
+        """
+        if not self._may_edit():
+            return self._fail('You do not have access to this.', status=403)
+        try:
+            payload = self._notices().mart369_admin_counts()
+        except AccessError as exc:
+            return self._fail(str(exc), status=403)
+        payload['ok'] = True
+        return self._json(payload)
+
+    @http.route('/369mart/admin/notices', **_POST)
+    def write_notice(self, **kwargs):
+        """Write a new one."""
+        if not self._may_edit():
+            return self._fail('You do not have access to this.', status=403)
+        try:
+            row = self._notices().mart369_admin_save(values=self._body())
+        except AccessError as exc:
+            return self._fail(str(exc), status=403)
+        except (UserError, ValidationError) as exc:
+            return self._fail(str(exc))
+        return self._json({'ok': True, 'notice': row}, status=201)
+
+    @http.route('/369mart/admin/notices/<int:notice_id>', **_PATCH)
+    def edit_notice(self, notice_id, **kwargs):
+        """Change one, or retire it.
+
+        `retired` is its own key rather than a writable `active`, so the
+        request says what it is doing.
+        """
+        if not self._may_edit():
+            return self._fail('You do not have access to this.', status=403)
+        body = self._body()
+        try:
+            if 'retired' in body:
+                row = self._notices().mart369_admin_retire(
+                    notice_id, bool(body['retired']))
+            else:
+                row = self._notices().mart369_admin_save(notice_id, body)
+        except AccessError as exc:
+            return self._fail(str(exc), status=403)
+        except (UserError, ValidationError) as exc:
+            return self._fail(str(exc))
+        return self._json({'ok': True, 'notice': row})

@@ -139,13 +139,18 @@ class Mart369Notifications(models.AbstractModel):
         now = fields.Datetime.now()
         domain = [('publish_at', '<=', now),
                   '|', ('until', '=', False), ('until', '>=', now)]
-        allowed = []
+        # 'order' carries no preference and never did, so it was never in
+        # this list - which meant a notice staff saved as an order one was
+        # filtered out for every customer, silently, with a screen offering
+        # them the kind. It belongs here because it is operational rather than
+        # marketing: the order notes above are already shown to everybody, and
+        # a notice about orders follows the same rule. The two that a customer
+        # can switch off stay switched off.
+        allowed = ['order']
         if partner.mart369_notify_offers:
             allowed.append('offer')
         if partner.mart369_notify_wallet:
             allowed.append('wallet')
-        if not allowed:
-            return []
         domain.append(('kind', 'in', allowed))
         return [notice._mart369_serialize()
                 for notice in self.env['mart369.notice'].sudo().search(domain, limit=20)]

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--
+        The notifications desk: the app's own console screen, inside Odoo.
+
+        A client action rather than a view, because the list it replaces has no
+        form and no search view - there was nowhere to write a notice properly.
+
+        `path` gives it a clean URL, /odoo/mart-notices.
+    -->
+    <record id="action_mart369_notice_desk" model="ir.actions.client">
+        <field name="name">Notifications</field>
+        <field name="tag">mart369_account.notices</field>
+        <field name="path">mart-notices</field>
+    </record>
+
+</odoo>
