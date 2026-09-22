@@ -1,6 +1,6 @@
 {
     'name': '369 Mart Account',
-    'version': '19.0.1.1.0',
+    'version': '19.0.1.2.0',
     'category': 'Website',
     'summary': "The customer's own things - profile, reviews, notifications, "
                "referrals, wishlist and rewards.",
@@ -41,6 +41,7 @@ Operators work these in **369 Mart -> Reviews**, **Referrals** and **Rewards**.
         'security/ir.model.access.csv',
         'data/account_data.xml',
         'views/review_views.xml',
+        'views/review_desk_views.xml',
         'views/referral_views.xml',
         'views/scratch_views.xml',
         'views/menus.xml',
@@ -51,6 +52,13 @@ Operators work these in **369 Mart -> Reviews**, **Referrals** and **Rewards**.
             'mart369_account/static/src/account/account_board.js',
             'mart369_account/static/src/account/account_views.js',
             'mart369_account/static/src/account/account_views.xml',
+            # After account_views.scss and after mart369_order's desk folder,
+            # which this leans on for `Pick` and for the shared chrome - a
+            # bundle compiles in the order it is listed.
+            'mart369_account/static/src/desk/**/*',
+        ],
+        'web.assets_tests': [
+            'mart369_account/static/tests/tours/**/*',
         ],
     },
     'images': [

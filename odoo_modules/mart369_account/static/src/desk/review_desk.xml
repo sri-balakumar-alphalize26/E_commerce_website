@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="mart369_account.ReviewDesk">
+        <Layout display="{ controlPanel: {} }" className="'o_mart369_desk h-100'">
+            <div class="mart-builder pe rv">
+
+                <header class="pe-head">
+                    <div>
+                        <h1>Reviews</h1>
+                        <p>What customers said, and whether the shop is showing it.</p>
+                    </div>
+                    <button class="mart-btn" t-on-click="() => this.moreViews()">
+                        <i class="fa fa-th-list" role="img" aria-label="List"/>
+                        All views
+                    </button>
+                </header>
+
+                <!-- The tiles are the filter, not a read-out above one - except
+                     the average, which has no tab to show and says so by not
+                     being a button. -->
+                <div class="rv-tiles">
+                    <t t-foreach="TILES" t-as="tile" t-key="tile.key">
+                        <div t-if="tile.stars" class="rv-tile rv-tile-flat">
+                            <span class="rv-tile-top">
+                                <i t-attf-class="fa {{ tile.icon }}" aria-hidden="true"/>
+                                <t t-esc="tile.label"/>
+                            </span>
+                            <b><t t-esc="tileValue(tile)"/> &#9733;</b>
+                            <small>Across every review</small>
+                        </div>
+                        <button t-else=""
+                                type="button"
+                                t-attf-class="rv-tile {{ state.tab === tile.tab ? 'rv-tile-on' : '' }} {{ tile.warn and tileValue(tile) ? 'rv-tile-warn' : '' }} {{ tile.bad and tileValue(tile) ? 'rv-tile-bad' : '' }}"
+                                t-att-aria-pressed="state.tab === tile.tab ? 'true' : 'false'"
+                                t-on-click="() => this.pick(tile.tab)">
+                            <span class="rv-tile-top">
+                                <i t-attf-class="fa {{ tile.icon }}" aria-hidden="true"/>
+                                <t t-esc="tile.label"/>
+                            </span>
+                            <b t-esc="tileValue(tile)"/>
+                            <small>Show these</small>
+                        </button>
+                    </t>
+                </div>
+
+                <div class="pe-toolbar rv-toolbar">
+                    <div class="rv-tabs" role="tablist">
+                        <button t-foreach="TABS" t-as="tab" t-key="tab.key"
+                                role="tab"
+                                t-att-aria-selected="state.tab === tab.key ? 'true' : 'false'"
+                                t-attf-class="{{ state.tab === tab.key ? 'mart-on' : '' }}"
+                                t-on-click="() => this.pick(tab.key)">
+                            <t t-esc="tab.label"/>
+                            <em t-if="tabCount(tab) !== null" t-esc="tabCount(tab)"/>
+                        </button>
+                    </div>
+                    <div class="pe-toolbar-gap"/>
+                    <input type="search" class="rv-search"
+                           placeholder="Product, customer or text"
+                           aria-label="Search reviews" t-on-input="search"/>
+                    <Pick label="'Bought it'" value="state.verified" options="verifiedOptions"
+                          onChange="(v) => this.setFilter('verified', v)"/>
+                    <Pick label="'Photos'" value="state.photos" options="photoOptions"
+                          onChange="(v) => this.setFilter('photos', v)"/>
+                </div>
+
+                <p t-if="state.error" class="pe-error" role="alert">
+                    We could not reach the shop. <t t-esc="state.error"/>
+                    <button class="mart-link" t-on-click="() => this.load()">Try again</button>
+                </p>
+
+                <div class="rv-queue-wrap">
+                    <div class="rv-queue">
+
+                        <p t-if="state.loading and !state.rows.length" class="pe-loading">
+                            Loading reviews...
+                        </p>
+
+                        <p t-elif="!state.rows.length and state.tab === 'pending'" class="pe-loading">
+                            Nothing is waiting to be looked at. Every review is
+                            live the moment it is written, so that is the queue
+                            empty rather than the shop quiet.
+                        </p>
+
+                        <p t-elif="!state.rows.length" class="pe-loading">
+                            No review here. Try another tile, or a different search.
+                        </p>
+
+                        <t t-else="">
+                            <p class="rv-count">
+                                <t t-esc="state.rows.length"/> review<t t-if="state.rows.length !== 1">s</t>
+                            </p>
+                            <ul class="rv-rows">
+                                <li t-foreach="state.rows" t-as="row" t-key="row.id"
+                                    class="rv-row" t-att-style="'--i: ' + row_index">
+
+                                    <span class="rv-who" t-esc="initials(row.by)"/>
+
+                                    <div class="rv-body">
+                                        <div class="rv-top">
+                                            <span t-attf-class="rv-stars {{ starClass(row.stars) }}">
+                                                <t t-esc="row.stars"/>&#9733;
+                                            </span>
+                                            <b t-esc="row.title or 'No headline'"/>
+                                            <span t-if="row.verified" class="mart-pill mart-pill-green rv-bought"
+                                                  title="Checked against their own order lines">
+                                                Verified purchase
+                                            </span>
+                                            <span t-if="row.photos" class="rv-shots"
+                                                  t-attf-title="{{ row.photos }} photo(s) from the customer">
+                                                <i class="fa fa-camera" aria-hidden="true"/>
+                                                <t t-esc="row.photos"/>
+                                            </span>
+                                            <small>
+                                                <t t-esc="row.by"/> &#183;
+                                                <t t-esc="row.product"/> &#183;
+                                                <t t-esc="ago(row.at)"/>
+                                            </small>
+                                        </div>
+                                        <p t-esc="row.text"/>
+                                    </div>
+
+                                    <div class="rv-act">
+                                        <button t-if="row.state !== 'published'"
+                                                class="mart-btn mart-btn-sm mart-btn-primary"
+                                                t-att-disabled="state.busy"
+                                                t-on-click="() => this.publish(row)">
+                                            Publish
+                                        </button>
+                                        <button t-if="row.state !== 'hidden'"
+                                                class="mart-btn mart-btn-sm"
+                                                t-att-disabled="state.busy"
+                                                t-on-click="() => this.askHide(row)">
+                                            Hide
+                                        </button>
+                                    </div>
+                                </li>
+                            </ul>
+                        </t>
+
+                    </div>
+                </div>
+
+            </div>
+        </Layout>
+    </t>
+
+</templates>

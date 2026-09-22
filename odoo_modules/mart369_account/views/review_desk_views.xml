@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--
+        The reviews desk: the app's own console screen, inside Odoo.
+
+        A client action rather than a view, because none of Odoo's view types
+        draws a queue of somebody's paragraphs with two buttons beside each.
+        The same choice the orders and returns desks made next door.
+
+        `path` gives it a clean URL, /odoo/mart-reviews, which is also what the
+        tour drives.
+    -->
+    <record id="action_mart369_review_desk" model="ir.actions.client">
+        <field name="name">Reviews</field>
+        <field name="tag">mart369_account.reviews</field>
+        <field name="path">mart-reviews</field>
+    </record>
+
+</odoo>

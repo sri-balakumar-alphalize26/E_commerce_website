@@ -1,0 +1,324 @@
+/* The reviews desk.
+ *
+ * Deliberately shaped like order_desk.scss and return_desk.scss in
+ * mart369_order next door, so the three read as one family.
+ *
+ * The shell, the buttons, the pills, the error bar and the loading line all
+ * come from mart369/static/src/builder/builder.scss, which is loaded earlier
+ * in the bundle because mart369 is a dependency of this module. Never @import
+ * it: one local @import breaks the whole backend bundle, and the failure shows
+ * up as a blank screen rather than as an error anyone can read.
+ *
+ * The numbers below are the console's own, lifted from
+ * components/admin/admin.css so the two screens match rather than each
+ * approximating the other: ground #f3f6f8, cards on #e4eaef at radius 16,
+ * tiles at 14, the tile figure 20px/800 with tabular numerals, amber #b7791f
+ * for a number that wants attention and red #c8433a for a bad one.
+ */
+
+.o_mart369_desk .mart-builder.rv {
+    --rv-line: #e4eaef;
+    --rv-ink: #13212b;
+    --rv-muted: #64757f;
+    --rv-ground: #f3f6f8;
+    --rv-blue: #0a78ab;
+    --rv-green: #1a7f3c;
+    --rv-amber: #b7791f;
+    --rv-red: #c8433a;
+    --rv-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    background: var(--rv-ground);
+
+    /* ------------------------------------------------------------- tiles */
+
+    .rv-tiles {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        padding: 14px 16px 0;
+    }
+
+    .rv-tile {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 12px 14px;
+        text-align: left;
+        background: #fff;
+        border: 1px solid var(--rv-line);
+        border-radius: 14px;
+        color: var(--rv-ink);
+        transition: border-color 140ms var(--rv-ease), box-shadow 140ms var(--rv-ease);
+
+        b {
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            font-variant-numeric: tabular-nums;
+        }
+
+        small {
+            font-size: 11.5px;
+            color: var(--rv-muted);
+        }
+    }
+
+    .rv-tile-top {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: var(--rv-muted);
+    }
+
+    /* The average is a figure, not a filter. It must not look pressable. */
+    .rv-tile-flat {
+        cursor: default;
+    }
+
+    button.rv-tile {
+        cursor: pointer;
+
+        &:hover {
+            border-color: #cddae3;
+        }
+    }
+
+    .rv-tile-on {
+        border-color: var(--rv-blue);
+        box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.14);
+    }
+
+    /* Only once there is something in them - a zero is not a warning. */
+    .rv-tile-warn b {
+        color: var(--rv-amber);
+    }
+
+    .rv-tile-bad b {
+        color: var(--rv-red);
+    }
+
+    /* ----------------------------------------------------------- toolbar */
+
+    .rv-toolbar {
+        flex-wrap: wrap;
+    }
+
+    .rv-tabs {
+        display: inline-flex;
+        gap: 2px;
+        padding: 3px;
+        border-radius: 11px;
+        background: var(--rv-ground);
+
+        button {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            height: 32px;
+            padding: 0 12px;
+            border: 0;
+            border-radius: 9px;
+            background: transparent;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--rv-muted);
+            cursor: pointer;
+
+            em {
+                font-style: normal;
+                font-size: 11px;
+                font-weight: 800;
+                padding: 1px 6px;
+                border-radius: 999px;
+                background: #e6edf2;
+            }
+
+            &.mart-on {
+                background: #fff;
+                color: var(--rv-ink);
+                box-shadow: 0 2px 6px -3px rgba(19, 33, 43, 0.4);
+
+                em {
+                    background: #eaf4fa;
+                    color: var(--rv-blue);
+                }
+            }
+        }
+    }
+
+    .rv-search {
+        height: 38px;
+        min-width: 220px;
+        padding: 0 12px;
+        border: 1px solid var(--rv-line);
+        border-radius: 10px;
+        background: #fff;
+        font-size: 13.5px;
+
+        &:focus {
+            outline: 0;
+            border-color: var(--rv-blue);
+            box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.14);
+        }
+    }
+
+    /* -------------------------------------------------------------- rows */
+
+    .rv-queue-wrap {
+        flex: 1;
+        min-height: 0;
+        overflow: auto;
+    }
+
+    .rv-queue {
+        padding: 0 16px 20px;
+    }
+
+    .rv-count {
+        margin: 14px 2px 8px;
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--rv-muted);
+    }
+
+    .rv-rows {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .rv-row {
+        display: flex;
+        gap: 12px;
+        padding: 12px;
+        background: #fff;
+        border: 1px solid var(--rv-line);
+        border-radius: 14px;
+        animation: rv-row 360ms var(--rv-ease) backwards;
+        animation-delay: calc(var(--i, 0) * 50ms);
+    }
+
+    /* Initials rather than a photograph: there is no avatar on a partner here,
+       and a generic silhouette on every row is noise. */
+    .rv-who {
+        flex: 0 0 auto;
+        width: 38px;
+        height: 38px;
+        display: grid;
+        place-items: center;
+        border-radius: 50%;
+        background: #eaf4fa;
+        color: var(--rv-blue);
+        font-size: 13px;
+        font-weight: 800;
+    }
+
+    .rv-body {
+        flex: 1;
+        min-width: 0;
+
+        p {
+            margin: 6px 0 0;
+            font-size: 13.5px;
+            line-height: 1.55;
+            color: #3a4a55;
+        }
+    }
+
+    .rv-top {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+
+        b {
+            font-size: 14.5px;
+            font-weight: 700;
+        }
+
+        small {
+            font-size: 12px;
+            color: var(--rv-muted);
+        }
+    }
+
+    .rv-stars {
+        font-size: 12px;
+        font-weight: 800;
+        color: #fff;
+        border-radius: 7px;
+        padding: 2px 7px;
+    }
+
+    .rv-s-good {
+        background: var(--rv-green);
+    }
+
+    .rv-s-mid {
+        background: #d99400;
+    }
+
+    .rv-s-bad {
+        background: var(--rv-red);
+    }
+
+    .rv-shots {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 12px;
+        color: var(--rv-muted);
+    }
+
+    .rv-bought {
+        font-size: 11px;
+    }
+
+    .rv-act {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    /* ------------------------------------------------------- narrow */
+
+    @media (max-width: 900px) {
+        .rv-tiles {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .rv-row {
+            flex-wrap: wrap;
+        }
+
+        .rv-act {
+            flex-direction: row;
+            width: 100%;
+        }
+    }
+}
+
+@keyframes rv-row {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .o_mart369_desk .mart-builder.rv .rv-row {
+        animation: none;
+    }
+}
