@@ -1320,6 +1320,64 @@
         h1 { margin: 0; font-size: 21px; font-weight: 800; }
         p { margin: 4px 0 0; max-width: 60ch; font-size: 13px; color: $mart-muted; }
     }
+    /* The header's two buttons: the Trash chip sits next to New page, the
+       way the builder's does next to its own toolbar. */
+    .mart-pages-head-act {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex: none;
+    }
+
+    /* A removed page waits here rather than being destroyed - a page is weeks
+       of somebody's work, and the button that removes it sits next to
+       Duplicate. */
+    .mart-pages-trash {
+        margin: 18px 0 4px;
+        padding: 16px 18px 18px;
+        background: #fff;
+        border: 1px solid $mart-line;
+        border-radius: 14px;
+
+        > header {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 12px;
+
+            h2 { margin: 0; font-size: 15px; font-weight: 800; }
+        }
+
+        .mart-hint { margin: 6px 0 0; }
+        .mart-pages-empty { margin-top: 12px; }
+    }
+
+    .mart-trash-list {
+        list-style: none;
+        margin: 12px 0 0;
+        padding: 0;
+
+        li {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 0;
+            border-bottom: 1px solid $mart-line;
+
+            &:last-child { border-bottom: 0; }
+        }
+    }
+
+    .mart-trash-txt {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+
+        b { font-size: 13.5px; font-weight: 700; }
+        small { font-size: 12px; color: $mart-muted; }
+    }
+
     .mart-pages-error, .mart-pages-empty {
         display: flex;
         flex-direction: column;

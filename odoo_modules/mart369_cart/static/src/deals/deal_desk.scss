@@ -1,0 +1,147 @@
+/* The deals desk.
+ *
+ * Only what the shared sheet does not cover. The shell, the panel, the
+ * buttons, the pills, the fields, the error bar and the loading line all come
+ * from mart369/static/src/builder/builder.scss, loaded earlier in the bundle
+ * because mart369 is a dependency of this module.
+ *
+ * No @import - Odoo rejects a local import inside a bundle and the whole
+ * backend stylesheet fails with it. The $mart-* tokens come from
+ * mart369/static/src/scss/_mart_vars.scss, which is listed before it.
+ */
+
+.o_mart369_deals { overflow: auto; }
+
+.mart-builder.dd {
+    .dd-head-act { display: flex; align-items: center; gap: 8px; flex: none; }
+
+    .dd-tiles {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 12px;
+        margin: 0 0 16px;
+    }
+
+    .dd-tile {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        padding: 12px 14px 13px;
+        text-align: left;
+        background: #fff;
+        border: 1px solid $mart-line;
+        border-radius: 14px;
+        cursor: pointer;
+        transition: border-color 160ms ease, box-shadow 160ms ease;
+
+        &:hover { border-color: darken($mart-line, 8%); }
+        &:focus-visible { outline: 2px solid $mart-blue; outline-offset: 2px; }
+
+        b { font-size: 22px; font-weight: 800; letter-spacing: -0.03em; }
+    }
+
+    /* The last one is a read-out, not a filter, so it must not look clickable. */
+    .dd-tile-flat { cursor: default; background: $mart-soft; &:hover { border-color: $mart-line; } }
+    .dd-tile-on { border-color: $mart-blue; box-shadow: inset 0 0 0 1px $mart-blue; }
+    .dd-tile-top {
+        display: flex; align-items: center; gap: 7px;
+        font-size: 12.5px; font-weight: 600; color: $mart-muted;
+        i { color: $mart-blue; }
+    }
+
+    .dd-cards { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+
+    .dd-card {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        padding: 14px 16px;
+        background: #fff;
+        border: 1px solid $mart-line;
+        border-radius: 14px;
+        cursor: pointer;
+
+        &:hover { border-color: darken($mart-line, 8%); }
+    }
+    .dd-card-on { border-color: $mart-blue; box-shadow: inset 0 0 0 1px $mart-blue; }
+    /* Dimmed, not hidden: a deal waiting for Friday is the thing somebody
+       most often comes here to check on. */
+    .dd-card-off { background: $mart-soft; }
+
+    .dd-card-head {
+        display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+        b { font-size: 15px; font-weight: 700; }
+    }
+    .dd-card-sub { font-size: 12.5px; color: $mart-muted; }
+    .dd-card-note { font-size: 12px; color: $mart-muted; font-style: italic; }
+
+    .dd-card-prices { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+    .dd-price {
+        display: inline-flex; align-items: baseline; gap: 6px;
+        padding: 3px 9px; border-radius: 999px; background: $mart-soft;
+        font-size: 12px;
+
+        em { font-style: normal; color: $mart-muted; max-width: 16ch; overflow: hidden;
+             text-overflow: ellipsis; white-space: nowrap; }
+        s { color: $mart-muted; }
+        b { color: $mart-green; font-weight: 700; }
+    }
+
+    .dd-card-act { display: flex; gap: 8px; margin-top: 6px; }
+
+    /* Editing is a dialog now, so the cards get the full width - which is
+       what they need to show three prices without truncating names. */
+    .dd-card-hint {
+        margin-left: auto; font-size: 11.5px; color: $mart-muted; opacity: 0;
+        transition: opacity 140ms ease;
+    }
+    .dd-card:hover .dd-card-hint, .dd-card:focus-visible .dd-card-hint { opacity: 1; }
+    .dd-card:focus-visible { outline: 2px solid $mart-blue; outline-offset: 2px; }
+
+    .dd-h {
+        margin: 18px 0 8px; font-size: 11px; font-weight: 700;
+        letter-spacing: 0.06em; text-transform: uppercase; color: $mart-muted;
+        em { font-style: normal; margin-left: 4px; color: $mart-ink; }
+    }
+
+    .dd-results {
+        list-style: none; margin: 6px 0 0; padding: 4px;
+        border: 1px solid $mart-line; border-radius: 10px;
+        max-height: 200px; overflow: auto; background: #fff;
+
+        button {
+            display: flex; justify-content: space-between; gap: 10px; width: 100%;
+            padding: 7px 10px; border: 0; border-radius: 7px; background: transparent;
+            font: inherit; font-size: 12.5px; text-align: left; cursor: pointer;
+            &:hover { background: $mart-blue-soft; }
+            small { color: $mart-muted; }
+        }
+    }
+
+    .dd-picked {
+        list-style: none; margin: 8px 0 0; padding: 0;
+        li {
+            display: flex; align-items: center; gap: 10px;
+            padding: 7px 0; border-bottom: 1px dashed $mart-line; font-size: 12.5px;
+            &:last-child { border-bottom: 0; }
+        }
+    }
+    .dd-picked-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+    .dd-picked-price {
+        display: inline-flex; gap: 6px; align-items: baseline; white-space: nowrap;
+        s { color: $mart-muted; }
+        b { color: $mart-green; }
+    }
+
+    .dd-foot { display: flex; justify-content: flex-end; gap: 8px; }
+}
+
+/* The dialog body reuses the same field styles as the desk. */
+.dd-dialog .mart-builder.dd {
+    .mart-field { margin-bottom: 10px; }
+    .dd-results { max-height: 220px; }
+}
+
+@media (max-width: 1100px) {
+    .mart-builder.dd .dd-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

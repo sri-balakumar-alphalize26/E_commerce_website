@@ -12,7 +12,7 @@ products means it keeps working untouched.
 
 import logging
 
-from odoo import http
+from odoo import fields, http
 from odoo.http import request
 
 from odoo.addons.mart369.controllers.public import _PUBLIC_JSON
@@ -44,9 +44,24 @@ class Mart369CatalogApi(http.Controller):
     # --------------------------------------------------------------- helpers
 
     def _cached(self, payload):
-        """Answer with the same cache window the home feed uses."""
+        """Answer with the same cache window the home feed uses, but never
+        past the next moment a price changes.
+
+        A deal opening at midnight would otherwise be served from a copy
+        cached at ten to, so the card says the old price while the cart -
+        which is never cached - already charges the new one. The customer is
+        shown two numbers and believes the smaller one.
+        """
         config = request.env['mart369.config'].sudo()._get()
         max_age = max(config.cache_seconds or 0, 0)
+        if 'mart369.deal' in request.env:
+            edge = request.env['mart369.deal'].sudo()._mart369_next_edge()
+            if edge:
+                seconds = (edge - fields.Datetime.now()).total_seconds()
+                # A floor of a second: zero would mean "never cache", and a
+                # deal starting this instant should not switch caching off
+                # for the request that happens to straddle it.
+                max_age = max(1, min(max_age, int(seconds)))
         return request.make_json_response(payload, headers=[
             ('Cache-Control', 'public, max-age=%d' % max_age),
         ])
@@ -198,9 +213,17 @@ class Mart369CatalogApi(http.Controller):
         """Everything on offer, biggest saving first, plus the coupons.
 
         Shape: {"deals": [card, ...], "coupons": [...]} - what the offers page
-        shows. A deal is a published product whose struck-through price is
-        genuinely above what it sells for; the ordering is the same one the
-        "Biggest savings" home row uses, so the two agree.
+        shows. Two things count as on offer, and both have to, or the page
+        contradicts the cards it is made of:
+
+        * a product a live `mart369.deal` names - the price is cut by the
+          pricer, and nothing is written to the product, so no stored column
+          would ever find it;
+        * a product hand-priced below its own compare price, which is how the
+          shop did offers before deals existed.
+
+        Ordered by the saving either way, the same ranking the "Biggest
+        savings" home row uses, so the two agree.
         """
         Template = request.env['product.template'].sudo()
         # Narrow in SQL first: most of the catalogue has no compare price at all.
@@ -208,12 +231,28 @@ class Mart369CatalogApi(http.Controller):
             ('is_published', '=', True),
             ('compare_list_price', '>', 0.0),
         ], limit=max(BROWSE_LIMIT * 2, 240))
-        deals = candidates.filtered(
-            lambda t: t.compare_list_price > t.list_price > 0
-        ).sorted(
-            key=lambda t: (t.compare_list_price - t.list_price) / t.compare_list_price,
-            reverse=True,
-        )[:BROWSE_LIMIT]
+        hand_priced = candidates.filtered(
+            lambda t: t.compare_list_price > t.list_price > 0)
+
+        on_deal = Template.browse()
+        if 'mart369.deal' in request.env:
+            wanted = request.env['mart369.deal'].sudo()._mart369_product_ids()
+            if wanted:
+                on_deal = Template.search(
+                    [('id', 'in', wanted), ('is_published', '=', True)])
+
+        deals = (hand_priced | on_deal)
+        # Ranked on what a shopper actually saves, which for a deal is only
+        # knowable by pricing it - the whole point of the pricer.
+        priced = request.env['mart369.serializable'].sudo()._price_context_for(deals)
+
+        def saving(tmpl):
+            entry = priced.get(tmpl.id) or {}
+            price = entry.get('price') or tmpl.list_price or 0.0
+            was = entry.get('mrp') or 0.0
+            return (was - price) / was if was > price > 0 else 0.0
+
+        deals = deals.sorted(key=saving, reverse=True)[:BROWSE_LIMIT]
         payload = {'deals': self._cards(deals)}
         # The cart module owns coupons; offers only borrows them to show. Same
         # live-window filter /369mart/cart/rules uses, so the two never disagree.

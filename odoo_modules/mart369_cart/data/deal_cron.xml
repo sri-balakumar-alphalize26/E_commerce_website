@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!--
+            Empties the deals Trash of anything past its retention.
+
+            Its own cron rather than mart369_home's, which sweeps the home
+            page models: this module does not depend on that one, and a shop
+            can install either without the other.
+        -->
+        <record id="ir_cron_purge_deals" model="ir.cron">
+            <field name="name">369 Mart: empty the deals Trash</field>
+            <field name="model_id" ref="model_mart369_deal"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_purge_deals()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+            <field name="active" eval="True"/>
+        </record>
+    </data>
+</odoo>

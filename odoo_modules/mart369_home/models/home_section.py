@@ -230,10 +230,28 @@ class Mart369HomeSection(models.Model):
             limit=max(limit * 10, 100))
         candidates = candidates.filtered(
             lambda p: p.compare_list_price > p.list_price > 0)
-        return candidates.sorted(
-            key=lambda p: ((p.compare_list_price - p.list_price)
-                           / p.compare_list_price),
-            reverse=True)[:limit]
+
+        # A product on a live deal is cheap without anything being written to
+        # it, so no stored column can find it. Asked for separately and added
+        # in, or the row would miss exactly the products the shop is
+        # advertising hardest.
+        if 'mart369.deal' in self.env:
+            wanted = self.env['mart369.deal'].sudo()._mart369_product_ids()
+            if wanted:
+                candidates |= Template.search(
+                    domain & Domain([('id', 'in', wanted)]),
+                    limit=max(limit * 10, 100))
+
+        # Ranked on the real saving, which for a deal only the pricer knows.
+        priced = self.env['mart369.serializable'].sudo()._price_context_for(candidates)
+
+        def saving(tmpl):
+            entry = priced.get(tmpl.id) or {}
+            price = entry.get('price') or tmpl.list_price or 0.0
+            was = entry.get('mrp') or 0.0
+            return (was - price) / was if was > price > 0 else 0.0
+
+        return candidates.sorted(key=saving, reverse=True)[:limit]
 
     @api.depends('kind', 'source', 'public_categ_id', 'include_child_categs',
                  'product_tag_id', 'rule', 'rule_days', 'limit',

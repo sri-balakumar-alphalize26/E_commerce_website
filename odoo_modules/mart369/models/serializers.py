@@ -10,9 +10,12 @@ Keep these lists in step with the storefront:
   TONE_CHOICES  <- the .hm-tone-* rules in components/home/home.css
 """
 
+import logging
 import re
 
 from odoo import api, models
+
+_logger = logging.getLogger(__name__)
 
 # Drawn artwork, used when no photo is uploaded. Names must match ART exactly.
 ART_CHOICES = [
@@ -279,10 +282,27 @@ class Mart369Serializable(models.AbstractModel):
             website = self.env['website'].get_current_website()
             try:
                 prices = templates._get_sales_prices(website)
-            except Exception:
-                # Called outside a website request (tests, cron, shell):
-                # fall back to the plain sales price.
+            except Exception:  # noqa: BLE001
+                # `_get_sales_prices` reads `request.pricelist`, so outside a
+                # website request - tests, cron, the shell - it raises and the
+                # plain sales price is the right answer.
+                #
+                # Logged rather than swallowed: this used to be silent, and a
+                # pricelist that starts failing inside a real request would
+                # quietly sell everything at list price with nothing to find
+                # afterwards. Debug, because the no-request case is normal and
+                # would otherwise fill the log.
+                _logger.debug(
+                    'mart369: no pricelist price for %s templates, using the '
+                    'list price', len(templates), exc_info=True)
                 prices = {}
+
+        # Deals are applied here rather than through a pricelist item, because
+        # this is the one function the card, the cart bill and the placed
+        # order all price through - see mart369_cart/models/deal.py for why.
+        deal_prices = {}
+        if 'mart369.deal' in self.env:
+            deal_prices = self.env['mart369.deal'].sudo()._mart369_price_map(templates)
 
         ctx = {}
         for tmpl in templates:
@@ -290,7 +310,20 @@ class Mart369Serializable(models.AbstractModel):
             price = entry.get('price_reduce')
             if price is None:
                 price = tmpl.list_price
-            mrp = entry.get('base_price') or tmpl.compare_list_price or 0.0
+
+            on_offer = deal_prices.get(tmpl.id)
+            if on_offer is not None and on_offer < price:
+                price = on_offer
+
+            # What to strike through. The pricelist's own "before" price if it
+            # gave one, then the hand-set compare price, and failing both the
+            # list price - which is the honest answer whenever a customer is
+            # being charged less than it, and is what makes a deal show its
+            # saving without anyone setting a compare price per product.
+            mrp = (entry.get('base_price')
+                   or tmpl.compare_list_price
+                   or tmpl.list_price
+                   or 0.0)
             ctx[tmpl.id] = {
                 'price': price,
                 'mrp': mrp if mrp and mrp > price else None,

@@ -1,6 +1,6 @@
 {
     'name': '369 Mart Delivery & Pricing',
-    'version': '19.0.1.0.0',
+    'version': '19.0.1.2.0',
     'category': 'Website',
     'summary': 'The bill, delivery fees, coupons, service areas and slots.',
     'description': """
@@ -32,8 +32,22 @@ them in **369 Mart -> Delivery & Pricing**.
         'security/ir.model.access.csv',
         'data/cart_data.xml',
         'views/pricing_views.xml',
+        'views/deal_views.xml',
+        # After the views, so the menu exists by the time the examples do.
+        'data/deal_cron.xml',
+        'data/deal_demo.xml',
     ],
+    'assets': {
+        'web.assets_backend': [
+            'mart369_cart/static/src/deals/**/*',
+        ],
+    },
     'images': [
+        # Deals and coupons first: they are what staff open this module for.
+        'static/description/deal_desk.png',
+        'static/description/deal_desk_panel.png',
+        'static/description/deals.png',
+        'static/description/deal_form.png',
         'static/description/delivery_rules.png',
         'static/description/coupons.png',
         'static/description/service_areas.png',

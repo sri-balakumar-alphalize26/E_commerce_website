@@ -159,6 +159,69 @@ class Mart369Coupon(models.Model):
         # Never hand money back: a discount stops at the bill.
         return max(0.0, min(off, sums.get('items', 0.0) + sums.get('fees', 0.0)))
 
+    # ---------------------------------------------------------- the console
+
+    def _mart369_admin_serialize(self):
+        """One coupon as the staff screens draw it.
+
+        Its own shape rather than a wider `_mart369_serialize`: that one goes
+        to every shopper who opens the cart, and how many times a code has
+        been used, what it is capped at and who may use it are not theirs to
+        read.
+        """
+        self.ensure_one()
+        return {
+            'id': self.id,
+            'code': self.code or '',
+            'title': self.title or '',
+            'note': self.note or '',
+            'kind': self.kind or 'flat',
+            'value': self.value or 0.0,
+            'maxOff': self.max_off or 0.0,
+            'minSpend': self.min_spend or 0.0,
+            'group': self.group or '',
+            'active': self.active,
+            'startsOn': fields.Date.to_string(self.starts_on) if self.starts_on else None,
+            'endsOn': fields.Date.to_string(self.ends_on) if self.ends_on else None,
+            'limitTotal': self.limit_total or 0,
+            'limitPerCustomer': self.limit_per_customer or 0,
+            'usedCount': self.used_count or 0,
+            # Switched on is not the same as usable: a code can be on and out
+            # of its window, or on and used up. The screens say which.
+            'live': self.active and self._mart369_live(),
+        }
+
+    @api.model
+    def mart369_admin_list(self):
+        """Every coupon, switched off ones included, plus the tiles.
+
+        `active_test=False` on purpose - a paused coupon is exactly what an
+        operator has come to the screen to find.
+        """
+        coupons = self.with_context(active_test=False).search([])
+        rows = [c._mart369_admin_serialize() for c in coupons]
+        return {
+            'coupons': rows,
+            'counts': {
+                'all': len(rows),
+                'live': sum(1 for r in rows if r['live']),
+                'paused': sum(1 for r in rows if not r['active']),
+                # Worth its own number: a code that is on, inside its window
+                # and nearly spent is about to start refusing customers, and
+                # nothing else on the screen would say so.
+                'nearlyUsedUp': sum(
+                    1 for r in rows
+                    if r['live'] and r['limitTotal']
+                    and r['usedCount'] >= r['limitTotal'] * 0.9),
+            },
+            'redemptions': sum(r['usedCount'] for r in rows),
+            # So the screen prints a minimum spend in the shop's own money
+            # rather than gluing a symbol of its own onto the number.
+            'currency': self.env['mart369.serializable']._mart369_shop_currency(),
+            'kinds': KIND_CHOICES,
+            'groups': GROUP_CHOICES,
+        }
+
     def _mart369_serialize(self):
         """One entry of the app's COUPONS array. `calc` is not sent - the
         server does the arithmetic now, which was the point."""

@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+<t t-name="mart369_cart.DealDesk">
+    <Layout display="{ controlPanel: {} }" className="'o_mart369_deals h-100'">
+        <div class="mart-builder pe dd">
+
+            <header class="pe-head">
+                <div>
+                    <h1>Deals</h1>
+                    <p>
+                        A price cut on the products you pick, for as long as you say.
+                        Shoppers do not type anything - the card is simply cheaper.
+                    </p>
+                </div>
+                <div class="dd-head-act">
+                    <button class="mart-btn" t-on-click="() => this.allViews()">
+                        <i class="fa fa-th-list" aria-hidden="true"/> All views
+                    </button>
+                    <button class="mart-btn mart-btn-primary" t-att-disabled="state.busy"
+                            t-on-click="() => this.open(null)">
+                        <i class="fa fa-plus" aria-hidden="true"/> New deal
+                    </button>
+                </div>
+            </header>
+
+            <div class="dd-tiles">
+                <button t-foreach="TILES" t-as="tile" t-key="tile.key" type="button"
+                        t-attf-class="dd-tile {{ state.tab === tile.key ? 'dd-tile-on' : '' }}"
+                        t-att-aria-pressed="state.tab === tile.key ? 'true' : 'false'"
+                        t-on-click="() => this.pick(tile.key)">
+                    <span class="dd-tile-top">
+                        <i t-attf-class="fa {{ tile.icon }}" aria-hidden="true"/>
+                        <t t-esc="tile.label"/>
+                    </span>
+                    <b t-esc="tileCount(tile)"/>
+                </button>
+                <span class="dd-tile dd-tile-flat">
+                    <span class="dd-tile-top">
+                        <i class="fa fa-shopping-basket" aria-hidden="true"/> Products on offer
+                    </span>
+                    <b t-esc="state.onOffer"/>
+                </span>
+            </div>
+
+            <p t-if="state.error" class="pe-error" role="alert">
+                We could not reach the shop. <t t-esc="state.error"/>
+                <button class="mart-link" t-on-click="() => this.load()">Try again</button>
+            </p>
+
+            <div class="dd-list">
+                <p t-if="state.loading and !state.deals.length" class="pe-loading">
+                    Loading deals...
+                </p>
+                <p t-elif="!shown.length" class="pe-loading">
+                    <t t-if="state.tab === 'all'">
+                        Nothing on offer. Make a deal and the price drops on the
+                        card, in the basket and on the order.
+                    </t>
+                    <t t-else="">No deals in this state.</t>
+                </p>
+
+                <ul t-else="" class="dd-cards">
+                    <!-- Tapping the card opens it for editing. The two buttons
+                         stop the click so they do not open it as well. -->
+                    <li t-foreach="shown" t-as="deal" t-key="deal.id"
+                        t-attf-class="dd-card {{ deal.live ? '' : 'dd-card-off' }}"
+                        tabindex="0" role="button"
+                        t-att-aria-label="'Edit ' + deal.name"
+                        t-on-click="() => this.open(deal)"
+                        t-on-keydown="(ev) => ev.key === 'Enter' ? this.open(deal) : null">
+                        <span class="dd-card-head">
+                            <b t-esc="deal.name"/>
+                            <span t-attf-class="mart-pill {{ deal.live ? 'mart-pill-green' : '' }}"
+                                  t-esc="why(deal)"/>
+                            <span class="dd-card-hint">Tap to edit</span>
+                        </span>
+                        <span class="dd-card-sub">
+                            <t t-esc="worth(deal)"/>
+                            · <t t-esc="deal.productCount"/> product<t t-if="deal.productCount !== 1">s</t>
+                            <t t-if="deal.floor"> · never below <t t-esc="money(deal.floor)"/></t>
+                        </span>
+                        <span t-if="deal.note" class="dd-card-note" t-esc="deal.note"/>
+
+                        <!-- What a shopper will actually pay, so nobody has to
+                             work it out to check the deal is right. -->
+                        <span t-if="deal.products.length" class="dd-card-prices">
+                            <span t-foreach="deal.products.slice(0, 3)" t-as="p" t-key="p.id"
+                                  class="dd-price">
+                                <em t-esc="p.name"/>
+                                <s t-esc="money(p.price)"/>
+                                <b t-esc="money(p.dealPrice)"/>
+                            </span>
+                            <small t-if="deal.productCount > 3">
+                                and <t t-esc="deal.productCount - 3"/> more
+                            </small>
+                        </span>
+
+                        <span class="dd-card-act">
+                            <button class="mart-btn mart-btn-sm" t-att-disabled="state.busy"
+                                    t-on-click.stop="() => this.toggle(deal)">
+                                <t t-if="deal.active">Switch off</t>
+                                <t t-else="">Switch on</t>
+                            </button>
+                            <button class="mart-btn mart-btn-sm mart-btn-danger"
+                                    t-att-disabled="state.busy"
+                                    t-on-click.stop="() => this.remove(deal)">Delete</button>
+                        </span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </Layout>
+</t>
+
+<t t-name="mart369_cart.DealDialog">
+    <Dialog size="'lg'" contentClass="'dd-dialog'"
+            title="state.draft.id ? state.draft.name || 'Edit deal' : 'New deal'">
+        <div class="mart-builder dd">
+            <p t-if="state.error" class="pe-error" role="alert" t-esc="state.error"/>
+
+            <label class="mart-field"><span>Name</span>
+                <input type="text" t-att-value="state.draft.name"
+                       placeholder="Diwali weekend"
+                       t-on-input="(ev) => this.edit('name', ev)"/></label>
+            <label class="mart-field"><span>Note</span>
+                <input type="text" t-att-value="state.draft.note"
+                       placeholder="A line for whoever opens this in six months"
+                       t-on-input="(ev) => this.edit('note', ev)"/></label>
+
+            <div class="mart-row">
+                <label class="mart-field"><span>Discount</span>
+                    <select t-att-value="state.draft.kind"
+                            t-on-change="(ev) => this.edit('kind', ev)">
+                        <option value="percent">Percentage off</option>
+                        <option value="amount">Amount off</option>
+                    </select></label>
+                <label class="mart-field">
+                    <span>
+                        <t t-if="state.draft.kind === 'percent'">Per cent off</t>
+                        <t t-else="">Amount off</t>
+                    </span>
+                    <input type="number" t-att-value="state.draft.value"
+                           t-on-input="(ev) => this.edit('value', ev)"/></label>
+            </div>
+
+            <div class="mart-row">
+                <label class="mart-field"><span>Never below</span>
+                    <input type="number" t-att-value="state.draft.floor"
+                           placeholder="0 for no floor"
+                           t-on-input="(ev) => this.edit('floor', ev)"/></label>
+                <span/>
+            </div>
+
+            <div class="mart-row">
+                <label class="mart-field"><span>Starts</span>
+                    <input type="datetime-local"
+                           t-att-value="forInput(state.draft.startsOn)"
+                           t-on-input="(ev) => this.edit('startsOn', ev)"/></label>
+                <label class="mart-field"><span>Ends</span>
+                    <input type="datetime-local"
+                           t-att-value="forInput(state.draft.endsOn)"
+                           t-on-input="(ev) => this.edit('endsOn', ev)"/></label>
+            </div>
+
+            <h4 class="dd-h">Products <em t-esc="state.draft.products.length"/></h4>
+            <label class="mart-field"><span>Add a product</span>
+                <input type="search" t-att-value="state.q"
+                       placeholder="Search the catalogue"
+                       t-on-input="onSearch"/></label>
+            <ul t-if="state.results.length" class="dd-results">
+                <li t-foreach="state.results" t-as="p" t-key="p.id">
+                    <button type="button" t-on-click="() => this.add(p)">
+                        <span t-esc="p.name"/>
+                        <small t-esc="money(p.list_price)"/>
+                    </button>
+                </li>
+            </ul>
+
+            <ul class="dd-picked">
+                <li t-foreach="state.draft.products" t-as="p" t-key="p.id">
+                    <span class="dd-picked-name" t-esc="p.name"/>
+                    <span class="dd-picked-price">
+                        <s t-esc="money(p.price)"/>
+                        <b t-esc="money(preview(p.price))"/>
+                    </span>
+                    <button type="button" class="mart-link"
+                            t-att-aria-label="'Remove ' + p.name"
+                            t-on-click="() => this.drop(p.id)">Remove</button>
+                </li>
+            </ul>
+            <p t-if="!state.draft.products.length" class="mart-hint">
+                A deal needs at least one product.
+            </p>
+
+            <p class="mart-hint">
+                Nothing is written to these products. The lower price is worked out
+                whenever a card, a basket or an order is priced, so switching this
+                off puts every price back on its own.
+            </p>
+        </div>
+
+        <t t-set-slot="footer">
+            <button class="btn btn-primary" t-att-disabled="!canSave or state.busy"
+                    t-on-click="() => this.save()">
+                <t t-if="state.draft.id">Save changes</t>
+                <t t-else="">Create deal</t>
+            </button>
+            <button class="btn btn-secondary" t-on-click="() => this.props.close()">
+                Cancel
+            </button>
+        </t>
+    </Dialog>
+</t>
+
+</templates>

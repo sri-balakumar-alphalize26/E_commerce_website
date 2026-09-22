@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ============================ list ============================ -->
+    <record id="view_mart369_deal_list" model="ir.ui.view">
+        <field name="name">mart369.deal.list</field>
+        <field name="model">mart369.deal</field>
+        <field name="arch" type="xml">
+            <list decoration-muted="not active"
+                  decoration-success="live"
+                  sample="1">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="kind"/>
+                <field name="value"/>
+                <field name="product_count" string="Products"/>
+                <field name="starts_on" optional="show"/>
+                <field name="ends_on" optional="show"/>
+                <field name="live" string="On now"/>
+                <field name="active" column_invisible="1"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- ============================ form ============================ -->
+    <record id="view_mart369_deal_form" model="ir.ui.view">
+        <field name="name">mart369.deal.form</field>
+        <field name="model">mart369.deal</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <widget name="web_ribbon" title="On now"
+                            invisible="not live"/>
+                    <widget name="web_ribbon" title="Archived" bg_color="text-bg-danger"
+                            invisible="active"/>
+                    <div class="oe_title">
+                        <label for="name"/>
+                        <h1><field name="name" placeholder="Diwali weekend"/></h1>
+                        <field name="note" placeholder="A line for whoever opens this in six months"/>
+                    </div>
+                    <group>
+                        <group string="The cut">
+                            <field name="kind"/>
+                            <field name="value"/>
+                            <field name="floor"/>
+                        </group>
+                        <group string="When">
+                            <field name="starts_on"/>
+                            <field name="ends_on"/>
+                            <field name="active"/>
+                            <field name="live" readonly="1"/>
+                        </group>
+                    </group>
+                    <!-- The price is never written to the product. It is worked
+                         out by the pricer every time anything is shown, which is
+                         why switching this off puts every price back by itself. -->
+                    <div class="alert alert-info" role="status">
+                        Nothing is written to these products. The lower price is
+                        worked out whenever a card, a basket or an order is
+                        priced, so ending the deal puts every price back on its
+                        own.
+                    </div>
+                    <notebook>
+                        <page string="Products" name="products">
+                            <field name="product_ids" widget="many2many_tags"
+                                   options="{'no_create': True}"/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- =========================== search =========================== -->
+    <record id="view_mart369_deal_search" model="ir.ui.view">
+        <field name="name">mart369.deal.search</field>
+        <field name="model">mart369.deal</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="product_ids"/>
+                <filter name="live" string="On right now" domain="[('live', '=', True)]"/>
+                <filter name="off" string="Switched off" domain="[('active', '=', False)]"/>
+                <group>
+                    <filter name="group_kind" string="Discount" context="{'group_by': 'kind'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_mart369_deals" model="ir.actions.act_window">
+        <field name="name">Deals</field>
+        <field name="res_model">mart369.deal</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{'search_default_live': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Put something on offer</p>
+            <p>
+                A deal cuts the price of the products you pick, for as long as
+                you say. Shoppers see the lower price on the card, in the
+                basket and on the order - they do not have to type anything.
+            </p>
+        </field>
+    </record>
+
+    <!-- Odoo falls back to its own generic views without these. -->
+    <record id="action_mart369_deals_list" model="ir.actions.act_window.view">
+        <field name="sequence" eval="1"/>
+        <field name="view_mode">list</field>
+        <field name="view_id" ref="view_mart369_deal_list"/>
+        <field name="act_window_id" ref="action_mart369_deals"/>
+    </record>
+    <record id="action_mart369_deals_form" model="ir.actions.act_window.view">
+        <field name="sequence" eval="2"/>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="view_mart369_deal_form"/>
+        <field name="act_window_id" ref="action_mart369_deals"/>
+    </record>
+
+    <!-- The desk: the front door of 369 Mart > Deals, and the twin of the
+         app's console screen. It answers "what is on offer, and what will a
+         shopper pay". The list and form above keep what it does not do -
+         grouping, export, the saved filters. -->
+    <record id="action_mart369_deal_desk" model="ir.actions.client">
+        <field name="name">Deals</field>
+        <field name="tag">mart369_cart.deals</field>
+        <field name="path">mart-deals</field>
+    </record>
+
+    <!-- Beside Coupons: both are promotions, run by the same people. -->
+    <menuitem id="menu_mart369_deals"
+              name="Deals"
+              parent="mart369.menu_mart369_root"
+              action="action_mart369_deal_desk"
+              groups="sales_team.group_sale_salesman"
+              sequence="9"/>
+    <menuitem id="menu_mart369_deals_all"
+              name="Deals (all views)"
+              parent="mart369.menu_mart369_advanced"
+              action="action_mart369_deals"
+              groups="sales_team.group_sale_salesman"
+              sequence="8"/>
+
+</odoo>

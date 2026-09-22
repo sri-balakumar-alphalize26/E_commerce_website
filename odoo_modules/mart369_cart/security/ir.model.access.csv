@@ -6,4 +6,8 @@ access_mart369_service_area_user,mart369.service.area user,model_mart369_service
 access_mart369_delivery_slot_system,mart369.delivery.slot system,model_mart369_delivery_slot,base.group_system,1,1,1,1
 access_mart369_delivery_slot_user,mart369.delivery.slot user,model_mart369_delivery_slot,base.group_user,1,0,0,0
 access_mart369_coupon_system,mart369.coupon system,model_mart369_coupon,base.group_system,1,1,1,1
+access_mart369_coupon_salesman,mart369.coupon salesman,model_mart369_coupon,sales_team.group_sale_salesman,1,1,1,1
 access_mart369_coupon_user,mart369.coupon user,model_mart369_coupon,base.group_user,1,0,0,0
+access_mart369_deal_system,mart369.deal system,model_mart369_deal,base.group_system,1,1,1,1
+access_mart369_deal_salesman,mart369.deal salesman,model_mart369_deal,sales_team.group_sale_salesman,1,1,1,1
+access_mart369_deal_user,mart369.deal user,model_mart369_deal,base.group_user,1,0,0,0

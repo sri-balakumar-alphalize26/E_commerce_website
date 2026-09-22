@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+        Two example deals, built in Python rather than written out here.
+
+        A deal needs products, and this module ships none. Pointing an XML
+        `ref` at a demo product would tie mart369_cart to whichever catalogue
+        module happens to be installed, and break the load for a shop that
+        brought its own. The method picks whatever is published, and does
+        nothing at all if a deal already exists - so upgrading a shop that has
+        set up its own never sprouts examples.
+
+        Not noupdate: with it, the function only runs on a fresh install and
+        a shop upgrading into this feature would never see the examples. The
+        method guards itself instead - it does nothing when a deal already
+        exists - so running on every upgrade is safe and seeds exactly once.
+    -->
+    <data>
+        <function model="mart369.deal" name="_mart369_load_demo"/>
+    </data>
+</odoo>

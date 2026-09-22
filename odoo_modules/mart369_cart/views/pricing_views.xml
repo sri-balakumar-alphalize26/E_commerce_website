@@ -182,11 +182,17 @@
               parent="menu_mart369_pricing"
               action="action_mart369_delivery_rules"
               sequence="10"/>
+    <!-- Coupons sit beside Orders, not under Delivery & Pricing.
+         Everything else in that group is plumbing a system administrator sets
+         up once - fees, service areas, slots. A coupon is a promotion, run by
+         whoever runs promotions, and gating it on base.group_system meant the
+         people whose job it is could not open the screen. -->
     <menuitem id="menu_mart369_coupons"
               name="Coupons"
-              parent="menu_mart369_pricing"
+              parent="mart369.menu_mart369_root"
               action="action_mart369_coupons"
-              sequence="20"/>
+              groups="sales_team.group_sale_salesman"
+              sequence="8"/>
     <menuitem id="menu_mart369_service_areas"
               name="Service areas"
               parent="menu_mart369_pricing"
