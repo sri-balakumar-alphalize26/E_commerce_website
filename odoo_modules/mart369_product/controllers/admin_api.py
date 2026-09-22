@@ -195,6 +195,29 @@ class Mart369ProductAdminApi(http.Controller):
             for p in found
         ]})
 
+    @http.route('/369mart/admin/product/catalog', **_GET)
+    def catalog(self, categ_id=None, q='', only_edited=None, **kwargs):
+        """The shop, as something to browse rather than something to spell.
+
+        Backs the "one product" picker on both surfaces. The work is on the
+        model so this route and Odoo's own editor cannot drift - the same rule
+        `/builder` follows, and the reason the drift guard in
+        tests/test_admin_api.py can compare the two.
+
+        `categ_id=0` means the products filed under no category at all. It is
+        a real choice, not a missing value, so it has to survive the trip
+        through the query string as the integer 0 rather than becoming None.
+        """
+        if not self._may_edit():
+            return self._fail('You do not have access to this.', status=403)
+        categ = None if categ_id in (None, '', 'all') else self._int(categ_id)
+        data = request.env['product.template'].mart369_page_picker(
+            categ_id=categ,
+            q=q or '',
+            only_edited=str(only_edited or '').lower() in ('1', 'true', 'yes'),
+        )
+        return self._json(dict(data, ok=True))
+
     @http.route('/369mart/admin/product/categories', **_GET)
     def categories(self, q='', **kwargs):
         """Shop categories, for the per-category wording picker."""

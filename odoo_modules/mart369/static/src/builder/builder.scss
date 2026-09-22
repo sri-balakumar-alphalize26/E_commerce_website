@@ -1707,6 +1707,169 @@
         line-height: 1.45;
     }
 
+    // ------------------------------------------------ browsing for a product
+    // The twin of the console's .pp-pick (components/admin/productEditor.css).
+    // A denser grid than .mart-pages-grid: that one is sized for four page
+    // cards, and this lists a hundred products.
+    .mart-pick {
+        display: grid;
+        grid-template-columns: 240px minmax(0, 1fr);
+        gap: 16px;
+        align-items: start;
+    }
+
+    .mart-pick-rail {
+        position: sticky;
+        top: 6px;
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+        padding: 8px;
+        border: 1px solid -line;
+        border-radius: 14px;
+        background: #fff;
+        max-height: 70vh;
+        overflow-y: auto;
+    }
+
+    .mart-pick-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        padding: 7px 10px;
+        border: 0;
+        border-radius: 9px;
+        background: none;
+        text-align: left;
+        font: inherit;
+        font-size: 13px;
+        color: -ink;
+        cursor: pointer;
+
+        span {
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        // The count is the point of the rail: it says where things are before
+        // you click. Tabular figures so the column does not jitter.
+        em {
+            flex: none;
+            font-style: normal;
+            font-size: 11.5px;
+            font-variant-numeric: tabular-nums;
+            color: -muted;
+        }
+
+        &:hover { background: -soft; }
+
+        &.mart-on {
+            background: -blue-soft;
+            color: -blue;
+            font-weight: 700;
+            em { color: inherit; }
+        }
+    }
+
+    .mart-pick-main {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        min-width: 0;
+    }
+
+    .mart-pick-bar {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        flex-wrap: wrap;
+    }
+
+    .mart-pick-search {
+        flex: 1;
+        min-width: 220px;
+        height: 34px;
+        padding: 0 12px;
+        border: 1px solid -line;
+        border-radius: 10px;
+        background: #fff;
+        font-size: 13px;
+    }
+
+    .mart-pick-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(172px, 1fr));
+        gap: 12px;
+    }
+
+    .mart-pick-tile {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 10px;
+        border: 1px solid -line;
+        border-radius: 14px;
+        background: #fff;
+        text-align: left;
+        font: inherit;
+        cursor: pointer;
+        transition: border-color 140ms, box-shadow 140ms, transform 120ms;
+
+        &:hover {
+            border-color: -blue;
+            box-shadow: 0 10px 22px -16px rgba(19, 33, 43, 0.6);
+            transform: translateY(-1px);
+        }
+
+        &.mart-on {
+            border-color: -blue;
+            box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.15);
+        }
+
+        b {
+            font-size: 12.5px;
+            font-weight: 700;
+            line-height: 1.3;
+            // Two lines, then clipped. A name that wraps to five makes every
+            // tile in its row that tall.
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        small { font-size: 11px; color: -muted; }
+
+        .mart-count-chip {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            height: auto;
+            padding: 2px 7px;
+            font-size: 10.5px;
+            font-style: normal;
+        }
+    }
+
+    .mart-pick-img {
+        display: grid;
+        place-items: center;
+        aspect-ratio: 1.25;
+        margin-bottom: 6px;
+        border-radius: 10px;
+        background: -soft;
+        overflow: hidden;
+
+        img { max-width: 82%; max-height: 82%; object-fit: contain; }
+    }
+
+    .mart-pick-more { margin: 0; font-size: 12px; color: -muted; }
+
     .pe-back {
         display: inline-flex;
         align-items: center;

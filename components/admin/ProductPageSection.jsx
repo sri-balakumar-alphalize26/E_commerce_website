@@ -187,11 +187,150 @@ function HotLayer({ stageRef, spots, selected, onSelect, onToggle, tick }) {
 
 /* --------------------------------------------------------------- the screen */
 
+/* ------------------------------------------------------------- the picker */
+
+/* Choosing a product by browsing the shop, rather than by spelling its name.
+
+   The search box this replaces only answered "is there a product called X?".
+   The question an employee actually arrives with is "what is in the shop, and
+   which of it have we already changed?" - so the shop's own categories are the
+   index, the counts say where things are, and "only edited" answers the second
+   question directly.
+
+   One call to /admin/product/catalog, which is
+   product.template.mart369_page_picker() - the same call Odoo's own editor
+   makes, so the two screens cannot disagree about what is in the shop. */
+function ProductPicker({ chosen, onPick }) {
+  const [categ, setCateg] = useState(null);       /* null = all, 0 = filed nowhere */
+  const [term, setTerm] = useState("");
+  const [onlyEdited, setOnlyEdited] = useState(false);
+  const [debounced, setDebounced] = useState("");
+
+  /* One request when the typing stops, not one per keystroke. */
+  useEffect(() => {
+    const timer = setTimeout(() => setDebounced(term.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [term]);
+
+  const query = [
+    categ === null ? "" : "categ_id=" + categ,
+    debounced ? "q=" + encodeURIComponent(debounced) : "",
+    onlyEdited ? "only_edited=1" : "",
+  ].filter(Boolean).join("&");
+
+  const { data, loading, error, reload } = useResource(
+    "/admin/product/catalog" + (query ? "?" + query : ""),
+    { deps: [categ, debounced, onlyEdited] });
+
+  /* The flat list of categories, hung back into the tree the shop keeps it
+     in. Two levels is what this shop has; deeper ones nest by the same rule. */
+  const tree = useMemo(() => {
+    const all = data?.categories || [];
+    const kids = new Map();
+    for (const c of all) {
+      if (c.parent_id) {
+        if (!kids.has(c.parent_id)) kids.set(c.parent_id, []);
+        kids.get(c.parent_id).push(c);
+      }
+    }
+    return all
+      .filter((c) => !c.parent_id)
+      .map((c) => ({ ...c, subs: kids.get(c.id) || [] }));
+  }, [data]);
+
+  const products = data?.products || [];
+  const truncated = data && data.total > products.length;
+
+  const Branch = ({ c, depth }) => (
+    <>
+      <button
+        className={"pp-rail-row" + (categ === c.id ? " pp-rail-on" : "")}
+        style={{ paddingLeft: 10 + depth * 14 }}
+        onClick={() => setCateg(c.id)}
+      >
+        <span>{c.name}</span>
+        <em>{c.count}</em>
+      </button>
+      {c.subs?.map((sub) => <Branch key={sub.id} c={sub} depth={depth + 1} />)}
+    </>
+  );
+
+  return (
+    <div className="pp-pick">
+      <aside className="pp-rail" aria-label="Categories">
+        <button className={"pp-rail-row" + (categ === null ? " pp-rail-on" : "")}
+          onClick={() => setCateg(null)}>
+          <span>All products</span>
+          <em>{data?.all_count ?? ""}</em>
+        </button>
+        {tree.map((c) => <Branch key={c.id} c={c} depth={0} />)}
+        {/* Without this the products filed under nothing are unreachable. */}
+        {data?.uncategorised > 0 && (
+          <button className={"pp-rail-row" + (categ === 0 ? " pp-rail-on" : "")}
+            onClick={() => setCateg(0)}>
+            <span>Uncategorised</span>
+            <em>{data.uncategorised}</em>
+          </button>
+        )}
+      </aside>
+
+      <div className="pp-pick-main">
+        <div className="pp-pick-bar">
+          <Search value={term} onChange={setTerm} placeholder="Find a product" wide />
+          <label className="pe-showhidden">
+            <input type="checkbox" checked={onlyEdited}
+              onChange={(e) => setOnlyEdited(e.target.checked)} />
+            <span>Only ones already edited</span>
+          </label>
+        </div>
+
+        <ErrorStrip error={error} onRetry={reload} />
+
+        {loading && !data ? (
+          <p className="pe-loading">Loading the shop…</p>
+        ) : products.length === 0 ? (
+          <Empty icon="box" title="Nothing here"
+            text={onlyEdited
+              ? "No product in this category has been given its own settings yet."
+              : "No published product matches that."} />
+        ) : (
+          <>
+            <div className="pp-grid">
+              {products.map((p) => (
+                <button key={p.id}
+                  className={"pp-tile" + (chosen?.id === p.id ? " pp-tile-on" : "")}
+                  onClick={() => onPick(p)}>
+                  <span className="pp-tile-img">
+                    <img src={p.image} alt="" loading="lazy" />
+                  </span>
+                  <b>{p.name}</b>
+                  <small>{p.code || " "}</small>
+                  {p.differs > 0 && (
+                    <em className="pp-tile-chip">{p.differs} changed</em>
+                  )}
+                </button>
+              ))}
+            </div>
+            {truncated && (
+              <p className="pp-pick-more">
+                Showing {products.length} of {data.total}. Narrow it down with a
+                category or the search box.
+              </p>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function ProductPageSection({ flash }) {
   const [scope, setScope] = useState("shop");           /* shop | product */
   const [product, setProduct] = useState(null);         /* the chosen product */
-  const [term, setTerm] = useState("");
-  const [matches, setMatches] = useState([]);
+  /* Choosing "One product" opens the shop to browse. The old toolbar search
+     box only answered "is there a product called X?", which needed you to
+     know the name first. */
+  const [picking, setPicking] = useState(false);
   const [sel, setSel] = useState(null);                 /* {kind, id} */
   const [showHidden, setShowHidden] = useState(false);
   const [confirm, setConfirm] = useState(null);
@@ -354,23 +493,9 @@ export default function ProductPageSection({ flash }) {
 
   /* ------------------------------------------------------------ the product */
 
-  /* One request when the typing stops, not one per keystroke. */
-  useEffect(() => {
-    const q = term.trim();
-    if (!q) { setMatches([]); return undefined; }
-    const timer = setTimeout(async () => {
-      try {
-        const r = await api("/admin/product/products?q=" + encodeURIComponent(q));
-        setMatches(r.items || []);
-      } catch { setMatches([]); }
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [term]);
-
   const pick = (item) => {
     setProduct(item);
-    setTerm("");
-    setMatches([]);
+    setPicking(false);
     setSel(null);
   };
 
@@ -386,45 +511,26 @@ export default function ProductPageSection({ flash }) {
       </header>
 
       <div className="pe-toolbar">
-        <div className="pp-search">
-          <Search value={term} onChange={setTerm} placeholder="Find a product" />
-          {term.trim() && (
-            <div className="pp-search-menu" role="listbox">
-              {matches.length === 0 ? (
-                <p className="pp-search-empty">Nothing matches that.</p>
-              ) : matches.map((item) => (
-                <button key={item.id} className="pp-search-row" role="option"
-                  aria-selected="false" onClick={() => pick(item)}>
-                  <span>{item.name}</span>
-                  {item.ref && <em>{item.ref}</em>}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {product && (
-          <span className="pp-prod">
-            {product.name}
-            <button className="pe-tool" onClick={() => setProduct(null)}
-              aria-label="Stop editing this product">×</button>
-          </span>
-        )}
-
+        {/* First control on the screen, because it decides what everything
+            else means: a switch here changes one product or all of them. */}
         <div className="ad-tabs" role="tablist" aria-label="What you are changing">
-          {[["shop", "Whole shop"], ["product", "This product"]].map(([k, label]) => (
+          {[["shop", "Whole shop"], ["product", "One product"]].map(([k, label]) => (
             <button key={k} role="tab" aria-selected={scope === k}
               className={scope === k ? "ad-on" : ""}
-              title={k === "product" && !product
-                ? "Pick a product first"
-                : undefined}
-              onClick={() => setScope(k)}>
+              onClick={() => { setScope(k); if (k === "product") setPicking(true); }}>
               {label}
             </button>
           ))}
         </div>
 
-        {hiddenCount > 0 && (
+        {scope === "product" && product && !picking && (
+          <span className="pp-prod">
+            {product.name}
+            <button className="pe-tool" onClick={() => setPicking(true)}>Change</button>
+          </span>
+        )}
+
+        {!picking && hiddenCount > 0 && (
           <label className="pe-showhidden">
             <input type="checkbox" checked={showHidden}
               onChange={(e) => setShowHidden(e.target.checked)} />
@@ -437,11 +543,18 @@ export default function ProductPageSection({ flash }) {
       </div>
 
       <p className="pe-hintbar">
-        Click any part of the page to change it. The eye takes something off the
-        page without deleting it. A section is a master switch: turn it off and
-        everything inside goes, whatever those parts say.
+        {picking
+          ? "Pick the product whose page you want to change. The number on a "
+            + "tile is how many of its parts already differ from the shop."
+          : "Click any part of the page to change it. The eye takes something "
+            + "off the page without deleting it. A section is a master switch: "
+            + "turn it off and everything inside goes, whatever those parts say."}
       </p>
 
+      {picking ? (
+        <ProductPicker chosen={product} onPick={pick} />
+      ) : (
+      <>
       <ErrorStrip error={error} onRetry={reload} />
 
       <div className="pe-cols">
@@ -482,6 +595,8 @@ export default function ProductPageSection({ flash }) {
           />
         </aside>
       </div>
+      </>
+      )}
 
       {confirm && (
         <Confirm

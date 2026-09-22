@@ -140,23 +140,6 @@
 .pp-radios[disabled] { opacity: 0.55; }
 .pp-radio { display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; }
 
-/* ------------------------------------------------------- the product search */
-
-.pp-search { position: relative; min-width: 240px; }
-.pp-search-menu {
-  position: absolute;
-  z-index: 20;
-  top: calc(100% + 4px);
-  left: 0;
-  right: 0;
-  padding: 10px 12px;
-  border: 1px solid var(--ad-line);
-  border-radius: 10px;
-  background: #fff;
-  box-shadow: 0 10px 30px -18px rgba(16, 28, 36, 0.5);
-}
-.pp-search-empty { margin: 0; font-size: 12px; color: var(--ad-muted); line-height: 1.5; }
-
 .pp-prod {
   display: inline-flex;
   align-items: center;
@@ -167,4 +150,150 @@
   border: 1px solid var(--ad-line);
   font-size: 12.5px;
   font-weight: 600;
+}
+
+/* ==========================================================================
+   The product picker — browsing the shop instead of spelling a product's name
+   ========================================================================== */
+.pp-pick {
+  display: grid;
+  grid-template-columns: 230px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+/* ---- the category rail */
+.pp-rail {
+  position: sticky;
+  top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 8px;
+  border: 1px solid var(--ad-line);
+  border-radius: 14px;
+  background: #fff;
+  max-height: calc(100vh - 140px);
+  overflow-y: auto;
+}
+
+.pp-rail-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 9px;
+  background: none;
+  text-align: left;
+  font: inherit;
+  font-size: 13px;
+  color: var(--ad-ink);
+  cursor: pointer;
+}
+.pp-rail-row span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* The count is the point of the rail: it says where things are before you
+   click. Tabular figures so the column does not jitter. */
+.pp-rail-row em {
+  flex: none;
+  font-style: normal;
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ad-muted);
+}
+.pp-rail-row:hover { background: var(--ad-ground); }
+.pp-rail-on, .pp-rail-on:hover {
+  background: #e6f2f9;
+  color: var(--ad-blue);
+  font-weight: 700;
+}
+.pp-rail-on em { color: inherit; }
+
+/* ---- the filter bar and the grid */
+.pp-pick-main { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+
+.pp-pick-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.pp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  gap: 12px;
+}
+
+.pp-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px;
+  border: 1px solid var(--ad-line);
+  border-radius: 14px;
+  background: #fff;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  transition: border-color 140ms, box-shadow 140ms, transform 120ms;
+}
+.pp-tile:hover {
+  border-color: var(--ad-blue);
+  box-shadow: 0 10px 22px -16px rgba(19, 33, 43, 0.6);
+  transform: translateY(-1px);
+}
+.pp-tile-on {
+  border-color: var(--ad-blue);
+  box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.15);
+}
+
+.pp-tile-img {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1.25;
+  margin-bottom: 6px;
+  border-radius: 10px;
+  background: var(--ad-ground);
+  overflow: hidden;
+}
+.pp-tile-img img { max-width: 82%; max-height: 82%; object-fit: contain; }
+
+.pp-tile b {
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.3;
+  /* Two lines, then clipped. A product name that wraps to five lines makes
+     every tile in its row that tall. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.pp-tile small { font-size: 11px; color: var(--ad-muted); }
+
+.pp-tile-chip {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #fff4e5;
+  color: #c9620c;
+  font-style: normal;
+  font-size: 10.5px;
+  font-weight: 800;
+}
+
+.pp-pick-more {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ad-muted);
+}
+
+@media (max-width: 900px) {
+  .pp-pick { grid-template-columns: minmax(0, 1fr); }
+  .pp-rail { position: static; max-height: 210px; }
 }
