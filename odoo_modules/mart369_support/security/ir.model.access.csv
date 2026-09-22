@@ -2,6 +2,7 @@ id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_mart369_ticket_system,mart369.ticket system,model_mart369_ticket,base.group_system,1,1,1,1
 access_mart369_ticket_sale,mart369.ticket sale,model_mart369_ticket,sales_team.group_sale_salesman,1,1,1,0
 access_mart369_ticket_user,mart369.ticket user,model_mart369_ticket,base.group_user,1,0,0,0
+access_mart369_ticket_designer,mart369.ticket designer,model_mart369_ticket,website.group_website_designer,1,1,1,0
 access_mart369_bot_rule_system,mart369.bot.rule system,model_mart369_bot_rule,base.group_system,1,1,1,1
 access_mart369_bot_rule_sale,mart369.bot.rule sale,model_mart369_bot_rule,sales_team.group_sale_salesman,1,1,1,0
 access_mart369_bot_rule_user,mart369.bot.rule user,model_mart369_bot_rule,base.group_user,1,0,0,0

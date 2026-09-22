@@ -1,0 +1,420 @@
+/* The support desk.
+ *
+ * Deliberately shaped like order_desk.scss and return_desk.scss in
+ * mart369_order, and review_desk.scss in mart369_account, so the four read as
+ * one family.
+ *
+ * The shell, the buttons, the pills, the error bar and the loading line all
+ * come from mart369/static/src/builder/builder.scss, which is loaded earlier in
+ * the bundle because mart369 is a dependency of this module. Never @import it:
+ * one local @import breaks the whole backend bundle, and it fails as a blank
+ * screen rather than as an error anybody can read.
+ *
+ * The numbers are the console's own, from components/admin/admin.css, so the
+ * two Support screens match rather than each approximating the other.
+ */
+
+.o_mart369_desk .mart-builder.sp {
+    --sp-line: #e4eaef;
+    --sp-ink: #13212b;
+    --sp-muted: #64757f;
+    --sp-ground: #f3f6f8;
+    --sp-blue: #0a78ab;
+    --sp-green: #1a7f3c;
+    --sp-amber: #b7791f;
+    --sp-red: #c8433a;
+    --sp-violet: #7b5cd6;
+    --sp-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    background: var(--sp-ground);
+
+    /* ------------------------------------------------------------- tiles */
+
+    .sp-tiles {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        padding: 14px 16px 0;
+    }
+
+    .sp-tile {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 12px 14px;
+        text-align: left;
+        background: #fff;
+        border: 1px solid var(--sp-line);
+        border-radius: 14px;
+        color: var(--sp-ink);
+        transition: border-color 140ms var(--sp-ease), box-shadow 140ms var(--sp-ease);
+
+        b {
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            font-variant-numeric: tabular-nums;
+        }
+
+        small {
+            font-size: 11.5px;
+            color: var(--sp-muted);
+        }
+    }
+
+    .sp-tile-top {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: var(--sp-muted);
+    }
+
+    /* A figure with no tab behind it must not look pressable. */
+    .sp-tile-flat {
+        cursor: default;
+    }
+
+    button.sp-tile {
+        cursor: pointer;
+
+        &:hover {
+            border-color: #cddae3;
+        }
+    }
+
+    .sp-tile-on {
+        border-color: var(--sp-blue);
+        box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.14);
+    }
+
+    /* Only once there is something in them - a zero is not a warning. */
+    .sp-tile-warn b {
+        color: var(--sp-amber);
+    }
+
+    .sp-tile-bad b {
+        color: var(--sp-red);
+    }
+
+    /* ----------------------------------------------------------- toolbar */
+
+    .sp-toolbar {
+        flex-wrap: wrap;
+    }
+
+    .sp-tabs {
+        display: inline-flex;
+        gap: 2px;
+        padding: 3px;
+        border-radius: 11px;
+        background: var(--sp-ground);
+
+        button {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            height: 32px;
+            padding: 0 12px;
+            border: 0;
+            border-radius: 9px;
+            background: transparent;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--sp-muted);
+            cursor: pointer;
+
+            em {
+                font-style: normal;
+                font-size: 11px;
+                font-weight: 800;
+                padding: 1px 6px;
+                border-radius: 999px;
+                background: #e6edf2;
+            }
+
+            &.mart-on {
+                background: #fff;
+                color: var(--sp-ink);
+                box-shadow: 0 2px 6px -3px rgba(19, 33, 43, 0.4);
+
+                em {
+                    background: #eaf4fa;
+                    color: var(--sp-blue);
+                }
+            }
+        }
+    }
+
+    .sp-search {
+        height: 38px;
+        min-width: 220px;
+        padding: 0 12px;
+        border: 1px solid var(--sp-line);
+        border-radius: 10px;
+        background: #fff;
+        font-size: 13.5px;
+
+        &:focus {
+            outline: 0;
+            border-color: var(--sp-blue);
+            box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.14);
+        }
+    }
+
+    /* -------------------------------------------------------------- rows */
+
+    .sp-queue-wrap {
+        flex: 1;
+        min-height: 0;
+        overflow: auto;
+    }
+
+    .sp-queue {
+        padding: 0 16px 20px;
+    }
+
+    .sp-count {
+        margin: 14px 2px 8px;
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--sp-muted);
+    }
+
+    .sp-rows {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .sp-row {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding: 12px;
+        background: #fff;
+        border: 1px solid var(--sp-line);
+        border-radius: 14px;
+        cursor: pointer;
+
+        &:hover {
+            border-color: #cddae3;
+        }
+    }
+
+    /* Past the half hour the kanban already flags on, so both screens call the
+       same tickets embarrassing. */
+    .sp-row-late {
+        border-color: #f0c9c5;
+        background: #fffaf9;
+    }
+
+    .sp-row-on {
+        border-color: var(--sp-blue);
+    }
+
+    .sp-line1,
+    .sp-line2 {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .sp-line2 {
+        font-size: 12px;
+        color: var(--sp-muted);
+    }
+
+    .sp-ref {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--sp-muted);
+    }
+
+    .sp-subject {
+        font-size: 14.5px;
+        font-weight: 700;
+        color: var(--sp-ink);
+    }
+
+    .sp-order {
+        font-size: 11.5px;
+        font-weight: 700;
+        color: var(--sp-blue);
+        background: #eaf4fa;
+        border-radius: 7px;
+        padding: 2px 7px;
+    }
+
+    .sp-said {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .sp-next {
+        margin-left: auto;
+    }
+
+    .sp-more {
+        display: flex;
+        justify-content: center;
+        padding: 14px 0 4px;
+    }
+
+    /* The five states. Same three bands the console paints. */
+    .sp-s-new { background: #fdf3e3; color: var(--sp-amber); }
+    .sp-s-open { background: #eaf4fa; color: var(--sp-blue); }
+    .sp-s-waiting { background: #f0ecfb; color: var(--sp-violet); }
+    .sp-s-done { background: #e8f5ec; color: var(--sp-green); }
+    .sp-s-cancelled { background: #eef2f5; color: var(--sp-muted); }
+
+    /* ------------------------------------------------------- the dialog */
+
+    &.sp-dialog {
+        background: transparent;
+        gap: 14px;
+    }
+
+    .sp-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+
+        b {
+            display: block;
+            font-size: 15px;
+            font-weight: 700;
+        }
+
+        small {
+            display: block;
+            margin-top: 3px;
+            font-size: 12px;
+            color: var(--sp-muted);
+        }
+    }
+
+    .sp-assign {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 12px 0;
+        font-size: 12.5px;
+        color: var(--sp-muted);
+
+        select {
+            height: 34px;
+            padding: 0 10px;
+            border: 1px solid var(--sp-line);
+            border-radius: 9px;
+            background: #fff;
+            font-size: 13px;
+        }
+    }
+
+    /* Theirs left, ours right - the shape of every chat anybody has used, so
+       nobody has to be told which is which. */
+    .sp-thread {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        max-height: 46vh;
+        overflow: auto;
+
+        li {
+            max-width: 78%;
+            padding: 9px 12px;
+            border-radius: 14px;
+
+            p {
+                margin: 0;
+                font-size: 13.5px;
+                line-height: 1.55;
+                white-space: pre-wrap;
+            }
+
+            small {
+                display: block;
+                margin-top: 4px;
+                font-size: 11px;
+                opacity: 0.75;
+            }
+        }
+
+        .sp-them {
+            align-self: flex-start;
+            background: var(--sp-ground);
+            border-bottom-left-radius: 5px;
+        }
+
+        .sp-us {
+            align-self: flex-end;
+            background: #eaf4fa;
+            color: #10485f;
+            border-bottom-right-radius: 5px;
+        }
+    }
+
+    .sp-reply {
+        margin-top: 14px;
+
+        textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--sp-line);
+            border-radius: 12px;
+            font: inherit;
+            font-size: 13.5px;
+            resize: vertical;
+
+            &:focus {
+                outline: 0;
+                border-color: var(--sp-blue);
+                box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.14);
+            }
+        }
+    }
+
+    .sp-reply-act {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-top: 8px;
+
+        small {
+            font-size: 11.5px;
+            color: var(--sp-muted);
+            font-variant-numeric: tabular-nums;
+        }
+    }
+
+    /* ------------------------------------------------------------ narrow */
+
+    @media (max-width: 900px) {
+        .sp-tiles {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .sp-next {
+            margin-left: 0;
+        }
+
+        .sp-thread li {
+            max-width: 92%;
+        }
+    }
+}

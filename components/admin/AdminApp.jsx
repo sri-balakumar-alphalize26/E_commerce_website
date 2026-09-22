@@ -22,6 +22,7 @@ import OrdersSection from "./AdminOrders";
 import ReturnsSection from "./AdminReturns";
 import { CustomersSection, ProductsSection } from "./AdminCatalog";
 import { OffersSection, ReviewsSection, SettingsSection } from "./AdminMore";
+import { SupportSection } from "./AdminSupport";
 import HomeSection from "./HomeSection";
 import ProductPageSection from "./ProductPageSection";
 
@@ -42,6 +43,7 @@ export const SECTIONS = [
   { key: "customers", label: "Customers", icon: "users", group: "Sales" },
   { key: "offers", label: "Offers", icon: "ticket", group: "Sales", live: true },
   { key: "reviews", label: "Reviews", icon: "star", group: "Sales", live: true },
+  { key: "support", label: "Support", icon: "chat", group: "Sales", live: true },
   { key: "products", label: "Products", icon: "layers", group: "Catalogue" },
   { key: "settings", label: "Settings", icon: "gear", group: "Store" },
 ];
@@ -233,11 +235,16 @@ export default function AdminApp({ section: initial = "dashboard", onSection, on
   /* Same again, and its own route for the same reason Orders has one: a badge
      wants three numbers, not every review in the shop once a minute. */
   const reviewCounts = useResource("/admin/reviews/counts", { pollMs: 60000 });
+  const supportCounts = useResource("/admin/support/counts", { pollMs: 60000 });
   const waiting = orderCounts.data?.counts?.needs || 0;
   const lateCount = orderCounts.data?.counts?.late || 0;
   const lowCount = stock.filter((s) => s.qty <= s.reorder).length;
   const pendingReviews = reviewCounts.data?.counts?.pending || 0;
-  const counts = { orders: waiting, reviews: pendingReviews, products: lowCount };
+  /* Tickets nobody has replied to - not every open one. A ticket already
+     answered and waiting on the customer is not somebody sitting unheard. */
+  const unanswered = supportCounts.data?.counts?.needs || 0;
+  const lateTickets = supportCounts.data?.late || 0;
+  const counts = { orders: waiting, reviews: pendingReviews, products: lowCount, support: unanswered };
   /* One line per thing to do, not one per order. The shell has no order list
      to name rows out of, and "2 late" is the part a manager acts on anyway. */
   const notes = useMemo(() => [
@@ -245,7 +252,8 @@ export default function AdminApp({ section: initial = "dashboard", onSection, on
     ...(waiting ? [{ id: "nord", icon: "box", text: `${waiting} order${waiting === 1 ? "" : "s"} still on their way`, at: null, go: ["orders"] }] : []),
     ...(lowCount ? [{ id: "nlow", icon: "layers", text: `${lowCount} products at or below reorder level`, at: TODAY - 3600000, go: ["products"] }] : []),
     ...(pendingReviews ? [{ id: "nrev", icon: "star", text: `${pendingReviews} review${pendingReviews === 1 ? "" : "s"} nobody has looked at yet`, at: null, go: ["reviews"] }] : []),
-  ], [waiting, lateCount, lowCount, pendingReviews]); // eslint-disable-line
+    ...(lateTickets ? [{ id: "nsup", icon: "chat", text: `${lateTickets} customer${lateTickets === 1 ? "" : "s"} waiting over half an hour for a reply`, at: null, go: ["support"] }] : []),
+  ], [waiting, lateCount, lowCount, pendingReviews, lateTickets]); // eslint-disable-line
 
   /* Orders are searched in the shop, not here - so this hands the term over
      rather than pretending to have matched anything. */
@@ -264,6 +272,7 @@ export default function AdminApp({ section: initial = "dashboard", onSection, on
   else if (section === "customers") body = <CustomersSection orders={ORDERS} flash={flash} />;
   else if (section === "offers") body = <OffersSection flash={flash} />;
   else if (section === "reviews") body = <ReviewsSection flash={flash} />;
+  else if (section === "support") body = <SupportSection openRef={openId} setOpenRef={setOpenId} flash={flash} />;
   else body = <SettingsSection settings={settings} setSettings={setSettings} flash={flash} />;
 
   const groups = [...new Set(SECTIONS.map((s) => s.group))];

@@ -6,9 +6,21 @@
         somebody works through during a day rather than sets up once.
     -->
 
+    <!--
+        Support opens the desk; the kanban keeps what the desk does not try to
+        do - grouping, the form and the chatter. Same split as Orders, Returns
+        and Reviews.
+    -->
     <menuitem id="menu_mart369_support"
               name="Support"
               parent="mart369.menu_mart369_root"
+              action="action_mart369_support_desk"
+              groups="sales_team.group_sale_salesman"
+              sequence="7"/>
+
+    <menuitem id="menu_mart369_support_all"
+              name="Support (all views)"
+              parent="mart369.menu_mart369_advanced"
               action="action_mart369_tickets"
               groups="sales_team.group_sale_salesman"
               sequence="7"/>

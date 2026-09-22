@@ -1,6 +1,6 @@
 {
     'name': '369 Mart Support',
-    'version': '19.0.1.0.0',
+    'version': '19.0.1.1.0',
     'category': 'Website',
     'summary': 'The support bot, real tickets, and order updates on WhatsApp.',
     'description': """
@@ -45,6 +45,7 @@ Operators work these in **369 Mart -> Support**.
         'security/ir.model.access.csv',
         'data/bot_rules.xml',
         'views/ticket_views.xml',
+        'views/support_desk_views.xml',
         'views/rule_views.xml',
         'views/menus.xml',
     ],
@@ -53,6 +54,13 @@ Operators work these in **369 Mart -> Support**.
             'mart369_support/static/src/support/support_board.js',
             'mart369_support/static/src/support/support_views.js',
             'mart369_support/static/src/support/support_views.xml',
+            # After the support/ files and after mart369_order's desk
+            # folder, which this leans on for `Pick` and the shared
+            # chrome - a bundle compiles in the order it is listed.
+            'mart369_support/static/src/desk/**/*',
+        ],
+        'web.assets_tests': [
+            'mart369_support/static/tests/tours/**/*',
         ],
     },
     'images': [

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--
+        The support desk: the app's own console screen, inside Odoo.
+
+        A client action rather than a view, because none of Odoo's view types
+        draws a queue of conversations with a reply box beside each. The same
+        choice the orders, returns and reviews desks made.
+
+        `path` gives it a clean URL, /odoo/mart-support, which the tour drives.
+    -->
+    <record id="action_mart369_support_desk" model="ir.actions.client">
+        <field name="name">Support</field>
+        <field name="tag">mart369_support.desk</field>
+        <field name="path">mart-support</field>
+    </record>
+
+</odoo>

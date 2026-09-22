@@ -487,6 +487,47 @@ html.ad-lock, html.ad-lock body { overflow: hidden; }
 /* ---------------- keyframes ---------------- */
 @keyframes ad-page { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 @keyframes ad-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+/* ------------------------------------------------------------ support ----
+   The queue and the conversation. Rows reuse the review card's shape - same
+   border, radius and --i stagger - because they are the same kind of thing:
+   somebody said something and it is waiting on us. */
+.ad-tickets { list-style: none; margin: 0; padding: 12px 18px 18px; display: flex; flex-direction: column; gap: 10px; }
+.ad-tickets li { display: flex; gap: 12px; padding: 12px; border: 1px solid var(--ad-line); border-radius: 14px; cursor: pointer; animation: ad-row 360ms var(--ad-ease) backwards; animation-delay: calc(var(--i) * 50ms); }
+.ad-tickets li:hover { border-color: #cddae3; }
+/* Past the half hour the backend kanban already flags on, so both screens
+   call the same tickets embarrassing. */
+.ad-ticket-late { border-color: #f0c9c5; background: #fffaf9; }
+.ad-ticket-body { flex: 1; min-width: 0; }
+.ad-ticket-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ad-ticket-top b { font-size: 14.5px; font-weight: 700; }
+.ad-ticket-body small { display: block; margin-top: 4px; font-size: 12px; color: var(--ad-muted); }
+.ad-ticket-order { font-size: 11.5px; font-weight: 700; color: var(--ad-blue); background: #eaf4fa; border-radius: 7px; padding: 2px 7px; }
+.ad-ticket-act { display: flex; flex-direction: column; gap: 6px; }
+.ad-ticket-subject { margin: 0 0 10px; font-size: 15px; font-weight: 600; line-height: 1.5; }
+.ad-ticket-meta { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 12.5px; color: var(--ad-muted); }
+.ad-ticket-meta span { display: inline-flex; align-items: center; gap: 5px; }
+.ad-ticket-assign { margin-top: 12px; }
+
+/* The conversation. Theirs on the left, ours on the right - the shape of
+   every chat anyone has used, so nobody has to be told which is which. */
+.ad-thread { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.ad-thread li { max-width: 78%; padding: 9px 12px; border-radius: 14px; }
+.ad-thread li p { margin: 0; font-size: 13.5px; line-height: 1.55; white-space: pre-wrap; }
+.ad-thread li small { display: block; margin-top: 4px; font-size: 11px; opacity: 0.75; }
+.ad-thread .ad-them { align-self: flex-start; background: var(--ad-ground); border-bottom-left-radius: 5px; }
+.ad-thread .ad-us { align-self: flex-end; background: #eaf4fa; color: #10485f; border-bottom-right-radius: 5px; }
+
+.ad-reply { width: 100%; padding: 10px 12px; border: 1px solid var(--ad-line); border-radius: 12px; font: inherit; font-size: 13.5px; resize: vertical; }
+.ad-reply:focus { outline: 0; border-color: var(--ad-blue); box-shadow: 0 0 0 3px rgba(10, 120, 171, .14); }
+.ad-reply-act { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px; }
+.ad-reply-act small { font-size: 11.5px; color: var(--ad-muted); font-variant-numeric: tabular-nums; }
+
+@media (max-width: 720px) {
+  .ad-tickets li { flex-wrap: wrap; }
+  .ad-ticket-act { flex-direction: row; width: 100%; }
+  .ad-thread li { max-width: 92%; }
+}
+
 @keyframes ad-row { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 @keyframes ad-pop { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: none; } }
 @keyframes ad-fade { from { opacity: 0; } to { opacity: 1; } }

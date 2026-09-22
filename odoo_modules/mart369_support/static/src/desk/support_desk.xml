@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="mart369_support.SupportDesk">
+        <Layout display="{ controlPanel: {} }" className="'o_mart369_desk h-100'">
+            <div class="mart-builder pe sp">
+
+                <header class="pe-head">
+                    <div>
+                        <h1>Support</h1>
+                        <p>Who is waiting on an answer, longest wait first.</p>
+                    </div>
+                    <button class="mart-btn" t-on-click="() => this.moreViews()">
+                        <i class="fa fa-th-large" role="img" aria-label="Board"/>
+                        All views
+                    </button>
+                </header>
+
+                <!-- The first tile is the filter. The other three are figures
+                     with no tab behind them, so they are not buttons. -->
+                <div class="sp-tiles">
+                    <t t-foreach="TILES" t-as="tile" t-key="tile.key">
+                        <div t-if="tile.flat"
+                             t-attf-class="sp-tile sp-tile-flat {{ tile.bad and tileValue(tile) ? 'sp-tile-bad' : '' }}">
+                            <span class="sp-tile-top">
+                                <i t-attf-class="fa {{ tile.icon }}" aria-hidden="true"/>
+                                <t t-esc="tile.label"/>
+                            </span>
+                            <b t-esc="tileValue(tile)"/>
+                            <small>Across the queue</small>
+                        </div>
+                        <button t-else=""
+                                type="button"
+                                t-attf-class="sp-tile {{ state.tab === tile.tab ? 'sp-tile-on' : '' }} {{ tile.warn and tileValue(tile) ? 'sp-tile-warn' : '' }}"
+                                t-att-aria-pressed="state.tab === tile.tab ? 'true' : 'false'"
+                                t-on-click="() => this.pick(tile.tab)">
+                            <span class="sp-tile-top">
+                                <i t-attf-class="fa {{ tile.icon }}" aria-hidden="true"/>
+                                <t t-esc="tile.label"/>
+                            </span>
+                            <b t-esc="tileValue(tile)"/>
+                            <small>Show these</small>
+                        </button>
+                    </t>
+                </div>
+
+                <div class="pe-toolbar sp-toolbar">
+                    <div class="sp-tabs" role="tablist">
+                        <button t-foreach="TABS" t-as="tab" t-key="tab.key"
+                                role="tab"
+                                t-att-aria-selected="state.tab === tab.key ? 'true' : 'false'"
+                                t-attf-class="{{ state.tab === tab.key ? 'mart-on' : '' }}"
+                                t-on-click="() => this.pick(tab.key)">
+                            <t t-esc="tab.label"/>
+                            <em t-if="tabCount(tab) !== null" t-esc="tabCount(tab)"/>
+                        </button>
+                    </div>
+                    <div class="pe-toolbar-gap"/>
+                    <input type="search" class="sp-search"
+                           placeholder="Ticket, customer or question"
+                           aria-label="Search tickets" t-on-input="search"/>
+                    <Pick label="'Whose'" value="state.mine" options="mineOptions"
+                          onChange="(v) => this.setFilter('mine', v)"/>
+                    <Pick label="'Handled by'" value="state.assignee" options="staffOptions"
+                          onChange="(v) => this.setFilter('assignee', v)"/>
+                    <Pick label="'Sort'" value="state.sort" options="sortOptions"
+                          onChange="(v) => this.setFilter('sort', v)"/>
+                </div>
+
+                <p t-if="state.error" class="pe-error" role="alert">
+                    We could not reach the shop. <t t-esc="state.error"/>
+                    <button class="mart-link" t-on-click="() => this.load()">Try again</button>
+                </p>
+
+                <div class="sp-queue-wrap">
+                    <div class="sp-queue">
+
+                        <p t-if="state.loading and !state.rows.length" class="pe-loading">
+                            Loading tickets...
+                        </p>
+
+                        <p t-elif="!state.rows.length and state.tab === 'needs'" class="pe-loading">
+                            Nobody is waiting on an answer. That is the queue
+                            empty, not broken.
+                        </p>
+
+                        <p t-elif="!state.rows.length" class="pe-loading">
+                            No ticket here. Try another tab, or a different search.
+                        </p>
+
+                        <t t-else="">
+                            <p class="sp-count">
+                                <t t-esc="state.total"/> ticket<t t-if="state.total !== 1">s</t>
+                            </p>
+                            <ul class="sp-rows">
+                                <li t-foreach="state.rows" t-as="row" t-key="row.ref"
+                                    t-attf-class="sp-row {{ row.late ? 'sp-row-late' : '' }} {{ state.sel === row.ref ? 'sp-row-on' : '' }}"
+                                    t-on-click="() => this.select(row)">
+                                    <span class="sp-line1">
+                                        <span class="sp-ref"><t t-esc="row.ref"/></span>
+                                        <b class="sp-subject" t-esc="row.subject or 'No subject'"/>
+                                        <span t-if="row.order" class="sp-order" t-esc="row.order"/>
+                                        <span t-attf-class="mart-pill sp-s-{{ row.state }}"
+                                              t-esc="row.stateLabel"/>
+                                    </span>
+                                    <span class="sp-line2">
+                                        <span class="sp-who" t-esc="row.customer"/>
+                                        <span class="sp-wait">waited <t t-esc="waited(row.waited)"/></span>
+                                        <span class="sp-owner"
+                                              t-esc="row.assignee or 'nobody yet'"/>
+                                        <span t-if="row.replies" class="sp-said">
+                                            <i class="fa fa-comment-o" aria-hidden="true"/>
+                                            <t t-esc="row.replies"/>
+                                        </span>
+                                        <!-- The server said what this is called. -->
+                                        <button t-if="row.next" class="mart-btn mart-btn-sm sp-next"
+                                                t-att-disabled="state.busy"
+                                                t-on-click.stop="() => this.advance(row)">
+                                            <t t-esc="row.next.label"/>
+                                        </button>
+                                    </span>
+                                </li>
+                            </ul>
+
+                            <div t-if="state.rows.length &lt; state.total" class="sp-more">
+                                <button class="mart-btn" t-on-click="() => this.showMore()">
+                                    Show more (<t t-esc="state.total - state.rows.length"/> left)
+                                </button>
+                            </div>
+                        </t>
+
+                    </div>
+                </div>
+
+            </div>
+        </Layout>
+    </t>
+
+    <t t-name="mart369_support.TicketDialog">
+        <Dialog size="'lg'" title="props.ref">
+            <div class="mart-builder sp sp-dialog">
+
+                <p t-if="state.loading" class="pe-loading">Loading the conversation...</p>
+                <p t-elif="state.error" class="pe-error" role="alert" t-esc="state.error"/>
+
+                <t t-elif="state.detail">
+                    <div class="sp-head">
+                        <div>
+                            <b t-esc="state.detail.subject or 'No subject'"/>
+                            <small>
+                                <t t-esc="state.detail.customer"/>
+                                <t t-if="state.detail.order"> · <t t-esc="state.detail.order"/></t>
+                                · waited <t t-esc="waited(state.detail.waited)"/>
+                            </small>
+                        </div>
+                        <span t-attf-class="mart-pill sp-s-{{ state.detail.state }}"
+                              t-esc="state.detail.stateLabel"/>
+                    </div>
+
+                    <label class="sp-assign">
+                        <span>Handled by</span>
+                        <select t-att-disabled="state.busy"
+                                t-on-change="(ev) => this.assign(ev.target.value)">
+                            <option t-foreach="staffOptions" t-as="opt" t-key="opt[0]"
+                                    t-att-value="opt[0]"
+                                    t-att-selected="assignedValue === opt[0]"
+                                    t-esc="opt[1]"/>
+                        </select>
+                    </label>
+
+                    <ul class="sp-thread">
+                        <li t-if="!state.detail.messages.length" class="mart-hint">
+                            Nothing said yet.
+                        </li>
+                        <li t-foreach="state.detail.messages" t-as="msg" t-key="msg_index"
+                            t-attf-class="{{ msg.from === 'me' ? 'sp-them' : 'sp-us' }}">
+                            <p t-esc="msg.text"/>
+                            <small>
+                                <t t-esc="msg.from === 'me' ? state.detail.customer : 'Us'"/>
+                                · <t t-esc="ago(msg.at)"/>
+                            </small>
+                        </li>
+                    </ul>
+
+                    <!-- Hidden, not disabled: the model refuses a reply on a
+                         closed ticket, so offering the box is a trap. -->
+                    <div t-if="state.detail.canReply" class="sp-reply">
+                        <textarea rows="3" t-att-maxlength="500"
+                                  placeholder="Type what the customer should read..."
+                                  t-att-disabled="state.busy"
+                                  t-model="state.text"/>
+                        <div class="sp-reply-act">
+                            <small><t t-esc="left"/> left</small>
+                            <button class="mart-btn mart-btn-primary"
+                                    t-att-disabled="state.busy or !state.text.trim()"
+                                    t-on-click="() => this.send()">Send reply</button>
+                        </div>
+                    </div>
+                </t>
+            </div>
+
+            <t t-set-slot="footer">
+                <button t-if="state.detail and state.detail.canReply"
+                        class="mart-btn" t-att-disabled="state.busy"
+                        t-on-click="() => this.park()">Waiting on them</button>
+                <button t-if="state.detail and state.detail.next"
+                        class="mart-btn mart-btn-primary" t-att-disabled="state.busy"
+                        t-on-click="() => this.advance()"
+                        t-esc="state.detail.next.label"/>
+                <button t-if="state.detail and state.detail.canReply"
+                        class="mart-btn mart-btn-danger" t-att-disabled="state.busy"
+                        t-on-click="() => this.askDrop()">Drop it</button>
+                <button class="mart-btn" t-on-click="() => this.props.close()">Close</button>
+            </t>
+        </Dialog>
+    </t>
+
+</templates>
