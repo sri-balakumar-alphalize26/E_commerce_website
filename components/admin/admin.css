@@ -528,36 +528,20 @@ html.ad-lock, html.ad-lock body { overflow: hidden; }
   .ad-thread li { max-width: 92%; }
 }
 
-@keyframes ad-row { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-@keyframes ad-pop { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: none; } }
-@keyframes ad-fade { from { opacity: 0; } to { opacity: 1; } }
-@keyframes ad-slide { from { transform: translateX(28px); opacity: 0.4; } to { transform: none; opacity: 1; } }
-@keyframes ad-draw { to { stroke-dashoffset: 0; } }
-@keyframes ad-bar { from { transform: scaleY(0); opacity: 0.3; } to { transform: none; opacity: 1; } }
-@keyframes ad-grow-x { from { transform: scaleX(0); } to { transform: none; } }
-@keyframes ad-grow-y { from { transform: scaleY(0); } to { transform: none; } }
-@keyframes ad-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+/* ------------------------------------------------------------ rewards ----
+   Scratch cards. Rows reuse the review card's shape - same border, radius and
+   --i stagger - because they are read the same way: a list of things that
+   happened, newest first. Read-only, so there is no action column. */
+.ad-prizes { list-style: none; margin: 0; padding: 12px 18px 18px; display: flex; flex-direction: column; gap: 10px; }
+.ad-prizes li { display: flex; gap: 12px; padding: 12px; border: 1px solid var(--ad-line); border-radius: 14px; animation: ad-row 360ms var(--ad-ease) backwards; animation-delay: calc(var(--i) * 50ms); }
+.ad-prize-body { flex: 1; min-width: 0; }
+.ad-prize-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ad-prize-top b { font-size: 15px; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.ad-prize-body small { display: block; margin-top: 4px; font-size: 12px; color: var(--ad-muted); }
+/* A prize the shop has committed to and nobody has opened yet. */
+.ad-prize-shut { font-size: 11.5px; font-weight: 700; color: var(--ad-amber); background: #fdf3e3; border-radius: 7px; padding: 2px 7px; }
 
-@media (prefers-reduced-motion: reduce) {
-  .ad-app *, .ad-drawer-wrap *, .ad-modal-wrap * { animation: none !important; transition: none !important; }
-  /* `*` does not match a pseudo-element, so everything drawn in a ::before or
-     ::after - the active nav marker, the timeline connector - kept animating
-     for somebody who had asked the machine not to. They need saying out loud. */
-  .ad-app *::before, .ad-app *::after,
-  .ad-drawer-wrap *::before, .ad-drawer-wrap *::after,
-  .ad-modal-wrap *::before, .ad-modal-wrap *::after { animation: none !important; transition: none !important; }
-  /* Killing the animation is safe for every entrance above, because those all
-     start invisible and end at the element's natural state - take the
-     animation away and you are left with the end state.
-
-     It is not safe where the *base* rule holds a pre-animation value that only
-     the keyframe clears. `.ad-line` parks the path at a full 2000 dash offset
-     and relies on `ad-draw` to wind it back to 0, so with the animation gone
-     the line is drawn entirely in the gap: anybody who asked their machine for
-     less motion got an empty chart rather than a still one. Every storefront
-     sheet already guards this; this one never did. */
-  .ad-app .ad-line { stroke-dashoffset: 0 !important; }
-}
+@media (max-width: 720px) { .ad-prizes li { flex-wrap: wrap; } }
 
 /* --------------------------------------------------------------------------
    Sample-data banner (Phase A). Loud on purpose: a screen that is not the
@@ -680,3 +664,34 @@ html.ad-lock, html.ad-lock body { overflow: hidden; }
 .ad-picked { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .ad-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 6px 4px 10px; border-radius: 999px; background: #eef2f5; font-size: 12.5px; }
 .ad-chip button { border: 0; background: transparent; cursor: pointer; font-size: 15px; line-height: 1; color: var(--ad-muted); padding: 0 2px; }
+
+/* ---- referrals ---- */
+.ad-ref-setting { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 16px 18px; }
+.ad-ref-setting > div { display: flex; flex-direction: column; gap: 4px; min-width: 240px; }
+.ad-ref-setting b { font-size: 15px; font-weight: 800; }
+.ad-ref-setting small { font-size: 12.5px; line-height: 1.5; color: var(--ad-muted); max-width: 62ch; }
+.ad-ref-edit { display: flex; align-items: center; gap: 8px; }
+.ad-ref-input { width: 120px; height: 40px; border: 1px solid var(--ad-line); border-radius: 10px; padding: 0 12px; font: inherit; font-size: 14px; font-weight: 600; color: var(--ad-ink); background: #fff; outline: none; transition: border-color 180ms, box-shadow 200ms; }
+.ad-ref-input:focus { border-color: var(--ad-blue); box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.14); }
+/* A blank cell reads as a missing number; an em dash says "not yet". */
+.ad-muted { color: var(--ad-muted); }
+.ad-table .ad-sub { display: block; font-size: 12px; color: var(--ad-muted); }
+
+/* --------------------------------------------------- five-tile stat strip --
+   Referrals draws the five the Odoo strip draws. Added beside the four-column
+   rule rather than changing it, because every other live section is on it. */
+.ad-mini-stats.ad-mini-5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+/* The stagger only counted to four, so a fifth tile arrived on delay 0. */
+.ad-mini-stats > span:nth-child(5) { --i: 4; }
+/* The line under the number. Scoped to a direct child so it cannot catch the
+   meter's fill, which is an <i> too. */
+.ad-mini-stats > span > i { font-style: normal; font-size: 11.5px; color: var(--ad-muted); }
+.ad-meter { height: 5px; margin-top: 6px; border-radius: 999px; background: var(--ad-ground); overflow: hidden; }
+.ad-meter > i { display: block; height: 100%; border-radius: inherit; background: var(--ad-blue); transition: width 420ms var(--ad-ease); }
+
+/* `.ad-mini-5` is two classes and the breakpoints below are one, so without
+   these it would win at every width and five tiles would stay in a row on a
+   phone. */
+@media (max-width: 1100px) { .ad-mini-stats.ad-mini-5 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 900px) { .ad-mini-stats.ad-mini-5 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .ad-mini-stats.ad-mini-5 { grid-template-columns: minmax(0, 1fr); } }

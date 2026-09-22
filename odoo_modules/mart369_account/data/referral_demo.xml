@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+        A few example invites, built in Python rather than written out here.
+
+        An invite needs two real partners and this module ships none, so an
+        XML `ref` would tie it to whichever demo data happened to be
+        installed. The method picks whatever customers exist and does nothing
+        at all once a single invite is on file - so a shop that has started
+        referring people never sprouts examples.
+
+        Not noupdate, for the reason mart369_cart's deal demo gives: with it,
+        the function would only ever run on a fresh install, and a shop
+        upgrading into this feature would never see the examples. The method
+        guards itself instead, so running on every upgrade seeds exactly once.
+    -->
+    <data>
+        <function model="mart369.referral" name="_mart369_load_demo"/>
+    </data>
+</odoo>

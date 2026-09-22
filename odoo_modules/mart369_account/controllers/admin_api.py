@@ -29,6 +29,8 @@ _GET = {'type': 'http', 'auth': 'user', 'methods': ['GET'],
         'csrf': False, 'sitemap': False}
 _PATCH = {'type': 'http', 'auth': 'user', 'methods': ['PATCH'],
           'csrf': False, 'sitemap': False}
+_POST = {'type': 'http', 'auth': 'user', 'methods': ['POST'],
+         'csrf': False, 'sitemap': False}
 
 EDITOR_GROUP = 'website.group_website_designer'
 
@@ -149,3 +151,56 @@ class Mart369ReviewAdminApi(http.Controller):
             'ok': True,
             'review': rating._mart369_admin_serialize(),
         })
+
+
+class Mart369ReferralAdminApi(Mart369ReviewAdminApi):
+    """Referrals, for the same console and under the same two rules.
+
+    A subclass so the helpers, the group and the refusal wording are literally
+    the same ones - two copies of `_may_edit` is how the two screens end up
+    fenced by different groups without anybody noticing.
+
+    Everything here is read-only bar one write, and that write is the single
+    deliberate sudo in the suite. See `reward` below.
+    """
+
+    def _referrals(self):
+        """Not sudo'd - on purpose, like the reviews above."""
+        return request.env['mart369.referral']
+
+    @http.route('/369mart/admin/referrals', **_GET)
+    def referrals(self, state='all', q='', **kwargs):
+        if not self._may_edit():
+            return self._fail('You do not have access to this.', status=403)
+        if state not in self._referrals().ADMIN_TABS:
+            state = 'all'
+        try:
+            payload = self._referrals().mart369_admin_list(state=state, q=q)
+        except AccessError as exc:
+            return self._fail(str(exc), status=403)
+        payload['ok'] = True
+        return self._json(payload)
+
+    @http.route('/369mart/admin/referrals/reward', **_PATCH)
+    def reward(self, **kwargs):
+        """Set what one successful referral pays.
+
+        The write itself is `mart369_admin_set_reward` on the model, not here,
+        because the backend desk sets the same number and two copies of a
+        setting write is how the two screens end up disagreeing. The one sudo
+        it needs, and why, is documented there.
+        """
+        if not self._may_edit():
+            return self._fail('You do not have access to this.', status=403)
+
+        raw = self._body().get('reward')
+        try:
+            tiles = self._referrals().mart369_admin_set_reward(raw)
+        except AccessError as exc:
+            return self._fail(str(exc), status=403)
+        except (UserError, ValidationError) as exc:
+            return self._fail(str(exc), field='reward')
+
+        _logger.info('369 Mart: referral reward set to %s by %s',
+                     raw, request.env.user.login)
+        return self._json({'ok': True, 'tiles': tiles})

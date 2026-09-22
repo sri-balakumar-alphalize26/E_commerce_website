@@ -10,6 +10,7 @@ auth_signup creates the user, res.users checks the password, and Odoo's own
 login cooldown slows a guesser down.
 """
 
+import logging
 import re
 
 from odoo import http
@@ -17,6 +18,8 @@ from odoo.exceptions import AccessDenied
 from odoo.http import request
 from odoo.addons.auth_signup.models.res_partner import SignupError
 from odoo.addons.mart369_auth.models.res_users import AMBIGUOUS
+
+_logger = logging.getLogger(__name__)
 
 _EMAIL = re.compile(r'^[^\s@]+@[^\s@]+\.[^\s@]{2,}$')
 
@@ -59,9 +62,12 @@ class Mart369AuthApi(http.Controller):
     def signup(self, **kwargs):
         """Create a customer account, then sign it in.
 
-        Body: {name, email, password, phone?}
+        Body: {name, email, password, phone?, code?}
         Ok:   {ok: true, name, email}
         Fail: {ok: false, error, field}  field is name | email | password
+
+        `code` is a referral code, from an invite link or typed in by hand. It
+        is optional and never a reason to refuse an account - see below.
         """
         body = self._body()
         name = (body.get('name') or '').strip()
@@ -92,7 +98,32 @@ class Mart369AuthApi(http.Controller):
         user = self._sign_in(email, password)
         if phone:
             user.partner_id.sudo().phone = phone
+        self._mart369_credit_referral(user, body.get('code'))
         return self._json(user._mart369_profile(), status=201)
+
+    def _mart369_credit_referral(self, user, code):
+        """Mark the inviter's row joined, if this signup carried a code.
+
+        Never allowed to fail the signup. The account is already made and the
+        customer is already signed in by the time this runs; refusing them an
+        account because they mistyped a friend's code - or because the referral
+        module is not installed - would be losing a customer to protect a
+        reward. So it is guarded and logged, the same way `sale_order.py`
+        guards the reward on a placed order.
+        """
+        code = (code or '').strip()
+        if not code or 'mart369.referral' not in request.env:
+            return False
+        try:
+            row = request.env['mart369.referral']._mart369_on_signup(
+                user.partner_id, code)
+        except Exception:  # noqa: BLE001
+            _logger.exception(
+                'mart369: crediting referral code %s on signup failed', code)
+            return False
+        if row:
+            _logger.info('mart369: signup credited referral %s', row.id)
+        return bool(row)
 
     @http.route('/369mart/auth/login', **_POST)
     def login(self, **kwargs):

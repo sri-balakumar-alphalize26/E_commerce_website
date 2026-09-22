@@ -12,6 +12,7 @@
    demo default so the page works before the server is connected.
    ========================================================================== */
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { clearReferral, takeReferral } from "@/lib/referral";
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const demo = {
@@ -115,6 +116,16 @@ export function SignInCard({
   const [agree, setAgree] = useState(true);
   const [left, setLeft] = useState(0);
   const [doneName, setDoneName] = useState("");
+  const [code, setCode] = useState("");
+
+  /* An invite link dropped the code here on its way past. Read it once the
+     page is up rather than during render - localStorage does not exist on the
+     server, and this component renders there first. Somebody who arrived by
+     any other route can still type one in below. */
+  useEffect(() => {
+    const saved = takeReferral();
+    if (saved) setCode(saved);
+  }, []);
 
   const emailOk = EMAIL_RE.test(email.trim());
   const pwScore = strength(password);
@@ -149,9 +160,16 @@ export function SignInCard({
     if (password.length < 8) return fail("password", "Use at least 8 characters.");
     if (!agree) return fail("agree", "Accept the Terms to create an account.");
     setBusy(true);
-    const r = await onCreateAccount({ name: name.trim(), email: email.trim(), password });
+    const r = await onCreateAccount({
+      name: name.trim(), email: email.trim(), password,
+      /* Sent as `code`. The server treats a wrong one as no code at all, so a
+         typo here costs the reward, never the account. */
+      code: code.trim().toUpperCase() || undefined,
+    });
     setBusy(false);
     if (!r?.ok) return fail(r?.field || "email", r?.error || "Couldn't create the account. Try again.");
+    /* Spent: a second account made in this browser is not the same invite. */
+    clearReferral();
     setDoneName(name.trim()); go("done");
   }
 
@@ -237,6 +255,13 @@ export function SignInCard({
                   <span /><span /><span /><span />
                   <em>{STRENGTH[pwScore]}</em>
                 </div>
+              </Field>
+              <Field id="si-code" label="Referral code" error={errFor("code")}
+                hint="Optional. If a friend invited you, their reward lands when you order.">
+                <input id="si-code" className="si-input si-code"
+                  autoComplete="off" placeholder="369ABCD"
+                  value={code}
+                  onChange={(e) => { setCode(e.target.value.toUpperCase()); clear(); }} />
               </Field>
               <label className={"si-check" + (error.field === "agree" ? " si-check-err" : "")}>
                 <input type="checkbox" checked={agree} onChange={(e) => { setAgree(e.target.checked); clear(); }} />

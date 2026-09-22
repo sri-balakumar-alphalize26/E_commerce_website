@@ -1,0 +1,432 @@
+/* The referrals desk.
+ *
+ * Deliberately shaped like review_desk.scss beside it and the order and return
+ * desks in mart369_order, so they all read as one family.
+ *
+ * The shell, the buttons, the pills, the error bar and the loading line all
+ * come from mart369/static/src/builder/builder.scss, which is loaded earlier
+ * in the bundle because mart369 is a dependency of this module. Never @import
+ * it: one local @import breaks the whole backend bundle, and the failure shows
+ * up as a blank screen rather than as an error anyone can read.
+ *
+ * The numbers are the console's own, lifted from components/admin/admin.css so
+ * the two screens match rather than each approximating the other.
+ */
+
+.o_mart369_desk .mart-builder.rf {
+    --rf-line: #e4eaef;
+    --rf-ink: #13212b;
+    --rf-muted: #64757f;
+    --rf-ground: #f3f6f8;
+    --rf-blue: #0a78ab;
+    --rf-green: #1a7f3c;
+    --rf-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    background: var(--rf-ground);
+
+    /* The whole page scrolls, not a pane inside it.
+     *
+     * The first cut gave the list its own scroller and pinned the tiles, the
+     * reward and the tabs above it - which on anything but a tall screen left
+     * the invites reading through a letterbox at the bottom while most of the
+     * window held a strip nobody needed to keep looking at. The header is
+     * cheap to scroll back up to; a two-row window onto the thing you came
+     * for is not.
+     */
+    height: 100%;
+    overflow-y: auto;
+
+    /* ------------------------------------------------------------- tiles */
+
+    .rf-tiles {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        padding: 14px 16px 0;
+    }
+
+    .rf-tile {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 12px 14px;
+        text-align: left;
+        background: #fff;
+        border: 1px solid var(--rf-line);
+        border-radius: 14px;
+        color: var(--rf-ink);
+        transition: border-color 140ms var(--rf-ease), box-shadow 140ms var(--rf-ease);
+
+        b {
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            font-variant-numeric: tabular-nums;
+        }
+
+        small {
+            font-size: 11.5px;
+            color: var(--rf-muted);
+        }
+    }
+
+    .rf-tile-top {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: var(--rf-muted);
+    }
+
+    /* Paid out is a figure, not a filter. It must not look pressable. */
+    .rf-tile-flat {
+        cursor: default;
+    }
+
+    button.rf-tile {
+        cursor: pointer;
+
+        &:hover {
+            border-color: #cddae3;
+        }
+    }
+
+    .rf-tile-on {
+        border-color: var(--rf-blue);
+        box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.14);
+    }
+
+    /* Only once there is something in it - a zero is not good news. */
+    .rf-tile-good b {
+        color: var(--rf-green);
+    }
+
+    /* ----------------------------------------------------------- setting */
+
+    .rf-setting {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+        margin: 12px 16px 0;
+        padding: 14px 16px;
+        background: #fff;
+        border: 1px solid var(--rf-line);
+        border-radius: 14px;
+
+        > div {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            min-width: 240px;
+        }
+
+        b {
+            font-size: 15px;
+            font-weight: 800;
+        }
+
+        small {
+            font-size: 12.5px;
+            line-height: 1.5;
+            color: var(--rf-muted);
+            max-width: 62ch;
+        }
+    }
+
+    /* ----------------------------------------------------------- toolbar */
+
+    .rf-toolbar {
+        flex-wrap: wrap;
+    }
+
+    .rf-tabs {
+        display: inline-flex;
+        gap: 2px;
+        padding: 3px;
+        border-radius: 11px;
+        background: var(--rf-ground);
+
+        button {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            height: 32px;
+            padding: 0 12px;
+            border: 0;
+            border-radius: 9px;
+            background: transparent;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--rf-muted);
+            cursor: pointer;
+
+            em {
+                font-style: normal;
+                font-size: 11px;
+                font-weight: 800;
+                padding: 1px 6px;
+                border-radius: 999px;
+                background: #e6edf2;
+            }
+
+            &.mart-on {
+                background: #fff;
+                color: var(--rf-ink);
+                box-shadow: 0 2px 6px -3px rgba(19, 33, 43, 0.4);
+
+                em {
+                    background: #eaf4fa;
+                    color: var(--rf-blue);
+                }
+            }
+        }
+    }
+
+    .rf-search {
+        height: 38px;
+        min-width: 240px;
+        padding: 0 12px;
+        border: 1px solid var(--rf-line);
+        border-radius: 10px;
+        background: #fff;
+        font-size: 13.5px;
+
+        &:focus {
+            outline: 0;
+            border-color: var(--rf-blue);
+            box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.14);
+        }
+    }
+
+    /* -------------------------------------------------------------- rows */
+
+    /* No scroller of its own - see the note on the block above. It still
+       grows to fill a tall window so the background does not stop short. */
+    .rf-queue-wrap {
+        flex: 1 0 auto;
+        min-height: 0;
+    }
+
+    .rf-queue {
+        padding: 0 16px 20px;
+    }
+
+    .rf-count {
+        margin: 14px 2px 8px;
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--rf-muted);
+    }
+
+    .rf-rows {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .rf-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px;
+        background: #fff;
+        border: 1px solid var(--rf-line);
+        border-radius: 14px;
+        animation: rf-row 360ms var(--rf-ease) backwards;
+        animation-delay: calc(var(--i, 0) * 50ms);
+    }
+
+    /* Initials rather than a photograph: an invited friend is not a partner
+       yet, so there is nothing to show but the name they were given. */
+    .rf-who {
+        flex: 0 0 auto;
+        width: 38px;
+        height: 38px;
+        display: grid;
+        place-items: center;
+        border-radius: 50%;
+        background: #eaf4fa;
+        color: var(--rf-blue);
+        font-size: 13px;
+        font-weight: 800;
+    }
+
+    .rf-body {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .rf-top {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+
+        b {
+            font-size: 14.5px;
+            font-weight: 700;
+        }
+
+        small {
+            font-size: 12px;
+            color: var(--rf-muted);
+        }
+    }
+
+    .rf-sub {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin: 5px 0 0;
+        font-size: 12.5px;
+        color: var(--rf-muted);
+    }
+
+    .rf-dot {
+        color: #b6c3cc;
+    }
+
+    .rf-p-grey {
+        background: #eceff2;
+        color: #5b6b76;
+    }
+
+    .rf-p-blue {
+        background: #e6f1f8;
+        color: #08516f;
+    }
+
+    .rf-p-green {
+        background: #e3f4e9;
+        color: #14602d;
+    }
+
+    /* What this invite was worth, on the right where the eye lands last. */
+    .rf-worth {
+        flex: 0 0 auto;
+        text-align: right;
+        min-width: 110px;
+
+        b {
+            display: block;
+            font-size: 15px;
+            font-weight: 800;
+            color: var(--rf-green);
+            font-variant-numeric: tabular-nums;
+        }
+
+        small {
+            font-size: 11.5px;
+            line-height: 1.35;
+            color: var(--rf-muted);
+        }
+    }
+
+    /* ------------------------------------------------------------ narrow */
+
+    @media (max-width: 900px) {
+        .rf-tiles {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .rf-row {
+            flex-wrap: wrap;
+        }
+
+        .rf-worth {
+            text-align: left;
+        }
+    }
+}
+
+/* The reward dialog. Its own styles rather than the page shell's `.mart-*`
+   ones: those are nested under `.mart-builder`, which is a flex column filling
+   the height, and dropping it into a dialog stretches every field. */
+.rf-dialog {
+    .rf-dialog-sub {
+        margin: 0 0 12px;
+        font-size: 13px;
+        color: #64757f;
+    }
+
+    .rf-dialog-error {
+        margin: 0 0 12px;
+        padding: 9px 12px;
+        border-radius: 10px;
+        background: #fbe9e7;
+        border: 1px solid #f3c4c1;
+        color: #9c2f28;
+        font-size: 13px;
+    }
+
+    .rf-dialog-field {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        max-width: 220px;
+
+        > span {
+            font-size: 12px;
+            font-weight: 700;
+            color: #13212b;
+        }
+
+        input {
+            height: 38px;
+            padding: 0 12px;
+            border: 1px solid #cfd8df;
+            border-radius: 10px;
+            background: #fff;
+            font: inherit;
+            font-size: 14px;
+            font-weight: 600;
+            color: #13212b;
+
+            &:focus {
+                outline: none;
+                border-color: #0a78ab;
+                box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.14);
+            }
+        }
+    }
+
+    .rf-dialog-hint {
+        display: flex;
+        gap: 8px;
+        margin: 16px 0 0;
+        font-size: 12.5px;
+        line-height: 1.5;
+        color: #64757f;
+
+        i {
+            margin-top: 2px;
+        }
+    }
+}
+
+@keyframes rf-row {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .o_mart369_desk .mart-builder.rf .rf-row {
+        animation: none;
+    }
+}

@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="mart369_account.ReferralDesk">
+        <Layout display="{ controlPanel: {} }" className="'o_mart369_desk h-100'">
+            <div class="mart-builder pe rf">
+
+                <header class="pe-head">
+                    <div>
+                        <h1>Referrals</h1>
+                        <p>Who invited whom, and which invites turned into customers.</p>
+                    </div>
+                    <button class="mart-btn" t-on-click="() => this.allViews()">
+                        <i class="fa fa-th-list" role="img" aria-label="List"/>
+                        All views
+                    </button>
+                </header>
+
+                <!-- The tiles are the filter, not a read-out above one - except
+                     paid out, which has no tab to show and says so by not being
+                     a button. -->
+                <div class="rf-tiles">
+                    <t t-foreach="TILES" t-as="tile" t-key="tile.key">
+                        <div t-if="tile.money" class="rf-tile rf-tile-flat">
+                            <span class="rf-tile-top">
+                                <i t-attf-class="fa {{ tile.icon }}" aria-hidden="true"/>
+                                <t t-esc="tile.label"/>
+                            </span>
+                            <b t-esc="tileValue(tile)"/>
+                            <small>Into inviters' wallets</small>
+                        </div>
+                        <button t-else=""
+                                type="button"
+                                t-attf-class="rf-tile {{ state.tab === tile.tab ? 'rf-tile-on' : '' }} {{ tile.good and tileValue(tile) ? 'rf-tile-good' : '' }}"
+                                t-att-aria-pressed="state.tab === tile.tab ? 'true' : 'false'"
+                                t-on-click="() => this.pick(tile.tab)">
+                            <span class="rf-tile-top">
+                                <i t-attf-class="fa {{ tile.icon }}" aria-hidden="true"/>
+                                <t t-esc="tile.label"/>
+                            </span>
+                            <b t-esc="tileValue(tile)"/>
+                            <small>Show these</small>
+                        </button>
+                    </t>
+                </div>
+
+                <!-- The only write on this screen, and it changes no invite. -->
+                <section class="rf-setting">
+                    <div>
+                        <b>One referral pays <t t-esc="state.tiles.reward or '-'"/></b>
+                        <small>
+                            <t t-esc="state.tiles.conversion or 0"/>% of everyone
+                            invited has gone on to buy something. Changing this
+                            only changes what is paid next - rewards already
+                            paid keep what they were worth.
+                        </small>
+                    </div>
+                    <button class="mart-btn" t-att-disabled="state.busy"
+                            t-on-click="() => this.askReward()">
+                        <i class="fa fa-cog" aria-hidden="true"/> Change reward
+                    </button>
+                </section>
+
+                <div class="pe-toolbar rf-toolbar">
+                    <div class="rf-tabs" role="tablist">
+                        <button t-foreach="TABS" t-as="tab" t-key="tab.key"
+                                role="tab"
+                                t-att-aria-selected="state.tab === tab.key ? 'true' : 'false'"
+                                t-attf-class="{{ state.tab === tab.key ? 'mart-on' : '' }}"
+                                t-on-click="() => this.pick(tab.key)">
+                            <t t-esc="tab.label"/>
+                            <em t-if="tabCount(tab) !== null" t-esc="tabCount(tab)"/>
+                        </button>
+                    </div>
+                    <div class="pe-toolbar-gap"/>
+                    <input type="search" class="rf-search"
+                           placeholder="Friend, contact or who invited"
+                           aria-label="Search referrals" t-on-input="search"/>
+                </div>
+
+                <p t-if="state.error" class="pe-error" role="alert">
+                    We could not reach the shop. <t t-esc="state.error"/>
+                    <button class="mart-link" t-on-click="() => this.load()">Try again</button>
+                </p>
+
+                <div class="rf-queue-wrap">
+                    <div class="rf-queue">
+
+                        <p t-if="state.loading and !state.rows.length" class="pe-loading">
+                            Loading invites...
+                        </p>
+
+                        <p t-elif="!state.rows.length and !state.q and state.tab === 'all'"
+                           class="pe-loading">
+                            Nobody has invited anybody yet. Invites appear here as
+                            customers send them from the app.
+                        </p>
+
+                        <p t-elif="!state.rows.length" class="pe-loading">
+                            No invite here. Try another tile, or a different search.
+                        </p>
+
+                        <t t-else="">
+                            <p class="rf-count">
+                                <t t-esc="state.rows.length"/> invite<t t-if="state.rows.length !== 1">s</t>
+                            </p>
+                            <ul class="rf-rows">
+                                <li t-foreach="state.rows" t-as="row" t-key="row.id"
+                                    class="rf-row" t-att-style="'--i: ' + row_index">
+
+                                    <span class="rf-who" t-esc="initials(row.friend)"/>
+
+                                    <div class="rf-body">
+                                        <div class="rf-top">
+                                            <b t-esc="row.friend or 'A friend'"/>
+                                            <span t-attf-class="mart-pill {{ stateClass(row.state) }}"
+                                                  t-esc="stateLabel(row.state)"/>
+                                            <small>
+                                                invited by <t t-esc="row.invitedBy"/>
+                                                <t t-if="row.inviterCode">
+                                                    (<t t-esc="row.inviterCode"/>)
+                                                </t>
+                                                &#183; <t t-esc="ago(row.at)"/>
+                                            </small>
+                                        </div>
+                                        <p class="rf-sub">
+                                            <t t-if="row.contact">
+                                                <i class="fa fa-envelope-o" aria-hidden="true"/>
+                                                <t t-esc="row.contact"/>
+                                            </t>
+                                            <t t-if="row.joinedAs and row.joinedAs !== row.friend">
+                                                <span class="rf-dot">&#183;</span>
+                                                signed up as <t t-esc="row.joinedAs"/>
+                                            </t>
+                                            <t t-if="row.order">
+                                                <span class="rf-dot">&#183;</span>
+                                                first order <t t-esc="row.order"/>
+                                            </t>
+                                        </p>
+                                    </div>
+
+                                    <div class="rf-worth">
+                                        <t t-if="row.rewardText">
+                                            <b t-esc="row.rewardText"/>
+                                            <small>paid</small>
+                                        </t>
+                                        <t t-elif="row.state === 'joined'">
+                                            <small>waiting on<br/>their first order</small>
+                                        </t>
+                                        <t t-else="">
+                                            <small>not yet signed up</small>
+                                        </t>
+                                    </div>
+                                </li>
+                            </ul>
+                        </t>
+
+                    </div>
+                </div>
+
+            </div>
+        </Layout>
+    </t>
+
+    <t t-name="mart369_account.RewardDialog">
+        <Dialog size="'md'" contentClass="'rf-dialog'" title="'What a referral pays'">
+            <p class="rf-dialog-sub">
+                Paid into the inviter's 369 Wallet when the person they invited
+                pays for their first order.
+            </p>
+            <p t-if="state.error" class="rf-dialog-error" role="alert" t-esc="state.error"/>
+
+            <label class="rf-dialog-field">
+                <span>Reward</span>
+                <input type="number" min="0" step="1" t-att-value="state.value"
+                       t-on-input="(ev) => this.edit(ev)"/>
+            </label>
+
+            <p class="rf-dialog-hint">
+                <i class="fa fa-info-circle" aria-hidden="true"/>
+                Rewards already paid keep what they were worth - the amount is
+                copied onto the invite when it is paid - so this only changes
+                what is paid next.
+            </p>
+
+            <t t-set-slot="footer">
+                <button class="btn btn-primary" t-att-disabled="!canSave or state.busy"
+                        t-on-click="() => this.save()">Save</button>
+                <button class="btn btn-secondary"
+                        t-on-click="() => this.props.close()">Cancel</button>
+            </t>
+        </Dialog>
+    </t>
+
+</templates>

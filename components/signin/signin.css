@@ -334,3 +334,12 @@ input.si-input::placeholder, .si-input input::placeholder { color: #9aabb8; }
 @media (prefers-reduced-motion: reduce) {
   .si-page *, .si-page *::before, .si-page *::after { animation: none !important; transition: none !important; }
 }
+
+/* A referral code is read off a screenshot or a paper slip and typed by hand,
+   so it is spaced out and always upper case - the field upper-cases as you
+   type, and this keeps what you see matching what was sent. */
+.si-code {
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  font-weight: 600;
+}

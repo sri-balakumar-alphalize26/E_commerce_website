@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--
+        The referrals desk: the app's own console screen, inside Odoo.
+
+        A client action rather than a view, because none of Odoo's view types
+        puts the four tiles, the reward setting and the invites on one screen -
+        and the question this answers ("is this worth running") is read off the
+        tiles rather than off the rows. The same choice the reviews desk next
+        door made.
+
+        `path` gives it a clean URL, /odoo/mart-referrals.
+    -->
+    <record id="action_mart369_referral_desk" model="ir.actions.client">
+        <field name="name">Referrals</field>
+        <field name="tag">mart369_account.referrals</field>
+        <field name="path">mart-referrals</field>
+    </record>
+
+</odoo>
