@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Concept C — Airy</title>
+<style>
+  :root{
+    --ink:#161d26; --ink-2:#4a5866; --muted:#8290a0; --line:#eceff4; --bg:#f6f7fb; --card:#fff;
+    --indigo:#4f5bd5; --indigo-soft:#eef0fe; --mint:#0f9d76; --mint-soft:#e7f7f1;
+    --amber:#c98a06; --amber-soft:#fdf4e3; --rose:#d1495b; --rose-soft:#fdeef0;
+    --r:18px; --sh:0 1px 3px rgba(22,29,38,.04), 0 12px 30px -20px rgba(22,29,38,.25);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;font-size:14px;-webkit-font-smoothing:antialiased}
+  svg{stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .app{display:grid;grid-template-columns:244px minmax(0,1fr);gap:0;min-height:100vh;padding:14px;gap:14px}
+  /* ---------- floating sidebar card ---------- */
+  .side{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);padding:20px 14px;display:flex;flex-direction:column;gap:20px;position:sticky;top:14px;height:calc(100vh - 28px)}
+  .brand{display:flex;align-items:center;gap:10px;padding:0 8px}
+  .mark{width:34px;height:34px;border-radius:11px;background:linear-gradient(140deg,#5b67e0,#3a45b8);color:#fff;display:grid;place-items:center;font-weight:800;font-size:11.5px}
+  .brand b{font-size:14.5px;font-weight:650;display:block;line-height:1.2;letter-spacing:-.01em}
+  .brand small{font-size:11.5px;color:var(--muted)}
+  nav{display:flex;flex-direction:column;gap:16px;flex:1;overflow:auto}
+  .grp p{margin:0 0 4px;padding:0 10px;font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#a9b3c1}
+  .grp a{display:flex;align-items:center;gap:11px;padding:9px 10px;border-radius:12px;color:var(--ink-2);text-decoration:none;font-size:13.5px;font-weight:550}
+  .grp a:hover{background:#f6f7fb}
+  .grp a.cur{background:var(--indigo-soft);color:#3a45b8;font-weight:700}
+  .grp svg{width:18px;height:18px;flex:none}
+  .tag{margin-left:auto;font-size:11px;font-weight:800;border-radius:999px;padding:1px 8px;background:#f0f2f7;color:var(--muted)}
+  .tag.hot{background:var(--rose-soft);color:var(--rose)}
+  .promo{background:linear-gradient(150deg,#4f5bd5,#7b5cd6);color:#fff;border-radius:14px;padding:14px;font-size:12.5px;line-height:1.45}
+  .promo b{display:block;font-size:13.5px;margin-bottom:3px}
+  .promo button{margin-top:10px;border:0;background:rgba(255,255,255,.2);color:#fff;font:inherit;font-size:12px;font-weight:700;padding:6px 11px;border-radius:9px;cursor:pointer}
+  .me{display:flex;align-items:center;gap:10px;padding-top:14px;border-top:1px solid var(--line)}
+  .av{width:32px;height:32px;border-radius:999px;background:#e5e8fb;color:#4550c0;display:grid;place-items:center;font-size:11.5px;font-weight:700}
+  /* ---------- content ---------- */
+  .main{min-width:0;display:flex;flex-direction:column;gap:14px}
+  header.top{display:flex;align-items:center;gap:12px}
+  header.top h1{margin:0;font-size:24px;font-weight:650;letter-spacing:-.03em}
+  header.top .when{font-size:13px;color:var(--muted);margin-top:2px}
+  .srch{margin-left:auto;display:flex;align-items:center;gap:9px;width:280px;height:40px;padding:0 14px;border-radius:999px;background:#fff;box-shadow:var(--sh);color:var(--muted);font-size:13px}
+  .ibtn{width:40px;height:40px;border:0;border-radius:999px;background:#fff;box-shadow:var(--sh);display:grid;place-items:center;color:var(--ink-2);position:relative;cursor:pointer}
+  .ibtn i{position:absolute;top:9px;right:10px;width:7px;height:7px;border-radius:999px;background:var(--rose);border:2px solid #fff}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  .stat{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);padding:18px}
+  .ic{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;margin-bottom:12px}
+  .i1{background:var(--indigo-soft);color:var(--indigo)} .i2{background:var(--amber-soft);color:var(--amber)}
+  .i3{background:var(--mint-soft);color:var(--mint)} .i4{background:var(--rose-soft);color:var(--rose)}
+  .stat .lbl{font-size:12.5px;color:var(--muted);font-weight:550}
+  .stat .num{font-size:30px;font-weight:650;letter-spacing:-.035em;margin:4px 0 8px;font-variant-numeric:tabular-nums}
+  .stat .foot{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:7px}
+  .chip{font-weight:700;border-radius:999px;padding:2px 8px;font-size:11.5px}
+  .chip.up{background:var(--mint-soft);color:var(--mint)} .chip.dn{background:var(--rose-soft);color:var(--rose)}
+  .two{display:grid;grid-template-columns:1.5fr 1fr;gap:14px;align-items:start}
+  .card{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden}
+  .card>.h{display:flex;align-items:center;gap:10px;padding:18px 20px 6px}
+  .card h2{margin:0;font-size:15.5px;font-weight:650;letter-spacing:-.015em}
+  .card .h p{margin:3px 0 0;font-size:12.5px;color:var(--muted)}
+  .pillbtn{margin-left:auto;height:32px;padding:0 13px;border:0;border-radius:999px;background:#f3f4f9;font:inherit;font-size:12.5px;font-weight:700;color:var(--ink-2);cursor:pointer}
+  .pillbtn:hover{background:#e9ebf4}
+  /* area chart */
+  .chart{padding:6px 12px 14px}
+  .chart svg{width:100%;height:170px;overflow:visible}
+  .xr{display:flex;justify-content:space-between;padding:6px 8px 0;font-size:11px;color:var(--muted)}
+  /* donut-ish list */
+  .rows{list-style:none;margin:0;padding:10px 12px 16px}
+  .rows li{display:flex;align-items:center;gap:12px;padding:9px 8px;border-radius:12px}
+  .rows li:hover{background:#f7f8fc}
+  .rows .n{flex:1;font-size:13.5px;color:var(--ink-2);font-weight:550}
+  .rows .v{font-weight:700;font-variant-numeric:tabular-nums}
+  .track{height:6px;border-radius:999px;background:#f0f2f7;overflow:hidden;width:86px}
+  .track span{display:block;height:100%;border-radius:999px;background:var(--indigo)}
+  /* orders list as cards */
+  .olist{list-style:none;margin:0;padding:10px 12px 16px;display:flex;flex-direction:column;gap:4px}
+  .olist li{display:flex;align-items:center;gap:14px;padding:12px;border-radius:14px}
+  .olist li:hover{background:#f7f8fc}
+  .oav{width:38px;height:38px;border-radius:999px;background:#eef0fe;color:#4550c0;display:grid;place-items:center;font-size:12.5px;font-weight:700;flex:none}
+  .oinfo{flex:1;min-width:0}
+  .oinfo b{display:block;font-size:13.8px;font-weight:600}
+  .oinfo small{font-size:12px;color:var(--muted)}
+  .state{font-size:12px;font-weight:700;border-radius:999px;padding:4px 11px}
+  .s-pack{background:var(--amber-soft);color:var(--amber)} .s-out{background:var(--indigo-soft);color:var(--indigo)}
+  .s-done{background:var(--mint-soft);color:var(--mint)} .s-late{background:var(--rose-soft);color:var(--rose)}
+  .amt{font-weight:700;font-variant-numeric:tabular-nums;min-width:70px;text-align:right}
+  @media (max-width:1040px){.app{grid-template-columns:1fr}.side{display:none}.stats{grid-template-columns:repeat(2,1fr)}.two{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand"><span class="mark">369</span><span><b>369 Mart</b><small>Admin console</small></span></div>
+    <nav>
+      <div class="grp"><p>Overview</p>
+        <a class="cur" href="#"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="2"/><rect x="14" y="3" width="7" height="5" rx="2"/><rect x="14" y="12" width="7" height="9" rx="2"/><rect x="3" y="16" width="7" height="5" rx="2"/></svg>Dashboard</a>
+      </div>
+      <div class="grp"><p>Sales</p>
+        <a href="#"><svg viewBox="0 0 24 24"><path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5"/></svg>Orders<span class="tag hot">14</span></a>
+        <a href="#"><svg viewBox="0 0 24 24"><path d="M3 7h11v10H3z"/><path d="M14 10h4l3 3v4h-7z"/><circle cx="7" cy="19" r="2"/><circle cx="17" cy="19" r="2"/></svg>Returns</a>
+        <a href="#"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-5 6-5s6 1.7 6 5"/></svg>Customers</a>
+        <a href="#"><svg viewBox="0 0 24 24"><path d="M4 9V6h16v3a2.5 2.5 0 000 5v3H4v-3a2.5 2.5 0 000-5z"/></svg>Offers</a>
+        <a href="#"><svg viewBox="0 0 24 24"><path d="M12 4l2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4L4.2 9.7l5.4-.8z"/></svg>Reviews<span class="tag">3</span></a>
+      </div>
+      <div class="grp"><p>Store</p>
+        <a href="#"><svg viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg>Home page</a>
+        <a href="#"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 10h18"/></svg>Products<span class="tag">6</span></a>
+        <a href="#"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 14a1.7 1.7 0 00.3 1.9 2 2 0 11-2.8 2.8 1.7 1.7 0 00-2.9 1.2 2 2 0 11-4 0 1.7 1.7 0 00-2.9-1.2 2 2 0 11-2.8-2.8A1.7 1.7 0 004 14a2 2 0 110-4 1.7 1.7 0 001.2-2.9 2 2 0 112.8-2.8A1.7 1.7 0 0011 4a2 2 0 114 0 1.7 1.7 0 002.9 1.2 2 2 0 112.8 2.8A1.7 1.7 0 0020 10a2 2 0 110 4z"/></svg>Settings</a>
+      </div>
+      <div class="promo"><b>3 returns pending</b>Two are past the refund window. Clear them before close.<button>Open returns</button></div>
+    </nav>
+    <div class="me"><span class="av">SS</span><span><b style="font-size:13px;font-weight:650;display:block">Shan S</b><small style="font-size:11.5px;color:var(--muted)">Store manager</small></span></div>
+  </aside>
+
+  <div class="main">
+    <header class="top">
+      <div><h1>Good morning, Shan</h1><div class="when">Monday, 22 September · 38 orders so far today</div></div>
+      <div class="srch"><svg viewBox="0 0 24 24" style="width:15px;height:15px"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.2-3.2"/></svg>Search anything</div>
+      <button class="ibtn"><svg viewBox="0 0 24 24" style="width:18px;height:18px"><path d="M18 8a6 6 0 10-12 0c0 6-2 7-2 7h16s-2-1-2-7"/><path d="M13.7 20a2 2 0 01-3.4 0"/></svg><i></i></button>
+      <span class="av" style="width:40px;height:40px;box-shadow:var(--sh)">SS</span>
+    </header>
+
+    <section class="stats">
+      <div class="stat"><div class="ic i1"><svg viewBox="0 0 24 24" style="width:19px;height:19px"><path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5"/></svg></div>
+        <div class="lbl">Orders today</div><div class="num">38</div>
+        <div class="foot"><span class="chip up">▲ 12%</span> ₹24,180 taken</div></div>
+      <div class="stat"><div class="ic i2"><svg viewBox="0 0 24 24" style="width:19px;height:19px"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg></div>
+        <div class="lbl">Waiting to be packed</div><div class="num">14</div>
+        <div class="foot"><span class="chip dn">2 late</span> oldest 26 min</div></div>
+      <div class="stat"><div class="ic i3"><svg viewBox="0 0 24 24" style="width:19px;height:19px"><path d="M3 7h11v10H3z"/><path d="M14 10h4l3 3v4h-7z"/><circle cx="7" cy="19" r="2"/><circle cx="17" cy="19" r="2"/></svg></div>
+        <div class="lbl">Out for delivery</div><div class="num">9</div>
+        <div class="foot">23 live in all</div></div>
+      <div class="stat"><div class="ic i4"><svg viewBox="0 0 24 24" style="width:19px;height:19px"><rect x="2.5" y="6" width="19" height="12" rx="3"/><circle cx="12" cy="12" r="2.6"/></svg></div>
+        <div class="lbl">Cash to collect</div><div class="num">₹6,420</div>
+        <div class="foot">across 11 orders</div></div>
+    </section>
+
+    <div class="two">
+      <section class="card">
+        <div class="h"><div><h2>Orders a day</h2><p>The last fortnight</p></div><button class="pillbtn">Open orders</button></div>
+        <div class="chart">
+          <svg viewBox="0 0 600 170" preserveAspectRatio="none">
+            <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#4f5bd5" stop-opacity=".28"/><stop offset="100%" stop-color="#4f5bd5" stop-opacity="0"/>
+            </linearGradient></defs>
+            <path d="M0 120 L46 96 L92 128 L138 82 L184 68 L230 104 L276 48 L322 86 L368 112 L414 60 L460 30 L506 70 L552 18 L600 92 L600 170 L0 170 Z" fill="url(#g)" stroke="none"/>
+            <path d="M0 120 L46 96 L92 128 L138 82 L184 68 L230 104 L276 48 L322 86 L368 112 L414 60 L460 30 L506 70 L552 18 L600 92" fill="none" stroke="#4f5bd5" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+            <circle cx="552" cy="18" r="4.5" fill="#fff" stroke="#4f5bd5" stroke-width="2.5" vector-effect="non-scaling-stroke"/>
+          </svg>
+          <div class="xr"><span>9 Sep</span><span>12</span><span>15</span><span>18</span><span>21</span><span>Today</span></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="h"><div><h2>Customers</h2><p>1,284 with an account</p></div></div>
+        <ul class="rows">
+          <li><span class="n">New this week</span><span class="track"><span style="width:18%"></span></span><span class="v">46</span></li>
+          <li><span class="n">Ordered in 30 days</span><span class="track"><span style="width:40%"></span></span><span class="v">40%</span></li>
+          <li><span class="n">Have a mobile number</span><span class="track"><span style="width:93%"></span></span><span class="v">93%</span></li>
+          <li><span class="n">Dormant</span><span class="track"><span style="width:19%;background:#c3c9d6"></span></span><span class="v">238</span></li>
+        </ul>
+      </section>
+    </div>
+
+    <section class="card">
+      <div class="h"><div><h2>Latest orders</h2><p>Live from the shop</p></div><button class="pillbtn">See all 23</button></div>
+      <ul class="olist">
+        <li><span class="oav">DR</span><span class="oinfo"><b>Divya R · #4821</b><small>6 items · 4 min ago</small></span><span class="state s-pack">Packing</span><span class="amt">₹1,240</span></li>
+        <li><span class="oav">AK</span><span class="oinfo"><b>Arun K · #4820</b><small>2 items · 18 min ago</small></span><span class="state s-out">Out for delivery</span><span class="amt">₹640</span></li>
+        <li><span class="oav">MS</span><span class="oinfo"><b>Meera S · #4819</b><small>11 items · 41 min ago</small></span><span class="state s-late">Late</span><span class="amt">₹2,115</span></li>
+        <li><span class="oav">PV</span><span class="oinfo"><b>Prakash V · #4818</b><small>1 item · 1 hr ago</small></span><span class="state s-done">Delivered</span><span class="amt">₹380</span></li>
+        <li><span class="oav">NT</span><span class="oinfo"><b>Nisha T · #4817</b><small>8 items · 1 hr ago</small></span><span class="state s-done">Delivered</span><span class="amt">₹1,860</span></li>
+      </ul>
+    </section>
+  </div>
+</div>
+</body>
+</html>

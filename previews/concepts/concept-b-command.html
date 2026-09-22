@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Concept B — Command</title>
+<style>
+  :root{
+    --navy:#0c2a3a; --navy-2:#081e2b; --ink:#0f1c24; --ink-2:#3d525e; --muted:#77878f;
+    --line:#e3e9ed; --line-2:#eef2f5; --bg:#f5f7f9; --card:#fff;
+    --accent:#0a78ab; --orange:#f7931e; --pos:#137a4d; --neg:#c23a2f; --warn:#a9700c;
+    --r:10px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;font-size:13.5px;-webkit-font-smoothing:antialiased}
+  svg{stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .app{display:grid;grid-template-columns:64px minmax(0,1fr);min-height:100vh}
+  /* ---------- icon rail: brand navy, labels on hover ---------- */
+  .rail{background:linear-gradient(180deg,var(--navy),var(--navy-2));display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 0;position:sticky;top:0;height:100vh;color:#d7e6ee}
+  .rail .mark{width:34px;height:34px;border-radius:10px;background:rgba(255,255,255,.12);display:grid;place-items:center;font-weight:800;font-size:11.5px;color:#fff;margin-bottom:10px}
+  .rail a{position:relative;width:40px;height:40px;border-radius:11px;display:grid;place-items:center;color:rgba(215,230,238,.72);text-decoration:none}
+  .rail a:hover{background:rgba(255,255,255,.1);color:#fff}
+  .rail a.cur{background:rgba(255,255,255,.16);color:#fff}
+  .rail a.cur::before{content:"";position:absolute;left:-12px;top:10px;bottom:10px;width:3px;border-radius:0 3px 3px 0;background:var(--orange)}
+  .rail a em{position:absolute;top:-2px;right:-2px;min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:var(--orange);color:#2a1600;font-style:normal;font-size:10px;font-weight:800;display:grid;place-items:center}
+  .rail a span{position:absolute;left:52px;white-space:nowrap;background:#0f1c24;color:#fff;font-size:12px;font-weight:600;padding:4px 9px;border-radius:7px;opacity:0;pointer-events:none;transition:opacity .12s}
+  .rail a:hover span{opacity:1}
+  .rail .sep{flex:1}
+  .rail svg{width:19px;height:19px}
+  /* ---------- top ---------- */
+  .main{min-width:0;display:flex;flex-direction:column}
+  header.top{display:flex;align-items:center;gap:12px;padding:0 22px;height:56px;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+  .crumb{font-size:12.5px;color:var(--muted)}
+  header.top h1{margin:0;font-size:17px;font-weight:700;letter-spacing:-.02em}
+  .seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-left:18px}
+  .seg button{border:0;background:#fff;font:inherit;font-size:12.5px;font-weight:600;color:var(--ink-2);padding:6px 11px;cursor:pointer}
+  .seg button+button{border-left:1px solid var(--line)}
+  .seg button.on{background:var(--ink);color:#fff}
+  .srch{margin-left:auto;display:flex;align-items:center;gap:8px;width:280px;height:32px;padding:0 10px;border:1px solid var(--line);border-radius:8px;color:var(--muted);font-size:12.5px}
+  .srch kbd{margin-left:auto;font:inherit;font-size:10.5px;border:1px solid var(--line);border-radius:4px;padding:0 4px}
+  .ibtn{width:32px;height:32px;border:1px solid var(--line);border-radius:8px;background:#fff;display:grid;place-items:center;color:var(--ink-2);position:relative;cursor:pointer}
+  .ibtn i{position:absolute;top:6px;right:7px;width:6px;height:6px;border-radius:999px;background:var(--neg)}
+  .av{width:30px;height:30px;border-radius:8px;background:var(--navy);color:#fff;display:grid;place-items:center;font-size:11px;font-weight:700}
+  /* ---------- body: dense ---------- */
+  main{padding:18px 22px 50px;display:flex;flex-direction:column;gap:14px}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);background:#fff;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+  .kpi{padding:14px 16px;border-right:1px solid var(--line-2);display:flex;flex-direction:column;gap:4px}
+  .kpi:last-child{border-right:0}
+  .kpi .lbl{font-size:11.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:650}
+  .kpi .num{font-size:25px;font-weight:700;letter-spacing:-.03em;font-variant-numeric:tabular-nums;display:flex;align-items:baseline;gap:8px}
+  .kpi .num s{text-decoration:none;font-size:11.5px;font-weight:700}
+  .up{color:var(--pos)} .dn{color:var(--neg)}
+  .kpi .sub{font-size:12px;color:var(--muted)}
+  .spark{height:22px;display:flex;align-items:flex-end;gap:2px;margin-top:2px}
+  .spark span{flex:1;background:#cfe0e9;border-radius:2px}
+  .spark span:last-child{background:var(--accent)}
+  .cols{display:grid;grid-template-columns:minmax(0,1fr) 312px;gap:14px;align-items:start}
+  .card{background:#fff;border:1px solid var(--line);border-radius:var(--r)}
+  .card>.h{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--line-2)}
+  .card h2{margin:0;font-size:13.5px;font-weight:700;letter-spacing:-.01em}
+  .card .h .r{margin-left:auto;display:flex;gap:6px}
+  .mini{height:28px;padding:0 9px;border:1px solid var(--line);border-radius:7px;background:#fff;font:inherit;font-size:12px;font-weight:650;color:var(--ink-2);cursor:pointer}
+  .mini.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:left;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:#8d9ba3;font-weight:650;padding:8px 14px;background:#fafcfd;border-bottom:1px solid var(--line-2)}
+  td{padding:9px 14px;border-bottom:1px solid var(--line-2);color:var(--ink-2);white-space:nowrap}
+  tr:hover td{background:#fafcfd}
+  tr:last-child td{border-bottom:0}
+  td.id{font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
+  td.amt{text-align:right;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
+  .pill{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:6px;background:var(--line-2);color:var(--ink-2)}
+  .pill.pack{background:#fff3e0;color:var(--warn)} .pill.out{background:#e6f2f8;color:#075d80}
+  .pill.done{background:#e7f4ed;color:var(--pos)} .pill.late{background:#fdecea;color:var(--neg)}
+  .act{font-size:12px;font-weight:700;color:var(--accent);cursor:pointer}
+  .queue{list-style:none;margin:0;padding:8px}
+  .queue li{display:flex;gap:10px;align-items:flex-start;padding:9px 8px;border-radius:8px}
+  .queue li:hover{background:#f7fafb}
+  .qi{flex:none;width:26px;height:26px;border-radius:7px;display:grid;place-items:center;background:#eef5f9;color:var(--accent)}
+  .qi.warn{background:#fff3e0;color:var(--warn)} .qi.bad{background:#fdecea;color:var(--neg)}
+  .queue b{display:block;font-size:12.8px;font-weight:600;color:var(--ink);line-height:1.35}
+  .queue small{font-size:11.5px;color:var(--muted)}
+  .bars{display:flex;align-items:flex-end;gap:6px;height:120px;padding:14px}
+  .bar{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:6px;height:100%}
+  .bar span{width:100%;border-radius:3px;background:#0a78ab}
+  .bar em{font-style:normal;font-size:10px;color:var(--muted)}
+  .bar.dim span{background:#c9dae4}
+  @media (max-width:1040px){.kpis{grid-template-columns:repeat(2,1fr)}.cols{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="rail">
+    <div class="mark">369</div>
+    <a class="cur" href="#"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="2"/><rect x="14" y="3" width="7" height="5" rx="2"/><rect x="14" y="12" width="7" height="9" rx="2"/><rect x="3" y="16" width="7" height="5" rx="2"/></svg><span>Dashboard</span></a>
+    <a href="#"><svg viewBox="0 0 24 24"><path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5"/></svg><em>14</em><span>Orders</span></a>
+    <a href="#"><svg viewBox="0 0 24 24"><path d="M3 7h11v10H3z"/><path d="M14 10h4l3 3v4h-7z"/><circle cx="7" cy="19" r="2"/><circle cx="17" cy="19" r="2"/></svg><span>Returns</span></a>
+    <a href="#"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-5 6-5s6 1.7 6 5"/></svg><span>Customers</span></a>
+    <a href="#"><svg viewBox="0 0 24 24"><path d="M4 9V6h16v3a2.5 2.5 0 000 5v3H4v-3a2.5 2.5 0 000-5z"/></svg><span>Offers</span></a>
+    <a href="#"><svg viewBox="0 0 24 24"><path d="M12 4l2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4L4.2 9.7l5.4-.8z"/></svg><em>3</em><span>Reviews</span></a>
+    <a href="#"><svg viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg><span>Home page</span></a>
+    <a href="#"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 10h18"/></svg><span>Products</span></a>
+    <div class="sep"></div>
+    <a href="#"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 14a1.7 1.7 0 00.3 1.9 2 2 0 11-2.8 2.8 1.7 1.7 0 00-2.9 1.2 2 2 0 11-4 0 1.7 1.7 0 00-2.9-1.2 2 2 0 11-2.8-2.8A1.7 1.7 0 004 14a2 2 0 110-4 1.7 1.7 0 001.2-2.9 2 2 0 112.8-2.8A1.7 1.7 0 0011 4a2 2 0 114 0 1.7 1.7 0 002.9 1.2 2 2 0 112.8 2.8A1.7 1.7 0 0020 10a2 2 0 110 4z"/></svg><span>Settings</span></a>
+    <a href="#"><svg viewBox="0 0 24 24"><path d="M4 9l2-5h12l2 5"/><path d="M4 9v11h16V9"/><path d="M4 9a3 3 0 006 0 3 3 0 006 0 3 3 0 006 0"/></svg><span>Storefront</span></a>
+  </aside>
+
+  <div class="main">
+    <header class="top">
+      <div><div class="crumb">Overview</div><h1>Dashboard</h1></div>
+      <div class="seg"><button class="on">Today</button><button>7 days</button><button>30 days</button></div>
+      <div class="srch"><svg viewBox="0 0 24 24" style="width:14px;height:14px"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.2-3.2"/></svg>Search<kbd>⌘K</kbd></div>
+      <button class="ibtn"><svg viewBox="0 0 24 24" style="width:16px;height:16px"><path d="M18 8a6 6 0 10-12 0c0 6-2 7-2 7h16s-2-1-2-7"/><path d="M13.7 20a2 2 0 01-3.4 0"/></svg><i></i></button>
+      <span class="av">SS</span>
+    </header>
+
+    <main>
+      <section class="kpis">
+        <div class="kpi"><div class="lbl">Orders today</div><div class="num">38 <s class="up">▲ 12%</s></div><div class="sub">₹24,180 taken</div>
+          <div class="spark"><span style="height:40%"></span><span style="height:62%"></span><span style="height:48%"></span><span style="height:70%"></span><span style="height:55%"></span><span style="height:82%"></span><span style="height:64%"></span></div></div>
+        <div class="kpi"><div class="lbl">Waiting to be packed</div><div class="num">14 <s class="dn">2 late</s></div><div class="sub">oldest waiting 26 min</div></div>
+        <div class="kpi"><div class="lbl">Out for delivery</div><div class="num">9</div><div class="sub">23 live in all</div></div>
+        <div class="kpi"><div class="lbl">Cash to collect</div><div class="num">₹6,420</div><div class="sub">across 11 orders</div></div>
+      </section>
+
+      <div class="cols">
+        <section class="card">
+          <div class="h"><h2>Order queue</h2><div class="r"><button class="mini on">Needs action 14</button><button class="mini">Out 9</button><button class="mini">All 23</button></div></div>
+          <table>
+            <thead><tr><th>Order</th><th>Customer</th><th>Items</th><th>Placed</th><th>Status</th><th style="text-align:right">Total</th><th></th></tr></thead>
+            <tbody>
+              <tr><td class="id">#4821</td><td>Divya R</td><td>6</td><td>4 min</td><td><span class="pill pack">Packing</span></td><td class="amt">₹1,240</td><td><span class="act">Pack →</span></td></tr>
+              <tr><td class="id">#4820</td><td>Arun K</td><td>2</td><td>18 min</td><td><span class="pill out">Out</span></td><td class="amt">₹640</td><td><span class="act">Track →</span></td></tr>
+              <tr><td class="id">#4819</td><td>Meera S</td><td>11</td><td>41 min</td><td><span class="pill late">Late</span></td><td class="amt">₹2,115</td><td><span class="act">Chase →</span></td></tr>
+              <tr><td class="id">#4818</td><td>Prakash V</td><td>1</td><td>1 hr</td><td><span class="pill done">Delivered</span></td><td class="amt">₹380</td><td><span class="act">View →</span></td></tr>
+              <tr><td class="id">#4817</td><td>Nisha T</td><td>8</td><td>1 hr</td><td><span class="pill done">Delivered</span></td><td class="amt">₹1,860</td><td><span class="act">View →</span></td></tr>
+              <tr><td class="id">#4816</td><td>Kavin B</td><td>3</td><td>2 hr</td><td><span class="pill pack">Packing</span></td><td class="amt">₹720</td><td><span class="act">Pack →</span></td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <section class="card">
+            <div class="h"><h2>Needs you</h2></div>
+            <ul class="queue">
+              <li><span class="qi bad"><svg viewBox="0 0 24 24" style="width:14px;height:14px"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg></span><span><b>2 orders past their promised time</b><small>oldest 26 min over</small></span></li>
+              <li><span class="qi warn"><svg viewBox="0 0 24 24" style="width:14px;height:14px"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 10h18"/></svg></span><span><b>6 products at or below reorder level</b><small>an hour ago</small></span></li>
+              <li><span class="qi"><svg viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M12 4l2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4L4.2 9.7l5.4-.8z"/></svg></span><span><b>3 reviews nobody has looked at</b><small>now</small></span></li>
+              <li><span class="qi"><svg viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M3 7h11v10H3z"/><circle cx="7" cy="19" r="2"/></svg></span><span><b>3 returns waiting on a pickup or refund</b><small>now</small></span></li>
+            </ul>
+          </section>
+          <section class="card">
+            <div class="h"><h2>Orders a day</h2><div class="r"><span style="font-size:11.5px;color:var(--muted)">fortnight</span></div></div>
+            <div class="bars">
+              <div class="bar"><span style="height:46%"></span><em>9</em></div><div class="bar"><span style="height:58%"></span><em>11</em></div>
+              <div class="bar"><span style="height:41%"></span><em>13</em></div><div class="bar"><span style="height:66%"></span><em>15</em></div>
+              <div class="bar"><span style="height:72%"></span><em>17</em></div><div class="bar"><span style="height:88%"></span><em>19</em></div>
+              <div class="bar"><span style="height:95%"></span><em>21</em></div><div class="bar dim"><span style="height:52%"></span><em>22</em></div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+</body>
+</html>

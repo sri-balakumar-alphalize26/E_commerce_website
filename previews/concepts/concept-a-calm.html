@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Concept A — Calm</title>
+<style>
+  :root{
+    --ink:#101720; --ink-2:#47565f; --muted:#7a8892; --line:#e8ecef; --line-2:#f1f4f6;
+    --bg:#fbfcfd; --card:#fff; --accent:#0d7d92; --accent-soft:#e6f4f6;
+    --pos:#12795a; --neg:#c04a3e; --warn:#b07408;
+    --r:12px; --sh:0 1px 2px rgba(16,23,32,.04), 0 8px 24px -16px rgba(16,23,32,.18);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;font-size:14px;-webkit-font-smoothing:antialiased}
+  .app{display:grid;grid-template-columns:236px minmax(0,1fr);min-height:100vh}
+  /* ---------- sidebar: light, quiet, one accent ---------- */
+  .side{background:var(--card);border-right:1px solid var(--line);padding:18px 14px;display:flex;flex-direction:column;gap:22px;position:sticky;top:0;height:100vh}
+  .brand{display:flex;align-items:center;gap:10px;padding:0 6px}
+  .mark{width:30px;height:30px;border-radius:9px;background:var(--ink);color:#fff;display:grid;place-items:center;font-weight:800;font-size:12px;letter-spacing:-.03em}
+  .brand b{font-size:14px;font-weight:650;letter-spacing:-.01em;display:block;line-height:1.2}
+  .brand small{font-size:11.5px;color:var(--muted)}
+  nav{display:flex;flex-direction:column;gap:18px;flex:1;overflow:auto}
+  .grp p{margin:0 0 6px;padding:0 8px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#9aa6ae}
+  .grp a{display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:8px;color:var(--ink-2);text-decoration:none;font-size:13.5px;font-weight:500}
+  .grp a:hover{background:var(--line-2);color:var(--ink)}
+  .grp a.cur{background:var(--accent-soft);color:#0a5f70;font-weight:600}
+  .grp a.cur svg{color:var(--accent)}
+  .grp svg{width:17px;height:17px;flex:none;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;color:#94a2ab}
+  .tag{margin-left:auto;font-size:11px;font-weight:700;color:var(--muted);background:var(--line-2);border-radius:999px;padding:1px 7px}
+  .tag.hot{background:#fdeee9;color:#b8492f}
+  .me{display:flex;align-items:center;gap:10px;padding:10px 6px 0;border-top:1px solid var(--line)}
+  .av{width:30px;height:30px;border-radius:999px;background:#dfe9ec;color:#2a5a66;display:grid;place-items:center;font-size:11.5px;font-weight:700}
+  /* ---------- topbar ---------- */
+  .main{min-width:0;display:flex;flex-direction:column}
+  header.top{display:flex;align-items:center;gap:14px;padding:16px 28px;border-bottom:1px solid var(--line);background:rgba(251,252,253,.85);backdrop-filter:blur(8px);position:sticky;top:0;z-index:5}
+  header.top h1{margin:0;font-size:19px;font-weight:650;letter-spacing:-.02em}
+  header.top .when{font-size:12.5px;color:var(--muted);margin-top:1px}
+  .srch{margin-left:auto;display:flex;align-items:center;gap:8px;width:300px;height:34px;padding:0 10px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--muted);font-size:13px}
+  .srch kbd{margin-left:auto;font:inherit;font-size:11px;border:1px solid var(--line);border-radius:5px;padding:0 5px;color:#9aa6ae}
+  .ibtn{width:34px;height:34px;border:1px solid var(--line);border-radius:9px;background:#fff;display:grid;place-items:center;color:var(--ink-2);position:relative}
+  .ibtn i{position:absolute;top:7px;right:8px;width:6px;height:6px;border-radius:999px;background:var(--neg)}
+  svg{stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  /* ---------- body ---------- */
+  main{padding:26px 28px 60px;display:flex;flex-direction:column;gap:18px;max-width:1180px}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px 16px 14px;box-shadow:var(--sh)}
+  .stat .lbl{font-size:12.5px;color:var(--muted);font-weight:500;display:flex;align-items:center;gap:7px}
+  .stat .num{font-size:28px;font-weight:650;letter-spacing:-.03em;margin:8px 0 6px;font-variant-numeric:tabular-nums}
+  .stat .foot{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+  .d{font-weight:650;display:inline-flex;align-items:center;gap:3px}
+  .d.up{color:var(--pos)} .d.dn{color:var(--neg)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh)}
+  .card > .h{display:flex;align-items:flex-end;justify-content:space-between;padding:16px 18px 12px;border-bottom:1px solid var(--line-2)}
+  .card h2{margin:0;font-size:15px;font-weight:650;letter-spacing:-.01em}
+  .card .h p{margin:2px 0 0;font-size:12.5px;color:var(--muted)}
+  .ghost{height:30px;padding:0 10px;border:1px solid var(--line);border-radius:8px;background:#fff;font:inherit;font-size:12.5px;font-weight:600;color:var(--ink-2);display:inline-flex;align-items:center;gap:5px;cursor:pointer}
+  .ghost:hover{border-color:#cfd8dd}
+  .two{display:grid;grid-template-columns:1.55fr 1fr;gap:16px}
+  /* bar chart */
+  .bars{display:flex;align-items:flex-end;gap:8px;height:168px;padding:20px 18px 12px}
+  .bar{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:8px;height:100%}
+  .bar span{width:100%;border-radius:5px 5px 2px 2px;background:linear-gradient(180deg,#22a0b5,#0d7d92)}
+  .bar em{font-style:normal;font-size:10.5px;color:var(--muted)}
+  .bar.dim span{background:#dbe4e8}
+  /* list rows */
+  .rows{list-style:none;margin:0;padding:6px 8px 10px}
+  .rows li{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px;border-radius:8px;font-size:13.5px}
+  .rows li:hover{background:var(--line-2)}
+  .rows b{font-weight:500;color:var(--ink-2)}
+  .rows .v{font-weight:650;font-variant-numeric:tabular-nums}
+  /* table */
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th{text-align:left;font-size:11.5px;letter-spacing:.05em;text-transform:uppercase;color:#96a2aa;font-weight:600;padding:10px 18px;border-bottom:1px solid var(--line-2)}
+  td{padding:13px 18px;border-bottom:1px solid var(--line-2);color:var(--ink-2)}
+  tr:last-child td{border-bottom:0}
+  td.id{font-weight:650;color:var(--ink);font-variant-numeric:tabular-nums}
+  td.amt{text-align:right;font-weight:650;color:var(--ink);font-variant-numeric:tabular-nums}
+  .pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;background:var(--line-2);color:var(--ink-2)}
+  .pill::before{content:"";width:6px;height:6px;border-radius:999px;background:currentColor}
+  .pill.pack{background:#fff5e6;color:var(--warn)} .pill.out{background:var(--accent-soft);color:#0a5f70}
+  .pill.done{background:#e8f5ef;color:var(--pos)} .pill.late{background:#fdeee9;color:var(--neg)}
+  .note{display:flex;align-items:center;gap:10px;padding:13px 16px;border:1px solid #f0e2c6;background:#fffaf0;border-radius:var(--r);font-size:13.5px;color:#7a5a12}
+  @media (max-width:1000px){.app{grid-template-columns:1fr}.side{display:none}.stats{grid-template-columns:repeat(2,1fr)}.two{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand"><span class="mark">369</span><span><b>369 Mart</b><small>Admin console</small></span></div>
+    <nav>
+      <div class="grp"><p>Overview</p>
+        <a class="cur" href="#"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="2"/><rect x="14" y="3" width="7" height="5" rx="2"/><rect x="14" y="12" width="7" height="9" rx="2"/><rect x="3" y="16" width="7" height="5" rx="2"/></svg>Dashboard</a>
+      </div>
+      <div class="grp"><p>Sales</p>
+        <a href="#"><svg viewBox="0 0 24 24"><path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/></svg>Orders<span class="tag hot">14</span></a>
+        <a href="#"><svg viewBox="0 0 24 24"><path d="M3 7h11v10H3z"/><path d="M14 10h4l3 3v4h-7z"/><circle cx="7" cy="19" r="2"/><circle cx="17" cy="19" r="2"/></svg>Returns</a>
+        <a href="#"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-5 6-5s6 1.7 6 5"/><path d="M17 11a3 3 0 100-6"/></svg>Customers</a>
+        <a href="#"><svg viewBox="0 0 24 24"><path d="M4 9V6h16v3a2.5 2.5 0 000 5v3H4v-3a2.5 2.5 0 000-5z"/></svg>Offers</a>
+        <a href="#"><svg viewBox="0 0 24 24"><path d="M12 4l2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4L4.2 9.7l5.4-.8z"/></svg>Reviews<span class="tag">3</span></a>
+      </div>
+      <div class="grp"><p>Store</p>
+        <a href="#"><svg viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg>Home page</a>
+        <a href="#"><svg viewBox="0 0 24 24"><path d="M6 3h9l5 5v13H6z"/><path d="M14 3v6h6"/></svg>Product page</a>
+        <a href="#"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 10h18"/></svg>Products<span class="tag">6</span></a>
+        <a href="#"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 14a1.7 1.7 0 00.3 1.9l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-2.9 1.2 2 2 0 11-4 0 1.7 1.7 0 00-2.9-1.2l-.1.1a2 2 0 11-2.8-2.8l.1-.1A1.7 1.7 0 004 14a2 2 0 110-4 1.7 1.7 0 001.2-2.9l-.1-.1a2 2 0 112.8-2.8l.1.1A1.7 1.7 0 0011 4a2 2 0 114 0 1.7 1.7 0 002.9 1.2l.1-.1a2 2 0 112.8 2.8l-.1.1A1.7 1.7 0 0020 10a2 2 0 110 4z"/></svg>Settings</a>
+      </div>
+    </nav>
+    <div class="me"><span class="av">SS</span><span><b style="font-size:13px;font-weight:600;display:block">Shan S</b><small style="font-size:11.5px;color:var(--muted)">Store manager</small></span></div>
+  </aside>
+
+  <div class="main">
+    <header class="top">
+      <div><h1>Dashboard</h1><div class="when">Monday, 22 September · 10:24</div></div>
+      <div class="srch"><svg viewBox="0 0 24 24" style="width:15px;height:15px"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.2-3.2"/></svg>Search orders, products, customers<kbd>⌘K</kbd></div>
+      <button class="ibtn"><svg viewBox="0 0 24 24" style="width:17px;height:17px"><path d="M18 8a6 6 0 10-12 0c0 6-2 7-2 7h16s-2-1-2-7"/><path d="M13.7 20a2 2 0 01-3.4 0"/></svg><i></i></button>
+      <span class="av">SS</span>
+    </header>
+
+    <main>
+      <section class="stats">
+        <div class="stat">
+          <div class="lbl">Orders today</div><div class="num">38</div>
+          <div class="foot"><span class="d up">▲ 12%</span> ₹24,180 taken</div>
+        </div>
+        <div class="stat">
+          <div class="lbl">Waiting to be packed</div><div class="num">14</div>
+          <div class="foot"><span class="d dn">2 running late</span></div>
+        </div>
+        <div class="stat">
+          <div class="lbl">Out for delivery</div><div class="num">9</div>
+          <div class="foot">23 live in all</div>
+        </div>
+        <div class="stat">
+          <div class="lbl">Cash to collect</div><div class="num">₹6,420</div>
+          <div class="foot">across 11 orders</div>
+        </div>
+      </section>
+
+      <div class="two">
+        <section class="card">
+          <div class="h">
+            <div><h2>Orders a day</h2><p>The last fortnight</p></div>
+            <button class="ghost">Open orders <svg viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+          </div>
+          <div class="bars">
+            <div class="bar"><span style="height:46%"></span><em>9</em></div>
+            <div class="bar"><span style="height:58%"></span><em>10</em></div>
+            <div class="bar"><span style="height:41%"></span><em>11</em></div>
+            <div class="bar"><span style="height:66%"></span><em>12</em></div>
+            <div class="bar"><span style="height:72%"></span><em>13</em></div>
+            <div class="bar"><span style="height:55%"></span><em>14</em></div>
+            <div class="bar"><span style="height:80%"></span><em>15</em></div>
+            <div class="bar"><span style="height:62%"></span><em>16</em></div>
+            <div class="bar"><span style="height:49%"></span><em>17</em></div>
+            <div class="bar"><span style="height:74%"></span><em>18</em></div>
+            <div class="bar"><span style="height:88%"></span><em>19</em></div>
+            <div class="bar"><span style="height:70%"></span><em>20</em></div>
+            <div class="bar"><span style="height:95%"></span><em>21</em></div>
+            <div class="bar dim"><span style="height:52%"></span><em>22</em></div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="h"><div><h2>Customers</h2><p>1,284 with an account</p></div></div>
+          <ul class="rows">
+            <li><b>New this week</b><span class="v">46</span></li>
+            <li><b>Ordered in the last 30 days</b><span class="v">512 (40%)</span></li>
+            <li><b>Have a mobile number</b><span class="v">1,190 (93%)</span></li>
+            <li><b>Dormant</b><span class="v">238</span></li>
+          </ul>
+        </section>
+      </div>
+
+      <section class="card">
+        <div class="h"><div><h2>Latest orders</h2><p>Live from the shop</p></div><button class="ghost">See all 23</button></div>
+        <table>
+          <thead><tr><th>Order</th><th>Customer</th><th>Placed</th><th>Status</th><th style="text-align:right">Total</th></tr></thead>
+          <tbody>
+            <tr><td class="id">#4821</td><td>Divya R</td><td>4 min ago</td><td><span class="pill pack">Packing</span></td><td class="amt">₹1,240</td></tr>
+            <tr><td class="id">#4820</td><td>Arun K</td><td>18 min ago</td><td><span class="pill out">Out for delivery</span></td><td class="amt">₹640</td></tr>
+            <tr><td class="id">#4819</td><td>Meera S</td><td>41 min ago</td><td><span class="pill late">Late</span></td><td class="amt">₹2,115</td></tr>
+            <tr><td class="id">#4818</td><td>Prakash V</td><td>1 hr ago</td><td><span class="pill done">Delivered</span></td><td class="amt">₹380</td></tr>
+            <tr><td class="id">#4817</td><td>Nisha T</td><td>1 hr ago</td><td><span class="pill done">Delivered</span></td><td class="amt">₹1,860</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <p class="note"><svg viewBox="0 0 24 24" style="width:17px;height:17px;flex:none"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg> 3 returns are waiting on a pickup or a refund.</p>
+    </main>
+  </div>
+</div>
+</body>
+</html>
