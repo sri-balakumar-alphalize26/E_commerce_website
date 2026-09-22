@@ -1,11 +1,18 @@
 /**
- * 369 Mart product page builder.
+ * 369 Mart product page builder - "all settings".
  *
  * The real product page drawn as a phone, with a switch on everything it can
  * show. Two tabs: the shop-wide defaults, and one product at a time. Saving
  * is the same shared queue the home builder uses, so the two behave alike.
+ *
+ * This used to be the front door of 369 Mart > Product Page. It now sits
+ * behind the desk editor (editor.js) at /odoo/mart-product-advanced, the way
+ * the home page's phone builder sits behind its editor: one screen for the
+ * page as shoppers see it, one for every last field. Both read the same
+ * payload through ProductPageReader and draw the same page through
+ * mart369_product.PageBody, so they cannot disagree.
  */
-import { Component, onWillStart, useState } from "@odoo/owl";
+import { onWillStart, useState } from "@odoo/owl";
 import { _t } from "@web/core/l10n/translation";
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
@@ -14,28 +21,16 @@ import { Layout } from "@web/search/layout";
 import { standardActionServiceProps } from "@web/webclient/actions/action_service";
 import { Icon } from "@mart369_home/builder/builder";
 import { useSaveQueue } from "@mart369_home/builder/save_queue";
+import { M, STATES, ProductPageReader } from "./page_reader";
 
-const M = {
-    section: "mart369.product.section",
-    field: "mart369.product.field",
-    override: "mart369.product.override",
-    categoryValue: "mart369.product.category.value",
-    product: "product.template",
-};
-
-const STATES = [
-    ["follow", _t("Follow the default")],
-    ["show", _t("Always show")],
-    ["hide", _t("Always hide")],
-];
-
-export class ProductBuilder extends Component {
+export class ProductBuilder extends ProductPageReader {
     static template = "mart369_product.ProductBuilder";
     static components = { Layout, Icon };
     static props = { ...standardActionServiceProps };
 
     setup() {
         this.orm = useService("orm");
+        this.action = useService("action");
         this.notification = useService("notification");
         this.STATES = STATES;
 
@@ -59,10 +54,6 @@ export class ProductBuilder extends Component {
         onWillStart(() => this.load());
     }
 
-    get d() {
-        return this.state.data;
-    }
-
     async load() {
         this.state.data = await this.orm.call(M.field, "builder_load", [
             this.state.productId,
@@ -74,74 +65,8 @@ export class ProductBuilder extends Component {
 
     // ------------------------------------------------------------- reading
 
-    /** The bands that draw as an accordion inside the buy card. */
-    get accordionSections() {
-        const inAccordion = ["features", "info", "specs", "description", "returns"];
-        return this.d.sections.filter((s) => inAccordion.includes(s.key));
-    }
-
-    /** The bands that sit below the fold. */
-    get tailSections() {
-        const tail = ["delivery", "bundle", "similar"];
-        return this.d.sections.filter((s) => tail.includes(s.key));
-    }
-
     get openSectionRecord() {
         return this.d.sections.find((s) => s.id === this.state.openSection);
-    }
-
-    sectionByKey(key) {
-        return this.d.sections.find((s) => s.key === key);
-    }
-
-    row(sectionKey, fieldKey) {
-        return this.rowsOf(this.sectionByKey(sectionKey)).find(
-            (r) => r.key === fieldKey
-        );
-    }
-
-    /** A section always has rows server-side, but never assume it here:
-     *  a half-loaded payload should not take the whole screen down. */
-    rowsOf(section) {
-        return (section && section.rows) || [];
-    }
-
-    rowVisible(sectionKey, fieldKey) {
-        const row = this.row(sectionKey, fieldKey);
-        return !!row && row.visible;
-    }
-
-    rowValue(sectionKey, fieldKey) {
-        const row = this.row(sectionKey, fieldKey);
-        return row ? row.value : "";
-    }
-
-    visibleRows(section) {
-        return this.rowsOf(section).filter((r) => r.visible);
-    }
-
-    differing(section) {
-        if (this.state.tab !== "product") {
-            return 0;
-        }
-        return this.rowsOf(section).filter((r) => r.state !== "follow").length;
-    }
-
-    get offPct() {
-        const card = this.d.card;
-        if (!card || !card.mrp || !card.price) {
-            return 0;
-        }
-        return Math.round(((card.mrp - card.price) / card.mrp) * 100);
-    }
-
-    get ratingText() {
-        return this.rowValue("reviews", "rating") || "No rating yet";
-    }
-
-    get ratingCountText() {
-        const count = this.rowValue("reviews", "rating_count");
-        return count ? `(${count} ratings)` : "";
     }
 
     // ------------------------------------------------------------- writing
@@ -193,6 +118,13 @@ export class ProductBuilder extends Component {
         await this.save.flushNow();
         this.state.tab = tab;
         await this.load();
+    }
+
+    /** Back to the page as shoppers see it. */
+    backToEditor() {
+        this.action.doAction("mart369_product.action_mart369_product_editor", {
+            additionalContext: { mart369_product_id: this.state.productId },
+        });
     }
 
     // ----------------------------------------------------- picking a product

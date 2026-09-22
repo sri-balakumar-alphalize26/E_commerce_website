@@ -9,7 +9,7 @@ import { registry } from "@web/core/registry";
 const INFO_BAND = '.mart-phone .mart-band:contains("Product information")';
 
 registry.category("web_tour.tours").add("mart369_product_builder", {
-    url: "/odoo/mart-product",
+    url: "/odoo/mart-product-advanced",
     steps: () => [
         {
             content: "the builder drew the product page",

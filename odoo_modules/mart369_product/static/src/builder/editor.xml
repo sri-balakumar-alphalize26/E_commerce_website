@@ -1,0 +1,438 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!-- ==================================================== the whole screen -->
+    <t t-name="mart369_product.ProductEditor">
+        <Layout display="{ controlPanel: {} }" className="'o_mart369_editor h-100'">
+            <div class="mart-builder pe">
+
+                <header class="pe-head">
+                    <div class="pe-title">
+                        <h1>The product page</h1>
+                        <small t-if="state.tab === 'global'">
+                            What every product shows, unless it says otherwise
+                        </small>
+                        <small t-else="">
+                            Just this one: <b t-esc="productName || 'no product picked'"/>
+                        </small>
+                    </div>
+                </header>
+
+                <!-- One strip. Two of these, disagreeing about which scope you
+                     are in, would be worse than either. -->
+                <div class="pe-toolbar">
+                    <div class="mart-modes" role="tablist" t-att-data-mode="state.tab"
+                         aria-label="What you are editing">
+                        <span class="mart-modes-cap">Editing</span>
+                        <button role="tab" t-att-aria-selected="state.tab === 'global' ? 'true' : 'false'"
+                                t-attf-class="{{ state.tab === 'global' ? 'mart-on' : '' }}"
+                                t-on-click="() => this.switchTab('global')">Whole shop</button>
+                        <button role="tab" t-att-aria-selected="state.tab === 'product' ? 'true' : 'false'"
+                                t-attf-class="{{ state.tab === 'product' ? 'mart-on' : '' }}"
+                                t-on-click="() => this.switchTab('product')">One product</button>
+                    </div>
+
+                    <span t-if="state.tab === 'product' and productName and !state.picking"
+                          class="pe-prod-chip">
+                        <t t-esc="productName"/>
+                        <button class="mart-link" t-on-click="() => this.changeProduct()">Change</button>
+                    </span>
+
+                    <label t-if="hiddenCount and !state.picking" class="pe-showhidden">
+                        <input type="checkbox" t-model="state.showHidden"/>
+                        <span>Show what is switched off (<t t-esc="hiddenCount"/>)</span>
+                    </label>
+
+                    <span class="pe-toolbar-gap"/>
+
+                    <button t-if="!state.picking" class="mart-btn mart-btn-sm"
+                            t-on-click="() => this.moreSettings()"
+                            title="The field registry, and wording by category">
+                        More settings
+                    </button>
+
+                    <t t-call="mart369_home.SaveChip"/>
+                </div>
+
+                <p class="pe-hintbar">
+                    <t t-if="state.picking">
+                        Pick the product whose page you want to change. The
+                        number on a tile is how many of its parts already
+                        differ from the shop.
+                    </t>
+                    <t t-else="">
+                        Click any part of the page to edit it. The eye takes a
+                        whole section out of the app without deleting anything.
+                    </t>
+                </p>
+
+                <p t-if="state.error" class="pe-error" role="alert">
+                    We could not reach the shop. <t t-esc="state.error"/>
+                    <button class="mart-link" t-on-click="() => this.load()">Try again</button>
+                </p>
+
+                <t t-if="state.picking" t-call="mart369_product.PpPicker"/>
+
+                <div t-else="" class="pe-cols">
+                    <div class="pe-canvas-wrap">
+                        <div class="mart-canvas" t-ref="canvas">
+                            <div class="mart-chrome" aria-hidden="true">
+                                <span class="mart-dots"><i/><i/><i/></span>
+                                <span class="mart-url">369mart.com &#8212; the product page, as shoppers see it</span>
+                            </div>
+                            <div class="mart-canvas-screen">
+                                <div class="mart-canvas-scroll">
+                                    <div t-attf-class="hm-page {{ state.showHidden ? '' : 'pe-hide-off' }}"
+                                         data-mode="quick">
+                                        <div class="hm-wrap hm-view-product pe-body">
+
+                                            <p t-if="state.loading and !d" class="pe-loading">
+                                                Loading the product page...
+                                            </p>
+
+                                            <p t-elif="d and !d.product" class="pe-loading">
+                                                There is no published product to draw yet.
+                                                Publish one, then come back.
+                                            </p>
+
+                                            <t t-elif="d">
+                                                <t t-call="mart369_product.PageBody">
+                                                    <t t-set="bandTpl" t-value="'mart369_product.PpBand'"/>
+                                                </t>
+                                            </t>
+
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="pe-canvas-note">
+                            This is the shop's own page, drawn from the payload the app is served.
+                        </p>
+                    </div>
+
+                    <aside class="mart-panel pe-panel">
+                        <t t-if="selected and selected.kind === 'field'">
+                            <t t-call="mart369_product.PpFieldPanel"/>
+                        </t>
+                        <t t-elif="selected">
+                            <t t-call="mart369_product.PpSectionPanel"/>
+                        </t>
+                        <t t-else="">
+                            <t t-call="mart369_product.PpWholePanel"/>
+                        </t>
+                    </aside>
+                </div>
+
+            </div>
+        </Layout>
+    </t>
+
+    <!-- =========================================================== the picker
+         Choosing a product by browsing the shop, rather than by spelling its
+         name. The rail is the shop's own categories with counts, so the
+         question "what is in here?" is answered before you click. -->
+    <t t-name="mart369_product.PpPicker">
+        <div class="mart-pick">
+            <aside class="mart-pick-rail" aria-label="Categories">
+                <button t-attf-class="mart-pick-row {{ state.pick.categ === null ? 'mart-on' : '' }}"
+                        t-on-click="() => this.setCategory(null)">
+                    <span>All products</span>
+                    <em t-esc="state.pick.data ? state.pick.data.all_count : ''"/>
+                </button>
+
+                <button t-foreach="categoryTree" t-as="c" t-key="c.id"
+                        t-attf-class="mart-pick-row {{ state.pick.categ === c.id ? 'mart-on' : '' }}"
+                        t-attf-style="padding-left: {{ 10 + c.depth * 14 }}px"
+                        t-on-click="() => this.setCategory(c.id)">
+                    <span t-esc="c.name"/>
+                    <em t-esc="c.count"/>
+                </button>
+
+                <!-- Without this the products filed under nothing are in the
+                     shop and in no list - unreachable from this screen. -->
+                <button t-if="state.pick.data and state.pick.data.uncategorised"
+                        t-attf-class="mart-pick-row {{ state.pick.categ === 0 ? 'mart-on' : '' }}"
+                        t-on-click="() => this.setCategory(0)">
+                    <span>Uncategorised</span>
+                    <em t-esc="state.pick.data.uncategorised"/>
+                </button>
+            </aside>
+
+            <div class="mart-pick-main">
+                <div class="mart-pick-bar">
+                    <input type="text" class="mart-pick-search"
+                           aria-label="Find a product"
+                           placeholder="Find a product..."
+                           t-att-value="state.pick.q"
+                           t-on-input="(ev) => this.onPickSearch(ev)"/>
+                    <label class="pe-showhidden">
+                        <input type="checkbox" t-att-checked="state.pick.onlyEdited"
+                               t-on-change="() => this.toggleOnlyEdited()"/>
+                        <span>Only ones already edited</span>
+                    </label>
+                </div>
+
+                <p t-if="!state.pick.data" class="pe-loading">Loading the shop...</p>
+
+                <p t-elif="!pickedProducts.length" class="pe-loading">
+                    <t t-if="state.pick.onlyEdited">
+                        No product here has been given its own settings yet.
+                    </t>
+                    <t t-else="">No published product matches that.</t>
+                </p>
+
+                <t t-else="">
+                    <div class="mart-pick-grid">
+                        <button t-foreach="pickedProducts" t-as="p" t-key="p.id"
+                                t-attf-class="mart-pick-tile {{ p.id === state.productId ? 'mart-on' : '' }}"
+                                t-on-click="() => this.pickProduct(p.id)">
+                            <span class="mart-pick-img">
+                                <img t-att-src="p.image" alt="" loading="lazy"/>
+                            </span>
+                            <b t-esc="p.name"/>
+                            <small t-esc="p.code"/>
+                            <em t-if="p.differs" class="mart-count-chip">
+                                <t t-esc="p.differs"/> changed
+                            </em>
+                        </button>
+                    </div>
+                    <p t-if="pickTruncated" class="mart-pick-more">
+                        Showing <t t-esc="pickedProducts.length"/> of
+                        <t t-esc="state.pick.data.total"/>. Narrow it down with a
+                        category or the search box.
+                    </p>
+                </t>
+            </div>
+        </div>
+    </t>
+
+    <!-- ========================================================== the canvas
+         One selectable, hideable band. The body is inert: it is a drawing,
+         not a control. `section` and `body` come from PageBody. -->
+    <t t-name="mart369_product.PpBand">
+        <div t-attf-class="pe-band {{ isSelected('section', section.id) ? 'pe-on' : '' }} {{ section.show ? '' : 'pe-hidden' }}"
+             t-att-data-band="'section:' + section.id"
+             t-on-click="(ev) => this.onBandClick(section, ev)">
+            <div class="pe-tools">
+                <span class="pe-tag" t-esc="section.name"/>
+                <span t-if="!section.show" class="pe-tag pe-tag-off">Hidden</span>
+                <span class="mart-count-chip" t-if="differing(section)">
+                    <t t-esc="differing(section)"/> differ
+                </span>
+                <button class="pe-tool" t-att-aria-pressed="section.show ? 'true' : 'false'"
+                        t-att-title="section.show ? 'Hide this whole section' : 'Show this whole section'"
+                        t-on-click="() => this.toggleSection(section)">
+                    <Icon n="section.show ? 'eye' : 'eye-off'" size="14"/>
+                </button>
+            </div>
+            <div class="pe-band-in" t-att-aria-hidden="section.show ? 'false' : 'true'">
+                <t t-call="{{ body }}"/>
+            </div>
+        </div>
+    </t>
+
+    <!-- =========================================================== the panel
+         Three panels, one at a time: the whole page, one section, one field.
+         Nothing selected is not nothing to do - it is the page's own list. -->
+    <t t-name="mart369_product.PpWholePanel">
+        <header class="mart-panel-head">
+            <div>
+                <h2>The whole page</h2>
+                <p t-esc="scopeLabel"/>
+            </div>
+        </header>
+
+        <div t-if="d" class="mart-panel-body">
+            <p class="mart-hint mb-3" t-if="state.tab === 'global'">
+                These are the shop's defaults. Every product follows them
+                unless it is set to differ.
+            </p>
+            <p class="mart-hint mb-3" t-else="">
+                Anything left on <b>Follow the default</b> keeps up with the
+                shop-wide setting, now and later.
+            </p>
+
+            <ul class="pe-secs">
+                <li t-foreach="d.sections" t-as="section" t-key="section.id"
+                    t-attf-class="pe-sec-row {{ section.show ? '' : 'pe-sec-off' }}">
+                    <button t-on-click="() => this.select('section', section.id)">
+                        <b t-esc="section.name"/>
+                        <small t-esc="countLabel(section)"/>
+                    </button>
+                    <span class="mart-count-chip" t-if="differing(section)">
+                        <t t-esc="differing(section)"/> differ
+                    </span>
+                    <Icon n="'right'" size="14"/>
+                </li>
+            </ul>
+        </div>
+
+        <p class="pe-panel-note">Click anything on the page to edit that instead.</p>
+    </t>
+
+    <t t-name="mart369_product.PpSectionPanel">
+        <t t-set="section" t-value="selected.section"/>
+        <header class="mart-panel-head pe-panel-head">
+            <div>
+                <button class="mart-link pe-back" t-on-click="() => this.clearSelection()">
+                    <Icon n="'left'" size="13"/> The whole page
+                </button>
+                <h2 t-esc="section.name"/>
+                <p t-esc="scopeLabel"/>
+            </div>
+            <label class="pe-switch-lbl">
+                <span t-esc="section.show ? 'Shown' : 'Hidden'"/>
+                <button class="mart-switch" role="switch"
+                        t-att-aria-checked="section.show ? 'true' : 'false'"
+                        t-on-click="() => this.toggleSection(section)">
+                    <i/>
+                </button>
+            </label>
+        </header>
+
+        <div class="mart-panel-body">
+            <p class="mart-hint mb-3" t-if="section.note" t-esc="section.note"/>
+            <div class="mart-warn" t-if="!section.show">
+                This whole section is switched off, so none of these fields
+                show &#8212; whatever they say individually.
+            </div>
+
+            <ul class="pe-fields">
+                <li t-foreach="rowsOf(section)" t-as="row" t-key="row.id"
+                    t-attf-class="pe-field-row {{ row.visible ? '' : 'pe-field-off' }}">
+                    <button class="pe-tool"
+                            t-if="state.tab === 'global'"
+                            t-att-aria-pressed="row.show ? 'true' : 'false'"
+                            t-att-title="row.show ? 'Hide this everywhere' : 'Show this everywhere'"
+                            t-on-click="() => this.toggleGlobal(row)">
+                        <Icon n="row.show ? 'eye' : 'eye-off'" size="14"/>
+                    </button>
+                    <button class="pe-field-open" t-on-click="() => this.select('field', row.id)">
+                        <b t-esc="row.name"/>
+                        <small t-if="row.value" t-esc="row.value"/>
+                        <small t-else="" class="mart-pdp-auto">from the product</small>
+                    </button>
+                    <small t-if="state.tab === 'product' and row.state !== 'follow'"
+                           class="mart-differs">differs</small>
+                    <Icon n="'right'" size="14"/>
+                </li>
+            </ul>
+
+            <div class="mart-actions" t-if="state.tab === 'product' and differing(section)">
+                <button class="mart-btn" t-on-click="() => this.resetSection(section)">
+                    Put these back to the shop default
+                </button>
+            </div>
+        </div>
+    </t>
+
+    <t t-name="mart369_product.PpFieldPanel">
+        <t t-set="row" t-value="selected.row"/>
+        <t t-set="section" t-value="selected.section"/>
+        <header class="mart-panel-head pe-panel-head">
+            <div>
+                <button class="mart-link pe-back"
+                        t-on-click="() => this.select('section', section.id)">
+                    <Icon n="'left'" size="13"/> <t t-esc="section.name"/>
+                </button>
+                <h2 t-esc="row.name"/>
+                <p><span class="pe-key" t-esc="row.key"/></p>
+            </div>
+        </header>
+
+        <div class="mart-panel-body pe-form">
+            <p class="mart-hint mb-3" t-if="row.note" t-esc="row.note"/>
+            <div class="mart-warn" t-if="!section.show">
+                &#8220;<t t-esc="section.name"/>&#8221; is switched off, so this
+                does not show whatever you set here.
+            </div>
+
+            <!-- ====== whole shop -->
+            <t t-if="state.tab === 'global'">
+                <label class="mart-switch-row">
+                    <span>Shown on every product</span>
+                    <button class="mart-switch" role="switch"
+                            t-att-aria-checked="row.show ? 'true' : 'false'"
+                            t-on-click="() => this.toggleGlobal(row)">
+                        <i/>
+                    </button>
+                </label>
+
+                <t t-if="row.source === 'text'">
+                    <label class="mart-field">
+                        <span>Default wording</span>
+                        <textarea t-if="row.value_kind === 'lines'"
+                                  t-att-value="row.default_value"
+                                  placeholder="One per line"
+                                  t-on-input="(ev) => this.editDefault(row, ev)"/>
+                        <select t-elif="row.value_kind === 'bool'"
+                                t-on-change="(ev) => this.editDefault(row, ev)">
+                            <option value="" t-att-selected="!row.default_value">Not set</option>
+                            <option value="1" t-att-selected="row.default_value === '1'">Yes</option>
+                            <option value="0" t-att-selected="row.default_value === '0'">No</option>
+                        </select>
+                        <input t-else="" type="text" t-att-value="row.default_value"
+                               placeholder="Used for every product unless overridden"
+                               t-on-input="(ev) => this.editDefault(row, ev)"/>
+                        <em class="pe-hint" t-if="row.value_kind === 'html'">
+                            Formatting is edited in Advanced &#8594; Product Page Fields.
+                        </em>
+                        <em class="pe-hint" t-else="">
+                            Set it per category under <b>Advanced &#8594; Wording by Category</b>.
+                        </em>
+                    </label>
+                </t>
+                <p class="mart-hint pe-src" t-elif="row.source === 'odoo'">
+                    Comes from the product's own <b t-esc="row.odoo_field"/> field.
+                </p>
+                <p class="mart-hint pe-src" t-else="">
+                    Worked out by the app.
+                </p>
+            </t>
+
+            <!-- ====== one product -->
+            <t t-else="">
+                <div class="mart-radios">
+                    <label t-foreach="STATES" t-as="st" t-key="st[0]"
+                           t-attf-class="{{ row.state === st[0] ? 'mart-on' : '' }}">
+                        <input type="radio" t-att-name="'st' + row.id" t-att-value="st[0]"
+                               t-att-checked="row.state === st[0]"
+                               t-on-change="() => this.setState(row, st[0])"/>
+                        <t t-esc="st[1]"/>
+                        <small t-if="st[0] === 'follow'" class="mart-hint">
+                            (<t t-esc="row.show ? 'shown' : 'hidden'"/> right now)
+                        </small>
+                    </label>
+                </div>
+
+                <label class="mart-field" t-if="row.per_product">
+                    <span>Wording just for this product</span>
+                    <textarea t-if="row.value_kind === 'lines'"
+                              t-att-value="row.product_value"
+                              placeholder="One per line"
+                              t-on-input="(ev) => this.setProductValue(row, ev)"/>
+                    <input t-else="" type="text" t-att-value="row.product_value"
+                           t-att-placeholder="row.default_value || 'Leave empty to use the shop wording'"
+                           t-on-input="(ev) => this.setProductValue(row, ev)"/>
+                    <em class="pe-hint">
+                        Empty means this product uses the shop's words.
+                        Right now it shows <b t-esc="row.value_source"/>.
+                    </em>
+                </label>
+                <p class="mart-hint pe-src" t-else="">
+                    This field is the same for every product.
+                </p>
+
+                <div class="mart-actions" t-if="row.state !== 'follow' or row.has_override">
+                    <button class="mart-btn mart-btn-danger"
+                            t-att-disabled="state.status === 'saving'"
+                            t-on-click="() => this.resetRow(row)">
+                        Put this one back
+                    </button>
+                </div>
+            </t>
+        </div>
+    </t>
+
+</templates>

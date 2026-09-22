@@ -3,11 +3,69 @@
 The product page in the app shows about fifty things. This module decides
 **which of them a customer actually sees**, and where the wording comes from.
 
-Edit it in **369 Mart → Product Page**: the real page drawn as a phone, with a
-switch on everything. The app reads the result from
-`GET /369mart/product/<id>`.
+Edit it in **369 Mart → Product Page**: the real page, wide, with a switch on
+everything. The app reads the result from `GET /369mart/product/<id>`.
 
 ![The builder](static/description/builder_product.png)
+
+## The two screens
+
+The same page, at two levels of detail — the same split the home page makes.
+
+| | |
+|---|---|
+| **The editor** `/odoo/mart-product` | The front door. The page as shoppers see it, on a wide canvas. Click a part of it to open its fields, open a field to edit it. `static/src/builder/editor.js` |
+| **All settings** `/odoo/mart-product-advanced` | Behind the editor's "More settings". The same page in a phone frame, with every field of every section listed at once. `static/src/builder/product_builder.js` |
+
+They are not two drawings of the page. Both read the same `builder_load`
+through `ProductPageReader` (`static/src/builder/page_reader.js`) and draw the
+same markup through `mart369_product.PageBody`
+(`static/src/builder/page_reader.xml`), passing in their own band wrapper —
+`.pe-band` for the editor, `.mart-band` for the phone. A section that appears
+on one therefore appears on the other, by construction.
+
+Their chrome lives in `mart369/static/src/builder/builder.scss`, next to the
+home page's, because the tours assert on those class names.
+
+> The editor took `/odoo/mart-product` from the phone builder in 19.0.1.3.0.
+> Because a write is not flushed before the create that wants the freed path,
+> that handover needs `migrations/19.0.1.3.0/pre-migrate.py` — file order
+> alone is not enough, and without it the upgrade rolls back on
+> `ir_act_client_path_unique`.
+
+## Finding the product
+
+"One product" opens the shop to browse, not a search box. The rail is the
+shop's own `product.public.category` tree with a count on every branch, plus an
+**Uncategorised** bucket — without it the products filed under no category are
+in the shop and in no list, and unreachable from this screen. There is a search
+box over name and internal reference, and an **only ones already edited**
+filter for "what has somebody changed?".
+
+One call behind it, `product.template.mart369_page_picker()`, shared by both
+surfaces: Odoo's editor reaches it over ORM, the console over
+`GET /369mart/admin/product/catalog`.
+
+Two things it gets right that are easy to get wrong:
+
+* **A parent category uses `child_of`.** "Computers" is a heading, not a
+  shelf; nothing is filed directly against it, so an equality test shows an
+  empty grid next to a count of one.
+* **The counts roll up through `parent_path`**, from a single read of every
+  published product's categories. Counting per category is one query each
+  *and* makes a parent read 0 while clicking it shows dozens.
+
+It is built on plain `product.public.category` fields on purpose.
+`mart369_catalog` has nicer helpers (`_mart369_product_domain`, `mart_in_app`),
+but it is not in this module's `depends`, and every 369 Mart module installs on
+its own. The cost is that the rail lists categories the storefront's nav hides
+— which is right here: this groups products so you can find one, it does not
+mirror the app's navigation.
+
+One ordering rule in `editor.js`: `pickProduct` loads the new product **before**
+it leaves the picker. The other way round re-renders the editor the moment the
+flag flips, which draws the *previous* product's page until the new one lands —
+so tapping a tile flashed up the wrong product, name in the toolbar and all.
 
 ## The two switches
 
@@ -89,7 +147,7 @@ Get-CimInstance Win32_Process -Filter "Name='python.exe'" |
   ? { $_.CommandLine -match 'http-port=8097' } | % { Stop-Process -Id $_.ProcessId -Force }
 ```
 
-## The phone mock's stylesheet
+## The mock's stylesheet
 
 `static/src/scss/storefront_pdp.scss` is generated from the storefront's own
 CSS by `tools/gen_pdp_scss.py` — **do not hand-edit it**. The product page's

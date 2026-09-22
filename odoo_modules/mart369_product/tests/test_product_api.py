@@ -150,5 +150,16 @@ class TestProductBuilderTour(HttpCase):
     def test_builder_tour(self):
         # Generous: the first request after an upgrade rebuilds the backend
         # asset bundle, which takes minutes on a big database.
-        self.start_tour('/odoo/mart-product', 'mart369_product_builder',
+        self.start_tour('/odoo/mart-product-advanced',
+                        'mart369_product_builder',
+                        login='admin', timeout=600)
+
+
+@tagged('post_install', '-at_install')
+class TestProductEditorTour(HttpCase):
+
+    def test_editor_tour(self):
+        # Generous for the same reason as the builder tour above: the first
+        # request after an upgrade rebuilds the backend asset bundle.
+        self.start_tour('/odoo/mart-product', 'mart369_product_editor',
                         login='admin', timeout=600)

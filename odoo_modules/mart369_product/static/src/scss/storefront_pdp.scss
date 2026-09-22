@@ -360,3 +360,15 @@
   .pd-desc { max-height: none; }
   .pd-desc::after { display: none; }
 }
+
+/* The desk editor's wide canvas. The real page lays the gallery and the buy
+   card side by side inside `.pd-top`; the mock draws them as plain siblings,
+   because each one has to be its own selectable band. Left alone on a canvas
+   three times the width of a phone, the gallery's aspect-ratio makes a
+   picture the height of the screen. So the page is held to a readable column
+   and the stage to a sane size - the only two places the mock's flatter
+   structure shows. */
+.mart-builder .mart-canvas .hm-page {
+  .pd-page { max-width: 880px; margin-inline: auto; }
+  .pd-stage { max-width: 420px; margin-inline: auto; }
+}

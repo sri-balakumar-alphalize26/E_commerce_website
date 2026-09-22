@@ -6,8 +6,14 @@
     <menuitem id="menu_mart369_product_builder"
               name="Product Page"
               parent="mart369.menu_mart369_root"
-              action="action_mart369_product_builder"
+              action="action_mart369_product_editor"
               sequence="15"/>
+
+    <menuitem id="menu_mart369_product_builder_advanced"
+              name="Product Page (all settings)"
+              parent="mart369.menu_mart369_advanced"
+              action="action_mart369_product_builder"
+              sequence="55"/>
 
     <menuitem id="menu_mart369_product_fields"
               name="Product Page Fields"

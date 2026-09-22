@@ -1,11 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-    <!-- The visual product-page editor: the real page drawn as a phone,
-         with a switch on every field. Lives at /odoo/mart-product. -->
+    <!-- The phone builder. It used to own /odoo/mart-product; the editor below
+         does now, and this is what "More settings" opens - every field the
+         page itself has no room to offer, drawn in a phone frame. The same
+         handover the home page's builder made.
+
+         It comes first in this file so it lets go of the path before the
+         editor asks for it. That is not enough on its own - see
+         migrations/19.0.1.3.0/pre-migrate.py, which does the real work. -->
     <record id="action_mart369_product_builder" model="ir.actions.client">
-        <field name="name">Product Page</field>
+        <field name="name">Product Page (all settings)</field>
         <field name="tag">mart369_product.builder</field>
+        <field name="path">mart-product-advanced</field>
+    </record>
+
+    <!-- The front door: the real product page, wide, with a switch on every
+         part of it. The twin of mart369_home's page editor. -->
+    <record id="action_mart369_product_editor" model="ir.actions.client">
+        <field name="name">Product Page</field>
+        <field name="tag">mart369_product.editor</field>
         <field name="path">mart-product</field>
     </record>
 

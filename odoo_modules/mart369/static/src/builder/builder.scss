@@ -1401,6 +1401,275 @@
     gap: 14px;
 }
 
+// ====================================================== product page screens
+// Both product screens - the desk editor (mart369_product/.../editor.js) and
+// the phone builder behind it - draw with these. They live here, next to the
+// home page's chrome, because the tours assert on these class names and a
+// style layer split across two modules is one nobody can find.
+.mart-builder {
+    // A count of how many fields on this product differ from the shop default.
+    .mart-count-chip {
+        display: inline-flex;
+        align-items: center;
+        height: 26px;
+        padding: 0 10px;
+        border-radius: 999px;
+        background: #fff4e5;
+        color: $mart-amber;
+        font-size: 11.5px;
+        font-weight: 700;
+        box-shadow: 0 2px 8px -3px rgba(19, 33, 43, 0.3);
+    }
+
+    // ------------------------------------------------ the page being drawn
+    .mart-pdp-head {
+        padding: 6px 0 14px;
+
+        b { display: block; font-size: 17px; font-weight: 800; letter-spacing: -0.015em; }
+        small { color: $mart-muted; font-size: 12px; }
+    }
+
+    .mart-pdp-section {
+        padding: 12px 14px;
+        border: 1px solid $mart-line;
+        border-radius: 14px;
+        background: #fff;
+
+        h3 {
+            margin: 0 0 8px;
+            font-size: 14px;
+            font-weight: 800;
+            letter-spacing: -0.01em;
+        }
+    }
+
+    .mart-pdp-rows {
+        margin: 0;
+        display: grid;
+        gap: 1px;
+        background: $mart-line;
+        border-radius: 10px;
+        overflow: hidden;
+
+        > div {
+            display: grid;
+            grid-template-columns: 44% 1fr;
+            gap: 8px;
+            padding: 7px 10px;
+            background: #fff;
+            font-size: 12px;
+        }
+
+        dt { color: $mart-muted; }
+        dd { margin: 0; color: $mart-ink; word-break: break-word; }
+
+        .mart-pdp-off {
+            background: repeating-linear-gradient(
+                -45deg, #fafbfc, #fafbfc 6px, #f2f5f7 6px, #f2f5f7 12px);
+            dt, dd { color: #aab6bf; }
+        }
+    }
+
+    .mart-pdp-auto { color: #9aa8b3; font-style: italic; font-size: 11.5px; }
+
+    // --------------------------------------------------- the phone's panel
+    .mart-fieldrow {
+        padding: 12px 0;
+        border-bottom: 1px solid $mart-line;
+
+        &:last-of-type { border-bottom: 0; }
+    }
+
+    .mart-fieldrow-head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 4px;
+
+        b { flex: 1; min-width: 0; font-size: 13.5px; font-weight: 700; }
+    }
+
+    .mart-differs {
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: #fff4e5;
+        color: $mart-amber;
+        font-size: 11px;
+        font-weight: 800;
+    }
+
+    .mart-warn {
+        margin-bottom: 14px;
+        padding: 10px 12px;
+        border-radius: 10px;
+        background: #fff4e5;
+        color: #7c3a00;
+        font-size: 12.5px;
+        line-height: 1.45;
+    }
+
+    .mart-radios label small { font-weight: 400; margin-left: auto; }
+
+    // A switch on its own line, for the one question a field panel opens with.
+    .mart-switch-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 0 14px;
+        border-bottom: 1px solid $mart-line;
+        margin-bottom: 14px;
+        font-size: 13.5px;
+        font-weight: 700;
+
+        span { flex: 1; min-width: 0; }
+    }
+}
+
+// ------------------------------------------- the product editor's own parts
+// Picking a product, and the two drill-down lists the panel is made of.
+.mart-builder.pe {
+    .pe-pick {
+        position: relative;
+        min-width: 210px;
+
+        input {
+            width: 100%;
+            height: 30px;
+            padding: 0 10px;
+            border: 1px solid $mart-line;
+            border-radius: 8px;
+            background: #fff;
+            font-size: 12.5px;
+        }
+
+        // The results hang over the canvas rather than pushing the toolbar
+        // apart - a strip that changes height as you type is unusable.
+        .mart-search-results {
+            position: absolute;
+            z-index: 30;
+            top: calc(100% + 4px);
+            left: 0;
+            right: 0;
+            max-height: 260px;
+            overflow-y: auto;
+        }
+    }
+
+    .pe-prod-chip {
+        display: inline-flex;
+        align-items: center;
+        height: 26px;
+        max-width: 220px;
+        padding: 0 10px;
+        border-radius: 999px;
+        background: $mart-soft;
+        color: $mart-ink;
+        font-size: 11.5px;
+        font-weight: 700;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    // "Show what is switched off" unchecked: the page draws only what a
+    // shopper would get. Hiding is done here rather than in the template so
+    // both screens keep drawing the same markup.
+    .pe-hide-off {
+        .pe-band.pe-hidden { display: none; }
+        .mart-pdp-off { display: none; }
+    }
+
+    // ------------------------------------------------- the panel's two lists
+    .pe-secs,
+    .pe-fields {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+
+    .pe-sec-row,
+    .pe-field-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 9px 0;
+        border-bottom: 1px solid $mart-line;
+
+        &:last-child { border-bottom: 0; }
+
+        > button:not(.pe-tool) {
+            flex: 1;
+            min-width: 0;
+            display: block;
+            padding: 0;
+            border: 0;
+            background: none;
+            text-align: left;
+            cursor: pointer;
+
+            b {
+                display: block;
+                font-size: 13.5px;
+                font-weight: 700;
+                color: $mart-ink;
+            }
+
+            small {
+                display: block;
+                margin-top: 1px;
+                font-size: 11.5px;
+                color: $mart-muted;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+        }
+
+        &:hover > button:not(.pe-tool) b { color: $mart-blue; }
+
+        // The eye and the chevron keep their size whatever the label does -
+        // a long field name must not squeeze the control that switches it off.
+        > .pe-tool { flex: none; }
+        > .hm-ic { flex: none; color: $mart-muted; opacity: 0.5; }
+    }
+
+    // Struck through, not removed: you are looking at this list precisely to
+    // find the thing you switched off.
+    .pe-sec-off > button b,
+    .pe-field-off > button b {
+        color: $mart-muted;
+        text-decoration: line-through;
+    }
+
+    .pe-key {
+        display: inline-block;
+        padding: 1px 7px;
+        border-radius: 6px;
+        background: $mart-soft;
+        color: $mart-muted;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 11px;
+    }
+
+    .pe-src {
+        padding: 10px 12px;
+        border-radius: 10px;
+        background: $mart-soft;
+        color: $mart-muted;
+        font-size: 12.5px;
+        line-height: 1.45;
+    }
+
+    .pe-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        margin-bottom: 4px;
+        font-size: 11.5px;
+        font-weight: 700;
+    }
+}
+
 @keyframes mart-landed {
     0%   { outline-color: $mart-orange; background: rgba(247, 147, 30, 0.14); }
     100% { outline-color: $mart-blue;   background: transparent; }
