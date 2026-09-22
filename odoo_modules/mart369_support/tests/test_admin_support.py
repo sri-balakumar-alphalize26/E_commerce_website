@@ -93,6 +93,37 @@ class TestSupportAdminModel(Mart369OrderFixtures, TransactionCase):
         self.assertGreaterEqual(
             self.Ticket.mart369_admin_counts()['longest'], 179)
 
+    def test_the_board_and_the_desk_agree_about_the_longest_wait(self):
+        """The two screens must not answer the same question differently.
+
+        The kanban strip used to read the stored `waiting_minutes`, so it
+        reported nought for a ticket nobody had touched since it was created -
+        the one most worth surfacing - while the desk beside it had always
+        worked the wait out live.
+        """
+        self._backdate(self.ticket, hours=2)
+        self.assertEqual(self.ticket.waiting_minutes, 0,
+                         'the stored field is still frozen, as it always was')
+
+        board = self.Ticket.mart369_support_dashboard()
+        desk = self.Ticket.mart369_admin_counts()
+        self.assertGreaterEqual(board['longest'], 119)
+        self.assertEqual(board['longest'], desk['longest'])
+
+    def test_the_average_still_ignores_tickets_nobody_answered(self):
+        """Counting the unanswered ones would flatter the number the longer
+        they are ignored, which is the opposite of useful."""
+        self._backdate(self.ticket, hours=5)
+        before = self.Ticket.mart369_support_dashboard()['average']
+
+        answered = self.Ticket._mart369_open(
+            self.env.user.partner_id, 'Answered quickly')
+        answered._mart369_say('Right away', from_customer=False)
+
+        after = self.Ticket.mart369_support_dashboard()['average']
+        self.assertLessEqual(after, before,
+                             'a fast answer can only pull the average down')
+
     # --------------------------------------------------------- the payload
 
     def test_the_row_carries_what_the_queue_draws(self):

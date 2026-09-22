@@ -2,6 +2,18 @@
 
 Same contract as the customers, payments, orders, reviews, referrals and rewards
 strips: one ORM call, tiles that switch the view's own named filters on.
+
+**The waits here are worked out, not read.** `waiting_minutes` is a stored
+compute on `opened_at` and `answered_at` (ticket.py), and neither of those
+changes while a ticket sits unanswered - so it stays at whatever it was when
+the ticket was created, which is nought. Reading it here reported the shortest
+possible wait for exactly the tickets this strip exists to surface, and
+disagreed with the desk next door, which has always computed it live.
+
+The stored field stays on the model: it is right once a ticket has been
+answered, and it is what grouping and sorting in the list view use. It is only
+wrong to *read* for a ticket still waiting, which is what `_mart369_waited()`
+in ticket_admin.py is for. Both screens now ask the same question the same way.
 """
 
 from datetime import timedelta
@@ -19,23 +31,28 @@ class Mart369Ticket(models.Model):
         today = fields.Date.context_today(self)
         start = fields.Datetime.to_datetime(today)
 
-        waiting = self.search([('state', '=', 'new')])
-        open_tickets = self.search([('state', 'in', list(OPEN_STATES))])
-        answered = self.search([('answered_at', '!=', False)])
+        waiting_domain = [('state', '=', 'new')]
+        open_domain = [('state', 'in', list(OPEN_STATES))]
 
         # Average wait only over tickets somebody really answered: counting the
         # unanswered ones would flatter the number the longer they are ignored.
-        minutes = answered.mapped('waiting_minutes')
+        answered = self.search([('answered_at', '!=', False)])
+        minutes = [t._mart369_waited() for t in answered]
         average = round(sum(minutes) / len(minutes)) if minutes else 0
-        longest = max(waiting.mapped('waiting_minutes') or [0])
+
+        # The longest anybody is still waiting. Read off `opened_at` rather
+        # than the stored field, which never moves for an unanswered ticket.
+        waits = [t._mart369_waited() for t in self.search(waiting_domain)]
+        longest = max(waits) if waits else 0
 
         return {
-            'waiting': len(waiting),
-            'open': len(open_tickets),
+            'waiting': self.search_count(waiting_domain),
+            'open': self.search_count(open_domain),
             'today': self.search_count([('opened_at', '>=', start)]),
             'average': average,
             'longest': longest,
-            'unanswered': len(open_tickets.filtered(lambda t: not t.answered_at)),
+            'unanswered': self.search_count(
+                open_domain + [('answered_at', '=', False)]),
             'mine': self.search_count([
                 ('user_id', '=', self.env.user.id),
                 ('state', 'in', list(OPEN_STATES)),

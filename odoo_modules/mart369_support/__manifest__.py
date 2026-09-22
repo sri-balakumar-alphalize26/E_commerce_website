@@ -1,6 +1,6 @@
 {
     'name': '369 Mart Support',
-    'version': '19.0.1.1.0',
+    'version': '19.0.1.2.0',
     'category': 'Website',
     'summary': 'The support bot, real tickets, and order updates on WhatsApp.',
     'description': """
