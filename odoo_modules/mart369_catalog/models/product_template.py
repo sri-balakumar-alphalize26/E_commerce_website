@@ -18,11 +18,16 @@ the value wins, so supplying them here retires the fakes quietly.
 
 from odoo import fields, models
 
-# A review only counts once the customer has actually been asked for it.
+# A review only counts once the customer has actually been asked for it, and
+# only while staff are still showing it.
+#
+# Kept in step with `REVIEW_DOMAIN` in
+# mart369_product/models/product_page.py by hand - see the note there.
 RATING_DOMAIN = [
     ('consumed', '=', True),
     ('is_internal', '=', False),
     ('rating', '>=', 1),
+    ('mart369_state', '=', 'published'),
 ]
 
 

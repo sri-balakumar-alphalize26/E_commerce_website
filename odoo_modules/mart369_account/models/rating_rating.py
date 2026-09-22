@@ -79,6 +79,9 @@ class RatingRating(models.Model):
 
         existing = self._mart369_review_for(partner, product)
         if existing:
+            # `mart369_state` is deliberately absent from `write`. Moderation is
+            # the store's, not the customer's: a review staff hid must not come
+            # back because its author retyped it.
             existing.sudo().write(write)
             return existing
 
@@ -87,6 +90,7 @@ class RatingRating(models.Model):
             'res_id': product.id,
             'partner_id': partner.id,
             'mart369_verified': self._mart369_has_bought(partner, product),
+            'mart369_state': 'published',
         })
         return self.sudo().create(write)
 
@@ -121,6 +125,12 @@ class RatingRating(models.Model):
         Same model as a product review, a different `res_model`. The rider is
         the rated party rather than the subject, which is what `rated_partner_id`
         is for.
+
+        Not moderated, on purpose. The row carries a `mart369_state` because the
+        field has a default and every row on the table gets one, but nothing
+        reads it here and the staff screens filter these out by `res_model`.
+        They never reach a product page - they are the customer telling the
+        store how a delivery went - so there is nothing to publish or hide.
         """
         stars = max(1, min(5, int(values.get('stars') or 0)))
         existing = self.sudo().search([
@@ -162,4 +172,131 @@ class RatingRating(models.Model):
                            and (self.write_date - self.create_date).total_seconds() > 1),
             'helpful': self.mart369_helpful or 0,
             'verified': bool(self.mart369_verified),
+            # Their own review, so they are told why nobody else can see it.
+            'state': self.mart369_state or 'published',
+        }
+
+    # ---------------------------------------------------------- the console
+
+    # Product reviews, whatever their moderation state. The state is the one
+    # thing the screen exists to change, so it must not also be the thing that
+    # hides rows from it - `REVIEW_DOMAIN` is for the shop, not for staff.
+    ADMIN_DOMAIN = [
+        ('res_model', '=', 'product.template'),
+        ('consumed', '=', True),
+        ('is_internal', '=', False),
+        ('rating', '>=', 1),
+    ]
+
+    def _mart369_admin_serialize(self, names=None):
+        """One review as the staff screens draw it.
+
+        Its own shape rather than a wider `_mart369_serialize`: that one is a
+        customer reading their own reviews back. Who wrote a review, and what
+        staff have done with it, are not part of that.
+
+        `names` is an optional {product id: name} so a list of reviews does not
+        read one product at a time.
+        """
+        self.ensure_one()
+        if names is None:
+            names = {}
+        return {
+            'id': self.id,
+            'productId': self.res_id,
+            'product': names.get(self.res_id) or self.res_name or '',
+            'by': self.partner_id.name or 'Someone',
+            'stars': int(round(self.rating)),
+            'title': self.mart369_title or '',
+            'text': self.feedback or '',
+            'tags': [t for t in (self.mart369_tags or '').split(',') if t],
+            'photos': self.mart369_photos or 0,
+            'verified': bool(self.mart369_verified),
+            'helpful': self.mart369_helpful or 0,
+            'at': int(self.create_date.timestamp() * 1000) if self.create_date else None,
+            'state': self.mart369_state or 'published',
+        }
+
+    @api.model
+    def mart369_admin_counts(self):
+        """Just the tallies, for the badge in the console's sidebar.
+
+        `search_count` rather than `mart369_admin_list`: the badge asks every
+        minute and wants one number, and building every review's payload to
+        throw all of it away is the kind of cost nobody notices until the shop
+        has a few thousand reviews.
+        """
+        return {
+            'pending': self.search_count(
+                self.ADMIN_DOMAIN + [('mart369_state', '=', 'pending')]),
+            'published': self.search_count(
+                self.ADMIN_DOMAIN + [('mart369_state', '=', 'published')]),
+            'hidden': self.search_count(
+                self.ADMIN_DOMAIN + [('mart369_state', '=', 'hidden')]),
+        }
+
+    @api.model
+    def mart369_admin_list(self, state=None, q=None, verified=None, photos=None):
+        """The reviews the staff screens list, and the tiles above them.
+
+        The tiles count every product review, not the filtered ones - a tab
+        that said "Waiting 3" only while you were looking at Waiting would be
+        useless for deciding whether to look. That holds for `verified` and
+        `photos` too: narrowing the list must not change how much is waiting.
+
+        `verified` and `photos` are the two filters the Odoo search view has
+        always offered (views/review_views.xml) and the console never did.
+        Both are tri-state - None means "do not care", so a screen that never
+        sends them behaves exactly as before.
+        """
+        every = self.search(self.ADMIN_DOMAIN, order='create_date desc')
+
+        rows_for_counts = every
+        matched = every
+        if state in ('pending', 'published', 'hidden'):
+            matched = matched.filtered(lambda r: (r.mart369_state or 'published') == state)
+
+        term = (q or '').strip()
+        if term:
+            # Product name is a search of its own: `res_id` is a bare integer,
+            # not a relation, so it cannot be walked in a domain.
+            hits = self.env['product.template'].sudo().search(
+                [('name', 'ilike', term)]).ids
+            low = term.lower()
+            matched = matched.filtered(
+                lambda r: r.res_id in hits
+                or low in (r.partner_id.name or '').lower()
+                or low in (r.mart369_title or '').lower()
+                or low in (r.feedback or '').lower())
+
+        # Tri-state, and read as a flag rather than a truthiness test: `False`
+        # has to be able to mean "only the unverified ones".
+        if verified is not None:
+            want = bool(verified)
+            matched = matched.filtered(lambda r: bool(r.mart369_verified) == want)
+        if photos is not None:
+            want = bool(photos)
+            matched = matched.filtered(lambda r: bool(r.mart369_photos) == want)
+
+        names = {}
+        if matched:
+            products = self.env['product.template'].sudo().browse(
+                [r.res_id for r in matched]).exists()
+            names = {p.id: p.display_name for p in products}
+
+        scored = [r.rating for r in rows_for_counts if r.rating]
+        return {
+            'reviews': [r._mart369_admin_serialize(names) for r in matched],
+            'counts': {
+                'all': len(rows_for_counts),
+                'pending': sum(1 for r in rows_for_counts
+                               if (r.mart369_state or 'published') == 'pending'),
+                'published': sum(1 for r in rows_for_counts
+                                 if (r.mart369_state or 'published') == 'published'),
+                'hidden': sum(1 for r in rows_for_counts
+                              if (r.mart369_state or 'published') == 'hidden'),
+            },
+            # Rounded here so the console never has to decide what to do with
+            # a rating out of an empty list.
+            'average': round(sum(scored) / len(scored), 1) if scored else 0.0,
         }

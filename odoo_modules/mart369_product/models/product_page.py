@@ -8,11 +8,19 @@ HTTP request to exist, which is exactly what made this untestable before.
 from odoo import api, fields, models
 from odoo.tools import is_html_empty
 
-# Reviews that count: really submitted, publicly visible, actually rated.
+# Reviews that count: really submitted, publicly visible, actually rated,
+# and not taken down by staff.
+#
+# There is a second copy of this list: `RATING_DOMAIN` in
+# mart369_catalog/models/product_template.py, which feeds the star on every
+# card. Neither module depends on the other, so the two cannot share a
+# constant - change one and change the other, or a hidden review stays out of
+# the page while its score still moves the average on every listing.
 REVIEW_DOMAIN = [
     ('consumed', '=', True),
     ('is_internal', '=', False),
     ('rating', '>=', 1),
+    ('mart369_state', '=', 'published'),
 ]
 
 

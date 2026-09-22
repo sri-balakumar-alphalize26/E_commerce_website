@@ -21,6 +21,10 @@
                 <field name="mart369_tags" string="Tags" optional="hide"/>
                 <field name="mart369_photos" string="Photos" optional="hide"/>
                 <field name="mart369_verified" string="Verified" optional="show" widget="boolean_toggle" readonly="1"/>
+                <field name="mart369_state" string="Shown" widget="badge"
+                       decoration-success="mart369_state == 'published'"
+                       decoration-warning="mart369_state == 'pending'"
+                       decoration-danger="mart369_state == 'hidden'"/>
                 <field name="consumed" column_invisible="1"/>
             </list>
         </field>
@@ -51,6 +55,9 @@
                             <field name="mart369_tags" string="Tags" readonly="1"/>
                             <field name="mart369_photos" string="Photos" readonly="1"/>
                             <field name="mart369_helpful" string="Found helpful"/>
+                            <!-- The one field on this form staff may change.
+                                 Everything else is the customer's. -->
+                            <field name="mart369_state" string="Shown"/>
                         </group>
                     </group>
                     <group string="What they said">
@@ -73,6 +80,10 @@
                 <filter name="unhappy" string="Unhappy" domain="[('rating', '&lt;=', 2)]"/>
                 <filter name="happy" string="Happy" domain="[('rating', '&gt;=', 4)]"/>
                 <separator/>
+                <filter name="pending" string="Waiting" domain="[('mart369_state', '=', 'pending')]"/>
+                <filter name="published" string="Published" domain="[('mart369_state', '=', 'published')]"/>
+                <filter name="hidden" string="Hidden" domain="[('mart369_state', '=', 'hidden')]"/>
+                <separator/>
                 <filter name="verified" string="Verified purchase" domain="[('mart369_verified', '=', True)]"/>
                 <filter name="with_photos" string="With photos" domain="[('mart369_photos', '&gt;', 0)]"/>
                 <separator/>
@@ -81,6 +92,7 @@
                 <group>
                     <filter name="group_product" string="Product" context="{'group_by': 'res_name'}"/>
                     <filter name="group_stars" string="Stars" context="{'group_by': 'rating'}"/>
+                    <filter name="group_state" string="Shown" context="{'group_by': 'mart369_state'}"/>
                     <filter name="group_day" string="Written on" context="{'group_by': 'create_date:day'}"/>
                 </group>
             </search>

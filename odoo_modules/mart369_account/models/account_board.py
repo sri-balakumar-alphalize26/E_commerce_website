@@ -34,6 +34,11 @@ class RatingRating(models.Model):
             'verified': verified,
             'verified_pct': round(verified * 100 / total) if total else 0,
             'with_photos': self.search_count(mine + [('mart369_photos', '>', 0)]),
+            # The same three the console's tabs count, so the two screens
+            # never disagree about how much is waiting.
+            'pending': self.search_count(mine + [('mart369_state', '=', 'pending')]),
+            'published': self.search_count(mine + [('mart369_state', '=', 'published')]),
+            'hidden': self.search_count(mine + [('mart369_state', '=', 'hidden')]),
             'written': self._mart369_review_bars(today),
         }
 
