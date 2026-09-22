@@ -45,7 +45,8 @@ them in **369 Mart -> Delivery & Pricing**.
     'images': [
         # Deals and coupons first: they are what staff open this module for.
         'static/description/deal_desk.png',
-        'static/description/deal_desk_panel.png',
+        'static/description/deal_desk_dialog.png',
+        'static/description/deal_desk_trash.png',
         'static/description/deals.png',
         'static/description/deal_form.png',
         'static/description/delivery_rules.png',

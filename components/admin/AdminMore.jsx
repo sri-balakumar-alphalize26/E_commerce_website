@@ -434,10 +434,14 @@ export function DealsBlock({ flash }) {
   const act = useAction();
   const [editing, setEditing] = useState(null);
   const [confirm, setConfirm] = useState(null);
+  const [forget, setForget] = useState(null);
+  const [trashOpen, setTrashOpen] = useState(false);
   const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
 
   const deals = data?.deals || [];
+  const trash = data?.trash || [];
+  const trashDays = data?.trashDays ?? 0;
   const counts = data?.counts || {};
   const currency = data?.currency;
 
@@ -484,6 +488,10 @@ export function DealsBlock({ flash }) {
         <div className="ad-toolbar">
           <div><h2 className="ad-sec-h">Deals</h2></div>
           <div className="ad-toolbar-right">
+            <button className="ad-btn" disabled={act.busy}
+              onClick={() => setTrashOpen(true)}>
+              <Icon n="trash" size={16} />Trash{trash.length ? <em>{trash.length}</em> : null}
+            </button>
             <button className="ad-btn ad-primary" disabled={act.busy}
               onClick={() => { setFormError(""); setEditing({}); }}>
               <Icon n="plus" size={16} />New deal
@@ -528,7 +536,7 @@ export function DealsBlock({ flash }) {
                   <button className="ad-link" disabled={act.busy}
                     onClick={() => { setFormError(""); setEditing(d); }}>Edit</button>
                   <button className="ad-link ad-danger-link" disabled={act.busy}
-                    onClick={() => setConfirm(d)}>Delete</button>
+                    onClick={() => setConfirm(d)}>Remove</button>
                 </span>
               </li>
             ))}
@@ -542,14 +550,70 @@ export function DealsBlock({ flash }) {
       )}
 
       {confirm && (
-        <Confirm danger title={`Delete ${confirm.name}?`}
-          text="Orders already placed keep the price they were charged — it was frozen onto the line at the time. Only future pricing changes."
-          confirmLabel="Delete deal"
+        <Confirm danger title={`Remove ${confirm.name}?`}
+          text={trashDays
+            ? `It stops discounting straight away and waits in the Trash for ${trashDays} days, where you can put it back.`
+            : "It stops discounting straight away and waits in the Trash, where you can put it back."}
+          confirmLabel="Remove deal"
           onCancel={() => setConfirm(null)}
           onConfirm={() => {
             const d = confirm; setConfirm(null);
-            run(() => api(`/admin/deals/${d.id}`, { method: "DELETE" }), `${d.name} deleted`);
+            run(() => api(`/admin/deals/${d.id}`, { method: "DELETE" }),
+              `${d.name} moved to the Trash`);
           }} />
+      )}
+
+      {forget && (
+        <Confirm danger title={`Delete ${forget.name} for good?`}
+          text="Orders already placed keep the price they were charged — it was frozen onto the line at the time — so only this record goes."
+          confirmLabel="Delete for good"
+          onCancel={() => setForget(null)}
+          onConfirm={() => {
+            const d = forget; setForget(null);
+            run(() => api(`/admin/deals/${d.id}/forever`, { method: "DELETE" }),
+              `${d.name} deleted`);
+          }} />
+      )}
+
+      {trashOpen && (
+        <Drawer title="Trash" onClose={() => setTrashOpen(false)}
+          sub={trash.length
+            ? `${trash.length} removed ${trash.length === 1 ? "deal" : "deals"}`
+            : "Nothing removed"}>
+          {!trash.length ? (
+            <Empty icon="trash" title="The Trash is empty"
+              text="A deal you remove waits here before it is deleted for good." />
+          ) : (
+            <>
+              <p className="ad-hint ad-trash-note"><Icon n="info" size={14} />
+                {trashDays
+                  ? `A removed deal stops discounting at once and waits ${trashDays} days here, then goes for good. Putting one back returns it exactly as it was — switched off if it was switched off.`
+                  : "Removed deals stop discounting at once and are kept until you delete them for good."}
+              </p>
+              <ul className="ad-trash-list">
+                {trash.map((d) => (
+                  <li key={d.id}>
+                    <span className="ad-trash-txt">
+                      <b>{d.name}</b>
+                      <small>
+                        {d.kind === "percent" ? `${d.value}% off` : `${money(d.value, currency)} off`}
+                        {" · "}{d.productCount} product{d.productCount === 1 ? "" : "s"}
+                        {" · removed "}{d.deletedAt ? d.deletedAt.slice(0, 16) : ""}
+                        {trashDays ? ` · ${d.daysLeft} day${d.daysLeft === 1 ? "" : "s"} left` : ""}
+                      </small>
+                    </span>
+                    <button className="ad-btn ad-sm" disabled={act.busy}
+                      onClick={() => run(
+                        () => api(`/admin/deals/${d.id}/restore`, { method: "POST" }),
+                        `${d.name} is back`)}>Put back</button>
+                    <button className="ad-btn ad-sm ad-danger-ghost" disabled={act.busy}
+                      onClick={() => setForget(d)}>Delete for good</button>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </Drawer>
       )}
     </>
   );

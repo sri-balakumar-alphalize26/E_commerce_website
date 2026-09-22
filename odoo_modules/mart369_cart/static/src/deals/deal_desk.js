@@ -232,6 +232,9 @@ export class DealDesk extends Component {
 
         this.state = useState({
             deals: [],
+            trash: [],
+            trashDays: 30,
+            trashOpen: false,
             counts: {},
             onOffer: 0,
             currency: null,
@@ -251,6 +254,8 @@ export class DealDesk extends Component {
         try {
             const data = await this.orm.call(M.deal, "mart369_admin_list", []);
             this.state.deals = data.deals;
+            this.state.trash = data.trash || [];
+            this.state.trashDays = data.trashDays;
             this.state.counts = data.counts;
             this.state.onOffer = data.onOffer;
             this.state.currency = data.currency;
@@ -335,12 +340,51 @@ export class DealDesk extends Component {
 
     remove(deal) {
         this.dialog.add(ConfirmationDialog, {
-            title: _t('Delete "%s"?', deal.name),
+            title: _t('Remove "%s"?', deal.name),
+            body: this.state.trashDays
+                ? _t(
+                    "It stops discounting straight away and waits in the Trash " +
+                        "for %s days, where you can put it back.",
+                    this.state.trashDays
+                )
+                : _t(
+                    "It stops discounting straight away and waits in the Trash, " +
+                        "where you can put it back."
+                ),
+            confirmLabel: _t("Remove deal"),
+            confirmClass: "btn-danger",
+            confirm: () =>
+                this.run(() => this.orm.call(M.deal, "action_trash", [[deal.id]]),
+                         _t("Moved to the Trash.")),
+            cancel: () => {},
+        });
+    }
+
+    // -------------------------------------------------------------- the Trash
+
+    openTrash() {
+        this.state.trashOpen = !this.state.trashOpen;
+    }
+
+    restore(deal) {
+        return this.run(
+            () => this.orm.call(M.deal, "action_restore", [[deal.id]]),
+            _t('"%s" is back.', deal.name)
+        );
+    }
+
+    /* Gone now rather than in thirty days. Only offered from the Trash, so
+       nothing is destroyed without having been visible there first. */
+    forget(deal) {
+        this.dialog.add(ConfirmationDialog, {
+            title: _t("Delete for good?"),
             body: _t(
-                "Orders already placed keep what they were charged - the price " +
-                    "was frozen onto the line at the time. Only future pricing changes."
+                '"%s" goes now. Orders already placed keep what they were ' +
+                    "charged - the price was frozen onto the line at the time - " +
+                    "so only this record goes.",
+                deal.name
             ),
-            confirmLabel: _t("Delete deal"),
+            confirmLabel: _t("Delete for good"),
             confirmClass: "btn-danger",
             confirm: () =>
                 this.run(() => this.orm.unlink(M.deal, [deal.id]), _t("Deleted.")),
