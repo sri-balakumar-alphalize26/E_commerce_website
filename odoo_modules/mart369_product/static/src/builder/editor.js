@@ -63,6 +63,10 @@ export class ProductEditor extends ProductPageReader {
             // box this replaces only answered "is there a product called
             // X?", which needed you to know the name first.
             picking: false,
+            // Whether this product has been changed since it was opened. Only
+            // used to decide whether moving to another one is worth a
+            // question - nothing here is unsaved.
+            touched: false,
             pick: { categ: null, q: "", onlyEdited: false, data: null, busy: false },
         });
 
@@ -174,7 +178,7 @@ export class ProductEditor extends ProductPageReader {
             if (!section.show) {
                 n += 1;
             }
-            n += this.rowsOf(section).filter((r) => !r.visible).length;
+            n += this.rowsOf(section).filter((r) => !this.shown(r)).length;
         }
         return n;
     }
@@ -214,6 +218,7 @@ export class ProductEditor extends ProductPageReader {
 
     /** This product's own answer: follow, always show, always hide. */
     setState(row, state) {
+        this.state.touched = true;
         return this.save.run(() =>
             this.orm.call(M.field, "set_product_state", [
                 row.id,
@@ -240,6 +245,7 @@ export class ProductEditor extends ProductPageReader {
         // drawing, which is that run through _as_text. Edit the raw one - a
         // bool would come back as "Yes" and be written back as the word.
         row.product_value = ev.target.value;
+        this.state.touched = true;
         this.pushValue(row.id, row.product_value);
     }
 
@@ -250,6 +256,7 @@ export class ProductEditor extends ProductPageReader {
      * wrong. Ask the server.
      */
     resetRow(row) {
+        this.state.touched = true;
         this.dialog.add(ConfirmationDialog, {
             title: _t("Put this one back?"),
             body: _t(
@@ -273,6 +280,7 @@ export class ProductEditor extends ProductPageReader {
     }
 
     resetSection(section) {
+        this.state.touched = true;
         const ids = this.rowsOf(section).map((r) => r.id);
         this.dialog.add(ConfirmationDialog, {
             title: _t("Put this whole section back?"),
@@ -298,12 +306,68 @@ export class ProductEditor extends ProductPageReader {
 
     // ----------------------------------------------------------- the scopes
 
+    /**
+     * The scope switch, with a question in front of it.
+     *
+     * The two scopes look identical and mean opposite things: the same eye
+     * hides a row on one product, or on all 117 of them. Somebody who has
+     * been editing one product and reaches for "Whole shop" without noticing
+     * is one click from changing the whole catalogue, and nothing on screen
+     * would look different afterwards. So the dangerous direction asks first
+     * and says what it is about to become.
+     *
+     * Only that direction. Going the other way opens the picker, which is
+     * self-evidently about one product, and a confirm on every switch trains
+     * people to click through the one that matters.
+     */
     async switchTab(tab) {
         if (tab === this.state.tab) {
             return;
         }
         await this.save.flushNow().catch(() => {});
+        if (tab === "global" && this.state.tab === "product") {
+            this.dialog.add(ConfirmationDialog, {
+                title: _t("Switch to the whole shop?"),
+                body: this.leavingProductNote,
+                confirmLabel: _t("Edit the whole shop"),
+                confirm: () => this._goTab("global"),
+                cancel: () => {},
+            });
+            return;
+        }
+        await this._goTab(tab);
+    }
+
+    /** What is true about the product being left behind. Counted, not
+     *  guessed: "3 things" is worth reading, "some things" is not. */
+    get leavingProductNote() {
+        const name = this.productName || _t("this product");
+        let differs = 0;
+        for (const section of this.d?.sections || []) {
+            differs += this.rowsOf(section).filter((r) => r.state !== "follow").length;
+        }
+        const kept = differs
+            ? _t(
+                  "The %s thing(s) you set just for “%s” stay as they are.",
+                  differs,
+                  name
+              )
+            : _t("“%s” keeps following the shop.", name);
+        return (
+            _t(
+                "From here, anything you switch or reword changes every " +
+                    "product in the shop, not just one."
+            ) +
+            " " +
+            kept
+        );
+    }
+
+    async _goTab(tab) {
         this.state.tab = tab;
+        // The selection deliberately survives: you stay on the field you were
+        // looking at and see what it says in the other scope. The tour pins
+        // this.
         if (tab === "product") {
             // "List out all the products" is the whole point of the switch:
             // it opens the shop rather than an empty search box.
@@ -312,7 +376,11 @@ export class ProductEditor extends ProductPageReader {
             return;
         }
         this.state.picking = false;
-        await this.load();
+        // No reload. `builder_load` carries both answers on every row - the
+        // shop-wide `show` and this product's `visible` - so the scope toggle
+        // is a question about the payload we already hold, not a new one for
+        // the server. It used to re-fetch, and that call costs well over a
+        // second: the toggle sat there looking broken.
     }
 
     // ----------------------------------------------------- picking a product
@@ -383,15 +451,52 @@ export class ProductEditor extends ProductPageReader {
         this.loadPicker();
     }
 
+    /** Out of the list again, still on the product you were editing. Browsing
+     *  is not choosing, so looking at the shop and changing your mind has to
+     *  leave you where you were. */
+    backToProduct() {
+        this.state.picking = false;
+    }
+
     /** Back to the shop, to choose a different product. */
     changeProduct() {
         this.state.picking = true;
         this.loadPicker();
     }
 
+    /**
+     * Moving to a different product, having changed the one you were on.
+     *
+     * Nothing is lost here - every write has already landed - so the question
+     * is not "save?" but "did you mean these to apply to that one product?".
+     * That is worth asking once, because the two scopes look the same and the
+     * whole point of this screen is that one product can differ deliberately
+     * rather than by accident.
+     */
     async pickProduct(id) {
+        if (this.state.touched && id !== this.state.productId) {
+            const from = this.productName;
+            this.dialog.add(ConfirmationDialog, {
+                title: _t("Move to a different product?"),
+                body: _t(
+                    "What you changed stays on “%s” and applies to " +
+                        "that product only. Anything you change next belongs " +
+                        "to the product you are about to open.",
+                    from
+                ),
+                confirmLabel: _t("Open it"),
+                confirm: () => this._openProduct(id),
+                cancel: () => {},
+            });
+            return;
+        }
+        await this._openProduct(id);
+    }
+
+    async _openProduct(id) {
         this.state.productId = id;
         this.state.sel = null;
+        this.state.touched = false;
         // Load first, leave the picker second. The other way round re-renders
         // the editor the moment the flag flips, which draws the *previous*
         // product's page until the new one lands - so tapping a tile flashed

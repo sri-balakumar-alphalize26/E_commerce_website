@@ -88,9 +88,28 @@ export class ProductPageReader extends Component {
         );
     }
 
+    /**
+     * Would a shopper see this row, in the scope being edited?
+     *
+     * Every row carries both answers: `show` is the shop-wide default and
+     * `visible` is what this one product ends up with once its own state is
+     * applied. Which one the canvas should draw depends on the question being
+     * asked - "what does the shop do?" or "what does this product do?" - and
+     * they differ exactly when somebody has made the product differ.
+     *
+     * Reading the right one per scope is also what lets the scope toggle be
+     * instant: the payload already holds both, so switching needs no reload,
+     * and `builder_load` costs well over a second.
+     */
+    shown(row) {
+        if (!row) {
+            return false;
+        }
+        return this.state.tab === "global" ? row.show : row.visible;
+    }
+
     rowVisible(sectionKey, fieldKey) {
-        const row = this.row(sectionKey, fieldKey);
-        return !!row && row.visible;
+        return this.shown(this.row(sectionKey, fieldKey));
     }
 
     rowValue(sectionKey, fieldKey) {
@@ -99,7 +118,7 @@ export class ProductPageReader extends Component {
     }
 
     visibleRows(section) {
-        return this.rowsOf(section).filter((r) => r.visible);
+        return this.rowsOf(section).filter((r) => this.shown(r));
     }
 
     /** How many of this section's rows this one product answers for itself. */
@@ -122,6 +141,39 @@ export class ProductPageReader extends Component {
 
     get ratingText() {
         return this.rowValue("reviews", "rating") || "No rating yet";
+    }
+
+    // ------------------------------------------------- the rails below the fold
+
+    /** The products the payload says would appear on a rail. `builder_load`
+     *  ships them in `preview` precisely so the canvas can draw the real
+     *  thing rather than a count - inventing products on an admin screen is
+     *  not an option, and "3 of 4 shown" tells an employee nothing about
+     *  what the rail will actually look like. */
+    rail(key) {
+        return (this.d?.preview && this.d.preview[key]) || [];
+    }
+
+    /** Is this rail's own switch on? Each rail is one field in its section. */
+    railOn(sectionKey, fieldKey) {
+        return this.rowVisible(sectionKey, fieldKey);
+    }
+
+    /** The page prices in whole rupees, the way the buy card already does.
+     *  builder_load carries no currency, and guessing one would be worse
+     *  than the symbol the rest of this screen already shows. */
+    money(n) {
+        return '₹' + Math.round(Number(n) || 0);
+    }
+
+    /** Bought-together is the product itself plus the rail. */
+    get bundleItems() {
+        const me = this.d?.card;
+        return me ? [me, ...this.rail('bundle')] : this.rail('bundle');
+    }
+
+    get bundleTotal() {
+        return this.bundleItems.reduce((sum, i) => sum + (Number(i.price) || 0), 0);
     }
 
     get ratingCountText() {

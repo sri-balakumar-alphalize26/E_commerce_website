@@ -32,11 +32,29 @@
                                 t-on-click="() => this.switchTab('product')">One product</button>
                     </div>
 
-                    <span t-if="state.tab === 'product' and productName and !state.picking"
-                          class="pe-prod-chip">
+                    <!-- The way back, both directions. The name used to carry a
+                         "Change" link inside the chip, and the chip clips at
+                         220px - so on any product with a real name the way out
+                         was cut off and there was no way back to the list. The
+                         button is its own control now, and the name truncates
+                         around it. -->
+                    <t t-if="state.tab === 'product' and !state.picking">
+                        <button class="mart-btn mart-btn-sm"
+                                t-on-click="() => this.changeProduct()">
+                            <Icon n="'left'" size="13"/> All products
+                        </button>
+                        <span t-if="productName" class="pe-prod-chip"
+                              t-att-title="productName">
+                            <b t-esc="productName"/>
+                        </span>
+                    </t>
+
+                    <button t-if="state.picking and state.productId"
+                            class="mart-btn mart-btn-sm"
+                            t-on-click="() => this.backToProduct()">
+                        <Icon n="'left'" size="13"/> Back to
                         <t t-esc="productName"/>
-                        <button class="mart-link" t-on-click="() => this.changeProduct()">Change</button>
-                    </span>
+                    </button>
 
                     <label t-if="hiddenCount and !state.picking" class="pe-showhidden">
                         <input type="checkbox" t-model="state.showHidden"/>
@@ -300,7 +318,7 @@
 
             <ul class="pe-fields">
                 <li t-foreach="rowsOf(section)" t-as="row" t-key="row.id"
-                    t-attf-class="pe-field-row {{ row.visible ? '' : 'pe-field-off' }}">
+                    t-attf-class="pe-field-row {{ shown(row) ? '' : 'pe-field-off' }}">
                     <button class="pe-tool"
                             t-if="state.tab === 'global'"
                             t-att-aria-pressed="row.show ? 'true' : 'false'"

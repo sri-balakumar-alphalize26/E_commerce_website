@@ -6,7 +6,23 @@ The product page in the app shows about fifty things. This module decides
 Edit it in **369 Mart → Product Page**: the real page, wide, with a switch on
 everything. The app reads the result from `GET /369mart/product/<id>`.
 
-![The builder](static/description/builder_product.png)
+![The editor](static/description/editor_product.png)
+
+Below the fold it draws the real rails — bought-together with its running
+total, and the similar / related rows — rather than a line saying how many are
+shown. They come from `builder_load`'s `preview`, which exists so this canvas
+never has to invent a product:
+
+![The rails](static/description/rails_product.png)
+
+Choosing **One product** opens the shop to browse:
+
+![The picker](static/description/picker_product.png)
+
+And "More settings" is the same page in a phone frame, with every field of
+every section listed at once:
+
+![All settings](static/description/builder_product.png)
 
 ## The two screens
 

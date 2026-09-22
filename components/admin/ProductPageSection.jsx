@@ -331,6 +331,12 @@ export default function ProductPageSection({ flash }) {
      box only answered "is there a product called X?", which needed you to
      know the name first. */
   const [picking, setPicking] = useState(false);
+  /* A question to put in front of something consequential: {title, text,
+     confirmLabel, onOk}. Separate from `confirm`, which is only the reset. */
+  const [ask, setAsk] = useState(null);
+  /* Whether this product has been changed since it was opened. Only decides
+     whether moving to another one is worth asking - nothing here is unsaved. */
+  const [touched, setTouched] = useState(false);
   const [sel, setSel] = useState(null);                 /* {kind, id} */
   const [showHidden, setShowHidden] = useState(false);
   const [confirm, setConfirm] = useState(null);
@@ -408,6 +414,7 @@ export default function ProductPageSection({ flash }) {
 
   const setState = (row, state) => {
     if (!product) return;
+    setTouched(true);
     lay("field:" + row.id, { state });
     setTick((n) => n + 1);
     save.queue(`field:${row.id}:p:${product.id}`,
@@ -417,6 +424,7 @@ export default function ProductPageSection({ flash }) {
 
   const setProductValue = (row, value) => {
     if (!product) return;
+    setTouched(true);
     lay("field:" + row.id, { product_value: value });
     save.queue(`field:${row.id}:v:${product.id}`,
       `/admin/product/fields/${row.id}/value`,
@@ -434,6 +442,7 @@ export default function ProductPageSection({ flash }) {
      server, and guessing them is how a panel starts lying. */
   const resetRow = async (row) => {
     if (!product) return;
+    setTouched(true);
     try {
       await api(`/admin/product/fields/reset`, {
         method: "POST",
@@ -493,10 +502,64 @@ export default function ProductPageSection({ flash }) {
 
   /* ------------------------------------------------------------ the product */
 
+  /* The two scopes look identical and mean opposite things: the same eye
+     hides a row on one product, or on every product in the shop. Somebody who
+     has been editing one product and reaches for "Whole shop" without noticing
+     is one click from changing the catalogue, and nothing on screen would look
+     different afterwards. So the dangerous direction asks first and says what
+     it is about to become.
+
+     Only that direction. Going the other way opens the picker, which is
+     self-evidently about one product, and a confirm on every switch trains
+     people to click through the one that matters. Odoo's own editor asks the
+     same question in the same words. */
+  const differs = useMemo(
+    () => allRows.filter((r) => r.state && r.state !== "follow").length,
+    [allRows]);
+
+  const goScope = (next) => {
+    if (next === scope) return;
+    if (next === "product") { setScope(next); setPicking(true); return; }
+    if (scope === "product" && product) {
+      const name = product.name;
+      setAsk({
+        title: "Switch to the whole shop?",
+        text: "From here, anything you switch or reword changes every product "
+          + "in the shop, not just one. "
+          + (differs
+            ? `The ${differs} thing${differs === 1 ? "" : "s"} you set just for `
+              + `“${name}” stay as they are.`
+            : `“${name}” keeps following the shop.`),
+        confirmLabel: "Edit the whole shop",
+        onOk: () => setScope("shop"),
+      });
+      return;
+    }
+    setScope(next);
+  };
+
+  /* Moving to a different product having changed the one you were on. Nothing
+     is lost - every write has already landed - so the question is not "save?"
+     but "did you mean those to apply to that one product?". */
   const pick = (item) => {
-    setProduct(item);
-    setPicking(false);
-    setSel(null);
+    const go = () => {
+      setProduct(item);
+      setPicking(false);
+      setSel(null);
+      setTouched(false);
+    };
+    if (touched && product && item.id !== product.id) {
+      setAsk({
+        title: "Move to a different product?",
+        text: `What you changed stays on “${product.name}” and applies to that `
+          + "product only. Anything you change next belongs to the product you "
+          + "are about to open.",
+        confirmLabel: "Open it",
+        onOk: go,
+      });
+      return;
+    }
+    go();
   };
 
   return (
@@ -517,17 +580,28 @@ export default function ProductPageSection({ flash }) {
           {[["shop", "Whole shop"], ["product", "One product"]].map(([k, label]) => (
             <button key={k} role="tab" aria-selected={scope === k}
               className={scope === k ? "ad-on" : ""}
-              onClick={() => { setScope(k); if (k === "product") setPicking(true); }}>
+              onClick={() => goScope(k)}>
               {label}
             </button>
           ))}
         </div>
 
+        {/* The way back, both directions: out of a product to the list, and
+            out of the list to the product you were on. Browsing is not
+            choosing, so changing your mind has to leave you where you were. */}
         {scope === "product" && product && !picking && (
-          <span className="pp-prod">
-            {product.name}
-            <button className="pe-tool" onClick={() => setPicking(true)}>Change</button>
-          </span>
+          <>
+            <button className="ad-btn ad-sm" onClick={() => setPicking(true)}>
+              <Icon n="left" size={14} /> All products
+            </button>
+            <span className="pp-prod" title={product.name}><b>{product.name}</b></span>
+          </>
+        )}
+
+        {picking && product && (
+          <button className="ad-btn ad-sm" onClick={() => setPicking(false)}>
+            <Icon n="left" size={14} /> Back to {product.name}
+          </button>
         )}
 
         {!picking && hiddenCount > 0 && (
@@ -596,6 +670,16 @@ export default function ProductPageSection({ flash }) {
         </aside>
       </div>
       </>
+      )}
+
+      {ask && (
+        <Confirm
+          title={ask.title}
+          text={ask.text}
+          confirmLabel={ask.confirmLabel}
+          onCancel={() => setAsk(null)}
+          onConfirm={() => { ask.onOk(); setAsk(null); }}
+        />
       )}
 
       {confirm && (

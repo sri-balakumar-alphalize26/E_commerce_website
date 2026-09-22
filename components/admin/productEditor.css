@@ -140,17 +140,22 @@
 .pp-radios[disabled] { opacity: 0.55; }
 .pp-radio { display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; }
 
+/* Which product is being edited. The name clips, because product names run
+   long - but it is only ever a label now: the way back to the list is its own
+   button beside it, so nothing you need can be cut off. */
 .pp-prod {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 6px 4px 12px;
+  max-width: 260px;
+  padding: 4px 12px;
   border-radius: 999px;
   background: var(--ad-ground);
   border: 1px solid var(--ad-line);
   font-size: 12.5px;
   font-weight: 600;
 }
+.pp-prod b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ==========================================================================
    The product picker — browsing the shop instead of spelling a product's name

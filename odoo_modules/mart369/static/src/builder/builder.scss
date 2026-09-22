@@ -1084,6 +1084,12 @@
         // The drawing is a drawing. Its own buttons and links must not answer.
         .pe-band-in { pointer-events: none; }
 
+        // The band's tag and eye sit in the top-right corner, which is exactly
+        // where a rail puts its "View all". The two printed over each other
+        // and neither could be read. The link is inert here, so it gives way -
+        // hidden rather than removed, so the heading row keeps its shape.
+        .hm-viewall { visibility: hidden; }
+
         .pe-tools {
             position: absolute;
             top: 4px;
@@ -1602,20 +1608,29 @@
         }
     }
 
+    // The name of the product being edited. It clips, because product names
+    // run long - but only the name does. This used to hold the way back to the
+    // list inside it, and the clip cut that button off entirely on any product
+    // with a real name, which left no way out of the screen at all. The
+    // controls are their own buttons now; this only ever says which product.
     .pe-prod-chip {
         display: inline-flex;
         align-items: center;
         height: 26px;
-        max-width: 220px;
+        max-width: 240px;
         padding: 0 10px;
         border-radius: 999px;
         background: $mart-soft;
         color: $mart-ink;
         font-size: 11.5px;
         font-weight: 700;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+
+        b {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
     }
 
     // "Show what is switched off" unchecked: the page draws only what a

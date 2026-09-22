@@ -116,8 +116,11 @@ export class ProductBuilder extends ProductPageReader {
 
     async switchTab(tab) {
         await this.save.flushNow();
+        // No reload: every row already carries both the shop-wide `show` and
+        // this product's `visible`, so the scope is a question about the
+        // payload in hand. `builder_load` costs over a second, and paying it
+        // to answer something we already know made the toggle feel broken.
         this.state.tab = tab;
-        await this.load();
     }
 
     /** Back to the page as shoppers see it. */
