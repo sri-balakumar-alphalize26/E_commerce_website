@@ -162,12 +162,26 @@ class Mart369AddressApi(http.Controller):
         if not address:
             return self._fail('No such address.', status=404)
         was_default = address.mart369_default
-        # Archive rather than delete: orders already placed still point here.
-        address.write({'active': False, 'mart369_default': False})
+
+        # Hand the crown over *before* archiving, not after. Doing it the other
+        # way round meant `_mine()` - which has no `active_test=False` - could
+        # no longer see this one, so the successor search ran against a list
+        # that had already lost a member, and if this was the only address the
+        # customer was left with none selected at all.
+        successor = request.env['res.partner']
         if was_default:
-            remaining = self._mine()[:1]
-            if remaining:
-                remaining._mart369_set_default()
+            successor = self._mine().filtered(lambda a: a.id != address.id)[:1]
+
+        # Archive rather than delete: orders already placed still point here.
+        # `type` goes back to 'other' with it. Clearing `mart369_default` alone
+        # left an archived record still typed 'delivery', so Odoo's own
+        # `address_get('delivery')` kept resolving to the address the customer
+        # had just removed - the app said nothing was selected while the shop
+        # would have shipped there.
+        address.write({'active': False, 'mart369_default': False, 'type': 'other'})
+
+        if successor:
+            successor._mart369_set_default()
         return self._json({'ok': True})
 
     @http.route('/369mart/addresses/<int:pid>/default', **_POST)

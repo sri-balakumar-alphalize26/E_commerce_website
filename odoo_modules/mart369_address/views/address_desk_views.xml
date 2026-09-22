@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--
+        The addresses desk: the app's own console screen, inside Odoo.
+
+        A client action rather than a view, and read-only like the console it
+        mirrors - these are customers' home addresses, and the one they chose
+        is where Odoo ships. The kanban keeps the "Make default" button for the
+        rare case where somebody really must change it.
+
+        `path` gives it a clean URL, /odoo/mart-addresses.
+    -->
+    <record id="action_mart369_address_desk" model="ir.actions.client">
+        <field name="name">Addresses</field>
+        <field name="tag">mart369_address.desk</field>
+        <field name="path">mart-addresses</field>
+    </record>
+
+</odoo>

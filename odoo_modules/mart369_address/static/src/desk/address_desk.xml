@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="mart369_address.AddressDesk">
+        <Layout display="{ controlPanel: {} }" className="'o_mart369_desk h-100'">
+            <div class="mart-builder pe ad">
+
+                <header class="pe-head">
+                    <div>
+                        <h1>Addresses</h1>
+                        <p>Where customers' shopping goes, and what is missing from it.</p>
+                    </div>
+                    <button class="mart-btn" t-on-click="() => this.moreViews()">
+                        <i class="fa fa-th-large" role="img" aria-label="Board"/>
+                        All views
+                    </button>
+                </header>
+
+                <div class="ad-tiles">
+                    <t t-foreach="TILES" t-as="tile" t-key="tile.key">
+                        <div t-if="tile.flat"
+                             t-attf-class="ad-tile ad-tile-flat {{ tile.warn and tileValue(tile) ? 'ad-tile-warn' : '' }}">
+                            <span class="ad-tile-top">
+                                <i t-attf-class="fa {{ tile.icon }}" aria-hidden="true"/>
+                                <t t-esc="tile.label"/>
+                            </span>
+                            <b t-esc="tileValue(tile)"/>
+                            <small>Across every address</small>
+                        </div>
+                        <button t-else=""
+                                type="button"
+                                t-attf-class="ad-tile {{ state.tab === tile.tab ? 'ad-tile-on' : '' }}"
+                                t-att-aria-pressed="state.tab === tile.tab ? 'true' : 'false'"
+                                t-on-click="() => this.pick(tile.tab)">
+                            <span class="ad-tile-top">
+                                <i t-attf-class="fa {{ tile.icon }}" aria-hidden="true"/>
+                                <t t-esc="tile.label"/>
+                            </span>
+                            <b t-esc="tileValue(tile)"/>
+                            <small>Show these</small>
+                        </button>
+                    </t>
+                </div>
+
+                <div class="pe-toolbar ad-toolbar">
+                    <div class="ad-tabs" role="tablist">
+                        <button t-foreach="TABS" t-as="tab" t-key="tab.key"
+                                role="tab"
+                                t-att-aria-selected="state.tab === tab.key ? 'true' : 'false'"
+                                t-attf-class="{{ state.tab === tab.key ? 'mart-on' : '' }}"
+                                t-on-click="() => this.pick(tab.key)">
+                            <t t-esc="tab.label"/>
+                            <em t-if="tabCount(tab) !== null" t-esc="tabCount(tab)"/>
+                        </button>
+                    </div>
+                    <div class="pe-toolbar-gap"/>
+                    <input type="search" class="ad-search"
+                           placeholder="Customer, area or pincode"
+                           aria-label="Search addresses" t-on-input="search"/>
+                </div>
+
+                <p t-if="state.error" class="pe-error" role="alert">
+                    We could not reach the shop. <t t-esc="state.error"/>
+                    <button class="mart-link" t-on-click="() => this.load()">Try again</button>
+                </p>
+
+                <div class="ad-queue-wrap">
+                    <div class="ad-queue">
+
+                        <p t-if="state.loading and !state.rows.length" class="pe-loading">
+                            Loading addresses...
+                        </p>
+
+                        <p t-elif="!state.rows.length and state.tab === 'all'" class="pe-loading">
+                            No addresses yet. One appears here once a customer
+                            saves one in the app.
+                        </p>
+
+                        <p t-elif="!state.rows.length" class="pe-loading">
+                            Nothing missing here. Try another tile, or a
+                            different search.
+                        </p>
+
+                        <t t-else="">
+                            <p class="ad-count">
+                                <t t-esc="state.total"/> address<t t-if="state.total !== 1">es</t>
+                            </p>
+                            <ul class="ad-rows">
+                                <li t-foreach="state.rows" t-as="row" t-key="row.id"
+                                    t-attf-class="ad-row {{ row.archived ? 'ad-row-gone' : '' }} {{ row.gaps.length ? 'ad-row-gap' : '' }}">
+                                    <span class="ad-line1">
+                                        <b class="ad-who" t-esc="row.customer"/>
+                                        <span t-if="row.label" class="ad-tag" t-esc="row.label"/>
+                                        <span t-if="row.isDefault" class="ad-ships">Ships here</span>
+                                        <span t-if="row.archived" class="ad-tag">Removed</span>
+                                    </span>
+                                    <span class="ad-line2">
+                                        <span t-esc="where(row)"/>
+                                        <span t-if="row.phone" t-esc="row.phone"/>
+                                    </span>
+                                    <!-- The same nouns the kanban prints in red. -->
+                                    <span t-if="row.gaps.length" class="ad-gaps">
+                                        <i class="fa fa-exclamation-triangle" aria-hidden="true"/>
+                                        Missing <t t-esc="row.gaps.join(', ')"/>
+                                    </span>
+                                </li>
+                            </ul>
+
+                            <div t-if="state.rows.length &lt; state.total" class="ad-more">
+                                <button class="mart-btn" t-on-click="() => this.showMore()">
+                                    Show more (<t t-esc="state.total - state.rows.length"/> left)
+                                </button>
+                            </div>
+                        </t>
+
+                    </div>
+                </div>
+
+            </div>
+        </Layout>
+    </t>
+
+</templates>

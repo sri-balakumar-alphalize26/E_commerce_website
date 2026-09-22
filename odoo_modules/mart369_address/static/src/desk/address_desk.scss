@@ -1,0 +1,219 @@
+/* The addresses desk.
+ *
+ * Shaped like reward_desk.scss and support_desk.scss in the sibling modules so
+ * the family reads as one. The shell, the buttons and the loading line come
+ * from mart369/static/src/builder/builder.scss, which is earlier in the bundle
+ * because mart369 is a dependency. Never @import it: one local @import takes
+ * the whole backend bundle down, and it fails as a blank screen rather than as
+ * an error anybody can read.
+ *
+ * Prefixed `.ad-` and scoped under `.mart-builder.ad`, which is this desk's
+ * own wrapper - not to be confused with the console's `ad-` classes, which
+ * live in a different application entirely.
+ */
+
+.o_mart369_desk .mart-builder.ad {
+    --ad-line: #e4eaef;
+    --ad-ink: #13212b;
+    --ad-muted: #64757f;
+    --ad-ground: #f3f6f8;
+    --ad-blue: #0a78ab;
+    --ad-amber: #b7791f;
+    --ad-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    background: var(--ad-ground);
+
+    .ad-tiles {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        padding: 14px 16px 0;
+    }
+
+    .ad-tile {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 12px 14px;
+        text-align: left;
+        background: #fff;
+        border: 1px solid var(--ad-line);
+        border-radius: 14px;
+        color: var(--ad-ink);
+
+        b {
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            font-variant-numeric: tabular-nums;
+        }
+
+        small { font-size: 11.5px; color: var(--ad-muted); }
+    }
+
+    .ad-tile-top {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: var(--ad-muted);
+    }
+
+    /* A figure with no tab behind it must not look pressable. */
+    .ad-tile-flat { cursor: default; }
+
+    button.ad-tile {
+        cursor: pointer;
+        &:hover { border-color: #cddae3; }
+    }
+
+    .ad-tile-on {
+        border-color: var(--ad-blue);
+        box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.14);
+    }
+
+    /* Only once there is something in it - a zero is not a warning. */
+    .ad-tile-warn b { color: var(--ad-amber); }
+
+    .ad-toolbar { flex-wrap: wrap; }
+
+    .ad-tabs {
+        display: inline-flex;
+        gap: 2px;
+        padding: 3px;
+        border-radius: 11px;
+        background: var(--ad-ground);
+
+        button {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            height: 32px;
+            padding: 0 12px;
+            border: 0;
+            border-radius: 9px;
+            background: transparent;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--ad-muted);
+            cursor: pointer;
+
+            em {
+                font-style: normal;
+                font-size: 11px;
+                font-weight: 800;
+                padding: 1px 6px;
+                border-radius: 999px;
+                background: #e6edf2;
+            }
+
+            &.mart-on {
+                background: #fff;
+                color: var(--ad-ink);
+                box-shadow: 0 2px 6px -3px rgba(19, 33, 43, 0.4);
+
+                em { background: #eaf4fa; color: var(--ad-blue); }
+            }
+        }
+    }
+
+    .ad-search {
+        height: 38px;
+        min-width: 240px;
+        padding: 0 12px;
+        border: 1px solid var(--ad-line);
+        border-radius: 10px;
+        background: #fff;
+        font-size: 13.5px;
+
+        &:focus {
+            outline: 0;
+            border-color: var(--ad-blue);
+            box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.14);
+        }
+    }
+
+    .ad-queue-wrap { flex: 1; min-height: 0; overflow: auto; }
+    .ad-queue { padding: 0 16px 20px; }
+
+    .ad-count {
+        margin: 14px 2px 8px;
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--ad-muted);
+    }
+
+    .ad-rows {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .ad-row {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        padding: 12px;
+        background: #fff;
+        border: 1px solid var(--ad-line);
+        border-radius: 14px;
+    }
+
+    /* Missing something a delivery needs. The same rows the kanban reddens. */
+    .ad-row-gap { border-color: #f2e3c6; background: #fffdf8; }
+
+    /* Removed by the customer. Kept because placed orders still point at it. */
+    .ad-row-gone { opacity: 0.62; }
+
+    .ad-line1 { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+    .ad-line2 {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+        font-size: 12.5px;
+        color: var(--ad-muted);
+    }
+
+    .ad-who { font-size: 14.5px; font-weight: 700; }
+
+    .ad-tag {
+        font-size: 11.5px;
+        font-weight: 700;
+        color: var(--ad-muted);
+        background: var(--ad-ground);
+        border-radius: 7px;
+        padding: 2px 7px;
+    }
+
+    .ad-ships {
+        font-size: 11.5px;
+        font-weight: 700;
+        color: #0f6b3d;
+        background: #e8f5ec;
+        border-radius: 7px;
+        padding: 2px 7px;
+    }
+
+    .ad-gaps {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--ad-amber);
+    }
+
+    .ad-more { display: flex; justify-content: center; padding: 14px 0 4px; }
+
+    @media (max-width: 900px) {
+        .ad-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+}

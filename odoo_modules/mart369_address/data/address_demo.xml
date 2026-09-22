@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+        A handful of addresses to look at, built in Python rather than written
+        out here.
+
+        An address is a child of a customer, and this module ships no
+        customers. Pointing an XML `ref` at one would tie mart369_address to
+        whichever module happened to create it. The method picks whoever is
+        signed up, and does nothing at all once a 369 Mart address exists - so
+        a shop with real customers never sprouts examples.
+
+        Some of them are deliberately incomplete: a missing pincode, a missing
+        mobile, no map pin. That is what the desk's tiles are for, and an
+        example set where everything is perfect shows none of it.
+
+        Not noupdate: with it the function would only run on a fresh install,
+        and a shop upgrading into this feature would never see the examples.
+        The method guards itself instead, so running on every upgrade is safe
+        and seeds exactly once.
+    -->
+    <data>
+        <function model="res.partner" name="_mart369_load_address_demo"/>
+    </data>
+</odoo>

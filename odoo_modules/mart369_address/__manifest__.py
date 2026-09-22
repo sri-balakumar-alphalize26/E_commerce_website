@@ -1,6 +1,6 @@
 {
     'name': '369 Mart Delivery Addresses',
-    'version': '19.0.1.1.0',
+    'version': '19.0.1.2.0',
     'category': 'Website',
     'summary': "Customers' delivery addresses, found from their live location.",
     'description': """
@@ -22,11 +22,24 @@ where a missing pincode, mobile or map fix is called out in red.
     'license': 'LGPL-3',
     'depends': [
         'mart369','mart369_auth', 'base_geolocalize'],
+    'assets': {
+        'web.assets_backend': [
+            # The desk leans on mart369's builder.scss for the shell, the
+            # buttons and the loading line - that module is a dependency, so it
+            # is already earlier in the bundle.
+            'mart369_address/static/src/desk/**/*',
+        ],
+    },
     'data': [
         'security/ir.model.access.csv',
+        # The desk action first: the menu in address_views.xml points at it,
+        # and Odoo resolves an xmlid as it reads, not afterwards.
+        'views/address_desk_views.xml',
         'views/address_views.xml',
+        'data/address_demo.xml',
     ],
     'images': [
+        'static/description/address_desk.png',
         'static/description/customer_addresses.png',
         'static/description/addresses_board.png',
         'static/description/addresses_list.png',

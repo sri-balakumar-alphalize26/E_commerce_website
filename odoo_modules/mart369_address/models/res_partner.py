@@ -103,6 +103,28 @@ class ResPartner(models.Model):
         siblings.filtered('mart369_default').mart369_default = False
         self.write({'mart369_default': True, 'type': 'delivery'})
 
+    def write(self, values):
+        """Setting the flag means becoming the default, not just wearing it.
+
+        `_mart369_set_default` above is what clears the sibling and moves
+        `type='delivery'` across, but nothing forced anybody through it - and
+        the backend list offers the flag as a toggle. Ticking it there set a
+        second `mart369_default` while the real shipping address stayed put, so
+        the shop had two defaults and delivered to the older one.
+
+        Writing the flag by hand now goes through the same door. Turning it
+        *off* is left alone: a customer who has no default is a state the
+        delete route already has to handle.
+        """
+        becoming = values.get('mart369_default') and len(self) == 1
+        if becoming and not self.env.context.get('mart369_setting_default'):
+            rest = {k: v for k, v in values.items() if k != 'mart369_default'}
+            if rest:
+                super().write(rest)
+            self.with_context(mart369_setting_default=True)._mart369_set_default()
+            return True
+        return super().write(values)
+
     # ------------------------------------------------------- what it misses
 
     def _mart369_gaps(self):
