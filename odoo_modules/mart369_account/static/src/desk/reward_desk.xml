@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="mart369_account.RewardDesk">
+        <Layout display="{ controlPanel: {} }" className="'o_mart369_desk h-100'">
+            <div class="mart-builder pe rw">
+
+                <header class="pe-head">
+                    <div>
+                        <h1>Rewards</h1>
+                        <p>What the shop has paid out, and what is still waiting to be opened.</p>
+                    </div>
+                    <button class="mart-btn" t-on-click="() => this.moreViews()">
+                        <i class="fa fa-th-list" role="img" aria-label="List"/>
+                        All views
+                    </button>
+                </header>
+
+                <!-- Tiles are the filter, except the payout, which is a sum
+                     with no tab behind it and so is not a button. -->
+                <div class="rw-tiles">
+                    <t t-foreach="TILES" t-as="tile" t-key="tile.key">
+                        <div t-if="tile.flat" class="rw-tile rw-tile-flat">
+                            <span class="rw-tile-top">
+                                <i t-attf-class="fa {{ tile.icon }}" aria-hidden="true"/>
+                                <t t-esc="tile.label"/>
+                            </span>
+                            <b t-esc="tileValue(tile)"/>
+                            <small>Across every card</small>
+                        </div>
+                        <button t-else=""
+                                type="button"
+                                t-attf-class="rw-tile {{ state.tab === tile.tab ? 'rw-tile-on' : '' }} {{ tile.warn and tileValue(tile) ? 'rw-tile-warn' : '' }}"
+                                t-att-aria-pressed="state.tab === tile.tab ? 'true' : 'false'"
+                                t-on-click="() => this.pick(tile.tab)">
+                            <span class="rw-tile-top">
+                                <i t-attf-class="fa {{ tile.icon }}" aria-hidden="true"/>
+                                <t t-esc="tile.label"/>
+                            </span>
+                            <b t-esc="tileValue(tile)"/>
+                            <small>Show these</small>
+                        </button>
+                    </t>
+                </div>
+
+                <div class="pe-toolbar rw-toolbar">
+                    <div class="rw-tabs" role="tablist">
+                        <button t-foreach="TABS" t-as="tab" t-key="tab.key"
+                                role="tab"
+                                t-att-aria-selected="state.tab === tab.key ? 'true' : 'false'"
+                                t-attf-class="{{ state.tab === tab.key ? 'mart-on' : '' }}"
+                                t-on-click="() => this.pick(tab.key)">
+                            <t t-esc="tab.label"/>
+                            <em t-if="tabCount(tab) !== null" t-esc="tabCount(tab)"/>
+                        </button>
+                    </div>
+                    <div class="pe-toolbar-gap"/>
+                    <input type="search" class="rw-search"
+                           placeholder="Customer or order"
+                           aria-label="Search cards" t-on-input="search"/>
+                </div>
+
+                <p t-if="state.error" class="pe-error" role="alert">
+                    We could not reach the shop. <t t-esc="state.error"/>
+                    <button class="mart-link" t-on-click="() => this.load()">Try again</button>
+                </p>
+
+                <div class="rw-queue-wrap">
+                    <div class="rw-queue">
+
+                        <p t-if="state.loading and !state.rows.length" class="pe-loading">
+                            Loading cards...
+                        </p>
+
+                        <p t-elif="!state.rows.length and state.tab === 'unscratched'" class="pe-loading">
+                            Nobody is sitting on an unopened prize. That is the
+                            list empty, not broken.
+                        </p>
+
+                        <p t-elif="!state.rows.length" class="pe-loading">
+                            No card here. Try another tile, or a different search.
+                        </p>
+
+                        <t t-else="">
+                            <p class="rw-count">
+                                <t t-esc="state.total"/> card<t t-if="state.total !== 1">s</t>
+                            </p>
+                            <ul class="rw-rows">
+                                <li t-foreach="state.rows" t-as="row" t-key="row.id"
+                                    t-attf-class="rw-row {{ row.scratched ? '' : 'rw-row-shut' }}">
+                                    <span class="rw-line1">
+                                        <b t-attf-class="rw-prize rw-p-{{ row.reward }}"
+                                           t-esc="prize(row)"/>
+                                        <span t-if="!row.scratched" class="rw-shut">Not opened yet</span>
+                                        <span class="rw-who" t-esc="row.customer"/>
+                                    </span>
+                                    <span class="rw-line2">
+                                        <span t-esc="row.origin"/>
+                                        <span t-if="row.scratched">
+                                            opened <t t-esc="ago(row.scratchedAt)"/>
+                                        </span>
+                                        <span t-else="">
+                                            minted <t t-esc="ago(row.mintedAt)"/>
+                                        </span>
+                                    </span>
+                                </li>
+                            </ul>
+
+                            <div t-if="state.rows.length &lt; state.total" class="rw-more">
+                                <button class="mart-btn" t-on-click="() => this.showMore()">
+                                    Show more (<t t-esc="state.total - state.rows.length"/> left)
+                                </button>
+                            </div>
+                        </t>
+
+                    </div>
+                </div>
+
+            </div>
+        </Layout>
+    </t>
+
+</templates>

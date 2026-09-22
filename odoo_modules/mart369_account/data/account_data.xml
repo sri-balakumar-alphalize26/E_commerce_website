@@ -1,41 +1,52 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-
     <!--
-        What one successful referral pays. A parameter rather than the constant
-        the app hardcoded, because it is the sort of number marketing changes
-        without wanting a deployment.
+        noupdate: an upgrade must never overwrite what an operator has since
+        changed. That is not theoretical here - the referral reward below has
+        a PATCH route on the admin console (controllers/admin_api.py), so it
+        is a number marketing is invited to edit, and without this every
+        upgrade quietly put 100 back. The notices are the same: one retired
+        because it no longer applies should stay retired.
     -->
-    <record id="param_referral_reward" model="ir.config_parameter">
-        <field name="key">mart369_account.referral_reward</field>
-        <field name="value">100</field>
-    </record>
+    <data noupdate="1">
 
-    <!--
-        The three promotional notifications the app shipped in its bundle, now
-        records an operator can edit, retire or replace.
-    -->
-    <record id="notice_weekend_sale" model="mart369.notice">
-        <field name="name">Weekend grocery sale is live</field>
-        <field name="text">Up to 40% off on fresh picks. Ends Sunday midnight.</field>
-        <field name="kind">offer</field>
-        <field name="go_view">offers</field>
-    </record>
+        <!--
+            What one successful referral pays. A parameter rather than the constant
+            the app hardcoded, because it is the sort of number marketing changes
+            without wanting a deployment.
+        -->
+        <record id="param_referral_reward" model="ir.config_parameter">
+            <field name="key">mart369_account.referral_reward</field>
+            <field name="value">100</field>
+        </record>
 
-    <record id="notice_wallet_topup" model="mart369.notice">
-        <field name="name">Add money, get more</field>
-        <field name="text">Top up your 369 Wallet and pay in one tap next time.</field>
-        <field name="kind">wallet</field>
-        <field name="go_view">account</field>
-        <field name="go_param">wallet</field>
-    </record>
+        <!--
+            The three promotional notifications the app shipped in its bundle, now
+            records an operator can edit, retire or replace.
+        -->
+        <record id="notice_weekend_sale" model="mart369.notice">
+            <field name="name">Weekend grocery sale is live</field>
+            <field name="text">Up to 40% off on fresh picks. Ends Sunday midnight.</field>
+            <field name="kind">offer</field>
+            <field name="go_view">offers</field>
+        </record>
 
-    <record id="notice_refer" model="mart369.notice">
-        <field name="name">Invite a friend, both of you win</field>
-        <field name="text">Share your code and earn when they place their first order.</field>
-        <field name="kind">offer</field>
-        <field name="go_view">account</field>
-        <field name="go_param">refer</field>
-    </record>
+        <record id="notice_wallet_topup" model="mart369.notice">
+            <field name="name">Add money, get more</field>
+            <field name="text">Top up your 369 Wallet and pay in one tap next time.</field>
+            <field name="kind">wallet</field>
+            <field name="go_view">account</field>
+            <field name="go_param">wallet</field>
+        </record>
+
+        <record id="notice_refer" model="mart369.notice">
+            <field name="name">Invite a friend, both of you win</field>
+            <field name="text">Share your code and earn when they place their first order.</field>
+            <field name="kind">offer</field>
+            <field name="go_view">account</field>
+            <field name="go_param">refer</field>
+        </record>
+
+    </data>
 
 </odoo>

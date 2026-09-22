@@ -48,6 +48,7 @@ Operators work these in **369 Mart -> Reviews**, **Referrals** and **Rewards**.
         'views/referral_views.xml',
         'views/referral_desk_views.xml',
         'views/scratch_views.xml',
+        'views/reward_desk_views.xml',
         'views/menus.xml',
     ],
     'assets': {
@@ -66,11 +67,13 @@ Operators work these in **369 Mart -> Reviews**, **Referrals** and **Rewards**.
         ],
     },
     'images': [
+        'static/description/review_desk.png',
         'static/description/reviews_board.png',
         'static/description/referrals_board.png',
         # The referrals desk, and the one write on it.
         'static/description/referral_desk.png',
         'static/description/referral_desk_reward.png',
+        'static/description/reward_desk.png',
         'static/description/rewards_board.png',
     ],
     'installable': True,

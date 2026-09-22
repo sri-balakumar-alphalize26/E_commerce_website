@@ -204,3 +204,47 @@ class Mart369ReferralAdminApi(Mart369ReviewAdminApi):
         _logger.info('369 Mart: referral reward set to %s by %s',
                      raw, request.env.user.login)
         return self._json({'ok': True, 'tiles': tiles})
+
+
+class Mart369RewardAdminApi(Mart369ReviewAdminApi):
+    """The staff side of rewards.
+
+    Subclassed for the helpers and the group check only, the same way the
+    referral routes above are.
+
+    **Read only, and deliberately so.** A scratch card is money - scratching
+    one credits the 369 Wallet out of the shop's pocket - so there is no route
+    here that mints, edits or voids one. The decision is enforced by there
+    being nothing to call, rather than by a check somebody can loosen later.
+    """
+
+    def _cards(self):
+        """Not sudo'd - on purpose. See the module docstring."""
+        return request.env['mart369.scratch']
+
+    @http.route('/369mart/admin/rewards', **_GET)
+    def rewards(self, tab=None, q=None, limit=None, **kwargs):
+        """The cards, and the numbers above them."""
+        if not self._may_edit():
+            return self._fail('You do not have access to this.', status=403)
+        try:
+            payload = self._cards().mart369_admin_list(
+                tab=tab, q=q, limit=int(limit or 30))
+        except AccessError as exc:
+            return self._fail(str(exc), status=403)
+        except (TypeError, ValueError):
+            return self._fail('That is not a number we can use.', field='limit')
+        payload['ok'] = True
+        return self._json(payload)
+
+    @http.route('/369mart/admin/rewards/counts', **_GET)
+    def reward_counts(self, **kwargs):
+        """The tallies alone, for the sidebar badge."""
+        if not self._may_edit():
+            return self._fail('You do not have access to this.', status=403)
+        try:
+            payload = self._cards().mart369_admin_counts()
+        except AccessError as exc:
+            return self._fail(str(exc), status=403)
+        payload['ok'] = True
+        return self._json(payload)

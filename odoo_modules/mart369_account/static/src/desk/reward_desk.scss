@@ -1,0 +1,211 @@
+/* The rewards desk.
+ *
+ * Deliberately shaped like review_desk.scss next door and the two desks in
+ * mart369_order, so the family reads as one. The shell, the buttons, the pills
+ * and the loading line come from mart369/static/src/builder/builder.scss, which
+ * is earlier in the bundle because mart369 is a dependency. Never @import it:
+ * one local @import takes the whole backend bundle down, and it fails as a
+ * blank screen rather than as an error anybody can read.
+ *
+ * Numbers are the console's own, from components/admin/admin.css.
+ */
+
+.o_mart369_desk .mart-builder.rw {
+    --rw-line: #e4eaef;
+    --rw-ink: #13212b;
+    --rw-muted: #64757f;
+    --rw-ground: #f3f6f8;
+    --rw-blue: #0a78ab;
+    --rw-green: #1a7f3c;
+    --rw-amber: #b7791f;
+    --rw-violet: #7b5cd6;
+    --rw-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    background: var(--rw-ground);
+
+    .rw-tiles {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        padding: 14px 16px 0;
+    }
+
+    .rw-tile {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 12px 14px;
+        text-align: left;
+        background: #fff;
+        border: 1px solid var(--rw-line);
+        border-radius: 14px;
+        color: var(--rw-ink);
+
+        b {
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            font-variant-numeric: tabular-nums;
+        }
+
+        small {
+            font-size: 11.5px;
+            color: var(--rw-muted);
+        }
+    }
+
+    .rw-tile-top {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: var(--rw-muted);
+    }
+
+    /* A sum with no tab behind it must not look pressable. */
+    .rw-tile-flat { cursor: default; }
+
+    button.rw-tile {
+        cursor: pointer;
+        &:hover { border-color: #cddae3; }
+    }
+
+    .rw-tile-on {
+        border-color: var(--rw-blue);
+        box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.14);
+    }
+
+    /* Only once there is something in it - a zero is not a warning. */
+    .rw-tile-warn b { color: var(--rw-amber); }
+
+    .rw-toolbar { flex-wrap: wrap; }
+
+    .rw-tabs {
+        display: inline-flex;
+        gap: 2px;
+        padding: 3px;
+        border-radius: 11px;
+        background: var(--rw-ground);
+
+        button {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            height: 32px;
+            padding: 0 12px;
+            border: 0;
+            border-radius: 9px;
+            background: transparent;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--rw-muted);
+            cursor: pointer;
+
+            em {
+                font-style: normal;
+                font-size: 11px;
+                font-weight: 800;
+                padding: 1px 6px;
+                border-radius: 999px;
+                background: #e6edf2;
+            }
+
+            &.mart-on {
+                background: #fff;
+                color: var(--rw-ink);
+                box-shadow: 0 2px 6px -3px rgba(19, 33, 43, 0.4);
+
+                em { background: #eaf4fa; color: var(--rw-blue); }
+            }
+        }
+    }
+
+    .rw-search {
+        height: 38px;
+        min-width: 220px;
+        padding: 0 12px;
+        border: 1px solid var(--rw-line);
+        border-radius: 10px;
+        background: #fff;
+        font-size: 13.5px;
+
+        &:focus {
+            outline: 0;
+            border-color: var(--rw-blue);
+            box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.14);
+        }
+    }
+
+    .rw-queue-wrap { flex: 1; min-height: 0; overflow: auto; }
+    .rw-queue { padding: 0 16px 20px; }
+
+    .rw-count {
+        margin: 14px 2px 8px;
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--rw-muted);
+    }
+
+    .rw-rows {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .rw-row {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        padding: 12px;
+        background: #fff;
+        border: 1px solid var(--rw-line);
+        border-radius: 14px;
+    }
+
+    /* A prize the shop has committed to and nobody has opened. */
+    .rw-row-shut { border-color: #f2e3c6; background: #fffdf8; }
+
+    .rw-line1 { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .rw-line2 {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+        font-size: 12px;
+        color: var(--rw-muted);
+    }
+
+    .rw-prize {
+        font-size: 15px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .rw-p-cash { color: var(--rw-green); }
+    .rw-p-coupon { color: var(--rw-violet); }
+    .rw-p-none { color: var(--rw-muted); font-weight: 700; }
+
+    .rw-shut {
+        font-size: 11.5px;
+        font-weight: 700;
+        color: var(--rw-amber);
+        background: #fdf3e3;
+        border-radius: 7px;
+        padding: 2px 7px;
+    }
+
+    .rw-who { font-size: 13px; font-weight: 600; }
+
+    .rw-more { display: flex; justify-content: center; padding: 14px 0 4px; }
+
+    @media (max-width: 900px) {
+        .rw-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+}

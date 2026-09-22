@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--
+        The rewards desk: the app's own console screen, inside Odoo.
+
+        A client action rather than a view, and read-only like the console it
+        mirrors - a scratch card is money, so nothing here mints or edits one.
+
+        `path` gives it a clean URL, /odoo/mart-rewards.
+    -->
+    <record id="action_mart369_reward_desk" model="ir.actions.client">
+        <field name="name">Rewards</field>
+        <field name="tag">mart369_account.rewards</field>
+        <field name="path">mart-rewards</field>
+    </record>
+
+</odoo>

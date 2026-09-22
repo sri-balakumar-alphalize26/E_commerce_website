@@ -50,13 +50,19 @@ class Mart369Scratch(models.Model):
 
     reward_type = fields.Selection(
         REWARD_CHOICES, string='Reward', required=True, default='none')
-    amount = fields.Float(string='Amount', help="For a cash reward.")
+    amount = fields.Monetary(
+        string='Amount', currency_field='currency_id',
+        help="For a cash reward.")
     coupon_id = fields.Many2one('mart369.coupon', string='Coupon', ondelete='set null')
 
     scratched = fields.Boolean(string='Scratched', default=False, copy=False)
     scratched_at = fields.Datetime(string='Scratched at', copy=False, readonly=True)
     currency_id = fields.Many2one(
-        'res.currency', default=lambda self: self.env.company.currency_id)
+        'res.currency', string='Currency',
+        default=lambda self: self.env.company.currency_id,
+        help="What `amount` is in. A card keeps the currency it was minted "
+             "in, so a later change of company currency cannot quietly "
+             "revalue a prize somebody has already been promised.")
 
     _order_uniq = models.Constraint(
         'unique (order_id)',
@@ -106,12 +112,22 @@ class Mart369Scratch(models.Model):
     # ---------------------------------------------------------- scratching
 
     def _mart369_scratch(self):
-        """Reveal it, and pay it. Once."""
+        """Reveal it, and pay it. Once.
+
+        **The wallet is paid before the card is marked**, and the order matters.
+        Marking first meant that if the payment raised - no wallet on the
+        account, say - the controller caught the UserError, the card was
+        already `scratched`, and the early return above turned every retry into
+        a no-op. The customer watched their prize revealed and never got the
+        money, with nothing on any screen to say so.
+
+        Paying first means a failure leaves the card exactly as it was, so the
+        next attempt is a real one.
+        """
         self.ensure_one()
         if self.scratched:
             # Not an error: the app reveals optimistically and may ask twice.
             return self
-        self.sudo().write({'scratched': True, 'scratched_at': fields.Datetime.now()})
         if self.reward_type == 'cash' and self.amount:
             card = self.env['loyalty.card'].sudo()._mart369_wallet(self.partner_id)
             if not card:
@@ -119,6 +135,7 @@ class Mart369Scratch(models.Model):
             card._mart369_move(
                 self.amount, 'reward', self.env._('Scratch card reward'),
                 sub=self.env._('From %s', (self.origin or '').lower()))
+        self.sudo().write({'scratched': True, 'scratched_at': fields.Datetime.now()})
         return self
 
     # --------------------------------------------------------- serializing
