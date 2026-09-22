@@ -277,131 +277,6 @@
     .sp-s-done { background: #e8f5ec; color: var(--sp-green); }
     .sp-s-cancelled { background: #eef2f5; color: var(--sp-muted); }
 
-    /* ------------------------------------------------------- the dialog */
-
-    &.sp-dialog {
-        background: transparent;
-        gap: 14px;
-    }
-
-    .sp-head {
-        display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
-        gap: 12px;
-
-        b {
-            display: block;
-            font-size: 15px;
-            font-weight: 700;
-        }
-
-        small {
-            display: block;
-            margin-top: 3px;
-            font-size: 12px;
-            color: var(--sp-muted);
-        }
-    }
-
-    .sp-assign {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin: 12px 0;
-        font-size: 12.5px;
-        color: var(--sp-muted);
-
-        select {
-            height: 34px;
-            padding: 0 10px;
-            border: 1px solid var(--sp-line);
-            border-radius: 9px;
-            background: #fff;
-            font-size: 13px;
-        }
-    }
-
-    /* Theirs left, ours right - the shape of every chat anybody has used, so
-       nobody has to be told which is which. */
-    .sp-thread {
-        list-style: none;
-        margin: 0;
-        padding: 0;
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-        max-height: 46vh;
-        overflow: auto;
-
-        li {
-            max-width: 78%;
-            padding: 9px 12px;
-            border-radius: 14px;
-
-            p {
-                margin: 0;
-                font-size: 13.5px;
-                line-height: 1.55;
-                white-space: pre-wrap;
-            }
-
-            small {
-                display: block;
-                margin-top: 4px;
-                font-size: 11px;
-                opacity: 0.75;
-            }
-        }
-
-        .sp-them {
-            align-self: flex-start;
-            background: var(--sp-ground);
-            border-bottom-left-radius: 5px;
-        }
-
-        .sp-us {
-            align-self: flex-end;
-            background: #eaf4fa;
-            color: #10485f;
-            border-bottom-right-radius: 5px;
-        }
-    }
-
-    .sp-reply {
-        margin-top: 14px;
-
-        textarea {
-            width: 100%;
-            padding: 10px 12px;
-            border: 1px solid var(--sp-line);
-            border-radius: 12px;
-            font: inherit;
-            font-size: 13.5px;
-            resize: vertical;
-
-            &:focus {
-                outline: 0;
-                border-color: var(--sp-blue);
-                box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.14);
-            }
-        }
-    }
-
-    .sp-reply-act {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 10px;
-        margin-top: 8px;
-
-        small {
-            font-size: 11.5px;
-            color: var(--sp-muted);
-            font-variant-numeric: tabular-nums;
-        }
-    }
-
     /* ------------------------------------------------------------ narrow */
 
     @media (max-width: 900px) {
@@ -416,5 +291,181 @@
         .sp-thread li {
             max-width: 92%;
         }
+    }
+}
+
+/* The conversation dialog.
+ *
+ * Scoped to `o_mart369_dialog`, which the component passes as the Dialog's
+ * `contentClass`, rather than nested under `.o_mart369_desk` like everything
+ * above. A Dialog renders in a portal at the end of the body, so desk-scoped
+ * rules never reach it - the panel drew with its sections in a row and its
+ * footer buttons unstyled, because none of this applied.
+ */
+.o_mart369_dialog.sp {
+    /* The tokens again: they were declared on the desk wrapper, which is not
+       an ancestor of anything in here. */
+    --sp-line: #e4eaef;
+    --sp-ink: #13212b;
+    --sp-muted: #64757f;
+    --sp-ground: #f3f6f8;
+    --sp-blue: #0a78ab;
+    --sp-green: #1a7f3c;
+    --sp-amber: #b7791f;
+    --sp-red: #c8433a;
+    --sp-violet: #7b5cd6;
+
+/* ------------------------------------------------------- the dialog */
+
+.sp-dialog {
+    /* `.mart-builder` is `display: flex` and defaults to a row; the column
+       direction was on the desk-scoped rule, which does not reach in here, so
+       the heading, the assignee and the conversation sat side by side. */
+    display: flex;
+    flex-direction: column;
+    background: transparent;
+    gap: 14px;
+}
+
+.sp-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+
+    b {
+        display: block;
+        font-size: 15px;
+        font-weight: 700;
+    }
+
+    small {
+        display: block;
+        margin-top: 3px;
+        font-size: 12px;
+        color: var(--sp-muted);
+    }
+}
+
+.sp-assign {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 12px 0;
+    font-size: 12.5px;
+    color: var(--sp-muted);
+
+    select {
+        height: 34px;
+        padding: 0 10px;
+        border: 1px solid var(--sp-line);
+        border-radius: 9px;
+        background: #fff;
+        font-size: 13px;
+    }
+}
+
+/* Theirs left, ours right - the shape of every chat anybody has used, so
+   nobody has to be told which is which. */
+.sp-thread {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 46vh;
+    overflow: auto;
+
+    li {
+        max-width: 78%;
+        padding: 9px 12px;
+        border-radius: 14px;
+
+        p {
+            margin: 0;
+            font-size: 13.5px;
+            line-height: 1.55;
+            white-space: pre-wrap;
+        }
+
+        small {
+            display: block;
+            margin-top: 4px;
+            font-size: 11px;
+            opacity: 0.75;
+        }
+    }
+
+    .sp-them {
+        align-self: flex-start;
+        background: var(--sp-ground);
+        border-bottom-left-radius: 5px;
+    }
+
+    .sp-us {
+        align-self: flex-end;
+        background: #eaf4fa;
+        color: #10485f;
+        border-bottom-right-radius: 5px;
+    }
+}
+
+.sp-reply {
+    margin-top: 14px;
+
+    textarea {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid var(--sp-line);
+        border-radius: 12px;
+        font: inherit;
+        font-size: 13.5px;
+        resize: vertical;
+
+        &:focus {
+            outline: 0;
+            border-color: var(--sp-blue);
+            box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.14);
+        }
+    }
+}
+
+.sp-reply-act {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 8px;
+
+    small {
+        font-size: 11.5px;
+        color: var(--sp-muted);
+        font-variant-numeric: tabular-nums;
+    }
+}
+    /* The footer slot sits outside the `.mart-builder` div, so it misses the
+       shared button chrome entirely. */
+    .modal-footer .mart-btn {
+        height: 34px;
+        padding: 0 12px;
+        border: 1px solid var(--sp-line, #e4eaef);
+        border-radius: 9px;
+        background: #fff;
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+    }
+
+    .modal-footer .mart-btn-primary {
+        border-color: transparent;
+        background: linear-gradient(180deg, #0c86be, #096b99);
+        color: #fff;
+    }
+
+    .modal-footer .mart-btn-danger {
+        border-color: transparent;
+        background: linear-gradient(180deg, #d9534a, #b83a32);
+        color: #fff;
     }
 }

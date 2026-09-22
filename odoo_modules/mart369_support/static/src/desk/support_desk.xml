@@ -137,7 +137,10 @@
     </t>
 
     <t t-name="mart369_support.TicketDialog">
-        <Dialog size="'lg'" title="props.ref">
+        <!-- `contentClass`, because a Dialog renders in a portal outside the
+             desk's own wrapper: styles scoped under `.o_mart369_desk` never
+             reach in here, and the footer slot is outside this div as well. -->
+        <Dialog size="'lg'" title="props.ref" contentClass="'o_mart369_dialog sp'">
             <div class="mart-builder sp sp-dialog">
 
                 <p t-if="state.loading" class="pe-loading">Loading the conversation...</p>
