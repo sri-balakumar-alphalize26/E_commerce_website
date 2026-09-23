@@ -775,3 +775,48 @@ html.ad-lock, html.ad-lock body { overflow: hidden; }
 .ad-cat-preview small { font-size: 12.5px; opacity: 0.8; }
 .ad-colour { display: flex; align-items: center; gap: 8px; }
 .ad-colour input[type="color"] { width: 44px; height: 40px; padding: 2px; border: 1px solid var(--ad-line); border-radius: 10px; background: #fff; cursor: pointer; }
+
+/* ---- payments and wallets ---- */
+/* A third line under each figure: these tiles say what the number is *not*,
+   which is where all three of the payments screen's old mistakes lived. */
+.ad-pay-stats > span i { font-style: normal; font-size: 11px; line-height: 1.35; color: var(--ad-muted); }
+/* Said once, quietly. Grey rather than red: this is not a warning, it is how
+   the screen is. */
+.ad-readonly { display: flex; align-items: flex-start; gap: 9px; padding: 10px 14px; background: #fff; border: 1px solid var(--ad-line); border-radius: 12px; font-size: 12.5px; line-height: 1.5; color: var(--ad-muted); }
+.ad-pays, .ad-wallets { list-style: none; margin: 0; padding: 10px 14px 14px; display: flex; flex-direction: column; gap: 10px; }
+.ad-pays > li, .ad-wallets > li { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: #fff; border: 1px solid var(--ad-line); border-radius: 14px; animation: ad-rise 380ms var(--ad-ease) backwards; animation-delay: calc(var(--i, 0) * 45ms); }
+/* A wallet that disagrees with its own history is the one to read. */
+.ad-wallets > li.ad-wallet-bad { border-left: 3px solid var(--ad-red); }
+.ad-pay-body, .ad-wallet-body { flex: 1; min-width: 0; }
+.ad-pay-top, .ad-wallet-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ad-pay-top b, .ad-wallet-top b { font-size: 14.5px; font-weight: 700; }
+.ad-pay-top small, .ad-wallet-body > small { font-size: 12px; color: var(--ad-muted); }
+.ad-wallet-body > small { display: block; margin-top: 4px; }
+.ad-pay-sub { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 5px 0 0; font-size: 12.5px; color: var(--ad-muted); }
+.ad-pay-sub code { padding: 1px 6px; border-radius: 6px; background: #eef2f5; color: #3a4a55; font-size: 12px; }
+.ad-pay-why { color: #9c2f28; }
+/* What it was worth, on the right where the eye lands last. */
+.ad-pay-worth { flex: 0 0 auto; text-align: right; min-width: 120px; }
+.ad-pay-worth b { display: block; font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.ad-pay-worth small { font-size: 11.5px; line-height: 1.35; color: var(--ad-muted); }
+.ad-wallet-act { flex: 0 0 auto; }
+/* The ledger drawer. */
+.ad-ledger-head { display: flex; align-items: baseline; gap: 24px; flex-wrap: wrap; padding-bottom: 12px; border-bottom: 1px solid var(--ad-line); margin-bottom: 12px; }
+.ad-ledger-head > div { display: flex; flex-direction: column; gap: 1px; }
+.ad-ledger-head span { font-size: 11.5px; color: var(--ad-muted); }
+.ad-ledger-head b { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.ad-ledger-bad b { color: var(--ad-red); }
+.ad-ledger { list-style: none; margin: 0; padding: 0; }
+.ad-ledger > li { display: flex; align-items: center; gap: 10px; padding: 10px 2px; border-bottom: 1px solid #eef2f5; }
+.ad-ledger > li:last-child { border-bottom: 0; }
+.ad-ledger-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.ad-ledger-txt b { font-size: 13.5px; font-weight: 700; }
+.ad-ledger-txt small { font-size: 12px; color: var(--ad-muted); }
+.ad-ledger-when { font-size: 12px; color: var(--ad-muted); white-space: nowrap; }
+.ad-ledger-amt { font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ad-ledger-amt.ad-in { color: var(--ad-green); }
+.ad-ledger-amt.ad-out { color: var(--ad-ink); }
+.ad-ledger-more { margin: 12px 0 0; text-align: center; }
+/* A wallet attached to nobody. Not an error - it holds nothing - but it should
+   not read like somebody's name. */
+.ad-wallet-nobody { color: var(--ad-muted); font-style: italic; }

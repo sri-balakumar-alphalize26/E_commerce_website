@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="mart369_payment.PaymentDesk">
+        <Layout display="{ controlPanel: {} }" className="'o_mart369_desk h-100'">
+            <div class="mart-builder pe pd">
+
+                <header class="pe-head">
+                    <div>
+                        <h1>Payments</h1>
+                        <p>Whether the money arrived, and if not, where it is.</p>
+                    </div>
+                    <button class="mart-btn" t-on-click="() => this.allViews()">
+                        <i class="fa fa-th-list" role="img" aria-label="List"/>
+                        All views
+                    </button>
+                </header>
+
+                <div class="pd-tiles">
+                    <t t-foreach="TILES" t-as="tile" t-key="tile.key">
+                        <div t-if="tile.flat" class="pd-tile pd-tile-flat">
+                            <span class="pd-tile-top"><t t-esc="tile.label"/></span>
+                            <b t-esc="tileValue(tile)"/>
+                            <small t-esc="tileNote(tile)"/>
+                        </div>
+                        <button t-else=""
+                                type="button"
+                                t-attf-class="pd-tile {{ state.tab === tile.tab ? 'pd-tile-on' : '' }} {{ tile.warn and tileValue(tile) ? 'pd-tile-warn' : '' }}"
+                                t-att-aria-pressed="state.tab === tile.tab ? 'true' : 'false'"
+                                t-on-click="() => this.pick(tile.tab)">
+                            <span class="pd-tile-top"><t t-esc="tile.label"/></span>
+                            <b t-esc="tileValue(tile)"/>
+                            <small t-esc="tileNote(tile)"/>
+                        </button>
+                    </t>
+                </div>
+
+                <!-- Said once, so nobody hunts for a button that should not
+                     exist. -->
+                <p class="pd-readonly">
+                    <i class="fa fa-lock" aria-hidden="true"/>
+                    <span>
+                        Nothing here can be changed. A payment becomes paid when
+                        the bank confirms it, and cash is marked collected on the
+                        payment itself, by whoever took the notes. Refunds happen
+                        on the return.
+                    </span>
+                </p>
+
+                <div class="pe-toolbar pd-toolbar">
+                    <div class="pd-tabs" role="tablist">
+                        <button t-foreach="TABS" t-as="tab" t-key="tab.key"
+                                role="tab"
+                                t-att-aria-selected="state.tab === tab.key ? 'true' : 'false'"
+                                t-attf-class="{{ state.tab === tab.key ? 'mart-on' : '' }}"
+                                t-on-click="() => this.pick(tab.key)">
+                            <t t-esc="tab.label"/>
+                            <em t-if="tabCount(tab) !== null" t-esc="tabCount(tab)"/>
+                        </button>
+                    </div>
+                    <div class="pe-toolbar-gap"/>
+                    <div class="pd-kinds" role="group" aria-label="Kind">
+                        <button t-foreach="kindOptions" t-as="opt" t-key="opt[0]"
+                                t-attf-class="pd-kind {{ state.kind === opt[0] ? 'mart-on' : '' }}"
+                                t-att-aria-pressed="state.kind === opt[0] ? 'true' : 'false'"
+                                t-on-click="() => this.setKind(opt[0])">
+                            <t t-esc="opt[1]"/>
+                        </button>
+                    </div>
+                    <input type="search" class="pd-search"
+                           placeholder="A reference, an order or a customer"
+                           aria-label="Search payments" t-on-input="search"/>
+                </div>
+
+                <p t-if="state.error" class="pe-error" role="alert">
+                    We could not reach the shop. <t t-esc="state.error"/>
+                    <button class="mart-link" t-on-click="() => this.load()">Try again</button>
+                </p>
+
+                <div class="pd-queue-wrap">
+                    <div class="pd-queue">
+
+                        <p t-if="state.loading and !state.rows.length" class="pe-loading">
+                            Loading payments...
+                        </p>
+
+                        <p t-elif="!state.rows.length and !state.q and state.tab === 'all'"
+                           class="pe-loading">
+                            Nobody has paid yet. Payments appear here as customers
+                            pay in the app.
+                        </p>
+
+                        <p t-elif="!state.rows.length and state.tab === 'failed'" class="pe-loading">
+                            Nothing has failed. That is the good version of this
+                            tab being empty.
+                        </p>
+
+                        <p t-elif="!state.rows.length" class="pe-loading">
+                            No payment here. Try another tile, or a different search.
+                        </p>
+
+                        <t t-else="">
+                            <p class="pd-count">
+                                <t t-esc="state.rows.length"/> payment<t t-if="state.rows.length !== 1">s</t>
+                            </p>
+                            <ul class="pd-rows">
+                                <li t-foreach="state.rows" t-as="row" t-key="row.id"
+                                    class="pd-row" t-att-style="'--i: ' + row_index">
+
+                                    <div class="pd-body">
+                                        <div class="pd-top">
+                                            <b t-esc="row.customer or 'A customer'"/>
+                                            <span t-attf-class="mart-pill {{ stateClass(row.state) }}"
+                                                  t-esc="stateLabel(row.state)"/>
+                                            <span t-if="row.cod and row.state === 'pending'"
+                                                  class="mart-pill pd-p-blue">
+                                                At the door
+                                            </span>
+                                            <small>
+                                                <t t-esc="kindLabel(row.kind)"/>
+                                                <t t-if="row.method">
+                                                    &#183; <t t-esc="row.method"/>
+                                                </t>
+                                                <t t-if="row.provider">
+                                                    (<t t-esc="row.provider"/>)
+                                                </t>
+                                                &#183; <t t-esc="ago(row.at)"/>
+                                            </small>
+                                        </div>
+                                        <p class="pd-sub">
+                                            <code t-esc="row.ref"/>
+                                            <t t-if="row.orderRef">
+                                                <span class="pd-dot">&#183;</span>
+                                                <button t-if="row.orderId" class="mart-link pd-order"
+                                                        t-on-click="() => this.openOrder(row)">
+                                                    <t t-esc="row.orderRef"/>
+                                                </button>
+                                                <!-- Plain words when the reference leads
+                                                     nowhere: a link that 404s is worse
+                                                     than no link. -->
+                                                <span t-else="" t-esc="row.orderRef"/>
+                                            </t>
+                                            <t t-if="row.message">
+                                                <span class="pd-dot">&#183;</span>
+                                                <span class="pd-why" t-esc="row.message"/>
+                                            </t>
+                                        </p>
+                                    </div>
+
+                                    <div class="pd-worth">
+                                        <b t-esc="row.amountText"/>
+                                        <small t-if="row.walletUsed">
+                                            and <t t-esc="row.walletText"/> from the wallet
+                                        </small>
+                                    </div>
+                                </li>
+                            </ul>
+                        </t>
+
+                    </div>
+                </div>
+
+            </div>
+        </Layout>
+    </t>
+
+</templates>

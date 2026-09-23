@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="mart369_payment.WalletDesk">
+        <Layout display="{ controlPanel: {} }" className="'o_mart369_desk h-100'">
+            <div class="mart-builder pe wd">
+
+                <header class="pe-head">
+                    <div>
+                        <h1>Wallets</h1>
+                        <p>Money customers have already paid us and have not spent yet.</p>
+                    </div>
+                    <button class="mart-btn" t-on-click="() => this.allViews()">
+                        <i class="fa fa-th-list" role="img" aria-label="List"/>
+                        All views
+                    </button>
+                </header>
+
+                <div class="wd-tiles">
+                    <t t-foreach="TILES" t-as="tile" t-key="tile.key">
+                        <div t-if="tile.flat" class="wd-tile wd-tile-flat">
+                            <span class="wd-tile-top"><t t-esc="tile.label"/></span>
+                            <b t-esc="tileValue(tile)"/>
+                            <small t-esc="tileNote(tile)"/>
+                        </div>
+                        <button t-else=""
+                                type="button"
+                                t-attf-class="wd-tile {{ state.tab === tile.tab ? 'wd-tile-on' : '' }} {{ tile.bad and tileValue(tile) ? 'wd-tile-bad' : '' }}"
+                                t-att-aria-pressed="state.tab === tile.tab ? 'true' : 'false'"
+                                t-on-click="() => this.pick(tile.tab)">
+                            <span class="wd-tile-top"><t t-esc="tile.label"/></span>
+                            <b t-esc="tileValue(tile)"/>
+                            <small t-esc="tileNote(tile)"/>
+                        </button>
+                    </t>
+                </div>
+
+                <!-- Only when there is something wrong. A banner that is always
+                     there is a banner nobody reads. -->
+                <p t-if="state.tiles.broken" class="wd-alarm">
+                    <i class="fa fa-exclamation-triangle" aria-hidden="true"/>
+                    <span>
+                        <b><t t-esc="state.tiles.broken"/></b>
+                        wallet<t t-if="state.tiles.broken !== 1">s</t>
+                        disagree<t t-if="state.tiles.broken === 1">s</t> with
+                        <t t-if="state.tiles.broken === 1">its</t><t t-else="">their</t>
+                        own history. That is a bug, not something a customer did,
+                        and nothing on this screen can fix it - the balance and the
+                        movements are the evidence.
+                    </span>
+                </p>
+
+                <p class="wd-readonly">
+                    <i class="fa fa-lock" aria-hidden="true"/>
+                    <span>
+                        Nothing here can be changed. A balance only moves through a
+                        top-up, an order, a refund or a reward - each one leaves a
+                        movement the customer can see in their own app.
+                    </span>
+                </p>
+
+                <div class="pe-toolbar wd-toolbar">
+                    <div class="wd-tabs" role="tablist">
+                        <button t-foreach="TABS" t-as="tab" t-key="tab.key"
+                                role="tab"
+                                t-att-aria-selected="state.tab === tab.key ? 'true' : 'false'"
+                                t-attf-class="{{ state.tab === tab.key ? 'mart-on' : '' }}"
+                                t-on-click="() => this.pick(tab.key)">
+                            <t t-esc="tab.label"/>
+                            <em t-if="tabCount(tab) !== null" t-esc="tabCount(tab)"/>
+                        </button>
+                    </div>
+                    <div class="pe-toolbar-gap"/>
+                    <input type="search" class="wd-search"
+                           placeholder="A customer, an email or a phone"
+                           aria-label="Search wallets" t-on-input="search"/>
+                </div>
+
+                <p t-if="state.error" class="pe-error" role="alert">
+                    We could not reach the shop. <t t-esc="state.error"/>
+                    <button class="mart-link" t-on-click="() => this.load()">Try again</button>
+                </p>
+
+                <div class="wd-queue-wrap">
+                    <div class="wd-queue">
+
+                        <p t-if="state.loading and !state.rows.length" class="pe-loading">
+                            Loading wallets...
+                        </p>
+
+                        <p t-elif="!state.rows.length and !state.q and state.tab === 'all'"
+                           class="pe-loading">
+                            Nobody has a wallet yet. One is made for a customer the
+                            first time they top up or are paid a reward.
+                        </p>
+
+                        <p t-elif="!state.rows.length and state.tab === 'broken'" class="pe-loading">
+                            Every balance matches its own history. That is the good
+                            version of this tab being empty.
+                        </p>
+
+                        <p t-elif="!state.rows.length" class="pe-loading">
+                            No wallet here. Try another tile, or a different search.
+                        </p>
+
+                        <t t-else="">
+                            <p class="wd-count">
+                                <t t-esc="state.rows.length"/> wallet<t t-if="state.rows.length !== 1">s</t>
+                            </p>
+                            <ul class="wd-rows">
+                                <li t-foreach="state.rows" t-as="row" t-key="row.id"
+                                    t-attf-class="wd-row {{ row.consistent ? '' : 'wd-row-bad' }}"
+                                    t-att-style="'--i: ' + row_index">
+
+                                    <div class="wd-body">
+                                        <div class="wd-top">
+                                            <b t-if="row.customer" t-esc="row.customer"/>
+                                            <!-- A wallet with nobody attached is
+                                                 odd enough to say so: "A customer"
+                                                 would read like a real person and
+                                                 hide it. -->
+                                            <b t-else="" class="wd-nobody">No customer</b>
+                                            <!-- A consistent wallet says nothing here.
+                                                 A tick on every row trains people to
+                                                 ignore the one red one. -->
+                                            <span t-if="!row.consistent" class="mart-pill wd-p-red">
+                                                Balance <t t-esc="row.balanceText"/>,
+                                                history <t t-esc="row.ledgerText"/>
+                                            </span>
+                                        </div>
+                                        <p class="wd-sub">
+                                            <t t-if="row.moves">
+                                                <!-- Only when the movement really
+                                                     has a kind: an empty pill is a
+                                                     box with nothing in it. -->
+                                                <span t-if="row.lastKind" class="mart-pill wd-p-grey"
+                                                      t-esc="kindLabel(row.lastKind)"/>
+                                                <t t-esc="row.lastTitle"/>
+                                                <span class="wd-dot">&#183;</span>
+                                                <t t-esc="ago(row.lastAt)"/>
+                                                <span class="wd-dot">&#183;</span>
+                                                <t t-esc="row.moves"/> movement<t t-if="row.moves !== 1">s</t>
+                                            </t>
+                                            <t t-else="">no movements yet</t>
+                                            <t t-if="row.email">
+                                                <span class="wd-dot">&#183;</span>
+                                                <t t-esc="row.email"/>
+                                            </t>
+                                        </p>
+                                    </div>
+
+                                    <div class="wd-worth">
+                                        <b t-esc="row.balanceText"/>
+                                        <small>held</small>
+                                    </div>
+
+                                    <div class="wd-act">
+                                        <button class="mart-btn mart-btn-sm"
+                                                t-on-click="() => this.openLedger(row)">
+                                            Movements
+                                        </button>
+                                    </div>
+                                </li>
+                            </ul>
+                        </t>
+
+                    </div>
+                </div>
+
+            </div>
+        </Layout>
+    </t>
+
+    <t t-name="mart369_payment.LedgerDialog">
+        <Dialog size="'lg'" contentClass="'wd-dialog'"
+                title="props.card.customer || 'This wallet'">
+            <div class="wd-dialog-head">
+                <div>
+                    <span>Balance</span>
+                    <b t-esc="state.card.balanceText"/>
+                </div>
+                <!-- Only drawn when it differs. Two numbers side by side that
+                     always agree is noise; two that disagree is the whole
+                     story. -->
+                <div t-if="!state.card.consistent" class="wd-dialog-bad">
+                    <span>Its movements add up to</span>
+                    <b t-esc="state.card.ledgerText"/>
+                </div>
+            </div>
+
+            <p class="wd-dialog-sub">
+                These are the same movements the customer sees in their own app.
+            </p>
+            <p t-if="state.error" class="wd-dialog-error" role="alert" t-esc="state.error"/>
+
+            <p t-if="state.loading and !state.moves.length" class="pe-loading">
+                Loading movements...
+            </p>
+            <p t-elif="!state.moves.length" class="pe-loading">
+                Nothing has moved in this wallet yet.
+            </p>
+
+            <ul t-else="" class="wd-moves">
+                <li t-foreach="state.moves" t-as="move" t-key="move.id">
+                    <span t-attf-class="mart-pill {{ kindClass(move.kind) }}"
+                          t-esc="kindLabel(move.kind)"/>
+                    <span class="wd-move-txt">
+                        <b t-esc="move.title"/>
+                        <small t-if="move.sub" t-esc="move.sub"/>
+                    </span>
+                    <span class="wd-move-when" t-esc="ago(move.at)"/>
+                    <b t-attf-class="wd-move-amount {{ sign(move.kind) === '-' ? 'wd-out' : 'wd-in' }}">
+                        <t t-esc="sign(move.kind)"/><t t-esc="move.amountText"/>
+                    </b>
+                </li>
+            </ul>
+
+            <p t-if="state.before" class="wd-more">
+                <button class="mart-link" t-att-disabled="state.loading"
+                        t-on-click="() => this.more()">Show older</button>
+            </p>
+
+            <t t-set-slot="footer">
+                <button class="btn btn-secondary"
+                        t-on-click="() => this.props.close()">Close</button>
+            </t>
+        </Dialog>
+    </t>
+
+</templates>

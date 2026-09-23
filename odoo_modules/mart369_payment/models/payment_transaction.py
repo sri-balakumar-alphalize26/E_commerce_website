@@ -259,9 +259,24 @@ class PaymentTransaction(models.Model):
         fortnight = start - timedelta(days=13)
         base = [('company_id', '=', company.id), ('mart369_kind', 'in', ('order', 'topup'))]
 
+        # `last_state_change`, not `write_date`. write_date moves whenever
+        # anything touches the row - a related-field recompute, a module
+        # upgrade, a COD collection - so a payment settled last week landed in
+        # today's takings the moment anything brushed past it. Core payment
+        # keeps last_state_change for exactly this question.
         done_today = self.sudo().search(base + [
-            ('state', '=', 'done'), ('write_date', '>=', start)])
-        collected = sum(done_today.mapped('amount'))
+            ('state', '=', 'done'), ('last_state_change', '>=', start)])
+
+        # Money that arrived today, counted once. An order settled entirely
+        # from the wallet carries the wallet amount as its own `amount` (see
+        # `_create_tx`: `payable or wallet_used`), and that money was already
+        # counted when it was topped up. Counting it again would report the
+        # same rupee twice on the screen used to check the bank.
+        cash_in = done_today.filtered(
+            lambda t: not (t.mart369_kind == 'order' and t.mart369_wallet_used
+                           and t.currency_id.is_zero(
+                               t.amount - t.mart369_wallet_used)))
+        collected = sum(cash_in.mapped('amount'))
 
         recent = self.sudo().search(base + [('create_date', '>=', week)])
         settled = len(recent.filtered(lambda t: t.state == 'done'))
@@ -291,18 +306,33 @@ class PaymentTransaction(models.Model):
             minutes = int((fields.Datetime.now() - pending[0].create_date).total_seconds() // 60)
             oldest = _("oldest %s min", minutes)
 
+        cash_due = sum(cash.mapped('amount'))
         return {
             'collected': currency.format(collected),
-            'collected_count': len(done_today),
+            'collected_count': len(cash_in),
+            # Orders settled from the wallet, kept out of the figure above and
+            # named here so the difference is visible rather than missing.
+            'from_wallet_count': len(done_today) - len(cash_in),
             'success_pct': round(settled * 100 / attempted) if attempted else 0,
+            # What that percentage is out of. Payments still waiting are not in
+            # it, so a shop whose cash-on-delivery all sits pending would
+            # otherwise read a flawless 100%.
+            'success_of': attempted,
             'bars': bars,
             'pending': len(pending),
             'pending_oldest': oldest,
-            'cash': currency.format(sum(cash.mapped('amount'))),
+            'cash': currency.format(cash_due),
             'cash_count': len(cash),
             'wallet_float': currency.format(float_total),
             'wallet_count': len(wallets),
             'wallet_broken': broken,
+            # The same figures unformatted. The backend strip prints the
+            # strings above; the app console formats with lib/money.js, and
+            # cannot do arithmetic on "Rs 1,200.00" or reformat it.
+            'collected_amount': float(collected),
+            'cash_amount': float(cash_due),
+            'wallet_float_amount': float(float_total),
+            'currency': currency.name,
         }
 
     # ------------------------------------------------------------- the app's view
@@ -332,3 +362,98 @@ class PaymentTransaction(models.Model):
                 payload['retry'] = True
             return payload
         return {'ok': True, 'state': 'pending', 'txn': self.mart369_txn}
+
+    # ------------------------------------------------------- the staff screen
+
+    # The five the screens offer. `draft` and `authorized` have no tab: a
+    # transaction nobody ever submitted and one a gateway is holding are both
+    # rare, and both appear under All with their own pill rather than being
+    # folded into a tab that would misdescribe them.
+    ADMIN_TABS = ('all', 'paid', 'waiting', 'cash', 'failed')
+
+    @api.model
+    def _mart369_admin_domain(self, tab):
+        base = [('mart369_kind', 'in', ('order', 'topup'))]
+        if tab == 'paid':
+            return base + [('state', '=', 'done')]
+        if tab == 'failed':
+            return base + [('state', 'in', ('cancel', 'error'))]
+        if tab in ('waiting', 'cash'):
+            # Split below rather than here: "at the door" is a fact about the
+            # provider, not about the state, and no domain crosses that.
+            return base + [('state', '=', 'pending')]
+        return base
+
+    @api.model
+    def mart369_admin_list(self, tab='all', method='', kind='', q='', limit=200):
+        """The rows and the tiles in one call, filtered on the server.
+
+        Read by both the app console (over /369mart/admin/payments) and the
+        backend desk (over the ORM), so the two cannot drift.
+        """
+        domain = self._mart369_admin_domain(tab)
+        if method:
+            domain = domain + [('mart369_app_method', '=', method)]
+        if kind in ('order', 'topup'):
+            domain = domain + [('mart369_kind', '=', kind)]
+        q = (q or '').strip()
+        if q:
+            domain = domain + ['|', '|', '|',
+                               ('reference', 'ilike', q),
+                               ('provider_reference', 'ilike', q),
+                               ('mart369_order_ref', 'ilike', q),
+                               ('partner_id.name', 'ilike', q)]
+
+        rows = self.search(domain, order='create_date desc, id desc', limit=limit)
+        if tab == 'cash':
+            rows = rows.filtered(lambda t: t.provider_id.mart369_is_cod)
+        elif tab == 'waiting':
+            rows = rows.filtered(lambda t: not t.provider_id.mart369_is_cod)
+
+        pending = self.search(self._mart369_admin_domain('waiting'))
+        at_the_door = pending.filtered(lambda t: t.provider_id.mart369_is_cod)
+        return {
+            'rows': [row._mart369_admin_row() for row in rows],
+            'counts': {
+                'all': self.search_count(self._mart369_admin_domain('all')),
+                'paid': self.search_count(self._mart369_admin_domain('paid')),
+                'waiting': len(pending) - len(at_the_door),
+                'cash': len(at_the_door),
+                'failed': self.search_count(self._mart369_admin_domain('failed')),
+            },
+            'tiles': self.mart369_payment_dashboard(),
+        }
+
+    def _mart369_admin_row(self):
+        self.ensure_one()
+        cod = self.provider_id.mart369_is_cod
+        # `mart369_order_ref` is text, not a link to anything - sale.order does
+        # not own these references yet. Resolved here rather than in the
+        # screens, so a reference that leads nowhere is drawn as plain words
+        # instead of a link that 404s.
+        order = self.env['sale.order'].sudo().search(
+            [('name', '=', self.mart369_order_ref)], limit=1
+        ) if self.mart369_order_ref else self.env['sale.order']
+        return {
+            'id': self.id,
+            'ref': self.mart369_txn or self.reference or '',
+            'customer': self.partner_id.display_name or '',
+            'kind': self.mart369_kind or '',
+            'method': self.mart369_app_method or '',
+            'provider': self.provider_id.name or '',
+            'cod': cod,
+            'state': self.state,
+            'amount': self.amount,
+            'walletUsed': self.mart369_wallet_used or 0.0,
+            # Formatted as well as raw: the backend desk prints these straight,
+            # the app console formats the numbers itself through lib/money.js.
+            'amountText': (self.currency_id or self.env.company.currency_id).format(
+                self.amount),
+            'walletText': (self.currency_id or self.env.company.currency_id).format(
+                self.mart369_wallet_used) if self.mart369_wallet_used else '',
+            'currency': (self.currency_id or self.env.company.currency_id).name,
+            'orderRef': self.mart369_order_ref or '',
+            'orderId': order.id if order else None,
+            'message': self.state_message or '',
+            'at': int(self.create_date.timestamp() * 1000) if self.create_date else None,
+        }

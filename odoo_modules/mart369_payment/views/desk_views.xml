@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--
+        The payments and wallets desks: the app's own console screens, inside
+        Odoo.
+
+        Client actions rather than views, because both answer a question that
+        is read off the tiles - "did the money arrive" and "how much of this is
+        ours" - and no Odoo view type draws that beside the rows. The same
+        choice the orders, reviews, referrals and searches desks made.
+
+        `path` gives each a clean URL: /odoo/mart-payments and /odoo/mart-wallets.
+
+        Both groups on the menus, because these are the twins of console screens
+        fenced by the website designer group and the two front ends must not
+        disagree about who may read. The check they share is
+        `_mart369_admin_may_read` on the model. The raw lists stay
+        base.group_system under Advanced: an unfiltered payment.transaction list
+        is a system-admin tool.
+    -->
+    <record id="action_mart369_payment_desk" model="ir.actions.client">
+        <field name="name">Payments</field>
+        <field name="tag">mart369_payment.payments</field>
+        <field name="path">mart-payments</field>
+    </record>
+
+    <record id="action_mart369_wallet_desk" model="ir.actions.client">
+        <field name="name">Wallets</field>
+        <field name="tag">mart369_payment.wallets</field>
+        <field name="path">mart-wallets</field>
+    </record>
+
+    <menuitem id="menu_mart369_payments_desk"
+              name="Payments"
+              parent="mart369.menu_mart369_root"
+              action="action_mart369_payment_desk"
+              groups="base.group_system,website.group_website_designer"
+              sequence="40"/>
+
+    <menuitem id="menu_mart369_wallets_desk"
+              name="Wallets"
+              parent="mart369.menu_mart369_root"
+              action="action_mart369_wallet_desk"
+              groups="base.group_system,website.group_website_designer"
+              sequence="45"/>
+
+</odoo>
