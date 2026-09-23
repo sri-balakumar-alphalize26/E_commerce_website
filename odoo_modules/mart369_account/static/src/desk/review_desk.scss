@@ -30,6 +30,10 @@
     display: flex;
     flex-direction: column;
     min-height: 0;
+    /* The whole page scrolls, not a pane inside it - the cards move up out
+       of the way like on every other desk. */
+    height: 100%;
+    overflow-y: auto;
     background: var(--rv-ground);
 
     /* ------------------------------------------------------------- tiles */
@@ -154,9 +158,8 @@
     /* -------------------------------------------------------------- rows */
 
     .rv-queue-wrap {
-        flex: 1;
+        flex: 1 0 auto;
         min-height: 0;
-        overflow: auto;
     }
 
     .rv-queue {
