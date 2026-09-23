@@ -1,0 +1,227 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="mart369_catalog.CatalogDesk">
+        <Layout display="{ controlPanel: {} }" className="'o_mart369_desk h-100'">
+            <div class="mart-builder pe cd">
+
+                <header class="pe-head">
+                    <div>
+                        <h1>Catalog</h1>
+                        <p>The groups a shopper sees in the app, and how each one looks.</p>
+                    </div>
+                    <button class="mart-btn" t-on-click="() => this.allViews()">
+                        <i class="fa fa-th-list" role="img" aria-label="List"/>
+                        All views
+                    </button>
+                </header>
+
+                <div class="cd-tiles">
+                    <t t-foreach="TILES" t-as="tile" t-key="tile.key">
+                        <div t-if="tile.flat" class="cd-tile cd-tile-flat">
+                            <span class="cd-tile-top">
+                                <i t-attf-class="fa {{ tile.icon }}" aria-hidden="true"/>
+                                <t t-esc="tile.label"/>
+                            </span>
+                            <b t-esc="tileValue(tile)"/>
+                            <small>Counted once, however many groups they sit in</small>
+                        </div>
+                        <button t-else=""
+                                type="button"
+                                t-attf-class="cd-tile {{ state.tab === tile.tab ? 'cd-tile-on' : '' }} {{ tile.warn and tileValue(tile) ? 'cd-tile-warn' : '' }}"
+                                t-att-aria-pressed="state.tab === tile.tab ? 'true' : 'false'"
+                                t-on-click="() => this.pick(tile.tab)">
+                            <span class="cd-tile-top">
+                                <i t-attf-class="fa {{ tile.icon }}" aria-hidden="true"/>
+                                <t t-esc="tile.label"/>
+                            </span>
+                            <b t-esc="tileValue(tile)"/>
+                            <small>Show these</small>
+                        </button>
+                    </t>
+                </div>
+
+                <div class="pe-toolbar cd-toolbar">
+                    <div class="cd-tabs" role="tablist">
+                        <button t-foreach="TABS" t-as="tab" t-key="tab.key"
+                                role="tab"
+                                t-att-aria-selected="state.tab === tab.key ? 'true' : 'false'"
+                                t-attf-class="{{ state.tab === tab.key ? 'mart-on' : '' }}"
+                                t-on-click="() => this.pick(tab.key)">
+                            <t t-esc="tab.label"/>
+                            <em t-if="tabCount(tab) !== null" t-esc="tabCount(tab)"/>
+                        </button>
+                    </div>
+                    <div class="pe-toolbar-gap"/>
+                    <div class="cd-modes" role="group" aria-label="Storefront">
+                        <button t-foreach="modeOptions" t-as="opt" t-key="opt[0]"
+                                t-attf-class="cd-mode {{ state.mode === opt[0] ? 'mart-on' : '' }}"
+                                t-att-aria-pressed="state.mode === opt[0] ? 'true' : 'false'"
+                                t-on-click="() => this.setMode(opt[0])">
+                            <t t-esc="opt[1]"/>
+                        </button>
+                    </div>
+                    <input type="search" class="cd-search"
+                           placeholder="A category or its app address"
+                           aria-label="Search categories" t-on-input="search"/>
+                </div>
+
+                <p t-if="state.error" class="pe-error" role="alert">
+                    We could not reach the shop. <t t-esc="state.error"/>
+                    <button class="mart-link" t-on-click="() => this.load()">Try again</button>
+                </p>
+
+                <div class="cd-queue-wrap">
+                    <div class="cd-queue">
+
+                        <p t-if="state.loading and !state.rows.length" class="pe-loading">
+                            Loading categories...
+                        </p>
+
+                        <p t-elif="!state.rows.length and !state.q and state.tab === 'all' and !state.mode"
+                           class="pe-loading">
+                            There are no categories yet. Add them under All views,
+                            and they appear here the moment they exist.
+                        </p>
+
+                        <p t-elif="!state.rows.length and state.tab === 'empty'" class="pe-loading">
+                            Every category has something in it. That is the good
+                            version of this tab being empty.
+                        </p>
+
+                        <p t-elif="!state.rows.length" class="pe-loading">
+                            No category here. Try another tile, or a different search.
+                        </p>
+
+                        <t t-else="">
+                            <p class="cd-count">
+                                <t t-esc="state.rows.length"/>
+                                categor<t t-if="state.rows.length === 1">y</t><t t-else="">ies</t>
+                            </p>
+                            <ul class="cd-rows">
+                                <li t-foreach="state.rows" t-as="row" t-key="row.id"
+                                    t-attf-class="cd-row {{ row.inApp ? '' : 'cd-row-off' }}"
+                                    t-att-style="'--i: ' + row_index">
+
+                                    <!-- The colours, shown as what they are: the
+                                         pale background and the ink on top of it. -->
+                                    <span class="cd-swatch" t-att-style="swatch(row)"
+                                          t-attf-title="Background {{ row.tone }}, heading {{ row.accent }}">
+                                        Aa
+                                    </span>
+
+                                    <div class="cd-body">
+                                        <div class="cd-top">
+                                            <b t-esc="row.name"/>
+                                            <span t-attf-class="mart-pill {{ row.mode === 'all' ? 'cd-p-violet' : 'cd-p-blue' }}"
+                                                  t-esc="modeLabel(row.mode)"/>
+                                            <span t-if="!row.inApp" class="mart-pill cd-p-grey">
+                                                Hidden
+                                            </span>
+                                            <span t-if="!row.products" class="mart-pill cd-p-amber">
+                                                Nothing in it
+                                            </span>
+                                        </div>
+                                        <p class="cd-sub">
+                                            <code t-esc="'/' + row.slug"/>
+                                            <t t-if="row.parent">
+                                                <span class="cd-dot">&#183;</span>
+                                                under <t t-esc="row.parent"/>
+                                            </t>
+                                            <span class="cd-dot">&#183;</span>
+                                            <t t-esc="row.products"/> product<t t-if="row.products !== 1">s</t>
+                                            <t t-if="row.children">
+                                                <span class="cd-dot">&#183;</span>
+                                                <t t-esc="row.children"/> sub<t t-if="row.children !== 1">s</t>
+                                            </t>
+                                        </p>
+                                        <p t-if="row.blurb" class="cd-blurb" t-esc="row.blurb"/>
+                                    </div>
+
+                                    <div class="cd-act">
+                                        <button class="mart-btn mart-btn-sm"
+                                                t-att-disabled="state.busy"
+                                                t-on-click="() => this.edit(row)">
+                                            How it looks
+                                        </button>
+                                        <button class="mart-btn mart-btn-sm"
+                                                t-att-disabled="state.busy"
+                                                t-on-click="() => this.toggleShown(row)">
+                                            <t t-if="row.inApp">Hide</t>
+                                            <t t-else="">Show</t>
+                                        </button>
+                                    </div>
+                                </li>
+                            </ul>
+                        </t>
+
+                    </div>
+                </div>
+
+            </div>
+        </Layout>
+    </t>
+
+    <t t-name="mart369_catalog.CategoryDialog">
+        <Dialog size="'md'" contentClass="'cd-dialog'"
+                title="props.row.name || 'This category'">
+            <p class="cd-dialog-sub">
+                How the app draws this category. The name and the app address are
+                changed in the form, under All views - the address is a link a
+                customer may have saved.
+            </p>
+            <p t-if="state.error" class="cd-dialog-error" role="alert" t-esc="state.error"/>
+
+            <div class="cd-dialog-preview" t-att-style="previewStyle">
+                <b t-esc="props.row.name"/>
+                <small t-esc="state.draft.mart_blurb or 'No line under the title'"/>
+            </div>
+
+            <div class="cd-dialog-form">
+                <label class="cd-dialog-field cd-span2"><span>One line under the title</span>
+                    <input type="text" t-att-value="state.draft.mart_blurb"
+                           placeholder="Farm-fresh produce, picked daily"
+                           t-on-input="(ev) => this.edit('mart_blurb', ev)"/></label>
+
+                <label class="cd-dialog-field"><span>Background</span>
+                    <span class="cd-colour">
+                        <input type="color" t-att-value="state.draft.mart_tone"
+                               t-on-input="(ev) => this.edit('mart_tone', ev)"/>
+                        <input type="text" t-att-value="state.draft.mart_tone"
+                               t-on-input="(ev) => this.edit('mart_tone', ev)"/>
+                    </span></label>
+
+                <label class="cd-dialog-field"><span>Heading colour</span>
+                    <span class="cd-colour">
+                        <input type="color" t-att-value="state.draft.mart_accent"
+                               t-on-input="(ev) => this.edit('mart_accent', ev)"/>
+                        <input type="text" t-att-value="state.draft.mart_accent"
+                               t-on-input="(ev) => this.edit('mart_accent', ev)"/>
+                    </span></label>
+
+                <label t-if="props.row.topLevel" class="cd-dialog-field cd-span2">
+                    <span>Storefront</span>
+                    <select t-att-value="state.draft.mart_mode"
+                            t-on-change="(ev) => this.edit('mart_mode', ev)">
+                        <option value="quick">Quick - the 10-minute run</option>
+                        <option value="all">Express - ships over days</option>
+                    </select>
+                </label>
+                <p t-else="" class="cd-dialog-hint cd-span2">
+                    <i class="fa fa-info-circle" aria-hidden="true"/>
+                    This follows <b t-esc="props.row.parent"/>, which is in
+                    <b t-esc="modeLabel(props.row.mode)"/>. Change the storefront
+                    on the top-level category.
+                </p>
+            </div>
+
+            <t t-set-slot="footer">
+                <button class="btn btn-primary" t-att-disabled="state.busy"
+                        t-on-click="() => this.save()">Save</button>
+                <button class="btn btn-secondary"
+                        t-on-click="() => this.props.close()">Cancel</button>
+            </t>
+        </Dialog>
+    </t>
+
+</templates>

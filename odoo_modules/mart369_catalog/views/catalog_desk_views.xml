@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--
+        The catalog desk: the app's own console screen, inside Odoo.
+
+        A client action rather than a view, because what an operator wants to
+        see here is how a category *looks* - its colours on top of each other,
+        its line under the title - and no Odoo view type draws that beside the
+        counts. The same choice the searches desk next door made.
+
+        `path` gives it a clean URL, /odoo/mart-catalog.
+
+        Both groups, for the reason search_desk_views.xml gives: this screen is
+        the twin of a console screen fenced by the website designer group, and
+        the two front ends must not disagree about who may read it. Core's own
+        ACLs on product.public.category are what govern the records.
+    -->
+    <record id="action_mart369_catalog_desk" model="ir.actions.client">
+        <field name="name">Catalog</field>
+        <field name="tag">mart369_catalog.catalog</field>
+        <field name="path">mart-catalog</field>
+    </record>
+
+    <menuitem id="menu_mart369_catalog_desk"
+              name="Catalog"
+              parent="mart369.menu_mart369_root"
+              action="action_mart369_catalog_desk"
+              groups="base.group_system,website.group_website_designer"
+              sequence="40"/>
+
+</odoo>

@@ -24,6 +24,7 @@ import { CustomersSection, ProductsSection } from "./AdminCatalog";
 import { OffersSection, ReviewsSection, SettingsSection } from "./AdminMore";
 import { ReferralsSection } from "./AdminReferrals";
 import { SearchesSection } from "./AdminSearches";
+import { CategoriesSection } from "./AdminCategories";
 import { RewardsSection } from "./AdminRewards";
 import { AddressesSection } from "./AdminAddresses";
 import { NotificationsSection } from "./AdminNotifications";
@@ -53,6 +54,7 @@ export const SECTIONS = [
   { key: "addresses", label: "Addresses", icon: "pin", group: "Sales", live: true },
   { key: "notifications", label: "Notifications", icon: "bell", group: "Store", live: true },
   { key: "support", label: "Support", icon: "chat", group: "Sales", live: true },
+  { key: "catalog", label: "Catalog", icon: "store", group: "Catalogue", live: true },
   { key: "searches", label: "Searches", icon: "search", group: "Catalogue", live: true },
   { key: "products", label: "Products", icon: "layers", group: "Catalogue" },
   { key: "settings", label: "Settings", icon: "gear", group: "Store" },
@@ -284,6 +286,7 @@ export default function AdminApp({ section: initial = "dashboard", onSection, on
   else if (section === "reviews") body = <ReviewsSection flash={flash} />;
   else if (section === "referrals") body = <ReferralsSection flash={flash} />;
   else if (section === "searches") body = <SearchesSection flash={flash} />;
+  else if (section === "catalog") body = <CategoriesSection flash={flash} />;
   else if (section === "rewards") body = <RewardsSection flash={flash} />;
   else if (section === "addresses") body = <AddressesSection flash={flash} />;
   else if (section === "notifications") body = <NotificationsSection flash={flash} />;

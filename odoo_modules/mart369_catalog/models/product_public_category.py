@@ -14,8 +14,10 @@ A category with no children is still a category: the app shows "Launching soon"
 for Fashion and Books, which have no products yet.
 """
 
+import re
+
 from odoo import api, fields, models
-from odoo.exceptions import ValidationError
+from odoo.exceptions import UserError, ValidationError
 
 from odoo.addons.mart369.models.serializers import slugify
 
@@ -153,3 +155,134 @@ class ProductPublicCategory(models.Model):
             node['subs'] = [child._mart369_serialize(with_subs=False)
                             for child in self._mart369_children()]
         return node
+
+    # ------------------------------------------------------- the staff screen
+
+    ADMIN_TABS = ('all', 'live', 'hidden', 'empty')
+
+    # What either screen may write, and nothing else. Name and `mart_slug` are
+    # not here on purpose: the slug is a URL a customer may have saved, and the
+    # name is Odoo's own field that the catalogue, the product pages and the
+    # reports all lean on. Both belong in the Odoo form, which is still one
+    # click away under "Catalog (all views)".
+    ADMIN_FIELDS = ('mart_in_app', 'mart_mode', 'mart_blurb',
+                    'mart_tone', 'mart_accent')
+
+    @api.model
+    def mart369_admin_list(self, tab='all', mode='', q='', limit=300):
+        """The rows and the tiles in one call, filtered on the server.
+
+        Read by both the app console (over /369mart/admin/categories) and the
+        backend desk (over the ORM), so the two cannot drift.
+        """
+        domain = []
+        if tab == 'live':
+            domain = [('mart_in_app', '=', True)]
+        elif tab == 'hidden':
+            domain = [('mart_in_app', '=', False)]
+        q = (q or '').strip()
+        if q:
+            domain = domain + ['|', ('name', 'ilike', q), ('mart_slug', 'ilike', q)]
+
+        rows = self.search(domain, limit=limit)
+        if mode in ('quick', 'all'):
+            # Filtered here rather than in the domain because a child's
+            # storefront is its top-level parent's, which no domain can see.
+            rows = rows.filtered(lambda c: c._mart369_mode() == mode)
+        if tab == 'empty':
+            rows = rows.filtered(lambda c: not c.mart_product_count)
+
+        everything = self.search([])
+        live = everything.filtered('mart_in_app')
+        empty = everything.filtered(lambda c: not c.mart_product_count)
+        return {
+            'rows': [row._mart369_admin_row() for row in rows],
+            'counts': {
+                'all': len(everything),
+                'live': len(live),
+                'hidden': len(everything) - len(live),
+                'empty': len(empty),
+            },
+            'tiles': {
+                'live': len(live),
+                'hidden': len(everything) - len(live),
+                'empty': len(empty),
+                # Products a shopper can actually reach, counted once: summing
+                # every category's own count would count a product in three
+                # categories three times.
+                'products': self.env['product.template'].sudo().search_count([
+                    ('is_published', '=', True),
+                    ('public_categ_ids', 'in', live.ids),
+                ]) if live else 0,
+            },
+        }
+
+    def _mart369_admin_row(self):
+        self.ensure_one()
+        return {
+            'id': self.id,
+            'name': self.name or '',
+            'slug': self.mart_slug or '',
+            'parent': self.parent_id.name or '',
+            # `mode` is what the app really uses - a child's is its top-level
+            # parent's. `ownMode` is what this record holds, so the screen can
+            # tell the two apart instead of showing a setting that does nothing.
+            'mode': self._mart369_mode(),
+            'ownMode': self.mart_mode or '',
+            'topLevel': not self.parent_id,
+            'tone': self.mart_tone or '',
+            'accent': self.mart_accent or '',
+            'blurb': self.mart_blurb or '',
+            'products': self.mart_product_count,
+            'children': len(self.child_id),
+            'inApp': self.mart_in_app,
+        }
+
+    def mart369_admin_write(self, values):
+        """Change how the app draws this category.
+
+        Allow-listed to `ADMIN_FIELDS`. Not sudo'd: core grants the website
+        designer write on `product.public.category`, so Odoo's own rules do
+        the refusing.
+        """
+        self.ensure_one()
+        clean = {k: v for k, v in (values or {}).items() if k in self.ADMIN_FIELDS}
+        if not clean:
+            raise UserError(self.env._("There is nothing here to change."))
+
+        if 'mart_mode' in clean:
+            if self.parent_id:
+                # Writing it would store a value the app never reads, and the
+                # screen would then show a storefront this category is not in.
+                raise UserError(self.env._(
+                    "\"%(name)s\" follows \"%(parent)s\". Change the storefront "
+                    "on the top-level category instead.",
+                    name=self.name, parent=self.parent_id.name))
+            if clean['mart_mode'] not in dict(MODE_CHOICES):
+                raise UserError(self.env._("That is not one of the storefronts."))
+
+        for key in ('mart_tone', 'mart_accent'):
+            if key in clean:
+                clean[key] = self._mart369_check_colour(clean[key])
+
+        if 'mart_in_app' in clean:
+            clean['mart_in_app'] = bool(clean['mart_in_app'])
+
+        self.write(clean)
+        return self._mart369_admin_row()
+
+    @api.model
+    def _mart369_check_colour(self, value):
+        """A colour the app can actually paint with.
+
+        The storefront drops these straight into CSS, so anything that is not
+        a hex colour is a silently broken category page rather than an error
+        anybody sees.
+        """
+        value = (value or '').strip()
+        if not value:
+            return ''
+        if not re.fullmatch(r'#[0-9a-fA-F]{6}', value):
+            raise UserError(self.env._(
+                "A colour looks like #e8f5e9. '%s' does not.", value))
+        return value.lower()
