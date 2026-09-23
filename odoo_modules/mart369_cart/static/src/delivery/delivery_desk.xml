@@ -1,0 +1,408 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+<t t-name="mart369_cart.DeliveryDesk">
+    <Layout display="{ controlPanel: {} }" className="'o_mart369_delivery h-100'">
+        <div class="mart-builder pe dv">
+
+            <header class="pe-head">
+                <div>
+                    <h1>Delivery</h1>
+                    <p>
+                        What a delivery costs, when it can arrive, and where we go.
+                        The app reads these the moment they are saved.
+                    </p>
+                </div>
+                <div class="dv-head-act">
+                    <button t-if="state.tab === 'slots'" class="mart-btn mart-btn-primary"
+                            t-att-disabled="state.busy" t-on-click="() => this.openSlot(null)">
+                        <Icon n="'plus'" size="14"/> New slot
+                    </button>
+                    <button t-if="state.tab === 'areas'" class="mart-btn mart-btn-primary"
+                            t-att-disabled="state.busy" t-on-click="() => this.openArea(null)">
+                        <Icon n="'plus'" size="14"/> New area
+                    </button>
+                    <button class="mart-btn" t-on-click="() => this.allViews()">
+                        <Icon n="'menu'" size="14"/> All views
+                    </button>
+                </div>
+            </header>
+
+            <p t-if="state.error" class="pe-error" role="alert">
+                We could not reach the shop. <t t-esc="state.error"/>
+                <button class="mart-link" t-on-click="() => this.load()">Try again</button>
+            </p>
+
+            <!-- The two things that are wrong in a way nobody would
+                 otherwise see. Said once, above the tabs, because neither of
+                 them shows on the tab you would be looking at. -->
+            <p t-if="dark.length" class="dv-warn" role="status">
+                <Icon n="'warn'" size="14"/>
+                <span>
+                    <t t-foreach="dark" t-as="rule" t-key="rule.id">
+                        <b t-esc="rule.modeLabel"/><t t-if="!rule_last">, </t>
+                    </t>
+                    is switched off - nothing from it can be bought.
+                </span>
+            </p>
+            <p t-if="shut.length" class="dv-warn" role="status">
+                <Icon n="'warn'" size="14"/>
+                <span>
+                    No slot is open for
+                    <t t-foreach="shut" t-as="mode" t-key="mode.key">
+                        <b t-esc="mode.label"/><t t-if="!mode_last"> or </t>
+                    </t>, so it has nothing to offer at checkout.
+                </span>
+            </p>
+            <p t-if="!state.loading and !state.areas.length" class="dv-warn" role="status">
+                <Icon n="'warn'" size="14"/>
+                <span>No service area is on, so every pincode is told we do not
+                    deliver there yet.</span>
+            </p>
+
+            <div class="pe-toolbar dv-toolbar">
+                <div class="mart-tabs" role="tablist">
+                    <button t-foreach="TABS" t-as="tab" t-key="tab.key" role="tab"
+                            t-att-aria-selected="state.tab === tab.key ? 'true' : 'false'"
+                            t-attf-class="{{ state.tab === tab.key ? 'mart-on' : '' }}"
+                            t-on-click="() => this.pick(tab.key)">
+                        <Icon n="tab.icon" size="15"/>
+                        <t t-esc="tab.label"/>
+                        <em t-esc="tabCount(tab)"/>
+                    </button>
+                </div>
+            </div>
+
+            <!-- =============================== fees =============================== -->
+            <div t-if="state.tab === 'fees'" class="dv-rules">
+                <section t-foreach="state.rules" t-as="rule" t-key="rule.id" class="dv-rule">
+                    <header>
+                        <h2 t-esc="rule.modeLabel"/>
+                        <span class="mart-pill mart-t-grey" t-esc="rule.mode"/>
+                        <Switch on="draft(rule).active"
+                                label="rule.modeLabel + ' delivery on'"
+                                disabled="state.busy"
+                                onChange="(on) => this.setFee(rule, 'active', on)"/>
+                    </header>
+
+                    <div class="dv-form">
+                        <label class="dv-field"><span>Shown as</span>
+                            <input type="text" placeholder="Quick"
+                                   t-att-value="draft(rule).label"
+                                   t-on-input="(ev) => this.setFee(rule, 'label', ev.target.value)"/></label>
+                        <label class="dv-field"><span>Delivery promise</span>
+                            <input type="text" placeholder="Delivery in 13 mins"
+                                   t-att-value="draft(rule).eta"
+                                   t-on-input="(ev) => this.setFee(rule, 'eta', ev.target.value)"/></label>
+                        <label class="dv-field"><span>Minimum order</span>
+                            <input type="text" inputmode="decimal" placeholder="0"
+                                   t-att-value="draft(rule).min_order"
+                                   t-on-input="(ev) => this.setFee(rule, 'min_order', ev.target.value)"/></label>
+                        <label class="dv-field"><span>Free delivery above</span>
+                            <input type="text" inputmode="decimal" placeholder="0"
+                                   t-att-value="draft(rule).free_above"
+                                   t-on-input="(ev) => this.setFee(rule, 'free_above', ev.target.value)"/></label>
+                        <label class="dv-field"><span>Delivery fee</span>
+                            <input type="text" inputmode="decimal" placeholder="0"
+                                   t-att-value="draft(rule).fee"
+                                   t-on-input="(ev) => this.setFee(rule, 'fee', ev.target.value)"/></label>
+                    </div>
+
+                    <p class="mart-hint dv-says">
+                        <t t-esc="sentence(rule)"/>
+                        <t t-if="minimum(rule)"> <t t-esc="minimum(rule)"/></t>
+                    </p>
+
+                    <footer>
+                        <span t-if="dirty(rule)" class="dv-unsaved">Unsaved changes</span>
+                        <button class="mart-btn mart-btn-primary"
+                                t-att-disabled="state.busy or !dirty(rule)"
+                                t-on-click="() => this.saveRule(rule)">
+                            Save <t t-esc="rule.modeLabel"/>
+                        </button>
+                    </footer>
+                </section>
+
+                <p t-if="!state.loading and !state.rules.length" class="mart-empty">
+                    <b>No delivery rules</b>
+                    Neither storefront has a rule, so the basket has no fee to show.
+                </p>
+            </div>
+
+            <!-- ============================== slots =============================== -->
+            <div t-if="state.tab === 'slots'" class="dv-table-wrap">
+                <table t-if="state.slots.length" class="dv-table">
+                    <thead>
+                        <tr>
+                            <th>Chip</th><th>Storefront</th><th>Kind</th><th>When</th>
+                            <th class="dv-num">Fee</th><th class="dv-num">Cap</th>
+                            <th>State</th><th/>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr t-foreach="state.slots" t-as="slot" t-key="slot.id"
+                            t-attf-class="{{ slot.active ? '' : 'dv-row-off' }}">
+                            <td>
+                                <b t-esc="slot.top"/>
+                                <small><t t-esc="slot.sub or '—'"/> · <t t-esc="slot.key"/></small>
+                            </td>
+                            <td t-esc="slot.modeLabel"/>
+                            <td t-esc="slot.kindLabel"/>
+                            <td>
+                                <t t-esc="when(slot) or '—'"/>
+                                <small t-esc="which(slot)"/>
+                            </td>
+                            <td class="dv-num">
+                                <t t-if="slot.fee" t-esc="money(slot.fee)"/>
+                                <t t-else="">Free</t>
+                            </td>
+                            <td class="dv-num">
+                                <t t-if="slot.capacity" t-esc="slot.capacity"/>
+                                <t t-else="">∞</t>
+                            </td>
+                            <td>
+                                <span t-if="slot.active" class="mart-pill mart-t-green">On</span>
+                                <span t-else="" class="mart-pill mart-t-grey">Off</span>
+                            </td>
+                            <td class="dv-act">
+                                <button class="mart-btn mart-btn-sm" t-att-disabled="state.busy"
+                                        t-on-click="() => this.openSlot(slot)">Edit</button>
+                                <button class="mart-btn mart-btn-sm" t-att-disabled="state.busy"
+                                        t-on-click="() => this.toggleSlot(slot)">
+                                    <t t-if="slot.active">Switch off</t>
+                                    <t t-else="">Put back</t>
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <p t-if="!state.loading and !state.slots.length" class="mart-empty">
+                    <b>No slots</b>
+                    The checkout has no window to offer. Add one and it appears on
+                    the slot step.
+                </p>
+            </div>
+
+            <!-- ============================== areas =============================== -->
+            <div t-if="state.tab === 'areas'" class="dv-table-wrap">
+                <table t-if="state.areas.length" class="dv-table">
+                    <thead>
+                        <tr>
+                            <th>Pincode</th><th>Area</th><th>Quick</th><th>Express</th>
+                            <th>Promise</th><th>State</th><th/>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr t-foreach="state.areas" t-as="area" t-key="area.id"
+                            t-attf-class="{{ area.active ? '' : 'dv-row-off' }}">
+                            <td>
+                                <b t-esc="area.pincode"/>
+                                <small t-if="area.pincode.length &lt; 6">and everything under it</small>
+                            </td>
+                            <td><t t-esc="area.name or '—'"/></td>
+                            <td>
+                                <span t-if="area.quick" class="mart-pill mart-t-green">On</span>
+                                <span t-else="" class="mart-pill mart-t-grey">Off</span>
+                            </td>
+                            <td>
+                                <span t-if="area.express" class="mart-pill mart-t-green">On</span>
+                                <span t-else="" class="mart-pill mart-t-grey">Off</span>
+                            </td>
+                            <td t-esc="area.eta or '—'"/>
+                            <td>
+                                <span t-if="area.active" class="mart-pill mart-t-green">On</span>
+                                <span t-else="" class="mart-pill mart-t-grey">Off</span>
+                            </td>
+                            <td class="dv-act">
+                                <button class="mart-btn mart-btn-sm" t-att-disabled="state.busy"
+                                        t-on-click="() => this.openArea(area)">Edit</button>
+                                <button class="mart-btn mart-btn-sm" t-att-disabled="state.busy"
+                                        t-on-click="() => this.toggleArea(area)">
+                                    <t t-if="area.active">Switch off</t>
+                                    <t t-else="">Put back</t>
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <p t-if="!state.loading and !state.areas.length" class="mart-empty">
+                    <b>Nowhere is covered</b>
+                    With no area on the list every pincode is told we do not deliver
+                    there. Add the ones you reach.
+                </p>
+            </div>
+
+        </div>
+    </Layout>
+</t>
+
+<!-- ============================== slot dialog ============================== -->
+<t t-name="mart369_cart.SlotDialog">
+    <Dialog size="'lg'" contentClass="'dv-dialog'"
+            title="state.draft.id ? 'Edit slot' : 'New slot'">
+        <div class="dv-dialog-body">
+            <p class="dv-sub">A chip on the checkout's slot step.</p>
+            <p t-if="state.error" class="dv-error" role="alert" t-esc="state.error"/>
+
+            <h3>What the chip says</h3>
+            <div class="dv-form">
+                <label class="dv-field"><span>Heading</span>
+                    <input type="text" placeholder="Today" t-att-value="state.draft.top"
+                           t-on-input="(ev) => this.set('top', ev.target.value)"/></label>
+                <label class="dv-field"><span>Detail</span>
+                    <input type="text" placeholder="6 - 8 PM" t-att-value="state.draft.sub"
+                           t-on-input="(ev) => this.set('sub', ev.target.value)"/></label>
+                <label class="dv-field dv-span2"><span>Confirmation line</span>
+                    <input type="text" t-att-value="state.draft.label"
+                           placeholder="Left empty, the shop writes it from the heading and the window"
+                           t-on-input="(ev) => this.set('label', ev.target.value)"/></label>
+            </div>
+
+            <h3>Which storefront, and what kind</h3>
+            <div class="dv-form">
+                <div class="dv-field"><span>Storefront</span>
+                    <div class="dv-choice" role="radiogroup">
+                        <button t-foreach="props.modes" t-as="mode" t-key="mode.key" type="button"
+                                role="radio" t-att-aria-checked="state.draft.mode === mode.key ? 'true' : 'false'"
+                                t-attf-class="{{ state.draft.mode === mode.key ? 'dv-on' : '' }}"
+                                t-on-click="() => this.set('mode', mode.key)" t-esc="mode.label"/>
+                    </div>
+                </div>
+                <div class="dv-field"><span>Kind</span>
+                    <div class="dv-choice" role="radiogroup">
+                        <button t-foreach="props.kinds" t-as="kind" t-key="kind.key" type="button"
+                                role="radio" t-att-aria-checked="state.draft.kind === kind.key ? 'true' : 'false'"
+                                t-attf-class="{{ state.draft.kind === kind.key ? 'dv-on' : '' }}"
+                                t-on-click="() => this.set('kind', kind.key)" t-esc="kind.label"/>
+                    </div>
+                </div>
+                <label t-if="!state.draft.id" class="dv-field"><span>Key</span>
+                    <input type="text" placeholder="eve" t-att-value="state.draft.key"
+                           t-on-input="(ev) => this.set('key', ev.target.value)"/></label>
+                <label class="dv-field"><span>Order in the list</span>
+                    <input type="text" inputmode="numeric" placeholder="10"
+                           t-att-value="state.draft.sequence"
+                           t-on-input="(ev) => this.set('sequence', ev.target.value)"/></label>
+            </div>
+            <p t-if="!state.draft.id" class="mart-hint">
+                The key is how the app and every order refer to this slot. Pick a
+                short one - now, eve, tm, std - and it cannot be changed afterwards.
+            </p>
+
+            <h3>When it runs</h3>
+            <div class="dv-form">
+                <label t-if="isWindow" class="dv-field">
+                    <span>From <em t-esc="clock(state.draft.from_hour)"/></span>
+                    <input type="text" inputmode="decimal" placeholder="18"
+                           t-att-value="state.draft.from_hour"
+                           t-on-input="(ev) => this.set('from_hour', ev.target.value)"/></label>
+                <label t-if="isWindow" class="dv-field">
+                    <span>To <em t-esc="clock(state.draft.to_hour)"/></span>
+                    <input type="text" inputmode="decimal" placeholder="20"
+                           t-att-value="state.draft.to_hour"
+                           t-on-input="(ev) => this.set('to_hour', ev.target.value)"/></label>
+                <label class="dv-field"><span>Days ahead</span>
+                    <input type="text" inputmode="numeric" placeholder="0"
+                           t-att-value="state.draft.day_offset"
+                           t-on-input="(ev) => this.set('day_offset', ev.target.value)"/></label>
+                <label class="dv-field">
+                    <span>Stop offering after <em t-esc="clock(state.draft.order_before)"/></span>
+                    <input type="text" inputmode="decimal" placeholder="24"
+                           t-att-value="state.draft.order_before"
+                           t-on-input="(ev) => this.set('order_before', ev.target.value)"/></label>
+            </div>
+            <p class="mart-hint">
+                Hours are numbers: 18.5 is 6:30 PM. 0 is today and 1 is tomorrow.
+                Leave the cut-off at 24 and the slot is always offered.
+            </p>
+
+            <h3>What it costs, and how many it takes</h3>
+            <div class="dv-form">
+                <label class="dv-field"><span>Extra fee</span>
+                    <input type="text" inputmode="decimal" placeholder="0"
+                           t-att-value="state.draft.fee"
+                           t-on-input="(ev) => this.set('fee', ev.target.value)"/></label>
+                <label class="dv-field"><span>Orders per slot</span>
+                    <input type="text" inputmode="numeric" placeholder="0"
+                           t-att-value="state.draft.capacity"
+                           t-on-input="(ev) => this.set('capacity', ev.target.value)"/></label>
+            </div>
+            <p class="mart-hint">
+                0 orders means no limit. Once a window is full the app stops
+                offering it for that day on its own.
+            </p>
+        </div>
+
+        <t t-set-slot="footer">
+            <button class="mart-btn mart-btn-primary" t-att-disabled="state.busy"
+                    t-on-click="() => this.save()">
+                <t t-if="state.draft.id">Save changes</t>
+                <t t-else="">Add slot</t>
+            </button>
+            <button class="mart-btn" t-on-click="() => this.props.close()">Cancel</button>
+        </t>
+    </Dialog>
+</t>
+
+<!-- ============================== area dialog ============================== -->
+<t t-name="mart369_cart.AreaDialog">
+    <Dialog contentClass="'dv-dialog'"
+            title="state.draft.id ? 'Edit service area' : 'New service area'">
+        <div class="dv-dialog-body">
+            <p t-if="state.error" class="dv-error" role="alert" t-esc="state.error"/>
+
+            <h3>Where</h3>
+            <div class="dv-form">
+                <label class="dv-field"><span>Pincode</span>
+                    <input type="text" placeholder="682016" t-att-value="state.draft.pincode"
+                           t-on-input="(ev) => this.set('pincode', ev.target.value)"/></label>
+                <label class="dv-field"><span>Area</span>
+                    <input type="text" placeholder="Kochi" t-att-value="state.draft.name"
+                           t-on-input="(ev) => this.set('name', ev.target.value)"/></label>
+            </div>
+            <p class="mart-hint">
+                A full pincode, or the start of one: 68 covers every pincode
+                beginning with it. The most specific entry wins, so 6820 beats 68.
+                The area name is for you - customers never see it.
+            </p>
+
+            <h3>What reaches it</h3>
+            <div class="dv-rows">
+                <div class="dv-row">
+                    <span><b>Quick delivery</b><small>The 10-minute grocery run</small></span>
+                    <Switch on="state.draft.quick"
+                            label="'Quick delivery'"
+                            onChange="() => this.set('quick', !state.draft.quick)"/>
+                </div>
+                <div class="dv-row">
+                    <span><b>Express delivery</b><small>Items that ship over days</small></span>
+                    <Switch on="state.draft.express"
+                            label="'Express delivery'"
+                            onChange="() => this.set('express', !state.draft.express)"/>
+                </div>
+            </div>
+
+            <div class="dv-form">
+                <label class="dv-field"><span>Delivery promise</span>
+                    <input type="text" placeholder="13 mins" t-att-value="state.draft.eta"
+                           t-on-input="(ev) => this.set('eta', ev.target.value)"/></label>
+            </div>
+            <p class="mart-hint">
+                Switch both off and the pincode is told we do not deliver there yet.
+            </p>
+        </div>
+
+        <t t-set-slot="footer">
+            <button class="mart-btn mart-btn-primary" t-att-disabled="state.busy"
+                    t-on-click="() => this.save()">
+                <t t-if="state.draft.id">Save changes</t>
+                <t t-else="">Add area</t>
+            </button>
+            <button class="mart-btn" t-on-click="() => this.props.close()">Cancel</button>
+        </t>
+    </Dialog>
+</t>
+
+</templates>

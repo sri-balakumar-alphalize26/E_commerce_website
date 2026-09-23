@@ -1,0 +1,278 @@
+/* The delivery desk.
+ *
+ * Only what the shared sheet does not cover. The shell, the header, the
+ * toolbar, the buttons, the pills, the tab strip, the toggle, the hint, the
+ * error bar and the empty state all come from
+ * mart369/static/src/builder/builder.scss and mart369/static/src/ui/kit.scss,
+ * both loaded earlier in the bundle because mart369 is a dependency.
+ *
+ * No @import - Odoo rejects a local import inside a bundle and the whole
+ * backend stylesheet fails with it. The $mart-* tokens come from
+ * mart369/static/src/scss/_mart_vars.scss, which is listed before it.
+ *
+ * **The form rules are a mixin, not a nested block.** Odoo portals a dialog
+ * to the end of the body, outside the screen that opened it, so anything
+ * written as `.mart-builder .dv-field` reaches the desk and not the dialog -
+ * and the desk shell is itself `display: flex`, so wrapping a dialog body in
+ * `.mart-builder` to borrow its rules lays the whole form out in one row.
+ * The same fields are wanted in both places, so they are written once and
+ * included in both.
+ */
+
+@mixin dv-forms {
+    .dv-form {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    .dv-field {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        font-size: 12.5px;
+        font-weight: 700;
+        color: $mart-muted;
+
+        /* The time beside the box, so nobody has to hold "18.5 is half past
+           six" in their head while typing it. */
+        em {
+            font-style: normal;
+            font-weight: 800;
+            color: $mart-blue;
+        }
+
+        input {
+            height: 38px;
+            padding: 0 11px;
+            border: 1px solid $mart-line;
+            border-radius: 10px;
+            font: inherit;
+            font-size: 13.5px;
+            font-weight: 500;
+            color: $mart-ink;
+            background: #fff;
+            outline: none;
+            transition: border-color 180ms ease, box-shadow 200ms ease;
+
+            &:focus {
+                border-color: $mart-blue;
+                box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.14);
+            }
+        }
+    }
+
+    .dv-span2 { grid-column: 1 / -1; }
+
+    /* Two or three options, both worth reading without opening anything. */
+    .dv-choice {
+        display: flex;
+        gap: 6px;
+
+        button {
+            flex: 1;
+            height: 38px;
+            padding: 0 10px;
+            border: 1px solid $mart-line;
+            border-radius: 10px;
+            background: #fff;
+            font: inherit;
+            font-size: 13px;
+            font-weight: 700;
+            color: $mart-muted;
+            cursor: pointer;
+            transition: border-color 160ms ease, color 160ms ease, background-color 160ms ease;
+
+            &:hover { color: $mart-ink; }
+            &.dv-on { border-color: $mart-blue; background: #eef7fc; color: $mart-blue-deep; }
+        }
+    }
+}
+
+.o_mart369_delivery { overflow: auto; }
+
+.mart-builder.dv {
+    @include dv-forms;
+
+    .dv-head-act { display: flex; align-items: center; gap: 8px; flex: none; }
+    .dv-toolbar { margin: 0 0 16px; }
+
+    /* Said above the tabs, because neither thing it warns about shows on the
+       tab somebody would be looking at. */
+    .dv-warn {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        margin: 0 0 12px;
+        padding: 10px 13px;
+        border-radius: 11px;
+        background: #fdf1dc;
+        border: 1px solid #f3dcae;
+        color: #8a5a06;
+        font-size: 13px;
+        line-height: 1.5;
+
+        .fa { margin-top: 2px; flex: none; }
+        b { font-weight: 800; }
+    }
+
+    /* ------------------------------------------------------------- fees */
+
+    .dv-rules {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+    }
+
+    .dv-rule {
+        display: flex;
+        flex-direction: column;
+        padding: 16px 18px 18px;
+        background: #fff;
+        border: 1px solid $mart-line;
+        border-radius: 16px;
+
+        > header {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            margin: 0 0 14px;
+
+            h2 {
+                margin: 0;
+                font-size: 17px;
+                font-weight: 800;
+                letter-spacing: -0.02em;
+            }
+
+            /* The switch at the far end of the heading, where "is this
+               storefront delivering at all" belongs - above the numbers,
+               not buried among them. */
+            .mart-switch { margin-left: auto; }
+        }
+
+        > footer {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: auto;
+            padding-top: 14px;
+        }
+    }
+
+    .dv-says { margin: 12px 0 0; }
+    .dv-unsaved { font-size: 12px; font-weight: 700; color: $mart-muted; }
+
+    /* ----------------------------------------------------------- tables */
+
+    .dv-table-wrap { overflow-x: auto; width: 100%; }
+
+    .dv-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13.5px;
+        background: #fff;
+        border: 1px solid $mart-line;
+        border-radius: 14px;
+
+        th {
+            text-align: left;
+            padding: 10px 12px;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            color: $mart-muted;
+            border-bottom: 1px solid $mart-line;
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #f1f4f7;
+            vertical-align: middle;
+        }
+
+        tbody tr:last-child td { border-bottom: 0; }
+        tbody tr:hover { background: #f7fafc; }
+
+        b { font-weight: 700; }
+        small { display: block; font-size: 12px; color: $mart-muted; }
+
+        .dv-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+        .dv-act { text-align: right; white-space: nowrap; }
+        .dv-act .mart-btn + .mart-btn { margin-left: 6px; }
+
+        /* Switched off is a state to read, not a row to hide. */
+        .dv-row-off td:first-child { box-shadow: inset 3px 0 0 $mart-amber; }
+        .dv-row-off b { color: $mart-muted; }
+    }
+}
+
+/* ------------------------------------------------------------- dialogs
+   Top level, because this is where Odoo puts a dialog: at the end of the
+   body, not inside the screen that opened it. */
+.dv-dialog {
+    .dv-dialog-body {
+        @include dv-forms;
+
+        font-family: Inter, "Segoe UI", system-ui, sans-serif;
+        color: $mart-ink;
+
+        h3 {
+            margin: 18px 0 10px;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.07em;
+            text-transform: uppercase;
+            color: $mart-muted;
+
+            &:first-of-type { margin-top: 0; }
+        }
+
+        /* The kit's own hint is nested under .mart-builder, which a portaled
+           dialog is not inside. */
+        .mart-hint {
+            margin: 8px 0 0;
+            font-size: 12.5px;
+            line-height: 1.5;
+            color: $mart-muted;
+        }
+
+        .dv-sub { margin: 0 0 12px; font-size: 13px; color: $mart-muted; }
+
+        .dv-error {
+            margin: 0 0 12px;
+            padding: 9px 12px;
+            border-radius: 10px;
+            background: #fbe9e7;
+            border: 1px solid #f3c4c1;
+            color: #9c2f28;
+            font-size: 13px;
+        }
+
+        /* A switch with its own sentence beside it, for a dialog where the
+           label has to say what switching it off actually does. */
+        .dv-rows { display: flex; flex-direction: column; gap: 8px; margin: 0 0 12px; }
+
+        .dv-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            border: 1px solid $mart-line;
+            border-radius: 11px;
+
+            > span { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+            b { font-size: 13.5px; font-weight: 700; color: $mart-ink; }
+            small { font-size: 12px; color: $mart-muted; }
+        }
+    }
+}
+
+@media (max-width: 900px) {
+    .mart-builder.dv .dv-rules { grid-template-columns: minmax(0, 1fr); }
+    .mart-builder.dv .dv-form,
+    .dv-dialog .dv-dialog-body .dv-form { grid-template-columns: minmax(0, 1fr); }
+}

@@ -116,6 +116,14 @@ class SaleOrder(models.Model):
 
     mart369_otp_hash = fields.Char(
         string='Delivery code', copy=False, readonly=True, groups='base.group_system')
+    # The code itself, kept so the customer can be shown it. The digest above
+    # is still what `_mart369_check_otp` compares, and it outlives this field:
+    # the plaintext is cleared the moment the code is spent, so a used code can
+    # still be recognised as used rather than looking like one never issued.
+    mart369_otp_code = fields.Char(
+        string='Delivery code (plain)', copy=False, readonly=True,
+        groups='base.group_system',
+        help="Shown to the customer on their own order, and to nobody else.")
     mart369_otp_at = fields.Datetime(string='Code issued', copy=False, readonly=True)
     mart369_otp_used_at = fields.Datetime(string='Code used', copy=False, readonly=True)
 
@@ -240,6 +248,15 @@ class SaleOrder(models.Model):
             if not nxt:
                 raise UserError(order.env._(
                     'Order %s has already been delivered.', order.mart369_ref or ''))
+            if nxt == 'delivered':
+                # Delivered is the customer's word, not the board's. It is
+                # reached by `mart369_action_deliver` with the code from the
+                # doorstep and by nothing else - a one-click button that could
+                # close a delivery would make the code decoration, and the
+                # first busy afternoon would prove it.
+                raise UserError(order.env._(
+                    'Order %s is out for delivery. Enter the delivery code to '
+                    'close it.', order.mart369_ref or ''))
             order._mart369_set_state(nxt)
         return True
 
@@ -287,6 +304,7 @@ class SaleOrder(models.Model):
         code = '%06d' % secrets.randbelow(1000000)
         self.sudo().write({
             'mart369_otp_hash': self._mart369_digest(code),
+            'mart369_otp_code': code,
             'mart369_otp_at': fields.Datetime.now(),
             'mart369_otp_used_at': False,
         })
@@ -300,7 +318,42 @@ class SaleOrder(models.Model):
             return False
         if not hmac.compare_digest(self._mart369_digest(code), order.mart369_otp_hash):
             return False
-        order.write({'mart369_otp_used_at': fields.Datetime.now()})
+        # Spent: forget the plaintext. The digest stays, so a second attempt
+        # is recognised as a used code rather than as one that never existed.
+        order.write({
+            'mart369_otp_used_at': fields.Datetime.now(),
+            'mart369_otp_code': False,
+        })
+        return True
+
+    def mart369_action_deliver(self, code):
+        """Close the delivery with the code from the customer's doorstep.
+
+        The only way an order becomes delivered. It lives on the model rather
+        than in the route on purpose: the console calls it today, the Odoo desk
+        calls it, and the rider app will call the same method rather than
+        carry a second copy of what a valid code is.
+
+        Refuses rather than lies. A wrong code, a spent one, or an order that
+        is not out for delivery each raise with a sentence the operator can
+        read out to whoever is standing there.
+        """
+        self.ensure_one()
+        if self.mart369_state == 'cancelled':
+            raise UserError(self.env._(
+                'Order %s was cancelled.', self.mart369_ref or ''))
+        if self.mart369_state == 'delivered':
+            raise UserError(self.env._(
+                'Order %s is already delivered.', self.mart369_ref or ''))
+        if self.mart369_state != 'out':
+            raise UserError(self.env._(
+                'Order %s is not out for delivery yet.', self.mart369_ref or ''))
+        if not self._mart369_check_otp(code):
+            # Deliberately one message for wrong and for already-used. Telling
+            # a caller which one it was tells them whether they are guessing at
+            # a live code.
+            raise UserError(self.env._('That delivery code is not right.'))
+        self._mart369_set_state('delivered')
         return True
 
     # ------------------------------------------------------------ cancelling
@@ -384,6 +437,12 @@ class SaleOrder(models.Model):
             'timeline': [s._mart369_serialize() for s in self.mart369_stamp_ids],
             'returns': [r._mart369_serialize() for r in self.mart369_return_ids],
             'canCancel': self.mart369_state == 'placed',
+            # The code for the doorstep. Only ever reaches the customer who
+            # owns the order - every route that calls this serializer is fenced
+            # by partner_id - and the admin has its own serializer that does
+            # not carry it. Empty once the code is spent, so a delivered order
+            # stops showing a number that no longer opens anything.
+            'otp': self.sudo().mart369_otp_code or '',
         }
 
     def _mart369_app_lines(self):

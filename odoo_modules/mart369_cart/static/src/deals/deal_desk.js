@@ -30,20 +30,23 @@ import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
 import { useDebounced } from "@web/core/utils/timing";
 import { _t } from "@web/core/l10n/translation";
-import { ConfirmationDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
+import { Confirm } from "@mart369/ui/confirm";
 import { Dialog } from "@web/core/dialog/dialog";
 import { Layout } from "@web/search/layout";
 import { standardActionServiceProps } from "@web/webclient/actions/action_service";
+import { Pick } from "@mart369/ui/pick";
+import { Search } from "@mart369/ui/search";
+import { Icon } from "@mart369/ui/icon";
 
 const M = { deal: "mart369.deal", product: "product.template" };
 
 /* Tile -> which deals it shows. `all` is the default, because a deal that is
    not running yet is exactly what somebody comes here to check on. */
 export const TILES = [
-    { key: "all", label: _t("All deals"), icon: "fa-tags" },
-    { key: "live", label: _t("On right now"), icon: "fa-bolt" },
-    { key: "scheduled", label: _t("Starting later"), icon: "fa-clock-o" },
-    { key: "off", label: _t("Switched off"), icon: "fa-pause" },
+    { key: "all", label: _t("All deals"), icon: "ticket" },
+    { key: "live", label: _t("On right now"), icon: "bolt" },
+    { key: "scheduled", label: _t("Starting later"), icon: "clock" },
+    { key: "off", label: _t("Switched off"), icon: "pause" },
 ];
 
 /** Money, in whatever the shop quotes in. Shared by both components. */
@@ -70,7 +73,7 @@ function format(amount, currency) {
  */
 export class DealDialog extends Component {
     static template = "mart369_cart.DealDialog";
-    static components = { Dialog };
+    static components = { Dialog, Pick, Search, Icon };
     static props = {
         deal: { type: [Object, { value: null }], optional: true },
         currency: { type: [Object, { value: null }], optional: true },
@@ -105,9 +108,22 @@ export class DealDialog extends Component {
     }
 
     edit(field, ev) {
-        const value = ev.target.value;
+        this.set(field, ev.target.value);
+    }
+
+    /** The same write as `edit`, given the value rather than the event an input
+     *  carried it in - which is what a component hands back. */
+    set(field, value) {
         this.state.draft[field] =
             field === "value" || field === "floor" ? parseFloat(value || 0) : value;
+    }
+
+    /** What the discount is, in the shop's words rather than the field's. */
+    get kindOptions() {
+        return [
+            ["percent", _t("Percentage off")],
+            ["amount", _t("Amount off")],
+        ];
     }
 
     async _search() {
@@ -128,8 +144,8 @@ export class DealDialog extends Component {
         }
     }
 
-    onSearch(ev) {
-        this.state.q = ev.target.value;
+    onSearch(q) {
+        this.state.q = q;
         this.search();
     }
 
@@ -219,7 +235,7 @@ export class DealDialog extends Component {
 
 export class DealDesk extends Component {
     static template = "mart369_cart.DealDesk";
-    static components = { Layout };
+    static components = { Layout, Icon };
     static props = { ...standardActionServiceProps };
 
     setup() {
@@ -339,7 +355,7 @@ export class DealDesk extends Component {
     }
 
     remove(deal) {
-        this.dialog.add(ConfirmationDialog, {
+        this.dialog.add(Confirm, {
             title: _t('Remove "%s"?', deal.name),
             body: this.state.trashDays
                 ? _t(
@@ -376,7 +392,7 @@ export class DealDesk extends Component {
     /* Gone now rather than in thirty days. Only offered from the Trash, so
        nothing is destroyed without having been visible there first. */
     forget(deal) {
-        this.dialog.add(ConfirmationDialog, {
+        this.dialog.add(Confirm, {
             title: _t("Delete for good?"),
             body: _t(
                 '"%s" goes now. Orders already placed keep what they were ' +

@@ -17,7 +17,7 @@ import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } fro
 import { createPortal } from "react-dom";
 import { Icon, OpenContext, Thumb, money } from "./shared";
 import {
-  RETURN_STEPS, cancellable, deliveryOtp, fmtDay, fmtPlaced, fmtTime, liveStatus, returnStatus, returnable, riderFor,
+  RETURN_STEPS, cancellable, fmtDay, fmtPlaced, fmtTime, liveStatus, returnStatus, returnable, riderFor,
 } from "./orderState";
 import { api } from "@/lib/api";
 import { useAction } from "@/lib/useFetch";
@@ -414,7 +414,7 @@ function HelpSheet({ o, s, rider, onClose, onCancel }) {
   useEffect(() => { list.current?.scrollTo({ top: list.current.scrollHeight, behavior: "smooth" }); }, [msgs, typing]);
   const answer = (q) => {
     const low = q.toLowerCase();
-    if (/where|status|late|when/.test(low)) return s.key === "out" ? `${rider.name} is on the way. ${o.eta || "It should reach you shortly."} Share OTP ${deliveryOtp(o)} at the door.` : s.key === "delivered" ? "This order was delivered. If something's wrong you can return or replace items from this page." : s.key === "cancelled" ? "This order was cancelled. Your refund status is shown on the order page." : `Your order is ${{ placed: "confirmed and being prepared", packed: "packed and waiting for a rider", shipped: "shipped and on its way to your city" }[s.key] || "on the way"}. ${o.eta || "We'll notify you when it moves on."}`;
+    if (/where|status|late|when/.test(low)) return s.key === "out" ? `${rider.name} is on the way. ${o.eta || "It should reach you shortly."}${o.otp ? ` Share OTP ${o.otp} at the door.` : ""}` : s.key === "delivered" ? "This order was delivered. If something's wrong you can return or replace items from this page." : s.key === "cancelled" ? "This order was cancelled. Your refund status is shown on the order page." : `Your order is ${{ placed: "confirmed and being prepared", packed: "packed and waiting for a rider", shipped: "shipped and on its way to your city" }[s.key] || "on the way"}. ${o.eta || "We'll notify you when it moves on."}`;
     if (/missing|damaged|wrong/.test(low)) return "Sorry about that! Tap “Return or replace” on the order page, choose the items and we'll arrange a pickup and a refund or replacement.";
     if (/payment|refund|charged|money/.test(low)) return o.method === "cod" ? "This is a cash on delivery order, so nothing has been charged yet." : `Payment of ${m(o.paid || o.total)} was received via ${o.pay}. Refunds reach the source in 3–5 working days, or instantly to 369 Wallet.`;
     if (/cancel/.test(low)) return cancellable(o, s) ? "You can still cancel — I've opened the cancellation for you." : "This order can't be cancelled any more because it's already been packed. You can return items after delivery.";
@@ -521,11 +521,14 @@ export default function OrderTrack({ order: o, byId, onChanged, onBack, onReceip
                   <button className="ot-round" onClick={() => setSheet("help")} aria-label="Chat"><Icon n="chat" size={17} /></button>
                 </div>
               )}
-              {s.idx === 2 && (
+              {/* Only when the shop has actually sent one. A spent code comes
+                  back empty, and a row of dots hiding nothing would have the
+                  customer reading out a number that opens no door. */}
+              {s.idx === 2 && !!o.otp && (
                 <div className="ot-otp">
                   <span><b>Delivery OTP</b><small>Share only when the rider is at your door</small></span>
                   <button className={"ot-otp-code" + (otpShown ? " ot-shown" : "")} onClick={() => setOtpShown((v) => !v)} aria-label={otpShown ? "Hide OTP" : "Show OTP"}>
-                    {deliveryOtp(o).split("").map((d, i) => <i key={i} style={{ "--i": i }}>{otpShown ? d : "•"}</i>)}
+                    {String(o.otp).split("").map((d, i) => <i key={i} style={{ "--i": i }}>{otpShown ? d : "•"}</i>)}
                   </button>
                 </div>
               )}

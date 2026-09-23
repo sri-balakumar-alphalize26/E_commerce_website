@@ -17,15 +17,15 @@
                     <button class="mart-btn mart-trash-chip" t-att-disabled="state.busy"
                             t-att-aria-expanded="state.trashOpen ? 'true' : 'false'"
                             t-on-click="() => this.openTrash()">
-                        <i class="fa fa-trash" aria-hidden="true"/> Trash<em
+                        <Icon n="'trash'" size="14"/> Trash<em
                             t-if="state.trash.length" t-esc="state.trash.length"/>
                     </button>
                     <button class="mart-btn" t-on-click="() => this.allViews()">
-                        <i class="fa fa-th-list" aria-hidden="true"/> All views
+                        <Icon n="'menu'" size="14"/> All views
                     </button>
                     <button class="mart-btn mart-btn-primary" t-att-disabled="state.busy"
                             t-on-click="() => this.open(null)">
-                        <i class="fa fa-plus" aria-hidden="true"/> New deal
+                        <Icon n="'plus'" size="14"/> New deal
                     </button>
                 </div>
             </header>
@@ -36,14 +36,14 @@
                         t-att-aria-pressed="state.tab === tile.key ? 'true' : 'false'"
                         t-on-click="() => this.pick(tile.key)">
                     <span class="dd-tile-top">
-                        <i t-attf-class="fa {{ tile.icon }}" aria-hidden="true"/>
+                        <Icon n="tile.icon" size="15"/>
                         <t t-esc="tile.label"/>
                     </span>
                     <b t-esc="tileCount(tile)"/>
                 </button>
                 <span class="dd-tile dd-tile-flat">
                     <span class="dd-tile-top">
-                        <i class="fa fa-shopping-basket" aria-hidden="true"/> Products on offer
+                        <Icon n="'basket'" size="14"/> Products on offer
                     </span>
                     <b t-esc="state.onOffer"/>
                 </span>
@@ -180,11 +180,8 @@
                            t-on-input="(ev) => this.edit('note', ev)"/></label>
 
                 <label class="dd-field"><span>Discount</span>
-                    <select t-att-value="state.draft.kind"
-                            t-on-change="(ev) => this.edit('kind', ev)">
-                        <option value="percent">Percentage off</option>
-                        <option value="amount">Amount off</option>
-                    </select></label>
+                    <Pick label="'Discount'" value="state.draft.kind" options="kindOptions"
+                          onChange="(v) => this.set('kind', v)"/></label>
                 <label class="dd-field">
                     <span>
                         <t t-if="state.draft.kind === 'percent'">Per cent off</t>
@@ -210,9 +207,9 @@
 
                 <div class="dd-field dd-span2">
                     <span>Products <em t-esc="state.draft.products.length"/> picked</span>
-                    <input type="search" t-att-value="state.q"
-                           placeholder="Search the catalogue"
-                           t-on-input="onSearch"/>
+                    <Search value="state.q" placeholder="'Search the catalogue'"
+                            label="'Search the catalogue'" wide="true"
+                            onChange="(v) => this.onSearch(v)"/>
                     <ul t-if="state.results.length" class="dd-results">
                         <li t-foreach="state.results" t-as="p" t-key="p.id">
                             <button type="button" t-on-click="() => this.add(p)">
@@ -233,7 +230,7 @@
             </div>
 
             <p class="dd-hint">
-                <i class="fa fa-info-circle" aria-hidden="true"/>
+                <Icon n="'info'" size="14"/>
                 Leave the dates empty and it runs until you switch it off. A product
                 caught by two deals takes the better one, never both. Nothing is
                 written to the products - the lower price is worked out whenever a
@@ -242,12 +239,12 @@
         </div>
 
         <t t-set-slot="footer">
-            <button class="btn btn-primary" t-att-disabled="!canSave or state.busy"
+            <button class="mart-btn mart-btn-primary" t-att-disabled="!canSave or state.busy"
                     t-on-click="() => this.save()">
                 <t t-if="state.draft.id">Save changes</t>
                 <t t-else="">Create deal</t>
             </button>
-            <button class="btn btn-secondary" t-on-click="() => this.props.close()">
+            <button class="mart-btn" t-on-click="() => this.props.close()">
                 Cancel
             </button>
         </t>

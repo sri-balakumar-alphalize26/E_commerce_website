@@ -187,3 +187,35 @@ class Mart369DeliverySlot(models.Model):
             if slot.mode in out and slot._mart369_is_open(now):
                 out[slot.mode].append(slot._mart369_serialize(now))
         return out
+
+    # -------------------------------------------------------- the console
+
+    def _mart369_admin_row(self):
+        """One slot as the admin console draws it.
+
+        The hours go out as the numbers they are stored as, not as '6 PM'.
+        The screen prints the time beside the box, but what it edits is the
+        number, so that the thing typed and the thing Odoo constrains to 0-24
+        are the same thing. A serializer that handed over '6 PM' would make
+        the screen parse English back into a float to save it.
+        """
+        self.ensure_one()
+        return {
+            'id': self.id,
+            'sequence': self.sequence,
+            'mode': self.mode,
+            'modeLabel': dict(MODE_CHOICES).get(self.mode, self.mode or ''),
+            'kind': self.kind,
+            'kindLabel': dict(KIND_CHOICES).get(self.kind, self.kind or ''),
+            'key': self.key or '',
+            'top': self.top or '',
+            'sub': self.sub or '',
+            'label': self.label or '',
+            'fromHour': round(self.from_hour or 0.0, 2),
+            'toHour': round(self.to_hour or 0.0, 2),
+            'dayOffset': self.day_offset or 0,
+            'orderBefore': round(self.order_before or 0.0, 2),
+            'fee': round(self.fee or 0.0, 2),
+            'capacity': self.capacity or 0,
+            'active': self.active,
+        }

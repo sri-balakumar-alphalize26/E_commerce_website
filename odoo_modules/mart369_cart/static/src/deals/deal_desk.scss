@@ -210,7 +210,7 @@
             }
         }
 
-        input, select {
+        input {
             width: 100%;
             height: 38px;
             padding: 0 12px;
@@ -231,15 +231,15 @@
             }
         }
 
-        /* The chevron the shared sheet draws on its own selects. Inlined
-           rather than borrowed, because those rules live under
-           `.mart-builder`, which this dialog deliberately does not use. */
-        select {
-            appearance: none;
-            padding-right: 32px;
-            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7a86' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>");
-            background-repeat: no-repeat;
-            background-position: right 10px center;
+        /* The kit's dropdown is a 32px inline-flex toggle, sized for a toolbar.
+           In a stack of full-width fields it has to match them, and the label
+           sits above it rather than beside it, so the toggle spreads. */
+        .mart-select {
+            width: 100%;
+            height: 38px;
+            justify-content: space-between;
+            font-weight: 400;
+            font-size: 13.5px;
         }
     }
 

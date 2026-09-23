@@ -73,7 +73,12 @@ const RIDERS = [
   { name: "Suresh P.", vehicle: "KL 02 H 5518", rating: 4.7, trips: "980" },
 ];
 export const riderFor = (o) => RIDERS[hash(o.id) % RIDERS.length];
-export const deliveryOtp = (o) => String(1000 + (hash(o.id + "otp") % 9000));
+
+/* The delivery code used to be worked out here, from a hash of the order id.
+   Anyone holding an order number could work out the code for that doorstep
+   without ever seeing the order, which is the whole thing the code exists to
+   stop. It comes from the shop now, on the order itself, and only the
+   customer who owns that order is ever sent it. Empty once it is spent. */
 
 /* Both are the shop's call. `canCancel` comes straight off the order; the
    return window is the one rule the page still applies itself, because it is

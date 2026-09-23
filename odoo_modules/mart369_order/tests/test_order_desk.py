@@ -58,10 +58,22 @@ class TestDeskMethods(Mart369OrderCase):
         with self.assertRaises(UserError):
             self.env['sale.order'].mart369_admin_advance('369M-NOPE')
 
+    def _deliver(self, order):
+        """Walk an order all the way to delivered.
+
+        `mart369_action_advance` stops at out for delivery on purpose, so this
+        does what the rider does: reads the code the shop issued and hands it
+        back. Reading it off the order is what the customer's own screen does
+        too - it is the same field.
+        """
+        while order.mart369_state != 'out':
+            order.mart369_action_advance()
+        order.mart369_action_deliver(order.sudo().mart369_otp_code)
+        return order
+
     def test_a_delivered_order_cannot_be_moved_on(self):
         order = self._order()
-        for __ in range(3):
-            order.mart369_action_advance()
+        self._deliver(order)
         with self.assertRaises(UserError):
             self.env['sale.order'].mart369_admin_advance(order.mart369_ref)
 
@@ -95,8 +107,7 @@ class TestDeskMethods(Mart369OrderCase):
         a different number, so they get a different name.
         """
         order = self._order()
-        for __ in range(3):
-            order.mart369_action_advance()
+        self._deliver(order)
 
         # Measured as a change, not against zero. These counts are over the
         # whole shop, so any database that already holds a return - a seeded

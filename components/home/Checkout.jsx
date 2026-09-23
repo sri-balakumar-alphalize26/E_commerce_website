@@ -34,8 +34,19 @@ function instructionLine(instructions) {
 }
 const reduced = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
-/* ---------------- slots ---------------- */
-function useSlots() {
+/* ---------------- slots ----------------
+
+   The windows come from the shop, where an operator sets them: what each chip
+   says, which hours it covers, what it costs and how many orders it can take.
+   `/slots` hands back exactly the shape this page draws, already filtered to
+   the ones open right now - a "Today, 6 - 8 PM" is gone from the list after
+   six, and a full window stops being offered, neither of which a clock in the
+   browser can know.
+
+   The clock version is kept as the fallback, for the first paint and for a
+   shop that cannot be reached. It is the wrong answer in the small ways just
+   listed, but an empty slot step is the wrong answer in every way. */
+function useClockSlots() {
   return useMemo(() => {
     const now = new Date();
     const day = (n) => { const d = new Date(now); d.setDate(d.getDate() + n); return d.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" }); };
@@ -49,6 +60,18 @@ function useSlots() {
     ];
     return { quick, all };
   }, []);
+}
+
+function useSlots() {
+  const { data } = useResource("/slots");
+  const clock = useClockSlots();
+  return useMemo(() => {
+    /* Each storefront falls back on its own. A shop with slots for Quick and
+       none for Express should not have its Quick list thrown away too. */
+    const quick = data?.quick?.length ? data.quick : clock.quick;
+    const all = data?.all?.length ? data.all : clock.all;
+    return { quick, all };
+  }, [data, clock]);
 }
 
 /* ---------------- building blocks ---------------- */
@@ -451,12 +474,24 @@ export default function CheckoutPage({
   const slots = useSlots();
   const [step, setStep] = useState(address ? 2 : 1);
   const [slot, setSlot] = useState({ quick: "now", all: "std" });
-  /* Priority is a line on the bill, so the shop adds it, not this page. The
-     chip's own price is still the browser's (the slots come from its clock,
-     not from /369mart/slots yet) - but only one side works out the total. */
+  /* The extra a slot costs is a line on the bill, so the shop adds it, not
+     this page: it is handed the number and works out the total. Which number
+     comes from the chosen chip, which is the operator's to set - not a
+     constant in this file that nobody outside it could change. */
   const shape = useMemo(() => computeBill({ cart, byId }), [cart, byId]);
-  const priority = shape.groups.all.length && slot.all === "pri" ? PRIORITY_FEE : 0;
+  const chosen = slots.all.find((s) => s.key === slot.all);
+  const priority = shape.groups.all.length ? Number(chosen?.fee) || 0 : 0;
   const bill = useBill({ cart, byId, rules, coupon, slotFee: priority });
+  /* The shop's slots arrive after the first paint, and the keys it offers are
+     the operator's, not this file's. Keep the pick on a chip that exists, or
+     "std" would stay selected against a list that no longer has it and the
+     step would show nothing chosen. */
+  useEffect(() => {
+    setSlot((s) => ({
+      quick: slots.quick.some((c) => c.key === s.quick) ? s.quick : slots.quick[0]?.key || s.quick,
+      all: slots.all.some((c) => c.key === s.all) ? s.all : slots.all[0]?.key || s.all,
+    }));
+  }, [slots]);
   const [walletUse, setWalletUse] = useState(false);
   const [pay, setPay] = useState({
     method: "", upiApp: "gpay", useVpa: false, vpa: "", cardId: "", bank: "",

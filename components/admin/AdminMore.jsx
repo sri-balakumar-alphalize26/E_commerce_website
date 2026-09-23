@@ -782,7 +782,7 @@ export function SettingsSection({ settings, setSettings, flash }) {
     <div className="ad-stack">
       <section className="ad-card">
         <div className="ad-toolbar">
-          <Tabs value={tab} onChange={setTab} tabs={[["store", "Store"], ["delivery", "Delivery"], ["payments", "Payments"], ["alerts", "Alerts"]]} />
+          <Tabs value={tab} onChange={setTab} tabs={[["store", "Store"], ["payments", "Payments"], ["alerts", "Alerts"]]} />
           <div className="ad-toolbar-right">
             {dirty && <span className="ad-dim">Unsaved changes</span>}
             <button className="ad-btn" disabled={!dirty} onClick={() => setS(settings)}>Reset</button>
@@ -804,22 +804,10 @@ export function SettingsSection({ settings, setSettings, flash }) {
           </div>
         )}
 
-        {tab === "delivery" && (
-          <div className="ad-two">
-            {[["quick", "Quick", "Groceries in 10–20 minutes"], ["express", "Express", "Electronics and home in 2–5 days"]].map(([k, title, sub]) => (
-              <div key={k} className="ad-panel">
-                <h3>{title}<small>{sub}</small></h3>
-                <div className="ad-form">
-                  <Field label="Minimum order" value={s[k].min} onChange={(v) => set(k, "min")(+v.replace(/\D/g, "") || 0)} suffix="₹" />
-                  <Field label="Delivery fee" value={s[k].fee} onChange={(v) => set(k, "fee")(+v.replace(/\D/g, "") || 0)} suffix="₹" />
-                  <Field label="Free above" value={s[k].freeAbove} onChange={(v) => set(k, "freeAbove")(+v.replace(/\D/g, "") || 0)} suffix="₹" />
-                  <Field label={k === "quick" ? "Delivery radius" : "Slots per day"} value={k === "quick" ? s[k].radius : s[k].slots} onChange={(v) => set(k, k === "quick" ? "radius" : "slots")(+v.replace(/\D/g, "") || 0)} suffix={k === "quick" ? "km" : "slots"} />
-                  <Field label="Promised time" value={s[k].eta} onChange={set(k, "eta")} wide />
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+        {/* Delivery had a tab here, on invented numbers that saved nowhere.
+           It is a live screen of its own now - Store > Delivery - and two
+           screens claiming the same settings, one of them fiction, is worse
+           than one. */}
 
         {tab === "payments" && (
           <div className="ad-rows">

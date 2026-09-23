@@ -23,6 +23,8 @@ from odoo import http
 from odoo.exceptions import AccessError, UserError, ValidationError
 from odoo.http import request
 
+from ..models.delivery_slot import KIND_CHOICES, MODE_CHOICES
+
 _logger = logging.getLogger(__name__)
 
 _GET = {'type': 'http', 'auth': 'user', 'methods': ['GET'],
@@ -150,11 +152,17 @@ class Mart369CouponAdminApi(http.Controller):
                 'There is already a coupon with the code %s.' % taken.code,
                 field='code', status=409)
         try:
-            coupon = self._coupons().create(values)
-            # Flushed here on purpose. Without it the unique index on `code`
-            # fires after this handler has returned, and the operator gets
-            # Odoo's raw integrity error instead of a sentence.
-            coupon.flush_recordset()
+            # Inside a savepoint, and flushed inside it. The flush is so the
+            # unique index on `code` fires here rather than after this handler
+            # has returned, where the operator would get Odoo's raw integrity
+            # error instead of a sentence. The savepoint is so that a refusal
+            # actually undoes the write: `create` has already put the row in
+            # the transaction by the time the constraint speaks, so catching
+            # the error and answering 400 without this told the operator no
+            # and kept the value anyway.
+            with request.env.cr.savepoint():
+                coupon = self._coupons().create(values)
+                coupon.flush_recordset()
         except (AccessError, UserError, ValidationError) as exc:
             # The model refuses a nonsense percentage in its own words - it
             # knows why better than this does.
@@ -190,8 +198,9 @@ class Mart369CouponAdminApi(http.Controller):
                     'There is already a coupon with the code %s.' % taken.code,
                     field='code', status=409)
         try:
-            coupon.write(values)
-            coupon.flush_recordset()
+            with request.env.cr.savepoint():
+                coupon.write(values)
+                coupon.flush_recordset()
         except (AccessError, UserError, ValidationError) as exc:
             return self._fail(str(exc))
         except IntegrityError:
@@ -218,7 +227,8 @@ class Mart369CouponAdminApi(http.Controller):
                 'orders now. Switch it off instead.' % coupon.used_count,
                 status=409)
         try:
-            coupon.unlink()
+            with request.env.cr.savepoint():
+                coupon.unlink()
         except (AccessError, UserError) as exc:
             return self._fail(str(exc), status=409)
         return self._json({'ok': True})
@@ -323,7 +333,13 @@ class Mart369DealAdminApi(Mart369CouponAdminApi):
             field = str(exc) if isinstance(exc, ValueError) else 'product_ids'
             return self._fail(self._deal_why(field), field=field)
         try:
-            deal = self._deals().create(values)
+            # Flushed, and inside a savepoint - see `create_coupon`. Without
+            # the flush the model's refusal arrives at commit, which is after
+            # this handler has answered 201, so the operator is told the deal
+            # was created and then it is not.
+            with request.env.cr.savepoint():
+                deal = self._deals().create(values)
+                deal.flush_recordset()
         except (AccessError, UserError, ValidationError) as exc:
             # The model refuses a percentage over 90 in its own words.
             return self._fail(str(exc))
@@ -345,7 +361,9 @@ class Mart369DealAdminApi(Mart369CouponAdminApi):
         if not values:
             return self._fail('Nothing to change.')
         try:
-            deal.write(values)
+            with request.env.cr.savepoint():
+                deal.write(values)
+                deal.flush_recordset()
         except (AccessError, UserError, ValidationError) as exc:
             return self._fail(str(exc))
         return self._json({'ok': True, 'deal': deal._mart369_admin_serialize()})
@@ -365,7 +383,8 @@ class Mart369DealAdminApi(Mart369CouponAdminApi):
         if not deal:
             return self._fail('There is no such deal.', status=404)
         try:
-            deal.action_trash()
+            with request.env.cr.savepoint():
+                deal.action_trash()
         except (AccessError, UserError) as exc:
             return self._fail(str(exc), status=409)
         return self._json({'ok': True, 'deal': deal._mart369_admin_serialize()})
@@ -379,7 +398,8 @@ class Mart369DealAdminApi(Mart369CouponAdminApi):
         if not deal:
             return self._fail('There is no such deal.', status=404)
         try:
-            deal.action_restore()
+            with request.env.cr.savepoint():
+                deal.action_restore()
         except (AccessError, UserError) as exc:
             return self._fail(str(exc), status=409)
         return self._json({'ok': True, 'deal': deal._mart369_admin_serialize()})
@@ -401,7 +421,8 @@ class Mart369DealAdminApi(Mart369CouponAdminApi):
         if not deal.deleted_at:
             return self._fail('Put it in the Trash first.', status=409)
         try:
-            deal.unlink()
+            with request.env.cr.savepoint():
+                deal.unlink()
         except (AccessError, UserError) as exc:
             return self._fail(str(exc), status=409)
         return self._json({'ok': True})
@@ -422,3 +443,326 @@ class Mart369DealAdminApi(Mart369CouponAdminApi):
             'products': [{'id': t.id, 'name': t.name, 'price': t.list_price}
                          for t in found],
         })
+
+
+# ---------------------------------------------------------------- delivery
+
+# What the console may set on a delivery rule. Not `mode`: there is one rule
+# per storefront and the unique index says so, so letting a form rewrite it
+# turns an edit of the Express fee into a collision with the Quick one.
+# Not `carrier_id` either - which Odoo carrier actually ships an order is a
+# back-office question, and the screen that answers it is in Odoo.
+RULE_WRITABLE = ('label', 'eta', 'min_order', 'free_above', 'fee', 'active')
+RULE_NUMBERS = ('min_order', 'free_above', 'fee')
+
+# `key` is absent on purpose: see `_slot_values`.
+SLOT_WRITABLE = ('mode', 'kind', 'top', 'sub', 'label', 'from_hour', 'to_hour',
+                 'day_offset', 'order_before', 'fee', 'capacity', 'sequence',
+                 'active')
+SLOT_NUMBERS = ('from_hour', 'to_hour', 'order_before', 'fee')
+SLOT_INTS = ('day_offset', 'capacity', 'sequence')
+
+AREA_WRITABLE = ('pincode', 'name', 'eta', 'quick', 'express', 'active')
+AREA_BOOLS = ('quick', 'express', 'active')
+
+
+class Mart369DeliveryAdminApi(Mart369CouponAdminApi):
+    """Fees, slots and service areas, for the app's own admin console.
+
+    Subclassed off the coupon controller for its four helpers, not its routes,
+    for the reason given on the deal controller: `_json`, `_fail`, `_body` and
+    `_may_edit` are the same in every admin controller in the suite, and
+    another copy of them is another place for the group check to drift.
+
+    **One GET for all three lists.** The console shows them as three tabs of
+    one screen off one poll, and none of the three is long - two rules, a
+    handful of slots, however many pincodes a shop actually reaches. Three
+    endpoints would mean three round trips and three chances for the tabs to
+    disagree about how fresh they are.
+
+    **Nothing here deletes.** A rule, a slot and an area are all pointed at by
+    orders that have already gone out, so each is switched off instead. That is
+    an ordinary `active` write through the same PATCH, not a route of its own:
+    unlike a notice, which is retired as a thing in itself, switching a slot
+    off is one more field on the same form.
+    """
+
+    # --------------------------------------------------------------- lookups
+
+    def _rules(self):
+        """Not sudo'd - on purpose. See the module docstring."""
+        return request.env['mart369.delivery.rule'].with_context(active_test=False)
+
+    def _slots(self):
+        return request.env['mart369.delivery.slot'].with_context(active_test=False)
+
+    def _areas(self):
+        return request.env['mart369.service.area'].with_context(active_test=False)
+
+    def _one(self, records, record_id):
+        try:
+            return records.browse(int(record_id)).exists()
+        except (TypeError, ValueError):
+            return records
+
+    # ------------------------------------------------------------- coercion
+
+    def _typed(self, body, allowed, numbers=(), integers=(), booleans=('active',)):
+        """The allow-listed fields, read out of the body in the right types.
+
+        Raises ValueError with a field name, so the screen can put the message
+        under the control the server is complaining about. Range is not
+        checked here - 0 to 24 is the model's rule and it already enforces it
+        on every write, including the ones Odoo's own list view makes.
+        """
+        values = {}
+        for field in allowed:
+            if field not in body:
+                continue
+            raw = body[field]
+            if field in booleans:
+                values[field] = bool(raw)
+            elif field in numbers:
+                try:
+                    values[field] = float(raw or 0.0)
+                except (TypeError, ValueError):
+                    raise ValueError(field)  # noqa: B904
+            elif field in integers:
+                try:
+                    values[field] = int(raw or 0)
+                except (TypeError, ValueError):
+                    raise ValueError(field)  # noqa: B904
+            else:
+                values[field] = (raw or '').strip()
+        return values
+
+    def _rule_values(self, body):
+        values = self._typed(body, RULE_WRITABLE, numbers=RULE_NUMBERS)
+        for field in ('label', 'eta'):
+            if field in values and not values[field]:
+                raise ValueError(field)
+        return values
+
+    def _slot_values(self, body, creating=False):
+        values = self._typed(body, SLOT_WRITABLE,
+                             numbers=SLOT_NUMBERS, integers=SLOT_INTS)
+        if 'mode' in values and values['mode'] not in dict(MODE_CHOICES):
+            raise ValueError('mode')
+        if 'kind' in values and values['kind'] not in dict(KIND_CHOICES):
+            raise ValueError('kind')
+        if 'top' in values and not values['top']:
+            raise ValueError('top')
+
+        # The key is set once and never rewritten. It is what the app calls
+        # the slot in its own state and what `sale.order.mart369_slot_key`
+        # stores when somebody books one, so renaming it would quietly orphan
+        # every order already out for that window - and the capacity count,
+        # which finds those orders by key, would start reading zero.
+        if creating:
+            key = (body.get('key') or '').strip()
+            if not key:
+                raise ValueError('key')
+            values['key'] = key
+            if not values.get('top'):
+                raise ValueError('top')
+        return values
+
+    def _area_values(self, body, creating=False):
+        values = self._typed(body, AREA_WRITABLE, booleans=AREA_BOOLS)
+        if 'pincode' in values:
+            # Whitespace out first: a pincode pasted from a spreadsheet
+            # arrives as '682 016', which is digits with a space in it, and
+            # refusing that teaches nobody anything.
+            values['pincode'] = ''.join(values['pincode'].split())
+            if not values['pincode']:
+                raise ValueError('pincode')
+        if creating and not values.get('pincode'):
+            raise ValueError('pincode')
+        return values
+
+    def _why(self, field):
+        """What each refusal means, in the operator's words.
+
+        Overrides the coupon controller's, which is right about `code` and
+        `title` and knows nothing about hours.
+        """
+        return {
+            'label': 'A storefront needs a name - it is the word on the basket.',
+            'eta': 'Write the delivery promise the customer reads.',
+            'top': 'A slot needs a heading - it is the bold line on the chip.',
+            'key': 'A slot needs a key. Keep it short: now, eve, tm, std.',
+            'mode': 'That is not one of the storefronts.',
+            'kind': 'That is not a kind of slot.',
+            'pincode': 'A pincode is digits only.',
+            'from_hour': 'An hour is a number: 18.5 is half past six.',
+            'to_hour': 'An hour is a number: 18.5 is half past six.',
+            'order_before': 'A cut-off is a number: 17 means five in the afternoon.',
+            'fee': 'A fee is a number.',
+            'min_order': 'A minimum order is a number.',
+            'free_above': 'That is a number - 0 means delivery is never free.',
+            'capacity': 'Orders per slot is a whole number. 0 means no limit.',
+            'day_offset': 'Days ahead is a whole number. 0 is today.',
+        }.get(field, 'That is not a value this field can take.')
+
+    # ---------------------------------------------------------------- routes
+
+    @http.route('/369mart/admin/delivery', **_GET)
+    def delivery(self, **kwargs):
+        """The three lists, and the words for the two choice rows.
+
+        The choices ship with the list so neither side keeps its own copy of
+        what a storefront or a kind of slot is called.
+        """
+        if not self._may_edit():
+            return self._fail('You do not have access to this.', status=403)
+        try:
+            # The model assembles it, not this. The desk in Odoo calls the
+            # same method through the ORM, so the two screens cannot come to
+            # different conclusions about what delivery costs.
+            payload = self._rules().mart369_admin_list()
+        except AccessError as exc:
+            return self._fail(str(exc), status=403)
+        payload['ok'] = True
+        return self._json(payload)
+
+    @http.route('/369mart/admin/delivery/rules/<int:rule_id>', **_PATCH)
+    def update_rule(self, rule_id, **kwargs):
+        """Change what a storefront's delivery costs.
+
+        No create and no delete: there is one rule per storefront, both are
+        seeded with the module, and a third would fail the unique index.
+        """
+        if not self._may_edit():
+            return self._fail('You do not have access to this.', status=403)
+        rule = self._one(self._rules(), rule_id)
+        if not rule:
+            return self._fail('There is no such delivery rule.', status=404)
+        try:
+            values = self._rule_values(self._body())
+        except ValueError as exc:
+            return self._fail(self._why(str(exc)), field=str(exc))
+        if not values:
+            return self._fail('Nothing to change.')
+        try:
+            # Inside a savepoint, and flushed inside it. The model refuses a
+            # negative fee on flush, which is after `write` has already put it
+            # in the transaction - so catching that and answering 400 without
+            # this would send the operator a refusal and keep the number.
+            with request.env.cr.savepoint():
+                rule.write(values)
+                rule.flush_recordset()
+        except (AccessError, UserError, ValidationError) as exc:
+            return self._fail(str(exc))
+        return self._json({'ok': True, 'rule': rule._mart369_admin_row()})
+
+    @http.route('/369mart/admin/delivery/slots', **_POST)
+    def create_slot(self, **kwargs):
+        """A new window on the checkout's slot step."""
+        if not self._may_edit():
+            return self._fail('You do not have access to this.', status=403)
+        try:
+            values = self._slot_values(self._body(), creating=True)
+        except ValueError as exc:
+            return self._fail(self._why(str(exc)), field=str(exc))
+        taken = self._slots().search(
+            [('mode', '=', values.get('mode') or 'quick'),
+             ('key', '=', values['key'])], limit=1)
+        if taken:
+            return self._fail(
+                'That key is already used by the %s slot %s.'
+                % (dict(MODE_CHOICES).get(taken.mode, '').lower(), taken.top),
+                field='key', status=409)
+        try:
+            with request.env.cr.savepoint():
+                slot = self._slots().create(values)
+                slot.flush_recordset()
+        except (AccessError, UserError, ValidationError) as exc:
+            return self._fail(str(exc))
+        except IntegrityError:
+            where = dict(MODE_CHOICES).get(values.get('mode') or 'quick', '')
+            return self._fail(
+                'That key is already used by another %s slot.' % where.lower(),
+                field='key', status=409)
+        return self._json({'ok': True, 'slot': slot._mart369_admin_row()}, status=201)
+
+    @http.route('/369mart/admin/delivery/slots/<int:slot_id>', **_PATCH)
+    def update_slot(self, slot_id, **kwargs):
+        """Change a window, switching it off included."""
+        if not self._may_edit():
+            return self._fail('You do not have access to this.', status=403)
+        slot = self._one(self._slots(), slot_id)
+        if not slot:
+            return self._fail('There is no such slot.', status=404)
+        try:
+            values = self._slot_values(self._body())
+        except ValueError as exc:
+            return self._fail(self._why(str(exc)), field=str(exc))
+        if not values:
+            return self._fail('Nothing to change.')
+        try:
+            with request.env.cr.savepoint():
+                slot.write(values)
+                slot.flush_recordset()
+        except (AccessError, UserError, ValidationError) as exc:
+            return self._fail(str(exc))
+        except IntegrityError:
+            # Moving a slot to the other storefront, where its key is taken.
+            return self._fail('That key is already used in that storefront.',
+                              field='mode', status=409)
+        return self._json({'ok': True, 'slot': slot._mart369_admin_row()})
+
+    @http.route('/369mart/admin/delivery/areas', **_POST)
+    def create_area(self, **kwargs):
+        """Start delivering somewhere."""
+        if not self._may_edit():
+            return self._fail('You do not have access to this.', status=403)
+        try:
+            values = self._area_values(self._body(), creating=True)
+        except ValueError as exc:
+            return self._fail(self._why(str(exc)), field=str(exc))
+        taken = self._areas().search([('pincode', '=', values['pincode'])], limit=1)
+        if taken:
+            return self._fail('There is already an area for %s.' % taken.pincode,
+                              field='pincode', status=409)
+        try:
+            with request.env.cr.savepoint():
+                area = self._areas().create(values)
+                area.flush_recordset()
+        except (AccessError, UserError, ValidationError) as exc:
+            return self._fail(str(exc))
+        except IntegrityError:
+            # Two people adding the same pincode between the check and here.
+            return self._fail('That pincode has just been added.',
+                              field='pincode', status=409)
+        return self._json({'ok': True, 'area': area._mart369_admin_row()}, status=201)
+
+    @http.route('/369mart/admin/delivery/areas/<int:area_id>', **_PATCH)
+    def update_area(self, area_id, **kwargs):
+        """Change an area, or stop delivering to it."""
+        if not self._may_edit():
+            return self._fail('You do not have access to this.', status=403)
+        area = self._one(self._areas(), area_id)
+        if not area:
+            return self._fail('There is no such service area.', status=404)
+        try:
+            values = self._area_values(self._body())
+        except ValueError as exc:
+            return self._fail(self._why(str(exc)), field=str(exc))
+        if not values:
+            return self._fail('Nothing to change.')
+        if values.get('pincode'):
+            taken = self._areas().search(
+                [('pincode', '=', values['pincode']), ('id', '!=', area.id)], limit=1)
+            if taken:
+                return self._fail('There is already an area for %s.' % taken.pincode,
+                                  field='pincode', status=409)
+        try:
+            with request.env.cr.savepoint():
+                area.write(values)
+                area.flush_recordset()
+        except (AccessError, UserError, ValidationError) as exc:
+            return self._fail(str(exc))
+        except IntegrityError:
+            return self._fail('That pincode has just been added.',
+                              field='pincode', status=409)
+        return self._json({'ok': True, 'area': area._mart369_admin_row()})
