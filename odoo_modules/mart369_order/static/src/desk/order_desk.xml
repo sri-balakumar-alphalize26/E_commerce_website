@@ -11,7 +11,7 @@
                     <p>What needs doing, longest wait first.</p>
                 </div>
                 <button class="mart-btn" t-on-click="() => this.moreViews()">
-                    <i class="fa fa-th-list" role="img" aria-label="Board"/>
+                    <Icon n="'menu'" size="14"/>
                     All views
                 </button>
             </header>
@@ -25,7 +25,7 @@
                         t-att-aria-pressed="state.tab === tile.tab ? 'true' : 'false'"
                         t-on-click="() => this.pick(tile.tab)">
                     <span class="od-tile-top">
-                        <i t-attf-class="fa {{ tile.icon }}" aria-hidden="true"/>
+                        <Icon n="tile.icon" size="15"/>
                         <t t-esc="tile.label"/>
                     </span>
                     <b t-esc="tileValue(tile)"/>
@@ -35,19 +35,11 @@
             </div>
 
             <div class="pe-toolbar od-toolbar">
-                <div class="od-tabs" role="tablist">
-                    <button t-foreach="TABS" t-as="tab" t-key="tab.key"
-                            role="tab"
-                            t-att-aria-selected="state.tab === tab.key ? 'true' : 'false'"
-                            t-attf-class="{{ state.tab === tab.key ? 'mart-on' : '' }}"
-                            t-on-click="() => this.pick(tab.key)">
-                        <t t-esc="tab.label"/>
-                        <em t-if="tabCount(tab) !== null" t-esc="tabCount(tab)"/>
-                    </button>
-                </div>
+                <Tabs tabs="tabItems" value="state.tab"
+                      onChange="(k) => this.pick(k)"/>
                 <div class="pe-toolbar-gap"/>
-                <input type="search" class="od-search" placeholder="Order, name or phone"
-                       aria-label="Search orders" t-on-input="search"/>
+                <Search value="state.q" placeholder="'Order, name or phone'" label="'Search orders'"
+                            onChange="(v) => this.onSearch(v)"/>
                 <Pick label="'Storefront'" value="state.mode" options="modeOptions"
                       onChange="(v) => this.setFilter('mode', v)"/>
                 <Pick label="'Period'" value="state.when" options="whenOptions"
@@ -56,7 +48,7 @@
                       onChange="(v) => this.setFilter('sort', v)"/>
                 <button class="mart-btn od-export" t-att-disabled="!state.rows.length"
                         t-on-click="() => this.exportCsv()">
-                    <i class="fa fa-download" aria-hidden="true"/>
+                    <Icon n="'download'" size="14"/>
                     Export these
                 </button>
             </div>
@@ -89,8 +81,7 @@
                                 t-on-click="() => this.select(row.ref)">
                                 <span class="od-line1">
                                     <span class="od-ref">
-                                        <i t-attf-class="fa {{ row.mode === 'quick' ? 'fa-bolt' : 'fa-truck' }}"
-                                           aria-hidden="true"/>
+                                        <Icon n="row.mode === 'quick' ? 'fa-bolt' : 'fa-truck'" size="15"/>
                                         #<t t-esc="row.ref"/>
                                     </span>
                                     <span class="od-ago" t-esc="ago(row.at)"/>
@@ -104,10 +95,9 @@
                                     <b class="od-total" t-esc="money(row.total, row.currency)"/>
                                 </span>
                                 <span class="od-line2">
-                                    <span t-attf-class="mart-pill od-s-{{ row.state }}"
-                                          t-esc="STATUS[row.state].label"/>
+                                    <Pill s="row.state" map="STATUS"/>
                                     <span t-if="row.late" class="od-late">
-                                        <i class="fa fa-clock-o" aria-hidden="true"/>
+                                        <Icon n="'clock'" size="14"/>
                                         <t t-esc="overdue(row.dueAt)"/>
                                     </span>
                                     <span t-else="" class="od-promise"
@@ -137,22 +127,6 @@
     </Layout>
 </t>
 
-<t t-name="mart369_order.Pick">
-    <Dropdown position="'bottom-start'" menuClass="'od-pick-menu'">
-        <button class="od-pick" type="button" t-att-aria-label="props.label">
-            <span t-esc="current"/>
-            <i class="fa fa-angle-down" aria-hidden="true"/>
-        </button>
-        <t t-set-slot="content">
-            <DropdownItem t-foreach="props.options" t-as="opt" t-key="opt[0]"
-                          class="opt[0] === props.value ? 'od-pick-on' : ''"
-                          onSelected="() => this.choose(opt[0])">
-                <i class="fa fa-check" aria-hidden="true"/>
-                <t t-esc="opt[1]"/>
-            </DropdownItem>
-        </t>
-    </Dropdown>
-</t>
 
     <!-- One order, opened. A dialog rather than the column beside the list:
          a customer, an address, a basket, a bill and a timeline never fitted
@@ -174,10 +148,9 @@
                 </p>
                 <div class="od-dialog-cols">
                     <p class="od-chips">
-                        <span t-attf-class="mart-pill od-s-{{ o.state }}"
-                              t-esc="desk.STATUS[o.state].label"/>
+                        <Pill s="o.state" map="desk.STATUS"/>
                         <span t-if="o.late" class="od-late">
-                            <i class="fa fa-clock-o" aria-hidden="true"/>
+                            <Icon n="'clock'" size="14"/>
                             <t t-esc="desk.overdue(o.dueAt)"/>
                         </span>
                         <span class="od-pay" t-esc="o.payNote or o.method or ''"/>
@@ -266,10 +239,8 @@
                     <t t-if="o.canCancel">
                         <label class="mart-field od-reason">
                             <span>If you cancel, tell the customer</span>
-                            <select t-att-value="state.reason" t-on-change="(ev) => desk.setReason(ev)">
-                                <option t-foreach="state.reasons" t-as="reason"
-                                        t-key="reason" t-esc="reason"/>
-                            </select>
+                            <Pick label="'Reason'" value="state.reason" options="desk.reasonOptions"
+                                  onChange="(v) => desk.setReason(v)"/>
                         </label>
                         <button class="mart-btn mart-btn-danger"
                                 t-att-disabled="state.busy"
@@ -282,12 +253,53 @@
                             t-att-disabled="state.busy"
                             t-on-click="() => desk.advance(o)">
                         <t t-esc="o.next.label"/>
-                        <i class="fa fa-arrow-right" aria-hidden="true"/>
+                        <Icon n="'right'" size="14"/>
                     </button>
                 </t>
-                <button class="btn btn-secondary" t-on-click="() => this.props.close()">
+                <!-- A plain link rather than a button: the route answers with
+                     a PDF, so letting the browser fetch it keeps the download
+                     behaviour people expect. Shown only once there is one -
+                     an order billed later would otherwise offer a 404. -->
+                <a t-if="o.hasInvoice" class="mart-btn od-invoice"
+                   t-att-href="invoiceHref(o.ref)">
+                    <Icon n="'download'" size="14"/>
+                    Invoice
+                </a>
+                <button class="mart-btn" t-on-click="() => this.props.close()">
                     Close
                 </button>
+            </t>
+        </Dialog>
+    </t>
+
+    <!-- The doorstep code. `contentClass`, because a Dialog renders in a portal
+         outside the screen that opened it, so its rules cannot be nested under
+         `.mart-builder` and are spelled out at top level. -->
+    <t t-name="mart369_order.DeliverDialog">
+        <Dialog size="'sm'" title="'Delivered #' + props.order.ref + '?'"
+                contentClass="'o_mart369_dialog od-otp'">
+            <div class="od-otp-body">
+                <p>
+                    Ask for the six-digit code on the customer's phone. It is the
+                    only thing that closes a delivery, and it works once.
+                </p>
+                <input type="text" inputmode="numeric" autocomplete="off"
+                       class="od-otp-in" maxlength="6" placeholder="000000"
+                       aria-label="Delivery code"
+                       t-att-value="state.code"
+                       t-att-disabled="state.busy"
+                       t-on-input="onInput" t-on-keydown="onKeydown"/>
+                <p t-if="state.error" class="od-otp-bad" role="alert"
+                   t-esc="state.error"/>
+            </div>
+            <t t-set-slot="footer">
+                <button class="mart-btn mart-btn-primary"
+                        t-att-disabled="!canSend"
+                        t-on-click="() => this.send()">
+                    <t t-if="state.busy">Checking...</t>
+                    <t t-else="">Mark delivered</t>
+                </button>
+                <button class="mart-btn" t-on-click="() => this.props.close()">Cancel</button>
             </t>
         </Dialog>
     </t>

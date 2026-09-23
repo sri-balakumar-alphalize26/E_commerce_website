@@ -35,12 +35,15 @@ import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
 import { useDebounced } from "@web/core/utils/timing";
 import { _t } from "@web/core/l10n/translation";
-import { ConfirmationDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
+import { Confirm } from "@mart369/ui/confirm";
 import { Dialog } from "@web/core/dialog/dialog";
 import { Layout } from "@web/search/layout";
 import { standardActionServiceProps } from "@web/webclient/actions/action_service";
-import { Dropdown } from "@web/core/dropdown/dropdown";
-import { DropdownItem } from "@web/core/dropdown/dropdown_item";
+import { Search } from "@mart369/ui/search";
+import { Pick } from "@mart369/ui/pick";
+import { Icon } from "@mart369/ui/icon";
+import { Tabs } from "@mart369/ui/tabs";
+import { Pill } from "@mart369/ui/pill";
 
 /* The shop's own words. Same six as `STATE_CHOICES` on sale.order and the same
    tones the console uses, so the two screens colour a state alike. */
@@ -56,11 +59,11 @@ export const STATUS = {
 /* Tile -> which tab it switches to. The numbers come from
    `mart369_admin_counts`, the same counts the kanban's KPI strip shows. */
 export const TILES = [
-    { tab: "placed", label: _t("To pack"), icon: "fa-inbox" },
-    { tab: "packing", label: _t("Packed & shipped"), icon: "fa-archive" },
-    { tab: "out", label: _t("Out"), icon: "fa-truck" },
-    { tab: "late", label: _t("Late"), icon: "fa-clock-o", warn: true },
-    { tab: "cash", label: _t("Cash to collect"), icon: "fa-money", amount: true },
+    { tab: "placed", label: _t("To pack"), icon: "box" },
+    { tab: "packing", label: _t("Packed & shipped"), icon: "archive" },
+    { tab: "out", label: _t("Out"), icon: "truck" },
+    { tab: "late", label: _t("Late"), icon: "clock", warn: true },
+    { tab: "cash", label: _t("Cash to collect"), icon: "money", amount: true },
 ];
 
 export const TABS = [
@@ -76,46 +79,73 @@ export const TABS = [
 const PAGE = 20;
 const POLL_MS = 30000;
 
-/* Ours, not the browser's.
+/* The doorstep code, asked for.
  *
- * A native <select> draws its menu with the operating system: a grey Windows
- * list here, a rounded sheet on a Mac, a full-screen roller on a phone. Three
- * looks the rest of this screen does not have, and none of them can show a
- * tick against the option that is currently on.
+ * `delivered` is the one step the ladder will not take on its own: the server
+ * refuses an advance into it and asks for the code the customer reads off their
+ * phone at the door. So this is not politeness, it is the only way through.
  *
- * Built on Odoo's own Dropdown rather than hand-rolled, so it gets the
- * positioning, the outside click, Escape and arrow-key navigation that the
- * rest of the backend's menus have - and the console's twin of this is the
- * same control drawn the same way.
- *
- * `options` are [value, label] pairs, the same shape the console's Select
- * takes, so the two stay easy to compare.
+ * It stays open on a refusal and clears the box. The server answers the same
+ * sentence for a wrong code and for one already spent - deliberately, so nobody
+ * can tell by guessing whether a code is live - which means the operator's only
+ * move is to ask again, and closing the dialog would lose their place.
  */
-export class Pick extends Component {
-    static template = "mart369_order.Pick";
-    static components = { Dropdown, DropdownItem };
+export class DeliverDialog extends Component {
+    static template = "mart369_order.DeliverDialog";
+    static components = { Dialog };
     static props = {
-        value: { type: String },
-        options: { type: Array },
-        label: { type: String },
-        onChange: { type: Function },
+        order: { type: Object },
+        onDelivered: { type: Function },
+        close: { type: Function },
     };
 
-    get current() {
-        const hit = this.props.options.find(([v]) => v === this.props.value);
-        return hit ? hit[1] : "";
+    setup() {
+        this.orm = useService("orm");
+        this.state = useState({ code: "", busy: false, error: "" });
     }
 
-    choose(value) {
-        if (value !== this.props.value) {
-            this.props.onChange(value);
+    onInput(ev) {
+        // Digits only, and never longer than the code the server issues.
+        this.state.code = (ev.target.value || "").replace(/\D/g, "").slice(0, 6);
+        this.state.error = "";
+    }
+
+    onKeydown(ev) {
+        if (ev.key === "Enter" && this.canSend) {
+            this.send();
+        }
+    }
+
+    get canSend() {
+        return this.state.code.length === 6 && !this.state.busy;
+    }
+
+    async send() {
+        if (!this.canSend) {
+            return;
+        }
+        this.state.busy = true;
+        try {
+            await this.orm.call("sale.order", "mart369_admin_deliver", [
+                this.props.order.ref,
+                this.state.code,
+            ]);
+            this.props.onDelivered();
+            this.props.close();
+        } catch (err) {
+            this.state.error =
+                err?.data?.message || err?.message?.data?.message || err?.message ||
+                _t("That delivery code is not right.");
+            this.state.code = "";
+        } finally {
+            this.state.busy = false;
         }
     }
 }
 
 export class OrderDesk extends Component {
     static template = "mart369_order.OrderDesk";
-    static components = { Layout, Pick };
+    static components = { Layout, Pick, Search, Icon, Tabs, Pill };
     static props = { ...standardActionServiceProps };
 
     setup() {
@@ -148,11 +178,16 @@ export class OrderDesk extends Component {
             error: "",
         });
 
-        this.search = useDebounced((ev) => {
-            this.state.q = ev.target.value.trim();
+        /* The box writes to state at once, so typing is never swallowed by
+           the wait; only the reload is debounced, which is all the 300ms
+           was ever for. The text is kept raw and trimmed when it is sent -
+           trimming it here would eat the space between two words. */
+        this.reload = useDebounced(() => this.load(), 300);
+        this.onSearch = (q) => {
+            this.state.q = q;
             this.state.limit = PAGE;
-            this.load();
-        }, 300);
+            this.reload();
+        };
 
         onWillStart(() => this.load());
 
@@ -179,7 +214,7 @@ export class OrderDesk extends Component {
                     tab: this.state.tab,
                     mode: this.state.mode || null,
                     when: this.state.when === "all" ? null : this.state.when,
-                    q: this.state.q || null,
+                    q: this.state.q.trim() || null,
                     sort: this.state.sort,
                     limit: this.state.limit,
                 }),
@@ -268,6 +303,14 @@ export class OrderDesk extends Component {
         this.load();
     }
 
+
+    /** The tabs as the kit's strip takes them: [key, label, count] triples.
+     *  `tabCount` returns null for a tab that counts nothing, and the strip
+     *  draws no badge for null - which is how a tab stays quiet. */
+    get tabItems() {
+        return this.TABS.map((tab) => [tab.key, tab.label, this.tabCount(tab)]);
+    }
+
     tabCount(tab) {
         if (!tab.badge) {
             return null;
@@ -305,7 +348,24 @@ export class OrderDesk extends Component {
         }
     }
 
+    /** The last step is not ours to take. Everything up to `out` is one call;
+     *  `delivered` needs the code from the door, so it opens the dialog. */
+    needsCode(row) {
+        return row.next?.state === "delivered";
+    }
+
     advance(row) {
+        if (this.needsCode(row)) {
+            this.dialog.add(DeliverDialog, {
+                order: row,
+                onDelivered: () => {
+                    this.notification.add(
+                        _t("#%s delivered", row.ref), { type: "success" });
+                    this.load({ quiet: true });
+                },
+            });
+            return;
+        }
         return this.run(() =>
             this.orm.call("sale.order", "mart369_admin_advance", [row.ref])
         );
@@ -315,7 +375,7 @@ export class OrderDesk extends Component {
        it is about to write. It lands on the customer's own tracking screen. */
     askCancel(order) {
         const reason = this.state.reason || this.state.reasons[0] || "";
-        this.dialog.add(ConfirmationDialog, {
+        this.dialog.add(Confirm, {
             title: _t("Cancel order %s?", order.ref),
             body: _t(
                 'The money goes back the way it was paid, and the customer is ' +
@@ -332,8 +392,15 @@ export class OrderDesk extends Component {
         });
     }
 
-    setReason(ev) {
-        this.state.reason = ev.target.value;
+    setReason(reason) {
+        this.state.reason = reason;
+    }
+
+    /** The shop's own cancellation reasons, which arrive as plain sentences.
+     *  Doubled up into the [value, label] pairs the dropdown takes - the
+     *  sentence is both what is shown and what is sent. */
+    get reasonOptions() {
+        return this.state.reasons.map((reason) => [reason, reason]);
     }
 
     /* What is on screen, not what is in the shop - hence "these" on the
@@ -553,7 +620,7 @@ export class OrderDesk extends Component {
  */
 export class OrderDialog extends Component {
     static template = "mart369_order.OrderDialog";
-    static components = { Dialog };
+    static components = { Dialog, Pick, Icon, Pill };
     static props = {
         desk: { type: Object },
         close: { type: Function },
@@ -562,6 +629,14 @@ export class OrderDialog extends Component {
     setup() {
         this.desk = this.props.desk;
         this.state = useState(this.props.desk.state);
+    }
+
+    /** The invoice's own URL. A method rather than an expression in the
+     *  template: an OWL template is evaluated without globals, so
+     *  `encodeURIComponent` in there is a ReferenceError at render time
+     *  rather than a mistake anybody sees while writing it. */
+    invoiceHref(ref) {
+        return `/369mart/admin/orders/${encodeURIComponent(ref)}/invoice`;
     }
 }
 

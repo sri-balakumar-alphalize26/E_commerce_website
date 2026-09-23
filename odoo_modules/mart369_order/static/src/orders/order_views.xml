@@ -20,7 +20,7 @@
             <button type="button" class="o_mart369_kpi"
                     t-on-click="() => this.applyFilter('today')"
                     title="Show the orders placed today">
-                <span class="o_mart369_tile o_mart369_tile_blue"><i class="fa fa-shopping-basket"/></span>
+                <span class="o_mart369_tile o_mart369_tile_blue"><Icon n="'basket'" size="14"/></span>
                 <span class="o_mart369_kpi_txt">
                     <small>Today</small>
                     <strong t-out="d.today"/>
@@ -37,7 +37,7 @@
             <button type="button" class="o_mart369_kpi"
                     t-on-click="() => this.applyFilter('state_placed')"
                     title="Show orders waiting to be packed">
-                <span class="o_mart369_tile o_mart369_tile_orange"><i class="fa fa-cube"/></span>
+                <span class="o_mart369_tile o_mart369_tile_orange"><Icon n="'box'" size="14"/></span>
                 <span class="o_mart369_kpi_txt">
                     <small>To pack</small>
                     <strong t-out="d.packing"/>
@@ -48,7 +48,7 @@
             <button type="button" class="o_mart369_kpi"
                     t-on-click="() => this.applyFilter('state_out')"
                     title="Show orders out for delivery">
-                <span class="o_mart369_tile o_mart369_tile_green"><i class="fa fa-motorcycle"/></span>
+                <span class="o_mart369_tile o_mart369_tile_green"><Icon n="'scooter'" size="14"/></span>
                 <span class="o_mart369_kpi_txt">
                     <small>Out for delivery</small>
                     <strong t-out="d.out"/>
@@ -61,7 +61,7 @@
                     t-on-click="() => this.applyFilter('late')"
                     title="Show orders past the time they were promised">
                 <span t-att-class="'o_mart369_tile' + (d.late ? ' o_mart369_tile_red' : '')">
-                    <i class="fa fa-exclamation-circle"/>
+                    <Icon n="'info'" size="14"/>
                 </span>
                 <span class="o_mart369_kpi_txt">
                     <small>Late</small>
@@ -74,7 +74,7 @@
             <button type="button" class="o_mart369_kpi"
                     t-on-click="() => this.applyFilter('method_cod,state_live')"
                     title="Show cash still to be collected at the door">
-                <span class="o_mart369_tile"><i class="fa fa-money"/></span>
+                <span class="o_mart369_tile"><Icon n="'money'" size="14"/></span>
                 <span class="o_mart369_kpi_txt">
                     <small>Cash to collect</small>
                     <strong t-out="d.cash"/>
