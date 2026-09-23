@@ -50,6 +50,9 @@ not try to do.
     'data': [
         'security/ir.model.access.csv',
         'data/order_data.xml',
+        # The invoice document. The record it draws is an ordinary posted
+        # account.move; only the paper is ours.
+        'report/invoice_report.xml',
         'views/order_views.xml',
         'views/return_views.xml',
         'views/return_desk_views.xml',

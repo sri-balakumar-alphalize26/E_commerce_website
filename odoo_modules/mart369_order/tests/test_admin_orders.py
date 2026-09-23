@@ -89,11 +89,23 @@ class TestAdminOrders(Mart369OrderHttpCase):
 
     # -------------------------------------------------------------- the list
 
+    def _deliver(self, order):
+        """Walk an order all the way to delivered.
+
+        `mart369_action_advance` stops at out for delivery on purpose, so this
+        does what the rider does: reads the code the shop issued and hands it
+        back. Reading it off the order is what the customer's own screen does
+        too - it is the same field.
+        """
+        while order.mart369_state != 'out':
+            order.mart369_action_advance()
+        order.mart369_action_deliver(order.sudo().mart369_otp_code)
+        return order
+
     def test_the_list_opens_on_what_still_needs_doing(self):
         live = self._order()
         done = self._order(ref='369M-DONE')
-        for __ in range(3):
-            done.mart369_action_advance()
+        self._deliver(done)
         self.assertEqual(done.mart369_state, 'delivered')
 
         self._staff()
@@ -159,11 +171,17 @@ class TestAdminOrders(Mart369OrderHttpCase):
     def test_advance_walks_a_quick_order_down_its_own_ladder(self):
         order = self._order()
         self._staff()
-        for expected in ('packed', 'out', 'delivered'):
+        for expected in ('packed', 'out'):
             response = self._post(
                 '/369mart/admin/orders/%s/advance' % order.mart369_ref)
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.json()['order']['state'], expected)
+
+        # And then it stops. The ladder does not reach delivered any more -
+        # /deliver does, with the code.
+        stuck = self._post('/369mart/admin/orders/%s/advance' % order.mart369_ref)
+        self.assertEqual(stuck.status_code, 409)
+        self.assertIn('delivery code', stuck.json()['error'])
 
     def test_advance_ships_an_express_order_rather_than_packing_it(self):
         order = self._order(
@@ -175,8 +193,7 @@ class TestAdminOrders(Mart369OrderHttpCase):
     def test_moving_a_delivered_order_on_is_a_conflict(self):
         """Not a 400. The operator did nothing wrong - the screen was stale."""
         order = self._order()
-        for __ in range(3):
-            order.mart369_action_advance()
+        self._deliver(order)
         self._staff()
         response = self._post('/369mart/admin/orders/%s/advance' % order.mart369_ref)
         self.assertEqual(response.status_code, 409)
@@ -276,15 +293,25 @@ class TestAdminOrders(Mart369OrderHttpCase):
         self.assertNotIn('otp_hash', response.text)
 
     def test_the_invoice_is_the_consoles_own_route(self):
-        """The shopper's invoice route is fenced to that shopper's own orders,
-        so staff following it for anybody else would get a 404 and no clue
-        why. This one answers 404 only because nothing has been invoiced."""
+        """A paid order has a real invoice behind this route now.
+
+        It used to be allowed to 404 - nothing in the suite ever made an
+        `account.move`, so the route was correct to say there was nothing to
+        render. Paying an order posts one, so a 404 here is now a failure
+        rather than the expected answer.
+        """
         order = self._order()
         self._staff()
         response = self._get('/369mart/admin/orders/%s/invoice' % order.mart369_ref)
-        self.assertIn(response.status_code, (200, 404))
-        if response.status_code == 404:
-            self.assertIn('invoice', response.json()['error'].lower())
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.content)
+        # Not asserted as PDF bytes on purpose: Odoo renders reports as HTML
+        # whenever tests are running, so that nothing has to wait on
+        # wkhtmltopdf (ir_actions_report.py, `_render_qweb_pdf_prepare_streams`
+        # is skipped under `test_enable`). What is worth pinning anyway is that
+        # the document is *ours* - the order reference leads our template and
+        # appears nowhere in Odoo's own invoice.
+        self.assertIn(order.mart369_ref, response.text)
 
     def test_the_list_does_not_carry_the_drawer_s_extra_query(self):
         """`orderCount` costs a search per row, so it is the drawer's only."""

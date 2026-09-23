@@ -2,8 +2,12 @@
 
 In the app a return was a patch in localStorage and its photos were a counter -
 `OrderTrack.jsx:361` counted how many the customer picked and then dropped them.
-Here a return is a record, the photos are real attachments, and the refund is a
-credit note Odoo can account for.
+Here a return is a record and the photos are real attachments.
+
+The refund is **not** a credit note. `_mart369_refund` hands back the wallet leg
+and leaves the gateway's share to the gateway's own refund, which an operator
+starts there - so nothing here reverses the invoice. A return that should show
+in the books as a credit note still needs one raising by hand.
 
 The four steps are the app's own RETURN_STEPS (orderState.js:27-32), so the
 tracking screen's progress bar reads this without changing.

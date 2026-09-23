@@ -408,4 +408,43 @@ class SaleOrder(models.Model):
                 'mart369: order %s was paid for but could not be confirmed',
                 self.mart369_ref)
             return False
+        self._mart369_invoice()
+        return True
+
+    def _mart369_invoice(self):
+        """The bill, as a real document in the books.
+
+        Until now nothing in the suite ever made an `account.move`, so the shop
+        took money that never reached accounting: no revenue, no tax, no
+        receivable, and both invoice routes answered 404 because there was
+        genuinely nothing to render.
+
+        `_create_invoices` rather than a move built by hand. It already knows
+        the lines, the partner, the currency and - the part worth not
+        re-deriving - the price-included tax this shop quotes in, which
+        `_mart369_order_values` set on the lines when the order was placed.
+
+        Swallowed like the confirm above it, and for the same reason: by the
+        time this runs the customer has paid. An unbilled order an operator can
+        see beats an exception that loses the payment.
+        """
+        self.ensure_one()
+        # Both `_mart369_on_paid` and `_mart369_on_accepted` reach the confirm,
+        # and `_post_process` can run more than once for one transaction, so
+        # this has to be safe to call twice. A second invoice for one order is
+        # worse than none: it doubles the day's revenue.
+        if self.invoice_ids.filtered(lambda m: m.state != 'cancel'):
+            return False
+        if self.invoice_status == 'no':
+            return False
+        try:
+            invoice = self.with_context(mart369_placing=True)._create_invoices()
+            if not invoice:
+                return False
+            invoice.action_post()
+        except Exception:  # noqa: BLE001 - see the docstring
+            _logger.exception(
+                'mart369: order %s was paid for but could not be invoiced',
+                self.mart369_ref)
+            return False
         return True
