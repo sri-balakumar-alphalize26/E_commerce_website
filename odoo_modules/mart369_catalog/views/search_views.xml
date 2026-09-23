@@ -51,9 +51,17 @@
         </field>
     </record>
 
+    <!--
+        Searches opens the desk (views/search_desk_views.xml); this list keeps
+        what the desk does not try to do - grouping, the saved filters and
+        exporting. Same split as Reviews, Referrals and Orders.
+
+        It stays base.group_system: the unfiltered table is a system-admin
+        tool, while the desk is the screen a shopkeeper reads.
+    -->
     <menuitem id="menu_mart369_searches"
-              name="Searches"
-              parent="mart369.menu_mart369_root"
+              name="Searches (all views)"
+              parent="mart369.menu_mart369_advanced"
               action="action_mart369_searches"
               groups="base.group_system"
               sequence="45"/>

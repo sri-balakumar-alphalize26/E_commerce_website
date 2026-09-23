@@ -78,3 +78,118 @@ class Mart369SearchTerm(models.Model):
         terms = self.sudo().search(
             [('trending', '=', True), ('results', '>', 0)], limit=limit)
         return [t.term for t in terms]
+
+    # ------------------------------------------------------- the staff screen
+
+    # The tabs both front ends offer. 'popular' is not a domain but an order:
+    # every term is popular relative to the ones below it, and a threshold
+    # ("more than 5 searches") would be a number nobody chose.
+    ADMIN_TABS = ('all', 'popular', 'empty', 'blocked')
+
+    @api.model
+    def mart369_admin_list(self, tab='all', q='', limit=200):
+        """The rows and the tiles in one call, filtered on the server.
+
+        One call rather than a list plus counts, for the reason the other
+        desks give: the tiles are the tabs, and fetching them apart is how the
+        two end up disagreeing between requests.
+
+        Read by both the app console (over /369mart/admin/searches) and the
+        backend desk (over the ORM), so the two cannot drift.
+        """
+        domain = []
+        if tab == 'empty':
+            domain = [('results', '=', 0)]
+        elif tab == 'blocked':
+            domain = [('trending', '=', False)]
+        q = (q or '').strip()
+        if q:
+            domain = domain + [('term', 'ilike', q)]
+
+        # 'popular' is the default order already; the others read better with
+        # the most recent search first, because they are worked through rather
+        # than ranked.
+        order = 'hits desc, last_seen desc' if tab in ('all', 'popular') \
+            else 'last_seen desc, hits desc'
+        rows = self.search(domain, order=order, limit=limit)
+
+        everything = self.search([])
+        empty = everything.filtered(lambda t: not t.results)
+        return {
+            'rows': [row._mart369_admin_row() for row in rows],
+            'counts': {
+                'all': len(everything),
+                'popular': len(everything),
+                'empty': len(empty),
+                'blocked': len(everything.filtered(lambda t: not t.trending)),
+            },
+            'tiles': {
+                # Searches, not terms: one person typing "milk" forty times is
+                # forty searches and one gap in the catalogue. Both numbers are
+                # here because they answer different questions.
+                'searches': sum(everything.mapped('hits')),
+                'terms': len(everything),
+                'empty': len(empty),
+                # What those fruitless searches cost, in searches rather than
+                # in terms - the number that says how often somebody went
+                # looking and left with nothing.
+                'empty_searches': sum(empty.mapped('hits')),
+                'blocked': len(everything.filtered(lambda t: not t.trending)),
+            },
+        }
+
+    def _mart369_admin_row(self):
+        self.ensure_one()
+        return {
+            'id': self.id,
+            'term': self.term or '',
+            'hits': self.hits,
+            'results': self.results,
+            'trending': self.trending,
+            # Epoch milliseconds, like every other admin payload: the screens
+            # format dates themselves, and a naive string would be read as UTC
+            # by the browser and printed hours early.
+            'at': int(self.last_seen.timestamp() * 1000) if self.last_seen else None,
+        }
+
+    def mart369_admin_set_trending(self, trending):
+        """Allow, or stop, this term appearing to shoppers as a suggestion.
+
+        The only write either screen offers, and deliberately the only one:
+        `term`, `hits`, `results` and `last_seen` are counts of things that
+        really happened, and a staff member who could edit them could make the
+        catalogue's gaps disappear by typing over them.
+
+        Not sudo'd. A designer may write this because the ACL says so - see
+        security/ir.model.access.csv - so Odoo's own rules do the refusing.
+        """
+        self.ensure_one()
+        self.write({'trending': bool(trending)})
+        return self._mart369_admin_row()
+
+    # ------------------------------------------------------------ demo data
+
+    @api.model
+    def _mart369_load_demo(self):
+        """A few searches to look at, on a shop where nobody has searched yet.
+
+        Safe to invent, unlike anything on the payments or wallet screens:
+        these are counts of searches, not money and not a claim about a named
+        customer. One of them deliberately found nothing, because that row is
+        the reason this screen exists and an operator should see what it looks
+        like.
+
+        Does nothing once a single real search has been counted, so a shop
+        with traffic never has examples mixed into its demand list.
+        """
+        if self.search_count([]):
+            return False
+        now = fields.Datetime.now()
+        self.create([
+            {'term': 'milk', 'hits': 34, 'results': 12, 'last_seen': now},
+            {'term': 'bread', 'hits': 21, 'results': 8, 'last_seen': now},
+            {'term': 'phone charger', 'hits': 12, 'results': 5, 'last_seen': now},
+            # The one that matters: somebody asked, the shop had nothing.
+            {'term': 'fresh paneer', 'hits': 9, 'results': 0, 'last_seen': now},
+        ])
+        return True

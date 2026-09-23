@@ -735,3 +735,19 @@ html.ad-lock, html.ad-lock body { overflow: hidden; }
 @media (max-width: 1100px) { .ad-mini-stats.ad-mini-5 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 900px) { .ad-mini-stats.ad-mini-5 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 560px) { .ad-mini-stats.ad-mini-5 { grid-template-columns: minmax(0, 1fr); } }
+
+/* ---- searches ---- */
+/* The line above the rows that says what the empty searches cost. A number on
+   a tile does not ask for anything to be done about it; this does. */
+.ad-gap-note { display: flex; align-items: flex-start; gap: 9px; padding: 12px 14px; background: #fff; border: 1px solid #f3c4c1; border-left: 3px solid var(--ad-red); border-radius: 12px; font-size: 13px; line-height: 1.5; color: #3a4a55; }
+.ad-gap-note b { font-weight: 800; }
+.ad-terms { list-style: none; margin: 0; padding: 10px 14px 14px; display: flex; flex-direction: column; gap: 10px; }
+.ad-terms > li { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: #fff; border: 1px solid var(--ad-line); border-radius: 14px; animation: ad-rise 380ms var(--ad-ease) backwards; animation-delay: calc(var(--i, 0) * 45ms); }
+/* A term that found nothing is the one worth reading, so it carries a mark
+   down its edge rather than only a pill among others. */
+.ad-terms > li.ad-term-gap { border-left: 3px solid var(--ad-red); }
+.ad-term-body { flex: 1; min-width: 0; }
+.ad-term-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ad-term-top b { font-size: 14.5px; font-weight: 700; }
+.ad-term-body small { display: block; margin-top: 4px; font-size: 12.5px; color: var(--ad-muted); }
+.ad-term-body small b { color: var(--ad-ink); font-weight: 700; }

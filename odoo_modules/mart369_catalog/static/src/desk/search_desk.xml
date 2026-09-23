@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="mart369_catalog.SearchDesk">
+        <Layout display="{ controlPanel: {} }" className="'o_mart369_desk h-100'">
+            <div class="mart-builder pe sd">
+
+                <header class="pe-head">
+                    <div>
+                        <h1>Searches</h1>
+                        <p>What customers typed into the app, and what it found them.</p>
+                    </div>
+                    <button class="mart-btn" t-on-click="() => this.allViews()">
+                        <i class="fa fa-th-list" role="img" aria-label="List"/>
+                        All views
+                    </button>
+                </header>
+
+                <!-- The tiles are the filter, not a read-out above one - except
+                     Searches, which has no tab to show and says so by not being
+                     a button. -->
+                <div class="sd-tiles">
+                    <t t-foreach="TILES" t-as="tile" t-key="tile.key">
+                        <div t-if="tile.flat" class="sd-tile sd-tile-flat">
+                            <span class="sd-tile-top">
+                                <i t-attf-class="fa {{ tile.icon }}" aria-hidden="true"/>
+                                <t t-esc="tile.label"/>
+                            </span>
+                            <b t-esc="tileValue(tile)"/>
+                            <small>Every search, counted</small>
+                        </div>
+                        <button t-else=""
+                                type="button"
+                                t-attf-class="sd-tile {{ state.tab === tile.tab ? 'sd-tile-on' : '' }} {{ tile.bad and tileValue(tile) ? 'sd-tile-bad' : '' }}"
+                                t-att-aria-pressed="state.tab === tile.tab ? 'true' : 'false'"
+                                t-on-click="() => this.pick(tile.tab)">
+                            <span class="sd-tile-top">
+                                <i t-attf-class="fa {{ tile.icon }}" aria-hidden="true"/>
+                                <t t-esc="tile.label"/>
+                            </span>
+                            <b t-esc="tileValue(tile)"/>
+                            <small>Show these</small>
+                        </button>
+                    </t>
+                </div>
+
+                <!-- Said once, above everything, because it is the whole point
+                     of the screen and a number alone does not ask for anything
+                     to be done about it. -->
+                <p t-if="state.tiles.empty" class="sd-gap">
+                    <i class="fa fa-info-circle" aria-hidden="true"/>
+                    <span>
+                        <b><t t-esc="state.tiles.empty"/></b>
+                        <t t-if="state.tiles.empty === 1"> term</t>
+                        <t t-else=""> terms</t>
+                        found nothing, over
+                        <b><t t-esc="state.tiles.empty_searches"/></b>
+                        <t t-if="state.tiles.empty_searches === 1"> search</t>
+                        <t t-else=""> searches</t>.
+                        That is what customers wanted and the shop does not stock.
+                    </span>
+                </p>
+
+                <div class="pe-toolbar sd-toolbar">
+                    <div class="sd-tabs" role="tablist">
+                        <button t-foreach="TABS" t-as="tab" t-key="tab.key"
+                                role="tab"
+                                t-att-aria-selected="state.tab === tab.key ? 'true' : 'false'"
+                                t-attf-class="{{ state.tab === tab.key ? 'mart-on' : '' }}"
+                                t-on-click="() => this.pick(tab.key)">
+                            <t t-esc="tab.label"/>
+                            <em t-if="tabCount(tab) !== null" t-esc="tabCount(tab)"/>
+                        </button>
+                    </div>
+                    <div class="pe-toolbar-gap"/>
+                    <input type="search" class="sd-search"
+                           placeholder="A word somebody searched for"
+                           aria-label="Search the terms" t-on-input="search"/>
+                </div>
+
+                <p t-if="state.error" class="pe-error" role="alert">
+                    We could not reach the shop. <t t-esc="state.error"/>
+                    <button class="mart-link" t-on-click="() => this.load()">Try again</button>
+                </p>
+
+                <div class="sd-queue-wrap">
+                    <div class="sd-queue">
+
+                        <p t-if="state.loading and !state.rows.length" class="pe-loading">
+                            Loading searches...
+                        </p>
+
+                        <p t-elif="!state.rows.length and !state.q and state.tab === 'all'"
+                           class="pe-loading">
+                            Nobody has searched yet. Every search in the app is
+                            counted here as it happens.
+                        </p>
+
+                        <p t-elif="!state.rows.length and state.tab === 'empty'" class="pe-loading">
+                            Every search found something. That is the good version
+                            of this tab being empty.
+                        </p>
+
+                        <p t-elif="!state.rows.length" class="pe-loading">
+                            No term here. Try another tile, or a different search.
+                        </p>
+
+                        <t t-else="">
+                            <p class="sd-count">
+                                <t t-esc="state.rows.length"/> term<t t-if="state.rows.length !== 1">s</t>
+                            </p>
+                            <ul class="sd-rows">
+                                <li t-foreach="state.rows" t-as="row" t-key="row.id"
+                                    t-attf-class="sd-row {{ row.results ? '' : 'sd-row-gap' }}"
+                                    t-att-style="'--i: ' + row_index">
+
+                                    <div class="sd-body">
+                                        <div class="sd-top">
+                                            <b t-esc="row.term"/>
+                                            <span t-if="!row.results" class="mart-pill sd-p-red">
+                                                Found nothing
+                                            </span>
+                                            <span t-if="!row.trending" class="mart-pill sd-p-grey">
+                                                Not suggested
+                                            </span>
+                                        </div>
+                                        <p class="sd-sub">
+                                            searched <b><t t-esc="row.hits"/></b>
+                                            <t t-if="row.hits === 1"> time</t>
+                                            <t t-else=""> times</t>
+                                            <span class="sd-dot">&#183;</span>
+                                            <t t-if="row.results">
+                                                <t t-esc="row.results"/> result<t t-if="row.results !== 1">s</t> last time
+                                            </t>
+                                            <t t-else="">no results last time</t>
+                                            <t t-if="row.at">
+                                                <span class="sd-dot">&#183;</span>
+                                                <t t-esc="ago(row.at)"/>
+                                            </t>
+                                        </p>
+                                    </div>
+
+                                    <div class="sd-act">
+                                        <button class="mart-btn mart-btn-sm"
+                                                t-att-disabled="state.busy"
+                                                t-att-title="row.trending ? 'Stop offering this as a suggestion' : 'Offer this as a suggestion again'"
+                                                t-on-click="() => this.toggleTrending(row)">
+                                            <t t-if="row.trending">Stop suggesting</t>
+                                            <t t-else="">Suggest again</t>
+                                        </button>
+                                    </div>
+                                </li>
+                            </ul>
+                        </t>
+
+                    </div>
+                </div>
+
+            </div>
+        </Layout>
+    </t>
+
+</templates>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+        A few example searches, built in Python rather than written out here so
+        the method can guard itself: it does nothing once a single real search
+        has been counted, and a shop with traffic never finds examples mixed
+        into its own demand list.
+
+        Safe to invent, unlike anything on the payments or wallet screens -
+        these are counts of searches, not money and not a claim about a named
+        customer. One of them found nothing on purpose, because that row is the
+        reason the screen exists.
+
+        Not noupdate, for the reason mart369_cart's deal demo gives: with it the
+        function would only ever run on a fresh install, and a shop upgrading
+        into this feature would never see the examples.
+    -->
+    <data>
+        <function model="mart369.search.term" name="_mart369_load_demo"/>
+    </data>
+</odoo>
