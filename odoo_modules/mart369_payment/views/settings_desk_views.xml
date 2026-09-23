@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--
+        The settings desk: the console's Settings screen, inside Odoo.
+
+        In mart369_payment because this is where all three of its groups exist
+        together - store and alerts from mart369, payments added here. It reads
+        and saves through `mart369.config.mart369_admin_settings` and
+        `mart369_admin_save`, the same two calls as /369mart/admin/settings.
+
+        Under Store, where the console keeps it. Both groups, like the console's
+        route; saving the store still needs Odoo's own settings right, and the
+        desk shows the refusal rather than hiding the tab.
+    -->
+    <record id="action_mart369_settings_desk" model="ir.actions.client">
+        <field name="name">Settings</field>
+        <field name="tag">mart369_payment.settings</field>
+        <field name="path">mart-settings</field>
+    </record>
+
+    <menuitem id="menu_mart369_settings_desk"
+              name="Settings"
+              parent="mart369.menu_mart369_store"
+              action="action_mart369_settings_desk"
+              groups="base.group_system,website.group_website_designer"
+              sequence="90"/>
+
+</odoo>

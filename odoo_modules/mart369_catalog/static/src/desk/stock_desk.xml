@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="mart369_catalog.StockDesk">
+        <Layout display="{ controlPanel: {} }" className="'o_mart369_desk h-100'">
+            <div class="mart-builder pe sk">
+
+                <header class="pe-head">
+                    <div>
+                        <h1>Products</h1>
+                        <p>Every product for sale, how many are left, and which storefront sells it.</p>
+                    </div>
+                </header>
+
+                <!-- The same four as the console. Low and out set the tab;
+                     products and stock value are figures and never look
+                     pressable. -->
+                <div class="sk-tiles">
+                    <t t-foreach="TILES" t-as="tile" t-key="tile.key">
+                        <div t-if="tile.flat" class="sk-tile sk-tile-flat">
+                            <span class="sk-tile-top">
+                                <Icon n="tile.icon" size="15"/>
+                                <t t-esc="tile.label"/>
+                            </span>
+                            <b t-esc="tileValue(tile)"/>
+                        </div>
+                        <button t-else=""
+                                type="button"
+                                t-attf-class="sk-tile {{ state.tab === tile.tab ? 'sk-tile-on' : '' }} {{ tile.warn ? 'sk-tile-warn' : '' }} {{ tile.bad ? 'sk-tile-bad' : '' }}"
+                                t-att-aria-pressed="state.tab === tile.tab ? 'true' : 'false'"
+                                t-on-click="() => this.pick(tile.tab)">
+                            <span class="sk-tile-top">
+                                <Icon n="tile.icon" size="15"/>
+                                <t t-esc="tile.label"/>
+                            </span>
+                            <b t-esc="tileValue(tile)"/>
+                        </button>
+                    </t>
+                </div>
+
+                <p t-if="state.tiles.stock === false" class="sk-note">
+                    <Icon n="'info'" size="14"/>
+                    <span>Inventory is not installed, so stock is not tracked.</span>
+                </p>
+
+                <div class="pe-toolbar sk-toolbar">
+                    <Tabs tabs="tabItems" value="state.tab" onChange="(k) => this.pick(k)"/>
+                    <div class="pe-toolbar-gap"/>
+                    <Search value="state.q" placeholder="'Name or code'" label="'Search products'"
+                            onChange="(v) => this.onSearch(v)"/>
+                    <Pick value="state.categ" options="categOptions" label="'Category'"
+                          onChange="(v) => this.set('categ', v)"/>
+                    <Pick value="state.mode" options="MODES" label="'Storefront'"
+                          onChange="(v) => this.set('mode', v)"/>
+                    <Pick value="state.sort" options="SORTS" label="'Sort'"
+                          onChange="(v) => this.set('sort', v)"/>
+                </div>
+
+                <p t-if="state.error" class="pe-error" role="alert">
+                    We could not reach the shop. <t t-esc="state.error"/>
+                    <button class="mart-link" t-on-click="() => this.load()">Try again</button>
+                </p>
+
+                <div class="sk-queue">
+                    <p t-if="state.loading and !state.rows.length" class="pe-loading">Loading products...</p>
+                    <p t-elif="!state.rows.length and filtered" class="pe-loading">
+                        No product matches. Clear the search, the category or the storefront to see more.
+                    </p>
+                    <p t-elif="!state.rows.length" class="pe-loading">There are no products for sale yet.</p>
+
+                    <t t-else="">
+                        <p class="sk-count">
+                            <t t-if="filtered">Showing <t t-esc="state.rows.length"/> of <t t-esc="state.total"/> that match - the tiles count the whole shop.</t>
+                            <t t-else=""><t t-esc="state.total"/> products</t>
+                        </p>
+                        <table class="sk-table">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th>Category</th>
+                                    <th>Delivery</th>
+                                    <th class="sk-num">Price</th>
+                                    <th class="sk-num">Sold / 7d</th>
+                                    <th class="sk-num">In stock</th>
+                                    <th>Live</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="state.rows" t-as="row" t-key="row.id"
+                                    t-attf-class="sk-row {{ row.state === 'out' ? 'sk-row-bad' : row.state === 'low' ? 'sk-row-warn' : '' }}"
+                                    t-on-click="() => this.open(row)">
+                                    <td>
+                                        <span class="sk-prod">
+                                            <span class="sk-thumb">
+                                                <img t-if="row.image" t-att-src="row.image" alt="" loading="lazy"/>
+                                                <Icon t-else="" n="'layers'" size="16"/>
+                                            </span>
+                                            <span>
+                                                <b t-esc="row.name"/>
+                                                <small><t t-esc="row.unit"/><t t-if="row.code"> · <t t-esc="row.code"/></t></small>
+                                            </span>
+                                        </span>
+                                    </td>
+                                    <td><small t-esc="row.cat or '-'"/></td>
+                                    <td>
+                                        <span t-attf-class="sk-tag {{ row.delivery ? 'sk-tag-e' : 'sk-tag-q' }}"
+                                              t-esc="row.delivery ? 'Express' : 'Quick'"/>
+                                    </td>
+                                    <td class="sk-num" t-esc="money(row.price)"/>
+                                    <td class="sk-num" t-esc="row.sold7"/>
+                                    <td class="sk-num sk-strong" t-esc="row.qty === null ? '-' : row.qty"/>
+                                    <td>
+                                        <span t-if="row.active" class="mart-pill mart-t-green">Live</span>
+                                        <span t-else="" class="mart-pill mart-t-grey">Hidden</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div t-if="state.rows.length &lt; state.total" class="sk-more">
+                            <button class="mart-btn" t-on-click="() => this.more()">
+                                Show more (<t t-esc="state.total - state.rows.length"/> left)
+                            </button>
+                        </div>
+                    </t>
+                </div>
+
+            </div>
+        </Layout>
+    </t>
+
+</templates>

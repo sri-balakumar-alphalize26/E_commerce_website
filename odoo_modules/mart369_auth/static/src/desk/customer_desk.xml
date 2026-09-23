@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="mart369_auth.CustomerDesk">
+        <Layout display="{ controlPanel: {} }" className="'o_mart369_desk h-100'">
+            <div class="mart-builder pe cu">
+
+                <header class="pe-head">
+                    <div>
+                        <h1>Customers</h1>
+                        <p>Everyone with a storefront account - what they have ordered, spent and hold in their wallet.</p>
+                    </div>
+                </header>
+
+                <!-- The same four as the console. Each sets the tab. -->
+                <div class="cu-tiles">
+                    <button t-foreach="TILES" t-as="tile" t-key="tile.key" type="button"
+                            t-attf-class="cu-tile {{ state.tab === tile.tab ? 'cu-tile-on' : '' }} {{ tile.warn ? 'cu-tile-warn' : '' }}"
+                            t-att-aria-pressed="state.tab === tile.tab ? 'true' : 'false'"
+                            t-on-click="() => this.set('tab', tile.tab)">
+                        <span class="cu-tile-top">
+                            <Icon n="tile.icon" size="15"/>
+                            <t t-esc="tile.label"/>
+                        </span>
+                        <b t-esc="state.counts[tile.key] or 0"/>
+                    </button>
+                </div>
+
+                <div class="pe-toolbar cu-toolbar">
+                    <Tabs tabs="tabItems" value="state.tab" onChange="(k) => this.set('tab', k)"/>
+                    <div class="pe-toolbar-gap"/>
+                    <Search value="state.q" placeholder="'Name, email, phone or area'" label="'Search customers'"
+                            onChange="(v) => this.onSearch(v)"/>
+                    <Pick value="state.area" options="areaOptions" label="'Area'"
+                          onChange="(v) => this.set('area', v)"/>
+                    <Pick value="state.joined" options="JOINED" label="'Joined'"
+                          onChange="(v) => this.set('joined', v)"/>
+                    <Pick value="state.wallet" options="WALLET" label="'Wallet'"
+                          onChange="(v) => this.set('wallet', v)"/>
+                </div>
+
+                <p t-if="state.error" class="pe-error" role="alert">
+                    We could not reach the shop. <t t-esc="state.error"/>
+                    <button class="mart-link" t-on-click="() => this.load()">Try again</button>
+                </p>
+
+                <div class="cu-queue">
+                    <p t-if="state.loading and !state.rows.length" class="pe-loading">Loading customers...</p>
+                    <p t-elif="!state.rows.length and filtered" class="pe-loading">
+                        Nobody matches. Clear the search, the area, the joined date or the wallet filter to see more.
+                    </p>
+                    <p t-elif="!state.rows.length and state.tab !== 'all'" class="pe-loading">
+                        No <t t-esc="state.tab"/> customers right now.
+                    </p>
+                    <p t-elif="!state.rows.length" class="pe-loading">Nobody has signed up yet.</p>
+
+                    <t t-else="">
+                        <p class="cu-count">
+                            <t t-if="filtered">Showing <t t-esc="state.rows.length"/> of <t t-esc="state.total"/> that match - the tiles count the whole shop.</t>
+                            <t t-else=""><t t-esc="state.total"/> customers</t>
+                        </p>
+                        <table class="cu-table">
+                            <thead>
+                                <tr>
+                                    <th>Customer</th>
+                                    <th>Contact</th>
+                                    <th>Area</th>
+                                    <th class="cu-num">Orders</th>
+                                    <th class="cu-num">Spent</th>
+                                    <th class="cu-num">Wallet</th>
+                                    <th>Last order</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="state.rows" t-as="row" t-key="row.id"
+                                    t-attf-class="cu-row {{ state.open and state.open.id === row.id ? 'cu-row-on' : '' }}"
+                                    t-on-click="() => this.openRow(row)">
+                                    <td>
+                                        <span class="cu-person">
+                                            <span class="cu-avatar" t-esc="(row.name or '?').slice(0, 1).toUpperCase()"/>
+                                            <span>
+                                                <b t-esc="row.name"/>
+                                                <small t-if="row.joined">Joined <t t-esc="day(row.joined)"/></small>
+                                            </span>
+                                        </span>
+                                    </td>
+                                    <td><small><t t-esc="row.email"/><br/><t t-esc="row.phone"/></small></td>
+                                    <td><small t-esc="row.area or '-'"/></td>
+                                    <td class="cu-num" t-esc="row.orders"/>
+                                    <td class="cu-num cu-strong" t-esc="money(row.spent)"/>
+                                    <td class="cu-num" t-esc="money(row.wallet)"/>
+                                    <td><small t-esc="ago(row.last)"/></td>
+                                    <td>
+                                        <span t-attf-class="mart-pill mart-t-{{ status(row)[1] }}" t-esc="status(row)[0]"/>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div t-if="state.rows.length &lt; state.total" class="cu-more">
+                            <button class="mart-btn" t-on-click="() => this.more()">
+                                Show more (<t t-esc="state.total - state.rows.length"/> left)
+                            </button>
+                        </div>
+                    </t>
+                </div>
+
+                <!-- One customer, the same panel as the console's drawer. -->
+                <t t-if="state.open">
+                    <div class="cu-scrim" t-on-click="() => this.close()"/>
+                    <aside class="cu-panel" role="dialog" aria-label="Customer">
+                        <header class="cu-panel-head">
+                            <span class="cu-avatar cu-avatar-lg" t-esc="(state.open.name or '?').slice(0, 1).toUpperCase()"/>
+                            <div>
+                                <h2 t-esc="state.open.name"/>
+                                <small>
+                                    <t t-esc="state.open.email"/>
+                                    <t t-if="state.open.phone"> · <t t-esc="state.open.phone"/></t>
+                                </small>
+                                <small>
+                                    <t t-esc="state.open.area or 'No area'"/> · <t t-esc="status(state.open)[0]"/>
+                                </small>
+                            </div>
+                            <button class="cu-x" aria-label="Close" t-on-click="() => this.close()">
+                                <Icon n="'x'" size="16"/>
+                            </button>
+                        </header>
+
+                        <div class="cu-figs">
+                            <span><small>Orders</small><b t-esc="state.open.orders"/></span>
+                            <span><small>Spent</small><b t-esc="money(state.open.spent)"/></span>
+                            <span><small>Wallet</small><b t-esc="money(state.open.wallet)"/></span>
+                            <span><small>Last order</small><b t-esc="ago(state.open.last)"/></span>
+                        </div>
+
+                        <h4>Recent orders</h4>
+                        <p t-if="!state.detail" class="pe-loading">Loading...</p>
+                        <p t-elif="state.detail.error" class="pe-error" t-esc="state.detail.error"/>
+                        <p t-elif="!state.detail.recent or !state.detail.recent.length" class="cu-dim">No orders yet.</p>
+                        <ul t-else="" class="cu-orders">
+                            <li t-foreach="state.detail.recent" t-as="o" t-key="o.ref">
+                                <span class="cu-chip" t-esc="o.items"/>
+                                <span>
+                                    <b>#<t t-esc="o.ref"/></b>
+                                    <small><t t-esc="day(o.at)"/><t t-if="o.method"> · <t t-esc="o.method"/></t></small>
+                                </span>
+                                <b t-esc="money(o.total)"/>
+                            </li>
+                        </ul>
+
+                        <footer class="cu-panel-foot">
+                            <button class="mart-btn" t-on-click="() => this.close()">Close</button>
+                            <button class="mart-btn mart-btn-primary" t-on-click="() => this.openForm()">
+                                Open full profile
+                            </button>
+                        </footer>
+                    </aside>
+                </t>
+
+            </div>
+        </Layout>
+    </t>
+
+</templates>

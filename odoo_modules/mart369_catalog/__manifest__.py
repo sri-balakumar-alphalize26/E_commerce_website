@@ -34,6 +34,7 @@ The app reads it from ``/369mart/catalog``, ``/369mart/browse/<category>`` and
         'views/category_views.xml',
         'views/search_views.xml',
         'views/search_desk_views.xml',
+        'views/stock_desk_views.xml',
         # Was missing, so the Catalog desk and its menu were never loaded and
         # the screen could not be reached at all - the file has been sitting
         # here unused. Listed after category_views.xml, whose action it does

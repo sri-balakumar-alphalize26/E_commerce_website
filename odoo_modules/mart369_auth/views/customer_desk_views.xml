@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--
+        The customers desk: the console's Customers screen, inside Odoo.
+
+        A client action like the other desks, reading
+        `res.users.mart369_admin_list`, the one call the console makes. Both
+        groups, like the console's route, so the two front ends agree about
+        who may read it.
+
+        The menu itself is in customer_views.xml, which loads after this so it
+        can point here; the list, board and form stay there as "Customers (all
+        views)" under Advanced, the way every desk keeps its "all views".
+    -->
+    <record id="action_mart369_customer_desk" model="ir.actions.client">
+        <field name="name">Customers</field>
+        <field name="tag">mart369_auth.customers</field>
+        <field name="path">mart-customers</field>
+    </record>
+
+</odoo>

@@ -25,6 +25,7 @@ grouped by status (New / Active / Dormant) and a full profile per customer.
         'security/ir.model.access.csv',
         'data/auth_settings.xml',
         'data/ir_cron.xml',
+        'views/customer_desk_views.xml',
         'views/customer_views.xml',
     ],
     'assets': {
@@ -33,6 +34,9 @@ grouped by status (New / Active / Dormant) and a full profile per customer.
             'mart369_auth/static/src/customers/customer_dashboard.js',
             'mart369_auth/static/src/customers/customer_views.js',
             'mart369_auth/static/src/customers/customer_views.xml',
+            'mart369_auth/static/src/desk/customer_desk.scss',
+            'mart369_auth/static/src/desk/customer_desk.js',
+            'mart369_auth/static/src/desk/customer_desk.xml',
         ],
     },
     'images': [

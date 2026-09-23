@@ -417,9 +417,18 @@
         <field name="act_window_id" ref="action_mart369_customers"/>
     </record>
 
+    <!-- Opens the desk (views/customer_desk_views.xml), the console's twin.
+         The list, board and form above are "Customers (all views)". -->
     <menuitem id="menu_mart369_customers"
               name="Customers"
               parent="mart369.menu_mart369_sales"
+              action="action_mart369_customer_desk"
+              groups="base.group_system,website.group_website_designer"
+              sequence="30"/>
+
+    <menuitem id="menu_mart369_customers_all"
+              name="Customers (all views)"
+              parent="mart369.menu_mart369_advanced"
               action="action_mart369_customers"
               groups="base.group_system"
               sequence="30"/>
