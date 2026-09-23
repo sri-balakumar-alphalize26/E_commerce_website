@@ -106,7 +106,7 @@ function NoticeDrawer({ notice, kinds, onClose, onSaved, flash }) {
           <span>Title</span>
           <span className="ad-field-in">
             <input value={form.name} onChange={(e) => set("name", e.target.value)}
-              placeholder="Weekend grocery sale is live" />
+              placeholder="Weekend sale on lighting is live" />
           </span>
         </label>
         <label className="ad-field ad-span2">

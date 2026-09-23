@@ -334,7 +334,7 @@ function AboutSec() {
             <span key={l} style={{ "--i": i }}><b>{n}</b>{l}</span>
           ))}
         </div>
-        <p className="ac-about-copy">369 Mart brings daily essentials from neighbourhood stores to your door in minutes, and ships electronics, home and office products from our warehouse through Express.</p>
+        <p className="ac-about-copy">369 Mart brings everyday electricals from neighbourhood stores to your door in minutes, and ships electronics, home and office products from our warehouse through Express.</p>
       </div>
     </div>
   );

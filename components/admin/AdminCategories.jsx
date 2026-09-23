@@ -229,7 +229,7 @@ function CategoryDialog({ row, error, busy, onCancel, onSave }) {
       <div className="ad-form">
         <label className="ad-field ad-span2"><span>One line under the title</span>
           <input value={draft.mart_blurb} onChange={set("mart_blurb")}
-            placeholder="Farm-fresh produce, picked daily" /></label>
+            placeholder="Switches, sockets and wiring accessories" /></label>
 
         <label className="ad-field"><span>Background</span>
           <span className="ad-colour">

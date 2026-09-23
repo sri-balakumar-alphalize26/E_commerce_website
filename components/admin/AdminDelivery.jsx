@@ -382,7 +382,7 @@ function AreaDrawer({ area, onClose, onSaved }) {
         <h4>What reaches it</h4>
         <div className="ad-kv-rows">
           <label className="ad-kv-row">
-            <span>Quick delivery<small>The 10-minute grocery run</small></span>
+            <span>Quick delivery<small>The 10-minute local run</small></span>
             <Switch on={!!form.quick} onChange={(v) => set("quick", v)} label="Quick delivery" />
           </label>
           <label className="ad-kv-row">

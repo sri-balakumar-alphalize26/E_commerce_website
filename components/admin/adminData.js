@@ -159,7 +159,7 @@ export const categorySales = () => {
   ORDERS.filter((o) => o.status !== "cancelled" && o.at > TODAY - 7 * DAY).forEach((o) =>
     o.items.forEach((l) => {
       const p = byId[l.id];
-      const cat = (p && (p.catName || p.subName)) || (p && p.delivery ? "Express" : "Grocery");
+      const cat = (p && (p.catName || p.subName)) || (p && p.delivery ? "Express" : "General");
       map[cat] = (map[cat] || 0) + l.price * l.qty;
     })
   );
@@ -172,7 +172,7 @@ export const STOCK = (() => {
   return PRODUCTS.slice(0, 64).map((p) => {
     const sold = Math.floor(r() * 40);
     const qty = r() > 0.93 ? 0 : Math.max(2, Math.round(r() * 70) - (r() > 0.78 ? 58 : 0));
-    return { id: p.id, name: p.name, unit: p.unit, price: p.price, mrp: p.mrp || p.price, image: p.image, images: p.images, art: p.art, color: p.color, label: p.label, delivery: !!p.delivery, cat: p.catName || p.subName || "Grocery", qty, sold7: sold, active: r() > 0.05, reorder: 12 };
+    return { id: p.id, name: p.name, unit: p.unit, price: p.price, mrp: p.mrp || p.price, image: p.image, images: p.images, art: p.art, color: p.color, label: p.label, delivery: !!p.delivery, cat: p.catName || p.subName || "General", qty, sold7: sold, active: r() > 0.05, reorder: 12 };
   });
 })();
 
@@ -196,18 +196,18 @@ export const COUPONS = [
   { code: "QUICK20", title: "20% off on Quick orders", note: "Up to ₹60 · Quick items above ₹199", used: 342, cap: 500, active: true, ends: "30 Sep 2026" },
   { code: "WELCOME50", title: "Flat ₹50 off", note: "First order above ₹499", used: 189, cap: 1000, active: true, ends: "31 Dec 2026" },
   { code: "FREEDEL", title: "Free delivery", note: "Orders above ₹299", used: 764, cap: 800, active: true, ends: "22 Sep 2026" },
-  { code: "ONAM25", title: "25% off staples", note: "Atta, rice and oils · max ₹150", used: 1200, cap: 1200, active: false, ends: "Ended 14 Sep 2026" },
+  { code: "ONAM25", title: "25% off cables", note: "Chargers, cables and adaptors · max ₹150", used: 1200, cap: 1200, active: false, ends: "Ended 14 Sep 2026" },
 ];
 
 export const REVIEWS = (() => {
   const r = rng(99);
   const texts = [
-    ["Fresh and neatly packed", "Arrived cold within 15 minutes. Will order again."],
-    ["Good quality", "Bananas were slightly ripe but fine for the price."],
+    ["Well packed", "Arrived in 15 minutes and sealed properly. Will order again."],
+    ["Good quality", "Build feels slightly plasticky but fine for the price."],
     ["Delivery was late", "Took 45 minutes instead of 20. Products were fine."],
-    ["Packaging damaged", "Oil bottle had leaked into the bag."],
+    ["Packaging damaged", "Box was crushed on one side, though the unit works."],
     ["Great value", "Cheaper than the shop near my house and faster too."],
-    ["Wrong item sent", "Ordered 1 kg atta, received 500 g."],
+    ["Wrong item sent", "Ordered a 3-pin plug, received a 2-pin."],
   ];
   return texts.map((t, i) => {
     const p = PRODUCTS[Math.floor(r() * PRODUCTS.length)];

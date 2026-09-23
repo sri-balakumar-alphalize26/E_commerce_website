@@ -82,9 +82,9 @@ function CouponForm({ coupon, currency, busy, error, onClose, onSave }) {
           </select></label>
 
         <label className="ad-field ad-span2"><span>Title customers see</span>
-          <input value={f.title} onChange={set("title")} placeholder="25% off staples" /></label>
+          <input value={f.title} onChange={set("title")} placeholder="25% off cables" /></label>
         <label className="ad-field ad-span2"><span>Small print</span>
-          <input value={f.note} onChange={set("note")} placeholder="Atta, rice and oils" /></label>
+          <input value={f.note} onChange={set("note")} placeholder="Chargers, cables and adaptors" /></label>
 
         {!free && (
           <label className="ad-field">

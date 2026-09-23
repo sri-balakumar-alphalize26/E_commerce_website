@@ -511,7 +511,7 @@ function ReviewEditor({ p, initial, onClose, onSave }) {
           </div>
           <label className="co-field ax-mt"><input value={r.title} maxLength={60} placeholder=" " onChange={(e) => setR({ ...r, title: e.target.value })} /><span>Headline (optional)</span></label>
           <label className="ax-textarea">
-            <textarea value={r.text} maxLength={500} rows={4} placeholder="Tell others about quality, freshness, size or taste" onChange={(e) => setR({ ...r, text: e.target.value })} />
+            <textarea value={r.text} maxLength={500} rows={4} placeholder="Tell others about build quality, performance, size or value" onChange={(e) => setR({ ...r, text: e.target.value })} />
             <small className={r.text.length > 450 ? "ax-warn" : ""}>{r.text.length}/500</small>
           </label>
           <div className="ax-photos">
