@@ -32,18 +32,21 @@ import { useDebounced } from "@web/core/utils/timing";
 import { _t } from "@web/core/l10n/translation";
 import { Layout } from "@web/search/layout";
 import { standardActionServiceProps } from "@web/webclient/actions/action_service";
+import { Search } from "@mart369/ui/search";
 
-import { Pick } from "@mart369_order/desk/order_desk";
+import { Pick } from "@mart369/ui/pick";
+import { Icon } from "@mart369/ui/icon";
+import { Tabs } from "@mart369/ui/tabs";
 
 const MODEL = "mart369.scratch";
 
 /* Each tile sets the tab, so the strip is the filter rather than a read-out
    above one. "Paid out" is the exception - there is no tab for a sum. */
 const TILES = [
-    { key: "all", tab: "all", label: _t("Cards minted"), icon: "fa-gift" },
-    { key: "unscratched", tab: "unscratched", label: _t("Waiting to be opened"), icon: "fa-inbox", warn: true },
-    { key: "paidAmount", label: _t("Paid out"), icon: "fa-money", money: true, flat: true },
-    { key: "nothing", tab: "nothing", label: _t("Won nothing"), icon: "fa-ban" },
+    { key: "all", tab: "all", label: _t("Cards minted"), icon: "gift" },
+    { key: "unscratched", tab: "unscratched", label: _t("Waiting to be opened"), icon: "box", warn: true },
+    { key: "paidAmount", label: _t("Paid out"), icon: "money", money: true, flat: true },
+    { key: "nothing", tab: "nothing", label: _t("Won nothing"), icon: "ban" },
 ];
 
 const TABS = [
@@ -101,7 +104,7 @@ function ago(ms) {
 
 export class RewardDesk extends Component {
     static template = "mart369_account.RewardDesk";
-    static components = { Layout, Pick };
+    static components = { Layout, Pick, Search, Icon, Tabs };
     static props = { ...standardActionServiceProps };
 
     setup() {
@@ -124,11 +127,16 @@ export class RewardDesk extends Component {
             error: "",
         });
 
-        this.search = useDebounced((ev) => {
-            this.state.q = ev.target.value.trim();
+        /* The box writes to state at once, so typing is never swallowed by
+           the wait; only the reload is debounced, which is all the 300ms
+           was ever for. The text is kept raw and trimmed when it is sent -
+           trimming it here would eat the space between two words. */
+        this.reload = useDebounced(() => this.load(), 300);
+        this.onSearch = (q) => {
+            this.state.q = q;
             this.state.limit = PAGE;
-            this.load();
-        }, 300);
+            this.reload();
+        };
 
         onWillStart(() => this.load());
 
@@ -145,7 +153,7 @@ export class RewardDesk extends Component {
         try {
             const page = await this.orm.call(MODEL, "mart369_admin_list", [], {
                 tab: this.state.tab,
-                q: this.state.q || null,
+                q: this.state.q.trim() || null,
                 limit: this.state.limit,
             });
             this.state.rows = page.cards || [];
@@ -173,6 +181,14 @@ export class RewardDesk extends Component {
     showMore() {
         this.state.limit += PAGE;
         this.load();
+    }
+
+
+    /** The tabs as the kit's strip takes them: [key, label, count] triples.
+     *  `tabCount` returns null for a tab that counts nothing, and the strip
+     *  draws no badge for null - which is how a tab stays quiet. */
+    get tabItems() {
+        return this.TABS.map((tab) => [tab.key, tab.label, this.tabCount(tab)]);
     }
 
     tabCount(tab) {

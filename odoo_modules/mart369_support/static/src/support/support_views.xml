@@ -13,7 +13,7 @@
 
             <button type="button" class="o_mart369_kpi" t-on-click="() => this.applyFilter('today')"
                     title="Show the tickets opened today">
-                <span class="o_mart369_tile o_mart369_tile_blue"><i class="fa fa-comments"/></span>
+                <span class="o_mart369_tile o_mart369_tile_blue"><Icon n="'chat'" size="14"/></span>
                 <span class="o_mart369_kpi_txt">
                     <small>Asked today</small>
                     <strong t-out="d.today"/>
@@ -30,7 +30,7 @@
             <button type="button" class="o_mart369_kpi" t-on-click="() => this.applyFilter('state_new')"
                     title="Show tickets nobody has picked up">
                 <span t-att-class="'o_mart369_tile' + (d.waiting ? ' o_mart369_tile_orange' : '')">
-                    <i class="fa fa-hourglass-half"/>
+                    <Icon n="'clock'" size="14"/>
                 </span>
                 <span class="o_mart369_kpi_txt">
                     <small>Waiting</small>
@@ -42,7 +42,7 @@
             <button type="button" class="o_mart369_kpi" t-on-click="() => this.applyFilter('unanswered')"
                     title="Show people nobody has replied to yet">
                 <span t-att-class="'o_mart369_tile' + (d.unanswered ? ' o_mart369_tile_red' : '')">
-                    <i class="fa fa-exclamation-circle"/>
+                    <Icon n="'info'" size="14"/>
                 </span>
                 <span class="o_mart369_kpi_txt">
                     <small>No reply yet</small>
@@ -54,7 +54,7 @@
 
             <button type="button" class="o_mart369_kpi" t-on-click="() => this.applyFilter('open')"
                     title="Show every open ticket">
-                <span class="o_mart369_tile o_mart369_tile_green"><i class="fa fa-clock-o"/></span>
+                <span class="o_mart369_tile o_mart369_tile_green"><Icon n="'clock'" size="14"/></span>
                 <span class="o_mart369_kpi_txt">
                     <small>Average wait</small>
                     <strong><t t-out="d.average"/> min</strong>
@@ -64,7 +64,7 @@
 
             <button type="button" class="o_mart369_kpi" t-on-click="() => this.applyFilter('mine')"
                     title="Show the ones you are handling">
-                <span class="o_mart369_tile"><i class="fa fa-user"/></span>
+                <span class="o_mart369_tile"><Icon n="'user'" size="14"/></span>
                 <span class="o_mart369_kpi_txt">
                     <small>Yours</small>
                     <strong t-out="d.mine"/>

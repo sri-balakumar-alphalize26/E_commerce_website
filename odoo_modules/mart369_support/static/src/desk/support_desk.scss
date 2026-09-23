@@ -149,21 +149,6 @@
         }
     }
 
-    .sp-search {
-        height: 38px;
-        min-width: 220px;
-        padding: 0 12px;
-        border: 1px solid var(--sp-line);
-        border-radius: 10px;
-        background: #fff;
-        font-size: 13.5px;
-
-        &:focus {
-            outline: 0;
-            border-color: var(--sp-blue);
-            box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.14);
-        }
-    }
 
     /* -------------------------------------------------------------- rows */
 
@@ -271,11 +256,6 @@
     }
 
     /* The five states. Same three bands the console paints. */
-    .sp-s-new { background: #fdf3e3; color: var(--sp-amber); }
-    .sp-s-open { background: #eaf4fa; color: var(--sp-blue); }
-    .sp-s-waiting { background: #f0ecfb; color: var(--sp-violet); }
-    .sp-s-done { background: #e8f5ec; color: var(--sp-green); }
-    .sp-s-cancelled { background: #eef2f5; color: var(--sp-muted); }
 
     /* ------------------------------------------------------------ narrow */
 
@@ -354,15 +334,6 @@
     margin: 12px 0;
     font-size: 12.5px;
     color: var(--sp-muted);
-
-    select {
-        height: 34px;
-        padding: 0 10px;
-        border: 1px solid var(--sp-line);
-        border-radius: 9px;
-        background: #fff;
-        font-size: 13px;
-    }
 }
 
 /* Theirs left, ours right - the shape of every chat anybody has used, so
@@ -444,28 +415,4 @@
         font-variant-numeric: tabular-nums;
     }
 }
-    /* The footer slot sits outside the `.mart-builder` div, so it misses the
-       shared button chrome entirely. */
-    .modal-footer .mart-btn {
-        height: 34px;
-        padding: 0 12px;
-        border: 1px solid var(--sp-line, #e4eaef);
-        border-radius: 9px;
-        background: #fff;
-        font-size: 13px;
-        font-weight: 700;
-        cursor: pointer;
-    }
-
-    .modal-footer .mart-btn-primary {
-        border-color: transparent;
-        background: linear-gradient(180deg, #0c86be, #096b99);
-        color: #fff;
-    }
-
-    .modal-footer .mart-btn-danger {
-        border-color: transparent;
-        background: linear-gradient(180deg, #d9534a, #b83a32);
-        color: #fff;
-    }
 }

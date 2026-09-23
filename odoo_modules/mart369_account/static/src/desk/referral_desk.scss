@@ -187,21 +187,6 @@
         }
     }
 
-    .rf-search {
-        height: 38px;
-        min-width: 240px;
-        padding: 0 12px;
-        border: 1px solid var(--rf-line);
-        border-radius: 10px;
-        background: #fff;
-        font-size: 13.5px;
-
-        &:focus {
-            outline: 0;
-            border-color: var(--rf-blue);
-            box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.14);
-        }
-    }
 
     /* -------------------------------------------------------------- rows */
 
@@ -295,20 +280,8 @@
         color: #b6c3cc;
     }
 
-    .rf-p-grey {
-        background: #eceff2;
-        color: #5b6b76;
-    }
 
-    .rf-p-blue {
-        background: #e6f1f8;
-        color: #08516f;
-    }
 
-    .rf-p-green {
-        background: #e3f4e9;
-        color: #14602d;
-    }
 
     /* What this invite was worth, on the right where the eye lands last. */
     .rf-worth {
