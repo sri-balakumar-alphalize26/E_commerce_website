@@ -222,6 +222,113 @@ class Mart369Coupon(models.Model):
             'groups': GROUP_CHOICES,
         }
 
+    # What a staff screen may set. `used_count` is not here on purpose: it is
+    # the shop's own tally of what customers did, not a field to correct.
+    ADMIN_WRITABLE = (
+        'code', 'title', 'note', 'kind', 'value', 'max_off', 'min_spend',
+        'group', 'active', 'starts_on', 'ends_on', 'limit_total',
+        'limit_per_customer', 'sequence',
+    )
+
+    @api.model
+    def _mart369_admin_values(self, values, creating=False):
+        """Typed the way the model wants, from whatever the screen sent.
+
+        A desk sends real types over the ORM and the console sends strings
+        over HTTP, so both are coerced here rather than trusted.
+        """
+        numbers = ('value', 'max_off', 'min_spend')
+        counts = ('limit_total', 'limit_per_customer', 'sequence')
+        dates = ('starts_on', 'ends_on')
+        out = {}
+        for field in self.ADMIN_WRITABLE:
+            if field not in values:
+                continue
+            raw = values[field]
+            if field == 'active':
+                out[field] = bool(raw)
+            elif field in dates:
+                out[field] = (str(raw or '').strip()[:10]) or False
+            elif field in counts:
+                out[field] = int(raw or 0)
+            elif field in numbers:
+                out[field] = float(raw or 0.0)
+            else:
+                out[field] = str(raw or '').strip()
+
+        if 'code' in out:
+            out['code'] = out['code'].upper()
+
+        # A name the customer types and a line the customer reads: without
+        # either, the coupon cannot do its job.
+        for field in ('code', 'title'):
+            if (creating or field in out) and not out.get(field):
+                raise ValidationError(
+                    self.env._('A coupon needs a code.') if field == 'code'
+                    else self.env._('A coupon needs a title - it is what the customer reads.'))
+
+        starts, ends = out.get('starts_on'), out.get('ends_on')
+        if starts and ends and starts > ends:
+            raise ValidationError(self.env._('The end date is before the start date.'))
+        return out
+
+    @api.model
+    def mart369_admin_save(self, coupon_id, values):
+        """Create one, or change one. Returns the row the screens draw.
+
+        `coupon_id` is falsy for a new coupon, which is how the desk tells the
+        two apart without a second method.
+
+        Wrapped in a savepoint on purpose. Without it a refused write is still
+        in the transaction when the error is caught, so the operator gets a
+        refusal *and* the bad value is saved - the worst of both. The flush is
+        what turns the unique index on `code` into a sentence rather than a
+        stack trace, and it has to happen inside the savepoint to be undone.
+        """
+        coupon = self.browse(int(coupon_id)).exists() if coupon_id else self
+        if coupon_id and not coupon:
+            raise ValidationError(self.env._('There is no such coupon.'))
+
+        vals = self._mart369_admin_values(values, creating=not coupon_id)
+        if not vals:
+            raise ValidationError(self.env._('Nothing to change.'))
+
+        if vals.get('code'):
+            clash = self.with_context(active_test=False).search(
+                [('code', '=', vals['code'])] +
+                ([('id', '!=', coupon.id)] if coupon_id else []),
+                limit=1)
+            if clash:
+                raise ValidationError(
+                    self.env._('There is already a coupon with the code %s.', clash.code))
+
+        with self.env.cr.savepoint():
+            if coupon_id:
+                coupon.write(vals)
+            else:
+                coupon = self.create(vals)
+            coupon.flush_recordset()
+        return coupon._mart369_admin_serialize()
+
+    @api.model
+    def mart369_admin_delete(self, coupon_id):
+        """Gone for good, when it can be.
+
+        No Trash here, unlike home pages: an order that used a code points at
+        it, so the database would refuse anyway. Better to say why in the
+        shop's own words than to let the operator read a foreign key error.
+        """
+        coupon = self.browse(int(coupon_id)).exists()
+        if not coupon:
+            raise ValidationError(self.env._('There is no such coupon.'))
+        if coupon.used_count:
+            raise ValidationError(self.env._(
+                'This code has been used %s times, so it belongs to those '
+                'orders now. Switch it off instead.', coupon.used_count))
+        with self.env.cr.savepoint():
+            coupon.unlink()
+        return True
+
     def _mart369_serialize(self):
         """One entry of the app's COUPONS array. `calc` is not sent - the
         server does the arithmetic now, which was the point."""

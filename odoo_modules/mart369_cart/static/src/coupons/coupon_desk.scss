@@ -1,0 +1,308 @@
+// The coupons desk. The twin of the console's coupon cards
+// (components/admin/admin.css, .ad-coupon*), and a sibling of the deals desk.
+//
+// The card is a ticket on purpose: a stub on the left carrying the code, the
+// words in the middle, the controls on the right. A row in a table made every
+// code look like a database record, which is exactly the screen this replaces.
+
+.mart-builder.cp {
+
+    /* ------------------------------------------------------------- tiles */
+    .cp-tiles {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 10px;
+        margin-bottom: 14px;
+    }
+
+    .cp-tile {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 12px 14px;
+        border: 1px solid $mart-line;
+        border-radius: 14px;
+        background: #fff;
+        text-align: left;
+        cursor: pointer;
+        transition: border-color 140ms, box-shadow 140ms, transform 120ms;
+
+        b { font-size: 21px; font-weight: 800; color: $mart-ink; }
+        small { font-size: 11px; color: $mart-muted; }
+
+        &:hover { border-color: #b7c4ce; }
+        &:active { transform: scale(0.99); }
+    }
+
+    .cp-tile-top {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11.5px;
+        font-weight: 700;
+        color: $mart-muted;
+    }
+
+    .cp-tile-on {
+        border-color: $mart-blue;
+        background: $mart-blue-soft;
+        box-shadow: 0 8px 18px -14px rgba(10, 120, 171, 0.9);
+    }
+
+    // A figure with no tab behind it, so it must not look pressable.
+    .cp-tile-flat { cursor: default; &:hover { border-color: $mart-line; } }
+
+    .cp-tile-warn {
+        border-color: #f0d2a8;
+        background: #fff8ee;
+        b { color: $mart-amber; }
+    }
+
+    /* ----------------------------------------------------------- toolbar */
+    .cp-head-act { display: flex; gap: 8px; }
+
+    .cp-tabs {
+        display: inline-flex;
+        gap: 2px;
+        padding: 3px;
+        border-radius: 11px;
+        background: $mart-soft;
+
+        button {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            height: 32px;
+            padding: 0 12px;
+            border: 0;
+            border-radius: 9px;
+            background: transparent;
+            font: inherit;
+            font-size: 13px;
+            font-weight: 700;
+            color: $mart-muted;
+            cursor: pointer;
+
+            &.mart-on { background: #fff; color: $mart-ink; box-shadow: 0 2px 6px -3px rgba(19, 33, 43, 0.4); }
+        }
+
+        em {
+            font-style: normal;
+            font-size: 11px;
+            font-weight: 800;
+            padding: 1px 6px;
+            border-radius: 999px;
+            background: #e6edf2;
+            color: $mart-muted;
+        }
+
+        .mart-on em { background: #eaf4fa; color: $mart-blue; }
+    }
+
+    /* ------------------------------------------------------------- cards */
+    .cp-queue-wrap { min-width: 0; }
+
+    .cp-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+        gap: 12px;
+    }
+
+    .cp-card {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 14px;
+        padding: 14px;
+        border: 1px solid $mart-line;
+        border-radius: 14px;
+        background: #fff;
+        animation: cp-card 320ms ease backwards;
+        animation-delay: calc(var(--i, 0) * 28ms);
+
+        &:hover { border-color: #b7c4ce; }
+    }
+
+    // Switched off, and saying so quietly rather than shouting.
+    .cp-card-off {
+        background: #fbfcfd;
+        .cp-stub { background: #eef2f5; color: $mart-muted; }
+        .cp-body > .cp-top b { color: $mart-muted; }
+    }
+
+    // The ticket stub. The dashed edge is the perforation.
+    .cp-stub {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        min-width: 104px;
+        padding: 12px 10px;
+        border-right: 2px dashed rgba(10, 120, 171, 0.25);
+        border-radius: 10px 0 0 10px;
+        background: $mart-blue-soft;
+        color: $mart-blue-deep;
+
+        b {
+            font-size: 13px;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            word-break: break-all;
+            text-align: center;
+        }
+    }
+
+    .cp-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+
+    .cp-top {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+
+        b { font-size: 14px; font-weight: 700; color: $mart-ink; }
+    }
+
+    .cp-sub, .cp-use, .cp-note {
+        margin: 0;
+        font-size: 12px;
+        color: $mart-muted;
+    }
+
+    .cp-note { font-style: italic; }
+    .cp-dot { padding: 0 5px; color: #c3ced6; }
+
+    // How far through its allowance.
+    .cp-progress {
+        height: 5px;
+        margin: 3px 0 1px;
+        border-radius: 999px;
+        background: #e9eef2;
+        overflow: hidden;
+
+        i {
+            display: block;
+            width: var(--p, 0%);
+            height: 100%;
+            border-radius: 999px;
+            background: linear-gradient(90deg, $mart-blue, $mart-blue-deep);
+            transition: width 320ms ease;
+        }
+    }
+
+    .cp-act {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        max-width: 200px;
+    }
+
+    @media (max-width: 1100px) {
+        .cp-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .cp-cards { grid-template-columns: minmax(0, 1fr); }
+    }
+}
+
+/* The dialog is portalled to Odoo's own container, outside `.mart-builder`,
+   so its rules cannot be nested under the screen and are spelled out here. */
+.o_mart369_dialog.cp-dialog {
+
+    .cp-form { display: flex; flex-direction: column; gap: 12px; }
+
+    .cp-form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px 14px;
+    }
+
+    .cp-span2 { grid-column: 1 / -1; }
+
+    .cp-field {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        min-width: 0;
+        font-size: 12.5px;
+        font-weight: 700;
+        color: $mart-muted;
+
+        input {
+            width: 100%;
+            height: 38px;
+            padding: 0 12px;
+            border: 1px solid #cfd8df;
+            border-radius: 10px;
+            background: #fff;
+            font: inherit;
+            font-size: 13.5px;
+            font-weight: 400;
+            color: $mart-ink;
+            transition: border-color 140ms, box-shadow 140ms;
+
+            &::placeholder { color: #a3b0ba; }
+            &:hover { border-color: #b7c4ce; }
+            &:focus {
+                outline: none;
+                border-color: $mart-blue;
+                box-shadow: 0 0 0 3px $mart-blue-soft;
+            }
+        }
+
+        // The kit's dropdown is a 32px toolbar control; in a stack of
+        // full-width fields it has to match them.
+        .mart-select {
+            width: 100%;
+            height: 38px;
+            justify-content: space-between;
+            font-weight: 400;
+            font-size: 13.5px;
+        }
+
+        .pe-hint {
+            font-size: 11px;
+            font-weight: 400;
+            font-style: normal;
+            color: $mart-muted;
+        }
+    }
+
+    .mart-switch-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding-top: 4px;
+        font-size: 13px;
+        font-weight: 700;
+        color: $mart-ink;
+    }
+
+    .pe-error {
+        margin: 0;
+        padding: 9px 12px;
+        border-radius: 10px;
+        background: #fdeaea;
+        color: #a3322a;
+        font-size: 12.5px;
+    }
+
+    @media (max-width: 700px) {
+        .cp-form-grid { grid-template-columns: minmax(0, 1fr); }
+    }
+}
+
+// Each desk carries its own row keyframe rather than reaching for a shared
+// one, the same way catalog, searches, reviews and referrals do.
+@keyframes cp-card {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
