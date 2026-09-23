@@ -1,0 +1,272 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="mart369_cart.CouponDesk">
+        <Layout display="{ controlPanel: {} }" className="'o_mart369_desk h-100'">
+            <div class="mart-builder pe cp">
+
+                <header class="pe-head">
+                    <div>
+                        <h1>Coupons</h1>
+                        <p>Which codes work right now, and why the others do not.</p>
+                    </div>
+                    <div class="cp-head-act">
+                        <button class="mart-btn" t-on-click="() => this.allViews()">
+                            <Icon n="'menu'" size="14"/>
+                            All views
+                        </button>
+                        <button class="mart-btn mart-btn-primary" t-att-disabled="state.busy"
+                                t-on-click="() => this.open(null)">
+                            New coupon
+                        </button>
+                    </div>
+                </header>
+
+                <!-- The tiles are the filter, not a read-out above one. -->
+                <div class="cp-tiles">
+                    <button t-foreach="TILES" t-as="tile" t-key="tile.key"
+                            type="button"
+                            t-attf-class="cp-tile {{ state.tab === tile.tab ? 'cp-tile-on' : '' }} {{ tile.warn and tileValue(tile) ? 'cp-tile-warn' : '' }}"
+                            t-att-aria-pressed="state.tab === tile.tab ? 'true' : 'false'"
+                            t-on-click="() => this.pick(tile.tab)">
+                        <span class="cp-tile-top">
+                            <Icon n="tile.icon" size="15"/>
+                            <t t-esc="tile.label"/>
+                        </span>
+                        <b t-esc="tileValue(tile)"/>
+                        <small>Show these</small>
+                    </button>
+                    <div class="cp-tile cp-tile-flat">
+                        <span class="cp-tile-top">
+                            <Icon n="'check'" size="15"/>
+                            Times redeemed
+                        </span>
+                        <b t-esc="state.redemptions"/>
+                        <small>Across every code, ever</small>
+                    </div>
+                </div>
+
+                <div class="pe-toolbar cp-toolbar">
+                    <Tabs tabs="tabItems" value="state.tab"
+                          onChange="(k) => this.pick(k)"/>
+                    <div class="pe-toolbar-gap"/>
+                    <Search value="state.q" placeholder="'A code, a title or a note'"
+                            label="'Search coupons'" onChange="(v) => this.onSearch(v)"/>
+                </div>
+
+                <p t-if="state.error" class="pe-error" role="alert">
+                    We could not reach the shop. <t t-esc="state.error"/>
+                    <button class="mart-link" t-on-click="() => this.load()">Try again</button>
+                </p>
+
+                <div class="cp-queue-wrap">
+                    <div class="cp-queue">
+
+                        <Empty t-if="state.loading and !state.coupons.length"
+                               icon="'ticket'" title="'Loading...'"
+                               text="'Fetching your coupons.'"/>
+
+                        <Empty t-elif="!state.coupons.length"
+                               icon="'ticket'" title="'No coupons yet'"
+                               text="'Make one and customers can type it in the cart.'"
+                               action="'New coupon'" onAction="() => this.open(null)"/>
+
+                        <Empty t-elif="!rows.length"
+                               icon="'search'" title="'Nothing here'"
+                               text="'No coupon matches this tile or that search.'"/>
+
+                        <div t-else="" class="cp-cards">
+                            <article t-foreach="rows" t-as="c" t-key="c.id"
+                                     t-attf-class="cp-card {{ c.live ? '' : 'cp-card-off' }}"
+                                     t-att-style="'--i: ' + c_index">
+
+                                <!-- The stub, so a code reads as a ticket. -->
+                                <span class="cp-stub">
+                                    <Icon n="'ticket'" size="16"/>
+                                    <b t-esc="c.code"/>
+                                </span>
+
+                                <div class="cp-body">
+                                    <div class="cp-top">
+                                        <b t-esc="c.title"/>
+                                        <span t-if="c.live" class="mart-pill mart-t-green">
+                                            <i aria-hidden="true"/>Working
+                                        </span>
+                                        <span t-else="" class="mart-pill mart-t-grey">
+                                            <i aria-hidden="true"/><t t-esc="why(c)"/>
+                                        </span>
+                                    </div>
+
+                                    <p class="cp-sub">
+                                        <t t-esc="worth(c)"/>
+                                        <t t-if="c.minSpend">
+                                            <span class="cp-dot">&#183;</span>
+                                            over <t t-esc="money(c.minSpend)"/>
+                                        </t>
+                                        <t t-if="c.limitPerCustomer">
+                                            <span class="cp-dot">&#183;</span>
+                                            <t t-esc="c.limitPerCustomer"/> per customer
+                                        </t>
+                                    </p>
+
+                                    <p t-if="c.note" class="cp-note" t-esc="c.note"/>
+
+                                    <!-- Only drawn when there is a cap: a bar with
+                                         no end is not measuring anything. -->
+                                    <div t-if="c.limitTotal" class="cp-progress"
+                                         t-attf-style="--p: {{ usedPct(c) }}%"
+                                         role="img" t-att-aria-label="used(c)">
+                                        <i/>
+                                    </div>
+
+                                    <p class="cp-use">
+                                        <t t-esc="used(c)"/>
+                                        <t t-if="c.endsOn">
+                                            <span class="cp-dot">&#183;</span>
+                                            until <t t-esc="c.endsOn"/>
+                                        </t>
+                                    </p>
+                                </div>
+
+                                <div class="cp-act">
+                                    <Switch on="c.active" label="c.code + ' working'"
+                                            disabled="state.busy"
+                                            onChange="() => this.toggle(c)"/>
+                                    <button class="mart-btn mart-btn-sm"
+                                            t-att-disabled="state.busy"
+                                            t-on-click="() => this.open(c)">Edit</button>
+                                    <button class="mart-btn mart-btn-sm"
+                                            t-on-click="() => this.copy(c)">Copy</button>
+                                    <button class="mart-btn mart-btn-sm mart-btn-danger"
+                                            t-att-disabled="state.busy"
+                                            t-on-click="() => this.askDelete(c)">Delete</button>
+                                </div>
+                            </article>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </Layout>
+    </t>
+
+    <!-- One coupon, opened. `contentClass`, because a Dialog renders in a
+         portal outside the screen that opened it, so its rules cannot be
+         nested under `.mart-builder` and have to be reachable from here. -->
+    <t t-name="mart369_cart.CouponDialog">
+        <Dialog size="'lg'" title="title" contentClass="'o_mart369_dialog cp-dialog'">
+            <div class="cp-form">
+
+                <p t-if="state.error" class="pe-error" role="alert" t-esc="state.error"/>
+
+                <div class="cp-form-grid">
+                    <label class="cp-field">
+                        <span>Code</span>
+                        <input type="text" t-att-value="state.draft.code"
+                               placeholder="e.g. WELCOME50"
+                               t-on-input="(ev) => this.edit('code', ev)"/>
+                        <em class="pe-hint">What the customer types. Always capitals.</em>
+                    </label>
+
+                    <label class="cp-field">
+                        <span>Title</span>
+                        <input type="text" t-att-value="state.draft.title"
+                               placeholder="e.g. 50 off your first order"
+                               t-on-input="(ev) => this.edit('title', ev)"/>
+                    </label>
+
+                    <label class="cp-field cp-span2">
+                        <span>Note</span>
+                        <input type="text" t-att-value="state.draft.note"
+                               placeholder="A line for whoever opens this in six months"
+                               t-on-input="(ev) => this.edit('note', ev)"/>
+                    </label>
+
+                    <label class="cp-field">
+                        <span>Discount</span>
+                        <Pick label="'Discount'" value="state.draft.kind" options="kindOptions"
+                              onChange="(v) => this.set('kind', v)"/>
+                    </label>
+
+                    <label class="cp-field">
+                        <span>
+                            <t t-if="isPercent">Per cent off</t>
+                            <t t-else="">Amount off</t>
+                        </span>
+                        <input type="number" min="0" step="0.01"
+                               t-att-value="state.draft.value"
+                               t-on-input="(ev) => this.edit('value', ev)"/>
+                    </label>
+
+                    <label class="cp-field" t-if="isPercent">
+                        <span>At most</span>
+                        <input type="number" min="0" step="0.01"
+                               t-att-value="state.draft.max_off"
+                               t-on-input="(ev) => this.edit('max_off', ev)"/>
+                        <em class="pe-hint">Caps the discount. Leave at 0 for no cap.</em>
+                    </label>
+
+                    <label class="cp-field">
+                        <span>Only over</span>
+                        <input type="number" min="0" step="0.01"
+                               t-att-value="state.draft.min_spend"
+                               t-on-input="(ev) => this.edit('min_spend', ev)"/>
+                        <em class="pe-hint">The basket has to reach this first.</em>
+                    </label>
+
+                    <label class="cp-field">
+                        <span>Who may use it</span>
+                        <Pick label="'Who may use it'" value="state.draft.group"
+                              options="groupOptions"
+                              onChange="(v) => this.set('group', v)"/>
+                    </label>
+
+                    <label class="cp-field">
+                        <span>Starts</span>
+                        <input type="date" t-att-value="state.draft.starts_on"
+                               t-on-input="(ev) => this.edit('starts_on', ev)"/>
+                    </label>
+
+                    <label class="cp-field">
+                        <span>Ends</span>
+                        <input type="date" t-att-value="state.draft.ends_on"
+                               t-on-input="(ev) => this.edit('ends_on', ev)"/>
+                    </label>
+
+                    <label class="cp-field">
+                        <span>Times in all</span>
+                        <input type="number" min="0" step="1"
+                               t-att-value="state.draft.limit_total"
+                               t-on-input="(ev) => this.edit('limit_total', ev)"/>
+                        <em class="pe-hint">0 means no limit.</em>
+                    </label>
+
+                    <label class="cp-field">
+                        <span>Times per customer</span>
+                        <input type="number" min="0" step="1"
+                               t-att-value="state.draft.limit_per_customer"
+                               t-on-input="(ev) => this.edit('limit_per_customer', ev)"/>
+                        <em class="pe-hint">0 means no limit.</em>
+                    </label>
+
+                    <label class="mart-switch-row cp-span2">
+                        <span>Working now</span>
+                        <Switch on="state.draft.active" label="'Working now'"
+                                onChange="(on) => this.set('active', on)"/>
+                    </label>
+                </div>
+            </div>
+
+            <t t-set-slot="footer">
+                <button class="mart-btn mart-btn-primary"
+                        t-att-disabled="!canSave or state.busy"
+                        t-on-click="() => this.save()">
+                    <t t-if="state.busy">Saving...</t>
+                    <t t-else="">Save</t>
+                </button>
+                <button class="mart-btn" t-on-click="() => this.props.close()">Cancel</button>
+            </t>
+        </Dialog>
+    </t>
+
+</templates>
