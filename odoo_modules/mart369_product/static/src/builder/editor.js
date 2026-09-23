@@ -30,16 +30,18 @@ import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
 import { useDebounced } from "@web/core/utils/timing";
 import { _t } from "@web/core/l10n/translation";
-import { ConfirmationDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
+import { Confirm } from "@mart369/ui/confirm";
 import { Layout } from "@web/search/layout";
 import { standardActionServiceProps } from "@web/webclient/actions/action_service";
-import { Icon } from "@mart369_home/builder/builder";
+import { Icon } from "@mart369/ui/icon";
+import { Switch } from "@mart369/ui/switch";
+import { Pick } from "@mart369/ui/pick";
 import { useSaveQueue } from "@mart369_home/builder/save_queue";
 import { M, STATES, ProductPageReader } from "./page_reader";
 
 export class ProductEditor extends ProductPageReader {
     static template = "mart369_product.ProductEditor";
-    static components = { Layout, Icon };
+    static components = { Layout, Icon, Pick, Switch };
     static props = { ...standardActionServiceProps };
 
     setup() {
@@ -230,7 +232,23 @@ export class ProductEditor extends ProductPageReader {
 
     /** The shop-wide wording. Debounced: there is another keystroke coming. */
     editDefault(row, ev) {
-        this.save.edit(M.field, row, "default_value", this.save.valueFrom(ev));
+        this.setDefault(row, this.save.valueFrom(ev));
+    }
+
+    /** The same edit, given the value rather than the event an input carried it
+     *  in - which is what a component hands back. */
+    setDefault(row, value) {
+        this.save.edit(M.field, row, "default_value", value);
+    }
+
+    /** A yes/no spec has three states, not two: a product can say yes, say no,
+     *  or not mention it. Stored as the strings "1", "0" and empty. */
+    get boolOptions() {
+        return [
+            ["", _t("Not set")],
+            ["1", _t("Yes")],
+            ["0", _t("No")],
+        ];
     }
 
     /**
@@ -257,7 +275,7 @@ export class ProductEditor extends ProductPageReader {
      */
     resetRow(row) {
         this.state.touched = true;
-        this.dialog.add(ConfirmationDialog, {
+        this.dialog.add(Confirm, {
             title: _t("Put this one back?"),
             body: _t(
                 "“%s” goes back to following the shop, and any wording " +
@@ -282,7 +300,7 @@ export class ProductEditor extends ProductPageReader {
     resetSection(section) {
         this.state.touched = true;
         const ids = this.rowsOf(section).map((r) => r.id);
-        this.dialog.add(ConfirmationDialog, {
+        this.dialog.add(Confirm, {
             title: _t("Put this whole section back?"),
             body: _t(
                 "Every field under “%s” goes back to following the shop " +
@@ -326,7 +344,7 @@ export class ProductEditor extends ProductPageReader {
         }
         await this.save.flushNow().catch(() => {});
         if (tab === "global" && this.state.tab === "product") {
-            this.dialog.add(ConfirmationDialog, {
+            this.dialog.add(Confirm, {
                 title: _t("Switch to the whole shop?"),
                 body: this.leavingProductNote,
                 confirmLabel: _t("Edit the whole shop"),
@@ -476,7 +494,7 @@ export class ProductEditor extends ProductPageReader {
     async pickProduct(id) {
         if (this.state.touched && id !== this.state.productId) {
             const from = this.productName;
-            this.dialog.add(ConfirmationDialog, {
+            this.dialog.add(Confirm, {
                 title: _t("Move to a different product?"),
                 body: _t(
                     "What you changed stays on “%s” and applies to " +

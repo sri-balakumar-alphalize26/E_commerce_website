@@ -6,10 +6,10 @@
  * change saves on its own, then the page is reloaded from the server so the
  * mock always shows exactly what the app will receive.
  */
-import { Component, onMounted, onPatched, onWillStart, useRef, useState } from "@odoo/owl";
+import { Component, onWillStart, useRef, useState } from "@odoo/owl";
 import { _t } from "@web/core/l10n/translation";
 import { registry } from "@web/core/registry";
-import { ConfirmationDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
+import { Confirm } from "@mart369/ui/confirm";
 import { useService } from "@web/core/utils/hooks";
 import { useSortable } from "@web/core/utils/sortable_owl";
 import { useDebounced } from "@web/core/utils/timing";
@@ -17,6 +17,9 @@ import { useSaveQueue } from "./save_queue";
 import { getDataURLFromFile } from "@web/core/utils/urls";
 import { Layout } from "@web/search/layout";
 import { standardActionServiceProps } from "@web/webclient/actions/action_service";
+import { Icon } from "@mart369/ui/icon";
+import { Switch } from "@mart369/ui/switch";
+import { Pick } from "@mart369/ui/pick";
 
 const M = {
     mode: "mart369.home.mode",
@@ -29,38 +32,6 @@ const M = {
     product: "product.template",
 };
 
-// Same strokes the app draws (components/home/shared.jsx).
-const ICONS = {
-    bag: '<path d="M5 8h14l-1 12H6z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>',
-    basket: '<path d="M4 10h16l-1.6 9a2 2 0 0 1-2 1.6H7.6a2 2 0 0 1-2-1.6z"/><path d="m9 10 3-6 3 6"/>',
-    leaf: '<path d="M5 19c0-8 5-14 15-14 0 10-6 15-14 15"/><path d="M5 19l8-8"/>',
-    plug: '<path d="M9 3v5M15 3v5M6 8h12v3a6 6 0 0 1-12 0z"/><path d="M12 17v4"/>',
-    pot: '<path d="M4 10h16v6a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4z"/><path d="M2 10h2M20 10h2M9 6c0-1 1-2 3-2s3 1 3 2"/>',
-    pen: '<path d="m4 20 1-4L16 5l3 3L8 19z"/><path d="m14 7 3 3"/>',
-    ticket: '<path d="M3 8a2 2 0 0 0 2-2h14a2 2 0 0 0 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 0-2 2H5a2 2 0 0 0-2-2v-2a2 2 0 0 0 0-4z"/><path d="M10 6v12" stroke-dasharray="2 2"/>',
-    search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
-    bolt: '<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>',
-    chev: '<path d="m6 9 6 6 6-6"/>',
-    right: '<path d="m9 6 6 6-6 6"/>',
-    cart: '<path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.5L21 8H6"/><circle cx="10" cy="20" r="1.3"/><circle cx="17" cy="20" r="1.3"/>',
-    user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
-    heart: '<path d="M12 20s-7.5-4.6-9.2-9.3C1.6 7.2 4 4 7.2 4c2 0 3.6 1.2 4.8 2.8C13.2 5.2 14.8 4 16.8 4 20 4 22.4 7.2 21.2 10.7 19.5 15.4 12 20 12 20z"/>',
-    truck: '<path d="M3 6h11v10H3zM14 9h4l3 3.5V16h-7"/><circle cx="7" cy="17.5" r="1.8"/><circle cx="17.5" cy="17.5" r="1.8"/>',
-    shirt: '<path d="m8 4-5 3 2 4 3-1v10h8V10l3 1 2-4-5-3a4 4 0 0 1-8 0z"/>',
-    book: '<path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5M8 7h7"/>',
-    grid: '<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>',
-    scooter: '<path d="M4 16a3 3 0 1 0 6 0 3 3 0 0 0-6 0zM14 16a3 3 0 1 0 6 0 3 3 0 0 0-6 0z"/><path d="M7 16h7l3-8h3"/>',
-    // Used by the editor's own chrome rather than by the shop.
-    left: '<path d="m15 6-6 6 6 6"/>',
-    plus: '<path d="M12 5v14M5 12h14"/>',
-    trash: '<path d="M4 7h16M10 7V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2"/><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/>',
-    eye: '<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>',
-    // The same eye with the lid drawn over it, so hidden reads as hidden.
-    'eye-off': '<path d="M3 3l18 18"/><path d="M10.6 5.2A9.8 9.8 0 0 1 12 5c6 0 10 7 10 7a17 17 0 0 1-3.3 4"/><path d="M6.2 6.4A17 17 0 0 0 2 12s4 7 10 7a9.6 9.6 0 0 0 4.3-1"/>',
-    clock: '<circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/>',
-    check: '<path d="m5 12 4.5 4.5L19 7"/>',
-    info: '<circle cx="12" cy="12" r="8"/><path d="M12 11v5M12 8h.01"/>',
-};
 
 const SOURCES = [
     ["category", _t("A product category")],
@@ -105,34 +76,9 @@ function reorderIds(ids, movedId, prevId, nextId) {
     return rest;
 }
 
-export class Icon extends Component {
-    static template = "mart369_home.Icon";
-    static props = { n: String, size: { type: Number, optional: true }, class: { type: String, optional: true } };
-    static defaultProps = { size: 20, class: "" };
-
-    setup() {
-        this.svg = useRef("svg");
-        // The paths are drawn by hand rather than by `t-out`.
-        //
-        // `t-out` builds its markup as HTML, so every <path> came out in the
-        // XHTML namespace - and an <svg> full of XHTML elements draws nothing
-        // at all. The box was the right size, the stroke was the right colour,
-        // and the icon was simply not there. Assigning innerHTML on the <svg>
-        // node makes the browser parse the fragment in the SVG namespace,
-        // which is the whole difference between an icon and an empty gap.
-        const draw = () => {
-            if (this.svg.el) {
-                this.svg.el.innerHTML = ICONS[this.props.n] || ICONS.grid;
-            }
-        };
-        onMounted(draw);
-        onPatched(draw);
-    }
-}
-
 export class HomeBuilder extends Component {
     static template = "mart369_home.HomeBuilder";
-    static components = { Layout, Icon };
+    static components = { Layout, Icon, Pick, Switch };
     static props = { ...standardActionServiceProps };
 
     setup() {
@@ -328,6 +274,28 @@ export class HomeBuilder extends Component {
     edit(model, rec, field, value) {
         this.save.edit(model, rec, field, value);
     }
+
+    /** A many2one, written from the dropdown's string - and `false` when the
+     *  empty first line is chosen, which is how Odoo clears one. */
+    editId(model, rec, field, value) {
+        this.save.edit(model, rec, field, parseInt(value) || false);
+    }
+
+    /** The categories, as the [value, label] pairs the dropdown takes. Ids are
+     *  cast to strings because the dropdown compares strings; `none` is the
+     *  wording of the empty first line, which differs by where it is used. */
+    categoryOptions(none) {
+        return [["", none], ...(this.d?.categories || []).map((c) => [String(c.id), c.name])];
+    }
+
+    tagOptions(none) {
+        return [["", none], ...(this.d?.tags || []).map((tg) => [String(tg.id), tg.name])];
+    }
+
+    /** What a many2one's current value is, as the string the dropdown wants. */
+    idValue(id) {
+        return id ? String(id) : "";
+    }
     onField(model, rec, field, ev) {
         this.save.edit(model, rec, field, this.save.valueFrom(ev));
     }
@@ -353,7 +321,7 @@ export class HomeBuilder extends Component {
         const body = days
             ? _t("%(what)s moves to the Trash. You can put it back for the next %(days)s days.", { what, days })
             : _t("%s moves to the Trash, where it is kept until you empty it.", what);
-        this.dialog.add(ConfirmationDialog, {
+        this.dialog.add(Confirm, {
             title: _t("Move to Trash?"),
             body,
             confirmLabel: _t("Move to Trash"),
@@ -385,7 +353,7 @@ export class HomeBuilder extends Component {
 
     /** Delete for good, skipping the rest of the retention. */
     deleteForever(row) {
-        this.dialog.add(ConfirmationDialog, {
+        this.dialog.add(Confirm, {
             title: _t("Delete for good?"),
             body: _t("%s will be gone for good. This cannot be undone.", row.name),
             confirmLabel: _t("Delete for good"),
@@ -397,7 +365,7 @@ export class HomeBuilder extends Component {
 
     emptyTrash() {
         const rows = this.d.trash;
-        this.dialog.add(ConfirmationDialog, {
+        this.dialog.add(Confirm, {
             title: _t("Empty the Trash?"),
             body: _t("All %s item(s) will be gone for good. This cannot be undone.", rows.length),
             confirmLabel: _t("Empty the Trash"),

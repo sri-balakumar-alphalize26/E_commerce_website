@@ -19,13 +19,14 @@ import { useService } from "@web/core/utils/hooks";
 import { useDebounced } from "@web/core/utils/timing";
 import { Layout } from "@web/search/layout";
 import { standardActionServiceProps } from "@web/webclient/actions/action_service";
-import { Icon } from "@mart369_home/builder/builder";
+import { Icon } from "@mart369/ui/icon";
+import { Switch } from "@mart369/ui/switch";
 import { useSaveQueue } from "@mart369_home/builder/save_queue";
 import { M, STATES, ProductPageReader } from "./page_reader";
 
 export class ProductBuilder extends ProductPageReader {
     static template = "mart369_product.ProductBuilder";
-    static components = { Layout, Icon };
+    static components = { Layout, Icon, Switch };
     static props = { ...standardActionServiceProps };
 
     setup() {

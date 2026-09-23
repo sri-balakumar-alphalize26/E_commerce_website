@@ -346,11 +346,8 @@
             </div>
             <label class="pe-switch-lbl">
                 <span t-esc="selected.record.active ? 'Shown' : 'Hidden'"/>
-                <button class="mart-switch" role="switch"
-                        t-att-aria-checked="selected.record.active ? 'true' : 'false'"
-                        t-on-click="() => this.toggleActive(selected.kind, selected.record.id)">
-                    <i/>
-                </button>
+                <Switch on="selected.record.active" label="'Shown in the app'"
+                        onChange="() => this.toggleActive(selected.kind, selected.record.id)"/>
             </label>
         </header>
 
@@ -358,14 +355,9 @@
             <t t-foreach="selected.spec.fields" t-as="f" t-key="f[0]">
                 <label class="mart-field">
                     <span t-esc="f[1]"/>
-                    <select t-if="f[3]"
-                            t-att-value="selected.record[f[0]]"
-                            t-on-change="(ev) => this.onField(selected.kind, selected.record.id, f[0], ev)">
-                        <t t-foreach="d.vocab[f[3]]" t-as="opt" t-key="opt">
-                            <option t-att-value="opt" t-att-selected="selected.record[f[0]] === opt"
-                                    t-esc="opt"/>
-                        </t>
-                    </select>
+                    <Pick t-if="f[3]" label="f[1]"
+                          value="selected.record[f[0]] || ''" options="vocabOptions(f[3])"
+                          onChange="(v) => this.setField(selected.kind, selected.record.id, f[0], v)"/>
                     <input t-else="" type="text"
                            t-att-value="selected.record[f[0]] || ''"
                            t-att-placeholder="f[2]"
@@ -412,12 +404,8 @@
             </label>
             <label class="mart-field">
                 <span>Icon</span>
-                <select t-att-value="d.mode.icon"
-                        t-on-change="(ev) => this.onModeField('icon', ev)">
-                    <t t-foreach="d.vocab.icons" t-as="opt" t-key="opt">
-                        <option t-att-value="opt" t-att-selected="d.mode.icon === opt" t-esc="opt"/>
-                    </t>
-                </select>
+                <Pick label="'Icon'" value="d.mode.icon || ''" options="vocabOptions('icons')"
+                      onChange="(v) => this.setModeField('icon', v)"/>
             </label>
             <label class="mart-field">
                 <span>Free delivery above</span>

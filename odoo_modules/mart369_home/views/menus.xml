@@ -4,46 +4,46 @@
     <!-- The front door: pick a page, then edit it. -->
     <menuitem id="menu_mart369_home_builder"
               name="Home Page"
-              parent="mart369.menu_mart369_root"
+              parent="mart369.menu_mart369_store"
               action="action_mart369_home_pages"
               sequence="10"/>
 
     <!-- The form-based screens, for anything the builder does not expose. -->
     <menuitem id="menu_mart369_home_version"
               name="Saved Home Pages"
-              parent="mart369.menu_mart369_advanced"
+              parent="mart369.menu_mart369_pages"
               action="action_mart369_home_version"
-              sequence="5"/>
+              sequence="10"/>
 
     <menuitem id="menu_mart369_home_config"
               name="Home Page Settings"
-              parent="mart369.menu_mart369_advanced"
+              parent="mart369.menu_mart369_pages"
               action="action_mart369_home_config"
-              sequence="10"/>
+              sequence="20"/>
 
     <menuitem id="menu_mart369_home_section"
               name="Home Sections"
-              parent="mart369.menu_mart369_advanced"
+              parent="mart369.menu_mart369_pages"
               action="action_mart369_home_section"
-              sequence="20"/>
+              sequence="30"/>
 
     <menuitem id="menu_mart369_home_banner"
               name="Banners"
-              parent="mart369.menu_mart369_advanced"
+              parent="mart369.menu_mart369_pages"
               action="action_mart369_home_banner"
-              sequence="30"/>
+              sequence="40"/>
 
     <menuitem id="menu_mart369_home_tile"
               name="Category Tiles"
-              parent="mart369.menu_mart369_advanced"
+              parent="mart369.menu_mart369_pages"
               action="action_mart369_home_tile"
-              sequence="40"/>
+              sequence="50"/>
 
     <menuitem id="menu_mart369_home_tab"
               name="Tabs"
-              parent="mart369.menu_mart369_advanced"
+              parent="mart369.menu_mart369_pages"
               action="action_mart369_home_tab"
-              sequence="50"/>
+              sequence="60"/>
 
     <!-- Also reachable from where a website admin would look for it. -->
     <menuitem id="menu_mart369_home_root"
