@@ -89,6 +89,14 @@ class TestMart369AuthApi(HttpCase):
 
     # ------------------------------------------------------------ me / logout
 
+    def test_me_says_whether_the_console_is_theirs(self):
+        """The console's gate reads `staff`. A customer must see False, and a
+        staff account True - the same group the admin routes check."""
+        self._signup()
+        self.assertIs(self.url_open('/369mart/auth/me').json()['staff'], False)
+        self.authenticate('admin', 'admin')
+        self.assertIs(self.url_open('/369mart/auth/me').json()['staff'], True)
+
     def test_me_is_401_when_signed_out(self):
         self.assertEqual(self.url_open('/369mart/auth/me').status_code, 401)
 

@@ -345,5 +345,9 @@ class ResUsers(models.Model):
             'email': self.email or self.login,
             'phone': partner.phone or '',
             'partner_id': partner.id,
+            # Whether the app's admin console should open for this person. The
+            # same group every /369mart/admin/* route checks, so the console's
+            # gate and its data can never disagree about who is staff.
+            'staff': self.has_group('website.group_website_designer'),
         }
 
