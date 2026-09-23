@@ -1,0 +1,473 @@
+// 369 Mart - the shared UI kit (.mart-*)
+//
+// The twin of the console's stylesheet (components/admin/admin.css), and the
+// reason the two sides can look alike: one definition of a button, a pill, a
+// dropdown, a search box, a tab strip, a toggle, an avatar and an empty state,
+// reachable from every module because this one is a dependency of all of them.
+//
+// Everything here is TOP LEVEL, not nested under .mart-builder. That nesting is
+// what pushed bootstrap buttons into four dialog footers: Odoo portals a dialog
+// to the end of the body, outside the screen that opened it, so a rule written
+// as `.mart-builder .mart-btn` simply does not reach it.
+//
+// Never @import this file or _mart_vars.scss: Odoo rejects local imports inside
+// an asset bundle. It is listed after _mart_vars.scss in the manifest instead,
+// which is where the $mart-* tokens below come from.
+
+/* ------------------------------------------------------------------ buttons */
+.mart-btn {
+    height: 36px;
+    padding: 0 14px;
+    border: 1px solid #cfd8df;
+    border-radius: 10px;
+    background: #fff;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    color: $mart-ink;
+    cursor: pointer;
+    transition: background 140ms, border-color 140ms, transform 120ms;
+
+    &:hover { background: $mart-soft; }
+    &:active { transform: scale(0.97); }
+    &:disabled { opacity: 0.55; cursor: default; transform: none; }
+
+    &.mart-btn-primary {
+        border-color: transparent;
+        background: linear-gradient(135deg, $mart-blue, $mart-blue-deep);
+        color: #fff;
+        box-shadow: 0 8px 18px -10px rgba(10, 120, 171, 0.8);
+        &:hover { filter: brightness(1.06); }
+    }
+    &.mart-btn-danger { color: $mart-red; &:hover { background: #fdeaea; border-color: #f3c4c1; } }
+    &.mart-btn-sm { height: 30px; padding: 0 11px; font-size: 12px; border-radius: 9px; }
+}
+
+.mart-link {
+    border: 0;
+    background: none;
+    padding: 0 0 0 6px;
+    color: $mart-blue;
+    font: inherit;
+    font-weight: 700;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+/* -------------------------------------------------------------------- pills */
+// The console's geometry, not the builders' slightly smaller one, so a state
+// reads the same size on both sides. The dot is drawn by the Pill component's
+// own <i>, so the older hand-written pills - which have no <i> - are unchanged
+// apart from those two pixels.
+.mart-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+    background: $mart-soft;
+    color: $mart-muted;
+
+    i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none; }
+}
+
+// The console's tones (.ad-t-*), named the same here.
+.mart-t-blue { background: #e6f1f8; color: #08516f; }
+.mart-t-amber { background: #fdf1dc; color: #8a5a06; }
+.mart-t-violet { background: #eeeafc; color: #4c3a9a; }
+.mart-t-orange { background: #ffeeda; color: #96530a; }
+.mart-t-green { background: #e3f4e9; color: #14602d; }
+.mart-t-red { background: #fbe9e7; color: #9c2f28; }
+.mart-t-grey { background: #eceff2; color: #5b6b76; }
+
+// Kept because the builders' own markup still asks for them by name.
+.mart-pill-green { background: #e7f5ec; color: #1f8a3c; }
+.mart-pill-blue { background: #e6f2f8; color: #0a78ab; }
+
+/* ---------------------------------------------------------------- dropdown */
+// The toggle of our own dropdown - see the Pick component.
+.mart-select {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    width: auto;
+    max-width: none;
+    height: 32px;
+    padding: 0 10px;
+    border: 1px solid $mart-line;
+    border-radius: 9px;
+    background: #fff;
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: $mart-ink;
+    cursor: pointer;
+    white-space: nowrap;
+
+    &:hover { border-color: darken($mart-line, 8%); }
+
+    &:focus {
+        outline: 0;
+        border-color: $mart-blue;
+        box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.14);
+    }
+
+    &:disabled {
+        opacity: 0.55;
+        cursor: default;
+        &:hover { border-color: $mart-line; }
+    }
+
+    .fa-angle-down {
+        color: $mart-muted;
+        transition: transform 180ms ease;
+    }
+
+    /* Odoo's Dropdown puts .show and aria-expanded on the toggle, so the
+       chevron can point at the menu the way the console's does. */
+    &.show {
+        border-color: $mart-blue;
+        .fa-angle-down { transform: rotate(180deg); }
+    }
+}
+
+/* The menu is portalled to the body by Odoo's Dropdown, so it lands outside the
+   screen that opened it and cannot be nested under one. */
+.o-dropdown--menu.mart-select-menu {
+    padding: 5px;
+    border-radius: 12px;
+    border: 1px solid $mart-line;
+    box-shadow: 0 12px 30px rgba(16, 39, 54, 0.16);
+
+    .o-dropdown-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 12px 7px 8px;
+        border-radius: 8px;
+        font-size: 12.5px;
+        color: $mart-ink;
+        cursor: pointer;
+
+        &:hover, &.focus { background: #f1f6f9; }
+
+        .fa-check { color: $mart-blue; opacity: 0; width: 12px; flex: none; }
+    }
+
+    .mart-select-on {
+        font-weight: 700;
+        .fa-check { opacity: 1; }
+    }
+}
+
+/* ------------------------------------------------------------- search box */
+.mart-search {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+    min-width: 210px;
+    height: 32px;
+    padding: 0 10px;
+    border: 1px solid $mart-line;
+    border-radius: 9px;
+    background: #fff;
+    color: $mart-muted;
+    transition: border-color 180ms, box-shadow 200ms;
+
+    &.mart-search-wide { width: 100%; min-width: 0; }
+
+    &:focus-within {
+        border-color: $mart-blue;
+        box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.14);
+    }
+
+    input {
+        flex: 1;
+        min-width: 60px;
+        height: 100%;
+        padding: 0;
+        border: 0;
+        outline: 0;
+        background: none;
+        font: inherit;
+        font-size: 12.5px;
+        color: $mart-ink;
+    }
+
+    .mart-search-x {
+        display: grid;
+        place-items: center;
+        flex: none;
+        width: 20px;
+        height: 20px;
+        padding: 0;
+        border: 0;
+        border-radius: 50%;
+        background: $mart-soft;
+        color: $mart-muted;
+        cursor: pointer;
+
+        &:hover { color: $mart-ink; }
+    }
+}
+
+/* ------------------------------------------------------------------- tabs */
+.mart-tabs {
+    display: inline-flex;
+    gap: 2px;
+    padding: 3px;
+    border-radius: 11px;
+    background: $mart-soft;
+
+    button {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        height: 32px;
+        padding: 0 12px;
+        border: 0;
+        border-radius: 9px;
+        background: none;
+        font: inherit;
+        font-size: 13px;
+        font-weight: 700;
+        color: $mart-muted;
+        cursor: pointer;
+        transition: background-color 180ms, color 180ms;
+
+        &:hover { color: $mart-ink; }
+
+        &.mart-on {
+            background: #fff;
+            color: $mart-ink;
+            box-shadow: 0 2px 6px -3px rgba(19, 33, 43, 0.4);
+        }
+    }
+
+    em {
+        font-style: normal;
+        font-size: 11px;
+        font-weight: 800;
+        padding: 1px 6px;
+        border-radius: 999px;
+        background: #e6edf2;
+        color: $mart-muted;
+    }
+
+    .mart-on em { background: #eaf4fa; color: $mart-blue; }
+}
+
+/* ----------------------------------------------------------------- toggle */
+// The drawn pill, 42x24 like the console's. A button, so it needs no label
+// wrapped round it; the knob is the <i>.
+button.mart-switch {
+    position: relative;
+    flex: none;
+    width: 42px;
+    height: 24px;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background: #cfd9e0;
+    cursor: pointer;
+    transition: background-color 240ms;
+
+    i {
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: #fff;
+        box-shadow: 0 2px 5px rgba(19, 33, 43, 0.3);
+        transition: transform 320ms cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    &.mart-on {
+        background: $mart-green;
+        i { transform: translateX(18px); }
+    }
+
+    &:disabled { opacity: 0.55; cursor: default; }
+
+    &:focus-visible { outline: 2px solid $mart-blue; outline-offset: 2px; }
+}
+
+/* ----------------------------------------------------------------- avatar */
+.mart-avatar {
+    flex: none;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: #e6edf2;
+    color: #41535f;
+    font-weight: 800;
+}
+
+.mart-a-blue { background: #dceff9; color: #08516f; }
+.mart-a-orange { background: #ffecd4; color: #96530a; }
+.mart-a-green { background: #ddf2e4; color: #14602d; }
+.mart-a-red { background: #fbe3e1; color: #9c2f28; }
+.mart-a-navy { background: #d7e3ea; color: $mart-blue-deep; }
+
+/* ------------------------------------------------------------ empty state */
+.mart-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 6px;
+    padding: 38px 20px 42px;
+
+    > span {
+        display: grid;
+        place-items: center;
+        width: 54px;
+        height: 54px;
+        border-radius: 16px;
+        background: $mart-soft;
+        color: $mart-blue;
+    }
+
+    b { margin-top: 6px; font-size: 16px; font-weight: 800; color: $mart-ink; }
+    p { margin: 0 0 8px; font-size: 13.5px; color: $mart-muted; }
+}
+
+/* --------------------------------------------------------------- confirm */
+// Our "are you sure?" - see ui/confirm.js, which is Odoo's ConfirmationDialog
+// with only the template replaced. Top level, because Odoo portals a dialog
+// to the end of the body, outside the screen that opened it.
+.o_mart369_dialog.mart-confirm {
+    border-radius: 18px;
+    box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.5);
+
+    .modal-header { border-bottom: 0; padding: 20px 22px 0; }
+    .modal-title { font-size: 18px; font-weight: 800; color: $mart-ink; }
+    .modal-body { padding: 8px 22px 4px; }
+    .modal-footer { border-top: 0; padding: 12px 22px 18px; gap: 10px; }
+
+    // Both buttons share the width, as the console's do: neither answer is
+    // the small one.
+    .modal-footer > .mart-btn { flex: 1; margin: 0; }
+}
+
+.mart-confirm-body { text-align: center; }
+
+.mart-confirm-ic {
+    display: grid;
+    place-items: center;
+    width: 52px;
+    height: 52px;
+    margin: 0 auto 12px;
+    border-radius: 16px;
+    background: $mart-blue-soft;
+    color: $mart-blue;
+}
+
+.mart-confirm-ic-danger { background: #fbe9e7; color: $mart-red; }
+
+.mart-confirm-text {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #47575f;
+    white-space: pre-wrap;
+}
+
+/* ---------------------------------------------------------------- toasts */
+// Odoo's notification service keeps its behaviour - the stacking, the
+// auto-close timer, the hover-to-freeze - and only the look is ours: the dark
+// pill the console drops at the bottom (.ad-toast, admin.css). The coloured
+// rope down the left edge becomes the whole background, because at this size
+// a 3px bar is not what tells you whether something went wrong.
+.o_notification {
+    align-items: center;
+    padding: 4px 6px 4px 0;
+    border: 0 !important;
+    border-radius: 999px !important;
+    background: #13212b;
+    color: #fff;
+    box-shadow: 0 18px 36px -18px rgba(0, 0, 0, 0.8) !important;
+
+    // The bar carries the type, so it is what we read the tone off - but it
+    // is not drawn, since the pill itself now says it.
+    .o_notification_bar { display: none; }
+
+    > div {
+        border: 0 !important;
+        padding: 7px 14px 7px 16px !important;
+    }
+
+    .o_notification_content { font-size: 13.5px; font-weight: 600; color: #fff; }
+
+    .o_notification_close {
+        filter: invert(1);
+        opacity: 0.55;
+        &:hover { opacity: 1; }
+    }
+
+    // The timer bar, kept but quietened: it answers "is this about to go?"
+    .o_notification_progress { opacity: 0.35 !important; }
+
+    &:has(.o_notification_bar.bg-danger) { background: #8f2f28; }
+    &:has(.o_notification_bar.bg-warning) { background: #8a5a06; }
+    &:has(.o_notification_bar.bg-info) { background: $mart-blue-deep; }
+}
+
+/* ---------------------------------------------------------------- prompt */
+// A small dialog that asks for one name. Its rules live here rather than in
+// builder.scss because Odoo portals a dialog outside the screen that opened
+// it, so anything nested under `.mart-builder` cannot reach it - which is why
+// this prompt used to come up unstyled.
+.o_mart369_dialog.mart-prompt {
+
+    .mart-field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-bottom: 10px;
+
+        > span {
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: $mart-muted;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            height: 38px;
+            padding: 0 12px;
+            border: 1px solid #cfd8df;
+            border-radius: 10px;
+            background: #fff;
+            font: inherit;
+            font-size: 13.5px;
+            color: $mart-ink;
+
+            &::placeholder { color: #a3b0ba; }
+            &:hover { border-color: #b7c4ce; }
+            &:focus {
+                outline: none;
+                border-color: $mart-blue;
+                box-shadow: 0 0 0 3px $mart-blue-soft;
+            }
+        }
+    }
+
+    .mart-hint {
+        margin: 0;
+        font-size: 11.5px;
+        line-height: 1.4;
+        color: $mart-muted;
+    }
+
+    .modal-footer { border-top: 0; gap: 8px; }
+}

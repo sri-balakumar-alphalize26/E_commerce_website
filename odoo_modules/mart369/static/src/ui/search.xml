@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="mart369.Search">
+        <label t-attf-class="mart-search {{ props.wide ? 'mart-search-wide' : '' }}">
+            <Icon n="'search'" size="17"/>
+            <input type="text" t-att-value="props.value"
+                   t-att-aria-label="props.label"
+                   t-att-placeholder="props.placeholder"
+                   t-on-input="(ev) => props.onChange(ev.target.value)"/>
+            <button t-if="props.value" type="button" class="mart-search-x" aria-label="Clear"
+                    t-on-click="() => props.onChange('')">
+                <Icon n="'x'" size="13"/>
+            </button>
+        </label>
+    </t>
+
+</templates>

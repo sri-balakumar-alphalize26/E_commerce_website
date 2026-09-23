@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="mart369.Pick">
+        <Dropdown position="'bottom-start'" menuClass="'mart-select-menu'" disabled="!!props.disabled">
+            <button class="mart-select" type="button" t-att-aria-label="props.label"
+                    t-att-disabled="props.disabled or false">
+                <span t-esc="current"/>
+                <Icon n="'chev'" size="14"/>
+            </button>
+            <t t-set-slot="content">
+                <DropdownItem t-foreach="props.options" t-as="opt" t-key="opt[0]"
+                              class="opt[0] === props.value ? 'mart-select-on' : ''"
+                              onSelected="() => this.choose(opt[0])">
+                    <Icon n="'check'" size="14"/>
+                    <t t-esc="opt[1]"/>
+                </DropdownItem>
+            </t>
+        </Dropdown>
+    </t>
+
+</templates>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="mart369.Empty">
+        <div class="mart-empty">
+            <span><Icon n="props.icon" size="26"/></span>
+            <b t-esc="props.title"/>
+            <p t-if="props.text" t-esc="props.text"/>
+            <button t-if="props.action" type="button" class="mart-btn mart-btn-primary"
+                    t-on-click="() => props.onAction()">
+                <t t-esc="props.action"/>
+            </button>
+        </div>
+    </t>
+
+</templates>
