@@ -24,9 +24,9 @@
 
     <menuitem id="menu_mart369_catalog_desk"
               name="Catalog"
-              parent="mart369.menu_mart369_root"
+              parent="mart369.menu_mart369_catalogue"
               action="action_mart369_catalog_desk"
               groups="base.group_system,website.group_website_designer"
-              sequence="40"/>
+              sequence="10"/>
 
 </odoo>

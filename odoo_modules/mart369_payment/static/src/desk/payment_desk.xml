@@ -11,7 +11,7 @@
                         <p>Whether the money arrived, and if not, where it is.</p>
                     </div>
                     <button class="mart-btn" t-on-click="() => this.allViews()">
-                        <i class="fa fa-th-list" role="img" aria-label="List"/>
+                        <Icon n="'menu'" size="14"/>
                         All views
                     </button>
                 </header>
@@ -38,7 +38,7 @@
                 <!-- Said once, so nobody hunts for a button that should not
                      exist. -->
                 <p class="pd-readonly">
-                    <i class="fa fa-lock" aria-hidden="true"/>
+                    <Icon n="'lock'" size="14"/>
                     <span>
                         Nothing here can be changed. A payment becomes paid when
                         the bank confirms it, and cash is marked collected on the
@@ -48,28 +48,13 @@
                 </p>
 
                 <div class="pe-toolbar pd-toolbar">
-                    <div class="pd-tabs" role="tablist">
-                        <button t-foreach="TABS" t-as="tab" t-key="tab.key"
-                                role="tab"
-                                t-att-aria-selected="state.tab === tab.key ? 'true' : 'false'"
-                                t-attf-class="{{ state.tab === tab.key ? 'mart-on' : '' }}"
-                                t-on-click="() => this.pick(tab.key)">
-                            <t t-esc="tab.label"/>
-                            <em t-if="tabCount(tab) !== null" t-esc="tabCount(tab)"/>
-                        </button>
-                    </div>
+                    <Tabs tabs="tabItems" value="state.tab"
+                          onChange="(k) => this.pick(k)"/>
                     <div class="pe-toolbar-gap"/>
-                    <div class="pd-kinds" role="group" aria-label="Kind">
-                        <button t-foreach="kindOptions" t-as="opt" t-key="opt[0]"
-                                t-attf-class="pd-kind {{ state.kind === opt[0] ? 'mart-on' : '' }}"
-                                t-att-aria-pressed="state.kind === opt[0] ? 'true' : 'false'"
-                                t-on-click="() => this.setKind(opt[0])">
-                            <t t-esc="opt[1]"/>
-                        </button>
-                    </div>
-                    <input type="search" class="pd-search"
-                           placeholder="A reference, an order or a customer"
-                           aria-label="Search payments" t-on-input="search"/>
+                    <Pick label="'Kind'" value="state.kind" options="kindOptions"
+                          onChange="(v) => this.setKind(v)"/>
+                    <Search value="state.q" placeholder="'A reference, an order or a customer'" label="'Search payments'"
+                            onChange="(v) => this.onSearch(v)"/>
                 </div>
 
                 <p t-if="state.error" class="pe-error" role="alert">
@@ -110,10 +95,9 @@
                                     <div class="pd-body">
                                         <div class="pd-top">
                                             <b t-esc="row.customer or 'A customer'"/>
-                                            <span t-attf-class="mart-pill {{ stateClass(row.state) }}"
-                                                  t-esc="stateLabel(row.state)"/>
+                                            <Pill s="row.state" map="STATES"/>
                                             <span t-if="row.cod and row.state === 'pending'"
-                                                  class="mart-pill pd-p-blue">
+                                                  class="mart-pill mart-t-blue">
                                                 At the door
                                             </span>
                                             <small>

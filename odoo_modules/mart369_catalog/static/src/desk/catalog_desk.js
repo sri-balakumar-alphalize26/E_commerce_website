@@ -25,14 +25,18 @@ import { _t } from "@web/core/l10n/translation";
 import { Dialog } from "@web/core/dialog/dialog";
 import { Layout } from "@web/search/layout";
 import { standardActionServiceProps } from "@web/webclient/actions/action_service";
+import { Search } from "@mart369/ui/search";
+import { Pick } from "@mart369/ui/pick";
+import { Icon } from "@mart369/ui/icon";
+import { Tabs } from "@mart369/ui/tabs";
 
 const MODEL = "product.public.category";
 
 const TILES = [
-    { key: "live", tab: "live", label: _t("In the app"), icon: "fa-th-large" },
-    { key: "hidden", tab: "hidden", label: _t("Hidden"), icon: "fa-eye-slash" },
-    { key: "empty", tab: "empty", label: _t("Standing empty"), icon: "fa-inbox", warn: true },
-    { key: "products", label: _t("Products a shopper can reach"), icon: "fa-cube", flat: true },
+    { key: "live", tab: "live", label: _t("In the app"), icon: "grid" },
+    { key: "hidden", tab: "hidden", label: _t("Hidden"), icon: "eye-off" },
+    { key: "empty", tab: "empty", label: _t("Standing empty"), icon: "box", warn: true },
+    { key: "products", label: _t("Products a shopper can reach"), icon: "box", flat: true },
 ];
 
 const TABS = [
@@ -63,7 +67,7 @@ function message(err) {
  */
 export class CategoryDialog extends Component {
     static template = "mart369_catalog.CategoryDialog";
-    static components = { Dialog };
+    static components = { Dialog, Pick, Icon };
     static props = {
         close: { type: Function },
         row: { type: Object },
@@ -85,8 +89,23 @@ export class CategoryDialog extends Component {
     }
 
     edit(key, ev) {
-        this.state.draft[key] = ev.target.value;
+        this.set(key, ev.target.value);
+    }
+
+    /** The same write as `edit`, given the value rather than the event the
+     *  input carried it in - which is what a component hands back. */
+    set(key, value) {
+        this.state.draft[key] = value;
         this.state.error = "";
+    }
+
+    /** The two storefronts, spelled out as they are in the dialog: this is
+     *  where somebody chooses one, so it is worth saying what each means. */
+    get modeOptions() {
+        return [
+            ["quick", _t("Quick - the 10-minute run")],
+            ["all", _t("Express - ships over days")],
+        ];
     }
 
     get preview() {
@@ -133,7 +152,7 @@ export class CategoryDialog extends Component {
 
 export class CatalogDesk extends Component {
     static template = "mart369_catalog.CatalogDesk";
-    static components = { Layout };
+    static components = { Layout, Pick, Search, Icon, Tabs };
     static props = { ...standardActionServiceProps };
 
     setup() {
@@ -157,10 +176,15 @@ export class CatalogDesk extends Component {
             error: "",
         });
 
-        this.search = useDebounced((ev) => {
-            this.state.q = ev.target.value.trim();
-            this.load();
-        }, 300);
+        /* The box writes to state at once, so typing is never swallowed by
+           the wait; only the reload is debounced, which is all the 300ms
+           was ever for. The text is kept raw and trimmed when it is sent -
+           trimming it here would eat the space between two words. */
+        this.reload = useDebounced(() => this.load(), 300);
+        this.onSearch = (q) => {
+            this.state.q = q;
+            this.reload();
+        };
 
         onWillStart(() => this.load());
 
@@ -182,7 +206,7 @@ export class CatalogDesk extends Component {
             const page = await this.orm.call(MODEL, "mart369_admin_list", [], {
                 tab: this.state.tab,
                 mode: this.state.mode || null,
-                q: this.state.q || null,
+                q: this.state.q.trim() || null,
             });
             this.state.rows = page.rows || [];
             this.state.counts = page.counts || null;
@@ -210,16 +234,24 @@ export class CatalogDesk extends Component {
         this.load();
     }
 
-    /* Three chips rather than the shared `Pick` dropdown: that lives in
-       mart369_order, and this module does not depend on it - pulling a whole
-       module in for one select would be the wrong trade. Three options fit on
-       a line anyway, and a chip shows which is on without being opened. */
+    /* The shared dropdown, the same control the console draws here. It used to
+       be three chips because `Pick` lived in mart369_order, which this module
+       does not depend on; it lives in the base module now, so there is nothing
+       left to work around. */
     get modeOptions() {
         return [
             ["", _t("Both storefronts")],
             ["quick", _t("Quick")],
             ["all", _t("Express")],
         ];
+    }
+
+
+    /** The tabs as the kit's strip takes them: [key, label, count] triples.
+     *  `tabCount` returns null for a tab that counts nothing, and the strip
+     *  draws no badge for null - which is how a tab stays quiet. */
+    get tabItems() {
+        return this.TABS.map((tab) => [tab.key, tab.label, this.tabCount(tab)]);
     }
 
     tabCount(tab) {

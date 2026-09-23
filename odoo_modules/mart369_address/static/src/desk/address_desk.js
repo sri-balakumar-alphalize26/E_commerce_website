@@ -33,16 +33,19 @@ import { useDebounced } from "@web/core/utils/timing";
 import { _t } from "@web/core/l10n/translation";
 import { Layout } from "@web/search/layout";
 import { standardActionServiceProps } from "@web/webclient/actions/action_service";
+import { Search } from "@mart369/ui/search";
+import { Icon } from "@mart369/ui/icon";
+import { Tabs } from "@mart369/ui/tabs";
 
 const MODEL = "res.partner";
 
 /* Each tile sets the tab, except the two that are figures with no tab of their
    own - "customers" and "missing something" cut across the tabs. */
 const TILES = [
-    { key: "all", tab: "all", label: _t("Addresses"), icon: "fa-map-marker" },
-    { key: "customers", label: _t("Customers"), icon: "fa-users", flat: true },
-    { key: "incomplete", label: _t("Missing something"), icon: "fa-exclamation-triangle", warn: true, flat: true },
-    { key: "no_location", tab: "no_location", label: _t("No map pin"), icon: "fa-crosshairs" },
+    { key: "all", tab: "all", label: _t("Addresses"), icon: "pin" },
+    { key: "customers", label: _t("Customers"), icon: "users", flat: true },
+    { key: "incomplete", label: _t("Missing something"), icon: "warn", warn: true, flat: true },
+    { key: "no_location", tab: "no_location", label: _t("No map pin"), icon: "target" },
 ];
 
 const TABS = [
@@ -67,7 +70,7 @@ function message(err) {
 
 export class AddressDesk extends Component {
     static template = "mart369_address.AddressDesk";
-    static components = { Layout };
+    static components = { Layout, Search, Icon, Tabs };
     static props = { ...standardActionServiceProps };
 
     setup() {
@@ -90,11 +93,16 @@ export class AddressDesk extends Component {
             error: "",
         });
 
-        this.search = useDebounced((ev) => {
-            this.state.q = ev.target.value.trim();
+        /* The box writes to state at once, so typing is never swallowed by
+           the wait; only the reload is debounced, which is all the 300ms
+           was ever for. The text is kept raw and trimmed when it is sent -
+           trimming it here would eat the space between two words. */
+        this.reload = useDebounced(() => this.load(), 300);
+        this.onSearch = (q) => {
+            this.state.q = q;
             this.state.limit = PAGE;
-            this.load();
-        }, 300);
+            this.reload();
+        };
 
         onWillStart(() => this.load());
 
@@ -111,7 +119,7 @@ export class AddressDesk extends Component {
         try {
             const page = await this.orm.call(MODEL, "mart369_admin_list", [], {
                 tab: this.state.tab,
-                q: this.state.q || null,
+                q: this.state.q.trim() || null,
                 limit: this.state.limit,
             });
             this.state.rows = page.addresses || [];
@@ -139,6 +147,14 @@ export class AddressDesk extends Component {
     showMore() {
         this.state.limit += PAGE;
         this.load();
+    }
+
+
+    /** The tabs as the kit's strip takes them: [key, label, count] triples.
+     *  `tabCount` returns null for a tab that counts nothing, and the strip
+     *  draws no badge for null - which is how a tab stays quiet. */
+    get tabItems() {
+        return this.TABS.map((tab) => [tab.key, tab.label, this.tabCount(tab)]);
     }
 
     tabCount(tab) {

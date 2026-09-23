@@ -120,21 +120,6 @@
         }
     }
 
-    .ad-search {
-        height: 38px;
-        min-width: 240px;
-        padding: 0 12px;
-        border: 1px solid var(--ad-line);
-        border-radius: 10px;
-        background: #fff;
-        font-size: 13.5px;
-
-        &:focus {
-            outline: 0;
-            border-color: var(--ad-blue);
-            box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.14);
-        }
-    }
 
     .ad-queue-wrap { flex: 1; min-height: 0; overflow: auto; }
     .ad-queue { padding: 0 16px 20px; }

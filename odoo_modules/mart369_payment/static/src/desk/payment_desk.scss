@@ -160,8 +160,7 @@
     }
 
     .pd-tabs,
-    .wd-tabs,
-    .pd-kinds {
+    .wd-tabs {
         display: inline-flex;
         gap: 2px;
         padding: 3px;
@@ -204,22 +203,6 @@
         }
     }
 
-    .pd-search,
-    .wd-search {
-        height: 38px;
-        min-width: 230px;
-        padding: 0 12px;
-        border: 1px solid var(--pw-line);
-        border-radius: 10px;
-        background: #fff;
-        font-size: 13.5px;
-
-        &:focus {
-            outline: 0;
-            border-color: var(--pw-blue);
-            box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.14);
-        }
-    }
 
     /* -------------------------------------------------------------- rows */
 
@@ -356,43 +339,6 @@
     .wd-nobody {
         color: var(--pw-muted);
         font-style: italic;
-    }
-
-    /* -------------------------------------------------------------- pills */
-
-    .pd-p-green,
-    .wd-p-green {
-        background: #e3f4e9;
-        color: #14602d;
-    }
-
-    .pd-p-amber {
-        background: #fdf1dc;
-        color: #8a5a06;
-    }
-
-    .pd-p-red,
-    .wd-p-red {
-        background: #fbe9e7;
-        color: #9c2f28;
-    }
-
-    .pd-p-grey,
-    .wd-p-grey {
-        background: #eceff2;
-        color: #5b6b76;
-    }
-
-    .pd-p-blue,
-    .wd-p-blue {
-        background: #e6f1f8;
-        color: #08516f;
-    }
-
-    .pd-p-violet,
-    .wd-p-violet {
-        background: #eeeafc;
-        color: #4c3a9a;
     }
 
     /* ------------------------------------------------------------ narrow */

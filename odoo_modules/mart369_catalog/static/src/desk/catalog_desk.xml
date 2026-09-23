@@ -11,7 +11,7 @@
                         <p>The groups a shopper sees in the app, and how each one looks.</p>
                     </div>
                     <button class="mart-btn" t-on-click="() => this.allViews()">
-                        <i class="fa fa-th-list" role="img" aria-label="List"/>
+                        <Icon n="'menu'" size="14"/>
                         All views
                     </button>
                 </header>
@@ -20,7 +20,7 @@
                     <t t-foreach="TILES" t-as="tile" t-key="tile.key">
                         <div t-if="tile.flat" class="cd-tile cd-tile-flat">
                             <span class="cd-tile-top">
-                                <i t-attf-class="fa {{ tile.icon }}" aria-hidden="true"/>
+                                <Icon n="tile.icon" size="15"/>
                                 <t t-esc="tile.label"/>
                             </span>
                             <b t-esc="tileValue(tile)"/>
@@ -32,7 +32,7 @@
                                 t-att-aria-pressed="state.tab === tile.tab ? 'true' : 'false'"
                                 t-on-click="() => this.pick(tile.tab)">
                             <span class="cd-tile-top">
-                                <i t-attf-class="fa {{ tile.icon }}" aria-hidden="true"/>
+                                <Icon n="tile.icon" size="15"/>
                                 <t t-esc="tile.label"/>
                             </span>
                             <b t-esc="tileValue(tile)"/>
@@ -42,28 +42,13 @@
                 </div>
 
                 <div class="pe-toolbar cd-toolbar">
-                    <div class="cd-tabs" role="tablist">
-                        <button t-foreach="TABS" t-as="tab" t-key="tab.key"
-                                role="tab"
-                                t-att-aria-selected="state.tab === tab.key ? 'true' : 'false'"
-                                t-attf-class="{{ state.tab === tab.key ? 'mart-on' : '' }}"
-                                t-on-click="() => this.pick(tab.key)">
-                            <t t-esc="tab.label"/>
-                            <em t-if="tabCount(tab) !== null" t-esc="tabCount(tab)"/>
-                        </button>
-                    </div>
+                    <Tabs tabs="tabItems" value="state.tab"
+                          onChange="(k) => this.pick(k)"/>
                     <div class="pe-toolbar-gap"/>
-                    <div class="cd-modes" role="group" aria-label="Storefront">
-                        <button t-foreach="modeOptions" t-as="opt" t-key="opt[0]"
-                                t-attf-class="cd-mode {{ state.mode === opt[0] ? 'mart-on' : '' }}"
-                                t-att-aria-pressed="state.mode === opt[0] ? 'true' : 'false'"
-                                t-on-click="() => this.setMode(opt[0])">
-                            <t t-esc="opt[1]"/>
-                        </button>
-                    </div>
-                    <input type="search" class="cd-search"
-                           placeholder="A category or its app address"
-                           aria-label="Search categories" t-on-input="search"/>
+                    <Pick label="'Storefront'" value="state.mode" options="modeOptions"
+                          onChange="(v) => this.setMode(v)"/>
+                    <Search value="state.q" placeholder="'A category or its app address'" label="'Search categories'"
+                            onChange="(v) => this.onSearch(v)"/>
                 </div>
 
                 <p t-if="state.error" class="pe-error" role="alert">
@@ -113,12 +98,12 @@
                                     <div class="cd-body">
                                         <div class="cd-top">
                                             <b t-esc="row.name"/>
-                                            <span t-attf-class="mart-pill {{ row.mode === 'all' ? 'cd-p-violet' : 'cd-p-blue' }}"
+                                            <span t-attf-class="mart-pill {{ row.mode === 'all' ? 'mart-t-violet' : 'mart-t-blue' }}"
                                                   t-esc="modeLabel(row.mode)"/>
-                                            <span t-if="!row.inApp" class="mart-pill cd-p-grey">
+                                            <span t-if="!row.inApp" class="mart-pill mart-t-grey">
                                                 Hidden
                                             </span>
-                                            <span t-if="!row.products" class="mart-pill cd-p-amber">
+                                            <span t-if="!row.products" class="mart-pill mart-t-amber">
                                                 Nothing in it
                                             </span>
                                         </div>
@@ -201,14 +186,11 @@
 
                 <label t-if="props.row.topLevel" class="cd-dialog-field cd-span2">
                     <span>Storefront</span>
-                    <select t-att-value="state.draft.mart_mode"
-                            t-on-change="(ev) => this.edit('mart_mode', ev)">
-                        <option value="quick">Quick - the 10-minute run</option>
-                        <option value="all">Express - ships over days</option>
-                    </select>
+                    <Pick label="'Storefront'" value="state.draft.mart_mode"
+                          options="modeOptions" onChange="(v) => this.set('mart_mode', v)"/>
                 </label>
                 <p t-else="" class="cd-dialog-hint cd-span2">
-                    <i class="fa fa-info-circle" aria-hidden="true"/>
+                    <Icon n="'info'" size="14"/>
                     This follows <b t-esc="props.row.parent"/>, which is in
                     <b t-esc="modeLabel(props.row.mode)"/>. Change the storefront
                     on the top-level category.
@@ -216,9 +198,9 @@
             </div>
 
             <t t-set-slot="footer">
-                <button class="btn btn-primary" t-att-disabled="state.busy"
+                <button class="mart-btn mart-btn-primary" t-att-disabled="state.busy"
                         t-on-click="() => this.save()">Save</button>
-                <button class="btn btn-secondary"
+                <button class="mart-btn"
                         t-on-click="() => this.props.close()">Cancel</button>
             </t>
         </Dialog>

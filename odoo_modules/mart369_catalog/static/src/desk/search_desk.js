@@ -27,6 +27,10 @@ import { useDebounced } from "@web/core/utils/timing";
 import { _t } from "@web/core/l10n/translation";
 import { Layout } from "@web/search/layout";
 import { standardActionServiceProps } from "@web/webclient/actions/action_service";
+import { Search } from "@mart369/ui/search";
+import { Switch } from "@mart369/ui/switch";
+import { Icon } from "@mart369/ui/icon";
+import { Tabs } from "@mart369/ui/tabs";
 
 const MODEL = "mart369.search.term";
 
@@ -34,10 +38,10 @@ const MODEL = "mart369.search.term";
    above one. Searches is the exception - there is no "searches" tab to show,
    so it stays a plain figure and never looks clickable. */
 const TILES = [
-    { key: "searches", label: _t("Searches"), icon: "fa-search", flat: true },
-    { key: "terms", tab: "popular", label: _t("Different terms"), icon: "fa-list-ul" },
-    { key: "empty", tab: "empty", label: _t("Found nothing"), icon: "fa-exclamation-triangle", bad: true },
-    { key: "blocked", tab: "blocked", label: _t("Not suggested"), icon: "fa-eye-slash" },
+    { key: "searches", label: _t("Searches"), icon: "search", flat: true },
+    { key: "terms", tab: "popular", label: _t("Different terms"), icon: "menu" },
+    { key: "empty", tab: "empty", label: _t("Found nothing"), icon: "warn", bad: true },
+    { key: "blocked", tab: "blocked", label: _t("Not suggested"), icon: "eye-off" },
 ];
 
 const TABS = [
@@ -82,7 +86,7 @@ function ago(ms) {
 
 export class SearchDesk extends Component {
     static template = "mart369_catalog.SearchDesk";
-    static components = { Layout };
+    static components = { Layout, Search, Switch, Icon, Tabs };
     static props = { ...standardActionServiceProps };
 
     setup() {
@@ -104,10 +108,15 @@ export class SearchDesk extends Component {
             error: "",
         });
 
-        this.search = useDebounced((ev) => {
-            this.state.q = ev.target.value.trim();
-            this.load();
-        }, 300);
+        /* The box writes to state at once, so typing is never swallowed by
+           the wait; only the reload is debounced, which is all the 300ms
+           was ever for. The text is kept raw and trimmed when it is sent -
+           trimming it here would eat the space between two words. */
+        this.reload = useDebounced(() => this.load(), 300);
+        this.onSearch = (q) => {
+            this.state.q = q;
+            this.reload();
+        };
 
         onWillStart(() => this.load());
 
@@ -131,7 +140,7 @@ export class SearchDesk extends Component {
         try {
             const page = await this.orm.call(MODEL, "mart369_admin_list", [], {
                 tab: this.state.tab,
-                q: this.state.q || null,
+                q: this.state.q.trim() || null,
             });
             this.state.rows = page.rows || [];
             this.state.counts = page.counts || null;
@@ -152,6 +161,14 @@ export class SearchDesk extends Component {
         }
         this.state.tab = tab;
         this.load();
+    }
+
+
+    /** The tabs as the kit's strip takes them: [key, label, count] triples.
+     *  `tabCount` returns null for a tab that counts nothing, and the strip
+     *  draws no badge for null - which is how a tab stays quiet. */
+    get tabItems() {
+        return this.TABS.map((tab) => [tab.key, tab.label, this.tabCount(tab)]);
     }
 
     tabCount(tab) {

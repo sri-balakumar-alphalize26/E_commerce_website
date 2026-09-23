@@ -419,9 +419,9 @@
 
     <menuitem id="menu_mart369_customers"
               name="Customers"
-              parent="mart369.menu_mart369_root"
+              parent="mart369.menu_mart369_sales"
               action="action_mart369_customers"
               groups="base.group_system"
-              sequence="20"/>
+              sequence="30"/>
 
 </odoo>

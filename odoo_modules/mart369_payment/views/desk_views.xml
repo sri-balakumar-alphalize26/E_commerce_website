@@ -33,16 +33,16 @@
 
     <menuitem id="menu_mart369_payments_desk"
               name="Payments"
-              parent="mart369.menu_mart369_root"
+              parent="mart369.menu_mart369_money"
               action="action_mart369_payment_desk"
               groups="base.group_system,website.group_website_designer"
-              sequence="40"/>
+              sequence="10"/>
 
     <menuitem id="menu_mart369_wallets_desk"
               name="Wallets"
-              parent="mart369.menu_mart369_root"
+              parent="mart369.menu_mart369_money"
               action="action_mart369_wallet_desk"
               groups="base.group_system,website.group_website_designer"
-              sequence="45"/>
+              sequence="20"/>
 
 </odoo>

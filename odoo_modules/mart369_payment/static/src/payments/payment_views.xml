@@ -20,7 +20,7 @@
             <button type="button" class="o_mart369_kpi"
                     t-on-click="() => this.applyFilter('state_done,today')"
                     title="Show what was collected today">
-                <span class="o_mart369_tile o_mart369_tile_green"><i class="fa fa-inr"/></span>
+                <span class="o_mart369_tile o_mart369_tile_green"><Icon n="'money'" size="14"/></span>
                 <span class="o_mart369_kpi_txt">
                     <small>Collected today</small>
                     <strong t-out="d.collected"/>
@@ -31,7 +31,7 @@
             <button type="button" class="o_mart369_kpi"
                     t-on-click="() => this.applyFilter('state_done')"
                     title="Show payments that went through">
-                <span class="o_mart369_tile o_mart369_tile_blue"><i class="fa fa-check-circle"/></span>
+                <span class="o_mart369_tile o_mart369_tile_blue"><Icon n="'check'" size="14"/></span>
                 <span class="o_mart369_kpi_txt">
                     <small>Went through</small>
                     <strong><t t-out="d.success_pct"/>%</strong>
@@ -48,7 +48,7 @@
             <button type="button" class="o_mart369_kpi"
                     t-on-click="() => this.applyFilter('state_pending')"
                     title="Show payments still waiting on a provider">
-                <span class="o_mart369_tile o_mart369_tile_orange"><i class="fa fa-clock-o"/></span>
+                <span class="o_mart369_tile o_mart369_tile_orange"><Icon n="'clock'" size="14"/></span>
                 <span class="o_mart369_kpi_txt">
                     <small>Waiting</small>
                     <strong t-out="d.pending"/>
@@ -59,7 +59,7 @@
             <button type="button" class="o_mart369_kpi"
                     t-on-click="() => this.applyFilter('method_cod,state_pending')"
                     title="Show cash still to be collected at the door">
-                <span class="o_mart369_tile"><i class="fa fa-money"/></span>
+                <span class="o_mart369_tile"><Icon n="'money'" size="14"/></span>
                 <span class="o_mart369_kpi_txt">
                     <small>Cash to collect</small>
                     <strong t-out="d.cash"/>
@@ -70,7 +70,7 @@
             <button type="button" class="o_mart369_kpi" t-on-click="() => this.openWallets()"
                     title="Open the 369 Wallets">
                 <span t-att-class="'o_mart369_tile' + (d.wallet_broken ? ' o_mart369_tile_red' : '')">
-                    <i class="fa fa-wallet"/>
+                    <Icon n="'wallet'" size="14"/>
                 </span>
                 <span class="o_mart369_kpi_txt">
                     <small>Wallet float</small>
