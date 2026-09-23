@@ -11,7 +11,7 @@
                         <p>What is waiting on somebody, longest wait first.</p>
                     </div>
                     <button class="mart-btn" t-on-click="() => this.moreViews()">
-                        <i class="fa fa-th-list" role="img" aria-label="Board"/>
+                        <Icon n="'menu'" size="14"/>
                         All views
                     </button>
                 </header>
@@ -24,7 +24,7 @@
                             t-att-aria-pressed="state.tab === tile.tab ? 'true' : 'false'"
                             t-on-click="() => this.pick(tile.tab)">
                         <span class="rd-tile-top">
-                            <i t-attf-class="fa {{ tile.icon }}" aria-hidden="true"/>
+                            <Icon n="tile.icon" size="15"/>
                             <t t-esc="tile.label"/>
                         </span>
                         <b t-esc="tileValue(tile)"/>
@@ -33,20 +33,11 @@
                 </div>
 
                 <div class="pe-toolbar rd-toolbar">
-                    <div class="rd-tabs" role="tablist">
-                        <button t-foreach="TABS" t-as="tab" t-key="tab.key"
-                                role="tab"
-                                t-att-aria-selected="state.tab === tab.key ? 'true' : 'false'"
-                                t-attf-class="{{ state.tab === tab.key ? 'mart-on' : '' }}"
-                                t-on-click="() => this.pick(tab.key)">
-                            <t t-esc="tab.label"/>
-                            <em t-if="tabCount(tab) !== null" t-esc="tabCount(tab)"/>
-                        </button>
-                    </div>
+                    <Tabs tabs="tabItems" value="state.tab"
+                          onChange="(k) => this.pick(k)"/>
                     <div class="pe-toolbar-gap"/>
-                    <input type="search" class="rd-search"
-                           placeholder="Order, customer or reason"
-                           aria-label="Search returns" t-on-input="search"/>
+                    <Search value="state.q" placeholder="'Order, customer or reason'" label="'Search returns'"
+                            onChange="(v) => this.onSearch(v)"/>
                     <Pick label="'Wants'" value="state.kind" options="kindOptions"
                           onChange="(v) => this.setFilter('kind', v)"/>
                     <Pick label="'Sort'" value="state.sort" options="sortOptions"
@@ -84,22 +75,20 @@
                                     t-on-click="() => this.select(row.id)">
                                     <span class="rd-line1">
                                         <span class="rd-ref">
-                                            <i t-attf-class="fa {{ row.kind === 'replace' ? 'fa-refresh' : 'fa-money' }}"
-                                               aria-hidden="true"/>
+                                            <Icon n="row.kind === 'replace' ? 'fa-refresh' : 'fa-money'" size="15"/>
                                             #<t t-esc="row.ref"/>
                                         </span>
                                         <span class="rd-ago" t-esc="ago(row.at)"/>
                                         <span class="rd-who" t-esc="row.who"/>
                                         <span t-if="row.photos" class="rd-shots"
                                               t-attf-title="{{ row.photos }} photo(s) from the customer">
-                                            <i class="fa fa-camera" aria-hidden="true"/>
+                                            <Icon n="'camera'" size="14"/>
                                             <t t-esc="row.photos"/>
                                         </span>
                                         <b class="rd-total" t-esc="money(row.amount, row.currency)"/>
                                     </span>
                                     <span class="rd-line2">
-                                        <span t-attf-class="mart-pill rd-s-{{ row.state }}"
-                                              t-esc="stateLabel(row)"/>
+                                        <Pill s="row.state" map="TONES" label="stateLabel(row)"/>
                                         <span class="rd-kind" t-esc="kindLabel(row.kind)"/>
                                         <span class="rd-reason" t-esc="row.reason"/>
                                         <button t-if="row.next" class="mart-btn mart-btn-sm rd-next"
@@ -137,7 +126,7 @@
                 <t t-set="r" t-value="state.detail"/>
 
                 <div class="rd-chips">
-                    <span t-attf-class="mart-pill rd-s-{{ r.state }}" t-esc="stateLabel(r)"/>
+                    <Pill s="r.state" map="TONES" label="stateLabel(r)"/>
                     <span class="rd-kind" t-esc="kindLabel(r.kind)"/>
                     <span class="rd-ago" t-esc="ago(r.at)"/>
                     <span class="rd-ago" t-esc="when(r.at)"/>
@@ -238,16 +227,16 @@
                 <!-- Hidden, not disabled: the model refuses a refusal once the
                      refund has gone, so offering the button would be a trap. -->
                 <button t-if="state.detail and state.detail.next"
-                        class="btn btn-primary" t-att-disabled="state.busy"
+                        class="mart-btn mart-btn-primary" t-att-disabled="state.busy"
                         t-on-click="() => this.advance()">
                     <t t-esc="state.detail.next.label"/>
                 </button>
                 <button t-if="state.detail and state.detail.canRefuse"
-                        class="btn btn-secondary text-danger" t-att-disabled="state.busy"
+                        class="mart-btn mart-btn-danger" t-att-disabled="state.busy"
                         t-on-click="() => this.askRefuse()">
                     Refuse
                 </button>
-                <button class="btn btn-secondary" t-on-click="() => this.props.close()">
+                <button class="mart-btn" t-on-click="() => this.props.close()">
                     Close
                 </button>
             </t>

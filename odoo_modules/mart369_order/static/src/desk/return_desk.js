@@ -43,12 +43,16 @@ import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
 import { useDebounced } from "@web/core/utils/timing";
 import { _t } from "@web/core/l10n/translation";
-import { ConfirmationDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
+import { Confirm } from "@mart369/ui/confirm";
 import { Dialog } from "@web/core/dialog/dialog";
 import { Layout } from "@web/search/layout";
 import { standardActionServiceProps } from "@web/webclient/actions/action_service";
+import { Search } from "@mart369/ui/search";
 
-import { Pick } from "./order_desk";
+import { Pick } from "@mart369/ui/pick";
+import { Icon } from "@mart369/ui/icon";
+import { Tabs } from "@mart369/ui/tabs";
+import { Pill } from "@mart369/ui/pill";
 
 const MODEL = "mart369.order.return";
 
@@ -65,11 +69,11 @@ export const STATUS = {
 /* Each tile sets the tab, so the strip is the filter rather than a read-out
    above one. Five, in the order a return really moves. */
 const TILES = [
-    { tab: "requested", label: _t("Requested"), icon: "fa-inbox" },
-    { tab: "pickup", label: _t("Pickup scheduled"), icon: "fa-truck" },
-    { tab: "picked", label: _t("Picked up"), icon: "fa-check" },
-    { tab: "done", label: _t("Refunded"), icon: "fa-money" },
-    { tab: "refused", label: _t("Refused"), icon: "fa-times", warn: true },
+    { tab: "requested", label: _t("Requested"), icon: "box" },
+    { tab: "pickup", label: _t("Pickup scheduled"), icon: "truck" },
+    { tab: "picked", label: _t("Picked up"), icon: "check" },
+    { tab: "done", label: _t("Refunded"), icon: "money" },
+    { tab: "refused", label: _t("Refused"), icon: "x", warn: true },
 ];
 
 const TABS = [
@@ -80,6 +84,16 @@ const TABS = [
 ];
 
 const PAGE = 20;
+
+/* Which tone each state wears. The words come from `stateLabel`, which the
+   server's vocabulary drives, so only the colour is decided here. */
+const TONES = {
+    requested: { tone: "blue" },
+    pickup: { tone: "amber" },
+    picked: { tone: "violet" },
+    done: { tone: "green" },
+    refused: { tone: "red" },
+};
 const POLL_MS = 30000;
 
 /* ------------------------------------------------------------------ shared
@@ -167,7 +181,7 @@ function stateLabel(row) {
  */
 export class ReturnDialog extends Component {
     static template = "mart369_order.ReturnDialog";
-    static components = { Dialog };
+    static components = { Dialog, Icon, Pill };
     static props = {
         id: { type: String },
         onChanged: { type: Function },
@@ -224,7 +238,7 @@ export class ReturnDialog extends Component {
     }
 
     askRefuse() {
-        this.dialog.add(ConfirmationDialog, {
+        this.dialog.add(Confirm, {
             title: _t("Refuse this return?"),
             body: _t(
                 "The customer is told it was refused on their own tracking " +
@@ -271,7 +285,7 @@ export class ReturnDialog extends Component {
 
 export class ReturnDesk extends Component {
     static template = "mart369_order.ReturnDesk";
-    static components = { Layout, Pick };
+    static components = { Layout, Pick, Search, Icon, Tabs, Pill };
     static props = { ...standardActionServiceProps };
 
     setup() {
@@ -282,6 +296,7 @@ export class ReturnDesk extends Component {
 
         this.TILES = TILES;
         this.TABS = TABS;
+        this.TONES = TONES;
 
         this.state = useState({
             tab: "needs",
@@ -298,11 +313,16 @@ export class ReturnDesk extends Component {
             error: "",
         });
 
-        this.search = useDebounced((ev) => {
-            this.state.q = ev.target.value.trim();
+        /* The box writes to state at once, so typing is never swallowed by
+           the wait; only the reload is debounced, which is all the 300ms
+           was ever for. The text is kept raw and trimmed when it is sent -
+           trimming it here would eat the space between two words. */
+        this.reload = useDebounced(() => this.load(), 300);
+        this.onSearch = (q) => {
+            this.state.q = q;
             this.state.limit = PAGE;
-            this.load();
-        }, 300);
+            this.reload();
+        };
 
         onWillStart(() => this.load());
 
@@ -329,7 +349,7 @@ export class ReturnDesk extends Component {
             const page = await this.orm.call(MODEL, "mart369_returns_list", [], {
                 tab: this.state.tab,
                 kind: this.state.kind || null,
-                q: this.state.q || null,
+                q: this.state.q.trim() || null,
                 sort: this.state.sort,
                 limit: this.state.limit,
             });
@@ -374,6 +394,14 @@ export class ReturnDesk extends Component {
     showMore() {
         this.state.limit += PAGE;
         this.load();
+    }
+
+
+    /** The tabs as the kit's strip takes them: [key, label, count] triples.
+     *  `tabCount` returns null for a tab that counts nothing, and the strip
+     *  draws no badge for null - which is how a tab stays quiet. */
+    get tabItems() {
+        return this.TABS.map((tab) => [tab.key, tab.label, this.tabCount(tab)]);
     }
 
     tabCount(tab) {

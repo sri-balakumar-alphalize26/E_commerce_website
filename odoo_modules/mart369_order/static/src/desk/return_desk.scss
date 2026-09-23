@@ -113,15 +113,6 @@
         }
     }
 
-    .rd-search {
-        min-width: 230px;
-        height: 34px;
-        padding: 0 12px;
-        border: 1px solid $m369-line;
-        border-radius: 10px;
-        background: #fff;
-        font-size: 13px;
-    }
 
     // -------------------------------------------------------------- the list
     // Full width. The detail used to sit in a 380px column beside this, which
@@ -226,11 +217,6 @@
     .rd-more { margin-top: 12px; text-align: center; }
 
     // The state, coloured the way the console colours it.
-    .rd-s-requested { background: #eaf4fa; color: $m369-blue; }
-    .rd-s-pickup { background: #fff4e5; color: #b7791f; }
-    .rd-s-picked { background: #f1ecfc; color: #6244b8; }
-    .rd-s-done { background: #e9f6ee; color: $m369-green; }
-    .rd-s-refused { background: #fdeaea; color: $m369-red; }
 
     // ------------------------------------------------------------ the dialog
     .rd-chips {
@@ -402,11 +388,6 @@
         font-weight: 700;
     }
 
-    .rd-s-requested { background: #eaf4fa; color: $m369-blue; }
-    .rd-s-pickup { background: #fff4e5; color: #b7791f; }
-    .rd-s-picked { background: #f1ecfc; color: #6244b8; }
-    .rd-s-done { background: #e9f6ee; color: $m369-green; }
-    .rd-s-refused { background: #fdeaea; color: $m369-red; }
 
     .rd-kind, .rd-ago { font-size: 12px; color: $m369-muted; }
 

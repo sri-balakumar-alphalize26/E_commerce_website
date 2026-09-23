@@ -185,6 +185,22 @@ class SaleOrder(models.Model):
         return order._mart369_admin_detail()
 
     @api.model
+    def mart369_admin_deliver(self, ref, code):
+        """Close a delivery with the code from the customer's doorstep.
+
+        A sibling of `mart369_admin_advance` rather than part of it: the ladder
+        stops at `out` now, and the last step needs something the operator can
+        only get by asking whoever is standing at the door. The checking itself
+        belongs to the order (`mart369_action_deliver`) so the desk, the console
+        and the rider app cannot disagree about what a valid code is.
+        """
+        order = self._mart369_admin_find(ref)
+        if not order:
+            raise UserError(self.env._('There is no such order.'))
+        order.mart369_action_deliver(code)
+        return order._mart369_admin_detail()
+
+    @api.model
     def mart369_admin_cancel(self, ref, reason=None):
         """Cancel the order and give the money back."""
         order = self._mart369_admin_find(ref)

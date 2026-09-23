@@ -18,10 +18,10 @@
     -->
     <menuitem id="menu_mart369_orders"
               name="Orders"
-              parent="mart369.menu_mart369_root"
+              parent="mart369.menu_mart369_sales"
               action="action_mart369_order_desk"
               groups="sales_team.group_sale_salesman"
-              sequence="5"/>
+              sequence="10"/>
 
     <menuitem id="menu_mart369_orders_all"
               name="Orders (all views)"
@@ -37,10 +37,10 @@
     -->
     <menuitem id="menu_mart369_returns"
               name="Returns"
-              parent="mart369.menu_mart369_root"
+              parent="mart369.menu_mart369_sales"
               action="action_mart369_return_desk"
               groups="sales_team.group_sale_salesman"
-              sequence="6"/>
+              sequence="20"/>
 
     <menuitem id="menu_mart369_returns_all"
               name="Returns (all views)"

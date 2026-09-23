@@ -122,51 +122,7 @@
         }
     }
 
-    .od-search,
-    .od-pick {
-        flex: 0 0 auto;
-        width: auto;
-        max-width: none;
-        height: 32px;
-        padding: 0 10px;
-        border: 1px solid $m369-line;
-        border-radius: 9px;
-        background: #fff;
-        font-size: 12.5px;
-        color: $m369-ink;
 
-        &:focus {
-            outline: 0;
-            border-color: $m369-blue;
-            box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.14);
-        }
-    }
-
-    /* The toggle of our own dropdown - see the Pick component. */
-    .od-pick {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        font-weight: 600;
-        cursor: pointer;
-        white-space: nowrap;
-
-        &:hover { border-color: darken($m369-line, 8%); }
-
-        .fa-angle-down {
-            color: $m369-muted;
-            transition: transform 180ms ease;
-        }
-
-        /* Odoo's Dropdown puts .show and aria-expanded on the toggle, so the
-           chevron can point at the menu the way the console's does. */
-        &.show {
-            border-color: $m369-blue;
-            .fa-angle-down { transform: rotate(180deg); }
-        }
-    }
-
-    .od-search { min-width: 210px; }
     .od-export { flex: 0 0 auto; }
 
     /* --------------------------------------------------------- the list */
@@ -272,12 +228,6 @@
     .od-more { padding: 12px; text-align: center; }
 
     /* Per state, matching the tones the console gives the same six words. */
-    .od-s-placed { background: #e6f1f8; color: #08516f; }
-    .od-s-packed { background: #fdf1dc; color: #8a5a06; }
-    .od-s-shipped { background: #eeeafc; color: #4c3a9a; }
-    .od-s-out { background: #ffeeda; color: #96530a; }
-    .od-s-delivered { background: #e3f4e9; color: #14602d; }
-    .od-s-cancelled { background: #fbe9e7; color: #9c2f28; }
 
     /* -------------------------------------------------------- the panel */
     .od-chips {
@@ -453,34 +403,6 @@
     }
 }
 
-/* The dropdown menu is portalled to the body by Odoo's Dropdown, so it lands
-   outside .mart-builder and cannot be nested under it. */
-.o-dropdown--menu.od-pick-menu {
-    padding: 5px;
-    border-radius: 12px;
-    border: 1px solid $m369-line;
-    box-shadow: 0 12px 30px rgba(16, 39, 54, 0.16);
-
-    .o-dropdown-item {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 7px 12px 7px 8px;
-        border-radius: 8px;
-        font-size: 12.5px;
-        color: $m369-ink;
-        cursor: pointer;
-
-        &:hover, &.focus { background: #f1f6f9; }
-
-        .fa-check { color: $m369-blue; opacity: 0; width: 12px; flex: none; }
-    }
-
-    .od-pick-on {
-        font-weight: 700;
-        .fa-check { opacity: 1; }
-    }
-}
 
 /* The order dialog is portalled to Odoo's dialog container, outside
    .mart-builder, so its rules cannot be nested under the screen and are
@@ -519,12 +441,6 @@
         font-weight: 700;
     }
 
-    .od-s-placed { background: #eaf4fa; color: $m369-blue; }
-    .od-s-packed { background: #fff4e5; color: #b7791f; }
-    .od-s-shipped { background: #f1ecfc; color: #6244b8; }
-    .od-s-out { background: #fdf0e8; color: #c2551f; }
-    .od-s-delivered { background: #e9f6ee; color: $m369-green; }
-    .od-s-cancelled { background: #fdeaea; color: $m369-red; }
 
     .od-late { font-size: 12px; font-weight: 700; color: #c2551f; }
     .od-pay { font-size: 12px; color: $m369-muted; }
@@ -673,17 +589,72 @@
         font-size: 12px;
         color: $m369-muted;
 
-        select {
+        /* Shorter than the kit's toolbar default: it shares a footer with the
+           buttons and has to sit on their line. */
+        .mart-select {
             height: 30px;
-            padding: 0 8px;
-            border: 1px solid $m369-line;
-            border-radius: 8px;
-            background: #fff;
             font-size: 12.5px;
+            font-weight: 400;
         }
     }
 
     @media (max-width: 800px) {
         .od-dialog-cols { grid-template-columns: minmax(0, 1fr); }
     }
+}
+
+/* The doorstep code dialog. Portalled outside `.mart-builder` like every other
+   dialog here, so these rules sit at top level. */
+.o_mart369_dialog.od-otp {
+
+    .od-otp-body {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        text-align: center;
+
+        p {
+            margin: 0;
+            font-size: 13.5px;
+            line-height: 1.5;
+            color: $m369-muted;
+        }
+    }
+
+    // Wide, spaced and monospaced: six digits read aloud across a doorstep are
+    // easier to check back if they do not look like ordinary prose.
+    .od-otp-in {
+        width: 100%;
+        height: 54px;
+        padding: 0 12px;
+        border: 1px solid $m369-line;
+        border-radius: 12px;
+        background: #fff;
+        font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+        font-size: 28px;
+        font-weight: 700;
+        letter-spacing: 0.35em;
+        text-align: center;
+        text-indent: 0.35em;
+        color: $m369-ink;
+
+        &::placeholder { color: #cfd8df; letter-spacing: 0.35em; }
+
+        &:focus {
+            outline: 0;
+            border-color: $m369-blue;
+            box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.14);
+        }
+
+        &:disabled { opacity: 0.6; }
+    }
+
+    .od-otp-bad {
+        margin: 0;
+        font-size: 12.5px;
+        font-weight: 600;
+        color: #a3322a;
+    }
+
+    .modal-footer > .mart-btn { flex: 1; margin: 0; }
 }
