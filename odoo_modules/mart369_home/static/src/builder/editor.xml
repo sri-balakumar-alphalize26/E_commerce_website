@@ -312,7 +312,6 @@
                 <span t-elif="offPct(item) >= 10 and item.stock !== 0" class="hm-off">
                     <t t-esc="offPct(item)"/>% OFF
                 </span>
-                <span t-if="item.veg" class="hm-veg"><i/></span>
                 <span t-if="item.stock === 0" class="hm-oos-tag">Out of stock</span>
             </div>
             <div class="hm-card-body">

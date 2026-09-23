@@ -218,22 +218,11 @@
             <field name="note">The internal reference.</field>
         </record>
 
-        <record id="f_veg" model="mart369.product.field">
-            <field name="key">veg</field>
-            <field name="name">Vegetarian mark</field>
-            <field name="section_id" ref="sec_info"/>
-            <field name="sequence">210</field>
-            <field name="source">odoo</field>
-            <field name="value_kind">bool</field>
-            <field name="odoo_field">mart_is_veg</field>
-            <field name="note">The green square. Food products only.</field>
-        </record>
-
         <record id="f_item_height" model="mart369.product.field">
             <field name="key">item_height</field>
             <field name="name">Item height</field>
             <field name="section_id" ref="sec_info"/>
-            <field name="sequence">220</field>
+            <field name="sequence">210</field>
             <field name="source">odoo</field>
             <field name="value_kind">text</field>
             <field name="odoo_field">mart_item_height</field>
@@ -243,7 +232,7 @@
             <field name="key">item_length</field>
             <field name="name">Item length</field>
             <field name="section_id" ref="sec_info"/>
-            <field name="sequence">230</field>
+            <field name="sequence">220</field>
             <field name="source">odoo</field>
             <field name="value_kind">text</field>
             <field name="odoo_field">mart_item_length</field>
@@ -253,7 +242,7 @@
             <field name="key">item_width</field>
             <field name="name">Item width</field>
             <field name="section_id" ref="sec_info"/>
-            <field name="sequence">240</field>
+            <field name="sequence">230</field>
             <field name="source">odoo</field>
             <field name="value_kind">text</field>
             <field name="odoo_field">mart_item_width</field>
@@ -263,28 +252,18 @@
             <field name="key">net_weight</field>
             <field name="name">Net weight</field>
             <field name="section_id" ref="sec_info"/>
-            <field name="sequence">250</field>
+            <field name="sequence">240</field>
             <field name="source">odoo</field>
             <field name="value_kind">text</field>
             <field name="odoo_field">weight</field>
             <field name="note">Taken from the weight on the product.</field>
         </record>
 
-        <record id="f_net_quantity" model="mart369.product.field">
-            <field name="key">net_quantity</field>
-            <field name="name">Net quantity</field>
-            <field name="section_id" ref="sec_specs"/>
-            <field name="sequence">260</field>
-            <field name="source">odoo</field>
-            <field name="value_kind">text</field>
-            <field name="odoo_field">mart_unit_text</field>
-        </record>
-
         <record id="f_spec_brand" model="mart369.product.field">
             <field name="key">spec_brand</field>
             <field name="name">Brand</field>
             <field name="section_id" ref="sec_specs"/>
-            <field name="sequence">270</field>
+            <field name="sequence">250</field>
             <field name="source">text</field>
             <field name="value_kind">text</field>
             <field name="default_value">369 Mart Select</field>
@@ -294,7 +273,7 @@
             <field name="key">warranty</field>
             <field name="name">Warranty</field>
             <field name="section_id" ref="sec_specs"/>
-            <field name="sequence">280</field>
+            <field name="sequence">260</field>
             <field name="source">text</field>
             <field name="value_kind">text</field>
             <field name="note">e.g. 1 year manufacturer warranty. Usually set per category.</field>
@@ -304,7 +283,7 @@
             <field name="key">in_the_box</field>
             <field name="name">In the box</field>
             <field name="section_id" ref="sec_specs"/>
-            <field name="sequence">290</field>
+            <field name="sequence">270</field>
             <field name="source">odoo</field>
             <field name="value_kind">text</field>
             <field name="odoo_field">mart_in_the_box</field>
@@ -314,7 +293,7 @@
             <field name="key">material</field>
             <field name="name">Material</field>
             <field name="section_id" ref="sec_specs"/>
-            <field name="sequence">300</field>
+            <field name="sequence">280</field>
             <field name="source">odoo</field>
             <field name="value_kind">text</field>
             <field name="odoo_field">mart_material</field>
@@ -324,27 +303,17 @@
             <field name="key">product_type</field>
             <field name="name">Product type</field>
             <field name="section_id" ref="sec_specs"/>
-            <field name="sequence">310</field>
+            <field name="sequence">290</field>
             <field name="source">computed</field>
             <field name="value_kind">text</field>
             <field name="note">The category the product sits in.</field>
-        </record>
-
-        <record id="f_shelf_life" model="mart369.product.field">
-            <field name="key">shelf_life</field>
-            <field name="name">Shelf life</field>
-            <field name="section_id" ref="sec_specs"/>
-            <field name="sequence">320</field>
-            <field name="source">text</field>
-            <field name="value_kind">text</field>
-            <field name="note">e.g. 3-5 days, refrigerated. Usually set per category.</field>
         </record>
 
         <record id="f_description" model="mart369.product.field">
             <field name="key">description</field>
             <field name="name">Description</field>
             <field name="section_id" ref="sec_description"/>
-            <field name="sequence">330</field>
+            <field name="sequence">300</field>
             <field name="source">odoo</field>
             <field name="value_kind">html</field>
             <field name="odoo_field">description_ecommerce</field>
@@ -355,10 +324,10 @@
             <field name="key">disclaimer</field>
             <field name="name">Disclaimer</field>
             <field name="section_id" ref="sec_description"/>
-            <field name="sequence">340</field>
+            <field name="sequence">310</field>
             <field name="source">text</field>
             <field name="value_kind">text</field>
-            <field name="default_value">While we work to ensure product information is correct, packaging and ingredients may be updated by the manufacturer. Always read the label before use.</field>
+            <field name="default_value">While we work to ensure product information is correct, specifications and packaging may be changed by the manufacturer. Always check the details on the product itself.</field>
             <field name="note">Shown under the description.</field>
         </record>
 
@@ -366,7 +335,7 @@
             <field name="key">returnable</field>
             <field name="name">Returnable</field>
             <field name="section_id" ref="sec_returns"/>
-            <field name="sequence">350</field>
+            <field name="sequence">320</field>
             <field name="source">text</field>
             <field name="value_kind">bool</field>
             <field name="default_value">yes</field>
@@ -377,7 +346,7 @@
             <field name="key">return_text</field>
             <field name="name">Return policy wording</field>
             <field name="section_id" ref="sec_returns"/>
-            <field name="sequence">360</field>
+            <field name="sequence">330</field>
             <field name="source">text</field>
             <field name="value_kind">text</field>
             <field name="default_value">7-day replacement for damaged or wrong items. Keep the original packaging.</field>
@@ -388,7 +357,7 @@
             <field name="key">policy_link</field>
             <field name="name">View-policy link</field>
             <field name="section_id" ref="sec_returns"/>
-            <field name="sequence">370</field>
+            <field name="sequence">340</field>
             <field name="source">text</field>
             <field name="value_kind">text</field>
             <field name="default_value">/cancellation-policy</field>
@@ -399,7 +368,7 @@
             <field name="key">rating</field>
             <field name="name">Average rating</field>
             <field name="section_id" ref="sec_reviews"/>
-            <field name="sequence">380</field>
+            <field name="sequence">350</field>
             <field name="source">computed</field>
             <field name="value_kind">text</field>
             <field name="note">Worked out from real customer reviews.</field>
@@ -409,7 +378,7 @@
             <field name="key">rating_count</field>
             <field name="name">Number of ratings</field>
             <field name="section_id" ref="sec_reviews"/>
-            <field name="sequence">390</field>
+            <field name="sequence">360</field>
             <field name="source">computed</field>
             <field name="value_kind">text</field>
         </record>
@@ -418,7 +387,7 @@
             <field name="key">rating_bars</field>
             <field name="name">Star breakdown</field>
             <field name="section_id" ref="sec_reviews"/>
-            <field name="sequence">400</field>
+            <field name="sequence">370</field>
             <field name="source">computed</field>
             <field name="value_kind">text</field>
             <field name="note">The five-star to one-star bars.</field>
@@ -428,7 +397,7 @@
             <field name="key">reviews</field>
             <field name="name">Customer reviews</field>
             <field name="section_id" ref="sec_reviews"/>
-            <field name="sequence">410</field>
+            <field name="sequence">380</field>
             <field name="source">computed</field>
             <field name="value_kind">text</field>
             <field name="note">Written by customers who bought the product.</field>
@@ -438,7 +407,7 @@
             <field name="key">review_empty</field>
             <field name="name">Be-the-first-to-review line</field>
             <field name="section_id" ref="sec_reviews"/>
-            <field name="sequence">420</field>
+            <field name="sequence">390</field>
             <field name="source">text</field>
             <field name="value_kind">text</field>
             <field name="default_value">Be the first to review this product</field>
@@ -449,7 +418,7 @@
             <field name="key">address</field>
             <field name="name">Delivery address</field>
             <field name="section_id" ref="sec_delivery"/>
-            <field name="sequence">430</field>
+            <field name="sequence">400</field>
             <field name="source">computed</field>
             <field name="value_kind">text</field>
             <field name="per_product" eval="False"/>
@@ -460,7 +429,7 @@
             <field name="key">explore_category</field>
             <field name="name">Explore-more link</field>
             <field name="section_id" ref="sec_delivery"/>
-            <field name="sequence">440</field>
+            <field name="sequence">410</field>
             <field name="source">computed</field>
             <field name="value_kind">text</field>
         </record>
@@ -469,7 +438,7 @@
             <field name="key">bundle_items</field>
             <field name="name">Frequently bought together</field>
             <field name="section_id" ref="sec_bundle"/>
-            <field name="sequence">450</field>
+            <field name="sequence">420</field>
             <field name="source">computed</field>
             <field name="value_kind">text</field>
             <field name="note">Uses the accessories set on the product, or picks them automatically.</field>
@@ -479,7 +448,7 @@
             <field name="key">similar_items</field>
             <field name="name">Similar products</field>
             <field name="section_id" ref="sec_similar"/>
-            <field name="sequence">460</field>
+            <field name="sequence">430</field>
             <field name="source">computed</field>
             <field name="value_kind">text</field>
             <field name="note">Uses the alternative products set on the product, or the same category.</field>
@@ -489,7 +458,7 @@
             <field name="key">related_items</field>
             <field name="name">Others you may also like</field>
             <field name="section_id" ref="sec_similar"/>
-            <field name="sequence">470</field>
+            <field name="sequence">440</field>
             <field name="source">computed</field>
             <field name="value_kind">text</field>
         </record>
@@ -498,7 +467,7 @@
             <field name="key">recently_viewed</field>
             <field name="name">Recently viewed</field>
             <field name="section_id" ref="sec_similar"/>
-            <field name="sequence">480</field>
+            <field name="sequence">450</field>
             <field name="source">computed</field>
             <field name="value_kind">text</field>
         </record>

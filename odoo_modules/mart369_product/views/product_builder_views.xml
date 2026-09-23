@@ -23,4 +23,13 @@
         <field name="path">mart-product</field>
     </record>
 
+    <!-- The other direction. The editor above answers "what should a product
+         page contain"; this answers "what will this one show", for a product
+         you pick off a list rather than hunt for in a scope switch. -->
+    <record id="action_mart369_products" model="ir.actions.client">
+        <field name="name">Products</field>
+        <field name="tag">mart369_product.products</field>
+        <field name="path">mart-products</field>
+    </record>
+
 </odoo>

@@ -40,6 +40,61 @@ class ProductTemplate(models.Model):
         for rec in self:
             rec.mart_page_differs = counts.get(rec, 0)
 
+    mart_page_hidden = fields.Char(
+        string='Hidden on this product', compute='_compute_mart_page_hidden',
+        help='Which product columns the page will not print for this product. '
+             'The form reads it to stop asking for them.')
+
+    @api.depends('mart_page_override_ids.state', 'public_categ_ids')
+    def _compute_mart_page_hidden(self):
+        """The columns this product's page will not print, comma-delimited.
+
+        So the Odoo form can stop asking for them. Until this existed, every
+        product was asked for every field - a bag of rice wanted a Material and
+        three Item sizes - and somebody typed values into boxes the page had
+        been told not to print.
+
+        Not a second opinion. `_visible_for` is the same ladder the shopper's
+        own page runs through - the section eye first as a master switch, then
+        this product's own choice, then the shop-wide default - so the form and
+        the page cannot come to different conclusions. Re-deriving it here is
+        how a box gets hidden while its value is on screen in the app.
+
+        Delimited with commas at both ends, because the view tests membership
+        with `',mart_item_width,' in mart_page_hidden` and a bare `in` would
+        match one column name inside a longer one.
+
+        A product being created has no category to resolve against, so nothing
+        is hidden and every box is offered. Hiding them on a blank form would
+        mean somebody saving a product having never been shown the box it
+        needed.
+        """
+        Field = self.env['mart369.product.field'].sudo()
+        columns = Field.search([('odoo_field', '!=', False)])
+
+        for rec in self:
+            # A record being created has a NewId, not an int. Tested that
+            # way rather than against models.NewId, which Odoo 19 moved.
+            if not isinstance(rec.id, int) or not rec.public_categ_ids:
+                rec.mart_page_hidden = ''
+                continue
+            overrides = {
+                (o.product_tmpl_id.id, o.field_id.id): o
+                for o in self.env['mart369.product.override'].sudo().search(
+                    [('product_tmpl_id', '=', rec.id)])
+            }
+            # A column is only hidden when every page row reading it is
+            # hidden. `mart_unit_text` feeds two of them - the size tag on
+            # the photo and Net quantity in the specifications - and taking
+            # the box away because one of the two is off would lose the
+            # value the other still prints.
+            shown, off = set(), set()
+            for field in columns:
+                (shown if field._visible_for(rec, overrides) else off).add(
+                    field.odoo_field)
+            hidden = off - shown
+            rec.mart_page_hidden = ',%s,' % ','.join(sorted(hidden)) if hidden else ''
+
     def action_mart_reset_page(self):
         """Put every field on this product back to following the defaults."""
         self.mart_page_override_ids.unlink()
@@ -147,6 +202,11 @@ class ProductTemplate(models.Model):
                 # wrong tool for a screen drawn inside the backend.
                 'image': '/web/image/product.template/%s/image_128' % p.id,
                 'differs': p.mart_page_differs,
+                # Added for the products desk's list view, which has columns to
+                # fill where the picker's tiles did not. Additive on purpose:
+                # the builder's own picker reads what it always read.
+                'price': p.list_price,
+                'categories': p.public_categ_ids.mapped('name'),
             } for p in found],
             'total': total,
             'limit': limit,

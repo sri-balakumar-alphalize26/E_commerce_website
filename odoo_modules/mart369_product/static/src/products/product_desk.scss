@@ -1,0 +1,327 @@
+// The products desk: the shop on the left, one product's page on the right.
+//
+// A rail and a grid for browsing, then a plain list of sections and rows for
+// reading. Deliberately not a preview - the builder next door already draws
+// the page, and this screen answers a different question: what will it show,
+// and where did each line come from.
+
+.mart-builder.pr {
+
+    /* -------------------------------------------------------------- list */
+    .pr-toolbar { margin-bottom: 14px; }
+
+    .pr-count {
+        font-size: 12px;
+        font-weight: 700;
+        color: $mart-muted;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .pr-cols {
+        display: grid;
+        grid-template-columns: 220px minmax(0, 1fr);
+        gap: 16px;
+        align-items: start;
+    }
+
+    .pr-rail {
+        position: sticky;
+        top: 6px;
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+        padding: 8px;
+        border: 1px solid $mart-line;
+        border-radius: 14px;
+        background: #fff;
+        max-height: 70vh;
+        overflow-y: auto;
+    }
+
+    .pr-rail-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 7px 10px;
+        border: 0;
+        border-radius: 9px;
+        background: transparent;
+        font: inherit;
+        font-size: 12.5px;
+        font-weight: 600;
+        color: $mart-ink;
+        text-align: left;
+        cursor: pointer;
+
+        &:hover { background: $mart-soft; }
+
+        em {
+            font-style: normal;
+            font-size: 11px;
+            font-weight: 800;
+            color: $mart-muted;
+            font-variant-numeric: tabular-nums;
+        }
+
+        &.mart-on {
+            background: $mart-blue-soft;
+            color: $mart-blue-deep;
+            em { color: $mart-blue; }
+        }
+    }
+
+    .pr-main { min-width: 0; }
+
+    .pr-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+        gap: 12px;
+    }
+
+    .pr-card {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px;
+        border: 1px solid $mart-line;
+        border-radius: 14px;
+        background: #fff;
+        text-align: left;
+        cursor: pointer;
+        animation: pr-card 320ms ease backwards;
+        animation-delay: calc(var(--i, 0) * 22ms);
+        transition: border-color 140ms, transform 120ms;
+
+        &:hover { border-color: #b7c4ce; }
+        &:active { transform: scale(0.99); }
+    }
+
+    .pr-card-img {
+        flex: none;
+        width: 52px;
+        height: 52px;
+        border-radius: 10px;
+        background: $mart-soft;
+        overflow: hidden;
+
+        img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    }
+
+    .pr-card-body {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+
+        b {
+            font-size: 13px;
+            font-weight: 700;
+            color: $mart-ink;
+            overflow-wrap: anywhere;
+        }
+        small { font-size: 11px; color: $mart-muted; }
+    }
+
+    .pr-card-tag { position: absolute; top: 8px; right: 8px; }
+
+    /* --------------------------------------------------- the view switch */
+    .pr-views {
+        display: inline-flex;
+        gap: 2px;
+        padding: 3px;
+        border-radius: 10px;
+        background: $mart-soft;
+
+        button {
+            display: grid;
+            place-items: center;
+            width: 30px;
+            height: 28px;
+            border: 0;
+            border-radius: 8px;
+            background: none;
+            color: $mart-muted;
+            cursor: pointer;
+
+            &:hover { color: $mart-ink; }
+
+            &.mart-on {
+                background: #fff;
+                color: $mart-blue;
+                box-shadow: 0 2px 6px -3px rgba(19, 33, 43, 0.4);
+            }
+        }
+    }
+
+    /* ---------------------------------------------------------- the table */
+    .pr-list {
+        width: 100%;
+        border-collapse: collapse;
+        border: 1px solid $mart-line;
+        border-radius: 14px;
+        background: #fff;
+        overflow: hidden;
+        font-size: 13px;
+
+        thead th {
+            padding: 9px 12px;
+            border-bottom: 1px solid $mart-line;
+            font-size: 10.5px;
+            font-weight: 800;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: $mart-muted;
+            text-align: left;
+        }
+
+        tbody tr {
+            cursor: pointer;
+            &:hover { background: $mart-soft; }
+            + tr td { border-top: 1px solid #f4f6f8; }
+        }
+
+        td { padding: 8px 12px; color: $mart-ink; vertical-align: middle; }
+    }
+
+    .pr-list-name {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        min-width: 0;
+
+        b { font-weight: 700; overflow-wrap: anywhere; }
+    }
+
+    .pr-list-img {
+        flex: none;
+        width: 30px;
+        height: 30px;
+        border-radius: 7px;
+        background: $mart-soft;
+        overflow: hidden;
+
+        img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    }
+
+    .pr-dim { color: $mart-muted; }
+
+    // Money and counts line up on the right, and on their digits.
+    .pr-num { text-align: right; font-variant-numeric: tabular-nums; }
+
+    /* ------------------------------------------------------------ detail */
+    .pr-detail-head {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .pr-title {
+        flex: 1;
+        min-width: 0;
+
+        h1 { margin: 0; overflow-wrap: anywhere; }
+        p { margin: 2px 0 0; font-size: 12.5px; color: $mart-muted; }
+    }
+
+    .pr-back { flex: none; }
+
+    .pr-detail {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+
+    .pr-sec {
+        border: 1px solid $mart-line;
+        border-radius: 14px;
+        background: #fff;
+        overflow: hidden;
+    }
+
+    // A whole band switched off. Quietened, never dropped.
+    .pr-sec-off {
+        background: #fbfcfd;
+        .pr-sec-head h2 { color: $mart-muted; }
+    }
+
+    .pr-sec-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 11px 14px;
+        border-bottom: 1px solid $mart-line;
+
+        h2 {
+            margin: 0;
+            font-size: 11.5px;
+            font-weight: 800;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: $mart-ink;
+        }
+    }
+
+    .pr-rows { list-style: none; margin: 0; padding: 0; }
+
+    .pr-row {
+        display: grid;
+        grid-template-columns: minmax(140px, 22%) minmax(0, 1fr) auto;
+        align-items: baseline;
+        gap: 12px;
+        padding: 9px 14px;
+        font-size: 13px;
+
+        & + & { border-top: 1px solid #f4f6f8; }
+    }
+
+    // Not on the page. Struck rather than hidden, so you can see what was
+    // left out as well as what was kept.
+    .pr-row-off {
+        color: $mart-muted;
+        .pr-row-value { text-decoration: line-through; opacity: 0.75; }
+    }
+
+    .pr-row-name {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-weight: 700;
+        color: $mart-muted;
+    }
+
+    .pr-row-value {
+        color: $mart-ink;
+        overflow-wrap: anywhere;
+        white-space: pre-line;
+    }
+
+    .pr-row-from {
+        font-size: 11px;
+        font-weight: 700;
+        color: $mart-muted;
+        white-space: nowrap;
+    }
+
+    @media (max-width: 1100px) {
+        .pr-cols { grid-template-columns: minmax(0, 1fr); }
+        .pr-rail { position: static; flex-direction: row; flex-wrap: wrap; max-height: none; }
+        .pr-row { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+        .pr-row-from { white-space: normal; }
+    }
+}
+
+// Its own row keyframe, the way catalog, searches and coupons each carry one.
+@keyframes pr-card {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}

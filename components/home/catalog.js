@@ -32,7 +32,7 @@ export const SECTION_TO_ROUTE = {
   "all-tech": "electronics", "all-home": "home-kitchen", "all-office": "stationery",
 };
 export function enrich(p) {
-  p.brand = p.brand || (p.veg ? "369 Mart Select" : p.unit || "369 Mart");
+  p.brand = p.brand || p.unit || "369 Mart";
   p.off = p.mrp ? Math.round(((p.mrp - p.price) / p.mrp) * 100) : 0;
   const h = [...String(p.id)].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) >>> 0, 7);
   p.rating = p.rating ?? Math.round((3.8 + (h % 12) / 10) * 10) / 10;

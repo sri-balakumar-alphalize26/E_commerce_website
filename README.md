@@ -26,7 +26,7 @@ Needs Node 18.18 or newer (Node 20 LTS recommended).
   (saved), trending, quick picks with Add; live results with highlight; Esc / backdrop shrink it back.
   Press `/` anywhere to open.
 - **Product cards** — multi-image view: swipe, arrows (on hover / always on touch), animated dots
-  showing how many images; heart, Add → − n + stepper, % OFF, veg mark, MRP, Quick / delivery days,
+  showing how many images; heart, Add → − n + stepper, % OFF, MRP, Quick / delivery days,
   Only N left, out of stock + Notify.
 - **Add to cart** — tap Add: the product image lifts out of the card (card turns mint), arcs into the
   floating green cart pill while shrinking and spinning, the pill squashes and ripples, the item's
@@ -106,7 +106,7 @@ Needs Node 18.18 or newer (Node 20 LTS recommended).
   - **Refer & earn** (`refer`): code with flip-in letters and copy, WhatsApp / copy link / share, earnings,
     progress to a ₹500 bonus with milestone dots, how it works, invite a friend and remind.
 - **Browsing** — category pages (`/category/<slug>/<sub>`) with a hero, subcategory tiles and a
-  product grid; filters for brand (with brand search), price range, discount, rating, veg, in stock and
+  product grid; filters for brand (with brand search), price range, discount, rating, in stock and
   delivery type; sort (relevance, popularity, price, discount, rating); active filter chips; infinite
   scroll with skeleton cards; phones get a floating Sort | Filter bar with bottom sheets. Header tabs,
   home category tiles and rail "View all" all open these pages, and the active tab follows the URL.

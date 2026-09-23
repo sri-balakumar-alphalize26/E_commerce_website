@@ -52,10 +52,16 @@ export class ProductEditor extends ProductPageReader {
 
         this.STATES = STATES;
 
+        // Arriving with a product means somebody asked for that product, so
+        // open on it. Landing in shop-wide scope instead put them in the one
+        // where a single toggle changes every product - the riskier of the two
+        // - having asked for one.
+        const asked = this.props.action?.context?.mart369_product_id || null;
+
         this.state = useState({
-            tab: "global",        // "global" (the whole shop) | "product"
+            tab: asked ? "product" : "global",   // "global" (the whole shop) | "product"
             data: null,
-            productId: this.props.action?.context?.mart369_product_id || null,
+            productId: asked,
             sel: null,            // "section:<id>" | "field:<id>" | null
             showHidden: false,
             status: "idle",       // idle | saving | saved | error

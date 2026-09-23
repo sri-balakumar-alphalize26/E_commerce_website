@@ -85,14 +85,9 @@ class Mart369ProductPage(models.AbstractModel):
             if features:
                 d['features'] = features
 
-        # The information table keeps its order and its labels. The veg row is
-        # the literal "veg", which the app draws as the green square.
+        # The information table keeps its order and its labels.
         info = []
         for field, value in shown.get('info', []):
-            if field.key == 'veg':
-                if value:
-                    info.append([field.name, 'veg'])
-                continue
             text = self._as_text(field, value, product)
             if text:
                 info.append([field.name, text])

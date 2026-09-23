@@ -37,8 +37,11 @@ frame with every field listed. The app reads the result from
     'data': [
         'security/ir.model.access.csv',
         'views/registry_views.xml',
-        'views/product_template_views.xml',
+        # The client actions first: the product form carries a button into the
+        # products screen, and a button's action has to exist before the view
+        # naming it is parsed.
         'views/product_builder_views.xml',
+        'views/product_template_views.xml',
         'views/menus.xml',
         'data/sections.xml',
         'data/fields.xml',
@@ -47,6 +50,7 @@ frame with every field listed. The app reads the result from
         'web.assets_backend': [
             'mart369_product/static/src/scss/storefront_pdp.scss',
             'mart369_product/static/src/builder/**/*',
+            'mart369_product/static/src/products/**/*',
         ],
         'web.assets_tests': [
             'mart369_product/static/tests/tours/**/*',

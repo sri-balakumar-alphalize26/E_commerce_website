@@ -114,8 +114,6 @@
 .ls-toggle em::after { content: ""; position: absolute; left: 3px; top: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25); transition: transform 300ms var(--hm-spring); }
 .ls-toggle input:checked + em { background: var(--hm-green); }
 .ls-toggle input:checked + em::after { transform: translateX(16px); }
-.ls-veg { width: 15px; height: 15px; border: 1.5px solid var(--hm-green); border-radius: 3px; display: grid; place-items: center; }
-.ls-veg b { width: 7px; height: 7px; border-radius: 50%; background: var(--hm-green); }
 
 /* toolbar */
 .ls-bar { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; margin-bottom: 12px; }

@@ -5,7 +5,7 @@
    SearchResults  /search?q=               listing, did-you-mean, related
    OffersPage     /offers                  deal countdown, coupons, deals grid
    BuyAgainPage   /buy-again               items from past orders
-   Listing        filters (brand, price, discount, rating, veg, stock,
+   Listing        filters (brand, price, discount, rating, stock,
                   delivery), sort, active chips, infinite scroll, skeletons,
                   mobile filter/sort sheets
    SiteFooter · NotFoundView · SkeletonCard
@@ -115,10 +115,6 @@ function Filters({ facets, f, setF, onClear }) {
       </FilterGroup>
 
       <FilterGroup title="More filters" {...g("more")}>
-        {facets.hasVeg && (
-          <label className="ls-toggle"><span><i className="ls-veg"><b /></i>Vegetarian only</span>
-            <input type="checkbox" checked={f.veg} onChange={(e) => setF({ veg: e.target.checked })} /><em /></label>
-        )}
         <label className="ls-toggle"><span>In stock only</span><input type="checkbox" checked={f.inStock} onChange={(e) => setF({ inStock: e.target.checked })} /><em /></label>
         {facets.hasQuick && facets.hasExpress && (
           <div className="ls-pills ls-mt">
@@ -140,17 +136,17 @@ export function useProductFilters(items) {
   const sig = items.map((p) => p.id).join(",");
   const facets = useMemo(() => {
     const brands = {};
-    let min = Infinity, max = 0, hasVeg = false, hasQuick = false, hasExpress = false;
+    let min = Infinity, max = 0, hasQuick = false, hasExpress = false;
     items.forEach((p) => {
       brands[p.brand] = (brands[p.brand] || 0) + 1;
       min = Math.min(min, p.price); max = Math.max(max, p.price);
-      hasVeg = hasVeg || !!p.veg; hasQuick = hasQuick || !p.delivery; hasExpress = hasExpress || !!p.delivery;
+      hasQuick = hasQuick || !p.delivery; hasExpress = hasExpress || !!p.delivery;
     });
     if (!items.length) { min = 0; max = 0; }
-    return { brands: Object.entries(brands).sort((a, b) => b[1] - a[1]), min, max, hasVeg, hasQuick, hasExpress };
+    return { brands: Object.entries(brands).sort((a, b) => b[1] - a[1]), min, max, hasQuick, hasExpress };
   }, [sig]); // eslint-disable-line
 
-  const fresh = () => ({ brands: [], price: [facets.min, facets.max], discount: 0, rating: 0, veg: false, inStock: false, delivery: "any" });
+  const fresh = () => ({ brands: [], price: [facets.min, facets.max], discount: 0, rating: 0, inStock: false, delivery: "any" });
   const [f, setFState] = useState(fresh);
   const [sort, setSortState] = useState("relevance");
   const [pulse, setPulse] = useState(0);
@@ -161,14 +157,14 @@ export function useProductFilters(items) {
   const setSort = (v) => { setSortState(v); setPulse((n) => n + 1); };
 
   const priceOn = f.price[0] > facets.min || f.price[1] < facets.max;
-  const active = f.brands.length + (priceOn ? 1 : 0) + (f.discount ? 1 : 0) + (f.rating ? 1 : 0) + (f.veg ? 1 : 0) + (f.inStock ? 1 : 0) + (f.delivery !== "any" ? 1 : 0);
+  const active = f.brands.length + (priceOn ? 1 : 0) + (f.discount ? 1 : 0) + (f.rating ? 1 : 0) + (f.inStock ? 1 : 0) + (f.delivery !== "any" ? 1 : 0);
 
   const results = useMemo(() => {
     let r = items.filter((p) =>
       (!f.brands.length || f.brands.includes(p.brand)) &&
       p.price >= f.price[0] && p.price <= f.price[1] &&
       p.off >= f.discount && p.rating >= f.rating &&
-      (!f.veg || p.veg) && (!f.inStock || p.stock !== 0) &&
+      (!f.inStock || p.stock !== 0) &&
       (f.delivery === "any" || (f.delivery === "quick" ? !p.delivery : !!p.delivery)));
     const by = {
       popular: (a, b) => b.popularity - a.popularity,
@@ -187,7 +183,6 @@ export function useProductFilters(items) {
     ...(priceOn ? [[`${money(f.price[0])} – ${money(f.price[1])}`, () => setF({ price: [facets.min, facets.max] })]] : []),
     ...(f.discount ? [[`${f.discount}%+ off`, () => setF({ discount: 0 })]] : []),
     ...(f.rating ? [[`${f.rating}★ & up`, () => setF({ rating: 0 })]] : []),
-    ...(f.veg ? [["Veg only", () => setF({ veg: false })]] : []),
     ...(f.inStock ? [["In stock", () => setF({ inStock: false })]] : []),
     ...(f.delivery !== "any" ? [[f.delivery === "quick" ? "Quick delivery" : "Express delivery", () => setF({ delivery: "any" })]] : []),
   ];

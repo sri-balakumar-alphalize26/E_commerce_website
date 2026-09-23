@@ -15,8 +15,8 @@ HERE = pathlib.Path(__file__).resolve().parent.parent
 OUT = HERE / 'data' / 'fields.xml'
 
 DISCLAIMER = ("While we work to ensure product information is correct, "
-              "packaging and ingredients may be updated by the manufacturer. "
-              "Always read the label before use.")
+              "specifications and packaging may be changed by the "
+              "manufacturer. Always check the details on the product itself.")
 RETURN_TEXT = ("7-day replacement for damaged or wrong items. Keep the "
                "original packaging.")
 
@@ -67,8 +67,6 @@ FIELDS = [
      'Legally required for packaged goods in India.'),
     ('article_id', 'Article ID', 'info', 'odoo', 'default_code', '', 'text', 1,
      'The internal reference.'),
-    ('veg', 'Vegetarian mark', 'info', 'odoo', 'mart_is_veg', '', 'bool', 1,
-     'The green square. Food products only.'),
     ('item_height', 'Item height', 'info', 'odoo', 'mart_item_height', '', 'text', 1, ''),
     ('item_length', 'Item length', 'info', 'odoo', 'mart_item_length', '', 'text', 1, ''),
     ('item_width', 'Item width', 'info', 'odoo', 'mart_item_width', '', 'text', 1, ''),
@@ -76,7 +74,6 @@ FIELDS = [
      'Taken from the weight on the product.'),
 
     # -- specifications --
-    ('net_quantity', 'Net quantity', 'specs', 'odoo', 'mart_unit_text', '', 'text', 1, ''),
     ('spec_brand', 'Brand', 'specs', 'text', '', '369 Mart Select', 'text', 1, ''),
     ('warranty', 'Warranty', 'specs', 'text', '', '', 'text', 1,
      'e.g. 1 year manufacturer warranty. Usually set per category.'),
@@ -84,8 +81,6 @@ FIELDS = [
     ('material', 'Material', 'specs', 'odoo', 'mart_material', '', 'text', 1, ''),
     ('product_type', 'Product type', 'specs', 'computed', '', '', 'text', 1,
      'The category the product sits in.'),
-    ('shelf_life', 'Shelf life', 'specs', 'text', '', '', 'text', 1,
-     'e.g. 3-5 days, refrigerated. Usually set per category.'),
 
     # -- description --
     ('description', 'Description', 'description', 'odoo', 'description_ecommerce', '',

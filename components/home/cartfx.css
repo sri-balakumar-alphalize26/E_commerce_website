@@ -13,7 +13,7 @@
 /* source box: image leaves, mint glow stays behind, then the image grows back */
 .hm-card-img, .sr-row-img, .sr-pick-img, .ac-wish-img, .pd-fbt-img { transition: background-color 360ms var(--hm-ease, ease), box-shadow 360ms; }
 .hm-lift { background: linear-gradient(180deg, #effbf3 40%, #dcf5e5) !important; box-shadow: inset 0 0 0 1.5px #bfe8cd; }
-.hm-lift .hm-gal, .hm-lift .hm-gal-one, .hm-lift > img, .hm-lift > svg, .hm-lift .pd-track, .hm-lift .hm-veg, .hm-lift .hm-off {
+.hm-lift .hm-gal, .hm-lift .hm-gal-one, .hm-lift > img, .hm-lift > svg, .hm-lift .pd-track, .hm-lift .hm-off {
   opacity: 0; transform: scale(0.72); transition: opacity 140ms ease, transform 200ms ease;
 }
 .hm-regrow .hm-gal, .hm-regrow .hm-gal-one, .hm-regrow > img, .hm-regrow > svg, .hm-regrow .pd-track {
