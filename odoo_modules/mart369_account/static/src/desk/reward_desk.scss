@@ -24,6 +24,10 @@
     display: flex;
     flex-direction: column;
     min-height: 0;
+    /* The whole page scrolls, not a pane inside it - the cards move up out
+       of the way like on every other desk. */
+    height: 100%;
+    overflow-y: auto;
     background: var(--rw-ground);
 
     .rw-tiles {
@@ -124,7 +128,7 @@
     }
 
 
-    .rw-queue-wrap { flex: 1; min-height: 0; overflow: auto; }
+    .rw-queue-wrap { flex: 1 0 auto; min-height: 0; }
     .rw-queue { padding: 0 16px 20px; }
 
     .rw-count {
