@@ -4,3 +4,4 @@ from . import payment_token
 from . import payment_transaction
 from . import loyalty_card
 from . import loyalty_history
+from . import settings_admin

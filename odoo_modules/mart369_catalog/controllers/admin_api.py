@@ -109,3 +109,26 @@ class Mart369SearchAdminApi(http.Controller):
         _logger.info('369 Mart: search term %s trending=%s by %s',
                      term.term, trending, request.env.user.login)
         return self._json({'ok': True, 'term': row})
+
+    # --------------------------------------------------------------- products
+
+    @http.route('/369mart/admin/products', **_GET)
+    def products(self, tab=None, categ=None, mode=None, q=None, sort=None,
+                 limit=None, offset=None, **kwargs):
+        """The stock list: one page, the shop's tiles and the filter options.
+
+        Read-only. Price, stock and publishing are changed in Odoo - a stock
+        change is an inventory adjustment, not a number typed over.
+        """
+        if not self._may_edit():
+            return self._fail('You do not have access to this.', status=403)
+        try:
+            payload = request.env['product.template'].mart369_admin_list(
+                tab=tab, categ=categ or None, mode=mode, q=q, sort=sort,
+                limit=limit or 50, offset=offset or 0)
+        except AccessError as exc:
+            return self._fail(str(exc), status=403)
+        except (UserError, ValueError) as exc:
+            return self._fail(str(exc))
+        payload['ok'] = True
+        return self._json(payload)
