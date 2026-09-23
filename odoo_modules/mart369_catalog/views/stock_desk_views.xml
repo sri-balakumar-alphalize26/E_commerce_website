@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--
+        The stock desk: the console's Products screen, inside Odoo.
+
+        A client action for the same reason as the searches desk: the tiles
+        and the storefront filter are what the screen is for, and no Odoo view
+        type draws them. It reads `product.template.mart369_admin_list`, the
+        one call the console makes, so the two agree on every number.
+
+        Both groups, like its twin: the console screen is fenced by the website
+        designer group, and the two front ends must not disagree about who may
+        read it.
+    -->
+    <record id="action_mart369_stock_desk" model="ir.actions.client">
+        <field name="name">Products</field>
+        <field name="tag">mart369_catalog.stock</field>
+        <field name="path">mart-stock</field>
+    </record>
+
+    <menuitem id="menu_mart369_stock_desk"
+              name="Products"
+              parent="mart369.menu_mart369_catalogue"
+              action="action_mart369_stock_desk"
+              groups="base.group_system,website.group_website_designer"
+              sequence="15"/>
+
+</odoo>

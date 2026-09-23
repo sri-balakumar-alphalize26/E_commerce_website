@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="mart369_payment.SettingsDesk">
+        <Layout display="{ controlPanel: {} }" className="'o_mart369_desk h-100'">
+            <div class="mart-builder pe st">
+
+                <header class="pe-head">
+                    <div>
+                        <h1>Settings</h1>
+                        <p>The store's details, how customers can pay, and what the console alerts you about.</p>
+                    </div>
+                </header>
+
+                <p t-if="state.loading and !state.draft" class="pe-loading st-pad">Loading settings...</p>
+
+                <t t-if="state.draft">
+                    <div class="st-card">
+                        <div class="pe-toolbar st-toolbar">
+                            <Tabs tabs="tabItems" value="state.tab" onChange="(k) => this.pickTab(k)"/>
+                            <div class="pe-toolbar-gap"/>
+                            <span t-if="dirty" class="st-dim">Unsaved changes</span>
+                            <button class="mart-btn" t-att-disabled="!dirty or state.busy"
+                                    t-on-click="() => this.reset()">Reset</button>
+                            <button class="mart-btn mart-btn-primary" t-att-disabled="!dirty or state.busy"
+                                    t-on-click="() => this.save()">
+                                <t t-if="state.busy">Saving...</t>
+                                <t t-else="">Save changes</t>
+                            </button>
+                        </div>
+
+                        <p t-if="state.error" class="pe-error st-err" role="alert" t-esc="state.error"/>
+
+                        <!-- Store: the company in Odoo. -->
+                        <div t-if="state.tab === 'store'" class="st-form">
+                            <label t-foreach="STORE_FIELDS" t-as="f" t-key="f.key"
+                                   t-attf-class="st-field {{ f.wide ? 'st-span2' : '' }}">
+                                <span t-esc="f.label"/>
+                                <input t-att-type="f.type or 'text'"
+                                       t-att-value="state.draft.store[f.key]"
+                                       t-att-placeholder="f.placeholder or ''"
+                                       t-on-input="(ev) => this.setField('store', f.key, ev.target.value)"/>
+                            </label>
+                            <p class="st-hint st-span2">
+                                <Icon n="'info'" size="14"/>
+                                <span>This is the company in Odoo - the same name and GSTIN print on invoices. When orders can be placed is set by the delivery slots, under Store › Delivery.</span>
+                            </p>
+                        </div>
+
+                        <!-- Payments: Odoo's own providers. -->
+                        <div t-if="state.tab === 'payments' and state.draft.pay" class="st-rows">
+                            <div t-foreach="state.draft.pay.providers" t-as="p" t-key="p.id" class="st-row">
+                                <span class="st-ic"><Icon n="PAY_ICON[p.kind] or 'lock'" size="18"/></span>
+                                <span class="st-txt">
+                                    <b>
+                                        <t t-esc="p.name"/>
+                                        <span t-attf-class="mart-pill mart-t-{{ payState(p)[1] }}" t-esc="payState(p)[0]"/>
+                                    </b>
+                                    <small t-esc="payHelp(p)"/>
+                                </span>
+                                <span t-if="p.state === 'disabled' and !p.canEnable" class="st-dim">In Odoo</span>
+                                <Switch t-else="" on="p.state !== 'disabled'" label="p.name"
+                                        disabled="state.busy"
+                                        onChange="(v) => this.toggleProvider(p, v)"/>
+                            </div>
+                            <div t-if="state.draft.pay.hasCod" class="st-row">
+                                <span class="st-ic"><Icon n="'lock'" size="18"/></span>
+                                <span class="st-txt">
+                                    <b>Cash on delivery limit</b>
+                                    <small>Orders above this must be paid another way. 0 means no limit.</small>
+                                </span>
+                                <span class="st-num">
+                                    <input inputmode="numeric" t-att-value="state.draft.pay.codLimit"
+                                           aria-label="Cash on delivery limit"
+                                           t-on-input="(ev) => this.setCod(ev.target.value)"/>
+                                    <em t-esc="state.draft.pay.currency and state.draft.pay.currency.symbol or ''"/>
+                                </span>
+                            </div>
+                            <p class="st-hint">
+                                <Icon n="'info'" size="14"/>
+                                <span>
+                                    These are Odoo's payment providers - the checkout offers exactly what is switched on here.
+                                    <t t-if="state.draft.pay.more"><t t-esc="state.draft.pay.more"/> more are switched off and set up in Odoo.</t>
+                                    <button class="mart-link" t-on-click="() => this.openProviders()">Open payment providers</button>
+                                </span>
+                            </p>
+                        </div>
+
+                        <!-- Alerts: the shared settings record. -->
+                        <div t-if="state.tab === 'alerts'" class="st-rows">
+                            <div t-foreach="ALERTS" t-as="a" t-key="a.key" class="st-row">
+                                <span class="st-ic"><Icon n="'dash'" size="18"/></span>
+                                <span class="st-txt"><b t-esc="a.label"/><small t-esc="a.help"/></span>
+                                <Switch on="!!state.draft.alerts[a.key]" label="a.label"
+                                        disabled="state.busy"
+                                        onChange="(v) => this.setField('alerts', a.key, v)"/>
+                            </div>
+                            <p class="st-hint">
+                                <Icon n="'info'" size="14"/>
+                                <span>These are for the console. Email and SMS alerts are not set up.</span>
+                            </p>
+                        </div>
+                    </div>
+                </t>
+
+                <p t-elif="state.error" class="pe-error st-pad" role="alert">
+                    We could not reach the shop. <t t-esc="state.error"/>
+                    <button class="mart-link" t-on-click="() => this.load()">Try again</button>
+                </p>
+
+            </div>
+        </Layout>
+    </t>
+
+</templates>

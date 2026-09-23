@@ -1,0 +1,244 @@
+/* The stock desk.
+ *
+ * Shaped like search_desk.scss so the catalogue desks read as one family, and
+ * sized off components/admin/admin.css so it matches the console's Products
+ * screen. The shell, buttons, pills, error bar and loading line come from
+ * mart369's builder.scss. Never @import it - one local @import breaks the whole
+ * backend bundle.
+ */
+
+.o_mart369_desk .mart-builder.sk {
+    --sk-line: #e4eaef;
+    --sk-ink: #13212b;
+    --sk-muted: #64757f;
+    --sk-ground: #f3f6f8;
+    --sk-blue: #0a78ab;
+    --sk-red: #c8433a;
+    --sk-amber: #b7791f;
+    --sk-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    height: 100%;
+    overflow-y: auto;
+    background: var(--sk-ground);
+
+    /* ------------------------------------------------------------- tiles */
+
+    .sk-tiles {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        padding: 14px 16px 0;
+    }
+
+    .sk-tile {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 12px 14px;
+        text-align: left;
+        background: #fff;
+        border: 1px solid var(--sk-line);
+        border-radius: 14px;
+        color: var(--sk-ink);
+        transition: border-color 140ms var(--sk-ease), box-shadow 140ms var(--sk-ease);
+
+        b {
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            font-variant-numeric: tabular-nums;
+        }
+    }
+
+    .sk-tile-top {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: var(--sk-muted);
+    }
+
+    .sk-tile-flat {
+        cursor: default;
+    }
+
+    button.sk-tile {
+        cursor: pointer;
+
+        &:hover {
+            border-color: #cddae3;
+        }
+    }
+
+    .sk-tile-on {
+        border-color: var(--sk-blue);
+        box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.14);
+    }
+
+    .sk-tile-warn b {
+        color: var(--sk-amber);
+    }
+
+    .sk-tile-bad b {
+        color: var(--sk-red);
+    }
+
+    .sk-note {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 12px 16px 0;
+        font-size: 12.5px;
+        color: var(--sk-muted);
+    }
+
+    .sk-toolbar {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    /* -------------------------------------------------------------- table */
+
+    .sk-queue {
+        padding: 0 16px 20px;
+    }
+
+    .sk-count {
+        margin: 14px 2px 8px;
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--sk-muted);
+    }
+
+    .sk-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        background: #fff;
+        border: 1px solid var(--sk-line);
+        border-radius: 14px;
+        overflow: hidden;
+        font-size: 13px;
+
+        th {
+            padding: 10px 12px;
+            font-size: 11.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--sk-muted);
+            background: #f8fafb;
+            border-bottom: 1px solid var(--sk-line);
+            text-align: left;
+        }
+
+        td {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--sk-line);
+            vertical-align: middle;
+
+            small {
+                color: var(--sk-muted);
+            }
+        }
+
+        tr:last-child td {
+            border-bottom: 0;
+        }
+    }
+
+    .sk-row {
+        cursor: pointer;
+
+        &:hover td {
+            background: #f8fbfd;
+        }
+    }
+
+    .sk-row-warn td:first-child {
+        box-shadow: inset 3px 0 0 var(--sk-amber);
+    }
+
+    .sk-row-bad td:first-child {
+        box-shadow: inset 3px 0 0 var(--sk-red);
+    }
+
+    .sk-table .sk-num {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .sk-strong {
+        font-weight: 800;
+    }
+
+    .sk-prod {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+
+        b {
+            display: block;
+            font-weight: 700;
+        }
+
+        small {
+            display: block;
+        }
+    }
+
+    .sk-thumb {
+        flex: none;
+        width: 38px;
+        height: 38px;
+        border-radius: 10px;
+        background: #f4f7f9;
+        display: grid;
+        place-items: center;
+        padding: 4px;
+        overflow: hidden;
+
+        img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+    }
+
+    .sk-tag {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 11.5px;
+        font-weight: 700;
+    }
+
+    .sk-tag-q {
+        background: #fff1de;
+        color: #96530a;
+    }
+
+    .sk-tag-e {
+        background: #e6f1f8;
+        color: #08516f;
+    }
+
+    .sk-more {
+        padding: 14px;
+        text-align: center;
+    }
+
+    @media (max-width: 900px) {
+        .sk-tiles {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .sk-table {
+            display: block;
+            overflow-x: auto;
+        }
+    }
+}
