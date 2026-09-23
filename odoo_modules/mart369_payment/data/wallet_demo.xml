@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+        A couple of empty wallets, so the screen and its movements dialog can
+        be seen on a shop where nobody has topped up yet.
+
+        Deliberately no balances and no payments. A seeded balance is money the
+        shop would owe a real customer and would show under "Money we hold"; a
+        seeded payment would land in today's takings, the success rate and the
+        sparkline, on the screen staff use to check the bank. An empty wallet
+        is not a claim about money - it is what every customer starts with.
+
+        In Python rather than as records, because a wallet needs a real partner
+        and this module ships none. Not noupdate: the method guards itself and
+        does nothing once any wallet exists, so running on every upgrade seeds
+        exactly once.
+    -->
+    <data>
+        <function model="loyalty.card" name="_mart369_load_demo"/>
+    </data>
+</odoo>

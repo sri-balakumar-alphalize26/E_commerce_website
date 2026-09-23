@@ -6,16 +6,22 @@
         Home Page 10, Product Page 15, Customers 20, Addresses 30, Advanced 90.
     -->
 
+    <!--
+        Payments and Wallets open the desks (views/desk_views.xml); these lists
+        keep what the desks do not try to do - grouping, the form, the saved
+        filters, exporting, and the "cash collected" button, which belongs
+        where somebody who took the notes will press it.
+    -->
     <menuitem id="menu_mart369_payments"
-              name="Payments"
-              parent="mart369.menu_mart369_root"
+              name="Payments (all views)"
+              parent="mart369.menu_mart369_advanced"
               action="action_mart369_payments"
               groups="base.group_system"
               sequence="40"/>
 
     <menuitem id="menu_mart369_wallets"
-              name="Wallets"
-              parent="mart369.menu_mart369_root"
+              name="Wallets (all views)"
+              parent="mart369.menu_mart369_advanced"
               action="action_mart369_wallets"
               groups="base.group_system"
               sequence="45"/>

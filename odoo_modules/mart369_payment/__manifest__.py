@@ -43,15 +43,27 @@ Staff see every payment and every wallet under **369 Mart -> Payments** and
         'data/payment_cleanup.xml',
         'views/payment_transaction_views.xml',
         'views/loyalty_card_views.xml',
+        'views/desk_views.xml',
         'views/menus.xml',
+        # Seeds once and guards itself - see the file's own comment.
+        'data/wallet_demo.xml',
     ],
     'assets': {
         'web.assets_backend': [
             'mart369_payment/static/src/payments/payment_dashboard.js',
             'mart369_payment/static/src/payments/payment_views.js',
             'mart369_payment/static/src/payments/payment_views.xml',
+            # The two desks. After the strip above, which they do not use but
+            # which defines the shared look a bundle compiles in order.
+            'mart369_payment/static/src/desk/**/*',
         ],
     },
+    'images': [
+        # The two desks, and the movements behind one wallet.
+        'static/description/payment_desk.png',
+        'static/description/wallet_desk.png',
+        'static/description/wallet_desk_ledger.png',
+    ],
     'installable': True,
     'application': False,
     'auto_install': False,

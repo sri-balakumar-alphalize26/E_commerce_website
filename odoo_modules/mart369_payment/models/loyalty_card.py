@@ -20,7 +20,7 @@ this number is the customer's money:
 import logging
 
 from odoo import _, api, fields, models, tools
-from odoo.exceptions import UserError
+from odoo.exceptions import AccessError, UserError
 
 _logger = logging.getLogger(__name__)
 
@@ -257,3 +257,170 @@ class LoyaltyCard(models.Model):
             'mart369 wallet %s: %s %s for partner %s (balance %s -> %s)',
             self.id, kind, amount, self.partner_id.id, balance, new_balance)
         return history
+
+    # ------------------------------------------------------- the staff screen
+
+    ADMIN_TABS = ('all', 'money', 'empty', 'broken')
+
+    @api.model
+    def _mart369_admin_may_read(self):
+        """Who may read the wallet screens.
+
+        Either group, because the two front ends are fenced differently: the
+        backend desk sits behind the system group its menu has always used,
+        and the app console behind the website designer group every admin
+        controller in the suite checks. One check, shared, is how the two stay
+        agreed about who may look.
+        """
+        if not (self.env.user.has_group('base.group_system')
+                or self.env.user.has_group('website.group_website_designer')):
+            raise AccessError(_("You do not have access to this."))
+        return True
+
+    @api.model
+    def mart369_admin_list(self, tab='all', q='', limit=200):
+        """Every 369 Wallet, with what the shop is holding in them.
+
+        Read-only, and there is nothing here that writes. A wallet is real
+        money the shop owes a customer; the only way its balance ever moves is
+        `_mart369_move`, called by a top-up, an order, a refund or a reward -
+        each of which is a thing that actually happened.
+        """
+        self._mart369_admin_may_read()
+        domain = [('mart369_is_wallet', '=', True)]
+        if tab == 'money':
+            domain += [('points', '>', 0)]
+        elif tab == 'empty':
+            domain += [('points', '<=', 0)]
+        elif tab == 'broken':
+            domain += [('mart369_consistent', '=', False)]
+        q = (q or '').strip()
+        if q:
+            domain += ['|', '|',
+                       ('partner_id.name', 'ilike', q),
+                       ('partner_id.email', 'ilike', q),
+                       ('partner_id.phone', 'ilike', q)]
+
+        cards = self.sudo().search(domain, order='points desc, id desc', limit=limit)
+
+        every = self.sudo().search([('mart369_is_wallet', '=', True)])
+        with_money = every.filtered(lambda c: c.points > 0)
+        broken = every.filtered(lambda c: not c.mart369_consistent)
+        held = sum(every.mapped('points'))
+        biggest = max(every.mapped('points')) if every else 0.0
+        top = every.filtered(lambda c: c.points == biggest)[:1] if every else every
+        currency = self.env.company.currency_id
+        return {
+            'rows': [card._mart369_admin_row() for card in cards],
+            'counts': {
+                'all': len(every),
+                'money': len(with_money),
+                'empty': len(every) - len(with_money),
+                'broken': len(broken),
+            },
+            'tiles': {
+                'wallets': len(every),
+                # Money the shop is holding for customers. A liability, not
+                # takings - it has already been paid for, and every rupee of
+                # it will be spent or asked for back.
+                'held': currency.format(held),
+                'held_amount': float(held),
+                'biggest': currency.format(biggest),
+                'biggest_amount': float(biggest),
+                'biggest_who': top.partner_id.display_name if top else '',
+                'broken': len(broken),
+                'currency': currency.name,
+            },
+        }
+
+    def _mart369_admin_row(self):
+        self.ensure_one()
+        last = self.env['loyalty.history'].sudo().search(
+            [('card_id', '=', self.id)], order='id desc', limit=1)
+        currency = self.currency_id or self.env.company.currency_id
+        return {
+            'id': self.id,
+            'customer': self.partner_id.display_name or '',
+            'email': self.partner_id.email or '',
+            'balance': self.points,
+            'balanceText': currency.format(self.points),
+            # Only meaningful when it differs from the balance, and the screens
+            # say so by drawing it only then.
+            'ledger': self.mart369_ledger_total,
+            'ledgerText': currency.format(self.mart369_ledger_total),
+            'consistent': self.mart369_consistent,
+            'moves': self.env['loyalty.history'].sudo().search_count(
+                [('card_id', '=', self.id)]),
+            'lastKind': last.mart369_kind or '',
+            'lastTitle': last.mart369_title or '',
+            'lastAt': int(last.create_date.timestamp() * 1000) if last.create_date else None,
+            'currency': currency.name,
+        }
+
+    @api.model
+    def mart369_admin_ledger(self, card_id, before=None, limit=50):
+        """One wallet's movements, for the drawer and the dialog.
+
+        A public wrapper over `_mart369_ledger` so the console, the desk and
+        the controller all go through the same access check and come back with
+        the same rows. Those rows are `loyalty.history._mart369_serialize()`
+        verbatim - the same six fields the customer sees in their own app, so
+        staff and customer are never reading different stories about the same
+        money.
+        """
+        self._mart369_admin_may_read()
+        card = self.sudo().browse(int(card_id)).exists()
+        if not card or not card.mart369_is_wallet:
+            raise UserError(_("That is not a 369 Wallet."))
+        rows = card._mart369_ledger(limit=limit, before=before)
+        currency = card.currency_id or self.env.company.currency_id
+        moves = []
+        for row in rows:
+            # The customer's own six keys, untouched, with the formatted amount
+            # added beside them for the backend desk. `_mart369_serialize` keeps
+            # its exact shape because the app parses it.
+            move = row._mart369_serialize()
+            move['amountText'] = currency.format(move['amount'])
+            moves.append(move)
+        return {
+            'card': card._mart369_admin_row(),
+            'moves': moves,
+            # The id to ask from next. None once the page came back short,
+            # which is how the screens know to stop offering "show older".
+            'before': rows[-1].id if len(rows) == limit else None,
+        }
+
+    # ------------------------------------------------------------ demo data
+
+    @api.model
+    def _mart369_load_demo(self):
+        """A couple of empty wallets, on a shop where nobody has one yet.
+
+        **No balances, and no payments anywhere.** A seeded balance is money
+        the shop would owe a real customer, and it would show up under "Money
+        we hold"; a seeded `payment.transaction` would land in today's
+        takings, the success rate and the sparkline, on the very screen staff
+        would use to check the bank. Neither has an honest version.
+
+        An empty wallet is not a claim about money. It is true in the ordinary
+        way - a wallet is made for a customer the first time one is needed -
+        and it lets the screen and the movements dialog be seen with every
+        number still correct.
+
+        Does nothing once any wallet exists, so a shop with real ones never
+        has examples added to the list it is reconciling.
+        """
+        if self.sudo().search_count([('mart369_is_wallet', '=', True)]):
+            return False
+        partners = self.env['res.partner'].sudo().search([
+            ('is_company', '=', False),
+            ('parent_id', '=', False),
+            ('name', '!=', False),
+            '|', ('customer_rank', '>', 0), ('user_ids.share', '=', True),
+        ], order='customer_rank desc, id', limit=2)
+        if not partners:
+            # No customers, so no wallets. The empty state explains itself.
+            return False
+        for partner in partners:
+            self._mart369_wallet(partner)
+        return True

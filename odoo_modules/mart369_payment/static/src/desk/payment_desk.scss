@@ -1,0 +1,548 @@
+/* The payments and wallets desks.
+ *
+ * One sheet for the two, because they are the same screen with different
+ * nouns and a shopkeeper moves between them. Deliberately shaped like the
+ * referral and searches desks, so the whole suite reads as one family.
+ *
+ * The shell, the buttons, the pills, the error bar and the loading line come
+ * from mart369/static/src/builder/builder.scss, already in the bundle because
+ * mart369 is a dependency. Never @import it: one local @import breaks the
+ * whole backend bundle, and the failure shows up as a blank screen rather
+ * than as an error anyone can read.
+ */
+
+.o_mart369_desk .mart-builder.pd,
+.o_mart369_desk .mart-builder.wd {
+    --pw-line: #e4eaef;
+    --pw-ink: #13212b;
+    --pw-muted: #64757f;
+    --pw-ground: #f3f6f8;
+    --pw-blue: #0a78ab;
+    --pw-green: #1a7f3c;
+    --pw-amber: #b7791f;
+    --pw-red: #c8433a;
+    --pw-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    background: var(--pw-ground);
+
+    /* The whole page scrolls, not a pane inside it. */
+    height: 100%;
+    overflow-y: auto;
+
+    /* ------------------------------------------------------------- tiles */
+
+    .pd-tiles,
+    .wd-tiles {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        padding: 14px 16px 0;
+    }
+
+    .pd-tile,
+    .wd-tile {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 12px 14px;
+        text-align: left;
+        background: #fff;
+        border: 1px solid var(--pw-line);
+        border-radius: 14px;
+        color: var(--pw-ink);
+        transition: border-color 140ms var(--pw-ease), box-shadow 140ms var(--pw-ease);
+
+        b {
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            font-variant-numeric: tabular-nums;
+        }
+
+        small {
+            font-size: 11.5px;
+            line-height: 1.35;
+            color: var(--pw-muted);
+        }
+    }
+
+    .pd-tile-top,
+    .wd-tile-top {
+        font-size: 12px;
+        color: var(--pw-muted);
+    }
+
+    .pd-tile-flat,
+    .wd-tile-flat {
+        cursor: default;
+    }
+
+    button.pd-tile,
+    button.wd-tile {
+        cursor: pointer;
+
+        &:hover {
+            border-color: #cddae3;
+        }
+    }
+
+    .pd-tile-on,
+    .wd-tile-on {
+        border-color: var(--pw-blue);
+        box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.14);
+    }
+
+    /* Only once there is something in them. A zero is not a warning. */
+    .pd-tile-warn b {
+        color: var(--pw-amber);
+    }
+
+    .wd-tile-bad b {
+        color: var(--pw-red);
+    }
+
+    /* ------------------------------------------------- what cannot be done */
+
+    /* Said once, quietly, so nobody hunts for a button that should not exist.
+       Grey rather than red: this is not a warning, it is how the screen is. */
+    .pd-readonly,
+    .wd-readonly {
+        display: flex;
+        align-items: flex-start;
+        gap: 9px;
+        margin: 12px 16px 0;
+        padding: 10px 14px;
+        background: #fff;
+        border: 1px solid var(--pw-line);
+        border-radius: 12px;
+        font-size: 12.5px;
+        line-height: 1.5;
+        color: var(--pw-muted);
+
+        i {
+            margin-top: 2px;
+        }
+    }
+
+    /* The alarm, which is a different thing entirely. */
+    .wd-alarm {
+        display: flex;
+        align-items: flex-start;
+        gap: 9px;
+        margin: 12px 16px 0;
+        padding: 12px 14px;
+        background: #fff;
+        border: 1px solid #f3c4c1;
+        border-left: 3px solid var(--pw-red);
+        border-radius: 12px;
+        font-size: 13px;
+        line-height: 1.5;
+        color: #3a4a55;
+
+        i {
+            margin-top: 2px;
+            color: var(--pw-red);
+        }
+
+        b {
+            font-weight: 800;
+        }
+    }
+
+    /* ----------------------------------------------------------- toolbar */
+
+    .pd-toolbar,
+    .wd-toolbar {
+        flex-wrap: wrap;
+    }
+
+    .pd-tabs,
+    .wd-tabs,
+    .pd-kinds {
+        display: inline-flex;
+        gap: 2px;
+        padding: 3px;
+        border-radius: 11px;
+        background: var(--pw-ground);
+
+        button {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            height: 32px;
+            padding: 0 12px;
+            border: 0;
+            border-radius: 9px;
+            background: transparent;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--pw-muted);
+            cursor: pointer;
+
+            em {
+                font-style: normal;
+                font-size: 11px;
+                font-weight: 800;
+                padding: 1px 6px;
+                border-radius: 999px;
+                background: #e6edf2;
+            }
+
+            &.mart-on {
+                background: #fff;
+                color: var(--pw-ink);
+                box-shadow: 0 2px 6px -3px rgba(19, 33, 43, 0.4);
+
+                em {
+                    background: #eaf4fa;
+                    color: var(--pw-blue);
+                }
+            }
+        }
+    }
+
+    .pd-search,
+    .wd-search {
+        height: 38px;
+        min-width: 230px;
+        padding: 0 12px;
+        border: 1px solid var(--pw-line);
+        border-radius: 10px;
+        background: #fff;
+        font-size: 13.5px;
+
+        &:focus {
+            outline: 0;
+            border-color: var(--pw-blue);
+            box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.14);
+        }
+    }
+
+    /* -------------------------------------------------------------- rows */
+
+    .pd-queue-wrap,
+    .wd-queue-wrap {
+        flex: 1 0 auto;
+        min-height: 0;
+    }
+
+    .pd-queue,
+    .wd-queue {
+        padding: 0 16px 20px;
+    }
+
+    .pd-count,
+    .wd-count {
+        margin: 14px 2px 8px;
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--pw-muted);
+    }
+
+    .pd-rows,
+    .wd-rows {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .pd-row,
+    .wd-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 14px;
+        background: #fff;
+        border: 1px solid var(--pw-line);
+        border-radius: 14px;
+        animation: pw-row 360ms var(--pw-ease) backwards;
+        animation-delay: calc(var(--i, 0) * 45ms);
+    }
+
+    /* A wallet that disagrees with its own history is the one to read. */
+    .wd-row-bad {
+        border-left: 3px solid var(--pw-red);
+    }
+
+    .pd-body,
+    .wd-body {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .pd-top,
+    .wd-top {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+
+        b {
+            font-size: 14.5px;
+            font-weight: 700;
+        }
+
+        small {
+            font-size: 12px;
+            color: var(--pw-muted);
+        }
+    }
+
+    .pd-sub,
+    .wd-sub {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin: 5px 0 0;
+        font-size: 12.5px;
+        color: var(--pw-muted);
+
+        code {
+            padding: 1px 6px;
+            border-radius: 6px;
+            background: #eef2f5;
+            color: #3a4a55;
+            font-size: 12px;
+        }
+    }
+
+    .pd-why {
+        color: #9c2f28;
+    }
+
+    .pd-order {
+        font-size: 12.5px;
+    }
+
+    .pd-dot,
+    .wd-dot {
+        color: #b6c3cc;
+    }
+
+    /* What it was worth, on the right where the eye lands last. */
+    .pd-worth,
+    .wd-worth {
+        flex: 0 0 auto;
+        text-align: right;
+        min-width: 120px;
+
+        b {
+            display: block;
+            font-size: 15px;
+            font-weight: 800;
+            font-variant-numeric: tabular-nums;
+        }
+
+        small {
+            font-size: 11.5px;
+            line-height: 1.35;
+            color: var(--pw-muted);
+        }
+    }
+
+    .wd-act {
+        flex: 0 0 auto;
+    }
+
+    /* A wallet attached to nobody. Not an error - it holds nothing - but it
+       should not read like somebody's name. */
+    .wd-nobody {
+        color: var(--pw-muted);
+        font-style: italic;
+    }
+
+    /* -------------------------------------------------------------- pills */
+
+    .pd-p-green,
+    .wd-p-green {
+        background: #e3f4e9;
+        color: #14602d;
+    }
+
+    .pd-p-amber {
+        background: #fdf1dc;
+        color: #8a5a06;
+    }
+
+    .pd-p-red,
+    .wd-p-red {
+        background: #fbe9e7;
+        color: #9c2f28;
+    }
+
+    .pd-p-grey,
+    .wd-p-grey {
+        background: #eceff2;
+        color: #5b6b76;
+    }
+
+    .pd-p-blue,
+    .wd-p-blue {
+        background: #e6f1f8;
+        color: #08516f;
+    }
+
+    .pd-p-violet,
+    .wd-p-violet {
+        background: #eeeafc;
+        color: #4c3a9a;
+    }
+
+    /* ------------------------------------------------------------ narrow */
+
+    @media (max-width: 1000px) {
+        .pd-tiles,
+        .wd-tiles {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .pd-row,
+        .wd-row {
+            flex-wrap: wrap;
+        }
+
+        .pd-worth,
+        .wd-worth {
+            text-align: left;
+        }
+    }
+}
+
+/* The ledger dialog. Its own styles rather than the page shell's, which is a
+   flex column filling the height and stretches everything inside a dialog. */
+.wd-dialog {
+    .wd-dialog-head {
+        display: flex;
+        align-items: baseline;
+        gap: 24px;
+        flex-wrap: wrap;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #e4eaef;
+
+        > div {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+        }
+
+        span {
+            font-size: 11.5px;
+            color: #64757f;
+        }
+
+        b {
+            font-size: 20px;
+            font-weight: 800;
+            font-variant-numeric: tabular-nums;
+        }
+    }
+
+    .wd-dialog-bad b {
+        color: #c8433a;
+    }
+
+    .wd-dialog-sub {
+        margin: 12px 0;
+        font-size: 12.5px;
+        color: #64757f;
+    }
+
+    .wd-dialog-error {
+        margin: 0 0 12px;
+        padding: 9px 12px;
+        border-radius: 10px;
+        background: #fbe9e7;
+        border: 1px solid #f3c4c1;
+        color: #9c2f28;
+        font-size: 13px;
+    }
+
+    .wd-moves {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+
+        li {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 2px;
+            border-bottom: 1px solid #eef2f5;
+
+            &:last-child {
+                border-bottom: 0;
+            }
+        }
+    }
+
+    .wd-move-txt {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+
+        b {
+            font-size: 13.5px;
+            font-weight: 700;
+        }
+
+        small {
+            font-size: 12px;
+            color: #64757f;
+        }
+    }
+
+    .wd-move-when {
+        font-size: 12px;
+        color: #64757f;
+        white-space: nowrap;
+    }
+
+    .wd-move-amount {
+        font-size: 14px;
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+
+        &.wd-in {
+            color: #1a7f3c;
+        }
+
+        &.wd-out {
+            color: #13212b;
+        }
+    }
+
+    .wd-more {
+        margin: 12px 0 0;
+        text-align: center;
+    }
+}
+
+@keyframes pw-row {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .o_mart369_desk .mart-builder.pd .pd-row,
+    .o_mart369_desk .mart-builder.wd .wd-row {
+        animation: none;
+    }
+}
