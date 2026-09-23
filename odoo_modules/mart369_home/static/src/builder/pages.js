@@ -15,18 +15,18 @@ import { Component, onWillStart, useRef, useState } from "@odoo/owl";
 import { registry } from "@web/core/registry";
 import { useAutofocus, useService } from "@web/core/utils/hooks";
 import { _t } from "@web/core/l10n/translation";
-import { ConfirmationDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
+import { Confirm } from "@mart369/ui/confirm";
 import { Dialog } from "@web/core/dialog/dialog";
 import { Layout } from "@web/search/layout";
 import { standardActionServiceProps } from "@web/webclient/actions/action_service";
-import { Icon } from "./builder";
+import { Icon } from "@mart369/ui/icon";
 
 const M = { version: "mart369.home.version" };
 
 /**
  * "What shall we call it?"
  *
- * `ConfirmationDialog` has no field to type into, and a page called
+ * `Confirm` has no field to type into, and a page called
  * "Everyday (copy)" that somebody meant to call "Diwali" is a page nobody
  * renames until they are looking for it six months later.
  */
@@ -164,7 +164,7 @@ export class HomePages extends Component {
             ? _t('Shoppers are on "%(from)s". They will be on "%(to)s" straight away.',
                  { from: from.name, to: page.name })
             : _t('Shoppers will be on "%s" straight away.', page.name);
-        this.dialog.add(ConfirmationDialog, {
+        this.dialog.add(Confirm, {
             title: from && from.id !== page.id
                 ? _t('Switch from "%(from)s" to "%(to)s"?',
                      { from: from.name, to: page.name })
@@ -217,7 +217,7 @@ export class HomePages extends Component {
     }
 
     remove(page) {
-        this.dialog.add(ConfirmationDialog, {
+        this.dialog.add(Confirm, {
             title: _t("Remove this page?"),
             body: this.state.trashDays
                 ? _t('"%(name)s" goes to the Trash, where you can put it back for %(days)s days.',
@@ -251,7 +251,7 @@ export class HomePages extends Component {
     /** Gone now rather than in thirty days. Only offered from the Trash, so
         nothing is destroyed without having been visible there first. */
     deleteForever(page) {
-        this.dialog.add(ConfirmationDialog, {
+        this.dialog.add(Confirm, {
             title: _t("Delete for good?"),
             body: _t('"%s" and everything on it goes now. There is no putting it back.',
                      page.name),

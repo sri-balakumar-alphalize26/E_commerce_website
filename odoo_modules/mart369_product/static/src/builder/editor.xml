@@ -301,11 +301,8 @@
             </div>
             <label class="pe-switch-lbl">
                 <span t-esc="section.show ? 'Shown' : 'Hidden'"/>
-                <button class="mart-switch" role="switch"
-                        t-att-aria-checked="section.show ? 'true' : 'false'"
-                        t-on-click="() => this.toggleSection(section)">
-                    <i/>
-                </button>
+                <Switch on="section.show" label="'Shown on the product page'"
+                        onChange="() => this.toggleSection(section)"/>
             </label>
         </header>
 
@@ -370,11 +367,8 @@
             <t t-if="state.tab === 'global'">
                 <label class="mart-switch-row">
                     <span>Shown on every product</span>
-                    <button class="mart-switch" role="switch"
-                            t-att-aria-checked="row.show ? 'true' : 'false'"
-                            t-on-click="() => this.toggleGlobal(row)">
-                        <i/>
-                    </button>
+                    <Switch on="row.show" label="'Shown on every product'"
+                            onChange="() => this.toggleGlobal(row)"/>
                 </label>
 
                 <t t-if="row.source === 'text'">
@@ -384,12 +378,9 @@
                                   t-att-value="row.default_value"
                                   placeholder="One per line"
                                   t-on-input="(ev) => this.editDefault(row, ev)"/>
-                        <select t-elif="row.value_kind === 'bool'"
-                                t-on-change="(ev) => this.editDefault(row, ev)">
-                            <option value="" t-att-selected="!row.default_value">Not set</option>
-                            <option value="1" t-att-selected="row.default_value === '1'">Yes</option>
-                            <option value="0" t-att-selected="row.default_value === '0'">No</option>
-                        </select>
+                        <Pick t-elif="row.value_kind === 'bool'" label="'Default wording'"
+                              value="row.default_value || ''" options="boolOptions"
+                              onChange="(v) => this.setDefault(row, v)"/>
                         <input t-else="" type="text" t-att-value="row.default_value"
                                placeholder="Used for every product unless overridden"
                                t-on-input="(ev) => this.editDefault(row, ev)"/>

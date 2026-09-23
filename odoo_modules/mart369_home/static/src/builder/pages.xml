@@ -171,8 +171,15 @@
         </article>
     </t>
 
+    <!-- `contentClass`, because a Dialog renders in a portal at the end of the
+         body, outside the `.mart-builder` div this screen lives in. Without it
+         the label, the box and the hint below fall outside every rule that
+         styles them and the prompt comes up unstyled. Do NOT fix that by
+         wrapping the body in `.mart-builder`: it is `display: flex`, so the
+         form lays itself out in one row. -->
     <t t-name="mart369_home.NamePrompt">
-        <Dialog size="'sm'" title="props.title">
+        <Dialog size="'sm'" title="props.title"
+                contentClass="'o_mart369_dialog mart-prompt'">
             <label class="mart-field">
                 <span>Name</span>
                 <input type="text" t-ref="name" t-att-placeholder="props.placeholder"
@@ -183,9 +190,9 @@
                 editing something rather than building from nothing.
             </p>
             <t t-set-slot="footer">
-                <button class="btn btn-primary" t-on-click="() => this.confirm()"
+                <button class="mart-btn mart-btn-primary" t-on-click="() => this.confirm()"
                         t-esc="props.confirmLabel"/>
-                <button class="btn btn-secondary" t-on-click="() => this.props.close()">
+                <button class="mart-btn" t-on-click="() => this.props.close()">
                     Cancel
                 </button>
             </t>

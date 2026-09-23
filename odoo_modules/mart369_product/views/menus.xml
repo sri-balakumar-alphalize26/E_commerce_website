@@ -5,9 +5,9 @@
          Customers (20, added by mart369_auth). -->
     <menuitem id="menu_mart369_product_builder"
               name="Product Page"
-              parent="mart369.menu_mart369_root"
+              parent="mart369.menu_mart369_store"
               action="action_mart369_product_editor"
-              sequence="15"/>
+              sequence="20"/>
 
     <menuitem id="menu_mart369_product_builder_advanced"
               name="Product Page (all settings)"
@@ -17,20 +17,20 @@
 
     <menuitem id="menu_mart369_product_fields"
               name="Product Page Fields"
-              parent="mart369.menu_mart369_advanced"
+              parent="mart369.menu_mart369_pages"
               action="action_mart369_product_field"
-              sequence="60"/>
+              sequence="70"/>
 
     <menuitem id="menu_mart369_product_sections"
               name="Product Page Sections"
-              parent="mart369.menu_mart369_advanced"
+              parent="mart369.menu_mart369_pages"
               action="action_mart369_product_section"
-              sequence="70"/>
+              sequence="80"/>
 
     <menuitem id="menu_mart369_product_category_value"
               name="Wording by Category"
-              parent="mart369.menu_mart369_advanced"
+              parent="mart369.menu_mart369_pages"
               action="action_mart369_product_category_value"
-              sequence="80"/>
+              sequence="90"/>
 
 </odoo>

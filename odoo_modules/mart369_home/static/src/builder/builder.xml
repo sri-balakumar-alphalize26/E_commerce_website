@@ -1,11 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates xml:space="preserve">
 
-    <t t-name="mart369_home.Icon">
-        <svg class="hm-ic" t-att-class="props.class" t-att-width="props.size" t-att-height="props.size"
-             viewBox="0 0 24 24" aria-hidden="true" t-ref="svg"/>
-    </t>
-
     <!-- ================================================================ root -->
     <t t-name="mart369_home.HomeBuilder">
         <Layout display="{ controlPanel: {} }" className="'o_mart369_builder'">
@@ -374,16 +369,15 @@
                 <t t-if="band.source === 'category'">
                     <div class="mart-field">
                         <label>Category</label>
-                        <select t-on-change="(ev) => this.edit('mart369.home.section', band, 'public_categ_id', parseInt(ev.target.value) || false)">
-                            <option value="" t-att-selected="!band.public_categ_id">— choose a category —</option>
-                            <option t-foreach="d.categories" t-as="c" t-key="c.id" t-att-value="c.id" t-att-selected="band.public_categ_id === c.id" t-esc="c.name"/>
-                        </select>
+                        <Pick label="'Category'" value="idValue(band.public_categ_id)"
+                              options="categoryOptions('— choose a category —')"
+                              onChange="(v) => this.editId('mart369.home.section', band, 'public_categ_id', v)"/>
                     </div>
                     <div class="mart-field">
-                        <label class="mart-switch">
-                            <input type="checkbox" t-att-checked="band.include_child_categs"
-                                   t-on-change="(ev) => this.onField('mart369.home.section', band, 'include_child_categs', ev)"/>
-                            Include sub-categories
+                        <label class="mart-switch-row">
+                            <span>Include sub-categories</span>
+                            <Switch on="band.include_child_categs" label="'Include sub-categories'"
+                                    onChange="(on) => this.edit('mart369.home.section', band, 'include_child_categs', on)"/>
                         </label>
                     </div>
                 </t>
@@ -391,19 +385,17 @@
                 <t t-if="band.source === 'tag'">
                     <div class="mart-field">
                         <label>Tag</label>
-                        <select t-on-change="(ev) => this.edit('mart369.home.section', band, 'product_tag_id', parseInt(ev.target.value) || false)">
-                            <option value="" t-att-selected="!band.product_tag_id">— choose a tag —</option>
-                            <option t-foreach="d.tags" t-as="tg" t-key="tg.id" t-att-value="tg.id" t-att-selected="band.product_tag_id === tg.id" t-esc="tg.name"/>
-                        </select>
+                        <Pick label="'Tag'" value="idValue(band.product_tag_id)"
+                              options="tagOptions('— choose a tag —')"
+                              onChange="(v) => this.editId('mart369.home.section', band, 'product_tag_id', v)"/>
                     </div>
                 </t>
 
                 <t t-if="band.source === 'rule'">
                     <div class="mart-field">
                         <label>Rule</label>
-                        <select t-on-change="(ev) => this.edit('mart369.home.section', band, 'rule', ev.target.value)">
-                            <option t-foreach="RULES" t-as="r" t-key="r[0]" t-att-value="r[0]" t-att-selected="band.rule === r[0]" t-esc="r[1]"/>
-                        </select>
+                        <Pick label="'Rule'" value="band.rule || ''" options="RULES"
+                              onChange="(v) => this.edit('mart369.home.section', band, 'rule', v)"/>
                     </div>
                     <div class="mart-field" t-if="band.rule === 'best'">
                         <label>Count sales from the last (days)</label>
@@ -576,9 +568,8 @@
                         <div class="mart-row">
                             <div class="mart-field">
                                 <label>Colour</label>
-                                <select t-on-change="(ev) => this.edit('mart369.home.banner', b, 'tone', ev.target.value)">
-                                    <option t-foreach="d.vocab.tones" t-as="tn" t-key="tn[0]" t-att-value="tn[0]" t-att-selected="b.tone === tn[0]" t-esc="tn[1]"/>
-                                </select>
+                                <Pick label="'Colour'" value="b.tone || ''" options="d.vocab.tones"
+                                      onChange="(v) => this.edit('mart369.home.banner', b, 'tone', v)"/>
                             </div>
                             <div class="mart-field"><label>Opens</label><input type="text" t-att-value="b.href" placeholder="e.g. /category/fruits-vegetables" t-on-input="(ev) => this.onField('mart369.home.banner', b, 'href', ev)"/></div>
                         </div>
@@ -628,10 +619,9 @@
                         </div>
                         <div class="mart-field">
                             <label>Category (optional)</label>
-                            <select t-on-change="(ev) => this.edit('mart369.home.tile', tl, 'public_categ_id', parseInt(ev.target.value) || false)">
-                                <option value="" t-att-selected="!tl.public_categ_id">— none —</option>
-                                <option t-foreach="d.categories" t-as="c" t-key="c.id" t-att-value="c.id" t-att-selected="tl.public_categ_id === c.id" t-esc="c.name"/>
-                            </select>
+                            <Pick label="'Category'" value="idValue(tl.public_categ_id)"
+                                  options="categoryOptions('— none —')"
+                                  onChange="(v) => this.editId('mart369.home.tile', tl, 'public_categ_id', v)"/>
                         </div>
                         <div class="mart-field">
                             <label>Picture</label>
@@ -644,9 +634,8 @@
                         <div class="mart-row">
                             <div class="mart-field">
                                 <label>Drawing</label>
-                                <select t-on-change="(ev) => this.edit('mart369.home.tile', tl, 'art', ev.target.value)">
-                                    <option t-foreach="d.vocab.art" t-as="a" t-key="a[0]" t-att-value="a[0]" t-att-selected="tl.art === a[0]" t-esc="a[1]"/>
-                                </select>
+                                <Pick label="'Drawing'" value="tl.art || ''" options="d.vocab.art"
+                                      onChange="(v) => this.edit('mart369.home.tile', tl, 'art', v)"/>
                             </div>
                             <div class="mart-field"><label>Text on it</label><input type="text" t-att-value="tl.badge" placeholder="e.g. ATTA" t-on-input="(ev) => this.onField('mart369.home.tile', tl, 'badge', ev)"/></div>
                         </div>
@@ -688,17 +677,15 @@
                             <div class="mart-field"><label>Label</label><input type="text" t-att-value="tb.name" t-on-input="(ev) => this.onField('mart369.home.tab', tb, 'name', ev)"/></div>
                             <div class="mart-field">
                                 <label>Icon</label>
-                                <select t-on-change="(ev) => this.edit('mart369.home.tab', tb, 'icon', ev.target.value)">
-                                    <option t-foreach="d.vocab.icons" t-as="ic" t-key="ic[0]" t-att-value="ic[0]" t-att-selected="tb.icon === ic[0]" t-esc="ic[1]"/>
-                                </select>
+                                <Pick label="'Icon'" value="tb.icon || ''" options="d.vocab.icons"
+                                      onChange="(v) => this.edit('mart369.home.tab', tb, 'icon', v)"/>
                             </div>
                         </div>
                         <div class="mart-row">
                             <div class="mart-field">
                                 <label>Opens</label>
-                                <select t-on-change="(ev) => this.edit('mart369.home.tab', tb, 'route_view', ev.target.value)">
-                                    <option t-foreach="ROUTE_VIEWS" t-as="rv" t-key="rv[0]" t-att-value="rv[0]" t-att-selected="tb.route_view === rv[0]" t-esc="rv[1]"/>
-                                </select>
+                                <Pick label="'Opens'" value="tb.route_view || ''" options="ROUTE_VIEWS"
+                                      onChange="(v) => this.edit('mart369.home.tab', tb, 'route_view', v)"/>
                             </div>
                             <div class="mart-field" t-if="tb.route_view === 'category'">
                                 <label>Category address</label>

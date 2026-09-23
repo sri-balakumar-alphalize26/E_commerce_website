@@ -144,9 +144,9 @@
                 <div class="mart-fieldrow">
                     <div class="mart-fieldrow-head">
                         <b t-esc="row.name"/>
-                        <label class="mart-switch" t-if="state.tab === 'global'">
-                            <input type="checkbox" t-att-checked="row.show"
-                                   t-on-change="() => this.toggleGlobal(row)"/>
+                        <label class="mart-switch-row" t-if="state.tab === 'global'">
+                            <Switch on="row.show" label="'Shown on every product'"
+                                    onChange="() => this.toggleGlobal(row)"/>
                             Show
                         </label>
                         <small t-if="state.tab === 'product' and row.state !== 'follow'"

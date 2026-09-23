@@ -24,10 +24,12 @@ import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
 import { useSortable } from "@web/core/utils/sortable_owl";
 import { _t } from "@web/core/l10n/translation";
-import { ConfirmationDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
+import { Confirm } from "@mart369/ui/confirm";
 import { Layout } from "@web/search/layout";
 import { standardActionServiceProps } from "@web/webclient/actions/action_service";
-import { Icon } from "./builder";
+import { Icon } from "@mart369/ui/icon";
+import { Switch } from "@mart369/ui/switch";
+import { Pick } from "@mart369/ui/pick";
 import { useSaveQueue } from "./save_queue";
 
 const M = {
@@ -103,7 +105,7 @@ const reduced = () =>
 
 export class PageEditor extends Component {
     static template = "mart369_home.PageEditor";
-    static components = { Layout, Icon };
+    static components = { Layout, Icon, Pick, Switch };
     static props = { ...standardActionServiceProps };
 
     setup() {
@@ -317,17 +319,34 @@ export class PageEditor extends Component {
      * later when the reload lands.
      */
     onField(kind, rid, field, ev) {
+        this.setField(kind, rid, field, this.save.valueFrom(ev));
+    }
+
+    /** The same edit as `onField`, given the value rather than the event an
+     *  input carried it in - which is what a component hands back. */
+    setField(kind, rid, field, value) {
         const record = this.recordFor(kind, rid);
         if (!record) {
             return;
         }
-        const value = this.save.valueFrom(ev);
         this.save.edit(KINDS[kind].model, record, field, value);
 
         const row = (this.d.preview?.[KINDS[kind].group] || []).find((r) => r.rid === rid);
         if (row) {
             row[PREVIEW_FIELD[kind]?.[field] || field] = value;
         }
+    }
+
+    /** One of the server's vocabularies - icons, tones, artwork - as the
+     *  [value, label] pairs the dropdown takes. They arrive that shape already
+     *  (ICON_CHOICES and friends in mart369/models/serializers.py); only the
+     *  value is cast, because the dropdown compares strings.
+     *
+     *  The `<select>` this replaced printed each pair with `t-esc`, so the
+     *  options read "bolt,Lightning (quick)" and picking one wrote that whole
+     *  string as the value - nothing ever showed as chosen. */
+    vocabOptions(key) {
+        return (this.d.vocab?.[key] || []).map(([value, label]) => [String(value), label]);
     }
 
     /** The eye. Writes at once - see save_queue's `now`. */
@@ -346,7 +365,11 @@ export class PageEditor extends Component {
 
     /** The tab's own settings - the panel when nothing is selected. */
     onModeField(field, ev) {
-        this.save.edit(M.mode, this.d.mode, field, this.save.valueFrom(ev));
+        this.setModeField(field, this.save.valueFrom(ev));
+    }
+
+    setModeField(field, value) {
+        this.save.edit(M.mode, this.d.mode, field, value);
     }
 
     // ------------------------------------------------------- add and remove
@@ -398,7 +421,7 @@ export class PageEditor extends Component {
 
     remove(kind, rid) {
         const days = this.d?.trash_days ?? 30;
-        this.dialog.add(ConfirmationDialog, {
+        this.dialog.add(Confirm, {
             title: _t("Remove this %s?", KINDS[kind].short),
             body: _t(
                 "It goes to the Trash, where you can put it back for %s days.",
