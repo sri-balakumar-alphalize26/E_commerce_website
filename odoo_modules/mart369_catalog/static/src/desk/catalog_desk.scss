@@ -1,0 +1,442 @@
+/* The catalog desk.
+ *
+ * Deliberately shaped like search_desk.scss beside it and the referral desk in
+ * mart369_account, so they all read as one family.
+ *
+ * The shell, the buttons, the pills, the error bar and the loading line come
+ * from mart369/static/src/builder/builder.scss, already in the bundle because
+ * mart369 is a dependency. Never @import it: one local @import breaks the
+ * whole backend bundle, and the failure shows up as a blank screen rather than
+ * as an error anyone can read.
+ */
+
+.o_mart369_desk .mart-builder.cd {
+    --cd-line: #e4eaef;
+    --cd-ink: #13212b;
+    --cd-muted: #64757f;
+    --cd-ground: #f3f6f8;
+    --cd-blue: #0a78ab;
+    --cd-amber: #b7791f;
+    --cd-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    background: var(--cd-ground);
+
+    /* The whole page scrolls, not a pane inside it. */
+    height: 100%;
+    overflow-y: auto;
+
+    /* ------------------------------------------------------------- tiles */
+
+    .cd-tiles {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        padding: 14px 16px 0;
+    }
+
+    .cd-tile {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 12px 14px;
+        text-align: left;
+        background: #fff;
+        border: 1px solid var(--cd-line);
+        border-radius: 14px;
+        color: var(--cd-ink);
+        transition: border-color 140ms var(--cd-ease), box-shadow 140ms var(--cd-ease);
+
+        b {
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            font-variant-numeric: tabular-nums;
+        }
+
+        small {
+            font-size: 11.5px;
+            color: var(--cd-muted);
+        }
+    }
+
+    .cd-tile-top {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: var(--cd-muted);
+    }
+
+    .cd-tile-flat {
+        cursor: default;
+    }
+
+    button.cd-tile {
+        cursor: pointer;
+
+        &:hover {
+            border-color: #cddae3;
+        }
+    }
+
+    .cd-tile-on {
+        border-color: var(--cd-blue);
+        box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.14);
+    }
+
+    /* Only once there is something in it - a zero is the answer you want. */
+    .cd-tile-warn b {
+        color: var(--cd-amber);
+    }
+
+    /* ----------------------------------------------------------- toolbar */
+
+    .cd-toolbar {
+        flex-wrap: wrap;
+    }
+
+    .cd-tabs,
+    .cd-modes {
+        display: inline-flex;
+        gap: 2px;
+        padding: 3px;
+        border-radius: 11px;
+        background: var(--cd-ground);
+
+        button {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            height: 32px;
+            padding: 0 12px;
+            border: 0;
+            border-radius: 9px;
+            background: transparent;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--cd-muted);
+            cursor: pointer;
+
+            em {
+                font-style: normal;
+                font-size: 11px;
+                font-weight: 800;
+                padding: 1px 6px;
+                border-radius: 999px;
+                background: #e6edf2;
+            }
+
+            &.mart-on {
+                background: #fff;
+                color: var(--cd-ink);
+                box-shadow: 0 2px 6px -3px rgba(19, 33, 43, 0.4);
+
+                em {
+                    background: #eaf4fa;
+                    color: var(--cd-blue);
+                }
+            }
+        }
+    }
+
+    .cd-search {
+        height: 38px;
+        min-width: 230px;
+        padding: 0 12px;
+        border: 1px solid var(--cd-line);
+        border-radius: 10px;
+        background: #fff;
+        font-size: 13.5px;
+
+        &:focus {
+            outline: 0;
+            border-color: var(--cd-blue);
+            box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.14);
+        }
+    }
+
+    /* -------------------------------------------------------------- rows */
+
+    .cd-queue-wrap {
+        flex: 1 0 auto;
+        min-height: 0;
+    }
+
+    .cd-queue {
+        padding: 0 16px 20px;
+    }
+
+    .cd-count {
+        margin: 14px 2px 8px;
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--cd-muted);
+    }
+
+    .cd-rows {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .cd-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 14px;
+        background: #fff;
+        border: 1px solid var(--cd-line);
+        border-radius: 14px;
+        animation: cd-row 360ms var(--cd-ease) backwards;
+        animation-delay: calc(var(--i, 0) * 45ms);
+    }
+
+    /* A hidden category is still here, just not in the app. Dimmed rather
+       than moved, so the list stays in the order an operator learned. */
+    .cd-row-off {
+        background: #fafbfc;
+
+        .cd-swatch {
+            opacity: 0.55;
+        }
+    }
+
+    /* The two colours shown as what they are: ink on its own background. */
+    .cd-swatch {
+        flex: 0 0 auto;
+        width: 44px;
+        height: 44px;
+        display: grid;
+        place-items: center;
+        border-radius: 12px;
+        border: 1px solid rgba(19, 33, 43, 0.08);
+        font-size: 14px;
+        font-weight: 800;
+    }
+
+    .cd-body {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .cd-top {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+
+        b {
+            font-size: 14.5px;
+            font-weight: 700;
+        }
+    }
+
+    .cd-sub {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin: 5px 0 0;
+        font-size: 12.5px;
+        color: var(--cd-muted);
+
+        code {
+            padding: 1px 6px;
+            border-radius: 6px;
+            background: #eef2f5;
+            color: #3a4a55;
+            font-size: 12px;
+        }
+    }
+
+    .cd-blurb {
+        margin: 5px 0 0;
+        font-size: 12.5px;
+        color: #3a4a55;
+    }
+
+    .cd-dot {
+        color: #b6c3cc;
+    }
+
+    .cd-p-blue {
+        background: #e6f1f8;
+        color: #08516f;
+    }
+
+    .cd-p-violet {
+        background: #eeeafc;
+        color: #4c3a9a;
+    }
+
+    .cd-p-grey {
+        background: #eceff2;
+        color: #5b6b76;
+    }
+
+    .cd-p-amber {
+        background: #fdf1dc;
+        color: #8a5a06;
+    }
+
+    .cd-act {
+        flex: 0 0 auto;
+        display: flex;
+        gap: 6px;
+    }
+
+    /* ------------------------------------------------------------ narrow */
+
+    @media (max-width: 1000px) {
+        .cd-tiles {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .cd-row {
+            flex-wrap: wrap;
+        }
+
+        .cd-act {
+            width: 100%;
+        }
+    }
+}
+
+/* The dialog. Its own styles rather than the page shell's `.mart-*` ones:
+   those are nested under `.mart-builder`, a flex column filling the height,
+   and dropping it into a dialog stretches every field. */
+.cd-dialog {
+    .cd-dialog-sub {
+        margin: 0 0 12px;
+        font-size: 13px;
+        line-height: 1.5;
+        color: #64757f;
+    }
+
+    .cd-dialog-error {
+        margin: 0 0 12px;
+        padding: 9px 12px;
+        border-radius: 10px;
+        background: #fbe9e7;
+        border: 1px solid #f3c4c1;
+        color: #9c2f28;
+        font-size: 13px;
+    }
+
+    /* What the shopper will see, above the controls that change it. */
+    .cd-dialog-preview {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        padding: 16px 18px;
+        border-radius: 14px;
+        border: 1px solid rgba(19, 33, 43, 0.08);
+        margin-bottom: 14px;
+
+        b {
+            font-size: 18px;
+            font-weight: 800;
+        }
+
+        small {
+            font-size: 12.5px;
+            opacity: 0.8;
+        }
+    }
+
+    .cd-dialog-form {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px 14px;
+        align-items: start;
+    }
+
+    .cd-span2 {
+        grid-column: 1 / -1;
+    }
+
+    .cd-dialog-field {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        min-width: 0;
+
+        > span:first-child {
+            font-size: 12px;
+            font-weight: 700;
+            color: #13212b;
+        }
+
+        input[type="text"],
+        select {
+            width: 100%;
+            height: 38px;
+            padding: 0 12px;
+            border: 1px solid #cfd8df;
+            border-radius: 10px;
+            background: #fff;
+            font: inherit;
+            font-size: 13.5px;
+            color: #13212b;
+
+            &:focus {
+                outline: none;
+                border-color: #0a78ab;
+                box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.14);
+            }
+        }
+    }
+
+    .cd-colour {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        input[type="color"] {
+            width: 44px;
+            height: 38px;
+            padding: 2px;
+            border: 1px solid #cfd8df;
+            border-radius: 10px;
+            background: #fff;
+            cursor: pointer;
+        }
+    }
+
+    .cd-dialog-hint {
+        display: flex;
+        gap: 8px;
+        margin: 0;
+        font-size: 12.5px;
+        line-height: 1.5;
+        color: #64757f;
+
+        i {
+            margin-top: 2px;
+        }
+    }
+}
+
+@keyframes cd-row {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .o_mart369_desk .mart-builder.cd .cd-row {
+        animation: none;
+    }
+}

@@ -144,9 +144,18 @@
         <field name="act_window_id" ref="action_mart369_catalog"/>
     </record>
 
+    <!--
+        Catalog opens the desk (views/catalog_desk_views.xml); these views keep
+        what the desk does not try to do - the name, the app address, the
+        parent, the order and the products themselves. Same split as Searches,
+        Reviews and Orders.
+
+        It stays base.group_system: the raw kanban edits fields the desk
+        deliberately refuses to touch.
+    -->
     <menuitem id="menu_mart369_catalog"
-              name="Catalog"
-              parent="mart369.menu_mart369_root"
+              name="Catalog (all views)"
+              parent="mart369.menu_mart369_advanced"
               action="action_mart369_catalog"
               groups="base.group_system"
               sequence="40"/>
