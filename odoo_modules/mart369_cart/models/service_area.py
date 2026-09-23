@@ -83,3 +83,23 @@ class Mart369ServiceArea(models.Model):
             return {'ok': False,
                     'error': self.env._("We don't deliver to this pincode yet.")}
         return {'ok': True, 'quick': area.quick, 'eta': area.eta or ''}
+
+    # -------------------------------------------------------- the console
+
+    def _mart369_admin_row(self):
+        """One area as the admin console draws it.
+
+        `_mart369_check` above answers a customer's question - can you reach
+        me, and how fast - and deliberately says nothing about which record
+        answered it. This says which record, and everything on it.
+        """
+        self.ensure_one()
+        return {
+            'id': self.id,
+            'pincode': self.pincode or '',
+            'name': self.name or '',
+            'quick': self.quick,
+            'express': self.express,
+            'eta': self.eta or '',
+            'active': self.active,
+        }

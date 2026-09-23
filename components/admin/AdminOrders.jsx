@@ -279,6 +279,48 @@ function OrderDrawer({ ref_, onClose, onAdvance, onCancel, reasons, busy, flash 
   );
 }
 
+/* The doorstep, as a dialog.
+
+   Its own component so the code lives nowhere but here: it is typed, sent and
+   forgotten, never held in the section's state where a re-render could leave
+   it lying about. The box keeps the focus and the dialog stays open when the
+   shop refuses, because a wrong digit is the likeliest outcome and closing
+   would make the operator ask for the whole code again. */
+function DeliverPrompt({ order, busy, onClose, onDeliver }) {
+  const [code, setCode] = useState("");
+  const [error, setError] = useState("");
+
+  const send = async () => {
+    setError("");
+    const ok = await onDeliver(order, code.trim());
+    if (ok === null || ok === false) {
+      setError("That code is not right. Ask the customer to read it again.");
+      setCode("");
+      return;
+    }
+    onClose();
+  };
+
+  return (
+    <Confirm title={`Delivered #${order.ref}?`} confirmLabel="Mark delivered"
+      text={
+        <>
+          The customer has the code on their own order screen. Ask for it at the
+          door — it is the only thing that closes a delivery, and it works once.
+          <br />
+          <input className="ad-otp-in" value={code} inputMode="numeric"
+            autoFocus maxLength={6} placeholder="000000"
+            aria-label="Delivery code"
+            onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+            onKeyDown={(e) => { if (e.key === "Enter" && code.trim()) send(); }} />
+          {error && <span className="ad-otp-bad" role="alert">{error}</span>}
+        </>
+      }
+      onCancel={onClose}
+      onConfirm={() => { if (!busy && code.trim()) send(); }} />
+  );
+}
+
 export default function OrdersSection({ openId, setOpenId, query = "", flash }) {
   const [tab, setTab] = useState("needs");
   const [mode, setMode] = useState("");
@@ -287,6 +329,7 @@ export default function OrdersSection({ openId, setOpenId, query = "", flash }) 
   const [term, setTerm] = useState(query);
   const [q, setQ] = useState(query);
   const [sel, setSel] = useState([]);
+  const [deliver, setDeliver] = useState(null); // the order waiting on a code
   const [limit, setLimit] = useState(PAGE);
 
   /* The topbar can hand a term over from another section. */
@@ -334,9 +377,23 @@ export default function OrdersSection({ openId, setOpenId, query = "", flash }) 
       return r;
     });
 
+  /* Delivered is not a step this board takes. Every other state is the shop
+     moving its own work along; that one is the customer saying they have their
+     things, and the code from their screen is the only evidence of it. The
+     server refuses an advance into delivered, so asking here is not politeness
+     - it is the only route through. */
+  const needsCode = (o) => o.next?.state === "delivered";
+
   const advance = (o) =>
-    run(() => api(`/admin/orders/${encodeURIComponent(o.ref)}/advance`, { method: "POST" }),
-      `#${o.ref} → ${(STATUS[o.next?.state]?.label || "moved on").toLowerCase()}`);
+    needsCode(o)
+      ? setDeliver(o)
+      : run(() => api(`/admin/orders/${encodeURIComponent(o.ref)}/advance`, { method: "POST" }),
+        `#${o.ref} → ${(STATUS[o.next?.state]?.label || "moved on").toLowerCase()}`);
+
+  const deliverOrder = (o, code) =>
+    run(() => api(`/admin/orders/${encodeURIComponent(o.ref)}/deliver`, {
+      method: "POST", body: { code },
+    }), `#${o.ref} delivered`);
 
   const cancelOrder = (o, reason) =>
     run(() => api(`/admin/orders/${encodeURIComponent(o.ref)}/cancel`, {
@@ -348,7 +405,12 @@ export default function OrdersSection({ openId, setOpenId, query = "", flash }) 
      the shop refused. */
   const bulkAdvance = () =>
     act.run(async () => {
-      const picked = rows.filter((o) => sel.includes(o.ref) && o.next);
+      /* Orders at the door are left out rather than attempted: each one needs
+         its own code, so a bulk button could only ever fail on them, and
+         reporting "3 of 5 moved on" would read like a fault. */
+      const chosen = rows.filter((o) => sel.includes(o.ref) && o.next);
+      const atDoor = chosen.filter(needsCode);
+      const picked = chosen.filter((o) => !needsCode(o));
       let done = 0;
       const failed = [];
       for (const o of picked) {
@@ -361,8 +423,11 @@ export default function OrdersSection({ openId, setOpenId, query = "", flash }) 
       }
       await refresh();
       setSel([]);
-      if (!failed.length) flash?.(`${done} order${done === 1 ? "" : "s"} moved on`);
-      else flash?.(`${done} of ${picked.length} moved on. ${failed.join(", ")} did not.`, "bad");
+      const note = atDoor.length
+        ? ` ${atDoor.length} at the door need${atDoor.length === 1 ? "s" : ""} a delivery code.`
+        : "";
+      if (!failed.length) flash?.(`${done} order${done === 1 ? "" : "s"} moved on.${note}`);
+      else flash?.(`${done} of ${picked.length} moved on. ${failed.join(", ")} did not.${note}`, "bad");
       return true;
     });
 
@@ -512,6 +577,12 @@ export default function OrdersSection({ openId, setOpenId, query = "", flash }) 
           onClose={() => setOpenId(null)}
           onAdvance={advance}
           onCancel={cancelOrder} />
+      )}
+
+      {deliver && (
+        <DeliverPrompt order={deliver} busy={act.busy}
+          onClose={() => setDeliver(null)}
+          onDeliver={deliverOrder} />
       )}
     </div>
   );

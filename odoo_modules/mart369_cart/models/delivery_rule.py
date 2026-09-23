@@ -87,3 +87,72 @@ class Mart369DeliveryRule(models.Model):
             'freeAbove': round(self.free_above or 0.0, 2),
             'fee': round(self.fee or 0.0, 2),
         }
+
+    # -------------------------------------------------------- the console
+
+    def _mart369_admin_row(self):
+        """One rule as the app's own admin console draws it.
+
+        Not `_mart369_serialize`. That is the shopper's shape - four numbers
+        and two lines of text, with no id and no notion of being switched off,
+        because a customer has no use for either. A screen that edits the
+        record needs both, and widening the shopper's serializer to carry them
+        would put a storefront's internals in every basket response.
+        """
+        self.ensure_one()
+        return {
+            'id': self.id,
+            'mode': self.mode,
+            'modeLabel': dict(MODE_CHOICES).get(self.mode, self.mode or ''),
+            'label': self.label or '',
+            'eta': self.eta or '',
+            'minOrder': round(self.min_order or 0.0, 2),
+            'freeAbove': round(self.free_above or 0.0, 2),
+            'fee': round(self.fee or 0.0, 2),
+            'active': self.active,
+        }
+
+    @api.model
+    def mart369_admin_list(self):
+        """Everything the delivery screens draw, in one answer.
+
+        Read by both of them - the desk in Odoo through the ORM, the app's
+        admin console through `/369mart/admin/delivery` - on purpose, and for
+        the reason the deals desk gives: staff who work in Odoo must not get a
+        different answer to "what does delivery cost" than staff who work in
+        the console. Two assemblers would drift the first time one of them
+        learned to count something.
+
+        All three lists come back together because they are one screen. Fees,
+        slots and areas are three tabs of it, none of them long, and fetching
+        them apart would mean three round trips and three chances for the tabs
+        to disagree about how fresh they are.
+
+        On the rule model rather than a model of its own: something has to own
+        the assembling, and delivery starts with what it costs. Each record
+        still serializes itself - this only puts the three lists in one
+        envelope.
+        """
+        slots = self.env['mart369.delivery.slot'].with_context(active_test=False)
+        areas = self.env['mart369.service.area'].with_context(active_test=False)
+        rules = self.with_context(active_test=False).search([])
+        slot_rows = slots.search([])
+        area_rows = areas.search([])
+        return {
+            'rules': [r._mart369_admin_row() for r in rules],
+            'slots': [s._mart369_admin_row() for s in slot_rows],
+            'areas': [a._mart369_admin_row() for a in area_rows],
+            # The words for the two choice rows travel with the lists, so
+            # neither screen keeps its own copy of what a storefront is
+            # called - and a third storefront would appear in both at once.
+            'modes': [{'key': key, 'label': label} for key, label in MODE_CHOICES],
+            'kinds': [{'key': key, 'label': label}
+                      for key, label in self.env['mart369.delivery.slot']._fields['kind'].selection],
+            # Which money these amounts are in, travelling with them.
+            'currency': self.env['mart369.serializable']._mart369_currency(),
+            'counts': {
+                'rules': len(rules.filtered('active')),
+                'slots': len(slot_rows.filtered('active')),
+                'areas': len(area_rows.filtered('active')),
+            },
+        }

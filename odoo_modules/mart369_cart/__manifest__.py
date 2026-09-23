@@ -1,6 +1,6 @@
 {
     'name': '369 Mart Delivery & Pricing',
-    'version': '19.0.1.2.0',
+    'version': '19.0.1.4.0',
     'category': 'Website',
     'summary': 'The bill, delivery fees, coupons, service areas and slots.',
     'description': """
@@ -40,10 +40,18 @@ them in **369 Mart -> Delivery & Pricing**.
     'assets': {
         'web.assets_backend': [
             'mart369_cart/static/src/deals/**/*',
+            'mart369_cart/static/src/delivery/**/*',
+            'mart369_cart/static/src/coupons/**/*',
         ],
     },
     'images': [
-        # Deals and coupons first: they are what staff open this module for.
+        # The delivery desk first: it is the front door of Delivery &
+        # Pricing, and the twin of the screen staff use in the app.
+        'static/description/delivery_desk.png',
+        'static/description/delivery_desk_slots.png',
+        'static/description/delivery_desk_slot_dialog.png',
+        'static/description/delivery_desk_areas.png',
+        # Then deals and coupons: what staff open this module for day to day.
         'static/description/deal_desk.png',
         'static/description/deal_desk_dialog.png',
         'static/description/deal_desk_trash.png',

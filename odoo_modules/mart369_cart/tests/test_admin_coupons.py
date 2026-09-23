@@ -186,6 +186,59 @@ class TestAdminCoupons(HttpCase):
             self._send('PATCH', '/369mart/admin/coupons/99999', {'active': False})
             .status_code, 404)
 
+    # ------------------------------------------------- refused means undone
+
+    def test_a_refused_percentage_is_not_saved_anyway(self):
+        """The whole point of the savepoint.
+
+        The model refuses a percentage over 100 on flush - which is *after*
+        `write` has already put it in the transaction. Catching that and
+        answering 400 is only half an answer: without a savepoint to roll back
+        to, the operator is told no and the nonsense value is committed
+        regardless, so the next person to open the screen sees 150% and the
+        cart starts honouring it.
+        """
+        self.coupon.write({'kind': 'percent', 'value': 10.0})
+        self._staff()
+        response = self._send(
+            'PATCH', '/369mart/admin/coupons/%s' % self.coupon.id, {'value': 150.0})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('between 0 and 100', response.json()['error'])
+        self.coupon.invalidate_recordset()
+        self.assertEqual(self.coupon.value, 10.0)
+
+    def test_a_refused_new_coupon_leaves_nothing_behind(self):
+        """Same on create: the row exists in the transaction before the
+        constraint speaks, so a refusal has to take it away again."""
+        self._staff()
+        response = self._send('POST', '/369mart/admin/coupons', {
+            'code': 'HALFOFF', 'title': 'Too much', 'kind': 'percent', 'value': 900.0,
+        })
+
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(self.Coupon.search([('code', '=', 'HALFOFF')]))
+
+    def test_the_transaction_still_works_after_a_refusal(self):
+        """A rolled-back write must leave the cursor usable.
+
+        Before the savepoint the failed flush poisoned the transaction, so the
+        *next* statement - even building the error response - came back
+        'current transaction is aborted'. A refusal and then an ordinary save
+        is the sequence an operator actually performs: get it wrong, fix it,
+        save.
+        """
+        self.coupon.write({'kind': 'percent', 'value': 10.0})
+        self._staff()
+        self._send('PATCH', '/369mart/admin/coupons/%s' % self.coupon.id,
+                   {'value': 150.0})
+
+        good = self._send('PATCH', '/369mart/admin/coupons/%s' % self.coupon.id,
+                          {'value': 25.0})
+        self.assertEqual(good.status_code, 200)
+        self.coupon.invalidate_recordset()
+        self.assertEqual(self.coupon.value, 25.0)
+
     # ------------------------------------------------------------- deleting
 
     def test_an_unused_code_can_be_deleted(self):

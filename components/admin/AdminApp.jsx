@@ -18,6 +18,7 @@ import {
   categorySales, hourlyOrders, isToday, revenueSeries,
 } from "./adminData";
 import { clock, dateLong, since } from "./format";
+import { money } from "@/lib/money";
 import OrdersSection from "./AdminOrders";
 import ReturnsSection from "./AdminReturns";
 import { CustomersSection, ProductsSection } from "./AdminCatalog";
@@ -31,6 +32,7 @@ import { RewardsSection } from "./AdminRewards";
 import { AddressesSection } from "./AdminAddresses";
 import { NotificationsSection } from "./AdminNotifications";
 import { BotAnswersSection } from "./AdminBotAnswers";
+import { DeliverySection } from "./AdminDelivery";
 import { SupportSection } from "./AdminSupport";
 import HomeSection from "./HomeSection";
 import ProductPageSection from "./ProductPageSection";
@@ -57,6 +59,7 @@ export const SECTIONS = [
   { key: "addresses", label: "Addresses", icon: "pin", group: "Sales", live: true },
   { key: "notifications", label: "Notifications", icon: "bell", group: "Store", live: true },
   { key: "bot-answers", label: "Bot answers", icon: "chat", group: "Store", live: true },
+  { key: "delivery", label: "Delivery", icon: "scooter", group: "Store", live: true },
   { key: "support", label: "Support", icon: "chat", group: "Sales", live: true },
   { key: "payments", label: "Payments", icon: "card", group: "Money", live: true },
   { key: "wallets", label: "Wallets", icon: "wallet", group: "Money", live: true },
@@ -98,6 +101,98 @@ function Stat({ label, value, delta, note, series, color, icon, i = 0 }) {
    The revenue-over-time and orders-per-hour charts the drop shipped are gone.
    There is no aggregate behind either, and a chart is the most convincing way
    there is to show somebody a number that is not true. */
+/* What delivery is doing, on the landing page.
+
+   The Delivery screen is where these are changed; this is where somebody
+   notices they need changing. So it carries the three numbers that are wrong
+   in a way nobody would otherwise see - a storefront switched off, no slot
+   left open in one of them, nowhere being delivered to - and says so plainly
+   rather than printing a green tick over them.
+
+   Its own read, not the dashboard's. `/admin/dashboard` is orders and
+   customers; widening it to carry pricing would make the whole strip fail
+   when one of them does, and this panel is the one that may legitimately
+   answer nothing - a shop that has not installed the pricing module still
+   has a dashboard. Silent when it cannot read, for the same reason. */
+function DeliveryPanel({ go }) {
+  const { data } = useResource("/admin/delivery", { pollMs: 60000, keepLast: true });
+  if (!data?.rules) return null;
+
+  const rules = data.rules || [];
+  const currency = data.currency;
+  const slots = (data.slots || []).filter((s) => s.active);
+  const areas = (data.areas || []).filter((a) => a.active);
+  const quickAreas = areas.filter((a) => a.quick).length;
+  const dark = rules.filter((r) => !r.active);
+  const modes = data.modes || [];
+  /* A storefront with no slot left open cannot be checked out of, and the
+     only place that shows is the slot step, one screen from the money. */
+  const shut = modes.filter((m) => !slots.some((s) => s.mode === m.key));
+
+  return (
+    <section className="ad-card" style={{ "--i": 6 }}>
+      <header className="ad-card-head">
+        <div>
+          <h2>Delivery</h2>
+          <p>{areas.length ? `${areas.length} area${areas.length === 1 ? "" : "s"} covered` : "Nowhere covered"}</p>
+        </div>
+        <button className="ad-btn" onClick={() => go("delivery")}>
+          Open delivery<Icon n="right" size={15} />
+        </button>
+      </header>
+
+      <ul className="ad-rows">
+        {rules.map((r, i) => (
+          <li key={r.id} className="ad-row-set" style={{ "--i": i }}>
+            <span className="ad-row-txt">
+              <b>{r.modeLabel}</b>
+              <small>
+                {r.active
+                  ? (r.freeAbove > 0
+                    ? `Free above ${money(r.freeAbove, currency)} · ${r.eta}`
+                    : `Never free · ${r.eta}`)
+                  : "Switched off — this storefront is not delivering"}
+              </small>
+            </span>
+            <span className="ad-strong">{r.fee ? money(r.fee, currency) : "Free"}</span>
+          </li>
+        ))}
+        <li className="ad-row-set" style={{ "--i": rules.length }}>
+          <span className="ad-row-txt">
+            <b>Slots open</b>
+            <small>{shut.length
+              ? `Nothing open for ${shut.map((m) => m.label).join(" or ")}`
+              : "Across both storefronts"}</small>
+          </span>
+          <span className="ad-strong">{slots.length}</span>
+        </li>
+        <li className="ad-row-set" style={{ "--i": rules.length + 1 }}>
+          <span className="ad-row-txt">
+            <b>Quick delivery reaches</b>
+            <small>{quickAreas ? `of ${areas.length} areas` : "no area at all"}</small>
+          </span>
+          <span className="ad-strong">{quickAreas}</span>
+        </li>
+      </ul>
+
+      {(dark.length || shut.length || !areas.length) ? (
+        <p className="ad-hint ad-hint-pad" role="status">
+          <Icon n="info" size={15} />
+          <span>
+            {!areas.length
+              ? "No service area is on, so every pincode is told we do not deliver there yet."
+              : dark.length
+                ? `${dark.map((r) => r.modeLabel).join(" and ")} is switched off — nothing from it can be bought.`
+                : `Nothing is open for ${shut.map((m) => m.label).join(" or ")}, so that storefront has no slot to offer at checkout.`}
+            {" "}
+            <button className="ad-link" onClick={() => go("delivery")}>Put it right</button>
+          </span>
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
 function Dashboard({ go }) {
   const { data, loading, error, reload } = useResource("/admin/dashboard", { pollMs: 60000, keepLast: true });
   const o = data?.orders;
@@ -178,6 +273,8 @@ function Dashboard({ go }) {
           </section>
         )}
       </div>
+
+      <DeliveryPanel go={go} />
 
       {o?.returns > 0 && (
         <section className="ad-card">
@@ -299,6 +396,7 @@ export default function AdminApp({ section: initial = "dashboard", onSection, on
   else if (section === "addresses") body = <AddressesSection flash={flash} />;
   else if (section === "notifications") body = <NotificationsSection flash={flash} />;
   else if (section === "bot-answers") body = <BotAnswersSection flash={flash} />;
+  else if (section === "delivery") body = <DeliverySection flash={flash} />;
   else if (section === "support") body = <SupportSection openRef={openId} setOpenRef={setOpenId} flash={flash} />;
   else body = <SettingsSection settings={settings} setSettings={setSettings} flash={flash} />;
 

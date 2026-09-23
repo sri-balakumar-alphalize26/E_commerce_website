@@ -877,3 +877,67 @@ html.ad-lock, html.ad-lock body { overflow: hidden; }
 /* A wallet attached to nobody. Not an error - it holds nothing - but it should
    not read like somebody's name. */
 .ad-wallet-nobody { color: var(--ad-muted); font-style: italic; }
+
+/* ============================ delivery ==================================
+   Fees, slots and service areas. Three tabs of one screen, so most of it is
+   the table and form kit above; only the fee panels and the choice row are
+   its own. */
+.ad-rules { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; padding: 16px; }
+.ad-rules > div { display: flex; }
+.ad-rule { flex: 1; display: flex; flex-direction: column; animation-delay: calc(var(--i, 0) * 60ms); }
+.ad-rule h4 { text-transform: none; font-size: 15px; letter-spacing: -0.01em; color: var(--ad-ink); }
+/* The switch sits at the far end of the heading, where "is this storefront
+   delivering at all" belongs - above the numbers, not buried among them. */
+.ad-rule-on { margin-left: auto; display: flex; align-items: center; }
+.ad-rule-foot { margin-top: auto; padding-top: 14px; display: flex; justify-content: flex-end; }
+
+/* Two or three options, both worth reading without opening anything. */
+.ad-choice { display: flex; gap: 6px; }
+.ad-choice button { flex: 1; height: 40px; padding: 0 10px; border: 1px solid var(--ad-line); border-radius: 10px; background: #fff; font: inherit; font-size: 13.5px; font-weight: 700; color: var(--ad-muted); cursor: pointer; transition: border-color 160ms, color 160ms, background-color 160ms; }
+.ad-choice button:hover { border-color: #cfd9e0; color: var(--ad-ink); }
+.ad-choice button.ad-on { border-color: var(--ad-blue); background: #eef7fc; color: var(--ad-navy); }
+
+/* A switch with its own sentence beside it, for a drawer where the label has
+   to say what switching it off actually does. */
+.ad-kv-rows { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+.ad-kv-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--ad-line); border-radius: 11px; cursor: pointer; }
+.ad-kv-row > span { display: flex; flex-direction: column; gap: 2px; flex: 1; font-size: 13.5px; font-weight: 700; color: var(--ad-ink); }
+.ad-kv-row small { font-size: 12px; font-weight: 500; color: var(--ad-muted); }
+
+/* Edit and Switch off, side by side at the end of a row. */
+.ad-table .ad-row-act { text-align: right; white-space: nowrap; }
+.ad-table .ad-row-act .ad-btn + .ad-btn { margin-left: 6px; }
+
+@media (max-width: 820px) {
+  .ad-rules { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* A hint sitting at the foot of a card rather than inside a form, so it needs
+   the card's own gutters. */
+.ad-hint-pad { padding: 0 18px 16px; }
+
+/* The delivery code, typed into the confirm dialog. Wide-tracked and centred
+   because it is read aloud from a customer's phone one digit at a time, and a
+   6-digit run of proportional text is easy to lose your place in. */
+.ad-otp-in {
+  display: block;
+  width: 190px;
+  margin: 12px auto 0;
+  height: 46px;
+  padding: 0 12px;
+  border: 1px solid var(--ad-line);
+  border-radius: 12px;
+  font: inherit;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.34em;
+  text-indent: 0.34em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: var(--ad-ink);
+  background: #fff;
+  outline: none;
+  transition: border-color 180ms, box-shadow 200ms;
+}
+.ad-otp-in:focus { border-color: var(--ad-blue); box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.14); }
+.ad-otp-bad { display: block; margin-top: 8px; font-size: 13px; font-weight: 600; color: var(--ad-red); }

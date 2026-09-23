@@ -286,6 +286,38 @@ class TestDealTrash(HttpCase):
         self.Deal._cron_purge_deals()
         self.assertTrue(self.deal.exists())
 
+    def test_a_refused_percentage_is_not_saved_anyway(self):
+        """A deal's routes had the same hole the coupon's did, one worse.
+
+        They did not flush at all, so the model's refusal arrived at commit -
+        after the handler had already answered 200 - and the operator was told
+        the deal was saved when it was not. Flushed inside a savepoint now: the
+        refusal comes back as a sentence, and the bad value is undone.
+        """
+        self.authenticate('admin', 'admin')
+        response = self.url_open(
+            '/369mart/admin/deals/%s' % self.deal.id,
+            data=json.dumps({'kind': 'percent', 'value': 95.0}),
+            headers=HEADERS, method='PATCH')
+
+        self.assertEqual(response.status_code, 400)
+        self.deal.invalidate_recordset()
+        self.assertNotEqual(self.deal.value, 95.0)
+
+    def test_the_transaction_still_works_after_a_refused_deal(self):
+        """Get it wrong, fix it, save - the sequence an operator performs."""
+        self.authenticate('admin', 'admin')
+        self.url_open('/369mart/admin/deals/%s' % self.deal.id,
+                      data=json.dumps({'kind': 'percent', 'value': 95.0}),
+                      headers=HEADERS, method='PATCH')
+
+        good = self.url_open('/369mart/admin/deals/%s' % self.deal.id,
+                             data=json.dumps({'kind': 'percent', 'value': 15.0}),
+                             headers=HEADERS, method='PATCH')
+        self.assertEqual(good.status_code, 200)
+        self.deal.invalidate_recordset()
+        self.assertEqual(self.deal.value, 15.0)
+
     def test_delete_over_http_is_a_trash_move(self):
         self.authenticate('admin', 'admin')
         response = self.url_open(
