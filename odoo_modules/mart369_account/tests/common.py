@@ -14,11 +14,18 @@ from odoo.addons.mart369_order.tests.common import Mart369OrderFixtures
 class Mart369AccountFixtures(Mart369OrderFixtures):
 
     def _delivered(self, **overrides):
-        """An order all the way through to delivered, the way a card is minted."""
+        """An order all the way through to delivered, the way a card is minted.
+
+        The last step is not an advance any more. `mart369_action_advance`
+        stops at out-for-delivery on purpose and the close needs the code the
+        shop issued, so this does what the rider does: reads it off the order
+        and hands it back. Same walk as mart369_order's own `_deliver`.
+        """
         order = self._place(**overrides)
         self._pay(order)
-        for __ in range(3):
+        while order.mart369_state != 'out':
             order.mart369_action_advance()
+        order.mart369_action_deliver(order.sudo().mart369_otp_code)
         return order
 
     def _review(self, product=None, **values):
