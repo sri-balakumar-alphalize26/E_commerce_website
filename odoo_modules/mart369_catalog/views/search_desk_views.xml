@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--
+        The searches desk: the app's own console screen, inside Odoo.
+
+        A client action rather than a view, because the question this answers -
+        "what did customers ask for that we do not sell" - is read off the
+        tiles and the line above the rows, and no Odoo view type draws that.
+        The same choice the referrals and reviews desks made.
+
+        `path` gives it a clean URL, /odoo/mart-searches.
+
+        Both groups: the list next door is a system-admin tool, but this screen
+        is the twin of a console screen fenced by the website designer group,
+        and the two front ends must not disagree about who may read it. The
+        model's ACLs are what actually govern the records - see
+        security/ir.model.access.csv, where the designer gets read and write on
+        `trending` and nothing else.
+    -->
+    <record id="action_mart369_search_desk" model="ir.actions.client">
+        <field name="name">Searches</field>
+        <field name="tag">mart369_catalog.searches</field>
+        <field name="path">mart-searches</field>
+    </record>
+
+    <menuitem id="menu_mart369_searches_desk"
+              name="Searches"
+              parent="mart369.menu_mart369_root"
+              action="action_mart369_search_desk"
+              groups="base.group_system,website.group_website_designer"
+              sequence="45"/>
+
+</odoo>
