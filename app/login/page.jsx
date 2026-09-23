@@ -18,7 +18,10 @@ export default function LoginRoute() {
   const router = useRouter();
   const after = () => {
     const next = new URLSearchParams(window.location.search).get("next");
-    router.push(next && next.startsWith("/") ? next : "/");
+    /* Only a path on this site. "//evil.com" also starts with "/", and a
+       browser reads it as another host - as it does "/\evil.com". */
+    const safe = next && next.startsWith("/") && !next.startsWith("//") && !next.includes("\\");
+    router.push(safe ? next : "/");
   };
   return (
     <div style={{ minHeight: "100vh", background: "#f2f6f9" }}>
