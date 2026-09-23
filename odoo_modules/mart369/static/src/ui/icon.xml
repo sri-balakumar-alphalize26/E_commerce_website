@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="mart369.Icon">
+        <svg class="hm-ic" t-att-class="props.class" t-att-width="props.size" t-att-height="props.size"
+             viewBox="0 0 24 24" aria-hidden="true" t-ref="svg"/>
+    </t>
+
+</templates>

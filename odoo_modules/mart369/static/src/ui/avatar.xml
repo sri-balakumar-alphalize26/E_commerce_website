@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="mart369.Avatar">
+        <span t-attf-class="mart-avatar {{ props.tone }}" t-att-style="style"
+              t-att-title="props.name" t-esc="initials"/>
+    </t>
+
+</templates>

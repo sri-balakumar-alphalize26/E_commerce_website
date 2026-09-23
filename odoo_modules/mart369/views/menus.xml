@@ -13,6 +13,57 @@
               sequence="45"/>
 
     <!--
+        The bar itself, and the six headings under it.
+
+        Every module used to hang its entry straight off the root, which put
+        nineteen items in a row across the top - enough that Odoo folded the
+        last few behind a "+" and nobody could tell that Payments and Wallets
+        were the same subject, or that Coupons and Deals were one job.
+
+        The headings are the console's own, from `SECTIONS` in
+        components/admin/AdminApp.jsx, so somebody who knows where a screen
+        lives in one place knows where it lives in the other. Page building is
+        the exception: it holds what the console has no screen for at all -
+        the records the home page and product page builders write.
+
+        No `groups` on any of them. Odoo hides a parent whose children are all
+        invisible, so a heading appears only for staff who can open something
+        inside it, and gating them here would only be a second, staler copy of
+        the rules already on the entries themselves.
+    -->
+    <menuitem id="menu_mart369_store"
+              name="Store"
+              parent="menu_mart369_root"
+              sequence="10"/>
+
+    <menuitem id="menu_mart369_sales"
+              name="Sales"
+              parent="menu_mart369_root"
+              sequence="20"/>
+
+    <menuitem id="menu_mart369_money"
+              name="Money"
+              parent="menu_mart369_root"
+              sequence="30"/>
+
+    <menuitem id="menu_mart369_catalogue"
+              name="Catalogue"
+              parent="menu_mart369_root"
+              sequence="40"/>
+
+    <!--
+        The innards of the two builders - home page bands, banners, tiles and
+        tabs, product page fields, sections and per-category wording. In the
+        base module rather than in mart369_home, for the same reason as the
+        root above: a heading defined in a feature module goes when that
+        module goes, and takes the other module's entries out of the bar.
+    -->
+    <menuitem id="menu_mart369_pages"
+              name="Page building"
+              parent="menu_mart369_root"
+              sequence="50"/>
+
+    <!--
         A container for the settings screens each module adds. Generic, so it
         belongs with the root menu rather than inside the home page.
     -->

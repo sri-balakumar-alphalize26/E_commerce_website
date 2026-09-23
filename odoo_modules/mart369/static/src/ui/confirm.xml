@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!-- The console's confirm card (components/admin/AdminUI.jsx): an icon
+         tile, the question, the consequence, then the two buttons side by
+         side. Cancel is first and focused, because the safe answer should be
+         the one a stray Return key gives. -->
+    <t t-name="mart369.Confirm">
+        <Dialog size="'sm'" title="props.title" modalRef="modalRef"
+                contentClass="'o_mart369_dialog mart-confirm'">
+            <div class="mart-confirm-body">
+                <span t-attf-class="mart-confirm-ic {{ danger ? 'mart-confirm-ic-danger' : '' }}">
+                    <Icon n="icon" size="22"/>
+                </span>
+                <p t-if="props.body" class="mart-confirm-text" t-out="props.body"/>
+            </div>
+            <t t-set-slot="footer">
+                <button class="mart-btn" t-on-click="_cancel" autofocus="autofocus"
+                        data-hotkey="x" t-esc="props.cancelLabel"/>
+                <button t-attf-class="mart-btn {{ danger ? 'mart-btn-danger' : 'mart-btn-primary' }}"
+                        t-on-click="_confirm" data-hotkey="q" t-esc="props.confirmLabel"/>
+            </t>
+        </Dialog>
+    </t>
+
+</templates>

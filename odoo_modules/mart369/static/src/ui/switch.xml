@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="mart369.Switch">
+        <button type="button" role="switch"
+                t-attf-class="mart-switch {{ props.on ? 'mart-on' : '' }}"
+                t-att-aria-checked="props.on ? 'true' : 'false'"
+                t-att-aria-label="props.label"
+                t-att-disabled="props.disabled or false"
+                t-on-click="() => this.toggle()">
+            <i aria-hidden="true"/>
+        </button>
+    </t>
+
+</templates>

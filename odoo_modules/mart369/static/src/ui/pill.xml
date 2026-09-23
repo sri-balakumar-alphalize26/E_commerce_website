@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="mart369.Pill">
+        <span t-attf-class="mart-pill mart-t-{{ tone }}">
+            <i aria-hidden="true"/>
+            <t t-esc="label"/>
+        </span>
+    </t>
+
+</templates>

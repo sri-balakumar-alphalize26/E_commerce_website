@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="mart369.Tabs">
+        <div class="mart-tabs" role="tablist">
+            <button t-foreach="props.tabs" t-as="tab" t-key="tab[0]" type="button" role="tab"
+                    t-attf-class="{{ props.value === tab[0] ? 'mart-on' : '' }}"
+                    t-att-aria-selected="props.value === tab[0] ? 'true' : 'false'"
+                    t-on-click="() => props.onChange(tab[0])">
+                <t t-esc="tab[1]"/>
+                <em t-if="shows(tab[2])" t-esc="tab[2]"/>
+            </button>
+        </div>
+    </t>
+
+</templates>
