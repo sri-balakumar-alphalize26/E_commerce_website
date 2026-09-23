@@ -14,7 +14,6 @@ import { useResource } from "@/lib/useFetch";
 import { Avatar, Confirm, Drawer, Empty, Icon, Pill, Search, Select, Switch, Tabs, useToast } from "./AdminUI";
 import { BarChart, DataTable, Legend, LineChart, RankBars, SERIES, Spark } from "./charts";
 import {
-  CUSTOMERS, ORDERS, SETTINGS, STOCK, TODAY,
   categorySales, hourlyOrders, isToday, revenueSeries,
 } from "./adminData";
 import { clock, dateLong, since } from "./format";
@@ -35,6 +34,7 @@ import { BotAnswersSection } from "./AdminBotAnswers";
 import { DeliverySection } from "./AdminDelivery";
 import { SupportSection } from "./AdminSupport";
 import HomeSection from "./HomeSection";
+import { signOut, useAdminMe } from "./AdminGate";
 import ProductPageSection from "./ProductPageSection";
 
 /* `live` marks a section that reads the shop. Everything else still runs on
@@ -48,10 +48,10 @@ import ProductPageSection from "./ProductPageSection";
 export const SECTIONS = [
   { key: "dashboard", label: "Dashboard", icon: "dash", group: "Overview", live: true },
   { key: "home", label: "Home page", icon: "layers", group: "Store", live: true },
-  { key: "product-page", label: "Product page", icon: "note", group: "Store", live: true },
+  { key: "product-page", label: "Product pages", icon: "note", group: "Store", live: true },
   { key: "orders", label: "Orders", icon: "box", group: "Sales", live: true },
   { key: "returns", label: "Returns", icon: "truck", group: "Sales", live: true },
-  { key: "customers", label: "Customers", icon: "users", group: "Sales" },
+  { key: "customers", label: "Customers", icon: "users", group: "Sales", live: true },
   { key: "offers", label: "Offers", icon: "ticket", group: "Sales", live: true },
   { key: "reviews", label: "Reviews", icon: "star", group: "Sales", live: true },
   { key: "referrals", label: "Referrals", icon: "users", group: "Sales", live: true },
@@ -65,8 +65,8 @@ export const SECTIONS = [
   { key: "wallets", label: "Wallets", icon: "wallet", group: "Money", live: true },
   { key: "catalog", label: "Catalog", icon: "store", group: "Catalogue", live: true },
   { key: "searches", label: "Searches", icon: "search", group: "Catalogue", live: true },
-  { key: "products", label: "Products", icon: "layers", group: "Catalogue" },
-  { key: "settings", label: "Settings", icon: "gear", group: "Store" },
+  { key: "products", label: "Products", icon: "layers", group: "Catalogue", live: true },
+  { key: "settings", label: "Settings", icon: "gear", group: "Store", live: true },
 ];
 const TITLES = Object.fromEntries(SECTIONS.map((s) => [s.key, s.label]));
 const LIVE = new Set(SECTIONS.filter((s) => s.live).map((s) => s.key));
@@ -304,18 +304,22 @@ function SampleBanner({ label }) {
 /* ================================== shell =============================== */
 export default function AdminApp({ section: initial = "dashboard", onSection, onExit }) {
   const [section, setSection] = useState(SECTIONS.some((s) => s.key === initial) ? initial : "dashboard");
-  const [stock, setStock] = useState(STOCK);
-  const [settings, setSettings] = useState(SETTINGS);
   const [openId, setOpenId] = useState(null);
   /* What the topbar handed to Orders to search for. Orders owns its own box;
-     this only seeds it. */
+     this only seeds it. Products and Customers the same. */
   const [orderQ, setOrderQ] = useState("");
+  const [seedQ, setSeedQ] = useState({ products: "", customers: "" });
   const [collapsed, setCollapsed] = useState(false);
   const [mobileNav, setMobileNav] = useState(false);
   const [alerts, setAlerts] = useState(false);
   const [profile, setProfile] = useState(false);
   const [q, setQ] = useState("");
   const [toast, flash] = useToast();
+  /* Who is signed in, from the gate (AdminGate.jsx). The gate only renders the
+     console for staff, so this is never empty in practice; the fallback is
+     for a console mounted outside it. */
+  const me = useAdminMe();
+  const who = { name: me?.name || "Staff", email: me?.email || "" };
   /* The drop pinned the clock to a made-up date. Start at null and fill it in
      after mount, so the server and the browser render the same thing and the
      date shown is today's. */
@@ -333,16 +337,6 @@ export default function AdminApp({ section: initial = "dashboard", onSection, on
     return () => window.removeEventListener("click", c);
   }, []);
 
-  /* ---- actions (replace with Odoo calls) ----
-     Orders is not here any more: it reads and writes the shop itself, so
-     moving an order on is no longer something the shell can do to a local
-     array. What is left below still runs on adminData.js and says so on
-     screen. */
-  const setQty = (id, qty) => setStock((l) => l.map((s) => (s.id === id ? { ...s, qty: Math.max(0, qty) } : s)));
-  const setPrice = (id, price) => setStock((l) => l.map((s) => (s.id === id ? { ...s, price } : s)));
-  const toggleProduct = (id) => setStock((l) => l.map((s) => (s.id === id ? { ...s, active: !s.active } : s)));
-  const addProduct = (p) => { setStock((l) => [{ ...p, id: "np" + Date.now(), sold7: 0, reorder: 12, active: true }, ...l]); flash(`${p.name} added`); };
-
   /* The sidebar badge is a real number now, so the shell asks for it rather
      than counting a list it no longer holds. Slower than the section's own
      poll on purpose: this one is only a badge. */
@@ -351,9 +345,17 @@ export default function AdminApp({ section: initial = "dashboard", onSection, on
      wants three numbers, not every review in the shop once a minute. */
   const reviewCounts = useResource("/admin/reviews/counts", { pollMs: 60000 });
   const supportCounts = useResource("/admin/support/counts", { pollMs: 60000 });
-  const waiting = orderCounts.data?.counts?.needs || 0;
+  /* Settings › Alerts decides whether these two speak at all. Late orders
+     always do: a promise already broken is not something to switch off. */
+  const alertSettings = useResource("/admin/settings", { pollMs: 60000, keepLast: true });
+  const alertsOn = alertSettings.data?.settings?.alerts || { newOrder: true, lowStock: true };
+  const waiting = alertsOn.newOrder ? orderCounts.data?.counts?.needs || 0 : 0;
   const lateCount = orderCounts.data?.counts?.late || 0;
-  const lowCount = stock.filter((s) => s.qty <= s.reorder).length;
+  /* Low stock is worked out over the whole shop on the server; one row is
+     asked for only because the tiles come with any page. Every five minutes:
+     stock does not move by the second, and this is only a badge. */
+  const productCounts = useResource("/admin/products?limit=1", { pollMs: 300000, enabled: alertsOn.lowStock !== false });
+  const lowCount = alertsOn.lowStock ? productCounts.data?.tiles?.low || 0 : 0;
   const pendingReviews = reviewCounts.data?.counts?.pending || 0;
   /* Tickets nobody has replied to - not every open one. A ticket already
      answered and waiting on the customer is not somebody sitting unheard. */
@@ -365,17 +367,16 @@ export default function AdminApp({ section: initial = "dashboard", onSection, on
   const notes = useMemo(() => [
     ...(lateCount ? [{ id: "nlate", icon: "clock", text: `${lateCount} order${lateCount === 1 ? "" : "s"} past the time they were promised`, at: null, go: ["orders"] }] : []),
     ...(waiting ? [{ id: "nord", icon: "box", text: `${waiting} order${waiting === 1 ? "" : "s"} still on their way`, at: null, go: ["orders"] }] : []),
-    ...(lowCount ? [{ id: "nlow", icon: "layers", text: `${lowCount} products at or below reorder level`, at: TODAY - 3600000, go: ["products"] }] : []),
+    ...(lowCount ? [{ id: "nlow", icon: "layers", text: `${lowCount} product${lowCount === 1 ? "" : "s"} running low`, at: null, go: ["products"] }] : []),
     ...(pendingReviews ? [{ id: "nrev", icon: "star", text: `${pendingReviews} review${pendingReviews === 1 ? "" : "s"} nobody has looked at yet`, at: null, go: ["reviews"] }] : []),
     ...(lateTickets ? [{ id: "nsup", icon: "chat", text: `${lateTickets} customer${lateTickets === 1 ? "" : "s"} waiting over half an hour for a reply`, at: null, go: ["support"] }] : []),
   ], [waiting, lateCount, lowCount, pendingReviews, lateTickets]); // eslint-disable-line
 
-  /* Orders are searched in the shop, not here - so this hands the term over
-     rather than pretending to have matched anything. */
-  const results = q.trim().length > 1 ? {
-    products: stock.filter((s) => s.name.toLowerCase().includes(q.toLowerCase())).slice(0, 4),
-    customers: CUSTOMERS.filter((c) => c.name.toLowerCase().includes(q.toLowerCase())).slice(0, 3),
-  } : null;
+  /* Orders, products and customers are all searched in the shop, not here -
+     so this hands the term over rather than pretending to have matched
+     anything. */
+  const results = q.trim().length > 1;
+  const seed = (k) => { setSeedQ((s) => ({ ...s, [k]: q.trim() })); setQ(""); go(k); };
 
   let body;
   if (section === "dashboard") body = <Dashboard go={go} />;
@@ -383,8 +384,8 @@ export default function AdminApp({ section: initial = "dashboard", onSection, on
   else if (section === "product-page") body = <ProductPageSection flash={flash} />;
   else if (section === "orders") body = <OrdersSection openId={openId} setOpenId={setOpenId} query={orderQ} flash={flash} />;
   else if (section === "returns") body = <ReturnsSection flash={flash} />;
-  else if (section === "products") body = <ProductsSection stock={stock} setQty={setQty} setPrice={setPrice} toggleProduct={toggleProduct} addProduct={addProduct} flash={flash} />;
-  else if (section === "customers") body = <CustomersSection orders={ORDERS} flash={flash} />;
+  else if (section === "products") body = <ProductsSection key={"p" + seedQ.products} initialQ={seedQ.products} />;
+  else if (section === "customers") body = <CustomersSection key={"c" + seedQ.customers} initialQ={seedQ.customers} />;
   else if (section === "offers") body = <OffersSection flash={flash} />;
   else if (section === "reviews") body = <ReviewsSection flash={flash} />;
   else if (section === "referrals") body = <ReferralsSection flash={flash} />;
@@ -398,7 +399,7 @@ export default function AdminApp({ section: initial = "dashboard", onSection, on
   else if (section === "bot-answers") body = <BotAnswersSection flash={flash} />;
   else if (section === "delivery") body = <DeliverySection flash={flash} />;
   else if (section === "support") body = <SupportSection openRef={openId} setOpenRef={setOpenId} flash={flash} />;
-  else body = <SettingsSection settings={settings} setSettings={setSettings} flash={flash} />;
+  else body = <SettingsSection flash={flash} />;
 
   const groups = [...new Set(SECTIONS.map((s) => s.group))];
   return (
@@ -424,8 +425,8 @@ export default function AdminApp({ section: initial = "dashboard", onSection, on
           ))}
         </nav>
         <div className="ad-side-foot">
-          <Avatar name="Shan S" tone="ad-a-navy" size={36} />
-          <span className="ad-brand-txt"><b>Shan S</b><small>Store manager</small></span>
+          <Avatar name={who.name} tone="ad-a-navy" size={36} />
+          <span className="ad-brand-txt"><b>{who.name}</b><small>{who.email || "Staff"}</small></span>
           <button className="ad-icon-btn" onClick={() => onExit?.()} aria-label="Open storefront" title="Open storefront"><Icon n="store" size={17} /></button>
         </div>
       </aside>
@@ -442,9 +443,8 @@ export default function AdminApp({ section: initial = "dashboard", onSection, on
             {results && (
               <div className="ad-results">
                 <button onClick={() => { setOrderQ(q); setQ(""); go("orders"); }}><Icon n="box" size={15} /><b>Search orders for “{q}”</b><small>Order number, customer or phone</small></button>
-                {results.products.map((p) => <button key={p.id} onClick={() => { setQ(""); go("products"); }}><Icon n="layers" size={15} /><b>{p.name}</b><small>{p.qty} in stock</small></button>)}
-                {results.customers.map((c) => <button key={c.id} onClick={() => { setQ(""); go("customers"); }}><Icon n="users" size={15} /><b>{c.name}</b><small>{c.orders} orders</small></button>)}
-                {!results.products.length && !results.customers.length && <p className="ad-no-res">Nothing else matches “{q}”</p>}
+                <button onClick={() => seed("products")}><Icon n="layers" size={15} /><b>Search products for “{q}”</b><small>Name or code</small></button>
+                <button onClick={() => seed("customers")}><Icon n="users" size={15} /><b>Search customers for “{q}”</b><small>Name, email, phone or area</small></button>
               </div>
             )}
           </div>
@@ -465,13 +465,13 @@ export default function AdminApp({ section: initial = "dashboard", onSection, on
           </div>
           <div className="ad-pop-wrap">
             <button className="ad-profile" onClick={() => { setProfile((v) => !v); setAlerts(false); }} aria-label="Account">
-              <Avatar name="Shan S" tone="ad-a-navy" size={34} /><Icon n="chev" size={15} />
+              <Avatar name={who.name} tone="ad-a-navy" size={34} /><Icon n="chev" size={15} />
             </button>
             {profile && (
               <div className="ad-pop ad-pop-sm">
                 <button onClick={() => { setProfile(false); go("settings"); }}><span className="ad-pop-ic"><Icon n="gear" size={16} /></span><span><b>Store settings</b></span></button>
                 <button onClick={() => { setProfile(false); onExit?.(); }}><span className="ad-pop-ic"><Icon n="store" size={16} /></span><span><b>Open storefront</b></span></button>
-                <button onClick={() => { setProfile(false); flash("Signed out (demo)"); }}><span className="ad-pop-ic"><Icon n="logout" size={16} /></span><span><b>Sign out</b></span></button>
+                <button onClick={() => { setProfile(false); signOut(); }}><span className="ad-pop-ic"><Icon n="logout" size={16} /></span><span><b>Sign out</b></span></button>
               </div>
             )}
           </div>

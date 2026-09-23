@@ -8,7 +8,6 @@ import { money } from "@/lib/money";
 import { useAction, useResource } from "@/lib/useFetch";
 import { Avatar, Confirm, Drawer, Empty, Icon, Search, Select, Switch, Tabs } from "./AdminUI";
 import { since } from "./format";
-import { inr } from "./adminData";
 
 /* ================================ offers ================================
    Coupons, read and written in the shop.
@@ -758,49 +757,99 @@ export function ReviewsSection({ flash }) {
   );
 }
 
-/* =============================== settings =============================== */
-function Field({ label, value, onChange, suffix, wide, type = "text" }) {
+/* =============================== settings ===============================
+   Reads and saves the shop. Each tab is saved on its own, to the record that
+   really decides it - the company, Odoo's payment providers, the shared
+   settings record - so there is no second copy here to drift from them. What
+   lives where is written down on the server, in mart369/models/settings_admin.py. */
+function Field({ label, value, onChange, suffix, wide, type = "text", placeholder }) {
   return (
     <label className={"ad-field" + (wide ? " ad-span2" : "")}>
       <span>{label}</span>
       <span className="ad-field-in">
-        <input type={type} value={value} onChange={(e) => onChange(e.target.value)} />
+        <input type={type} value={value ?? ""} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} />
         {suffix && <em>{suffix}</em>}
       </span>
     </label>
   );
 }
 
-export function SettingsSection({ settings, setSettings, flash }) {
-  const [s, setS] = useState(settings);
+const PAY_ICON = { cod: "cash", wallet: "wallet", gateway: "card" };
+const PAY_STATE = { enabled: ["On", "green"], test: ["Test mode", "orange"], disabled: ["Off", "grey"] };
+
+export function SettingsSection({ flash }) {
   const [tab, setTab] = useState("store");
-  const dirty = JSON.stringify(s) !== JSON.stringify(settings);
-  const set = (group, key) => (v) => setS({ ...s, [group]: { ...s[group], [key]: v } });
-  const save = () => { setSettings(s); flash("Settings saved"); };
+  const { data, loading, error, reload } = useResource("/admin/settings");
+  const saved = data?.settings;
+  const [draft, setDraft] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  /* The draft is the saved copy until somebody types. Reset whenever the shop
+     answers, so a save shows what was actually stored, not what was typed. */
+  useEffect(() => { if (saved) setDraft(saved); }, [saved]);
+
+  if (error && !saved) return <Empty icon="info" title="We could not reach the shop" text={error.message} action="Try again" onAction={reload} />;
+  if (loading || !draft) return <Empty icon="gear" title="Loading…" text="Fetching settings." />;
+
+  const group = tab === "payments" ? "pay" : tab;
+  const dirty = JSON.stringify(draft[group]) !== JSON.stringify(saved[group]);
+  const set = (g, key) => (v) => setDraft((d) => ({ ...d, [g]: { ...d[g], [key]: v } }));
+
+  const save = async () => {
+    setBusy(true); setErr("");
+    let body = draft[group];
+    if (group === "pay") {
+      /* Only what the screen can change: the switches and the cash limit. */
+      body = {
+        providers: Object.fromEntries(draft.pay.providers.map((p) => [p.id, p.state !== "disabled"])),
+        codLimit: draft.pay.codLimit,
+      };
+    }
+    try {
+      const res = await api(`/admin/settings/${group}`, { method: "POST", body });
+      api.invalidate("/admin/settings");
+      /* The checkout's own list of methods is cached too. */
+      if (group === "pay") api.invalidate("/payment");
+      setDraft(res.settings);
+      await reload();
+      flash?.("Settings saved");
+    } catch (e) {
+      setErr(e.message || "That did not save.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const pay = draft.pay;
+  const toggle = (id, on) => setDraft((d) => ({
+    ...d, pay: { ...d.pay, providers: d.pay.providers.map((p) => (p.id === id ? { ...p, state: on ? "enabled" : "disabled" } : p)) },
+  }));
 
   return (
     <div className="ad-stack">
       <section className="ad-card">
         <div className="ad-toolbar">
-          <Tabs value={tab} onChange={setTab} tabs={[["store", "Store"], ["payments", "Payments"], ["alerts", "Alerts"]]} />
+          <Tabs value={tab} onChange={(t) => { setTab(t); setErr(""); }} tabs={[["store", "Store"], ...(pay ? [["payments", "Payments"]] : []), ["alerts", "Alerts"]]} />
           <div className="ad-toolbar-right">
             {dirty && <span className="ad-dim">Unsaved changes</span>}
-            <button className="ad-btn" disabled={!dirty} onClick={() => setS(settings)}>Reset</button>
-            <button className="ad-btn ad-primary" disabled={!dirty} onClick={save}>Save changes</button>
+            <button className="ad-btn" disabled={!dirty || busy} onClick={() => { setDraft(saved); setErr(""); }}>Reset</button>
+            <button className="ad-btn ad-primary" disabled={!dirty || busy} onClick={save}>{busy ? "Saving…" : "Save changes"}</button>
           </div>
         </div>
+        {err && <p className="ad-hint ad-gap-note"><Icon n="info" size={14} /><span>{err}</span></p>}
 
         {tab === "store" && (
           <div className="ad-form ad-form-pad">
-            <Field label="Store name" value={s.store.name} onChange={set("store", "name")} wide />
-            <Field label="Phone" value={s.store.phone} onChange={set("store", "phone")} />
-            <Field label="Email" value={s.store.email} onChange={set("store", "email")} />
-            <Field label="Address" value={s.store.address} onChange={set("store", "address")} wide />
-            <Field label="GSTIN" value={s.store.gstin} onChange={set("store", "gstin")} />
-            <div className="ad-field-row">
-              <Field label="Opens" type="time" value={s.store.open} onChange={set("store", "open")} />
-              <Field label="Closes" type="time" value={s.store.close} onChange={set("store", "close")} />
-            </div>
+            <Field label="Store name" value={draft.store.name} onChange={set("store", "name")} wide />
+            <Field label="Phone" value={draft.store.phone} onChange={set("store", "phone")} />
+            <Field label="Email" value={draft.store.email} onChange={set("store", "email")} type="email" />
+            <Field label="Address" value={draft.store.street} onChange={set("store", "street")} wide placeholder="Door number and street" />
+            <Field label="Area" value={draft.store.street2} onChange={set("store", "street2")} />
+            <Field label="City" value={draft.store.city} onChange={set("store", "city")} />
+            <Field label="PIN code" value={draft.store.zip} onChange={set("store", "zip")} />
+            <Field label="GSTIN" value={draft.store.gstin} onChange={set("store", "gstin")} />
+            <p className="ad-hint ad-span2"><Icon n="info" size={14} />This is the company in Odoo — the same name and GSTIN print on invoices. When orders can be placed is set by the delivery slots, under Store › Delivery.</p>
           </div>
         )}
 
@@ -809,32 +858,44 @@ export function SettingsSection({ settings, setSettings, flash }) {
            screens claiming the same settings, one of them fiction, is worse
            than one. */}
 
-        {tab === "payments" && (
+        {tab === "payments" && pay && (
           <div className="ad-rows">
-            {[["upi", "UPI", "Google Pay, PhonePe, Paytm, any UPI ID"], ["card", "Cards", "Visa, Mastercard, RuPay, Amex"], ["netbanking", "Net banking", "All major Indian banks"], ["cod", "Cash on delivery", `Allowed up to ${inr(s.pay.codLimit)}`], ["wallet", "369 Wallet", "Balance, refunds and cashback"]].map(([k, t, d], i) => (
-              <div key={k} className="ad-row-set" style={{ "--i": i }}>
-                <span className="ad-row-ic"><Icon n={k === "upi" ? "upi" : k === "card" ? "card" : k === "netbanking" ? "bank" : k === "cod" ? "cash" : "wallet"} size={18} /></span>
-                <span className="ad-row-txt"><b>{t}</b><small>{d}</small></span>
-                <Switch on={s.pay[k]} onChange={set("pay", k)} label={t} />
+            {pay.providers.map((p, i) => {
+              const [label, tone] = PAY_STATE[p.state] || PAY_STATE.disabled;
+              const on = p.state !== "disabled";
+              const locked = !on && !p.canEnable;
+              return (
+                <div key={p.id} className="ad-row-set" style={{ "--i": i }}>
+                  <span className="ad-row-ic"><Icon n={PAY_ICON[p.kind] || "card"} size={18} /></span>
+                  <span className="ad-row-txt">
+                    <b>{p.name} <span className={"ad-pill ad-t-" + tone}><i />{label}</span></b>
+                    <small>{p.kind === "cod" ? `Allowed up to ${money(pay.codLimit, pay.currency)}` : locked ? "Set up its keys in Odoo to switch it on" : p.kind === "wallet" ? "Balance, refunds and rewards" : "Card and UPI payments through this gateway"}</small>
+                  </span>
+                  {locked ? <span className="ad-dim">In Odoo</span> : <Switch on={on} onChange={(v) => toggle(p.id, v)} label={p.name} />}
+                </div>
+              );
+            })}
+            {pay.hasCod && (
+              <div className="ad-row-set" style={{ "--i": pay.providers.length }}>
+                <span className="ad-row-ic"><Icon n="shield" size={18} /></span>
+                <span className="ad-row-txt"><b>Cash on delivery limit</b><small>Orders above this must be paid another way. 0 means no limit.</small></span>
+                <span className="ad-field-in ad-narrow"><input value={pay.codLimit} inputMode="numeric" onChange={(e) => set("pay", "codLimit")(+e.target.value.replace(/[^\d.]/g, "") || 0)} aria-label="Cash on delivery limit" /><em>{pay.currency?.symbol || ""}</em></span>
               </div>
-            ))}
-            <div className="ad-row-set" style={{ "--i": 5 }}>
-              <span className="ad-row-ic"><Icon n="shield" size={18} /></span>
-              <span className="ad-row-txt"><b>Cash on delivery limit</b><small>Orders above this must be paid online</small></span>
-              <span className="ad-field-in ad-narrow"><input value={s.pay.codLimit} onChange={(e) => set("pay", "codLimit")(+e.target.value.replace(/\D/g, "") || 0)} aria-label="COD limit" /><em>₹</em></span>
-            </div>
+            )}
+            <p className="ad-hint"><Icon n="info" size={14} />These are Odoo's payment providers — the checkout offers exactly what is switched on here.{pay.more ? ` ${pay.more} more are switched off and set up in Odoo.` : ""}</p>
           </div>
         )}
 
         {tab === "alerts" && (
           <div className="ad-rows">
-            {[["newOrder", "New order", "Beep and badge when an order comes in"], ["lowStock", "Low stock", "When a product reaches its reorder level"], ["cancelled", "Cancellations", "When a customer cancels an order"], ["dailySummary", "Daily summary", "Sales and stock email at closing time"]].map(([k, t, d], i) => (
+            {[["newOrder", "New orders", "Badge and bell when orders are waiting to be moved on"], ["lowStock", "Low stock", "Bell when products reach the level where the app says “Only N left”"]].map(([k, t, d], i) => (
               <div key={k} className="ad-row-set" style={{ "--i": i }}>
                 <span className="ad-row-ic"><Icon n="bell" size={18} /></span>
                 <span className="ad-row-txt"><b>{t}</b><small>{d}</small></span>
-                <Switch on={s.alerts[k]} onChange={set("alerts", k)} label={t} />
+                <Switch on={!!draft.alerts[k]} onChange={set("alerts", k)} label={t} />
               </div>
             ))}
+            <p className="ad-hint"><Icon n="info" size={14} />These are for this console. Email and SMS alerts are not set up.</p>
           </div>
         )}
       </section>

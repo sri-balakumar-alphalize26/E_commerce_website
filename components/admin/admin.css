@@ -941,3 +941,12 @@ html.ad-lock, html.ad-lock body { overflow: hidden; }
 }
 .ad-otp-in:focus { border-color: var(--ad-blue); box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.14); }
 .ad-otp-bad { display: block; margin-top: 8px; font-size: 13px; font-weight: 600; color: var(--ad-red); }
+
+/* ---------- the gate (AdminGate.jsx): checking / not staff ---------- */
+.ad-gate { min-height: 100vh; display: grid; place-items: center; padding: 24px 16px; background: #f2f6f9; }
+.ad-gate-wait { color: var(--ad-muted, #64757f); font-size: 14px; }
+.ad-gate-card { max-width: 440px; width: 100%; padding: 24px; background: #fff; border: 1px solid var(--ad-line, #e4eaef); border-radius: 16px; display: flex; flex-direction: column; gap: 10px; }
+.ad-gate-card b { font-size: 18px; }
+.ad-gate-card p { margin: 0; color: var(--ad-muted, #64757f); font-size: 14px; line-height: 1.5; }
+.ad-gate-act { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
+.ad-gate-act a { text-decoration: none; }
