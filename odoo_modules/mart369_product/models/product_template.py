@@ -1,4 +1,5 @@
-from odoo import api, fields, models
+from odoo import _, api, fields, models
+from odoo.exceptions import AccessError, UserError
 
 
 class ProductTemplate(models.Model):
@@ -99,6 +100,227 @@ class ProductTemplate(models.Model):
         """Put every field on this product back to following the defaults."""
         self.mart_page_override_ids.unlink()
         return True
+
+    # ------------------------------------------------- the Products desk
+
+    # Which columns the Products desk may write, in the order it draws them.
+    # An allowlist rather than "write whatever arrived": this method is
+    # reachable by anyone who can reach the desk, and `product.template` has
+    # columns - cost, taxes, routes, `is_published` - that have no business
+    # being set from a screen that does not show them.
+    #
+    # Labels are not repeated here. They come from the field definitions, so
+    # renaming a field renames its box and the two cannot drift.
+    MART_DESK_GROUPS = [
+        ('Basics', ['name', 'default_code', 'public_categ_ids',
+                    'list_price', 'compare_list_price']),
+        ('Wording on the card', ['mart_unit_text', 'mart_per_unit',
+                                 'mart_note', 'mart_home_tag']),
+        ('What the page shows', ['mart_features', 'mart_in_the_box',
+                                 'mart_material', 'mart_item_height',
+                                 'mart_item_length', 'mart_item_width',
+                                 'weight', 'description_ecommerce']),
+        ('Stock and delivery', ['mart_low_stock_at', 'mart_delivery_text']),
+    ]
+
+    # Asked for on every product, whatever the product page is told to print.
+    # A product with no name or no price is not a product, and
+    # `public_categ_ids` decides which of the four layers even apply to it -
+    # hiding that box would make the rest of the form behave unpredictably
+    # with nothing on screen to explain why.
+    MART_DESK_ALWAYS = ('name', 'list_price', 'public_categ_ids')
+
+    # The few places Odoo's own word for a column is not the shop's word for
+    # it. Deliberately short: every other label comes from the field itself,
+    # and each entry here is a second name somebody has to keep in step.
+    #
+    # These are the same relabels the Odoo product form makes, so a shopkeeper
+    # reads "Article ID" on both screens and on the product page rather than
+    # meeting "Internal Reference" on one of the three.
+    MART_DESK_LABELS = {
+        'default_code': 'Article ID',
+        'list_price': 'Price',
+        'compare_list_price': 'MRP',
+        'public_categ_ids': 'Categories',
+        'weight': 'Net weight',
+        'description_ecommerce': 'Description',
+    }
+
+    MART_DESK_EDITOR_GROUP = 'website.group_website_designer'
+
+    def _mart369_desk_check(self):
+        """Refused, not filtered - the same rule the admin routes use.
+
+        Deciding what a product page shows is already
+        `website.group_website_designer` in this module's access rules, so
+        that is who may fill one in. No new role invented for the same
+        question. `mart369_roles` grants this group to its Manager, so the
+        two product screens agree on who may edit.
+
+        Nothing below sudo's. This runs as the person signed in, so Odoo's own
+        rules on `product.template` apply on their own rather than being
+        re-implemented here badly - somebody who may reach this screen but may
+        not write products gets Odoo's refusal, which is the true answer.
+        """
+        if not self.env.user.has_group(self.MART_DESK_EDITOR_GROUP):
+            raise AccessError(_(
+                "You do not have permission to change products. Ask an "
+                "administrator for the website designer role."))
+
+    def _mart369_desk_widget(self, field):
+        if field.type in ('float', 'monetary'):
+            return 'number'
+        if field.type == 'integer':
+            return 'integer'
+        if field.type == 'html':
+            return 'html'
+        if field.type == 'text':
+            return 'text'
+        if field.type == 'many2many':
+            return 'categories'
+        return 'char'
+
+    @api.model
+    def mart369_desk_form(self, product_id=None):
+        """The boxes the desk should draw, and what is in them.
+
+        Built from the live field definitions rather than a second list kept
+        in JavaScript, so a renamed or retyped column reaches the screen
+        without anybody remembering to change it there too.
+
+        Boxes the product page has been told not to print are left out, using
+        the same `mart_page_hidden` the Odoo form reads - so the desk, the
+        form and the shopper's page agree. A product being created has no
+        category to resolve against, so nothing is hidden and everything is
+        offered: hiding boxes on a blank screen loses values nobody was given
+        the chance to enter.
+        """
+        self._mart369_desk_check()
+
+        product = self.browse(int(product_id)).exists() if product_id else self.browse()
+        hidden = product.mart_page_hidden or '' if product else ''
+
+        groups, values = [], {}
+        for title, names in self.MART_DESK_GROUPS:
+            boxes = []
+            for name in names:
+                field = self._fields.get(name)
+                if not field:
+                    continue  # the module that supplies it is not installed
+                if name not in self.MART_DESK_ALWAYS and ',%s,' % name in hidden:
+                    continue
+                boxes.append({
+                    'name': name,
+                    'label': self.MART_DESK_LABELS.get(name, field.string),
+                    'help': field.help or '',
+                    'widget': self._mart369_desk_widget(field),
+                    'required': name == 'name',
+                })
+                if product:
+                    raw = product[name]
+                    if field.type == 'many2many':
+                        values[name] = raw.ids
+                    elif field.type in ('float', 'monetary', 'integer'):
+                        values[name] = raw or 0
+                    else:
+                        values[name] = raw or ''
+            if boxes:
+                groups.append({'title': title, 'boxes': boxes})
+
+        photos = []
+        if product and 'product_template_image_ids' in self._fields:
+            photos = [{
+                'id': image.id,
+                'name': image.name or '',
+                'url': '/web/image/product.image/%s/image_256' % image.id,
+            } for image in product.product_template_image_ids]
+
+        return {
+            'id': product.id or None,
+            'groups': groups,
+            'values': values,
+            'photo': ('/web/image/product.template/%s/image_256?unique=%s'
+                      % (product.id, product.write_date)
+                      if product and product.image_1920 else ''),
+            'photos': photos,
+            'categories': [
+                {'id': c.id, 'name': c.display_name}
+                # The model's own order (sequence, then name). There is no
+                # `complete_name` on this model in 19, though `display_name`
+                # still reads "Parent / Child", which is what the label wants.
+                for c in self.env['product.public.category'].search([])
+            ],
+        }
+
+    @api.model
+    def mart369_desk_save(self, values, product_id=None, photos=None):
+        """Create or update a product from the desk. Returns its id."""
+        self._mart369_desk_check()
+
+        allowed = {n for _title, names in self.MART_DESK_GROUPS for n in names}
+        vals = {}
+        for name, value in (values or {}).items():
+            if name not in allowed or name not in self._fields:
+                continue  # silently dropped: see MART_DESK_GROUPS
+            field = self._fields[name]
+            if field.type == 'many2many':
+                vals[name] = [(6, 0, [int(v) for v in (value or [])])]
+            elif field.type in ('float', 'monetary'):
+                vals[name] = float(value or 0)
+            elif field.type == 'integer':
+                vals[name] = int(value or 0)
+            else:
+                vals[name] = value if value not in (None, False) else ''
+
+        if not product_id and not (vals.get('name') or '').strip():
+            raise UserError(_("A product needs a name."))
+
+        if 'image_1920' in (values or {}):
+            # '' means "take the photograph away", which is not the same as
+            # not mentioning it at all.
+            vals['image_1920'] = values['image_1920'] or False
+
+        if product_id:
+            product = self.browse(int(product_id)).exists()
+            if not product:
+                raise UserError(_("That product no longer exists."))
+            product.write(vals)
+        else:
+            # The desk's list only shows published products, so one created
+            # here and left unpublished would vanish the moment it was saved.
+            # Published is what the person plainly meant.
+            vals.setdefault('is_published', True)
+            product = self.create(vals)
+
+        self._mart369_desk_photos(product, photos or {})
+        return product.id
+
+    def _mart369_desk_photos(self, product, photos):
+        """The gallery: rows on `product.image`, added and removed one at a time.
+
+        Kept out of the write above because they are separate records, and
+        because replacing the whole set on every save would churn ids - and so
+        image URLs - for photographs nobody touched.
+        """
+        if 'product_template_image_ids' not in self._fields:
+            return  # website_sale is not installed; there is no gallery
+        Image = self.env['product.image']
+
+        remove = [int(i) for i in (photos.get('remove') or [])]
+        if remove:
+            product.product_template_image_ids.filtered(
+                lambda r: r.id in remove).unlink()
+
+        for added in (photos.get('add') or []):
+            data = added.get('data') if isinstance(added, dict) else added
+            if not data:
+                continue
+            name = added.get('name') if isinstance(added, dict) else ''
+            Image.create({
+                'name': name or product.name or 'Photograph',
+                'image_1920': data,
+                'product_tmpl_id': product.id,
+            })
 
     # ------------------------------------------------------------ the picker
 

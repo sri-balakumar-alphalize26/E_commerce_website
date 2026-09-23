@@ -13,17 +13,24 @@
  * its page will show - section by section, field by field, with the value each
  * one resolved to.
  *
- * Two things it deliberately does not do. It does not decide visibility: the
- * server's `mart369_product_page` runs the same `_visible_for` / `_value_for`
- * ladders the shopper's own route runs, so this screen cannot disagree with
- * the page it is describing. And it does not edit - changing a field stays in
- * the builder, one button away, opening on this product. Two screens writing
- * one setting is how they start to differ.
+ * It does not decide visibility: the server's `mart369_product_page` runs the
+ * same `_visible_for` / `_value_for` ladders the shopper's own route runs, so
+ * this screen cannot disagree with the page it is describing.
+ *
+ * It does write, but only a product's own columns - name, price, category,
+ * the wording, the photographs. The page configuration, which is the four
+ * layers and the per-product exceptions, stays the builder's alone, one
+ * button away under Edit page. That split is the point: two screens writing
+ * one setting is how they start to differ, so each setting has exactly one
+ * writer. A box the page has been told not to print is not offered here
+ * either - `mart369_desk_form` reads the same `mart_page_hidden` the Odoo
+ * form reads.
  */
 import { Component, onWillStart, useState } from "@odoo/owl";
 import { browser } from "@web/core/browser/browser";
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
+import { getDataURLFromFile } from "@web/core/utils/urls";
 import { _t } from "@web/core/l10n/translation";
 import { Layout } from "@web/search/layout";
 import { standardActionServiceProps } from "@web/webclient/actions/action_service";
@@ -82,6 +89,11 @@ export class ProductDesk extends Component {
             page: null,
             loading: true,
             error: "",
+            // The editor, or null when nothing is being edited. `id` is null
+            // for a product being created, which is also what tells `save`
+            // whether to create or to write.
+            form: null,
+            saving: false,
         });
 
         // Arriving from a product's own form means that product was asked
@@ -196,6 +208,135 @@ export class ProductDesk extends Component {
             "mart369_product.action_mart369_product_editor",
             { additionalContext: { mart369_product_id: this.state.open.id } }
         );
+    }
+
+    // ------------------------------------------------------------- editing
+
+    /** A blank product. Nothing is resolved against a category yet, so the
+     *  server offers every box; see `mart369_desk_form`. */
+    newProduct() {
+        return this.openForm(null);
+    }
+
+    /** The product's own details, in place. The Odoo form is still one click
+     *  away for everything this screen deliberately leaves out - taxes,
+     *  costing, routes, reordering. */
+    editDetails() {
+        return this.openForm(this.state.open.id);
+    }
+
+    async openForm(productId) {
+        this.state.loading = true;
+        this.state.error = "";
+        try {
+            const form = await this.orm.call(
+                PRODUCT, "mart369_desk_form", [], { product_id: productId });
+            // `values` is what the boxes are bound to and is edited in place;
+            // `photos` is the gallery as saved, and `add` / `remove` are what
+            // this visit changed, applied only when Save is pressed.
+            this.state.form = {
+                id: form.id,
+                groups: form.groups,
+                values: { ...form.values },
+                categories: form.categories,
+                photo: form.photo,
+                photos: form.photos,
+                add: [],
+                remove: [],
+            };
+        } catch (err) {
+            this.state.error = message(err);
+        } finally {
+            this.state.loading = false;
+        }
+    }
+
+    closeForm() {
+        this.state.form = null;
+    }
+
+    setField(name, value) {
+        this.state.form.values[name] = value;
+    }
+
+    /** Categories are a checklist rather than a picker: the four layers key
+     *  off them, so which ones a product is in decides what the rest of this
+     *  form even asks for. */
+    toggleCategory(id) {
+        const chosen = this.state.form.values.public_categ_ids || [];
+        this.state.form.values.public_categ_ids = chosen.includes(id)
+            ? chosen.filter((c) => c !== id)
+            : [...chosen, id];
+    }
+
+    isChosen(id) {
+        return (this.state.form.values.public_categ_ids || []).includes(id);
+    }
+
+    async onPhoto(ev, main) {
+        const files = [...(ev.target.files || [])];
+        ev.target.value = "";
+        for (const file of files) {
+            const data = (await getDataURLFromFile(file)).split(",")[1];
+            if (main) {
+                this.state.form.values.image_1920 = data;
+                this.state.form.photo = "data:image/png;base64," + data;
+                return; // only one picture goes on the card
+            }
+            this.state.form.add.push({ name: file.name, data });
+        }
+    }
+
+    clearPhoto() {
+        // '' rather than leaving it out: the server reads the difference as
+        // "take it away" versus "was not mentioned".
+        this.state.form.values.image_1920 = "";
+        this.state.form.photo = "";
+    }
+
+    /** A saved photograph is marked for removal rather than removed, so
+     *  nothing is lost until Save; one added this visit simply leaves. */
+    dropPhoto(photo) {
+        if (photo.id) {
+            this.state.form.remove.push(photo.id);
+            this.state.form.photos = this.state.form.photos.filter(
+                (p) => p.id !== photo.id);
+        } else {
+            this.state.form.add = this.state.form.add.filter((p) => p !== photo);
+        }
+    }
+
+    get pendingPhotos() {
+        return this.state.form.add.map((p) => ({
+            ...p, url: "data:image/png;base64," + p.data }));
+    }
+
+    async save() {
+        const form = this.state.form;
+        if (!(form.values.name || "").trim()) {
+            this.state.error = _t("A product needs a name.");
+            return;
+        }
+        this.state.saving = true;
+        this.state.error = "";
+        try {
+            const id = await this.orm.call(PRODUCT, "mart369_desk_save", [], {
+                values: form.values,
+                product_id: form.id,
+                photos: { add: form.add, remove: form.remove },
+            });
+            this.state.form = null;
+            // The list's counts and cards are now stale either way - a new
+            // product is not in it, and an edited one may have changed
+            // category or name.
+            await this.load();
+            const row = this.state.products.find((p) => p.id === id);
+            await this.open(row || { id, name: form.values.name });
+        } catch (err) {
+            this.state.error = message(err);
+        } finally {
+            this.state.saving = false;
+        }
     }
 
     // ------------------------------------------------------------- drawing

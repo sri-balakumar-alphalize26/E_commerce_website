@@ -153,7 +153,13 @@ PICKER_KEYS = frozenset({
     'categories', 'uncategorised', 'products', 'total', 'limit', 'all_count',
 })
 PICKER_CATEG_KEYS = frozenset({'id', 'name', 'parent_id', 'count'})
-PICKER_PRODUCT_KEYS = frozenset({'id', 'name', 'code', 'image', 'differs'})
+# `price` and `categories` were added for the Products desk's list view,
+# which has columns to fill where the builder's tiles did not. The picker
+# says that addition is deliberate and additive; this set is the record of
+# what it now promises, so a key vanishing still fails here.
+PICKER_PRODUCT_KEYS = frozenset({
+    'id', 'name', 'code', 'image', 'differs', 'price', 'categories',
+})
 
 
 @tagged('post_install', '-at_install')

@@ -305,7 +305,125 @@
         white-space: nowrap;
     }
 
+    // ------------------------------------------------------ the editor
+    //
+    // `.mart-field` itself is not defined here: builder.scss already styles
+    // `.mart-builder .mart-field`, and this screen's root carries that class.
+    // Restating it would be a second copy to keep in step.
+
+    .pr-new { flex: 0 0 auto; }
+
+    .pr-form {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        padding-bottom: 24px;
+    }
+
+    .pr-hint {
+        margin: 8px 0 0;
+        font-size: 12px;
+        color: $mart-muted;
+    }
+
+    .pr-fields {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+        gap: 4px 16px;
+        padding: 4px 2px 2px;
+    }
+
+    // A paragraph and a checklist both need the room; a name and a price do
+    // not, which is the whole reason for the grid above.
+    .pr-field-wide { grid-column: 1 / -1; }
+
+    .pr-categs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .pr-categ {
+        border: 1px solid $mart-line;
+        background: #fff;
+        color: $mart-ink;
+        border-radius: 999px;
+        padding: 5px 12px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color 140ms ease, border-color 140ms ease;
+
+        &:hover { background: $mart-soft; }
+
+        &.mart-on {
+            background: $mart-blue-soft;
+            border-color: $mart-blue;
+            color: $mart-blue-deep;
+        }
+    }
+
+    .pr-photos {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        padding: 4px 2px 2px;
+    }
+
+    .pr-photo {
+        position: relative;
+        width: 128px;
+        min-height: 128px;
+        border: 1px solid $mart-line;
+        border-radius: 10px;
+        background: #fff;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        padding: 8px;
+        text-align: center;
+
+        img {
+            max-width: 100%;
+            max-height: 84px;
+            object-fit: contain;
+        }
+
+        small {
+            font-size: 10px;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: $mart-muted;
+        }
+    }
+
+    // The one that goes on the card, said rather than left to position.
+    .pr-photo-main { border-color: $mart-blue; }
+
+    // Added this visit and not written yet, so it is drawn as provisional -
+    // pressing Cancel takes it away again, which a solid tile would not warn
+    // anybody about.
+    .pr-photo-new { border-style: dashed; }
+
+    .pr-photo-none {
+        font-size: 12px;
+        color: $mart-muted;
+    }
+
+    .pr-photo-add {
+        border-style: dashed;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 600;
+        color: $mart-blue-deep;
+
+        &:hover { background: $mart-soft; }
+    }
+
     @media (max-width: 1100px) {
+        .pr-fields { grid-template-columns: minmax(0, 1fr); }
         .pr-cols { grid-template-columns: minmax(0, 1fr); }
         .pr-rail { position: static; flex-direction: row; flex-wrap: wrap; max-height: none; }
         .pr-row { grid-template-columns: minmax(0, 1fr); gap: 2px; }

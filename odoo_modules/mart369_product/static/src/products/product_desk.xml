@@ -5,8 +5,136 @@
         <Layout display="{ controlPanel: {} }" className="'o_mart369_desk h-100'">
             <div class="mart-builder pe pr">
 
+                <!-- ========================================== the editor -->
+                <t t-if="state.form">
+                    <header class="pe-head pr-detail-head">
+                        <button class="mart-btn pr-back" t-on-click="() => this.closeForm()">
+                            <Icon n="'left'" size="14"/> Cancel
+                        </button>
+                        <div class="pr-title">
+                            <h1 t-esc="state.form.id ? 'Edit product' : 'New product'"/>
+                            <p t-if="!state.form.id">
+                                Everything is offered until a category is chosen -
+                                after that the page settings decide what is asked for.
+                            </p>
+                            <p t-else="">
+                                The product's own details. What its page shows is
+                                under Edit page.
+                            </p>
+                        </div>
+                        <button class="mart-btn mart-btn-primary"
+                                t-att-disabled="state.saving"
+                                t-on-click="() => this.save()">
+                            <t t-esc="state.saving ? 'Saving...' : 'Save'"/>
+                        </button>
+                    </header>
+
+                    <p t-if="state.error" class="pe-error" role="alert">
+                        <t t-esc="state.error"/>
+                    </p>
+
+                    <div class="pr-form">
+                        <!-- Photographs first: it is the thing that was
+                             impossible before and the first thing anybody
+                             wants to do. -->
+                        <section class="pr-sec">
+                            <header class="pr-sec-head"><h2>Photographs</h2></header>
+                            <div class="pr-photos">
+                                <div class="pr-photo pr-photo-main">
+                                    <img t-if="state.form.photo" t-att-src="state.form.photo" alt=""/>
+                                    <span t-else="" class="pr-photo-none">No photograph</span>
+                                    <label class="mart-btn">
+                                        Choose
+                                        <input type="file" accept="image/*" hidden=""
+                                               t-on-change="(ev) => this.onPhoto(ev, true)"/>
+                                    </label>
+                                    <button t-if="state.form.photo" class="mart-link"
+                                            t-on-click="() => this.clearPhoto()">Remove</button>
+                                    <small>On the card</small>
+                                </div>
+
+                                <div t-foreach="state.form.photos" t-as="ph" t-key="ph.id"
+                                     class="pr-photo">
+                                    <img t-att-src="ph.url" alt=""/>
+                                    <button class="mart-link"
+                                            t-on-click="() => this.dropPhoto(ph)">Remove</button>
+                                </div>
+                                <div t-foreach="pendingPhotos" t-as="ph" t-key="ph_index"
+                                     class="pr-photo pr-photo-new">
+                                    <img t-att-src="ph.url" alt=""/>
+                                    <button class="mart-link"
+                                            t-on-click="() => this.dropPhoto(ph)">Remove</button>
+                                    <small>Not saved yet</small>
+                                </div>
+
+                                <label class="pr-photo pr-photo-add">
+                                    <span>+ Add photographs</span>
+                                    <input type="file" accept="image/*" multiple="" hidden=""
+                                           t-on-change="(ev) => this.onPhoto(ev, false)"/>
+                                </label>
+                            </div>
+                            <p class="pr-hint">
+                                The first is the picture on the card. The rest become
+                                the gallery the shopper can swipe. With no photograph
+                                at all the app draws its own artwork instead.
+                            </p>
+                        </section>
+
+                        <section t-foreach="state.form.groups" t-as="g" t-key="g.title"
+                                 class="pr-sec">
+                            <header class="pr-sec-head"><h2 t-esc="g.title"/></header>
+                            <div class="pr-fields">
+                                <t t-foreach="g.boxes" t-as="b" t-key="b.name">
+                                    <!-- Categories are a checklist, not a box:
+                                         which ones a product is in decides
+                                         what the rest of this form asks for. -->
+                                    <label t-if="b.widget === 'categories'"
+                                           class="mart-field pr-field-wide">
+                                        <span t-esc="b.label"/>
+                                        <div class="pr-categs">
+                                            <button t-foreach="state.form.categories" t-as="c"
+                                                    t-key="c.id" type="button"
+                                                    t-attf-class="pr-categ {{ isChosen(c.id) ? 'mart-on' : '' }}"
+                                                    t-att-aria-pressed="isChosen(c.id) ? 'true' : 'false'"
+                                                    t-on-click="() => this.toggleCategory(c.id)">
+                                                <t t-esc="c.name"/>
+                                            </button>
+                                        </div>
+                                    </label>
+
+                                    <label t-elif="b.widget === 'text' or b.widget === 'html'"
+                                           class="mart-field pr-field-wide">
+                                        <span t-esc="b.label"/>
+                                        <textarea rows="4" t-att-value="state.form.values[b.name]"
+                                                  t-on-input="(ev) => this.setField(b.name, ev.target.value)"/>
+                                        <small t-if="b.help" t-esc="b.help"/>
+                                    </label>
+
+                                    <label t-elif="b.widget === 'number' or b.widget === 'integer'"
+                                           class="mart-field">
+                                        <span t-esc="b.label"/>
+                                        <input type="number"
+                                               t-att-step="b.widget === 'integer' ? '1' : '0.01'"
+                                               t-att-value="state.form.values[b.name]"
+                                               t-on-input="(ev) => this.setField(b.name, ev.target.value)"/>
+                                        <small t-if="b.help" t-esc="b.help"/>
+                                    </label>
+
+                                    <label t-else="" class="mart-field">
+                                        <span t-esc="b.label"/>
+                                        <input type="text" t-att-value="state.form.values[b.name]"
+                                               t-att-required="b.required ? 'required' : false"
+                                               t-on-input="(ev) => this.setField(b.name, ev.target.value)"/>
+                                        <small t-if="b.help" t-esc="b.help"/>
+                                    </label>
+                                </t>
+                            </div>
+                        </section>
+                    </div>
+                </t>
+
                 <!-- ============================================ the list -->
-                <t t-if="!state.open">
+                <t t-elif="!state.open">
                     <header class="pe-head">
                         <div>
                             <h1>Products</h1>
@@ -18,6 +146,10 @@
                         <Search value="state.q" placeholder="'A product name or code'"
                                 label="'Search products'"
                                 onChange="(v) => this.onSearch(v)"/>
+                        <button class="mart-btn mart-btn-primary pr-new"
+                                t-on-click="() => this.newProduct()">
+                            New product
+                        </button>
                         <div class="pe-toolbar-gap"/>
                         <span class="pr-count">
                             <t t-esc="state.total"/> of <t t-esc="state.allCount"/>
@@ -155,10 +287,16 @@
                                 </t>
                             </p>
                         </div>
-                        <!-- Two different edits, so two buttons: the product
-                             itself, and what its page shows. -->
+                        <!-- Three ways on, and they are different jobs: the
+                             product's own details here, everything Odoo holds
+                             that this screen leaves out (taxes, costing,
+                             routes, reordering) under All views, and what the
+                             page prints under Edit page. -->
                         <button class="mart-btn" t-on-click="() => this.editProduct()">
-                            Edit product details
+                            All views
+                        </button>
+                        <button class="mart-btn" t-on-click="() => this.editDetails()">
+                            Edit details
                         </button>
                         <button class="mart-btn mart-btn-primary"
                                 t-on-click="() => this.edit()">
@@ -172,7 +310,8 @@
 
                     <p class="pe-hintbar">
                         What this product's page shows, and where each line comes
-                        from. Change any of it under Edit page.
+                        from. The product's own details are under Edit details;
+                        what the page prints is under Edit page.
                     </p>
 
                     <div class="pr-detail">
