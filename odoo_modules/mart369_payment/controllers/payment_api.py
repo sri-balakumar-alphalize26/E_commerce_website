@@ -155,6 +155,17 @@ class Mart369PaymentApi(http.Controller):
 
         cod = request.env.ref(
             'delivery.payment_provider_cod', raise_if_not_found=False)
+
+        if not available and amount > 0:
+            # Nothing can take this basket. The customer is about to reach a
+            # step with no way on, and they will simply leave - which looks
+            # like ordinary abandonment in every report there is. Said out
+            # loud here, because this is the only place that knows.
+            _logger.warning(
+                'mart369: no payment method for %s of %s (customer %s, cod ceiling %s)',
+                amount, currency.name, self._me().id,
+                cod.sudo().maximum_amount if cod else 0.0)
+
         return self._json({
             'ok': True,
             'methods': available,

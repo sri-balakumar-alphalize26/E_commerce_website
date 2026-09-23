@@ -534,3 +534,11 @@
   .rc-paper { position: fixed !important; left: 0; top: 0; width: 80mm; margin: 0 !important; transform: none !important; clip-path: none !important; box-shadow: none !important; }
   .rc-feed { filter: none !important; clip-path: none !important; }
 }
+
+/* The step has nothing to offer. Amber rather than red: for the likely case -
+   a basket over the cash-on-delivery ceiling - nothing has gone wrong, there
+   is simply something to do. Laid out like .co-covered next door so the two
+   read as the same kind of notice in the same place. */
+.co-nopay { display: flex; align-items: flex-start; gap: 9px; margin-top: 12px; padding: 13px 15px; border-radius: 12px; background: #fdf3e3; border: 1px solid #f3dcae; color: #8a5a06; font-size: 14px; line-height: 1.5; animation: hm-rise 360ms var(--hm-ease) both; }
+.co-nopay .hm-ic { flex: none; margin-top: 2px; }
+.co-nopay b { display: block; font-weight: 800; margin-bottom: 2px; }

@@ -224,7 +224,7 @@ function SlotStep({ bill, slots, slot, setSlot, onContinue }) {
 }
 
 /* ---------------- 3 payment ---------------- */
-function PaymentStep({ payable, pay, setPay, wallet, walletUse, setWalletUse, walletBal, offered, codLimit, cards = [], upis = [] }) {
+function PaymentStep({ payable, pay, setPay, wallet, walletUse, setWalletUse, walletBal, offered, optionsPending, codLimit, cards = [], upis = [] }) {
   const set = (patch) => setPay((p) => ({ ...p, ...patch }));
 
   /* Only what the shop can actually take. It used to offer all four and find
@@ -250,6 +250,29 @@ function PaymentStep({ payable, pay, setPay, wallet, walletUse, setWalletUse, wa
 
       {wallet.covers ? (
         <div className="co-covered"><Icon n="check" size={16} />Your wallet covers this order. No other payment needed.</div>
+      ) : !methods.length && !optionsPending ? (
+        /* The shop can take nothing for this basket. Until now the list simply
+           came back empty and this step rendered an empty box: no methods, no
+           message, no way on. Somebody who has chosen their shopping and typed
+           their address deserves to be told which of the two things happened,
+           and only one of them is theirs to fix. */
+        <div className="co-nopay" role="alert">
+          <Icon n="info" size={16} />
+          {codLimit > 0 && payable > codLimit ? (
+            <span>
+              <b>This order is too large to pay for at the door.</b>
+              Cash on delivery stops at {money(codLimit)} and this basket comes
+              to {money(payable)}. Take it under {money(codLimit)} and you can
+              pay the rider{walletBal > 0 ? ", or put some of it on your 369 Wallet balance" : ""}.
+            </span>
+          ) : (
+            <span>
+              <b>We cannot take a payment for this order right now.</b>
+              Nothing you have done is wrong - no way of paying is switched on
+              at our end. Please get in touch and we will sort it out.
+            </span>
+          )}
+        </div>
       ) : (
         <div className="co-methods" role="radiogroup" aria-label="Payment method">
           {methods.map((m, i) => {
@@ -528,7 +551,7 @@ export default function CheckoutPage({
      The reference is the app's, and that is what makes paying twice safe. */
   const ref = useRef(null);
   const [ordered, setOrdered] = useState(null);
-  const { data: options } = useResource(`/payment/options?amount=${Math.round(payable)}&order_ref=${encodeURIComponent(ordered || "")}`, { enabled: !!ordered });
+  const { data: options, loading: optionsLoading } = useResource(`/payment/options?amount=${Math.round(payable)}&order_ref=${encodeURIComponent(ordered || "")}`, { enabled: !!ordered });
 
   /* Which ways of paying the shop can take for this amount, from the shop.
      A ceiling is part of it - cash on delivery drops off a large basket by
@@ -545,9 +568,13 @@ export default function CheckoutPage({
     if (pay.method === "netbanking") return !!pay.bank;
     return true;
   })();
-  const hint = !methodReady && (offered.length
+  /* When there is nothing to offer, PaymentStep says so where the methods
+     would have been, and says which of the two reasons it is. This line would
+     only repeat it, less usefully - it used to tell somebody whose basket was
+     simply over the cash ceiling to contact the shop. */
+  const hint = !methodReady && offered.length
     ? (pay.method === "netbanking" ? "Choose your bank" : "Choose how you'd like to pay")
-    : "No way of paying is switched on yet — please contact the shop.");
+    : "";
 
 
   const draftOrder = () => {
@@ -659,7 +686,7 @@ export default function CheckoutPage({
           </Step>
           <Step n={3} icon="card" title="Payment" open={step === 3} done={false}>
             <div key={nudge} className={nudge ? "co-nudge" : ""}>
-              <PaymentStep payable={payable} pay={pay} setPay={setPay} wallet={wallet} walletUse={walletUse} setWalletUse={setWalletUse} walletBal={walletBalance} offered={offered} codLimit={options?.codLimit || 0} cards={cards} upis={savedPay.upis} />
+              <PaymentStep payable={payable} pay={pay} setPay={setPay} wallet={wallet} walletUse={walletUse} setWalletUse={setWalletUse} walletBal={walletBalance} offered={offered} optionsPending={!options} codLimit={options?.codLimit || 0} cards={cards} upis={savedPay.upis} />
             </div>
           </Step>
         </div>
