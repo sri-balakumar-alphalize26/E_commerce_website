@@ -18,7 +18,10 @@ Two kinds of rule:
   around the numbers.
 """
 
+import re
+
 from odoo import api, fields, models
+from odoo.exceptions import ValidationError
 
 # A handler for each of these lives on mart369.bot as _mart369_answer_<kind>.
 KIND_CHOICES = [
@@ -41,6 +44,27 @@ class Mart369BotRule(models.Model):
     _description = '369 Mart Support Answer'
     _order = 'sequence, id'
     _rec_name = 'title'
+
+    @api.constrains('pattern')
+    def _check_pattern(self):
+        """A pattern that will not compile must fail here, loudly.
+
+        The bot catches `re.error` while matching, logs a warning and moves
+        on to the next rule (bot.py). That is right at answering time - one
+        bad rule must not take the panel down - but it means a broken pattern
+        is a rule that silently never matches, for ever, with nothing on any
+        screen to say so. Obscure while only developers touched these; routine
+        the moment somebody types one into the console.
+        """
+        for rule in self:
+            if not rule.pattern:
+                continue
+            try:
+                re.compile(rule.pattern)
+            except re.error as exc:
+                raise ValidationError(self.env._(
+                    'That pattern is not something the bot can match on: %s',
+                    exc)) from exc
 
     sequence = fields.Integer(
         default=10,

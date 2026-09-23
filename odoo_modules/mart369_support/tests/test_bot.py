@@ -152,10 +152,23 @@ class TestMart369Bot(Mart369OrderFixtures, TransactionCase):
         self.assertTrue(reply.get('chips'))
 
     def test_a_rule_with_a_broken_pattern_does_not_break_the_panel(self):
-        self.env['mart369.bot.rule'].sudo().create({
-            'sequence': 1, 'title': 'Broken', 'pattern': '([unclosed',
+        """Answering must survive a pattern that will not compile.
+
+        Writing one is refused now (`_check_pattern`), so this breaks the rule
+        in SQL instead - which is how such a row really comes to exist: data
+        that predates the constraint, an import, a direct write. The guard in
+        the matcher is for those, and it is still needed: refusing new ones
+        does not repair the old.
+        """
+        rule = self.env['mart369.bot.rule'].sudo().create({
+            'sequence': 1, 'title': 'Broken', 'pattern': 'placeholder',
             'kind': 'static', 'reply': 'never seen',
         })
+        self.env.cr.execute(
+            "UPDATE mart369_bot_rule SET pattern = %s WHERE id = %s",
+            ('([unclosed', rule.id))
+        rule.invalidate_recordset(['pattern'])
+
         reply = self._ask('hello')
         self.assertTrue(reply.get('text'))
         self.assertNotIn('never seen', reply['text'])

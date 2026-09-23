@@ -1,0 +1,302 @@
+/* The bot answers desk.
+ *
+ * Shaped like support_desk.scss beside it, so the two read as one module. The
+ * shell, the buttons, the pills and the loading line come from
+ * mart369/static/src/builder/builder.scss, which is earlier in the bundle
+ * because mart369 is a dependency. Never @import it: one local @import takes
+ * the whole backend bundle down, and it fails as a blank screen rather than as
+ * an error anybody can read.
+ */
+
+.o_mart369_desk .mart-builder.bt {
+    --bt-line: #e4eaef;
+    --bt-ink: #13212b;
+    --bt-muted: #64757f;
+    --bt-ground: #f3f6f8;
+    --bt-blue: #0a78ab;
+    --bt-green: #1a7f3c;
+    --bt-red: #c8433a;
+
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    background: var(--bt-ground);
+
+    .bt-head-act { display: flex; gap: 8px; }
+
+    .bt-tiles {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        padding: 14px 16px 0;
+    }
+
+    .bt-tile {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 12px 14px;
+        text-align: left;
+        background: #fff;
+        border: 1px solid var(--bt-line);
+        border-radius: 14px;
+        color: var(--bt-ink);
+
+        b {
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            font-variant-numeric: tabular-nums;
+        }
+
+        small { font-size: 11.5px; color: var(--bt-muted); }
+    }
+
+    .bt-tile-top {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: var(--bt-muted);
+    }
+
+    /* A figure with no tab behind it must not look pressable. */
+    .bt-tile-flat { cursor: default; }
+
+    button.bt-tile {
+        cursor: pointer;
+        &:hover { border-color: #cddae3; }
+    }
+
+    .bt-tile-on {
+        border-color: var(--bt-blue);
+        box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.14);
+    }
+
+    /* An answer that cannot match anything is not a warning, it is broken. */
+    .bt-tile-bad b { color: var(--bt-red); }
+
+    .bt-toolbar { flex-wrap: wrap; }
+
+    .bt-tabs {
+        display: inline-flex;
+        gap: 2px;
+        padding: 3px;
+        border-radius: 11px;
+        background: var(--bt-ground);
+
+        button {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            height: 32px;
+            padding: 0 12px;
+            border: 0;
+            border-radius: 9px;
+            background: transparent;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--bt-muted);
+            cursor: pointer;
+
+            em {
+                font-style: normal;
+                font-size: 11px;
+                font-weight: 800;
+                padding: 1px 6px;
+                border-radius: 999px;
+                background: #e6edf2;
+            }
+
+            &.mart-on {
+                background: #fff;
+                color: var(--bt-ink);
+                box-shadow: 0 2px 6px -3px rgba(19, 33, 43, 0.4);
+
+                em { background: #eaf4fa; color: var(--bt-blue); }
+            }
+        }
+    }
+
+    .bt-search {
+        height: 38px;
+        min-width: 220px;
+        padding: 0 12px;
+        border: 1px solid var(--bt-line);
+        border-radius: 10px;
+        background: #fff;
+        font-size: 13.5px;
+
+        &:focus {
+            outline: 0;
+            border-color: var(--bt-blue);
+            box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.14);
+        }
+    }
+
+    .bt-queue-wrap { flex: 1; min-height: 0; overflow: auto; }
+    .bt-queue { padding: 0 16px 20px; }
+
+    .bt-count {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 14px 2px 8px;
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--bt-muted);
+    }
+
+    .bt-note { font-weight: 400; }
+
+    .bt-rows {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .bt-row {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        padding: 12px;
+        background: #fff;
+        border: 1px solid var(--bt-line);
+        border-radius: 14px;
+    }
+
+    /* Kept, not deleted: somebody wrote it for a reason. */
+    .bt-row-off { opacity: 0.62; }
+
+    .bt-line1 { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .bt-line2 { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+    .bt-title { font-size: 14.5px; font-weight: 700; }
+
+    /* A pattern is code, and reads as code. */
+    .bt-pattern {
+        display: inline-block;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 12px;
+        color: #4a5a66;
+        background: var(--bt-ground);
+        border-radius: 7px;
+        padding: 3px 8px;
+    }
+
+    .bt-reply {
+        margin: 0;
+        font-size: 13.5px;
+        line-height: 1.5;
+        color: #3a4a55;
+    }
+
+    /* The words are not the answer for this kind. */
+    .bt-computed { font-style: italic; color: var(--bt-muted); }
+
+    .bt-kind {
+        font-size: 11.5px;
+        font-weight: 700;
+        color: var(--bt-muted);
+        background: var(--bt-ground);
+        border-radius: 7px;
+        padding: 2px 7px;
+    }
+
+    .bt-act { margin-left: auto; display: flex; gap: 6px; }
+
+    .bt-s-on { background: #e8f5ec; color: var(--bt-green); }
+    .bt-s-off { background: #eef2f5; color: var(--bt-muted); }
+
+    .bt-more { display: flex; justify-content: center; padding: 14px 0 4px; }
+
+    @media (max-width: 900px) {
+        .bt-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .bt-act { margin-left: 0; }
+    }
+}
+
+/* The write dialog.
+ *
+ * Scoped to `o_mart369_dialog`, which the component passes as the Dialog's
+ * `contentClass`, rather than nested under `.o_mart369_desk` above. A Dialog
+ * renders in a portal at the end of the body, so desk-scoped rules never reach
+ * it. The tokens are re-declared for the same reason, and `.bt-dialog` has to
+ * restate both its direction and `align-items`, because `.mart-builder` is a
+ * flex row that does not stretch its children - without that every field sat
+ * at the width of its own placeholder.
+ */
+.o_mart369_dialog.bt {
+    --bt-line: #e4eaef;
+    --bt-ink: #13212b;
+    --bt-muted: #64757f;
+    --bt-blue: #0a78ab;
+
+    .bt-dialog {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+        background: transparent;
+    }
+
+    .bt-field {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        gap: 5px;
+        font-size: 12.5px;
+        font-weight: 700;
+        color: var(--bt-muted);
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+            padding: 9px 12px;
+            border: 1px solid var(--bt-line);
+            border-radius: 10px;
+            font: inherit;
+            font-size: 13.5px;
+            font-weight: 400;
+            color: var(--bt-ink);
+            background: #fff;
+
+            &:focus {
+                outline: 0;
+                border-color: var(--bt-blue);
+                box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.14);
+            }
+        }
+
+        textarea { resize: vertical; }
+    }
+
+    .bt-two {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    /* The footer slot sits outside the `.mart-builder` div, so it misses the
+       shared button chrome entirely. */
+    .modal-footer .mart-btn {
+        height: 34px;
+        padding: 0 12px;
+        border: 1px solid var(--bt-line);
+        border-radius: 9px;
+        background: #fff;
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+    }
+
+    .modal-footer .mart-btn-primary {
+        border-color: transparent;
+        background: linear-gradient(180deg, #0c86be, #096b99);
+        color: #fff;
+    }
+}

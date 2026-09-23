@@ -174,3 +174,101 @@ class Mart369SupportAdminApi(http.Controller):
         if row is None:
             return self._fail('Nothing to change.')
         return self._json({'ok': True, 'ticket': row})
+
+
+class Mart369BotAdminApi(Mart369SupportAdminApi):
+    """The staff side of the bot answers.
+
+    Subclassed for the helpers and the group check only, the same way the
+    other admin controllers in the suite do it.
+
+    These are the words the shop says to a customer before a person sees them,
+    so this writes freely - create, reword, reorder, switch off. **Nothing
+    deletes an answer**: somebody wrote it for a reason, and off keeps it
+    findable.
+
+    A bad pattern is refused by the model's own constraint and the message
+    comes back named to the field, because a regular expression that will not
+    compile is a rule that silently never matches.
+    """
+
+    def _rules(self):
+        """Not sudo'd - on purpose. See the module docstring."""
+        return request.env['mart369.bot.rule']
+
+    @http.route('/369mart/admin/answers', **_GET)
+    def answers(self, tab=None, q=None, limit=None, **kwargs):
+        """The answers, in the order the bot tries them."""
+        if not self._may_edit():
+            return self._fail('You do not have access to this.', status=403)
+        try:
+            payload = self._rules().mart369_admin_list(
+                tab=tab, q=q, limit=int(limit or 30))
+        except AccessError as exc:
+            return self._fail(str(exc), status=403)
+        except (TypeError, ValueError):
+            return self._fail('That is not a number we can use.', field='limit')
+        payload['ok'] = True
+        return self._json(payload)
+
+    @http.route('/369mart/admin/answers/counts', **_GET)
+    def answer_counts(self, **kwargs):
+        """The tallies alone, for the sidebar badge.
+
+        Declared before the `<int:rule_id>` routes so 'counts' and 'order' are
+        never read as ids.
+        """
+        if not self._may_edit():
+            return self._fail('You do not have access to this.', status=403)
+        try:
+            payload = self._rules().mart369_admin_counts()
+        except AccessError as exc:
+            return self._fail(str(exc), status=403)
+        payload['ok'] = True
+        return self._json(payload)
+
+    @http.route('/369mart/admin/answers/order', **_POST)
+    def reorder_answers(self, **kwargs):
+        """Put them in this order. Its own route because order is meaning:
+        the bot takes the first match."""
+        if not self._may_edit():
+            return self._fail('You do not have access to this.', status=403)
+        try:
+            self._rules().mart369_admin_reorder(self._body().get('ids') or [])
+        except AccessError as exc:
+            return self._fail(str(exc), status=403)
+        except (UserError, ValidationError) as exc:
+            return self._fail(str(exc), field='ids')
+        return self._json({'ok': True})
+
+    @http.route('/369mart/admin/answers', **_POST)
+    def write_answer(self, **kwargs):
+        """Write a new one. It goes last, so it takes no matches from
+        anything already there."""
+        if not self._may_edit():
+            return self._fail('You do not have access to this.', status=403)
+        try:
+            row = self._rules().mart369_admin_save(values=self._body())
+        except AccessError as exc:
+            return self._fail(str(exc), status=403)
+        except (UserError, ValidationError) as exc:
+            return self._fail(str(exc), field='pattern')
+        return self._json({'ok': True, 'answer': row}, status=201)
+
+    @http.route('/369mart/admin/answers/<int:rule_id>', **_PATCH)
+    def edit_answer(self, rule_id, **kwargs):
+        """Change one, or switch it on and off."""
+        if not self._may_edit():
+            return self._fail('You do not have access to this.', status=403)
+        body = self._body()
+        try:
+            if 'active' in body:
+                row = self._rules().mart369_admin_switch(
+                    rule_id, bool(body['active']))
+            else:
+                row = self._rules().mart369_admin_save(rule_id, body)
+        except AccessError as exc:
+            return self._fail(str(exc), status=403)
+        except (UserError, ValidationError) as exc:
+            return self._fail(str(exc), field='pattern')
+        return self._json({'ok': True, 'answer': row})
