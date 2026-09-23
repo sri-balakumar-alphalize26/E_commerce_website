@@ -45,8 +45,13 @@ class Mart369OrderAdminApi(http.Controller):
     def _json(self, payload, status=200):
         return request.make_json_response(payload, status=status)
 
-    def _fail(self, error, status=400):
-        return self._json({'ok': False, 'error': error}, status=status)
+    def _fail(self, error, field=None, status=400):
+        """Same shape as every other controller in the suite, field included -
+        so a screen can put the message under the control it is about."""
+        payload = {'ok': False, 'error': error}
+        if field:
+            payload['field'] = field
+        return self._json(payload, status=status)
 
     def _body(self):
         try:
@@ -137,6 +142,43 @@ class Mart369OrderAdminApi(http.Controller):
             return self._fail(str(exc), status=403)
         return self._json({'ok': True, 'order': order._mart369_admin_detail()})
 
+    @http.route('/369mart/admin/orders/<string:ref>/deliver', **_POST)
+    def deliver(self, ref, **kwargs):
+        """Close a delivery with the code from the customer's doorstep.
+
+        Separate from `advance` because it is not the same kind of act. Every
+        other step is the shop moving its own work along; this one is the
+        customer confirming they have their things, and the code is the only
+        evidence of that. `mart369_action_advance` refuses to reach delivered
+        precisely so this route is the only way through.
+
+        The arithmetic is not here. `mart369_action_deliver` on the order
+        knows what a valid code is, and the rider app will call that same
+        method rather than carry a second opinion about it.
+        """
+        if not self._may_edit():
+            return self._fail('You do not have access to this.', status=403)
+        order = self._order(ref)
+        if not order:
+            return self._fail('There is no such order.', status=404)
+        code = (self._body().get('code') or '').strip()
+        if not code:
+            return self._fail('Ask the customer for their delivery code.',
+                              field='code')
+        try:
+            order.mart369_action_deliver(code)
+        except UserError as exc:
+            # A wrong code is the operator mistyping, or the customer reading
+            # out the wrong thing: 400, and the screen keeps the box open. An
+            # order that is not out for delivery moved while the screen was
+            # looking at it: 409, the same as `advance` answers.
+            wrong = 'not right' in str(exc)
+            return self._fail(str(exc), field='code' if wrong else None,
+                              status=400 if wrong else 409)
+        except AccessError as exc:
+            return self._fail(str(exc), status=403)
+        return self._json({'ok': True, 'order': order._mart369_admin_detail()})
+
     @http.route('/369mart/admin/orders/<string:ref>/invoice', **_GET)
     def invoice(self, ref, **kwargs):
         """The same document the customer can download, for the operator.
@@ -154,7 +196,7 @@ class Mart369OrderAdminApi(http.Controller):
         if not invoices:
             return self._fail('No invoice for that order yet.', status=404)
         pdf, __ = request.env['ir.actions.report'].sudo()._render_qweb_pdf(
-            'account.account_invoices', res_ids=invoices[:1].ids)
+            'mart369_order.report_invoice', res_ids=invoices[:1].ids)
         filename = '369mart-%s.pdf' % (order.mart369_ref or order.id)
         return request.make_response(pdf, headers=[
             ('Content-Type', 'application/pdf'),

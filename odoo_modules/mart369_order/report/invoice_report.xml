@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <!-- The shop's own invoice.
+         =====================================================================
+         The record underneath is an ordinary `account.move` - posted, numbered
+         by its journal, and countable by every accounting report Odoo has. Only
+         the document is ours.
+
+         Odoo's `account.account_invoices` is a fine invoice for a company that
+         sells to businesses. It is not what a shopper who bought milk at eleven
+         at night recognises: it leads with the company, names the customer as a
+         partner and prints a quotation reference they have never seen. This one
+         leads with the order number they already have in the app, and breaks
+         the bill down the way the checkout screen did - because the first thing
+         anybody does with an invoice is check it against what they were shown.
+    -->
+    <record id="action_report_mart369_invoice" model="ir.actions.report">
+        <field name="name">369 Mart invoice</field>
+        <field name="model">account.move</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">mart369_order.report_invoice</field>
+        <field name="report_file">mart369_order.report_invoice</field>
+        <field name="print_report_name">'369mart-%s' % (object.name or '').replace('/', '-')</field>
+        <field name="binding_model_id" eval="False"/>
+    </record>
+
+    <template id="report_invoice">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="doc">
+                <t t-set="order" t-value="doc.invoice_line_ids.sale_line_ids.order_id[:1]"/>
+                <t t-set="company" t-value="doc.company_id"/>
+                <t t-call="web.external_layout">
+                    <div class="page mart369-inv">
+                        <!-- Inline, because wkhtmltopdf never sees the
+                             backend asset bundle and Odoo 19 has no
+                             `web.report_assets_common` template to
+                             inherit - it is an asset bundle now. -->
+                        <style>
+                .mart369-inv { font-size: 12px; color: #13212b; }
+                .mart369-inv-head { display: flex; justify-content: space-between; gap: 24px; margin-bottom: 18px; }
+                .mart369-inv h2 { margin: 0; font-size: 20px; font-weight: 800; color: #0b4a6e; }
+                .mart369-inv-ref { margin: 4px 0 0; font-size: 15px; font-weight: 700; letter-spacing: 0.02em; }
+                .mart369-inv-no { margin: 2px 0 0; font-size: 11px; color: #6b7a86; }
+                .mart369-inv-to { text-align: right; font-size: 11.5px; }
+                .mart369-inv-to strong { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: #6b7a86; }
+                .mart369-inv-lines thead th { border-bottom: 1px solid #e7ecf0; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7a86; }
+                .mart369-inv-lines td { border-top: 1px solid #f4f6f8; }
+                .mart369-inv-sum { display: flex; justify-content: flex-end; }
+                .mart369-inv-sum table { width: 46%; }
+                .mart369-inv-sum td { border: 0; padding: 2px 0; }
+                .mart369-inv-total td { border-top: 1px solid #e7ecf0; padding-top: 6px; font-size: 14px; }
+                .mart369-inv-note { margin-top: 14px; font-size: 11px; color: #6b7a86; }
+                .mart369-inv-foot { margin-top: 10px; font-size: 10.5px; color: #6b7a86; }
+                                    </style>
+
+
+                        <div class="mart369-inv-head">
+                            <div>
+                                <h2 t-esc="doc.move_type == 'out_refund' and 'Credit note' or 'Invoice'"/>
+                                <!-- The number the customer already has, first.
+                                     The journal's own number is the legal one
+                                     and sits beside it. -->
+                                <p class="mart369-inv-ref"
+                                   t-if="order and order.mart369_ref"
+                                   t-esc="order.mart369_ref"/>
+                                <p class="mart369-inv-no">
+                                    <span t-esc="doc.name"/>
+                                    <span t-if="doc.invoice_date">
+                                        · <span t-field="doc.invoice_date"/>
+                                    </span>
+                                </p>
+                            </div>
+                            <div class="mart369-inv-to">
+                                <strong>Billed to</strong>
+                                <div t-field="doc.partner_id"
+                                     t-options='{"widget": "contact", "fields": ["name", "address", "phone"], "no_marker": True}'/>
+                            </div>
+                        </div>
+
+                        <table class="table table-sm mart369-inv-lines">
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th class="text-end">Qty</th>
+                                    <th class="text-end">Price</th>
+                                    <th class="text-end">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="doc.invoice_line_ids.filtered(lambda l: l.display_type not in ('line_section', 'line_note'))"
+                                    t-as="line">
+                                    <td>
+                                        <span t-field="line.name"/>
+                                    </td>
+                                    <td class="text-end">
+                                        <span t-field="line.quantity"/>
+                                    </td>
+                                    <td class="text-end">
+                                        <span t-field="line.price_unit"
+                                              t-options='{"widget": "monetary", "display_currency": doc.currency_id}'/>
+                                    </td>
+                                    <td class="text-end">
+                                        <span t-field="line.price_total"
+                                              t-options='{"widget": "monetary", "display_currency": doc.currency_id}'/>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <div class="mart369-inv-sum">
+                            <table class="table table-sm">
+                                <tr>
+                                    <td>Subtotal</td>
+                                    <td class="text-end">
+                                        <span t-field="doc.amount_untaxed"
+                                              t-options='{"widget": "monetary", "display_currency": doc.currency_id}'/>
+                                    </td>
+                                </tr>
+                                <tr t-if="doc.amount_tax">
+                                    <td>Tax</td>
+                                    <td class="text-end">
+                                        <span t-field="doc.amount_tax"
+                                              t-options='{"widget": "monetary", "display_currency": doc.currency_id}'/>
+                                    </td>
+                                </tr>
+                                <!-- What the shop actually took, and how. The
+                                     wallet leg is not a discount and must not
+                                     read as one: the money was real, it just
+                                     arrived earlier. -->
+                                <tr t-if="order and order.mart369_wallet_used">
+                                    <td>Paid from wallet</td>
+                                    <td class="text-end">
+                                        <span t-esc="order.mart369_wallet_used"
+                                              t-options='{"widget": "monetary", "display_currency": doc.currency_id}'/>
+                                    </td>
+                                </tr>
+                                <tr class="mart369-inv-total">
+                                    <td><strong>Total</strong></td>
+                                    <td class="text-end">
+                                        <strong t-field="doc.amount_total"
+                                                t-options='{"widget": "monetary", "display_currency": doc.currency_id}'/>
+                                    </td>
+                                </tr>
+                                <tr t-if="doc.amount_residual">
+                                    <td>Still to pay</td>
+                                    <td class="text-end">
+                                        <span t-field="doc.amount_residual"
+                                              t-options='{"widget": "monetary", "display_currency": doc.currency_id}'/>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <p class="mart369-inv-note" t-if="order and order.mart369_pay_note">
+                            <span t-esc="order.mart369_pay_note"/>
+                        </p>
+
+                        <p class="mart369-inv-foot">
+                            Prices include tax. Questions about this bill go to
+                            <span t-esc="company.email or company.name"/>.
+                        </p>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+
+</odoo>

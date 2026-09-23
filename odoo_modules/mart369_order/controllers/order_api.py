@@ -172,7 +172,7 @@ class Mart369OrderApi(http.Controller):
         if not invoices:
             return self._fail('No invoice for that order yet.', status=404)
         pdf, __ = request.env['ir.actions.report'].sudo()._render_qweb_pdf(
-            'account.account_invoices', res_ids=invoices[:1].ids)
+            'mart369_order.report_invoice', res_ids=invoices[:1].ids)
         filename = '369mart-%s.pdf' % (order.mart369_ref or order.id)
         return request.make_response(pdf, headers=[
             ('Content-Type', 'application/pdf'),
