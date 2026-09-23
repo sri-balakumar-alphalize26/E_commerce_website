@@ -11,7 +11,7 @@
                         <p>What customers typed into the app, and what it found them.</p>
                     </div>
                     <button class="mart-btn" t-on-click="() => this.allViews()">
-                        <i class="fa fa-th-list" role="img" aria-label="List"/>
+                        <Icon n="'menu'" size="14"/>
                         All views
                     </button>
                 </header>
@@ -23,7 +23,7 @@
                     <t t-foreach="TILES" t-as="tile" t-key="tile.key">
                         <div t-if="tile.flat" class="sd-tile sd-tile-flat">
                             <span class="sd-tile-top">
-                                <i t-attf-class="fa {{ tile.icon }}" aria-hidden="true"/>
+                                <Icon n="tile.icon" size="15"/>
                                 <t t-esc="tile.label"/>
                             </span>
                             <b t-esc="tileValue(tile)"/>
@@ -35,7 +35,7 @@
                                 t-att-aria-pressed="state.tab === tile.tab ? 'true' : 'false'"
                                 t-on-click="() => this.pick(tile.tab)">
                             <span class="sd-tile-top">
-                                <i t-attf-class="fa {{ tile.icon }}" aria-hidden="true"/>
+                                <Icon n="tile.icon" size="15"/>
                                 <t t-esc="tile.label"/>
                             </span>
                             <b t-esc="tileValue(tile)"/>
@@ -48,7 +48,7 @@
                      of the screen and a number alone does not ask for anything
                      to be done about it. -->
                 <p t-if="state.tiles.empty" class="sd-gap">
-                    <i class="fa fa-info-circle" aria-hidden="true"/>
+                    <Icon n="'info'" size="14"/>
                     <span>
                         <b><t t-esc="state.tiles.empty"/></b>
                         <t t-if="state.tiles.empty === 1"> term</t>
@@ -62,20 +62,11 @@
                 </p>
 
                 <div class="pe-toolbar sd-toolbar">
-                    <div class="sd-tabs" role="tablist">
-                        <button t-foreach="TABS" t-as="tab" t-key="tab.key"
-                                role="tab"
-                                t-att-aria-selected="state.tab === tab.key ? 'true' : 'false'"
-                                t-attf-class="{{ state.tab === tab.key ? 'mart-on' : '' }}"
-                                t-on-click="() => this.pick(tab.key)">
-                            <t t-esc="tab.label"/>
-                            <em t-if="tabCount(tab) !== null" t-esc="tabCount(tab)"/>
-                        </button>
-                    </div>
+                    <Tabs tabs="tabItems" value="state.tab"
+                          onChange="(k) => this.pick(k)"/>
                     <div class="pe-toolbar-gap"/>
-                    <input type="search" class="sd-search"
-                           placeholder="A word somebody searched for"
-                           aria-label="Search the terms" t-on-input="search"/>
+                    <Search value="state.q" placeholder="'A word somebody searched for'" label="'Search the terms'"
+                            onChange="(v) => this.onSearch(v)"/>
                 </div>
 
                 <p t-if="state.error" class="pe-error" role="alert">
@@ -117,10 +108,10 @@
                                     <div class="sd-body">
                                         <div class="sd-top">
                                             <b t-esc="row.term"/>
-                                            <span t-if="!row.results" class="mart-pill sd-p-red">
+                                            <span t-if="!row.results" class="mart-pill mart-t-red">
                                                 Found nothing
                                             </span>
-                                            <span t-if="!row.trending" class="mart-pill sd-p-grey">
+                                            <span t-if="!row.trending" class="mart-pill mart-t-grey">
                                                 Not suggested
                                             </span>
                                         </div>
@@ -141,13 +132,9 @@
                                     </div>
 
                                     <div class="sd-act">
-                                        <button class="mart-btn mart-btn-sm"
-                                                t-att-disabled="state.busy"
-                                                t-att-title="row.trending ? 'Stop offering this as a suggestion' : 'Offer this as a suggestion again'"
-                                                t-on-click="() => this.toggleTrending(row)">
-                                            <t t-if="row.trending">Stop suggesting</t>
-                                            <t t-else="">Suggest again</t>
-                                        </button>
+                                        <Switch on="row.trending" label="'Suggest to shoppers'"
+                                                disabled="state.busy"
+                                                onChange="() => this.toggleTrending(row)"/>
                                     </div>
                                 </li>
                             </ul>

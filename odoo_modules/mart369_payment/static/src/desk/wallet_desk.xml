@@ -11,7 +11,7 @@
                         <p>Money customers have already paid us and have not spent yet.</p>
                     </div>
                     <button class="mart-btn" t-on-click="() => this.allViews()">
-                        <i class="fa fa-th-list" role="img" aria-label="List"/>
+                        <Icon n="'menu'" size="14"/>
                         All views
                     </button>
                 </header>
@@ -38,7 +38,7 @@
                 <!-- Only when there is something wrong. A banner that is always
                      there is a banner nobody reads. -->
                 <p t-if="state.tiles.broken" class="wd-alarm">
-                    <i class="fa fa-exclamation-triangle" aria-hidden="true"/>
+                    <Icon n="'warn'" size="14"/>
                     <span>
                         <b><t t-esc="state.tiles.broken"/></b>
                         wallet<t t-if="state.tiles.broken !== 1">s</t>
@@ -51,7 +51,7 @@
                 </p>
 
                 <p class="wd-readonly">
-                    <i class="fa fa-lock" aria-hidden="true"/>
+                    <Icon n="'lock'" size="14"/>
                     <span>
                         Nothing here can be changed. A balance only moves through a
                         top-up, an order, a refund or a reward - each one leaves a
@@ -60,20 +60,11 @@
                 </p>
 
                 <div class="pe-toolbar wd-toolbar">
-                    <div class="wd-tabs" role="tablist">
-                        <button t-foreach="TABS" t-as="tab" t-key="tab.key"
-                                role="tab"
-                                t-att-aria-selected="state.tab === tab.key ? 'true' : 'false'"
-                                t-attf-class="{{ state.tab === tab.key ? 'mart-on' : '' }}"
-                                t-on-click="() => this.pick(tab.key)">
-                            <t t-esc="tab.label"/>
-                            <em t-if="tabCount(tab) !== null" t-esc="tabCount(tab)"/>
-                        </button>
-                    </div>
+                    <Tabs tabs="tabItems" value="state.tab"
+                          onChange="(k) => this.pick(k)"/>
                     <div class="pe-toolbar-gap"/>
-                    <input type="search" class="wd-search"
-                           placeholder="A customer, an email or a phone"
-                           aria-label="Search wallets" t-on-input="search"/>
+                    <Search value="state.q" placeholder="'A customer, an email or a phone'" label="'Search wallets'"
+                            onChange="(v) => this.onSearch(v)"/>
                 </div>
 
                 <p t-if="state.error" class="pe-error" role="alert">
@@ -123,7 +114,7 @@
                                             <!-- A consistent wallet says nothing here.
                                                  A tick on every row trains people to
                                                  ignore the one red one. -->
-                                            <span t-if="!row.consistent" class="mart-pill wd-p-red">
+                                            <span t-if="!row.consistent" class="mart-pill mart-t-red">
                                                 Balance <t t-esc="row.balanceText"/>,
                                                 history <t t-esc="row.ledgerText"/>
                                             </span>
@@ -133,7 +124,7 @@
                                                 <!-- Only when the movement really
                                                      has a kind: an empty pill is a
                                                      box with nothing in it. -->
-                                                <span t-if="row.lastKind" class="mart-pill wd-p-grey"
+                                                <span t-if="row.lastKind" class="mart-pill mart-t-grey"
                                                       t-esc="kindLabel(row.lastKind)"/>
                                                 <t t-esc="row.lastTitle"/>
                                                 <span class="wd-dot">&#183;</span>
@@ -202,8 +193,7 @@
 
             <ul t-else="" class="wd-moves">
                 <li t-foreach="state.moves" t-as="move" t-key="move.id">
-                    <span t-attf-class="mart-pill {{ kindClass(move.kind) }}"
-                          t-esc="kindLabel(move.kind)"/>
+                    <Pill s="move.kind" map="KINDS"/>
                     <span class="wd-move-txt">
                         <b t-esc="move.title"/>
                         <small t-if="move.sub" t-esc="move.sub"/>
@@ -221,7 +211,7 @@
             </p>
 
             <t t-set-slot="footer">
-                <button class="btn btn-secondary"
+                <button class="mart-btn"
                         t-on-click="() => this.props.close()">Close</button>
             </t>
         </Dialog>

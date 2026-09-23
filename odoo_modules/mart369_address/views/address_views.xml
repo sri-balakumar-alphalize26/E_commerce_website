@@ -160,10 +160,10 @@
     -->
     <menuitem id="menu_mart369_addresses"
               name="Addresses"
-              parent="mart369.menu_mart369_root"
+              parent="mart369.menu_mart369_sales"
               action="action_mart369_address_desk"
               groups="sales_team.group_sale_salesman"
-              sequence="30"/>
+              sequence="80"/>
 
     <menuitem id="menu_mart369_addresses_all"
               name="Addresses (all views)"

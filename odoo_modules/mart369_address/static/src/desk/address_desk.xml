@@ -11,7 +11,7 @@
                         <p>Where customers' shopping goes, and what is missing from it.</p>
                     </div>
                     <button class="mart-btn" t-on-click="() => this.moreViews()">
-                        <i class="fa fa-th-large" role="img" aria-label="Board"/>
+                        <Icon n="'grid'" size="14"/>
                         All views
                     </button>
                 </header>
@@ -21,7 +21,7 @@
                         <div t-if="tile.flat"
                              t-attf-class="ad-tile ad-tile-flat {{ tile.warn and tileValue(tile) ? 'ad-tile-warn' : '' }}">
                             <span class="ad-tile-top">
-                                <i t-attf-class="fa {{ tile.icon }}" aria-hidden="true"/>
+                                <Icon n="tile.icon" size="15"/>
                                 <t t-esc="tile.label"/>
                             </span>
                             <b t-esc="tileValue(tile)"/>
@@ -33,7 +33,7 @@
                                 t-att-aria-pressed="state.tab === tile.tab ? 'true' : 'false'"
                                 t-on-click="() => this.pick(tile.tab)">
                             <span class="ad-tile-top">
-                                <i t-attf-class="fa {{ tile.icon }}" aria-hidden="true"/>
+                                <Icon n="tile.icon" size="15"/>
                                 <t t-esc="tile.label"/>
                             </span>
                             <b t-esc="tileValue(tile)"/>
@@ -43,20 +43,11 @@
                 </div>
 
                 <div class="pe-toolbar ad-toolbar">
-                    <div class="ad-tabs" role="tablist">
-                        <button t-foreach="TABS" t-as="tab" t-key="tab.key"
-                                role="tab"
-                                t-att-aria-selected="state.tab === tab.key ? 'true' : 'false'"
-                                t-attf-class="{{ state.tab === tab.key ? 'mart-on' : '' }}"
-                                t-on-click="() => this.pick(tab.key)">
-                            <t t-esc="tab.label"/>
-                            <em t-if="tabCount(tab) !== null" t-esc="tabCount(tab)"/>
-                        </button>
-                    </div>
+                    <Tabs tabs="tabItems" value="state.tab"
+                          onChange="(k) => this.pick(k)"/>
                     <div class="pe-toolbar-gap"/>
-                    <input type="search" class="ad-search"
-                           placeholder="Customer, area or pincode"
-                           aria-label="Search addresses" t-on-input="search"/>
+                    <Search value="state.q" placeholder="'Customer, area or pincode'" label="'Search addresses'"
+                            onChange="(v) => this.onSearch(v)"/>
                 </div>
 
                 <p t-if="state.error" class="pe-error" role="alert">
@@ -100,7 +91,7 @@
                                     </span>
                                     <!-- The same nouns the kanban prints in red. -->
                                     <span t-if="row.gaps.length" class="ad-gaps">
-                                        <i class="fa fa-exclamation-triangle" aria-hidden="true"/>
+                                        <Icon n="'warn'" size="14"/>
                                         Missing <t t-esc="row.gaps.join(', ')"/>
                                     </span>
                                 </li>

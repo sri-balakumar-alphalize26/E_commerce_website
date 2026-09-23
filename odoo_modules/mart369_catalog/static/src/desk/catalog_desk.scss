@@ -98,8 +98,7 @@
         flex-wrap: wrap;
     }
 
-    .cd-tabs,
-    .cd-modes {
+    .cd-tabs {
         display: inline-flex;
         gap: 2px;
         padding: 3px;
@@ -142,21 +141,6 @@
         }
     }
 
-    .cd-search {
-        height: 38px;
-        min-width: 230px;
-        padding: 0 12px;
-        border: 1px solid var(--cd-line);
-        border-radius: 10px;
-        background: #fff;
-        font-size: 13.5px;
-
-        &:focus {
-            outline: 0;
-            border-color: var(--cd-blue);
-            box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.14);
-        }
-    }
 
     /* -------------------------------------------------------------- rows */
 
@@ -265,25 +249,9 @@
         color: #b6c3cc;
     }
 
-    .cd-p-blue {
-        background: #e6f1f8;
-        color: #08516f;
-    }
 
-    .cd-p-violet {
-        background: #eeeafc;
-        color: #4c3a9a;
-    }
 
-    .cd-p-grey {
-        background: #eceff2;
-        color: #5b6b76;
-    }
 
-    .cd-p-amber {
-        background: #fdf1dc;
-        color: #8a5a06;
-    }
 
     .cd-act {
         flex: 0 0 auto;
@@ -373,8 +341,7 @@
             color: #13212b;
         }
 
-        input[type="text"],
-        select {
+        input[type="text"] {
             width: 100%;
             height: 38px;
             padding: 0 12px;
@@ -390,6 +357,17 @@
                 border-color: #0a78ab;
                 box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.14);
             }
+        }
+
+        /* The kit's dropdown is a 32px inline-flex toggle, sized for a toolbar.
+           In a stack of full-width fields it has to match them, and the label
+           sits above it rather than beside it, so the toggle spreads. */
+        .mart-select {
+            width: 100%;
+            height: 38px;
+            justify-content: space-between;
+            font-weight: 400;
+            font-size: 13.5px;
         }
     }
 

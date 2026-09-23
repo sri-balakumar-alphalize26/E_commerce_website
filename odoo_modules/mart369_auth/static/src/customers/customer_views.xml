@@ -18,7 +18,7 @@
             <t t-set="d" t-value="state.data"/>
             <button type="button" class="o_mart369_kpi" t-on-click="() => this.applyFilter('status_new,status_active,status_dormant')"
                     title="Show every live customer">
-                <span class="o_mart369_tile o_mart369_tile_blue"><i class="fa fa-users"/></span>
+                <span class="o_mart369_tile o_mart369_tile_blue"><Icon n="'users'" size="14"/></span>
                 <span class="o_mart369_kpi_txt">
                     <small>Customers</small>
                     <strong t-out="d.total"/>
@@ -27,7 +27,7 @@
             </button>
             <button type="button" class="o_mart369_kpi" t-on-click="() => this.applyFilter('status_new')"
                     title="Show customers who signed up this week">
-                <span class="o_mart369_tile o_mart369_tile_orange"><i class="fa fa-star"/></span>
+                <span class="o_mart369_tile o_mart369_tile_orange"><Icon n="'star'" size="14"/></span>
                 <span class="o_mart369_kpi_txt">
                     <small>New this week</small>
                     <strong t-out="d.new_week"/>
@@ -41,7 +41,7 @@
             </button>
             <button type="button" class="o_mart369_kpi" t-on-click="() => this.applyFilter('status_active')"
                     title="Show active customers">
-                <span class="o_mart369_tile o_mart369_tile_green"><i class="fa fa-shopping-bag"/></span>
+                <span class="o_mart369_tile o_mart369_tile_green"><Icon n="'bag'" size="14"/></span>
                 <span class="o_mart369_kpi_txt">
                     <small>Ordered in 30 days</small>
                     <strong t-out="d.ordered_30"/>
@@ -50,7 +50,7 @@
             </button>
             <button type="button" class="o_mart369_kpi" t-on-click="() => this.applyFilter('no_mobile')"
                     title="Show customers without a mobile">
-                <span class="o_mart369_tile"><i class="fa fa-mobile"/></span>
+                <span class="o_mart369_tile"><Icon n="'phone'" size="14"/></span>
                 <span class="o_mart369_kpi_txt">
                     <small>Mobile on file</small>
                     <strong><t t-out="d.with_mobile"/> <em>of <t t-out="d.total"/></em></strong>
@@ -59,7 +59,7 @@
             </button>
             <button type="button" class="o_mart369_kpi" t-on-click="() => this.applyFilter('status_dormant')"
                     title="Show dormant customers">
-                <span class="o_mart369_tile o_mart369_tile_red"><i class="fa fa-moon-o"/></span>
+                <span class="o_mart369_tile o_mart369_tile_red"><Icon n="'moon'" size="14"/></span>
                 <span class="o_mart369_kpi_txt">
                     <small>Dormant</small>
                     <strong t-out="d.dormant"/>

@@ -29,6 +29,11 @@ import { useDebounced } from "@web/core/utils/timing";
 import { _t } from "@web/core/l10n/translation";
 import { Layout } from "@web/search/layout";
 import { standardActionServiceProps } from "@web/webclient/actions/action_service";
+import { Search } from "@mart369/ui/search";
+import { Pick } from "@mart369/ui/pick";
+import { Icon } from "@mart369/ui/icon";
+import { Tabs } from "@mart369/ui/tabs";
+import { Pill } from "@mart369/ui/pill";
 
 const MODEL = "payment.transaction";
 
@@ -51,12 +56,12 @@ const TABS = [
    keep their own pill rather than being folded into Paid: a payment a gateway
    is holding, and one the customer never submitted, are not money in. */
 const STATES = {
-    draft: { label: _t("Never sent"), cls: "pd-p-grey" },
-    pending: { label: _t("Waiting"), cls: "pd-p-amber" },
-    authorized: { label: _t("Held by the bank"), cls: "pd-p-violet" },
-    done: { label: _t("Paid"), cls: "pd-p-green" },
-    cancel: { label: _t("Cancelled"), cls: "pd-p-grey" },
-    error: { label: _t("Failed"), cls: "pd-p-red" },
+    draft: { label: _t("Never sent"), tone: "grey" },
+    pending: { label: _t("Waiting"), tone: "amber" },
+    authorized: { label: _t("Held by the bank"), tone: "violet" },
+    done: { label: _t("Paid"), tone: "green" },
+    cancel: { label: _t("Cancelled"), tone: "grey" },
+    error: { label: _t("Failed"), tone: "red" },
 };
 
 const KINDS = {
@@ -96,7 +101,7 @@ function ago(ms) {
 
 export class PaymentDesk extends Component {
     static template = "mart369_payment.PaymentDesk";
-    static components = { Layout };
+    static components = { Layout, Pick, Search, Icon, Tabs, Pill };
     static props = { ...standardActionServiceProps };
 
     setup() {
@@ -105,6 +110,7 @@ export class PaymentDesk extends Component {
 
         this.TILES = TILES;
         this.TABS = TABS;
+        this.STATES = STATES;
 
         this.state = useState({
             tab: "all",
@@ -118,10 +124,15 @@ export class PaymentDesk extends Component {
             error: "",
         });
 
-        this.search = useDebounced((ev) => {
-            this.state.q = ev.target.value.trim();
-            this.load();
-        }, 300);
+        /* The box writes to state at once, so typing is never swallowed by
+           the wait; only the reload is debounced, which is all the 300ms
+           was ever for. The text is kept raw and trimmed when it is sent -
+           trimming it here would eat the space between two words. */
+        this.reload = useDebounced(() => this.load(), 300);
+        this.onSearch = (q) => {
+            this.state.q = q;
+            this.reload();
+        };
 
         onWillStart(() => this.load());
 
@@ -141,7 +152,7 @@ export class PaymentDesk extends Component {
             const page = await this.orm.call(MODEL, "mart369_admin_list", [], {
                 tab: this.state.tab,
                 kind: this.state.kind || null,
-                q: this.state.q || null,
+                q: this.state.q.trim() || null,
             });
             this.state.rows = page.rows || [];
             this.state.counts = page.counts || null;
@@ -175,6 +186,14 @@ export class PaymentDesk extends Component {
             ["order", _t("Orders")],
             ["topup", _t("Top-ups")],
         ];
+    }
+
+
+    /** The tabs as the kit's strip takes them: [key, label, count] triples.
+     *  `tabCount` returns null for a tab that counts nothing, and the strip
+     *  draws no badge for null - which is how a tab stays quiet. */
+    get tabItems() {
+        return this.TABS.map((tab) => [tab.key, tab.label, this.tabCount(tab)]);
     }
 
     tabCount(tab) {
@@ -222,9 +241,6 @@ export class PaymentDesk extends Component {
         return STATES[key]?.label || key;
     }
 
-    stateClass(key) {
-        return STATES[key]?.cls || "pd-p-grey";
-    }
 
     kindLabel(key) {
         return KINDS[key] || key;

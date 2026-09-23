@@ -26,6 +26,10 @@ import { _t } from "@web/core/l10n/translation";
 import { Dialog } from "@web/core/dialog/dialog";
 import { Layout } from "@web/search/layout";
 import { standardActionServiceProps } from "@web/webclient/actions/action_service";
+import { Search } from "@mart369/ui/search";
+import { Icon } from "@mart369/ui/icon";
+import { Tabs } from "@mart369/ui/tabs";
+import { Pill } from "@mart369/ui/pill";
 
 const MODEL = "loyalty.card";
 
@@ -46,10 +50,10 @@ const TABS = [
 /* The four kinds of movement, in the customer's own words - these are the
    same rows they see in the app, so they must read the same way. */
 const KINDS = {
-    add: { label: _t("Added"), cls: "wd-p-green", sign: "+" },
-    spend: { label: _t("Spent"), cls: "wd-p-grey", sign: "-" },
-    refund: { label: _t("Refunded"), cls: "wd-p-blue", sign: "+" },
-    reward: { label: _t("Reward"), cls: "wd-p-violet", sign: "+" },
+    add: { label: _t("Added"), tone: "green", sign: "+" },
+    spend: { label: _t("Spent"), tone: "grey", sign: "-" },
+    refund: { label: _t("Refunded"), tone: "blue", sign: "+" },
+    reward: { label: _t("Reward"), tone: "violet", sign: "+" },
 };
 
 const POLL_MS = 60000;
@@ -90,7 +94,7 @@ function ago(ms) {
  */
 export class LedgerDialog extends Component {
     static template = "mart369_payment.LedgerDialog";
-    static components = { Dialog };
+    static components = { Dialog, Icon, Pill };
     static props = {
         close: { type: Function },
         card: { type: Object },
@@ -127,9 +131,6 @@ export class LedgerDialog extends Component {
         return KINDS[kind]?.label || kind;
     }
 
-    kindClass(kind) {
-        return KINDS[kind]?.cls || "wd-p-grey";
-    }
 
     sign(kind) {
         return KINDS[kind]?.sign || "";
@@ -142,7 +143,7 @@ export class LedgerDialog extends Component {
 
 export class WalletDesk extends Component {
     static template = "mart369_payment.WalletDesk";
-    static components = { Layout };
+    static components = { Layout, Search, Icon, Tabs, Pill };
     static props = { ...standardActionServiceProps };
 
     setup() {
@@ -152,6 +153,7 @@ export class WalletDesk extends Component {
 
         this.TILES = TILES;
         this.TABS = TABS;
+        this.KINDS = KINDS;
 
         this.state = useState({
             tab: "all",
@@ -163,10 +165,15 @@ export class WalletDesk extends Component {
             error: "",
         });
 
-        this.search = useDebounced((ev) => {
-            this.state.q = ev.target.value.trim();
-            this.load();
-        }, 300);
+        /* The box writes to state at once, so typing is never swallowed by
+           the wait; only the reload is debounced, which is all the 300ms
+           was ever for. The text is kept raw and trimmed when it is sent -
+           trimming it here would eat the space between two words. */
+        this.reload = useDebounced(() => this.load(), 300);
+        this.onSearch = (q) => {
+            this.state.q = q;
+            this.reload();
+        };
 
         onWillStart(() => this.load());
         this.timer = setInterval(() => this.load({ quiet: true }), POLL_MS);
@@ -180,7 +187,7 @@ export class WalletDesk extends Component {
         try {
             const page = await this.orm.call(MODEL, "mart369_admin_list", [], {
                 tab: this.state.tab,
-                q: this.state.q || null,
+                q: this.state.q.trim() || null,
             });
             this.state.rows = page.rows || [];
             this.state.counts = page.counts || null;
@@ -199,6 +206,14 @@ export class WalletDesk extends Component {
         }
         this.state.tab = tab;
         this.load();
+    }
+
+
+    /** The tabs as the kit's strip takes them: [key, label, count] triples.
+     *  `tabCount` returns null for a tab that counts nothing, and the strip
+     *  draws no badge for null - which is how a tab stays quiet. */
+    get tabItems() {
+        return this.TABS.map((tab) => [tab.key, tab.label, this.tabCount(tab)]);
     }
 
     tabCount(tab) {
