@@ -13,10 +13,10 @@
     -->
     <menuitem id="menu_mart369_support"
               name="Support"
-              parent="mart369.menu_mart369_root"
+              parent="mart369.menu_mart369_sales"
               action="action_mart369_support_desk"
               groups="sales_team.group_sale_salesman"
-              sequence="7"/>
+              sequence="90"/>
 
     <menuitem id="menu_mart369_support_all"
               name="Support (all views)"
@@ -36,10 +36,10 @@
     -->
     <menuitem id="menu_mart369_bot_rules"
               name="Bot answers"
-              parent="mart369.menu_mart369_root"
+              parent="mart369.menu_mart369_store"
               action="action_mart369_bot_desk"
               groups="sales_team.group_sale_salesman"
-              sequence="29"/>
+              sequence="40"/>
 
     <menuitem id="menu_mart369_bot_rules_all"
               name="Bot answers (all views)"

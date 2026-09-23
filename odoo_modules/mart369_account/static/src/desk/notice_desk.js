@@ -24,18 +24,23 @@ import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
 import { useDebounced } from "@web/core/utils/timing";
 import { _t } from "@web/core/l10n/translation";
-import { ConfirmationDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
+import { Confirm } from "@mart369/ui/confirm";
 import { Dialog } from "@web/core/dialog/dialog";
 import { Layout } from "@web/search/layout";
 import { standardActionServiceProps } from "@web/webclient/actions/action_service";
+import { Search } from "@mart369/ui/search";
+import { Pick } from "@mart369/ui/pick";
+import { Icon } from "@mart369/ui/icon";
+import { Tabs } from "@mart369/ui/tabs";
+import { Pill } from "@mart369/ui/pill";
 
 const MODEL = "mart369.notice";
 
 const TILES = [
-    { key: "live", tab: "live", label: _t("Live now"), icon: "fa-bullhorn" },
-    { key: "scheduled", tab: "scheduled", label: _t("Scheduled"), icon: "fa-clock-o" },
-    { key: "expired", tab: "expired", label: _t("Finished"), icon: "fa-check" },
-    { key: "off", tab: "off", label: _t("Taken down"), icon: "fa-ban", warn: true },
+    { key: "live", tab: "live", label: _t("Live now"), icon: "megaphone" },
+    { key: "scheduled", tab: "scheduled", label: _t("Scheduled"), icon: "clock" },
+    { key: "expired", tab: "expired", label: _t("Finished"), icon: "check" },
+    { key: "off", tab: "off", label: _t("Taken down"), icon: "ban", warn: true },
 ];
 
 const TABS = [
@@ -47,6 +52,15 @@ const TABS = [
 ];
 
 const PAGE = 30;
+
+/* Which tone each state wears. A notice's state is its own label, so there
+   is nothing to translate - only to colour. */
+const TONES = {
+    live: { tone: "green" },
+    scheduled: { tone: "blue" },
+    expired: { tone: "grey" },
+    off: { tone: "amber" },
+};
 const POLL_MS = 60000;
 
 function message(err) {
@@ -81,7 +95,7 @@ function when(ms) {
 
 export class NoticeDialog extends Component {
     static template = "mart369_account.NoticeDialog";
-    static components = { Dialog };
+    static components = { Dialog, Pick, Icon, Pill };
     static props = {
         notice: { type: [Object, { value: false }], optional: true },
         kinds: { type: Array },
@@ -105,6 +119,17 @@ export class NoticeDialog extends Component {
             busy: false,
             error: "",
         });
+    }
+
+    /** The kinds the server offers, as the [value, label] pairs the dropdown
+     *  takes. Empty until the desk behind this has loaded them, which `Pick`
+     *  shows as a blank toggle rather than falling over. */
+    get kindOptions() {
+        return this.props.kinds.map((kind) => [String(kind.key), kind.label]);
+    }
+
+    setKind(kind) {
+        this.state.form.kind = kind;
     }
 
     async save() {
@@ -142,7 +167,7 @@ export class NoticeDialog extends Component {
 
 export class NoticeDesk extends Component {
     static template = "mart369_account.NoticeDesk";
-    static components = { Layout };
+    static components = { Layout, Search, Icon, Tabs, Pill };
     static props = { ...standardActionServiceProps };
 
     setup() {
@@ -153,6 +178,7 @@ export class NoticeDesk extends Component {
 
         this.TILES = TILES;
         this.TABS = TABS;
+        this.TONES = TONES;
 
         this.state = useState({
             tab: "live",
@@ -167,11 +193,16 @@ export class NoticeDesk extends Component {
             error: "",
         });
 
-        this.search = useDebounced((ev) => {
-            this.state.q = ev.target.value.trim();
+        /* The box writes to state at once, so typing is never swallowed by
+           the wait; only the reload is debounced, which is all the 300ms
+           was ever for. The text is kept raw and trimmed when it is sent -
+           trimming it here would eat the space between two words. */
+        this.reload = useDebounced(() => this.load(), 300);
+        this.onSearch = (q) => {
+            this.state.q = q;
             this.state.limit = PAGE;
-            this.load();
-        }, 300);
+            this.reload();
+        };
 
         onWillStart(() => this.load());
 
@@ -190,7 +221,7 @@ export class NoticeDesk extends Component {
         try {
             const page = await this.orm.call(MODEL, "mart369_admin_list", [], {
                 tab: this.state.tab,
-                q: this.state.q || null,
+                q: this.state.q.trim() || null,
                 limit: this.state.limit,
             });
             this.state.rows = page.notices || [];
@@ -237,7 +268,7 @@ export class NoticeDesk extends Component {
     }
 
     askTakeDown(row) {
-        this.dialog.add(ConfirmationDialog, {
+        this.dialog.add(Confirm, {
             title: _t("Take this down?"),
             body: _t(
                 "It stops appearing to anybody new. Customers who have already " +
@@ -266,6 +297,14 @@ export class NoticeDesk extends Component {
     showMore() {
         this.state.limit += PAGE;
         this.load();
+    }
+
+
+    /** The tabs as the kit's strip takes them: [key, label, count] triples.
+     *  `tabCount` returns null for a tab that counts nothing, and the strip
+     *  draws no badge for null - which is how a tab stays quiet. */
+    get tabItems() {
+        return this.TABS.map((tab) => [tab.key, tab.label, this.tabCount(tab)]);
     }
 
     tabCount(tab) {

@@ -1,5 +1,6 @@
 import { Component, onWillStart, onWillUpdateProps, useState } from "@odoo/owl";
 import { useService } from "@web/core/utils/hooks";
+import { Icon } from "@mart369/ui/icon";
 
 /**
  * Base for the three strips on this module's screens.
@@ -46,6 +47,7 @@ class Mart369Strip extends Component {
 
 export class Mart369ReviewBoard extends Mart369Strip {
     static template = "mart369_account.ReviewBoard";
+    static components = { Icon };
     static model = "rating.rating";
     static method = "mart369_review_dashboard";
 
@@ -68,12 +70,14 @@ export class Mart369ReviewBoard extends Mart369Strip {
 
 export class Mart369ReferralBoard extends Mart369Strip {
     static template = "mart369_account.ReferralBoard";
+    static components = { Icon };
     static model = "mart369.referral";
     static method = "mart369_referral_dashboard";
 }
 
 export class Mart369RewardBoard extends Mart369Strip {
     static template = "mart369_account.RewardBoard";
+    static components = { Icon };
     static model = "mart369.scratch";
     static method = "mart369_scratch_dashboard";
 }

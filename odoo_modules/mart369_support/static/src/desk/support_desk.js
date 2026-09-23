@@ -27,20 +27,24 @@
  *  - **Reply is hidden, not disabled, on a closed ticket.** The model refuses
  *    it, and offering a box only to reject what somebody typed is a trap.
  *
- * `Pick` is imported from the orders desk rather than copied - mart369_support
- * depends on mart369_order, so it is already in the bundle.
+ * `Pick` is imported from the shared kit in mart369 rather than copied, which is
+ * why the toolbar's dropdowns and the one in the dialog are the same control.
  */
 import { Component, onWillStart, onWillUnmount, useState } from "@odoo/owl";
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
 import { useDebounced } from "@web/core/utils/timing";
 import { _t } from "@web/core/l10n/translation";
-import { ConfirmationDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
+import { Confirm } from "@mart369/ui/confirm";
 import { Dialog } from "@web/core/dialog/dialog";
 import { Layout } from "@web/search/layout";
 import { standardActionServiceProps } from "@web/webclient/actions/action_service";
+import { Search } from "@mart369/ui/search";
 
-import { Pick } from "@mart369_order/desk/order_desk";
+import { Pick } from "@mart369/ui/pick";
+import { Icon } from "@mart369/ui/icon";
+import { Tabs } from "@mart369/ui/tabs";
+import { Pill } from "@mart369/ui/pill";
 
 const MODEL = "mart369.ticket";
 
@@ -48,10 +52,10 @@ const MODEL = "mart369.ticket";
    above one. "Longest wait" is the exception - there is no tab for it, so it
    stays a plain figure and does not look pressable. */
 const TILES = [
-    { key: "needs", tab: "needs", label: _t("Needs a reply"), icon: "fa-inbox", warn: true },
-    { key: "late", label: _t("Waiting over 30 min"), icon: "fa-exclamation-triangle", bad: true, flat: true },
-    { key: "longest", label: _t("Longest wait"), icon: "fa-clock-o", minutes: true, flat: true },
-    { key: "answeredToday", label: _t("Answered today"), icon: "fa-check", flat: true },
+    { key: "needs", tab: "needs", label: _t("Needs a reply"), icon: "box", warn: true },
+    { key: "late", label: _t("Waiting over 30 min"), icon: "warn", bad: true, flat: true },
+    { key: "longest", label: _t("Longest wait"), icon: "clock", minutes: true, flat: true },
+    { key: "answeredToday", label: _t("Answered today"), icon: "check", flat: true },
 ];
 
 const TABS = [
@@ -64,6 +68,16 @@ const TABS = [
 ];
 
 const PAGE = 30;
+
+/* Which tone each state wears. The label is the server's - `row.stateLabel`
+   - so this decides the colour and nothing else. */
+const TONES = {
+    new: { tone: "amber" },
+    open: { tone: "blue" },
+    waiting: { tone: "violet" },
+    done: { tone: "green" },
+    cancelled: { tone: "grey" },
+};
 const POLL_MS = 30000;
 const MAX_REPLY = 500;
 
@@ -109,7 +123,7 @@ function ago(ms) {
  */
 export class TicketDialog extends Component {
     static template = "mart369_support.TicketDialog";
-    static components = { Dialog };
+    static components = { Dialog, Pick, Icon, Pill };
     static props = {
         ref: { type: String },
         staff: { type: Array },
@@ -203,7 +217,7 @@ export class TicketDialog extends Component {
     }
 
     askDrop() {
-        this.dialog.add(ConfirmationDialog, {
+        this.dialog.add(Confirm, {
             title: _t("Drop this ticket?"),
             body: _t(
                 "It is closed without an answer, and the customer is not told."
@@ -228,7 +242,7 @@ export class TicketDialog extends Component {
         ];
     }
 
-    /** Who the <select> should show as chosen, as a string to compare against
+    /** Who the dropdown should show as chosen, as a string to compare against
      *  the option values. A getter rather than an expression in the template:
      *  an OWL template is evaluated without globals, so `String(...)` in there
      *  is a TypeError at render time rather than a mistake anybody sees. */
@@ -249,7 +263,7 @@ export class TicketDialog extends Component {
 
 export class SupportDesk extends Component {
     static template = "mart369_support.SupportDesk";
-    static components = { Layout, Pick };
+    static components = { Layout, Pick, Search, Icon, Tabs, Pill };
     static props = { ...standardActionServiceProps };
 
     setup() {
@@ -260,6 +274,7 @@ export class SupportDesk extends Component {
 
         this.TILES = TILES;
         this.TABS = TABS;
+        this.TONES = TONES;
 
         this.state = useState({
             tab: "needs",
@@ -279,11 +294,16 @@ export class SupportDesk extends Component {
             error: "",
         });
 
-        this.search = useDebounced((ev) => {
-            this.state.q = ev.target.value.trim();
+        /* The box writes to state at once, so typing is never swallowed by
+           the wait; only the reload is debounced, which is all the 300ms
+           was ever for. The text is kept raw and trimmed when it is sent -
+           trimming it here would eat the space between two words. */
+        this.reload = useDebounced(() => this.load(), 300);
+        this.onSearch = (q) => {
+            this.state.q = q;
             this.state.limit = PAGE;
-            this.load();
-        }, 300);
+            this.reload();
+        };
 
         onWillStart(() => this.load());
 
@@ -307,7 +327,7 @@ export class SupportDesk extends Component {
         try {
             const page = await this.orm.call(MODEL, "mart369_admin_list", [], {
                 tab: this.state.tab,
-                q: this.state.q || null,
+                q: this.state.q.trim() || null,
                 mine: this.state.mine === "1" ? true : null,
                 assignee: this.state.assignee || null,
                 sort: this.state.sort,
@@ -363,6 +383,14 @@ export class SupportDesk extends Component {
     showMore() {
         this.state.limit += PAGE;
         this.load();
+    }
+
+
+    /** The tabs as the kit's strip takes them: [key, label, count] triples.
+     *  `tabCount` returns null for a tab that counts nothing, and the strip
+     *  draws no badge for null - which is how a tab stays quiet. */
+    get tabItems() {
+        return this.TABS.map((tab) => [tab.key, tab.label, this.tabCount(tab)]);
     }
 
     tabCount(tab) {

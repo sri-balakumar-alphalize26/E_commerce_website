@@ -13,11 +13,11 @@
                     <div class="bt-head-act">
                         <button class="mart-btn mart-btn-primary"
                                 t-on-click="() => this.write(false)">
-                            <i class="fa fa-plus" aria-hidden="true"/>
+                            <Icon n="'plus'" size="14"/>
                             New answer
                         </button>
                         <button class="mart-btn" t-on-click="() => this.moreViews()">
-                            <i class="fa fa-th-list" role="img" aria-label="List"/>
+                            <Icon n="'menu'" size="14"/>
                             All views
                         </button>
                     </div>
@@ -28,7 +28,7 @@
                         <div t-if="tile.flat"
                              t-attf-class="bt-tile bt-tile-flat {{ tile.bad and tileValue(tile) ? 'bt-tile-bad' : '' }}">
                             <span class="bt-tile-top">
-                                <i t-attf-class="fa {{ tile.icon }}" aria-hidden="true"/>
+                                <Icon n="tile.icon" size="15"/>
                                 <t t-esc="tile.label"/>
                             </span>
                             <b t-esc="tileValue(tile)"/>
@@ -40,7 +40,7 @@
                                 t-att-aria-pressed="state.tab === tile.tab ? 'true' : 'false'"
                                 t-on-click="() => this.pick(tile.tab)">
                             <span class="bt-tile-top">
-                                <i t-attf-class="fa {{ tile.icon }}" aria-hidden="true"/>
+                                <Icon n="tile.icon" size="15"/>
                                 <t t-esc="tile.label"/>
                             </span>
                             <b t-esc="tileValue(tile)"/>
@@ -50,20 +50,11 @@
                 </div>
 
                 <div class="pe-toolbar bt-toolbar">
-                    <div class="bt-tabs" role="tablist">
-                        <button t-foreach="TABS" t-as="tab" t-key="tab.key"
-                                role="tab"
-                                t-att-aria-selected="state.tab === tab.key ? 'true' : 'false'"
-                                t-attf-class="{{ state.tab === tab.key ? 'mart-on' : '' }}"
-                                t-on-click="() => this.pick(tab.key)">
-                            <t t-esc="tab.label"/>
-                            <em t-if="tabCount(tab) !== null" t-esc="tabCount(tab)"/>
-                        </button>
-                    </div>
+                    <Tabs tabs="tabItems" value="state.tab"
+                          onChange="(k) => this.pick(k)"/>
                     <div class="pe-toolbar-gap"/>
-                    <input type="search" class="bt-search"
-                           placeholder="Name, pattern or words"
-                           aria-label="Search answers" t-on-input="search"/>
+                    <Search value="state.q" placeholder="'Name, pattern or words'" label="'Search answers'"
+                            onChange="(v) => this.onSearch(v)"/>
                 </div>
 
                 <p t-if="state.error" class="pe-error" role="alert">
@@ -94,8 +85,7 @@
                                     t-attf-class="bt-row {{ row.active ? '' : 'bt-row-off' }}">
                                     <span class="bt-line1">
                                         <b class="bt-title" t-esc="row.title"/>
-                                        <span t-attf-class="mart-pill bt-s-{{ row.active ? 'on' : 'off' }}"
-                                              t-esc="row.active ? 'in use' : 'switched off'"/>
+                                        <Pill s="row.active ? 'on' : 'off'" map="TONES"/>
                                         <span class="bt-kind" t-esc="row.kindLabel"/>
                                     </span>
                                     <code class="bt-pattern" t-esc="row.pattern"/>
@@ -110,13 +100,13 @@
                                                         t-att-disabled="state.busy or row_index === 0"
                                                         aria-label="Try this earlier"
                                                         t-on-click="() => this.move(row_index, -1)">
-                                                    <i class="fa fa-arrow-up" aria-hidden="true"/>
+                                                    <Icon n="'up'" size="14"/>
                                                 </button>
                                                 <button class="mart-btn mart-btn-sm"
                                                         t-att-disabled="state.busy or row_index === state.rows.length - 1"
                                                         aria-label="Try this later"
                                                         t-on-click="() => this.move(row_index, 1)">
-                                                    <i class="fa fa-arrow-down" aria-hidden="true"/>
+                                                    <Icon n="'down'" size="14"/>
                                                 </button>
                                             </t>
                                             <button class="mart-btn mart-btn-sm"
@@ -176,10 +166,8 @@
 
                 <label class="bt-field">
                     <span>Kind</span>
-                    <select t-model="state.form.kind">
-                        <option t-foreach="props.kinds" t-as="kind" t-key="kind.key"
-                                t-att-value="kind.key" t-esc="kind.label"/>
-                    </select>
+                    <Pick label="'Kind'" value="state.form.kind" options="kindOptions"
+                          onChange="(v) => this.setKind(v)"/>
                 </label>
 
                 <label class="bt-field">

@@ -11,7 +11,7 @@
                         <p>Who invited whom, and which invites turned into customers.</p>
                     </div>
                     <button class="mart-btn" t-on-click="() => this.allViews()">
-                        <i class="fa fa-th-list" role="img" aria-label="List"/>
+                        <Icon n="'menu'" size="14"/>
                         All views
                     </button>
                 </header>
@@ -23,7 +23,7 @@
                     <t t-foreach="TILES" t-as="tile" t-key="tile.key">
                         <div t-if="tile.money" class="rf-tile rf-tile-flat">
                             <span class="rf-tile-top">
-                                <i t-attf-class="fa {{ tile.icon }}" aria-hidden="true"/>
+                                <Icon n="tile.icon" size="15"/>
                                 <t t-esc="tile.label"/>
                             </span>
                             <b t-esc="tileValue(tile)"/>
@@ -35,7 +35,7 @@
                                 t-att-aria-pressed="state.tab === tile.tab ? 'true' : 'false'"
                                 t-on-click="() => this.pick(tile.tab)">
                             <span class="rf-tile-top">
-                                <i t-attf-class="fa {{ tile.icon }}" aria-hidden="true"/>
+                                <Icon n="tile.icon" size="15"/>
                                 <t t-esc="tile.label"/>
                             </span>
                             <b t-esc="tileValue(tile)"/>
@@ -57,25 +57,16 @@
                     </div>
                     <button class="mart-btn" t-att-disabled="state.busy"
                             t-on-click="() => this.askReward()">
-                        <i class="fa fa-cog" aria-hidden="true"/> Change reward
+                        <Icon n="'gear'" size="14"/> Change reward
                     </button>
                 </section>
 
                 <div class="pe-toolbar rf-toolbar">
-                    <div class="rf-tabs" role="tablist">
-                        <button t-foreach="TABS" t-as="tab" t-key="tab.key"
-                                role="tab"
-                                t-att-aria-selected="state.tab === tab.key ? 'true' : 'false'"
-                                t-attf-class="{{ state.tab === tab.key ? 'mart-on' : '' }}"
-                                t-on-click="() => this.pick(tab.key)">
-                            <t t-esc="tab.label"/>
-                            <em t-if="tabCount(tab) !== null" t-esc="tabCount(tab)"/>
-                        </button>
-                    </div>
+                    <Tabs tabs="tabItems" value="state.tab"
+                          onChange="(k) => this.pick(k)"/>
                     <div class="pe-toolbar-gap"/>
-                    <input type="search" class="rf-search"
-                           placeholder="Friend, contact or who invited"
-                           aria-label="Search referrals" t-on-input="search"/>
+                    <Search value="state.q" placeholder="'Friend, contact or who invited'" label="'Search referrals'"
+                            onChange="(v) => this.onSearch(v)"/>
                 </div>
 
                 <p t-if="state.error" class="pe-error" role="alert">
@@ -113,8 +104,7 @@
                                     <div class="rf-body">
                                         <div class="rf-top">
                                             <b t-esc="row.friend or 'A friend'"/>
-                                            <span t-attf-class="mart-pill {{ stateClass(row.state) }}"
-                                                  t-esc="stateLabel(row.state)"/>
+                                            <Pill s="row.state" map="STATES"/>
                                             <small>
                                                 invited by <t t-esc="row.invitedBy"/>
                                                 <t t-if="row.inviterCode">
@@ -125,7 +115,7 @@
                                         </div>
                                         <p class="rf-sub">
                                             <t t-if="row.contact">
-                                                <i class="fa fa-envelope-o" aria-hidden="true"/>
+                                                <Icon n="'mail'" size="14"/>
                                                 <t t-esc="row.contact"/>
                                             </t>
                                             <t t-if="row.joinedAs and row.joinedAs !== row.friend">
@@ -177,16 +167,16 @@
             </label>
 
             <p class="rf-dialog-hint">
-                <i class="fa fa-info-circle" aria-hidden="true"/>
+                <Icon n="'info'" size="14"/>
                 Rewards already paid keep what they were worth - the amount is
                 copied onto the invite when it is paid - so this only changes
                 what is paid next.
             </p>
 
             <t t-set-slot="footer">
-                <button class="btn btn-primary" t-att-disabled="!canSave or state.busy"
+                <button class="mart-btn mart-btn-primary" t-att-disabled="!canSave or state.busy"
                         t-on-click="() => this.save()">Save</button>
-                <button class="btn btn-secondary"
+                <button class="mart-btn"
                         t-on-click="() => this.props.close()">Cancel</button>
             </t>
         </Dialog>

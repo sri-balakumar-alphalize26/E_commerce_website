@@ -306,3 +306,35 @@ class TestSupportAdminRoutes(Mart369OrderFixtures, HttpCase):
         self.assertTrue(payload['ok'])
         self.assertIn('needs', payload['counts'])
         self.assertNotIn('tickets', payload, 'counts only')
+
+
+@tagged('post_install', '-at_install')
+class TestSupportDeskTour(Mart369OrderFixtures, HttpCase):
+    """The desk, driven the way somebody would drive it.
+
+    `support_desk_tour.js` has existed since the desk was written but nothing
+    ran it, so it was a file that could rot without anybody noticing - and it
+    had: a selector in it still named `.sp-tabs`, a class the desk stopped
+    drawing when its tab strip became the shared component.
+
+    Worth running rather than only reading, because this is the one screen
+    where a control writes: the reply box claims the ticket, stamps it
+    answered and moves it out of "needs a reply", and the Python tests can
+    only check the method, never that the box reaches it.
+    """
+
+    def test_the_desk_answers_a_ticket(self):
+        # A ticket nobody has answered, so the desk opens on it rather than on
+        # its empty state - which is what a tour asserting on rows would
+        # otherwise be looking at.
+        ticket = self.env['mart369.ticket']._mart369_open(
+            self.partner, 'It never arrived')
+        self.assertEqual(ticket.state, 'new')
+
+        # Generous for the same reason as the other tours in this repo: the
+        # first request after an upgrade rebuilds the backend asset bundle.
+        self.start_tour('/odoo/mart-support', 'mart369_support_desk',
+                        login='admin', timeout=600)
+
+        ticket.invalidate_recordset()
+        self.assertTrue(ticket.message_ids, 'the reply reached the server')

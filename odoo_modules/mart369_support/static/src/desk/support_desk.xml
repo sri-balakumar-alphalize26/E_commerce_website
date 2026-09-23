@@ -11,7 +11,7 @@
                         <p>Who is waiting on an answer, longest wait first.</p>
                     </div>
                     <button class="mart-btn" t-on-click="() => this.moreViews()">
-                        <i class="fa fa-th-large" role="img" aria-label="Board"/>
+                        <Icon n="'grid'" size="14"/>
                         All views
                     </button>
                 </header>
@@ -23,7 +23,7 @@
                         <div t-if="tile.flat"
                              t-attf-class="sp-tile sp-tile-flat {{ tile.bad and tileValue(tile) ? 'sp-tile-bad' : '' }}">
                             <span class="sp-tile-top">
-                                <i t-attf-class="fa {{ tile.icon }}" aria-hidden="true"/>
+                                <Icon n="tile.icon" size="15"/>
                                 <t t-esc="tile.label"/>
                             </span>
                             <b t-esc="tileValue(tile)"/>
@@ -35,7 +35,7 @@
                                 t-att-aria-pressed="state.tab === tile.tab ? 'true' : 'false'"
                                 t-on-click="() => this.pick(tile.tab)">
                             <span class="sp-tile-top">
-                                <i t-attf-class="fa {{ tile.icon }}" aria-hidden="true"/>
+                                <Icon n="tile.icon" size="15"/>
                                 <t t-esc="tile.label"/>
                             </span>
                             <b t-esc="tileValue(tile)"/>
@@ -45,20 +45,11 @@
                 </div>
 
                 <div class="pe-toolbar sp-toolbar">
-                    <div class="sp-tabs" role="tablist">
-                        <button t-foreach="TABS" t-as="tab" t-key="tab.key"
-                                role="tab"
-                                t-att-aria-selected="state.tab === tab.key ? 'true' : 'false'"
-                                t-attf-class="{{ state.tab === tab.key ? 'mart-on' : '' }}"
-                                t-on-click="() => this.pick(tab.key)">
-                            <t t-esc="tab.label"/>
-                            <em t-if="tabCount(tab) !== null" t-esc="tabCount(tab)"/>
-                        </button>
-                    </div>
+                    <Tabs tabs="tabItems" value="state.tab"
+                          onChange="(k) => this.pick(k)"/>
                     <div class="pe-toolbar-gap"/>
-                    <input type="search" class="sp-search"
-                           placeholder="Ticket, customer or question"
-                           aria-label="Search tickets" t-on-input="search"/>
+                    <Search value="state.q" placeholder="'Ticket, customer or question'" label="'Search tickets'"
+                            onChange="(v) => this.onSearch(v)"/>
                     <Pick label="'Whose'" value="state.mine" options="mineOptions"
                           onChange="(v) => this.setFilter('mine', v)"/>
                     <Pick label="'Handled by'" value="state.assignee" options="staffOptions"
@@ -100,8 +91,7 @@
                                         <span class="sp-ref"><t t-esc="row.ref"/></span>
                                         <b class="sp-subject" t-esc="row.subject or 'No subject'"/>
                                         <span t-if="row.order" class="sp-order" t-esc="row.order"/>
-                                        <span t-attf-class="mart-pill sp-s-{{ row.state }}"
-                                              t-esc="row.stateLabel"/>
+                                        <Pill s="row.state" map="TONES" label="row.stateLabel"/>
                                     </span>
                                     <span class="sp-line2">
                                         <span class="sp-who" t-esc="row.customer"/>
@@ -109,7 +99,7 @@
                                         <span class="sp-owner"
                                               t-esc="row.assignee or 'nobody yet'"/>
                                         <span t-if="row.replies" class="sp-said">
-                                            <i class="fa fa-comment-o" aria-hidden="true"/>
+                                            <Icon n="'chat'" size="14"/>
                                             <t t-esc="row.replies"/>
                                         </span>
                                         <!-- The server said what this is called. -->
@@ -156,19 +146,13 @@
                                 · waited <t t-esc="waited(state.detail.waited)"/>
                             </small>
                         </div>
-                        <span t-attf-class="mart-pill sp-s-{{ state.detail.state }}"
-                              t-esc="state.detail.stateLabel"/>
+                        <Pill s="state.detail.state" map="TONES" label="state.detail.stateLabel"/>
                     </div>
 
                     <label class="sp-assign">
                         <span>Handled by</span>
-                        <select t-att-disabled="state.busy"
-                                t-on-change="(ev) => this.assign(ev.target.value)">
-                            <option t-foreach="staffOptions" t-as="opt" t-key="opt[0]"
-                                    t-att-value="opt[0]"
-                                    t-att-selected="assignedValue === opt[0]"
-                                    t-esc="opt[1]"/>
-                        </select>
+                        <Pick label="'Handled by'" value="assignedValue" options="staffOptions"
+                              disabled="state.busy" onChange="(v) => this.assign(v)"/>
                     </label>
 
                     <ul class="sp-thread">

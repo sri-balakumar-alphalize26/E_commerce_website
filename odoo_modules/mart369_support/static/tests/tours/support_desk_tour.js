@@ -59,7 +59,7 @@ registry.category("web_tour.tours").add("mart369_support_desk", {
         {
             // Answered, so nobody is waiting on us for it any more.
             content: "The queue caught up behind it",
-            trigger: ".mart-builder.sp .sp-tabs button.mart-on",
+            trigger: ".mart-builder.sp .mart-tabs button.mart-on",
         },
     ],
 });

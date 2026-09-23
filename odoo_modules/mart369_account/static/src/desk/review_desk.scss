@@ -150,21 +150,6 @@
         }
     }
 
-    .rv-search {
-        height: 38px;
-        min-width: 220px;
-        padding: 0 12px;
-        border: 1px solid var(--rv-line);
-        border-radius: 10px;
-        background: #fff;
-        font-size: 13.5px;
-
-        &:focus {
-            outline: 0;
-            border-color: var(--rv-blue);
-            box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.14);
-        }
-    }
 
     /* -------------------------------------------------------------- rows */
 

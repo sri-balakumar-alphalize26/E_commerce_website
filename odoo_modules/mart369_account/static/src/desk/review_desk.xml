@@ -11,7 +11,7 @@
                         <p>What customers said, and whether the shop is showing it.</p>
                     </div>
                     <button class="mart-btn" t-on-click="() => this.moreViews()">
-                        <i class="fa fa-th-list" role="img" aria-label="List"/>
+                        <Icon n="'menu'" size="14"/>
                         All views
                     </button>
                 </header>
@@ -23,7 +23,7 @@
                     <t t-foreach="TILES" t-as="tile" t-key="tile.key">
                         <div t-if="tile.stars" class="rv-tile rv-tile-flat">
                             <span class="rv-tile-top">
-                                <i t-attf-class="fa {{ tile.icon }}" aria-hidden="true"/>
+                                <Icon n="tile.icon" size="15"/>
                                 <t t-esc="tile.label"/>
                             </span>
                             <b><t t-esc="tileValue(tile)"/> &#9733;</b>
@@ -35,7 +35,7 @@
                                 t-att-aria-pressed="state.tab === tile.tab ? 'true' : 'false'"
                                 t-on-click="() => this.pick(tile.tab)">
                             <span class="rv-tile-top">
-                                <i t-attf-class="fa {{ tile.icon }}" aria-hidden="true"/>
+                                <Icon n="tile.icon" size="15"/>
                                 <t t-esc="tile.label"/>
                             </span>
                             <b t-esc="tileValue(tile)"/>
@@ -45,20 +45,11 @@
                 </div>
 
                 <div class="pe-toolbar rv-toolbar">
-                    <div class="rv-tabs" role="tablist">
-                        <button t-foreach="TABS" t-as="tab" t-key="tab.key"
-                                role="tab"
-                                t-att-aria-selected="state.tab === tab.key ? 'true' : 'false'"
-                                t-attf-class="{{ state.tab === tab.key ? 'mart-on' : '' }}"
-                                t-on-click="() => this.pick(tab.key)">
-                            <t t-esc="tab.label"/>
-                            <em t-if="tabCount(tab) !== null" t-esc="tabCount(tab)"/>
-                        </button>
-                    </div>
+                    <Tabs tabs="tabItems" value="state.tab"
+                          onChange="(k) => this.pick(k)"/>
                     <div class="pe-toolbar-gap"/>
-                    <input type="search" class="rv-search"
-                           placeholder="Product, customer or text"
-                           aria-label="Search reviews" t-on-input="search"/>
+                    <Search value="state.q" placeholder="'Product, customer or text'" label="'Search reviews'"
+                            onChange="(v) => this.onSearch(v)"/>
                     <Pick label="'Bought it'" value="state.verified" options="verifiedOptions"
                           onChange="(v) => this.setFilter('verified', v)"/>
                     <Pick label="'Photos'" value="state.photos" options="photoOptions"
@@ -109,7 +100,7 @@
                                             </span>
                                             <span t-if="row.photos" class="rv-shots"
                                                   t-attf-title="{{ row.photos }} photo(s) from the customer">
-                                                <i class="fa fa-camera" aria-hidden="true"/>
+                                                <Icon n="'camera'" size="14"/>
                                                 <t t-esc="row.photos"/>
                                             </span>
                                             <small>

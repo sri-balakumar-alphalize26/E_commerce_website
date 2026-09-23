@@ -113,21 +113,6 @@
         }
     }
 
-    .nt-search {
-        height: 38px;
-        min-width: 220px;
-        padding: 0 12px;
-        border: 1px solid var(--nt-line);
-        border-radius: 10px;
-        background: #fff;
-        font-size: 13.5px;
-
-        &:focus {
-            outline: 0;
-            border-color: var(--nt-blue);
-            box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.14);
-        }
-    }
 
     .nt-queue-wrap { flex: 1; min-height: 0; overflow: auto; }
     .nt-queue { padding: 0 16px 20px; }
@@ -193,10 +178,6 @@
     .nt-act { margin-left: auto; display: flex; gap: 6px; }
 
     /* The four states, in the same bands the console paints. */
-    .nt-s-live { background: #e8f5ec; color: var(--nt-green); }
-    .nt-s-scheduled { background: #eaf4fa; color: var(--nt-blue); }
-    .nt-s-expired { background: #eef2f5; color: var(--nt-muted); }
-    .nt-s-off { background: #fdf3e3; color: var(--nt-amber); }
 
     .nt-more { display: flex; justify-content: center; padding: 14px 0 4px; }
 
@@ -242,7 +223,6 @@
         color: var(--nt-muted);
 
         input,
-        select,
         textarea {
             width: 100%;
             padding: 9px 12px;
@@ -262,6 +242,17 @@
         }
 
         textarea { resize: vertical; }
+
+        /* The kit's dropdown is a 32px inline-flex toggle, sized for a toolbar.
+           In a stack of full-width fields it has to match them, and the label
+           sits above it rather than beside it, so the toggle spreads. */
+        .mart-select {
+            width: 100%;
+            height: 38px;
+            justify-content: space-between;
+            font-weight: 400;
+            font-size: 13.5px;
+        }
     }
 
     .nt-when {
@@ -270,22 +261,4 @@
         gap: 12px;
     }
 
-    /* The footer slot sits outside the `.mart-builder` div, so it misses the
-       shared button chrome entirely. */
-    .modal-footer .mart-btn {
-        height: 34px;
-        padding: 0 12px;
-        border: 1px solid var(--nt-line);
-        border-radius: 9px;
-        background: #fff;
-        font-size: 13px;
-        font-weight: 700;
-        cursor: pointer;
-    }
-
-    .modal-footer .mart-btn-primary {
-        border-color: transparent;
-        background: linear-gradient(180deg, #0c86be, #096b99);
-        color: #fff;
-    }
 }

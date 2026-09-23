@@ -35,11 +35,14 @@ import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
 import { useDebounced } from "@web/core/utils/timing";
 import { _t } from "@web/core/l10n/translation";
-import { ConfirmationDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
+import { Confirm } from "@mart369/ui/confirm";
 import { Layout } from "@web/search/layout";
 import { standardActionServiceProps } from "@web/webclient/actions/action_service";
+import { Search } from "@mart369/ui/search";
 
-import { Pick } from "@mart369_order/desk/order_desk";
+import { Pick } from "@mart369/ui/pick";
+import { Icon } from "@mart369/ui/icon";
+import { Tabs } from "@mart369/ui/tabs";
 
 const MODEL = "rating.rating";
 
@@ -47,10 +50,10 @@ const MODEL = "rating.rating";
    above one. Average is the exception - there is no "average" tab to show, so
    it stays a plain figure and never looks clickable. */
 const TILES = [
-    { key: "average", label: _t("Average rating"), icon: "fa-star", stars: true },
-    { key: "pending", tab: "pending", label: _t("Waiting"), icon: "fa-inbox", warn: true },
-    { key: "published", tab: "published", label: _t("Published"), icon: "fa-check" },
-    { key: "hidden", tab: "hidden", label: _t("Hidden"), icon: "fa-eye-slash", bad: true },
+    { key: "average", label: _t("Average rating"), icon: "star", stars: true },
+    { key: "pending", tab: "pending", label: _t("Waiting"), icon: "box", warn: true },
+    { key: "published", tab: "published", label: _t("Published"), icon: "check" },
+    { key: "hidden", tab: "hidden", label: _t("Hidden"), icon: "eye-off", bad: true },
 ];
 
 const TABS = [
@@ -95,7 +98,7 @@ function ago(ms) {
 
 export class ReviewDesk extends Component {
     static template = "mart369_account.ReviewDesk";
-    static components = { Layout, Pick };
+    static components = { Layout, Pick, Search, Icon, Tabs };
     static props = { ...standardActionServiceProps };
 
     setup() {
@@ -120,10 +123,15 @@ export class ReviewDesk extends Component {
             error: "",
         });
 
-        this.search = useDebounced((ev) => {
-            this.state.q = ev.target.value.trim();
-            this.load();
-        }, 300);
+        /* The box writes to state at once, so typing is never swallowed by
+           the wait; only the reload is debounced, which is all the 300ms
+           was ever for. The text is kept raw and trimmed when it is sent -
+           trimming it here would eat the space between two words. */
+        this.reload = useDebounced(() => this.load(), 300);
+        this.onSearch = (q) => {
+            this.state.q = q;
+            this.reload();
+        };
 
         onWillStart(() => this.load());
 
@@ -152,7 +160,7 @@ export class ReviewDesk extends Component {
         try {
             const page = await this.orm.call(MODEL, "mart369_admin_list", [], {
                 state: this.state.tab === "all" ? null : this.state.tab,
-                q: this.state.q || null,
+                q: this.state.q.trim() || null,
                 verified: this.flag(this.state.verified),
                 photos: this.flag(this.state.photos),
             });
@@ -180,6 +188,14 @@ export class ReviewDesk extends Component {
     setFilter(key, value) {
         this.state[key] = value;
         this.load();
+    }
+
+
+    /** The tabs as the kit's strip takes them: [key, label, count] triples.
+     *  `tabCount` returns null for a tab that counts nothing, and the strip
+     *  draws no badge for null - which is how a tab stays quiet. */
+    get tabItems() {
+        return this.TABS.map((tab) => [tab.key, tab.label, this.tabCount(tab)]);
     }
 
     tabCount(tab) {
@@ -229,7 +245,7 @@ export class ReviewDesk extends Component {
     /** Asked first, and the question says what it costs: the star goes too,
      *  which is the half nobody expects. */
     askHide(row) {
-        this.dialog.add(ConfirmationDialog, {
+        this.dialog.add(Confirm, {
             title: _t("Hide this review?"),
             body: _t(
                 "%s by %s will no longer show on the product page, and will stop counting towards its rating.",

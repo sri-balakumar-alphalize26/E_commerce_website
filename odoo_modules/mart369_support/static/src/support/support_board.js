@@ -1,5 +1,6 @@
 import { Component, onWillStart, onWillUpdateProps, useState } from "@odoo/owl";
 import { useService } from "@web/core/utils/hooks";
+import { Icon } from "@mart369/ui/icon";
 
 /**
  * The numbers strip above 369 Mart -> Support.
@@ -10,6 +11,7 @@ import { useService } from "@web/core/utils/hooks";
  */
 export class Mart369SupportBoard extends Component {
     static template = "mart369_support.SupportBoard";
+    static components = { Icon };
     static props = { list: { type: Object, optional: true } };
 
     setup() {
