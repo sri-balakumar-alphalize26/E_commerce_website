@@ -447,6 +447,82 @@ class Mart369ProductField(models.Model):
         return True
 
     @api.model
+    def mart369_product_page(self, product_id):
+        """Every section and every field, for one product, as the desk draws it.
+
+        A sibling of `_resolve_sections` rather than a caller of it, because
+        the two answer different questions. That one answers "what does the
+        shopper get", so it returns the visible fields and nothing else. This
+        one answers "what will this product show, and what did it decide not
+        to" - and a section that is switched off has to appear *as* switched
+        off. Missing and deliberately-hidden look identical otherwise, and
+        only one of them is a decision somebody made.
+
+        The ladders are not re-derived: `_visible_for`, `_value_for` and
+        `_value_source_for` are the same three the shopper's own route runs
+        through, so this screen cannot drift from the page it describes.
+        """
+        product = self.env['product.template'].browse(int(product_id)).exists()
+        if not product:
+            return {}
+
+        fields_all = self.search([])
+        overrides = {
+            (o.product_tmpl_id.id, o.field_id.id): o
+            for o in self.env['mart369.product.override'].search(
+                [('product_tmpl_id', '=', product.id)])
+        }
+        cat_values = fields_all[:1]._category_values(product) if fields_all else {}
+
+        by_section = {}
+        for field in fields_all:
+            by_section.setdefault(field.section_id, self.browse())
+            by_section[field.section_id] |= field
+
+        sections = []
+        for section in self.env['mart369.product.section'].search([]):
+            rows = []
+            for field in by_section.get(section, self.browse()):
+                visible = field._visible_for(product, overrides)
+                rows.append({
+                    'id': field.id,
+                    'key': field.key or '',
+                    'name': field.name or field.key or '',
+                    'value': field._value_for(product, overrides, cat_values) or '',
+                    # Which of the four layers won. Without it an inherited
+                    # value is indistinguishable from one set on this product,
+                    # which is how the same wording gets typed in two places.
+                    'source': field._value_source_for(product, overrides, cat_values),
+                    'visible': visible,
+                    'perProduct': field.per_product,
+                    'kind': field.value_kind or 'text',
+                })
+            if not rows:
+                continue
+            sections.append({
+                'id': section.id,
+                'key': section.key or '',
+                'name': section.name or section.key or '',
+                # The master switch. Off here means the whole band is gone,
+                # whatever each field inside it says.
+                'show': section.show,
+                'fields': rows,
+                'shown': sum(1 for r in rows if r['visible']),
+                'total': len(rows),
+            })
+
+        return {
+            'product': {
+                'id': product.id,
+                'name': product.display_name,
+                'categories': [c.display_name
+                               for c in product.public_categ_ids],
+                'differs': product.mart_page_differs,
+            },
+            'sections': sections,
+        }
+
+    @api.model
     def _resolve_sections(self, product):
         """{section key: [(field, value), ...]} in page order, visible only.
 

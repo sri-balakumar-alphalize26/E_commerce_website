@@ -366,7 +366,7 @@ export default function ProductDetail({
                       {d.info.map(([k, v], n) => (
                         <div key={k} style={{ "--k": n }}>
                           <dt>{k}</dt>
-                          <dd>{v === "veg" ? <span className="pd-veg"><i /></span> : k === "Brand" || k === "Sold by" ? <a href="#" onClick={(e) => { e.preventDefault(); onExplore?.(); }}>{v}</a> : v}</dd>
+                          <dd>{k === "Brand" || k === "Sold by" ? <a href="#" onClick={(e) => { e.preventDefault(); onExplore?.(); }}>{v}</a> : v}</dd>
                         </div>
                       ))}
                     </dl>

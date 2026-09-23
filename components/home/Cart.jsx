@@ -119,7 +119,7 @@ function LineItem({ p, qty, setQty, i }) {
       <span className="ct-thumb"><Thumb p={p} /></span>
       <div className="ct-line-info" data-open="" onClick={(e) => open?.(p, e.currentTarget.parentElement.querySelector(".ct-thumb")?.getBoundingClientRect())}>
         <b>{p.name}</b>
-        <small>{p.unit}{p.veg ? " · Veg" : ""}</small>
+        <small>{p.unit}</small>
       </div>
       <Stepper qty={qty} onChange={change} name={p.name} />
       <div className="ct-line-price">

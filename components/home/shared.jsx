@@ -364,7 +364,6 @@ export function ProductCard({ p, qty, setQty, i }) {
         </div>
         {off >= 10 && !oos && !p.tag && <span className="hm-off">{off}% OFF</span>}
         {p.tag && <span className="hm-off hm-new">{p.tag}</span>}
-        {p.veg && <span className="hm-veg" title="Vegetarian" aria-label="Vegetarian"><i /></span>}
         {oos && <span className="hm-oos-tag">Out of stock</span>}
       </div>
       <div className="hm-card-body">

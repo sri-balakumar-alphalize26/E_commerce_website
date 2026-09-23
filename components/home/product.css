@@ -137,8 +137,6 @@
 .pd-table dt { padding: 9px 12px; color: var(--hm-muted); }
 .pd-table dd { margin: 0; padding: 9px 12px; color: var(--hm-ink); word-break: break-word; }
 .pd-table dd a { color: var(--hm-blue) !important; text-decoration: none; font-weight: 600; }
-.pd-veg { width: 18px; height: 18px; border: 1.5px solid var(--pd-green); border-radius: 3px; display: inline-grid; place-items: center; background: #fff; }
-.pd-veg i { width: 8px; height: 8px; border-radius: 50%; background: var(--pd-green); }
 
 .pd-grid { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border: 1px solid var(--pd-line); border-radius: 12px; overflow: hidden; }
 .pd-grid > div { padding: 10px 12px; border-top: 1px solid var(--pd-line); }

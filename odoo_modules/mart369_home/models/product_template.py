@@ -28,9 +28,6 @@ class ProductTemplate(models.Model):
         string='Badge',
         help='A short pill on the card, e.g. New. It replaces the discount '
              'pill, so leave it empty on discounted products.')
-    mart_is_veg = fields.Boolean(
-        string='Vegetarian',
-        help='On: the card carries the green vegetarian mark.')
     mart_low_stock_at = fields.Integer(
         string='Warn when stock reaches',
         help='The card says "Only N left" once free stock falls to this '

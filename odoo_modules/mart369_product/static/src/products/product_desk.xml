@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="mart369_product.ProductDesk">
+        <Layout display="{ controlPanel: {} }" className="'o_mart369_desk h-100'">
+            <div class="mart-builder pe pr">
+
+                <!-- ============================================ the list -->
+                <t t-if="!state.open">
+                    <header class="pe-head">
+                        <div>
+                            <h1>Products</h1>
+                            <p>Every product, and what its page will show.</p>
+                        </div>
+                    </header>
+
+                    <div class="pe-toolbar pr-toolbar">
+                        <Search value="state.q" placeholder="'A product name or code'"
+                                label="'Search products'"
+                                onChange="(v) => this.onSearch(v)"/>
+                        <div class="pe-toolbar-gap"/>
+                        <span class="pr-count">
+                            <t t-esc="state.total"/> of <t t-esc="state.allCount"/>
+                        </span>
+                        <!-- The same two Odoo offers on its own product list,
+                             in the same order, so the icons mean what they
+                             mean everywhere else in the backend. -->
+                        <div class="pr-views" role="group" aria-label="View">
+                            <button type="button"
+                                    t-attf-class="{{ state.view === 'kanban' ? 'mart-on' : '' }}"
+                                    t-att-aria-pressed="state.view === 'kanban' ? 'true' : 'false'"
+                                    title="Cards" t-on-click="() => this.setView('kanban')">
+                                <Icon n="'dash'" size="15"/>
+                            </button>
+                            <button type="button"
+                                    t-attf-class="{{ state.view === 'list' ? 'mart-on' : '' }}"
+                                    t-att-aria-pressed="state.view === 'list' ? 'true' : 'false'"
+                                    title="List" t-on-click="() => this.setView('list')">
+                                <Icon n="'menu'" size="15"/>
+                            </button>
+                        </div>
+                    </div>
+
+                    <p t-if="state.error" class="pe-error" role="alert">
+                        We could not reach the shop. <t t-esc="state.error"/>
+                        <button class="mart-link" t-on-click="() => this.load()">Try again</button>
+                    </p>
+
+                    <div class="pr-cols">
+                        <!-- The rail. Its counts are the server's, rolled up
+                             through the category tree. -->
+                        <aside class="pr-rail" aria-label="Categories">
+                            <button type="button"
+                                    t-attf-class="pr-rail-row {{ state.categ === null ? 'mart-on' : '' }}"
+                                    t-on-click="() => this.pickCateg(null)">
+                                <span>All products</span>
+                                <em t-esc="state.allCount"/>
+                            </button>
+                            <button t-foreach="topCategories" t-as="c" t-key="c.id"
+                                    type="button"
+                                    t-attf-class="pr-rail-row {{ state.categ === c.id ? 'mart-on' : '' }}"
+                                    t-on-click="() => this.pickCateg(c.id)">
+                                <span t-esc="c.name"/>
+                                <em t-esc="c.count"/>
+                            </button>
+                            <button t-if="state.uncategorised" type="button"
+                                    t-attf-class="pr-rail-row {{ state.categ === 0 ? 'mart-on' : '' }}"
+                                    t-on-click="() => this.pickCateg(0)">
+                                <span>Uncategorised</span>
+                                <em t-esc="state.uncategorised"/>
+                            </button>
+                        </aside>
+
+                        <div class="pr-main">
+                            <Empty t-if="state.loading and !state.products.length"
+                                   icon="'box'" title="'Loading...'"
+                                   text="'Fetching the shop.'"/>
+
+                            <Empty t-elif="!state.products.length"
+                                   icon="'search'" title="'Nothing here'"
+                                   text="'No published product matches that.'"/>
+
+                            <!-- A table when there are columns worth lining
+                                 up, cards when the picture is the point. -->
+                            <table t-elif="state.view === 'list'" class="pr-list">
+                                <thead>
+                                    <tr>
+                                        <th>Product</th>
+                                        <th>Code</th>
+                                        <th>Category</th>
+                                        <th class="pr-num">Price</th>
+                                        <th>Page</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr t-foreach="state.products" t-as="p" t-key="p.id"
+                                        t-on-click="() => this.open(p)">
+                                        <td>
+                                            <span class="pr-list-name">
+                                                <span class="pr-list-img">
+                                                    <img t-att-src="p.image" alt="" loading="lazy"/>
+                                                </span>
+                                                <b t-esc="p.name"/>
+                                            </span>
+                                        </td>
+                                        <td class="pr-dim" t-esc="p.code or '-'"/>
+                                        <td class="pr-dim" t-esc="p.categories.length ? p.categories.join(', ') : 'Uncategorised'"/>
+                                        <td class="pr-num" t-esc="money(p.price)"/>
+                                        <td>
+                                            <span t-if="p.differs" class="mart-pill mart-t-blue">
+                                                <i aria-hidden="true"/>
+                                                <t t-esc="p.differs"/> changed
+                                            </span>
+                                            <span t-else="" class="pr-dim">Follows the shop</span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            <div t-else="" class="pr-grid">
+                                <button t-foreach="state.products" t-as="p" t-key="p.id"
+                                        type="button" class="pr-card"
+                                        t-att-style="'--i: ' + p_index"
+                                        t-on-click="() => this.open(p)">
+                                    <span class="pr-card-img">
+                                        <img t-att-src="p.image" alt="" loading="lazy"/>
+                                    </span>
+                                    <span class="pr-card-body">
+                                        <b t-esc="p.name"/>
+                                        <small t-if="p.code" t-esc="p.code"/>
+                                    </span>
+                                    <!-- Customised, so it is worth opening. -->
+                                    <span t-if="p.differs" class="mart-pill mart-t-blue pr-card-tag">
+                                        <i aria-hidden="true"/>
+                                        <t t-esc="p.differs"/> changed
+                                    </span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </t>
+
+                <!-- ========================================== one product -->
+                <t t-else="">
+                    <header class="pe-head pr-detail-head">
+                        <button class="mart-btn pr-back" t-on-click="() => this.back()">
+                            <Icon n="'left'" size="14"/> All products
+                        </button>
+                        <div class="pr-title">
+                            <h1 t-esc="state.page ? state.page.product.name : state.open.name"/>
+                            <p t-if="state.page">
+                                <t t-esc="visibleRows"/> parts on its page
+                                <t t-if="state.page.product.categories.length">
+                                    · <t t-esc="state.page.product.categories.join(', ')"/>
+                                </t>
+                            </p>
+                        </div>
+                        <!-- Two different edits, so two buttons: the product
+                             itself, and what its page shows. -->
+                        <button class="mart-btn" t-on-click="() => this.editProduct()">
+                            Edit product details
+                        </button>
+                        <button class="mart-btn mart-btn-primary"
+                                t-on-click="() => this.edit()">
+                            Edit page
+                        </button>
+                    </header>
+
+                    <p t-if="state.error" class="pe-error" role="alert">
+                        We could not reach the shop. <t t-esc="state.error"/>
+                    </p>
+
+                    <p class="pe-hintbar">
+                        What this product's page shows, and where each line comes
+                        from. Change any of it under Edit page.
+                    </p>
+
+                    <div class="pr-detail">
+                        <Empty t-if="state.loading and !state.page"
+                               icon="'box'" title="'Loading...'"
+                               text="'Reading the page.'"/>
+
+                        <Empty t-elif="state.page and !state.page.sections.length"
+                               icon="'layers'" title="'No sections yet'"
+                               text="'The product page has nothing on it to show.'"/>
+
+                        <t t-elif="state.page">
+                            <section t-foreach="state.page.sections" t-as="s" t-key="s.id"
+                                     t-attf-class="pr-sec {{ s.show ? '' : 'pr-sec-off' }}">
+                                <header class="pr-sec-head">
+                                    <h2 t-esc="s.name"/>
+                                    <!-- Switched off is said, not implied by
+                                         absence: missing and hidden look the
+                                         same, and only one is a decision. -->
+                                    <span t-attf-class="mart-pill {{ s.show ? 'mart-t-grey' : 'mart-t-amber' }}">
+                                        <i aria-hidden="true"/>
+                                        <t t-esc="sectionNote(s)"/>
+                                    </span>
+                                </header>
+
+                                <ul class="pr-rows">
+                                    <li t-foreach="s.fields" t-as="f" t-key="f.id"
+                                        t-attf-class="pr-row {{ (s.show and f.visible) ? '' : 'pr-row-off' }}">
+                                        <span class="pr-row-name">
+                                            <t t-esc="f.name"/>
+                                            <Icon t-if="!(s.show and f.visible)"
+                                                  n="'eye-off'" size="13"/>
+                                        </span>
+                                        <span class="pr-row-value" t-esc="valueOf(f)"/>
+                                        <!-- Which layer won. An inherited value
+                                             and one set on this product read the
+                                             same without it. -->
+                                        <span class="pr-row-from" t-esc="sourceLabel(f.source)"/>
+                                    </li>
+                                </ul>
+                            </section>
+                        </t>
+                    </div>
+                </t>
+
+            </div>
+        </Layout>
+    </t>
+
+</templates>

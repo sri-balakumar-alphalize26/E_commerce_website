@@ -326,7 +326,6 @@
                           t-esc="item.art || item.name"/>
                 </div>
                 <span t-if="item.tag" class="hm-off hm-new" t-esc="item.tag"/>
-                <span t-if="item.veg" class="hm-veg"><i/></span>
             </div>
             <div class="hm-card-body">
                 <div class="hm-unit" t-esc="item.unit"/>

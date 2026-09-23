@@ -6,7 +6,11 @@
         <field name="model">product.template</field>
         <field name="inherit_id" ref="mart369.view_product_template_form_mart369"/>
         <field name="arch" type="xml">
-            <xpath expr="//page[@name='mart369']" position="inside">
+            <!-- On General Information rather than the 369 Mart tab, so a
+                 product is filled in on one page. mart369_product adds the
+                 photographs and the page boxes into the same place, after
+                 these, because it loads after this module. -->
+            <xpath expr="//page[@name='general_information']/group" position="after">
                     <div class="text-muted small mb-2">
                         How this product reads on a card in the app. Everything
                         here is optional - leave it empty and the app falls back
@@ -19,8 +23,7 @@
                             <field name="mart_note" placeholder="e.g. Approx 250-400 g"/>
                             <field name="mart_home_tag" placeholder="e.g. New"/>
                         </group>
-                        <group string="Marks and stock">
-                            <field name="mart_is_veg"/>
+                        <group string="Stock and delivery">
                             <field name="mart_low_stock_at"/>
                             <field name="mart_delivery_text" placeholder="e.g. 3-5 days"/>
                         </group>

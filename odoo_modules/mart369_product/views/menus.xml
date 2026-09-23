@@ -9,6 +9,12 @@
               action="action_mart369_product_editor"
               sequence="20"/>
 
+    <menuitem id="menu_mart369_products"
+              name="Product pages"
+              parent="mart369.menu_mart369_store"
+              action="action_mart369_products"
+              sequence="21"/>
+
     <menuitem id="menu_mart369_product_builder_advanced"
               name="Product Page (all settings)"
               parent="mart369.menu_mart369_advanced"

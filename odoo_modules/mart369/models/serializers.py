@@ -18,6 +18,14 @@ from odoo import api, models
 _logger = logging.getLogger(__name__)
 
 # Drawn artwork, used when no photo is uploaded. Names must match ART exactly.
+# How many gallery photos beyond the main one reach the app. It was 3, which
+# silently dropped a fourth: the storefront gallery pages through whatever it
+# is given and has no fixed size, so nothing anywhere said no. A bound is still
+# wanted - a product somebody has put forty photos on should not put forty URLs
+# in every card payload - but it should be high enough that nobody meets it by
+# accident.
+MAX_EXTRA_IMAGES = 12
+
 ART_CHOICES = [
     ('Adapter', 'Adapter / dongle'),
     ('Apple', 'Apple'),
@@ -210,7 +218,7 @@ class Mart369Serializable(models.AbstractModel):
         images = []
         if product.image_512:
             images.append(self._image_url('image_512', '512x512', record=product))
-        for extra in product.product_template_image_ids[:3]:
+        for extra in product.product_template_image_ids[:MAX_EXTRA_IMAGES]:
             if extra.image_512:
                 images.append(self._image_url('image_512', '512x512', record=extra))
 
@@ -232,9 +240,6 @@ class Mart369Serializable(models.AbstractModel):
         # Optional keys are left out entirely, never sent as null.
         if mrp:
             vals['mrp'] = round(mrp, 2)
-        if product.mart_is_veg:
-            vals['veg'] = True
-
         colour = pick('color_override', product.mart_color)
         if colour:
             vals['color'] = colour
@@ -256,8 +261,8 @@ class Mart369Serializable(models.AbstractModel):
             if delivery:
                 vals['delivery'] = delivery
 
-        if 'free_qty' in product._fields:
-            qty = product.free_qty
+        qty = self._mart369_free_qty(product)
+        if qty is not None:
             if qty <= 0:
                 vals['stock'] = 0
             elif product.mart_low_stock_at and qty <= product.mart_low_stock_at:
@@ -266,6 +271,30 @@ class Mart369Serializable(models.AbstractModel):
         return vals
 
     # ------------------------------------------------------ the prices
+
+    def _mart369_free_qty(self, product):
+        """Free stock for a template, or None when there is none to speak of.
+
+        This used to read `product.free_qty` behind `if 'free_qty' in
+        product._fields`, and `product` is a product.template, which has no
+        such field - Inventory puts `free_qty` on the variant and gives the
+        template only `qty_available` and friends. So the guard was always
+        False and the app was never once told a product was out of stock or
+        running low. Sold-out items read as buyable.
+
+        None rather than 0.0 for "no answer", because the two mean opposite
+        things to a shopper: nothing to say is not the same as none left, and
+        a service or an untracked consumable must not be marked sold out.
+
+        `mart369_catalog` already counts stock this way for the staff list
+        (`product_admin.py._mart369_admin_qty`); this is the shopper's side of
+        the same sum.
+        """
+        if 'free_qty' not in self.env['product.product']._fields:
+            return None  # Inventory is not installed; nothing tracks stock.
+        if 'is_storable' in product._fields and not product.is_storable:
+            return None  # Nothing Inventory tracks has nothing to run out of.
+        return sum(product.product_variant_ids.mapped('free_qty'))
 
     def _price_context_for(self, templates):
         """{template_id: {'price': x, 'mrp': y or None}} for these
