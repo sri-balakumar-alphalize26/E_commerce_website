@@ -124,15 +124,30 @@ class TestProductForm(TransactionCase):
         self.assertNotIn(',mart_material,', self.product.mart_page_hidden)
 
     def test_a_column_two_rows_share_survives_one_of_them_hiding(self):
-        """`mart_unit_text` is the size tag *and* Net quantity.
+        """One column, two rows: the box goes only when both are off.
 
         Taking the box away because one of the two is switched off would lose
         the value the other still prints.
-        """
-        rows = self.Field.search([('odoo_field', '=', 'mart_unit_text')])
-        self.assertGreater(len(rows), 1, 'two rows should read this column')
 
-        self.Field.set_product_state(rows[0].id, self.product.id, 'hide')
+        The second row is made here rather than found in the seed data. Two
+        rows did share `mart_unit_text` - the size tag and Net quantity - until
+        Net quantity was dropped as grocery wording, and a test that reads the
+        catalogue stops testing anything the day the catalogue changes. The
+        rule outlives whichever fields happen to share a column.
+        """
+        first = self.Field.search(
+            [('odoo_field', '=', 'mart_unit_text')], limit=1)
+        self.assertTrue(first, 'the size tag should read this column')
+        second = self.Field.create({
+            'key': 'test_second_reader',
+            'name': 'A second row on the same column',
+            'section_id': first.section_id.id,
+            'source': 'odoo',
+            'odoo_field': 'mart_unit_text',
+        })
+        rows = first + second
+
+        self.Field.set_product_state(first.id, self.product.id, 'hide')
         self.product.invalidate_recordset()
         self.assertNotIn(',mart_unit_text,', self.product.mart_page_hidden,
                          'the other row still prints it')
@@ -141,6 +156,41 @@ class TestProductForm(TransactionCase):
             self.Field.set_product_state(row.id, self.product.id, 'hide')
         self.product.invalidate_recordset()
         self.assertIn(',mart_unit_text,', self.product.mart_page_hidden)
+
+    # ----------------------------------------------- what was taken away
+
+    def test_the_shop_asks_nothing_about_food(self):
+        """369 Mart sells electricals, so no product is asked if it is veg.
+
+        The vegetarian mark, Net quantity and Shelf life were inherited from a
+        grocery template and reached a Wi-Fi adapter's form. The column behind
+        the veg mark is gone, so a box for it could only come back by someone
+        re-adding the column; the other two are gone from the catalogue.
+        """
+        arch = self._arch()
+        self.assertNotIn('mart_is_veg', arch)
+        self.assertNotIn(
+            'mart_is_veg', self.env['product.template']._fields,
+            'the vegetarian column should be gone from the product itself')
+
+        for key in ('veg', 'net_quantity', 'shelf_life'):
+            self.assertFalse(
+                self.Field.search([('key', '=', key)]),
+                'the product page should no longer offer %s' % key)
+
+    def test_no_column_is_asked_for_twice(self):
+        """The mirror of the drift test above.
+
+        That one catches a page row with no box. This catches the opposite
+        mistake, which is the one actually made: an "Article ID" box was added
+        for `default_code` while Odoo's own Reference was already on the form,
+        so the same column appeared twice and either copy could be edited.
+        """
+        arch = self._arch()
+        for column in ('default_code', 'mart_unit_text'):
+            self.assertEqual(
+                arch.count('name="%s"' % column), 1,
+                '%s should have exactly one box on the form' % column)
 
     def test_a_new_product_is_offered_everything(self):
         """Nothing to resolve against yet, so nothing is taken away.

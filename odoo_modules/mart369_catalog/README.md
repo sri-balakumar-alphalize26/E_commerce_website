@@ -15,7 +15,7 @@ from a hash of the product id:
 ```js
 p.rating = p.rating ?? Math.round((3.8 + (h % 12) / 10) * 10) / 10;
 p.popularity = p.popularity ?? h % 1000;
-p.brand = p.brand || (p.veg ? "369 Mart Select" : p.unit || "369 Mart");
+p.brand = p.brand || p.unit || "369 Mart";
 ```
 
 So "sort by customer rating" sorted by a hash, "most popular" was a hash, and a

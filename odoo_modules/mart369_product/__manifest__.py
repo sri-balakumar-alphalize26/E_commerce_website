@@ -45,6 +45,7 @@ frame with every field listed. The app reads the result from
         'views/menus.xml',
         'data/sections.xml',
         'data/fields.xml',
+        'data/removed_fields.xml',
     ],
     'assets': {
         'web.assets_backend': [

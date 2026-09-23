@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Fields the shop no longer has any use for.
+
+         369 Mart sells electrical and electronic goods. The catalogue was
+         started from a grocery template, so a Wi-Fi adapter's form asked
+         whether it was vegetarian, how long it kept, and what its net
+         quantity was. All three are gone from the generator table and so
+         from fields.xml.
+
+         Dropping a record from a data file is normally enough - Odoo removes
+         what a module no longer declares. Not here: fields.xml is
+         noupdate="1", so a shopkeeper's switches survive an upgrade, and the
+         same flag makes Odoo skip the record over the obsolete-data sweep.
+         The three rows stayed in the database, still on the Product Page
+         screen, still hiding boxes on the product form. Hence saying it
+         outright.
+
+         Deleting the field takes its category values and its per-product
+         overrides with it - both are ondelete='cascade'.
+
+         Not noupdate, so it runs on every upgrade and a row that somehow
+         returns is removed again. -->
+    <delete model="mart369.product.field"
+            search="[('key', 'in', ['veg', 'net_quantity', 'shelf_life'])]"/>
+</odoo>

@@ -126,6 +126,14 @@
                            invisible="',mart_item_length,' in mart_page_hidden"/>
                     <field name="mart_item_width" placeholder="e.g. 6 cm"
                            invisible="',mart_item_width,' in mart_page_hidden"/>
+                    <!-- The page calls this Article ID. Odoo calls it the
+                         internal Reference, and in 19 does not put it on this
+                         form at all - checked, it is nowhere in the assembled
+                         arch - so without this box the page row could never be
+                         filled in. -->
+                    <field name="default_code" string="Article ID"
+                           placeholder="e.g. SPX-CHG-014"
+                           invisible="',default_code,' in mart_page_hidden"/>
                     <field name="weight" string="Net weight"
                            invisible="',weight,' in mart_page_hidden"/>
                     <field name="description_ecommerce" colspan="2"
