@@ -583,6 +583,63 @@ html.ad-lock, html.ad-lock body { overflow: hidden; }
   .ad-notice-act { flex-direction: row; width: 100%; }
 }
 
+/* -------------------------------------------------------- bot answers ----
+   The pattern is code and reads as code; the words under it are what a
+   customer sees. Order is meaning here - the bot takes the first match - so
+   the move buttons sit with the row rather than in a toolbar. */
+.ad-answers { list-style: none; margin: 0; padding: 12px 18px 18px; display: flex; flex-direction: column; gap: 10px; }
+.ad-answers li { display: flex; gap: 12px; padding: 12px; border: 1px solid var(--ad-line); border-radius: 14px; animation: ad-row 360ms var(--ad-ease) backwards; animation-delay: calc(var(--i) * 50ms); }
+/* Kept, not deleted: somebody wrote it for a reason. */
+.ad-answer-off { opacity: .62; }
+.ad-answer-body { flex: 1; min-width: 0; }
+.ad-answer-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ad-answer-top b { font-size: 14.5px; font-weight: 700; }
+.ad-answer-pattern { display: inline-block; margin-top: 5px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: #4a5a66; background: var(--ad-ground); border-radius: 7px; padding: 3px 8px; }
+.ad-answer-body p { margin: 6px 0 0; font-size: 13.5px; line-height: 1.5; color: #3a4a55; }
+.ad-answer-body p em { color: var(--ad-muted); }
+.ad-answer-kind { font-size: 11.5px; font-weight: 700; color: var(--ad-muted); background: var(--ad-ground); border-radius: 7px; padding: 2px 7px; }
+.ad-answer-act { display: flex; flex-direction: column; gap: 6px; }
+.ad-answer-move { display: flex; gap: 4px; }
+.ad-answer-hint { padding: 0 18px 16px; }
+/* The field the server refused, so the message lands under the right box. */
+.ad-field-bad .ad-field-in { border-color: var(--ad-red); box-shadow: 0 0 0 3px rgba(200, 67, 58, .12); }
+
+@media (max-width: 720px) {
+  .ad-answers li { flex-wrap: wrap; }
+  .ad-answer-act { flex-direction: row; width: 100%; }
+}
+
+@keyframes ad-row { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes ad-pop { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: none; } }
+@keyframes ad-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes ad-slide { from { transform: translateX(28px); opacity: 0.4; } to { transform: none; opacity: 1; } }
+@keyframes ad-draw { to { stroke-dashoffset: 0; } }
+@keyframes ad-bar { from { transform: scaleY(0); opacity: 0.3; } to { transform: none; opacity: 1; } }
+@keyframes ad-grow-x { from { transform: scaleX(0); } to { transform: none; } }
+@keyframes ad-grow-y { from { transform: scaleY(0); } to { transform: none; } }
+@keyframes ad-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .ad-app *, .ad-drawer-wrap *, .ad-modal-wrap * { animation: none !important; transition: none !important; }
+  /* `*` does not match a pseudo-element, so everything drawn in a ::before or
+     ::after - the active nav marker, the timeline connector - kept animating
+     for somebody who had asked the machine not to. They need saying out loud. */
+  .ad-app *::before, .ad-app *::after,
+  .ad-drawer-wrap *::before, .ad-drawer-wrap *::after,
+  .ad-modal-wrap *::before, .ad-modal-wrap *::after { animation: none !important; transition: none !important; }
+  /* Killing the animation is safe for every entrance above, because those all
+     start invisible and end at the element's natural state - take the
+     animation away and you are left with the end state.
+
+     It is not safe where the *base* rule holds a pre-animation value that only
+     the keyframe clears. `.ad-line` parks the path at a full 2000 dash offset
+     and relies on `ad-draw` to wind it back to 0, so with the animation gone
+     the line is drawn entirely in the gap: anybody who asked their machine for
+     less motion got an empty chart rather than a still one. Every storefront
+     sheet already guards this; this one never did. */
+  .ad-app .ad-line { stroke-dashoffset: 0 !important; }
+}
+
 /* --------------------------------------------------------------------------
    Sample-data banner (Phase A). Loud on purpose: a screen that is not the
    shop must say so before anybody reads a number off it. Deleted section by

@@ -25,11 +25,27 @@
               groups="sales_team.group_sale_salesman"
               sequence="7"/>
 
+    <!--
+        Bot answers opens the desk; the editable list keeps bulk work and
+        exporting.
+
+        `sales_team.group_sale_salesman`, not `base.group_system`: the ACL has
+        always granted salesmen read, write and create on a bot answer, so the
+        menu was stricter than the rule behind it - somebody allowed to change
+        what the shop says could not find the screen.
+    -->
     <menuitem id="menu_mart369_bot_rules"
               name="Bot answers"
               parent="mart369.menu_mart369_root"
+              action="action_mart369_bot_desk"
+              groups="sales_team.group_sale_salesman"
+              sequence="29"/>
+
+    <menuitem id="menu_mart369_bot_rules_all"
+              name="Bot answers (all views)"
+              parent="mart369.menu_mart369_advanced"
               action="action_mart369_rules"
-              groups="base.group_system"
+              groups="sales_team.group_sale_salesman"
               sequence="29"/>
 
 </odoo>

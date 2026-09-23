@@ -30,6 +30,7 @@ import { WalletsSection } from "./AdminWallets";
 import { RewardsSection } from "./AdminRewards";
 import { AddressesSection } from "./AdminAddresses";
 import { NotificationsSection } from "./AdminNotifications";
+import { BotAnswersSection } from "./AdminBotAnswers";
 import { SupportSection } from "./AdminSupport";
 import HomeSection from "./HomeSection";
 import ProductPageSection from "./ProductPageSection";
@@ -55,6 +56,7 @@ export const SECTIONS = [
   { key: "rewards", label: "Rewards", icon: "gift", group: "Sales", live: true },
   { key: "addresses", label: "Addresses", icon: "pin", group: "Sales", live: true },
   { key: "notifications", label: "Notifications", icon: "bell", group: "Store", live: true },
+  { key: "bot-answers", label: "Bot answers", icon: "chat", group: "Store", live: true },
   { key: "support", label: "Support", icon: "chat", group: "Sales", live: true },
   { key: "payments", label: "Payments", icon: "card", group: "Money", live: true },
   { key: "wallets", label: "Wallets", icon: "wallet", group: "Money", live: true },
@@ -296,6 +298,7 @@ export default function AdminApp({ section: initial = "dashboard", onSection, on
   else if (section === "rewards") body = <RewardsSection flash={flash} />;
   else if (section === "addresses") body = <AddressesSection flash={flash} />;
   else if (section === "notifications") body = <NotificationsSection flash={flash} />;
+  else if (section === "bot-answers") body = <BotAnswersSection flash={flash} />;
   else if (section === "support") body = <SupportSection openRef={openId} setOpenRef={setOpenId} flash={flash} />;
   else body = <SettingsSection settings={settings} setSettings={setSettings} flash={flash} />;
 

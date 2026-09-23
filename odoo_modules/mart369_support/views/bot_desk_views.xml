@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--
+        The bot answers desk: the app's own console screen, inside Odoo.
+
+        A client action rather than a view, because the editable list it
+        replaces has no search view and no filters at all - fine for somebody
+        who knows what a pattern is, poor for somebody deciding what the shop
+        should say.
+
+        `path` gives it a clean URL, /odoo/mart-answers.
+    -->
+    <record id="action_mart369_bot_desk" model="ir.actions.client">
+        <field name="name">Bot answers</field>
+        <field name="tag">mart369_support.answers</field>
+        <field name="path">mart-answers</field>
+    </record>
+
+</odoo>

@@ -47,6 +47,8 @@ Operators work these in **369 Mart -> Support**.
         'views/ticket_views.xml',
         'views/support_desk_views.xml',
         'views/rule_views.xml',
+        'views/bot_desk_views.xml',
+        'data/bot_demo.xml',
         'views/menus.xml',
     ],
     'assets': {
@@ -64,8 +66,11 @@ Operators work these in **369 Mart -> Support**.
         ],
     },
     'images': [
+        'static/description/support_desk.png',
+        'static/description/support_desk_dialog.png',
         'static/description/tickets_board.png',
         'static/description/ticket_form.png',
+        'static/description/bot_desk.png',
         'static/description/rules_list.png',
     ],
     'installable': True,
