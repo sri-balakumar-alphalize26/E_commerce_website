@@ -21,14 +21,6 @@ from odoo.exceptions import UserError, ValidationError
 
 from odoo.addons.mart369.models.serializers import slugify
 
-# Which of the app's two storefronts a category belongs to. Quick is the
-# 10-minute grocery run; Express is everything that ships over days.
-MODE_CHOICES = [
-    ('quick', 'Quick'),
-    ('all', 'Express'),
-]
-
-
 class ProductPublicCategory(models.Model):
     _inherit = 'product.public.category'
 
@@ -40,10 +32,6 @@ class ProductPublicCategory(models.Model):
     mart_in_app = fields.Boolean(
         string='Show in the app', default=True,
         help="Off: Odoo keeps the category, the 369 Mart app does not show it.")
-    mart_mode = fields.Selection(
-        MODE_CHOICES, string='Storefront', default='quick',
-        help="Quick is the 10-minute grocery run, Express is everything that "
-             "ships over days. Set on the top-level category; children follow it.")
     mart_tone = fields.Char(
         string='Background', default='#f4f6f8',
         help="The pale colour behind this category's page, e.g. #e8f5e9.")
@@ -54,6 +42,10 @@ class ProductPublicCategory(models.Model):
         string='One-line description',
         help="Sits under the title on the category page, e.g. "
              "Farm-fresh produce, picked daily.")
+    mart_blurb_color = fields.Char(
+        string='Line colour',
+        help="The colour of the one line under the title, e.g. #4a5a66. Empty: "
+             "the app's grey - or, for a sub-category, its main category's.")
 
     mart_product_count = fields.Integer(
         string='Products in the app', compute='_compute_mart_product_count',
@@ -113,14 +105,6 @@ class ProductPublicCategory(models.Model):
 
     # -------------------------------------------------------------- reading
 
-    def _mart369_mode(self):
-        """A child inherits the storefront of its top-most parent."""
-        self.ensure_one()
-        top = self
-        while top.parent_id:
-            top = top.parent_id
-        return top.mart_mode or 'quick'
-
     def _mart369_product_domain(self):
         """Published products in this category or any category beneath it."""
         self.ensure_one()
@@ -138,18 +122,19 @@ class ProductPublicCategory(models.Model):
     def _mart369_serialize(self, with_subs=True):
         """One node of the tree the app draws.
 
-        Matches the shape of CATALOG in components/home/catalog.js, so the
-        category pages need no change: slug, name, mode, tone, accent, blurb
-        and an ordered list of subs.
+        Matches the shape of CATALOG in components/home/catalog.js: slug,
+        name, tone, accent, blurb and an ordered list of subs. No Quick or
+        Express: that is decided per item, by the customer's distance to the
+        branch holding the stock, not by the category.
         """
         self.ensure_one()
         node = {
             'slug': self.mart_slug or '',
             'name': self.name or '',
-            'mode': self._mart369_mode(),
             'tone': self.mart_tone or '',
             'accent': self.mart_accent or '',
             'blurb': self.mart_blurb or '',
+            'blurbColor': self.mart_blurb_color or '',
         }
         if with_subs:
             node['subs'] = [child._mart369_serialize(with_subs=False)
@@ -165,15 +150,16 @@ class ProductPublicCategory(models.Model):
     # name is Odoo's own field that the catalogue, the product pages and the
     # reports all lean on. Both belong in the Odoo form, which is still one
     # click away under "Catalog (all views)".
-    ADMIN_FIELDS = ('mart_in_app', 'mart_mode', 'mart_blurb',
-                    'mart_tone', 'mart_accent')
+    ADMIN_FIELDS = ('mart_in_app', 'mart_blurb', 'mart_tone', 'mart_accent',
+                    'mart_blurb_color')
 
     @api.model
     def mart369_admin_list(self, tab='all', mode='', q='', limit=300):
         """The rows and the tiles in one call, filtered on the server.
 
         Read by both the app console (over /369mart/admin/categories) and the
-        backend desk (over the ORM), so the two cannot drift.
+        backend desk (over the ORM), so the two cannot drift. `mode` is still
+        accepted, and ignored: categories no longer have a storefront.
         """
         domain = []
         if tab == 'live':
@@ -185,10 +171,6 @@ class ProductPublicCategory(models.Model):
             domain = domain + ['|', ('name', 'ilike', q), ('mart_slug', 'ilike', q)]
 
         rows = self.search(domain, limit=limit)
-        if mode in ('quick', 'all'):
-            # Filtered here rather than in the domain because a child's
-            # storefront is its top-level parent's, which no domain can see.
-            rows = rows.filtered(lambda c: c._mart369_mode() == mode)
         if tab == 'empty':
             rows = rows.filtered(lambda c: not c.mart_product_count)
 
@@ -224,15 +206,17 @@ class ProductPublicCategory(models.Model):
             'name': self.name or '',
             'slug': self.mart_slug or '',
             'parent': self.parent_id.name or '',
-            # `mode` is what the app really uses - a child's is its top-level
-            # parent's. `ownMode` is what this record holds, so the screen can
-            # tell the two apart instead of showing a setting that does nothing.
-            'mode': self._mart369_mode(),
-            'ownMode': self.mart_mode or '',
+            'parentId': self.parent_id.id or False,
+            # A sub-category is drawn in its main category's colours, so the
+            # dialog's preview needs them.
+            'parentTone': self.parent_id.mart_tone or '',
+            'parentAccent': self.parent_id.mart_accent or '',
+            'parentBlurbColor': self.parent_id.mart_blurb_color or '',
             'topLevel': not self.parent_id,
             'tone': self.mart_tone or '',
             'accent': self.mart_accent or '',
             'blurb': self.mart_blurb or '',
+            'blurbColor': self.mart_blurb_color or '',
             'products': self.mart_product_count,
             'children': len(self.child_id),
             'inApp': self.mart_in_app,
@@ -246,30 +230,95 @@ class ProductPublicCategory(models.Model):
         the refusing.
         """
         self.ensure_one()
-        clean = {k: v for k, v in (values or {}).items() if k in self.ADMIN_FIELDS}
+        clean = self._mart369_admin_clean(values)
         if not clean:
             raise UserError(self.env._("There is nothing here to change."))
-
-        if 'mart_mode' in clean:
-            if self.parent_id:
-                # Writing it would store a value the app never reads, and the
-                # screen would then show a storefront this category is not in.
-                raise UserError(self.env._(
-                    "\"%(name)s\" follows \"%(parent)s\". Change the storefront "
-                    "on the top-level category instead.",
-                    name=self.name, parent=self.parent_id.name))
-            if clean['mart_mode'] not in dict(MODE_CHOICES):
-                raise UserError(self.env._("That is not one of the storefronts."))
-
-        for key in ('mart_tone', 'mart_accent'):
-            if key in clean:
-                clean[key] = self._mart369_check_colour(clean[key])
-
-        if 'mart_in_app' in clean:
-            clean['mart_in_app'] = bool(clean['mart_in_app'])
-
         self.write(clean)
         return self._mart369_admin_row()
+
+    def mart369_admin_edit(self, values):
+        """Everything about a category, from the desk's Edit button: how it
+        looks, and also its name and where it sits.
+
+        The name is safe to change here because the app address is not: a
+        renamed category keeps its slug, so a saved link still works. The
+        address itself stays in the Odoo form. `mart369_admin_write` - the
+        route the web console uses - still refuses both.
+        """
+        self.ensure_one()
+        values = values or {}
+        vals = self._mart369_admin_clean(values)
+        if 'name' in values:
+            name = (values.get('name') or '').strip()
+            if not name:
+                raise UserError(self.env._("A category needs a name."))
+            vals['name'] = name
+        if 'parent_id' in values:
+            parent_id = self._mart369_admin_parent(values.get('parent_id'))
+            if parent_id == self.id:
+                raise UserError(self.env._("A category cannot go under itself."))
+            if parent_id and self.child_id:
+                # Its sub-categories would become a third level.
+                raise UserError(self.env._(
+                    "\"%(name)s\" has sub-categories, so it stays a main "
+                    "category. Move them first.", name=self.name))
+            vals['parent_id'] = parent_id
+        if not vals:
+            raise UserError(self.env._("There is nothing here to change."))
+        self.write(vals)
+        return self._mart369_admin_row()
+
+    @api.model
+    def _mart369_admin_parent(self, parent):
+        """The id a category may go under - a main category - or False."""
+        if not parent:
+            return False
+        parent_rec = self.browse(int(parent)).exists()
+        if not parent_rec:
+            raise UserError(self.env._("That parent category no longer exists."))
+        if parent_rec.parent_id:
+            # The app draws two levels: a category and its sub-categories.
+            # A third level would have no pill and no page of its own.
+            raise UserError(self.env._(
+                "Sub-categories go under a main category. \"%(name)s\" is "
+                "already under \"%(parent)s\".",
+                name=parent_rec.name, parent=parent_rec.parent_id.name))
+        return parent_rec.id
+
+    @api.model
+    def mart369_admin_create(self, values):
+        """A new category from the Catalogue desk.
+
+        The name is the one thing required; a parent makes it a sub-category.
+        Everything else goes through the same allowlist and checks as an edit,
+        and the app address is filled in from the name, as for any category.
+        """
+        values = values or {}
+        name = (values.get('name') or '').strip()
+        if not name:
+            raise UserError(self.env._("A category needs a name."))
+        vals = self._mart369_admin_clean(values)
+        vals['name'] = name
+        parent_id = self._mart369_admin_parent(values.get('parent_id'))
+        if parent_id:
+            parent_rec = self.browse(parent_id)
+            vals['parent_id'] = parent_id
+            # A sub-category's circle is drawn in its own colours; one sent
+            # without them starts in its main category's, not the defaults.
+            vals.setdefault('mart_tone', parent_rec.mart_tone)
+            vals.setdefault('mart_accent', parent_rec.mart_accent)
+        return self.create(vals)._mart369_admin_row()
+
+    @api.model
+    def _mart369_admin_clean(self, values):
+        """`values` cut down to ADMIN_FIELDS and checked."""
+        clean = {k: v for k, v in (values or {}).items() if k in self.ADMIN_FIELDS}
+        for key in ('mart_tone', 'mart_accent', 'mart_blurb_color'):
+            if key in clean:
+                clean[key] = self._mart369_check_colour(clean[key])
+        if 'mart_in_app' in clean:
+            clean['mart_in_app'] = bool(clean['mart_in_app'])
+        return clean
 
     @api.model
     def _mart369_check_colour(self, value):

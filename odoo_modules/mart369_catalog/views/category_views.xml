@@ -12,13 +12,13 @@
                     <group>
                         <field name="mart_in_app" widget="boolean_toggle"/>
                         <field name="mart_slug" placeholder="fruits-vegetables"/>
-                        <field name="mart_mode" invisible="parent_id"/>
                         <field name="mart_product_count"/>
                     </group>
                     <group>
                         <field name="mart_tone" widget="color" placeholder="#e8f5e9"/>
                         <field name="mart_accent" widget="color" placeholder="#1f7a4c"/>
                         <field name="mart_blurb" placeholder="Farm-fresh produce, picked daily"/>
+                        <field name="mart_blurb_color" widget="color" placeholder="#4a5a66"/>
                     </group>
                 </group>
             </sheet>
@@ -37,9 +37,6 @@
                 <field name="name" string="Category" class="fw-bold"/>
                 <field name="parent_id" string="Inside"/>
                 <field name="mart_slug" string="App address"/>
-                <field name="mart_mode" string="Storefront" widget="badge"
-                       decoration-success="mart_mode == 'quick'"
-                       decoration-info="mart_mode == 'all'"/>
                 <field name="mart_product_count" string="Products"/>
                 <field name="mart_blurb" string="Description" optional="show"/>
                 <field name="mart_tone" string="Background" optional="hide"/>
@@ -101,16 +98,12 @@
                 <filter name="tops" string="Top level" domain="[('parent_id', '=', False)]"/>
                 <filter name="subs" string="Sub-categories" domain="[('parent_id', '!=', False)]"/>
                 <separator/>
-                <filter name="quick" string="Quick" domain="[('mart_mode', '=', 'quick')]"/>
-                <filter name="express" string="Express" domain="[('mart_mode', '=', 'all')]"/>
-                <separator/>
                 <filter name="hidden" string="Hidden from the app"
                         domain="[('mart_in_app', '=', False)]"/>
                 <filter name="no_blurb" string="No description"
                         domain="[('mart_blurb', 'in', [False, ''])]"/>
                 <group name="group_by">
                     <filter name="by_parent" string="Inside" context="{'group_by': 'parent_id'}"/>
-                    <filter name="by_mode" string="Storefront" context="{'group_by': 'mart_mode'}"/>
                 </group>
             </search>
         </field>

@@ -110,7 +110,7 @@ async function handle(req, ctx) {
   }
 
   const method = req.method;
-  const body = method === "POST" || method === "PATCH" ? await req.json().catch(() => undefined) : undefined;
+  const body = method === "POST" || method === "PATCH" || method === "PUT" ? await req.json().catch(() => undefined) : undefined;
   const { status, data, session: rotated, location } = await odooFetch(target, { method, body, session });
   const out = outward(status, location);
   const keep = keepable(method, path);
@@ -148,4 +148,5 @@ async function handle(req, ctx) {
 export const GET = handle;
 export const POST = handle;
 export const PATCH = handle;
+export const PUT = handle;
 export const DELETE = handle;

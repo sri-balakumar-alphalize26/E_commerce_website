@@ -7,9 +7,11 @@ field, leaned on by the catalogue, the product pages and every report; the
 address is a URL a customer may have saved, and changing it breaks that link
 silently. A request carrying either must change neither.
 
-**A sub-category has no storefront of its own.** It follows its top-level
-parent - so accepting one would store a value the app never reads and then
-show a storefront the category is not in.
+**A category has no storefront.** Quick or Express is decided per item, by
+the customer's distance to the branch holding the stock - so a request that
+still carries one changes nothing.
+
+**A new category needs a name**, and can be put under another one.
 
 **A colour has to be a colour.** The storefront drops these straight into CSS,
 so anything else is a silently broken category page rather than an error
@@ -35,7 +37,6 @@ class TestAdminCategories(HttpCase):
         self.top = Category.create({
             'name': 'Admin Test Aisle',
             'mart_slug': 'admin-test-aisle',
-            'mart_mode': 'quick',
             'mart_in_app': True,
         })
         self.child = Category.create({
@@ -102,26 +103,23 @@ class TestAdminCategories(HttpCase):
         self.assertTrue(all(not r['inApp'] for r in hidden['rows']))
         self.assertIsNotNone(self._row_for(hidden, self.hidden))
 
-    def test_a_child_reports_its_parents_storefront(self):
-        """`mode` is what the app really uses; `ownMode` is what the record
-        holds. Showing only the second would print a setting that does
-        nothing."""
+    def test_a_row_has_no_storefront(self):
         self.authenticate('admin', 'admin')
-        self.top.mart_mode = 'all'
         __, payload = self._rows()
         child = self._row_for(payload, self.child)
-        self.assertEqual(child['mode'], 'all')
+        self.assertNotIn('mode', child)
         self.assertFalse(child['topLevel'])
+        self.assertEqual(child['parentId'], self.top.id)
+        # Drawn in its main category's colours, so the preview needs them.
+        self.assertEqual(child['parentTone'], self.top.mart_tone)
+        self.assertEqual(child['parentAccent'], self.top.mart_accent)
 
-    def test_the_storefront_filter_follows_the_parent_too(self):
-        """A child has no mart_mode of its own, so a plain domain would drop
-        it out of its own storefront."""
+    def test_an_old_storefront_filter_is_ignored(self):
+        """A caller still sending `mode` gets every category, not none."""
         self.authenticate('admin', 'admin')
-        self.top.mart_mode = 'all'
-        __, express = self._rows(mode='all')
-        self.assertIsNotNone(self._row_for(express, self.child))
-        __, quick = self._rows(mode='quick')
-        self.assertIsNone(self._row_for(quick, self.child))
+        __, everything = self._rows()
+        __, with_mode = self._rows(mode='all')
+        self.assertEqual(len(with_mode['rows']), len(everything['rows']))
 
     def test_the_tiles_count_everything_not_the_filtered_rows(self):
         self.authenticate('admin', 'admin')
@@ -167,6 +165,31 @@ class TestAdminCategories(HttpCase):
         self.assertEqual(self.top.mart_tone, '#e8f5e9')
         self.assertEqual(self.top.mart_accent, '#1f7a4c')
 
+    def test_the_line_under_the_title_has_its_own_colour(self):
+        self.authenticate('admin', 'admin')
+        res = self._patch(self.child, {'mart_blurb_color': '#A32020'})
+        self.assertEqual(res.status_code, 200, res.text)
+        self.child.invalidate_recordset()
+        self.assertEqual(self.child.mart_blurb_color, '#a32020')
+
+        res = self._patch(self.child, {'mart_blurb_color': 'grey'})
+        self.assertEqual(res.status_code, 400, res.text)
+
+        # Empty is the way back to the default, not an error.
+        res = self._patch(self.child, {'mart_blurb_color': ''})
+        self.assertEqual(res.status_code, 200, res.text)
+        self.child.invalidate_recordset()
+        self.assertFalse(self.child.mart_blurb_color)
+
+    def test_a_row_carries_both_line_colours(self):
+        self.top.mart_blurb_color = '#1f7a4c'
+        self.authenticate('admin', 'admin')
+        __, payload = self._rows()
+        self.assertEqual(self._row_for(payload, self.top)['blurbColor'], '#1f7a4c')
+        child = self._row_for(payload, self.child)
+        self.assertEqual(child['blurbColor'], '')
+        self.assertEqual(child['parentBlurbColor'], '#1f7a4c')
+
     def test_the_name_and_the_address_are_not_editable_here(self):
         """The two fields this screen refuses. A request carrying them must
         change neither - the allow-list is what enforces that."""
@@ -182,15 +205,112 @@ class TestAdminCategories(HttpCase):
         self.assertEqual(self.top.mart_slug, 'admin-test-aisle')
         self.assertEqual(self.top.mart_blurb, 'Still saved')
 
-    def test_a_sub_category_cannot_be_given_its_own_storefront(self):
-        """It follows its parent, so storing one would show a storefront this
-        category is not in."""
+    def test_a_storefront_can_no_longer_be_written(self):
+        """The field is gone; sending it is a request with nothing in it."""
         self.authenticate('admin', 'admin')
         res = self._patch(self.child, {'mart_mode': 'all'})
         self.assertEqual(res.status_code, 400, res.text)
-        self.assertIn('top-level', res.json()['error'])
+        self.assertNotIn('mart_mode', self.env['product.public.category']._fields)
+
+    # ------------------------------------------------------------- creating
+
+    def test_a_new_category_from_the_desk(self):
+        Category = self.env['product.public.category']
+        row = Category.mart369_admin_create({
+            'name': '  Admin Test New  ', 'parent_id': self.top.id,
+            'mart_blurb': 'Fresh in', 'mart_tone': '#E8F5E9'})
+        made = Category.browse(row['id'])
+        self.assertEqual(made.name, 'Admin Test New')
+        self.assertEqual(made.parent_id, self.top)
+        self.assertEqual(made.mart_tone, '#e8f5e9')
+        self.assertTrue(made.mart_slug, 'the app address is made from the name')
+
+    def test_a_new_sub_category_starts_in_its_main_categorys_colours(self):
+        self.top.write({'mart_tone': '#e8f5e9', 'mart_accent': '#1f7a4c'})
+        Category = self.env['product.public.category']
+        plain = Category.browse(Category.mart369_admin_create(
+            {'name': 'Admin Test Plain Sub', 'parent_id': self.top.id})['id'])
+        self.assertEqual((plain.mart_tone, plain.mart_accent), ('#e8f5e9', '#1f7a4c'))
+
+    def test_a_sub_category_keeps_the_colours_picked_for_it(self):
+        Category = self.env['product.public.category']
+        own = Category.browse(Category.mart369_admin_create({
+            'name': 'Admin Test Own Sub', 'parent_id': self.top.id,
+            'mart_tone': '#FDECEC', 'mart_accent': '#a32020'})['id'])
+        self.assertEqual((own.mart_tone, own.mart_accent), ('#fdecec', '#a32020'))
+        # And the app is sent them, on the sub-category itself.
+        node = own._mart369_serialize(with_subs=False)
+        self.assertEqual((node['tone'], node['accent']), ('#fdecec', '#a32020'))
+
+    def test_a_new_category_needs_a_name(self):
+        from odoo.exceptions import UserError
+        with self.assertRaises(UserError):
+            self.env['product.public.category'].mart369_admin_create({'name': '   '})
+
+    def test_a_new_category_cannot_go_under_a_sub_category(self):
+        """The app shows two levels; a third would have no page of its own."""
+        from odoo.exceptions import UserError
+        with self.assertRaisesRegex(UserError, 'main category'):
+            self.env['product.public.category'].mart369_admin_create(
+                {'name': 'Admin Test Too Deep', 'parent_id': self.child.id})
+
+    def test_a_new_category_takes_only_the_allowed_fields(self):
+        row = self.env['product.public.category'].mart369_admin_create({
+            'name': 'Admin Test Allow', 'mart_slug': 'sneaky-address', 'sequence': 999})
+        made = self.env['product.public.category'].browse(row['id'])
+        self.assertNotEqual(made.mart_slug, 'sneaky-address')
+        self.assertNotEqual(made.sequence, 999)
+
+    # -------------------------------------------------------------- editing
+
+    def test_edit_renames_but_keeps_the_app_address(self):
+        """A customer may have saved the link, so the address stays."""
+        self.child.mart369_admin_edit({'name': '  Admin Test Renamed  '})
+        self.assertEqual(self.child.name, 'Admin Test Renamed')
+        self.assertEqual(self.child.mart_slug, 'admin-test-shelf')
+
+    def test_edit_needs_a_name(self):
+        from odoo.exceptions import UserError
+        with self.assertRaises(UserError):
+            self.child.mart369_admin_edit({'name': '  '})
+
+    def test_edit_saves_the_look_too(self):
+        self.child.mart369_admin_edit({
+            'mart_blurb': 'Thin and light', 'mart_blurb_color': '#A32020',
+            'mart_tone': '#fdecec', 'mart_accent': '#a32020'})
+        self.assertEqual(self.child.mart_blurb, 'Thin and light')
+        self.assertEqual(self.child.mart_blurb_color, '#a32020')
+        self.assertEqual((self.child.mart_tone, self.child.mart_accent), ('#fdecec', '#a32020'))
+
+    def test_a_sub_category_can_become_a_main_category(self):
+        tone = self.child.mart_tone
+        self.child.mart369_admin_edit({'parent_id': False})
+        self.assertFalse(self.child.parent_id)
+        self.assertEqual(self.child.mart_tone, tone, 'it keeps its colours')
+
+    def test_a_main_category_without_subs_can_become_a_sub_category(self):
+        self.hidden.mart369_admin_edit({'parent_id': self.top.id})
+        self.assertEqual(self.hidden.parent_id, self.top)
+
+    def test_edit_keeps_two_levels(self):
+        from odoo.exceptions import UserError
+        # Not under a sub-category.
+        with self.assertRaisesRegex(UserError, 'main category'):
+            self.hidden.mart369_admin_edit({'parent_id': self.child.id})
+        # Not under itself.
+        with self.assertRaisesRegex(UserError, 'itself'):
+            self.hidden.mart369_admin_edit({'parent_id': self.hidden.id})
+        # A main category with sub-categories stays a main category.
+        with self.assertRaisesRegex(UserError, 'has sub-categories'):
+            self.top.mart369_admin_edit({'parent_id': self.hidden.id})
+        self.assertFalse(self.top.parent_id)
+
+    def test_the_web_console_still_cannot_rename(self):
+        """Edit is the desk's; the console's PATCH route refuses the name."""
+        self.authenticate('admin', 'admin')
+        self._patch(self.child, {'name': 'Renamed by the console', 'mart_blurb': 'x'})
         self.child.invalidate_recordset()
-        self.assertNotEqual(self.child.mart_mode, 'all')
+        self.assertEqual(self.child.name, 'Admin Test Shelf')
 
     def test_a_colour_has_to_be_a_colour(self):
         """The storefront drops these straight into CSS."""

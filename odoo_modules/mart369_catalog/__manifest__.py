@@ -1,6 +1,6 @@
 {
     'name': '369 Mart Catalog',
-    'version': '19.0.1.0.0',
+    'version': '19.0.1.3.0',
     'category': 'Website',
     'summary': 'Categories, browsing and search for the 369 Mart app.',
     'description': """

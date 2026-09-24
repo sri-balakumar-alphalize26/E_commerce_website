@@ -172,6 +172,48 @@ class Mart369SearchAdminApi(http.Controller):
                      request.env.user.login)
         return self._json({'ok': True, 'id': new_id})
 
+    # ------------------------------------------------------------ categories
+    # The console's Catalog screen. Its model methods and tests were in place;
+    # the two routes were not, so the screen said it could not reach the shop.
+
+    @http.route('/369mart/admin/categories', **_GET_POST)
+    def categories(self, tab='all', mode='', q='', **kwargs):
+        if not self._may_edit():
+            return self._fail('You do not have access to this.', status=403)
+        if request.httprequest.method == 'POST':
+            try:
+                row = request.env['product.public.category'].mart369_admin_create(self._body())
+            except AccessError as exc:
+                return self._fail(str(exc), status=403)
+            except (UserError, ValidationError) as exc:
+                return self._fail(str(exc))
+            return self._json({'ok': True, 'row': row})
+        payload = request.env['product.public.category'].mart369_admin_list(
+            tab=tab or 'all', mode=mode or '', q=q or '')
+        payload['ok'] = True
+        return self._json(payload)
+
+    @http.route('/369mart/admin/categories/<int:categ_id>',
+                type='http', auth='user', methods=['PATCH', 'PUT'], csrf=False, sitemap=False)
+    def category_write(self, categ_id, **kwargs):
+        """PATCH: how it looks. PUT: everything, from the Edit button - the
+        name and where it sits too (`mart369_admin_edit`)."""
+        if not self._may_edit():
+            return self._fail('You do not have access to this.', status=403)
+        category = request.env['product.public.category'].browse(categ_id).exists()
+        if not category:
+            return self._fail('That category no longer exists.', status=404)
+        try:
+            if request.httprequest.method == 'PUT':
+                row = category.mart369_admin_edit(self._body())
+            else:
+                row = category.mart369_admin_write(self._body())
+        except AccessError as exc:
+            return self._fail(str(exc), status=403)
+        except (UserError, ValidationError) as exc:
+            return self._fail(str(exc))
+        return self._json({'ok': True, 'row': row})
+
     @http.route('/369mart/admin/products/form', **_GET)
     def product_form(self, id=None, **kwargs):  # noqa: A002 - the query name
         """The editor's boxes, values and photographs. No id: a blank form."""
