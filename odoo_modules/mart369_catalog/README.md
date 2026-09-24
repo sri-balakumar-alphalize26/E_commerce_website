@@ -38,7 +38,7 @@ touched — and a 40-product page costs two extra queries in total, not eighty.
 
 ## For staff
 
-**369 Mart → Catalog** is the category list: name, app address, storefront,
+**369 Mart → Catalog** is the category list: name, app address,
 product count, and the two colours the app paints the page with. The board view
 shows each category in its own colours, so you see what the shopper will see.
 
@@ -80,7 +80,6 @@ visitor is sent to the login page, and one customer never sees another's.
   the customer's URL contains. It is filled in from the name, kept unique in
   Postgres, and never changed by a rename — a customer may have the link. The
   install hook backfills categories that existed before this module.
-- A child category takes its parent's storefront (Quick or Express).
 - A category with nothing in it answers `200` with an empty list. "Launching
   soon" is a real state, not an error.
 

@@ -12,7 +12,6 @@
         <record id="categ_components" model="product.public.category">
         <field name="name">Components</field>
         <field name="mart_slug">components</field>
-        <field name="mart_mode">all</field>
         <field name="mart_tone">#eef3f7</field>
         <field name="mart_accent">#12405e</field>
         <field name="mart_blurb">Everything that goes inside the box</field>
@@ -94,7 +93,6 @@
         <record id="categ_peripherals" model="product.public.category">
         <field name="name">Peripherals</field>
         <field name="mart_slug">peripherals</field>
-        <field name="mart_mode">quick</field>
         <field name="mart_tone">#f2f7f4</field>
         <field name="mart_accent">#12513c</field>
         <field name="mart_blurb">Keyboards, mice and the things you touch</field>
@@ -140,7 +138,6 @@
         <record id="categ_displays" model="product.public.category">
         <field name="name">Displays</field>
         <field name="mart_slug">displays</field>
-        <field name="mart_mode">all</field>
         <field name="mart_tone">#f4f2f8</field>
         <field name="mart_accent">#3a2c6b</field>
         <field name="mart_blurb">Monitors and the arms that hold them</field>
@@ -168,7 +165,6 @@
         <record id="categ_networking" model="product.public.category">
         <field name="name">Networking</field>
         <field name="mart_slug">networking</field>
-        <field name="mart_mode">quick</field>
         <field name="mart_tone">#f0f6f8</field>
         <field name="mart_accent">#0f4f63</field>
         <field name="mart_blurb">Get everything online and keep it there</field>
@@ -205,7 +201,6 @@
         <record id="categ_computers" model="product.public.category">
         <field name="name">Computers</field>
         <field name="mart_slug">computers</field>
-        <field name="mart_mode">all</field>
         <field name="mart_tone">#f7f4f0</field>
         <field name="mart_accent">#5a3a1c</field>
         <field name="mart_blurb">Ready to go, out of the box</field>
@@ -242,7 +237,6 @@
         <record id="categ_accessories" model="product.public.category">
         <field name="name">Accessories</field>
         <field name="mart_slug">accessories</field>
-        <field name="mart_mode">quick</field>
         <field name="mart_tone">#f8f4f2</field>
         <field name="mart_accent">#6b3326</field>
         <field name="mart_blurb">Cables, power and the small stuff</field>

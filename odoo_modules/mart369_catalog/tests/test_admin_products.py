@@ -85,16 +85,6 @@ class TestAdminProductList(TransactionCase):
         rows = self.Tmpl.mart369_admin_list(q='Zz Admin', sort='low', limit=200)['rows']
         self.assertEqual(rows[0]['id'], self.out.id, 'lowest stock first')
 
-    def test_storefront_follows_the_top_category(self):
-        Categ = self.env['product.public.category']
-        top = Categ.create({'name': 'Zz Express Top', 'mart_mode': 'all'})
-        child = Categ.create({'name': 'Zz Express Child', 'parent_id': top.id})
-        self.plenty.public_categ_ids = [(6, 0, [child.id])]
-        self.assertIn(self.plenty.id, self._ids(mode='all', q='Zz Admin'))
-        self.assertNotIn(self.plenty.id, self._ids(mode='quick', q='Zz Admin'))
-        row = self.Tmpl.mart369_admin_list(q='Zz Admin Plenty')['rows'][0]
-        self.assertTrue(row['delivery'], 'the row says Express too')
-
     def test_tiles_count_the_shop_not_the_filter(self):
         everything = self.Tmpl.mart369_admin_list()['tiles']
         filtered = self.Tmpl.mart369_admin_list(q='Zz Admin Plenty')

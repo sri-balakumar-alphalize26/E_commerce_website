@@ -26,15 +26,16 @@ class TestMart369CatalogApi(HttpCase):
         super().setUpClass()
         Category = cls.env['product.public.category']
         cls.fruit = Category.create({
-            'name': 'Test Fruits', 'sequence': 1, 'mart_mode': 'quick',
+            'name': 'Test Fruits', 'sequence': 1,
             'mart_tone': '#e8f5e9', 'mart_accent': '#1f7a4c',
             'mart_blurb': 'Farm-fresh produce, picked daily',
+            'mart_blurb_color': '#3a4750',
         })
         cls.fresh = Category.create({
             'name': 'Test Fresh Fruits', 'parent_id': cls.fruit.id, 'sequence': 1,
         })
         cls.soon = Category.create({
-            'name': 'Test Launching Soon', 'sequence': 2, 'mart_mode': 'all',
+            'name': 'Test Launching Soon', 'sequence': 2,
         })
         cls.hidden = Category.create({
             'name': 'Test Hidden Aisle', 'sequence': 3, 'mart_in_app': False,
@@ -97,10 +98,14 @@ class TestMart369CatalogApi(HttpCase):
         fruit = tree.get('test-fruits')
         self.assertTrue(fruit, 'a top-level category should be in the tree')
         self.assertEqual(fruit['name'], 'Test Fruits')
-        self.assertEqual(fruit['mode'], 'quick')
+        # No storefront on a category: Quick or Express is per item now.
+        self.assertNotIn('mode', fruit)
         self.assertEqual(fruit['tone'], '#e8f5e9')
         self.assertEqual(fruit['accent'], '#1f7a4c')
         self.assertEqual(fruit['blurb'], 'Farm-fresh produce, picked daily')
+        self.assertEqual(fruit['blurbColor'], '#3a4750')
+        # Unset on the sub: empty, so the app falls back to the category's.
+        self.assertEqual(fruit['subs'][0]['blurbColor'], '')
         self.assertEqual([s['slug'] for s in fruit['subs']], ['test-fresh-fruits'])
 
         self.assertNotIn('test-hidden-aisle', tree, 'hidden means hidden')
@@ -169,10 +174,6 @@ class TestMart369CatalogApi(HttpCase):
         old.invalidate_recordset(['mart_slug'])
         self.assertEqual(old.mart_slug, 'test-legacy-aisle')
 
-    def test_a_child_takes_its_parents_storefront(self):
-        self.assertEqual(self.fresh._mart369_mode(), 'quick')
-        self.fruit.mart_mode = 'all'
-        self.assertEqual(self.fresh._mart369_mode(), 'all')
 
     # ---------------------------------------------------------- the browse
 

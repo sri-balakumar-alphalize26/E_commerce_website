@@ -67,11 +67,17 @@ class Mart369CatalogApi(http.Controller):
         ])
 
     def _cards(self, templates, mode_key=None):
-        """Product cards, priced and signalled in one pass for the whole page."""
+        """Product cards, priced and signalled in one pass for the whole page.
+
+        `mode_key='own'` lets each product say for itself - Express when it has
+        a delivery time, as the product page and the cart decide - rather than
+        one mode for the whole page."""
         mixin = request.env['mart369.serializable'].sudo()
         templates = templates.sudo()
         price_ctx = mixin._price_context_for(templates)
-        return [mixin._serialize_product(t, None, price_ctx, mode_key)
+        return [mixin._serialize_product(
+                    t, None, price_ctx,
+                    ('all' if t.mart_delivery_text else 'quick') if mode_key == 'own' else mode_key)
                 for t in templates]
 
     def _category(self, slug):
@@ -130,7 +136,8 @@ class Mart369CatalogApi(http.Controller):
         return self._cached({
             'category': category._mart369_serialize(),
             'sub': shown._mart369_serialize(with_subs=False) if sub else None,
-            'items': self._cards(templates, category._mart369_mode()),
+            # Each product for itself: a category no longer has a storefront.
+            'items': self._cards(templates, 'own'),
         })
 
     # ---------------------------------------------------------- the search

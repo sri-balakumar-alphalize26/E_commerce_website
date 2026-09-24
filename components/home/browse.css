@@ -198,8 +198,6 @@ html.ls-lock, html.ls-lock body { overflow: hidden; }
 }
 .cg-hero::after { content: ""; position: absolute; right: -60px; top: -80px; width: 280px; height: 280px; border-radius: 50%; background: rgba(255, 255, 255, 0.45); pointer-events: none; }
 .cg-hero > div:first-child { position: relative; z-index: 1; }
-.cg-mode { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 999px; background: #fff; font-size: 12px; font-weight: 700; color: var(--accent); animation: hm-pop 420ms var(--hm-spring) 160ms both; }
-.cg-mode .hm-fill { color: var(--hm-orange); }
 .cg-hero h1 { margin: 10px 0 4px; font-size: 32px; font-weight: 800; letter-spacing: -0.035em; line-height: 1.1; color: var(--hm-ink); animation: hm-rise 480ms var(--hm-ease) 80ms both; }
 .cg-hero p { margin: 0; font-size: 15px; color: #4a5a66; animation: hm-rise 480ms var(--hm-ease) 160ms both; }
 .cg-hero-art { position: relative; z-index: 1; display: flex; align-items: center; flex: none; }

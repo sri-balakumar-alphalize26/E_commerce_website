@@ -8,10 +8,8 @@ Read-only. Every number is one the shop already keeps:
 * **Low** is `mart_low_stock_at`, the threshold the storefront already uses for
   "Only N left". A second reorder level kept here would disagree with it.
 * **Sold / 7d** is one grouped read over confirmed order lines for the page.
-* **Storefront** is Express when the product sits in a category whose
-  top-level parent is an Express storefront - the rule the Catalog screen and
-  the app's own navigation use - or when it carries a delivery time, which is
-  the test the product page uses.
+* **Storefront** is Express when the product carries a delivery time, the test
+  the product page and the cart use. Categories no longer have a storefront.
 
 Stock is not a stored field, so the stock tabs and the "lowest stock" sort
 cannot be a SQL domain. They are worked out over the whole filtered set, in
@@ -88,15 +86,12 @@ class ProductTemplate(models.Model):
 
     @api.model
     def _mart369_admin_express_domain(self):
-        """Products on the Express storefront, as a domain.
+        """Products that ship as Express today: those with a delivery time.
 
-        A child category's storefront is its top-level parent's, which no
-        domain can see - so the Express categories are worked out here and
-        handed to the domain as ids."""
-        Categ = self.env['product.public.category']
-        express = Categ.search([]).filtered(lambda c: c._mart369_mode() == 'all')
-        return ['|', ('mart_delivery_text', '!=', False),
-                ('public_categ_ids', 'in', express.ids)]
+        Categories no longer have a storefront - Quick or Express is decided
+        per item by the customer's distance to the branch holding the stock -
+        so only the product's own delivery time is left to go on."""
+        return [('mart_delivery_text', '!=', False)]
 
     @api.model
     def _mart369_admin_domain(self, categ=None, mode=None, q=None):
