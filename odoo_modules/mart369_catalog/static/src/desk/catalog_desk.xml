@@ -10,10 +10,17 @@
                         <h1>Catalog</h1>
                         <p>The groups a shopper sees in the app, and how each one looks.</p>
                     </div>
-                    <button class="mart-btn" t-on-click="() => this.allViews()">
-                        <Icon n="'menu'" size="14"/>
-                        All views
-                    </button>
+                    <div class="cd-head-act">
+                        <button class="mart-btn" t-on-click="() => this.allViews()">
+                            <Icon n="'menu'" size="14"/>
+                            All views
+                        </button>
+                        <button class="mart-btn mart-btn-primary" t-att-disabled="state.busy"
+                                t-on-click="() => this.newCategory()">
+                            <Icon n="'plus'" size="14"/>
+                            New category
+                        </button>
+                    </div>
                 </header>
 
                 <div class="cd-tiles">
@@ -45,8 +52,6 @@
                     <Tabs tabs="tabItems" value="state.tab"
                           onChange="(k) => this.pick(k)"/>
                     <div class="pe-toolbar-gap"/>
-                    <Pick label="'Storefront'" value="state.mode" options="modeOptions"
-                          onChange="(v) => this.setMode(v)"/>
                     <Search value="state.q" placeholder="'A category or its app address'" label="'Search categories'"
                             onChange="(v) => this.onSearch(v)"/>
                 </div>
@@ -63,10 +68,9 @@
                             Loading categories...
                         </p>
 
-                        <p t-elif="!state.rows.length and !state.q and state.tab === 'all' and !state.mode"
+                        <p t-elif="!state.rows.length and !state.q and state.tab === 'all'"
                            class="pe-loading">
-                            There are no categories yet. Add them under All views,
-                            and they appear here the moment they exist.
+                            There are no categories yet. Add one with New category.
                         </p>
 
                         <p t-elif="!state.rows.length and state.tab === 'empty'" class="pe-loading">
@@ -85,7 +89,7 @@
                             </p>
                             <ul class="cd-rows">
                                 <li t-foreach="state.rows" t-as="row" t-key="row.id"
-                                    t-attf-class="cd-row {{ row.inApp ? '' : 'cd-row-off' }}"
+                                    t-attf-class="cd-row {{ row.inApp ? '' : 'cd-row-off' }} {{ state.fresh === row.id ? 'cd-row-new' : '' }}"
                                     t-att-style="'--i: ' + row_index">
 
                                     <!-- The colours, shown as what they are: the
@@ -98,8 +102,6 @@
                                     <div class="cd-body">
                                         <div class="cd-top">
                                             <b t-esc="row.name"/>
-                                            <span t-attf-class="mart-pill {{ row.mode === 'all' ? 'mart-t-violet' : 'mart-t-blue' }}"
-                                                  t-esc="modeLabel(row.mode)"/>
                                             <span t-if="!row.inApp" class="mart-pill mart-t-grey">
                                                 Hidden
                                             </span>
@@ -126,6 +128,12 @@
                                     <div class="cd-act">
                                         <button class="mart-btn mart-btn-sm"
                                                 t-att-disabled="state.busy"
+                                                t-on-click="() => this.editAll(row)">
+                                            <Icon n="'pen'" size="13"/>
+                                            Edit
+                                        </button>
+                                        <button class="mart-btn mart-btn-sm"
+                                                t-att-disabled="state.busy"
                                                 t-on-click="() => this.edit(row)">
                                             How it looks
                                         </button>
@@ -148,58 +156,133 @@
     </t>
 
     <t t-name="mart369_catalog.CategoryDialog">
-        <Dialog size="'md'" contentClass="'cd-dialog'"
-                title="props.row.name || 'This category'">
-            <p class="cd-dialog-sub">
-                How the app draws this category. The name and the app address are
-                changed in the form, under All views - the address is a link a
-                customer may have saved.
-            </p>
-            <p t-if="state.error" class="cd-dialog-error" role="alert" t-esc="state.error"/>
+        <Dialog size="'lg'" contentClass="'cd-dialog'" title="title">
+            <div class="cd-dlg-cols">
+                <div class="cd-dlg-left">
+                    <p t-if="isNew" class="cd-dialog-sub">
+                        A new group for the app. Its app address is made from the name.
+                    </p>
+                    <p t-elif="isEdit" class="cd-dialog-sub">
+                        Everything about this category. Renaming it keeps its app
+                        address <code t-esc="'/' + props.row.slug"/>, so a link a customer
+                        saved still works.
+                    </p>
+                    <p t-else="" class="cd-dialog-sub">
+                        How the app draws this category. The name and the app address are
+                        changed in the form, under All views - the address is a link a
+                        customer may have saved.
+                    </p>
+                    <p t-if="state.error" class="cd-dialog-error" role="alert" t-esc="state.error"/>
 
-            <div class="cd-dialog-preview" t-att-style="previewStyle">
-                <b t-esc="props.row.name"/>
-                <small t-esc="state.draft.mart_blurb or 'No line under the title'"/>
-            </div>
+                    <div class="cd-dialog-form">
+                        <t t-if="askPlace">
+                            <label class="cd-dialog-field"><span>Name</span>
+                                <input type="text" t-att-value="state.draft.name" placeholder="e.g. Keyboards"
+                                       t-on-input="(ev) => this.edit('name', ev)"/></label>
+                            <!-- Its sub-categories would become a third level. -->
+                            <div t-if="placeLocked" class="cd-dialog-field"><span>Under</span>
+                                <p class="cd-dialog-locked">
+                                    <Icon n="'lock'" size="13"/>
+                                    <span>Has <t t-esc="props.row.children"/> sub-categor<t t-if="props.row.children === 1">y</t><t t-else="">ies</t>, so it stays a main category - move them first.</span>
+                                </p></div>
+                            <label t-else="" class="cd-dialog-field"><span>Under</span>
+                                <Pick label="'Parent category'" value="state.draft.parent_id"
+                                      options="parentOptions" onChange="(v) => this.set('parent_id', v)"/></label>
+                            <!-- How to use the two boxes, one line each. -->
+                            <ul class="cd-dialog-how cd-span2">
+                                <li><b>Category:</b> just type the name - leave Under as None.</li>
+                                <li><b>Sub-category:</b> type the name, then choose the main category it goes under (e.g. Computers). Only main categories are listed - the app shows two levels.</li>
+                            </ul>
+                        </t>
+                        <label class="cd-dialog-field cd-span2"><span>One line under the title</span>
+                            <input type="text" t-att-value="state.draft.mart_blurb"
+                                   placeholder="Farm-fresh produce, picked daily"
+                                   t-on-input="(ev) => this.edit('mart_blurb', ev)"/>
+                            <small t-if="isSub" class="cd-dialog-note">Shown under the title when this sub-category is picked.</small></label>
 
-            <div class="cd-dialog-form">
-                <label class="cd-dialog-field cd-span2"><span>One line under the title</span>
-                    <input type="text" t-att-value="state.draft.mart_blurb"
-                           placeholder="Farm-fresh produce, picked daily"
-                           t-on-input="(ev) => this.edit('mart_blurb', ev)"/></label>
+                        <!-- Empty means the default: the app's grey, or for a
+                             sub-category its main category's line colour. -->
+                        <label class="cd-dialog-field"><span>Line colour <em t-if="state.draft.mart_blurb_color">Colours the one line under the title</em><em t-elif="isSub and main and main.blurbColor">Default: <t t-esc="main.name"/>'s line colour</em><em t-else="">Default: the app's grey</em></span>
+                            <span class="cd-colour">
+                                <input type="color" t-att-value="lineColour"
+                                       t-on-input="(ev) => this.edit('mart_blurb_color', ev)"/>
+                                <!-- Always the code in use, like the other two;
+                                     the default is shown, but only saved once changed. -->
+                                <input type="text" t-att-value="lineColour"
+                                       t-on-input="(ev) => this.edit('mart_blurb_color', ev)"/>
+                            </span>
+                            <button t-if="state.draft.mart_blurb_color" type="button" class="mart-link cd-line-reset"
+                                    t-on-click.prevent="() => this.set('mart_blurb_color', '')">Back to default</button></label>
+                        <div class="cd-dialog-field"/>
 
-                <label class="cd-dialog-field"><span>Background</span>
-                    <span class="cd-colour">
-                        <input type="color" t-att-value="state.draft.mart_tone"
-                               t-on-input="(ev) => this.edit('mart_tone', ev)"/>
-                        <input type="text" t-att-value="state.draft.mart_tone"
-                               t-on-input="(ev) => this.edit('mart_tone', ev)"/>
-                    </span></label>
+                        <p t-if="isSub" class="cd-dialog-hint cd-span2">
+                            <Icon n="'info'" size="14"/>
+                            <span>Colours this sub-category's circle. It starts in <b t-esc="main ? main.name : 'its main category'"/>'s colours; a colour you pick stays, whatever Under is set to.</span>
+                        </p>
+                        <!-- One tap sets both colours; the boxes below fine-tune either. -->
+                        <div class="cd-dialog-field cd-span2"><span>Colours</span>
+                            <div class="cd-palette" role="group" aria-label="Colour presets">
+                                <button t-foreach="PALETTE" t-as="pair" t-key="pair[0]" type="button"
+                                        t-att-class="isPair(pair[0], pair[1]) ? 'cd-on' : ''"
+                                        t-att-aria-pressed="isPair(pair[0], pair[1]) ? 'true' : 'false'"
+                                        t-att-title="pair[2]"
+                                        t-att-style="'background: ' + pair[0] + '; color: ' + pair[1]"
+                                        t-on-click="() => this.pickPair(pair[0], pair[1])">Aa</button>
+                            </div>
+                        </div>
+                        <label class="cd-dialog-field"><span>Background <em t-if="isSub">Fills the circle</em><em t-else="">Fills the category's header</em></span>
+                            <span class="cd-colour">
+                                <input type="color" t-att-value="state.draft.mart_tone"
+                                       t-on-input="(ev) => this.edit('mart_tone', ev)"/>
+                                <input type="text" t-att-value="state.draft.mart_tone"
+                                       t-on-input="(ev) => this.edit('mart_tone', ev)"/>
+                            </span></label>
 
-                <label class="cd-dialog-field"><span>Heading colour</span>
-                    <span class="cd-colour">
-                        <input type="color" t-att-value="state.draft.mart_accent"
-                               t-on-input="(ev) => this.edit('mart_accent', ev)"/>
-                        <input type="text" t-att-value="state.draft.mart_accent"
-                               t-on-input="(ev) => this.edit('mart_accent', ev)"/>
-                    </span></label>
+                        <label class="cd-dialog-field"><span>Heading colour <em t-if="isSub">Rings the circle and colours its name</em><em t-else="">Colours the All tile; new sub-categories start with it</em></span>
+                            <span class="cd-colour">
+                                <input type="color" t-att-value="state.draft.mart_accent"
+                                       t-on-input="(ev) => this.edit('mart_accent', ev)"/>
+                                <input type="text" t-att-value="state.draft.mart_accent"
+                                       t-on-input="(ev) => this.edit('mart_accent', ev)"/>
+                            </span></label>
 
-                <label t-if="props.row.topLevel" class="cd-dialog-field cd-span2">
-                    <span>Storefront</span>
-                    <Pick label="'Storefront'" value="state.draft.mart_mode"
-                          options="modeOptions" onChange="(v) => this.set('mart_mode', v)"/>
-                </label>
-                <p t-else="" class="cd-dialog-hint cd-span2">
-                    <Icon n="'info'" size="14"/>
-                    This follows <b t-esc="props.row.parent"/>, which is in
-                    <b t-esc="modeLabel(props.row.mode)"/>. Change the storefront
-                    on the top-level category.
-                </p>
+                    </div>
+                </div>
+                <!-- As the app draws it, live, one shape at a time. A category:
+                     its page header, a rectangle filled with Background. A
+                     sub-category: a round tile, in its own colours. -->
+                <aside class="cd-dlg-right" aria-label="How it looks in the app">
+                    <p class="cd-dlg-cap">How it looks in the app</p>
+                    <div t-if="!isSub" class="cd-prev-cat cd-prev-is-cat" t-att-style="previewStyle">
+                        <div class="cd-prev-hero">
+                            <div class="cd-prev-words">
+                                <b t-esc="previewName"/>
+                                <small t-att-style="'color: ' + lineColour" t-esc="state.draft.mart_blurb or 'No line under the title'"/>
+                            </div>
+                            <div class="cd-prev-art" aria-hidden="true">
+                                <span><Icon n="'box'" size="18"/></span>
+                                <span><Icon n="'box'" size="22"/></span>
+                            </div>
+                        </div>
+                        <p class="cd-prev-key">
+                            <i class="cd-prev-swatch"/>
+                            <span>Heading colour - the All tile, and where new sub-categories start</span>
+                        </p>
+                    </div>
+                    <div t-else="" class="cd-prev-cat cd-prev-is-sub" t-att-style="previewStyle">
+                        <i class="cd-prev-circle"><Icon n="'box'" size="30"/></i>
+                        <b class="cd-prev-subname" t-esc="previewName"/>
+                        <small class="cd-prev-subline">
+                            Under <t t-esc="main ? main.name : ''"/> &#183;
+                            <span t-att-style="'color: ' + lineColour" t-esc="state.draft.mart_blurb or 'No line under the title'"/>
+                        </small>
+                    </div>
+                </aside>
             </div>
 
             <t t-set-slot="footer">
                 <button class="mart-btn mart-btn-primary" t-att-disabled="state.busy"
-                        t-on-click="() => this.save()">Save</button>
+                        t-on-click="() => this.save()"><t t-esc="isNew ? 'Create' : 'Save'"/></button>
                 <button class="mart-btn"
                         t-on-click="() => this.props.close()">Cancel</button>
             </t>

@@ -3,8 +3,7 @@
  *
  * The twin of /admin/catalog, and the sibling of the searches desk beside it.
  * It answers "what does the app look like from the outside" - which groups a
- * shopper sees, which storefront each belongs to, and which of them are
- * standing empty - which the kanban next door cannot without opening each one.
+ * shopper sees, how each looks, and which of them are standing empty - which the kanban next door cannot without opening each one.
  *
  * Everything it reads is `mart369_admin_list` on the model, the same one call
  * the console makes. Nothing here is a second implementation of anything.
@@ -48,6 +47,25 @@ const TABS = [
 
 const POLL_MS = 60000;
 
+/* Pale background + readable heading ink, in pairs, so a tap cannot give ink
+   the shopper cannot read. The same pairs as the web admin's (PALETTE in
+   components/admin/AdminCategories.jsx). [background, heading, name] */
+const PALETTE = [
+    ["#f4f6f8", "#0b4a6e", _t("Default")],
+    ["#eef3f7", "#12405e", _t("Steel")],
+    ["#e8f3f9", "#0a78ab", _t("Sky")],
+    ["#e8f5e9", "#1f7a4c", _t("Leaf")],
+    ["#fdf3e2", "#9a5b00", _t("Amber")],
+    ["#fdecec", "#a32020", _t("Berry")],
+    ["#f3eefb", "#5b3aa6", _t("Violet")],
+    ["#f8f4f2", "#6b3326", _t("Cocoa")],
+    ["#eef6f4", "#0f6b5c", _t("Teal")],
+    ["#f1f1f1", "#222222", _t("Ink")],
+];
+
+// The app's grey for the line under the title (browse.css .cg-hero p).
+const LINE_GREY = "#4a5a66";
+
 function message(err) {
     return (
         err?.data?.message ||
@@ -70,22 +88,90 @@ export class CategoryDialog extends Component {
     static components = { Dialog, Pick, Icon };
     static props = {
         close: { type: Function },
-        row: { type: Object },
+        // null for a new category.
+        row: { type: [Object, { value: null }] },
+        // "new", "edit" (everything, from the Edit button) or "look" (the
+        // line and the colours, from How it looks). Defaults from `row`.
+        mode: { type: String, optional: true },
+        // [[id, name]] of the categories a new one can sit under.
+        parents: { type: Array, optional: true },
         onSave: { type: Function },
     };
 
     setup() {
-        const row = this.props.row;
+        const row = this.props.row || {};
+        this.isNew = !this.props.row;
+        this.mode = this.props.mode || (this.isNew ? "new" : "look");
+        this.isEdit = this.mode === "edit";
         this.state = useState({
             draft: {
+                name: this.isEdit ? row.name || "" : "",
+                parent_id: this.isEdit && row.parentId ? String(row.parentId) : "",
                 mart_blurb: row.blurb || "",
                 mart_tone: row.tone || "#f4f6f8",
                 mart_accent: row.accent || "#0b4a6e",
-                mart_mode: row.ownMode || "quick",
+                // Empty until chosen: the app's grey, or the main category's.
+                mart_blurb_color: row.blurbColor || "",
             },
             busy: false,
             error: "",
         });
+        this.PALETTE = PALETTE;
+        // Whether Background or Heading has been picked in this dialog. Until
+        // then a new sub-category takes its main category's colours; after,
+        // the picked ones stay whatever Under is set to.
+        this.coloursPicked = this.isEdit;
+    }
+
+    /** Name and Under are asked for when making a category, and when editing
+     *  one from the Edit button - not from How it looks. */
+    get askPlace() {
+        return this.isNew || this.isEdit;
+    }
+
+    /** A main category with sub-categories cannot go under another one: its
+     *  sub-categories would become a third level. */
+    get placeLocked() {
+        return this.isEdit && !this.props.row.parentId && this.props.row.children > 0;
+    }
+
+    /** One tap sets both colours; the boxes below fine-tune either. */
+    pickPair(tone, accent) {
+        this.coloursPicked = true;
+        this.state.draft.mart_tone = tone;
+        this.state.draft.mart_accent = accent;
+        this.state.error = "";
+    }
+
+    isPair(tone, accent) {
+        const d = this.state.draft;
+        return (d.mart_tone || "").toLowerCase() === tone && (d.mart_accent || "").toLowerCase() === accent;
+    }
+
+    /** The colour the line under the title is drawn in: its own, else (for a
+     *  sub-category) its main category's, else the app's grey. */
+    get lineColour() {
+        return this.state.draft.mart_blurb_color
+            || (this.isSub && this.main && this.main.blurbColor)
+            || LINE_GREY;
+    }
+
+    get title() {
+        if (this.isNew) {
+            return _t("New category");
+        }
+        const name = this.props.row.name || _t("this category");
+        return this.isEdit ? _t("Edit %s", name) : name;
+    }
+
+    /** A category can sit at the top, or under any main category - never
+     *  under itself. */
+    get parentOptions() {
+        const self = this.props.row ? String(this.props.row.id) : null;
+        return [
+            ["", _t("None - a top-level category")],
+            ...(this.props.parents || []).filter(([id]) => id !== self),
+        ];
     }
 
     edit(key, ev) {
@@ -97,15 +183,15 @@ export class CategoryDialog extends Component {
     set(key, value) {
         this.state.draft[key] = value;
         this.state.error = "";
-    }
-
-    /** The two storefronts, spelled out as they are in the dialog: this is
-     *  where somebody chooses one, so it is worth saying what each means. */
-    get modeOptions() {
-        return [
-            ["quick", _t("Quick - the 10-minute run")],
-            ["all", _t("Express - ships over days")],
-        ];
+        if (key === "mart_tone" || key === "mart_accent") {
+            this.coloursPicked = true;
+        } else if (key === "parent_id" && !this.coloursPicked) {
+            // Nothing picked yet: start from the main category's colours, or
+            // back to the defaults when Under goes back to None.
+            const m = this.main;
+            this.state.draft.mart_tone = (m && m.tone) || "#f4f6f8";
+            this.state.draft.mart_accent = (m && m.accent) || "#0b4a6e";
+        }
     }
 
     get preview() {
@@ -115,15 +201,37 @@ export class CategoryDialog extends Component {
         };
     }
 
+    /** The chosen colours, as the app's own variables: --tone fills the
+     *  header (or a sub-category's circle), --accent colours the ring. */
     get previewStyle() {
         const p = this.preview;
-        return `background: ${p.background}; color: ${p.color};`;
+        return `--tone: ${p.background}; --accent: ${p.color};`;
     }
 
-    /* Its own copy rather than reaching into the desk: a dialog that reads its
-       parent's methods is a dialog that breaks when the parent moves. */
-    modeLabel(mode) {
-        return mode === "all" ? _t("Express") : _t("Quick");
+    /** A sub-category: one being made with an Under chosen, or an existing
+     *  one that has a parent. The app draws it as a round tile, in its own
+     *  colours. */
+    get isSub() {
+        return this.askPlace ? !!this.state.draft.parent_id : !!this.props.row.parentId;
+    }
+
+    /** The main category a sub-category sits under: name and colours. */
+    get main() {
+        if (this.askPlace) {
+            const hit = (this.props.parents || []).find(([id]) => id === this.state.draft.parent_id);
+            return hit ? { name: hit[1], tone: hit[2], accent: hit[3], blurbColor: hit[4] } : null;
+        }
+        const row = this.props.row;
+        return row.parentId
+            ? { name: row.parent, tone: row.parentTone, accent: row.parentAccent, blurbColor: row.parentBlurbColor }
+            : null;
+    }
+
+    get previewName() {
+        if (this.askPlace) {
+            return this.state.draft.name.trim() || (this.isNew ? _t("New category") : this.props.row.name);
+        }
+        return this.props.row.name;
     }
 
     async save() {
@@ -131,10 +239,20 @@ export class CategoryDialog extends Component {
             return;
         }
         const values = { ...this.state.draft };
-        // A sub-category follows its top-level parent, so sending a storefront
-        // for one would be refused by the model - correctly. Do not send it.
-        if (!this.props.row.topLevel) {
-            delete values.mart_mode;
+        if (this.askPlace) {
+            if (!values.name.trim()) {
+                this.state.error = _t("A category needs a name.");
+                return;
+            }
+            values.parent_id = values.parent_id ? Number(values.parent_id) : false;
+            if (this.placeLocked) {
+                delete values.parent_id;
+            }
+        } else {
+            // The name and the parent of an existing category are changed in
+            // the form, under All views - see the note at the top.
+            delete values.name;
+            delete values.parent_id;
         }
         this.state.busy = true;
         try {
@@ -166,8 +284,9 @@ export class CatalogDesk extends Component {
 
         this.state = useState({
             tab: "all",
-            mode: "",
             q: "",
+            // The category just created, drawn highlighted once.
+            fresh: null,
             rows: [],
             counts: null,
             tiles: {},
@@ -205,7 +324,6 @@ export class CatalogDesk extends Component {
         try {
             const page = await this.orm.call(MODEL, "mart369_admin_list", [], {
                 tab: this.state.tab,
-                mode: this.state.mode || null,
                 q: this.state.q.trim() || null,
             });
             this.state.rows = page.rows || [];
@@ -227,23 +345,6 @@ export class CatalogDesk extends Component {
         }
         this.state.tab = tab;
         this.load();
-    }
-
-    setMode(mode) {
-        this.state.mode = mode;
-        this.load();
-    }
-
-    /* The shared dropdown, the same control the console draws here. It used to
-       be three chips because `Pick` lived in mart369_order, which this module
-       does not depend on; it lives in the base module now, so there is nothing
-       left to work around. */
-    get modeOptions() {
-        return [
-            ["", _t("Both storefronts")],
-            ["quick", _t("Quick")],
-            ["all", _t("Express")],
-        ];
     }
 
 
@@ -309,6 +410,57 @@ export class CatalogDesk extends Component {
         });
     }
 
+    /** What a category can go under: [id, name, background, heading, line].
+     *  Main categories only - the app shows two levels, so a sub-category
+     *  goes under a main one and nothing goes under a sub-category. Read
+     *  from the model, not the rows on screen, so a filter never hides one. */
+    async mains() {
+        const mains = await this.orm.searchRead(
+            MODEL, [["parent_id", "=", false]], ["name", "mart_tone", "mart_accent", "mart_blurb_color"],
+            { order: "sequence, name" });
+        return mains.map((c) => [String(c.id), c.name, c.mart_tone, c.mart_accent, c.mart_blurb_color || ""]);
+    }
+
+    /** Everything about a category: its name, where it sits, and how it
+     *  looks. The app address stays - a customer may have saved the link. */
+    async editAll(row) {
+        this.dialog.add(CategoryDialog, {
+            row,
+            mode: "edit",
+            parents: await this.mains(),
+            onSave: async (values) => {
+                this.state.busy = true;
+                try {
+                    await this.orm.call(MODEL, "mart369_admin_edit", [[row.id], values]);
+                    this.notification.add(_t("Saved."), { type: "success" });
+                } finally {
+                    this.state.busy = false;
+                    await this.load({ quiet: true });
+                }
+            },
+        });
+    }
+
+    /** A new category, from the same dialog as editing one: a name, an
+     *  optional parent, and how it looks. */
+    async newCategory() {
+        this.dialog.add(CategoryDialog, {
+            row: null,
+            parents: await this.mains(),
+            onSave: async (values) => {
+                this.state.busy = true;
+                try {
+                    const made = await this.orm.call(MODEL, "mart369_admin_create", [values]);
+                    this.notification.add(_t("%s is in the catalogue.", made.name), { type: "success" });
+                    this.state.fresh = made.id;
+                } finally {
+                    this.state.busy = false;
+                    await this.load({ quiet: true });
+                }
+            },
+        });
+    }
+
     /** The kanban and list, for what this screen does not do: the name, the
         app address, the parent, the order and the products themselves. */
     allViews() {
@@ -316,10 +468,6 @@ export class CatalogDesk extends Component {
     }
 
     // --------------------------------------------------------------- drawing
-
-    modeLabel(mode) {
-        return mode === "all" ? _t("Express") : _t("Quick");
-    }
 
     swatch(row) {
         return `background: ${row.tone || "#f4f6f8"}; color: ${row.accent || "#0b4a6e"};`;
