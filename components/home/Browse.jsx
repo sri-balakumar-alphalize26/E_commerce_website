@@ -364,9 +364,12 @@ export function CategoryPage({ slug, subSlug, cart, setQty }) {
       <Crumbs items={[["Home", ["home"]], [c.name, sub === "all" ? null : ["category", c.slug]], ...(sub !== "all" ? [[subName]] : [])]} />
       <header className="cg-hero">
         <div>
-          <span className="cg-mode">{c.mode === "quick" ? <><Icon n="bolt" size={12} className="hm-fill" />Quick delivery</> : <><Icon n="truck" size={12} />Express delivery</>}</span>
           <h1>{c.name}</h1>
-          <p>{c.blurb}{sub === "all" && items.length ? ` · ${items.length} products` : ""}</p>
+          {/* The picked sub-category's own line when it has one, else the
+              category's - and its own line colour, else the category's, else
+              the stylesheet's grey. */}
+          <p style={{ color: (sub !== "all" && subs.find((s) => s.slug === sub)?.blurbColor) || c.blurbColor || undefined }}>
+            {(sub !== "all" && subs.find((s) => s.slug === sub)?.blurb) || c.blurb}{sub === "all" && items.length ? ` · ${items.length} products` : ""}</p>
         </div>
         <div className="cg-hero-art" aria-hidden="true">
           {items.slice(0, 3).map((p, k) => <span key={p.id} style={{ "--k": k }}><Thumb p={p} /></span>)}
@@ -388,7 +391,10 @@ export function CategoryPage({ slug, subSlug, cart, setQty }) {
                 <span className="cg-sub-img cg-all"><Icon n="grid" size={26} /></span><span>All</span>
               </button>
               {subs.map((s, k) => (
-                <button key={s.slug} className={"cg-sub" + (sub === s.slug ? " cg-on" : "")} style={{ "--k": k + 1 }} onClick={() => pick(s.slug)}>
+                /* Each sub-category's circle in its own colours; one without
+                   them falls through to the category's, set on .cg-page. */
+                <button key={s.slug} className={"cg-sub" + (sub === s.slug ? " cg-on" : "")}
+                  style={{ "--k": k + 1, "--tone": s.tone || undefined, "--accent": s.accent || undefined }} onClick={() => pick(s.slug)}>
                   {/* Only the subcategory being viewed has its products loaded, so
                       the others show the same placeholder the "All" tile uses
                       rather than borrowing somebody else's picture. */}

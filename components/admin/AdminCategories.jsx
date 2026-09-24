@@ -3,9 +3,10 @@
    369 Mart admin — Catalog
 
    The groups a shopper sees in the app, and how each one looks: the pale
-   colour behind its page, the ink of its heading, the line under its title,
-   and which storefront it belongs to — Quick, the ten-minute run, or Express,
-   which ships over days.
+   colour behind its page, the ink of its heading and the line under its
+   title. New categories are made here too: a top-level aisle, or a
+   sub-category inside one (the app shows two levels, so a parent is always
+   top-level).
 
    Two things this screen will not change, on purpose. **The name** is Odoo's
    own field, leaned on by the catalogue, the product pages and every report.
@@ -21,15 +22,15 @@ import { api } from "@/lib/api";
 import { useAction, useResource } from "@/lib/useFetch";
 import { Drawer, Empty, Icon, Search, Select, Tabs } from "./AdminUI";
 
-const MODES = { quick: "Quick", all: "Express" };
-
 export function CategoriesSection({ flash }) {
   const [tab, setTab] = useState("all");
-  const [mode, setMode] = useState("");
   const [term, setTerm] = useState("");
   const [q, setQ] = useState("");
   const [editing, setEditing] = useState(null);
   const [formError, setFormError] = useState("");
+  const [fresh, setFresh] = useState(null);
+  const [mode, setMode] = useState("look");
+  const open = (r, m) => { setFormError(""); setMode(m); setEditing(r); };
 
   useEffect(() => {
     const id = setTimeout(() => setQ(term.trim()), 300);
@@ -39,13 +40,15 @@ export function CategoriesSection({ flash }) {
   const path = useMemo(() => {
     const p = new URLSearchParams();
     if (tab !== "all") p.set("tab", tab);
-    if (mode) p.set("mode", mode);
     if (q) p.set("q", q);
     const qs = p.toString();
     return "/admin/categories" + (qs ? `?${qs}` : "");
-  }, [tab, mode, q]);
+  }, [tab, q]);
 
   const { data, loading, error, reload } = useResource(path);
+  /* Every category, whatever the tab, for the "Inside" choice of a new one. */
+  const { data: everything, reload: reloadAll } = useResource("/admin/categories");
+  const parents = (everything?.rows || []).filter((r) => r.topLevel);
   const act = useAction();
 
   const rows = data?.rows || [];
@@ -81,8 +84,12 @@ export function CategoriesSection({ flash }) {
      stale in the same tick it is set. */
   async function saveDialog(values) {
     setFormError("");
+    const isNew = editing === "new";
     try {
-      await api(`/admin/categories/${editing.id}`, { method: "PATCH", body: values });
+      const res = await api(isNew ? "/admin/categories" : `/admin/categories/${editing.id}`,
+        { method: isNew ? "POST" : mode === "edit" ? "PUT" : "PATCH", body: values });
+      /* Drawn highlighted in the list so the new one can be found. */
+      if (isNew && res?.row?.id) { setTab("all"); setTerm(""); setFresh(res.row.id); }
     } catch (e) {
       setFormError(e?.message || "That could not be saved.");
       return;
@@ -90,19 +97,23 @@ export function CategoriesSection({ flash }) {
     api.invalidate("/admin/categories");
     api.invalidate("/catalog");
     await reload();
-    flash?.(`${editing.name} saved`);
+    reloadAll();
+    flash?.(isNew ? `${values.name} added` : `${values.name || editing.name} saved`);
     setEditing(null);
   }
 
   return (
     <div className="ad-stack">
-      <section className="ad-mini-stats">
-        <span><small>In the app</small><b>{tiles.live ?? 0}</b></span>
-        <span><small>Hidden</small><b>{tiles.hidden ?? 0}</b></span>
-        <span className={tiles.empty ? "ad-warn" : ""}>
-          <small>Standing empty</small><b>{tiles.empty ?? 0}</b>
-        </span>
-        <span><small>Products a shopper can reach</small><b>{tiles.products ?? 0}</b></span>
+      {/* The tiles double as a filter, like the Odoo desk's. */}
+      <section className="ad-mini-stats ad-cat-tiles">
+        {[["live", "In the app", tiles.live], ["hidden", "Hidden", tiles.hidden], ["empty", "Standing empty", tiles.empty]].map(([k, label, n]) => (
+          <button key={k} type="button" aria-pressed={tab === k}
+            className={(tab === k ? "ad-on " : "") + (k === "empty" && n ? "ad-warn" : "")}
+            onClick={() => setTab(tab === k ? "all" : k)}>
+            <small>{label}</small><b>{n ?? 0}</b><i>{tab === k ? "Showing these" : "Show these"}</i>
+          </button>
+        ))}
+        <span><small>Products a shopper can reach</small><b>{tiles.products ?? 0}</b><i>Counted once, however many groups they sit in</i></span>
       </section>
 
       <section className="ad-card">
@@ -115,8 +126,9 @@ export function CategoriesSection({ flash }) {
           ]} />
           <div className="ad-toolbar-right">
             <Search value={term} onChange={setTerm} placeholder="A category or its app address" />
-            <Select value={mode} onChange={setMode} label="Storefront"
-              options={[["", "Both storefronts"], ["quick", "Quick"], ["all", "Express"]]} />
+            <button type="button" className="ad-btn ad-primary" onClick={() => { setFormError(""); setEditing("new"); }}>
+              <Icon n="plus" size={15} />New category
+            </button>
           </div>
         </div>
 
@@ -132,15 +144,17 @@ export function CategoriesSection({ flash }) {
             title={tab === "empty" ? "Every category has something in it" : "No category here"}
             text={tab === "empty"
               ? "That is the good version of this tab being empty."
-              : q || tab !== "all" || mode
+              : q || tab !== "all"
                 ? "Nothing matches that. Try another tab, or clear the search."
-                : "Categories are added in Odoo, and appear here the moment they exist."} />
+                : "Add one with New category."} />
         )}
 
         {!error && !!rows.length && (
+          <>
+          <p className="ad-cat-count">{rows.length} categor{rows.length === 1 ? "y" : "ies"}</p>
           <ul className="ad-cats">
             {rows.map((r, i) => (
-              <li key={r.id} className={r.inApp ? "" : "ad-cat-off"} style={{ "--i": i }}>
+              <li key={r.id} className={(r.inApp ? "" : "ad-cat-off") + (fresh === r.id ? " ad-cat-new" : "")} style={{ "--i": i }}>
                 {/* The two colours shown as what they are: ink on its own
                     background, rather than two hex codes in a table. */}
                 <span className="ad-cat-swatch"
@@ -150,9 +164,6 @@ export function CategoriesSection({ flash }) {
                 <div className="ad-cat-body">
                   <div className="ad-cat-top">
                     <b>{r.name}</b>
-                    <span className={"ad-pill " + (r.mode === "all" ? "ad-t-violet" : "ad-t-blue")}>
-                      <i />{MODES[r.mode] || r.mode}
-                    </span>
                     {!r.inApp && <span className="ad-pill ad-t-grey"><i />Hidden</span>}
                     {!r.products && <span className="ad-pill ad-t-amber"><i />Nothing in it</span>}
                   </div>
@@ -167,18 +178,22 @@ export function CategoriesSection({ flash }) {
 
                 <div className="ad-cat-act">
                   <button className="ad-btn ad-sm" disabled={act.busy}
-                    onClick={() => { setFormError(""); setEditing(r); }}>How it looks</button>
+                    onClick={() => open(r, "edit")}><Icon n="edit" size={13} />Edit</button>
+                  <button className="ad-btn ad-sm" disabled={act.busy}
+                    onClick={() => open(r, "look")}>How it looks</button>
                   <button className="ad-btn ad-sm" disabled={act.busy}
                     onClick={() => toggleShown(r)}>{r.inApp ? "Hide" : "Show"}</button>
                 </div>
               </li>
             ))}
           </ul>
+          </>
         )}
       </section>
 
       {editing && (
-        <CategoryDialog row={editing} error={formError} busy={act.busy}
+        <CategoryDialog row={editing === "new" ? null : editing} mode={editing === "new" ? "new" : mode}
+          parents={parents.filter((p) => editing === "new" || p.id !== editing.id)} error={formError} busy={act.busy}
           onCancel={() => setEditing(null)} onSave={saveDialog} />
       )}
     </div>
@@ -189,73 +204,190 @@ export function CategoriesSection({ flash }) {
    because that is the shell every other form in this console uses - and the
    blurb and the two colours only make sense seen together, so a colour picked
    beside the words it sits behind is picked once. */
-function CategoryDialog({ row, error, busy, onCancel, onSave }) {
+/* Pale background + readable heading ink, in pairs, so a tap cannot give
+   ink the shopper cannot read. [background, heading, name] */
+const PALETTE = [
+  ["#f4f6f8", "#0b4a6e", "Default"],
+  ["#eef3f7", "#12405e", "Steel"],
+  ["#e8f3f9", "#0a78ab", "Sky"],
+  ["#e8f5e9", "#1f7a4c", "Leaf"],
+  ["#fdf3e2", "#9a5b00", "Amber"],
+  ["#fdecec", "#a32020", "Berry"],
+  ["#f3eefb", "#5b3aa6", "Violet"],
+  ["#f8f4f2", "#6b3326", "Cocoa"],
+  ["#eef6f4", "#0f6b5c", "Teal"],
+  ["#f1f1f1", "#222222", "Ink"],
+];
+
+function CategoryDialog({ row, mode, parents, error, busy, onCancel, onSave }) {
+  const isNew = !row;
+  const isEdit = mode === "edit";
+  /* Name and Under are asked for when making a category, and from the Edit
+     button - not from How it looks. */
+  const askPlace = isNew || isEdit;
+  /* A main category with sub-categories cannot go under another one: its
+     sub-categories would become a third level. */
+  const placeLocked = isEdit && !row.parentId && row.children > 0;
   const [draft, setDraft] = useState({
-    mart_blurb: row.blurb || "",
-    mart_tone: row.tone || "#f4f6f8",
-    mart_accent: row.accent || "#0b4a6e",
-    mart_mode: row.ownMode || "quick",
+    name: isEdit ? row.name || "" : "",
+    parent_id: isEdit && row.parentId ? String(row.parentId) : "",
+    mart_blurb: row?.blurb || "",
+    mart_tone: row?.tone || "#f4f6f8",
+    mart_accent: row?.accent || "#0b4a6e",
+    mart_blurb_color: row?.blurbColor || "",
   });
-  const set = (k) => (e) => setDraft((d) => ({ ...d, [k]: e.target.value }));
+  const [nameBad, setNameBad] = useState(false);
+  const [picked, setPicked] = useState(isEdit);
+  const set = (k) => (e) => {
+    if (k === "mart_tone" || k === "mart_accent") setPicked(true);
+    setDraft((d) => ({ ...d, [k]: e.target.value }));
+  };
+  /* Under chosen before any colour was picked: start from the main
+     category's colours, or back to the defaults when Under goes back to None. */
+  const setUnder = (v) => setDraft((d) => {
+    if (picked) return { ...d, parent_id: v };
+    const p = parents.find((x) => String(x.id) === v);
+    return { ...d, parent_id: v, mart_tone: p?.tone || "#f4f6f8", mart_accent: p?.accent || "#0b4a6e" };
+  });
+
+  /* A sub-category - one being made with an Under chosen, or one that has a
+     parent. The app draws it as a round tile, in its own colours. */
+  const isSub = askPlace ? !!draft.parent_id : !!row.parentId;
+  const main = askPlace
+    ? (() => { const p = parents.find((x) => String(x.id) === draft.parent_id); return p ? { name: p.name, tone: p.tone, accent: p.accent, blurbColor: p.blurbColor } : null; })()
+    : row.parentId ? { name: row.parent, tone: row.parentTone, accent: row.parentAccent, blurbColor: row.parentBlurbColor } : null;
+  const shownName = askPlace ? draft.name.trim() || (isNew ? "New category" : row.name) : row.name;
+  /* Empty Line colour = the default: the app's grey, or for a sub-category
+     its main category's line colour. */
+  const lineColour = draft.mart_blurb_color || (isSub && main?.blurbColor) || "#4a5a66";
+  const line = draft.mart_blurb || "No line under the title";
 
   const submit = () => {
-    const values = { ...draft };
-    /* A sub-category follows its top-level parent, so sending a storefront
-       for one would be refused by the model - correctly. Do not send it. */
-    if (!row.topLevel) delete values.mart_mode;
-    onSave(values);
+    const { name, parent_id, ...look } = draft;
+    if (!askPlace) return onSave(look);
+    if (!name.trim()) { setNameBad(true); return; }
+    if (isEdit) return onSave({ ...look, name: name.trim(), ...(placeLocked ? {} : { parent_id: parent_id ? Number(parent_id) : false }) });
+    onSave({ ...look, name: name.trim(), ...(parent_id ? { parent_id: Number(parent_id) } : {}) });
   };
 
+  const colour = (key, label, hint, value, placeholder) => (
+    <label className="ad-field"><span>{label}<em>{hint}</em></span>
+      <span className="ad-colour">
+        <input type="color" value={value} onChange={set(key)} aria-label={`Pick the ${label.toLowerCase()}`} />
+        <input value={draft[key]} onChange={set(key)} placeholder={placeholder} />
+      </span></label>
+  );
+
   return (
-    <Drawer
-      title={row.name}
-      sub="How the app draws this category. The name and the app address are changed in Odoo - the address is a link a customer may have saved."
+    <Drawer wide
+      title={isNew ? "New category" : isEdit ? `Edit ${row.name}` : row.name}
+      sub={isNew
+        ? "A new group for the app. Its app address is made from the name."
+        : isEdit
+        ? "Its name, where it sits, and how it looks. The app address stays the same, so a link a customer saved still works."
+        : "How the app draws this category. The name and the app address are changed in Odoo - the address is a link a customer may have saved."}
       onClose={onCancel}
       foot={(close) => (
         <>
           <button className="ad-btn" onClick={close}>Cancel</button>
-          <button className="ad-btn ad-primary" disabled={busy} onClick={submit}>Save</button>
+          <button className="ad-btn ad-primary" disabled={busy} onClick={submit}>{isNew ? "Add category" : "Save"}</button>
         </>
       )}>
       {error && <p className="ad-hint ad-form-error" role="alert"><Icon n="info" size={14} />{error}</p>}
 
-      {/* What the shopper will see, above the controls that change it. */}
-      <div className="ad-cat-preview"
-        style={{ background: draft.mart_tone, color: draft.mart_accent }}>
-        <b>{row.name}</b>
-        <small>{draft.mart_blurb || "No line under the title"}</small>
-      </div>
+      <div className="ad-dlg-cols">
+        <div className="ad-form">
+          {askPlace && <>
+            <label className="ad-field ad-span2"><span>Name</span>
+              <input autoFocus value={draft.name} placeholder="e.g. Audio" aria-invalid={nameBad}
+                onChange={(e) => { setNameBad(false); set("name")(e); }} />
+              {nameBad && <small className="ad-form-error">A category needs a name.</small>}</label>
+            {placeLocked ? (
+              <div className="ad-field ad-span2"><span>Under</span>
+                <p className="ad-cat-locked"><Icon n="lock" size={13} />
+                  <span>Has {row.children} sub-categor{row.children === 1 ? "y" : "ies"}, so it stays a main category - move them first.</span></p>
+              </div>
+            ) : (
+              <div className="ad-field ad-span2"><span>Under</span>
+                <Select value={draft.parent_id} label="Parent category"
+                  onChange={setUnder}
+                  options={[["", "None - a top-level category"], ...parents.map((p) => [String(p.id), p.name])]} />
+              </div>
+            )}
+            <ul className="ad-cat-how ad-span2">
+              <li><b>Category:</b> just type the name - leave Under as None.</li>
+              <li><b>Sub-category:</b> type the name, then choose the main category it goes under (e.g. Computers). Only main categories are listed - the app shows two levels.</li>
+            </ul>
+          </>}
+          <label className="ad-field ad-span2"><span>One line under the title</span>
+            <input value={draft.mart_blurb} onChange={set("mart_blurb")}
+              placeholder="Switches, sockets and wiring accessories" />
+            {isSub && <small className="ad-dim">Shown under the title when this sub-category is picked.</small>}</label>
 
-      <div className="ad-form">
-        <label className="ad-field ad-span2"><span>One line under the title</span>
-          <input value={draft.mart_blurb} onChange={set("mart_blurb")}
-            placeholder="Switches, sockets and wiring accessories" /></label>
+          {/* Always the code in use, like the other two; the default is
+              shown, but only saved once changed. */}
+          <label className="ad-field"><span>Line colour<em>{draft.mart_blurb_color
+              ? "Colours the one line under the title"
+              : isSub && main?.blurbColor ? `Default: ${main.name}'s line colour` : "Default: the app's grey"}</em></span>
+            <span className="ad-colour">
+              <input type="color" value={lineColour} onChange={set("mart_blurb_color")} aria-label="Pick the line colour" />
+              <input value={lineColour} onChange={set("mart_blurb_color")} />
+            </span>
+            {draft.mart_blurb_color && <button type="button" className="ad-link ad-line-reset"
+              onClick={(e) => { e.preventDefault(); setDraft((d) => ({ ...d, mart_blurb_color: "" })); }}>Back to default</button>}
+          </label>
+          <div className="ad-field" />
 
-        <label className="ad-field"><span>Background</span>
-          <span className="ad-colour">
-            <input type="color" value={draft.mart_tone} onChange={set("mart_tone")} />
-            <input value={draft.mart_tone} onChange={set("mart_tone")} />
-          </span></label>
+          {/* A sub-category has its own colours too: they fill its circle. */}
+          {isSub && (
+            <p className="ad-hint ad-span2"><Icon n="info" size={14} />
+              <span>Colours this sub-category&apos;s circle. It starts in <b>{main?.name || "its main category"}</b>&apos;s colours; a colour you pick stays, whatever Under is set to.</span></p>
+          )}
+          <>
+            {/* One tap sets both colours; the pickers below fine-tune either. */}
+            <div className="ad-field ad-span2"><span>Colours</span>
+              <div className="ad-palette" role="group" aria-label="Colour presets">
+                {PALETTE.map(([tone, accent, name]) => {
+                  const on = draft.mart_tone.toLowerCase() === tone && draft.mart_accent.toLowerCase() === accent;
+                  return (
+                    <button key={tone} type="button" className={on ? "ad-on" : ""} aria-pressed={on} title={name}
+                      style={{ background: tone, color: accent }}
+                      onClick={() => { setPicked(true); setDraft((d) => ({ ...d, mart_tone: tone, mart_accent: accent })); }}>Aa</button>
+                  );
+                })}
+              </div>
+            </div>
+            {colour("mart_tone", "Background", isSub ? "Fills the circle" : "Fills the category's header", draft.mart_tone)}
+            {colour("mart_accent", "Heading colour", isSub ? "Rings the circle and colours its name" : "Colours the All tile; new sub-categories start with it", draft.mart_accent)}
+          </>
+        </div>
 
-        <label className="ad-field"><span>Heading colour</span>
-          <span className="ad-colour">
-            <input type="color" value={draft.mart_accent} onChange={set("mart_accent")} />
-            <input value={draft.mart_accent} onChange={set("mart_accent")} />
-          </span></label>
-
-        {row.topLevel ? (
-          <label className="ad-field ad-span2"><span>Storefront</span>
-            <select value={draft.mart_mode} onChange={set("mart_mode")}>
-              <option value="quick">Quick - the 10-minute run</option>
-              <option value="all">Express - ships over days</option>
-            </select></label>
-        ) : (
-          <p className="ad-hint ad-span2">
-            <Icon n="info" size={14} />
-            This follows <b>{row.parent}</b>, which is in <b>{MODES[row.mode]}</b>.
-            Change the storefront on the top-level category.
-          </p>
-        )}
+        {/* As the app draws it, live. A category: its page header filled with
+            Background. A sub-category: a round tile in its main category's colours. */}
+        <aside className="ad-dlg-right" aria-label="How it looks in the app">
+          <p className="ad-dlg-cap">How it looks in the app</p>
+          {!isSub ? (
+            <div className="ad-prev-cat" style={{ "--tone": draft.mart_tone, "--accent": draft.mart_accent }}>
+              <div className="ad-prev-hero">
+                <div className="ad-prev-words">
+                  <b>{shownName}</b>
+                  <small style={{ color: lineColour }}>{line}</small>
+                </div>
+                <div className="ad-prev-art" aria-hidden="true">
+                  <span><Icon n="box" size={18} /></span>
+                  <span><Icon n="box" size={22} /></span>
+                </div>
+              </div>
+              <p className="ad-prev-key"><i />Heading colour - the All tile, and where new sub-categories start</p>
+            </div>
+          ) : (
+            <div className="ad-prev-sub" style={{ "--tone": draft.mart_tone, "--accent": draft.mart_accent }}>
+              <i><Icon n="box" size={30} /></i>
+              <b>{shownName}</b>
+              <small>Under {main?.name || ""} · <span style={{ color: lineColour }}>{line}</span></small>
+            </div>
+          )}
+        </aside>
       </div>
     </Drawer>
   );
