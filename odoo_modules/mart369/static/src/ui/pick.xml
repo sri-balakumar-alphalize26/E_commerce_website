@@ -4,7 +4,8 @@
     <t t-name="mart369.Pick">
         <Dropdown position="'bottom-start'" menuClass="'mart-select-menu'" disabled="!!props.disabled">
             <button class="mart-select" type="button" t-att-aria-label="props.label"
-                    t-att-disabled="props.disabled or false">
+                    t-att-disabled="props.disabled or false"
+                    t-on-keydown="onKeydown">
                 <span t-esc="current"/>
                 <Icon n="'chev'" size="14"/>
             </button>

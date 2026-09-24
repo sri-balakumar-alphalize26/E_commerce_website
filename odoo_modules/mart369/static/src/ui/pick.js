@@ -49,4 +49,36 @@ export class Pick extends Component {
             this.props.onChange(value);
         }
     }
+
+    /** Type to pick, the way a native select does: "c" lands on cm, "k" on
+     *  kg, and quick letters build a word ("mo" is months, not mm). Works
+     *  with the menu open or shut, since focus stays on the button. */
+    onKeydown(ev) {
+        if (this.props.disabled || ev.key.length !== 1 || ev.ctrlKey || ev.metaKey || ev.altKey) {
+            return;
+        }
+        const now = Date.now();
+        this.typed = (now - (this.typedAt || 0) < 800 ? this.typed || "" : "") + ev.key.toLowerCase();
+        this.typedAt = now;
+        const opts = this.props.options;
+        const starts = (typed) => ([, label]) => String(label).toLowerCase().startsWith(typed);
+        let hit;
+        if ([...this.typed].every((ch) => ch === this.typed[0])) {
+            // The same letter again steps through the options that start with
+            // it (m: mg, ml, m ...), as a native select does.
+            const same = opts.filter(starts(this.typed[0]));
+            const at = same.findIndex(([v]) => v === this.props.value);
+            hit = same.length ? same[(at + 1) % same.length] : undefined;
+            if (this.typed.length === 1 && at === -1) {
+                hit = same[0];
+            }
+        } else {
+            hit = opts.find(starts(this.typed));
+        }
+        if (hit) {
+            ev.preventDefault();
+            ev.stopPropagation();
+            this.choose(hit[0]);
+        }
+    }
 }

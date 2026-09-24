@@ -59,6 +59,8 @@ you want from the Apps list.
             'mart369/static/src/ui/icon.xml',
             'mart369/static/src/ui/pick.js',
             'mart369/static/src/ui/pick.xml',
+            # Numbers only in every number box on a 369 Mart screen.
+            'mart369/static/src/ui/number_guard.js',
             'mart369/static/src/ui/switch.js',
             'mart369/static/src/ui/switch.xml',
             'mart369/static/src/ui/search.js',
