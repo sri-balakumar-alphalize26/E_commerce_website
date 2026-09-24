@@ -6,137 +6,310 @@ import { useEffect, useMemo, useState } from "react";
 import { money } from "@/lib/money";
 import { useResource } from "@/lib/useFetch";
 import { Avatar, Drawer, Empty, Icon, Search, Select, Tabs } from "./AdminUI";
+import ProductEditor, { PhotoViewer } from "./ProductEditor";
 import { RIDERS, clock, groupIN, isToday } from "./adminData";
 import { dateShort, since } from "./format";
 
 /* ============================== products ===============================
-   Reads the shop. The tabs, category, storefront and sort all go to the
-   server - "lowest stock first" means nothing if it only sorts the page you
-   were sent.
+   The shop's products, and the same editor as Odoo's Products desk.
 
-   **Read-only, deliberately.** A stock count typed over here would disagree
-   with Inventory the moment anything was sold; a real change is an inventory
-   adjustment, and price and publishing belong to the product master. So the
-   numbers are shown as numbers, not as inputs that do nothing. */
+   The list reads the shop: the tabs, category and sort all go to
+   the server - "lowest stock first" means nothing if it only sorts the page
+   you were sent. The tiles count the whole shop, never the filter.
+
+   **What can be changed here is what the desk can change.** New product and
+   Edit write through `mart369_desk_save`, whose allowlist is the product's
+   own details, wording and photographs. Stock is still never typed over: a
+   stock change is an inventory adjustment, and a number typed here would
+   disagree with Inventory the moment anything was sold. */
 const Thumb = ({ src }) => (
   <span className="ad-thumb">{src ? <img src={src} alt="" loading="lazy" /> : <Icon n="layers" size={18} />}</span>
 );
 const STOCK = { out: ["Out of stock", "red"], low: ["Low", "orange"] };
 const SORT_LABEL = [["low", "Lowest stock"], ["sold", "Best selling"], ["price", "Highest price"], ["name", "Name A–Z"]];
+const VIEW_KEY = "369mart.admin.products.view";
+const SOURCE = { product: "this product", category: "its category", odoo: "the product record", default: "the shop" };
 
-export function ProductsSection({ initialQ = "" }) {
+export function ProductsSection({ initialQ = "", flash, go }) {
   const [tab, setTab] = useState("all");
   const [term, setTerm] = useState(initialQ);
   const [q, setQ] = useState(initialQ);
   const [categ, setCateg] = useState("");
-  const [mode, setMode] = useState("");
   const [sort, setSort] = useState("low");
   const [limit, setLimit] = useState(50);
-  const [open, setOpen] = useState(null);
+  const [view, setViewState] = useState("list");
+  /* One of: null (the list), {detail: id, row}, {edit: id|null, back}. */
+  const [screen, setScreen] = useState(null);
+
+  useEffect(() => {
+    try { const v = localStorage.getItem(VIEW_KEY); if (v === "cards" || v === "list") setViewState(v); } catch (e) { /* private window */ }
+  }, []);
+  const setView = (v) => { setViewState(v); try { localStorage.setItem(VIEW_KEY, v); } catch (e) { /* ignore */ } };
 
   useEffect(() => {
     const id = setTimeout(() => setQ(term.trim()), 300);
     return () => clearTimeout(id);
   }, [term]);
-  useEffect(() => setLimit(50), [tab, q, categ, mode, sort]);
+  useEffect(() => setLimit(50), [tab, q, categ, sort]);
+  useEffect(() => { window.scrollTo({ top: 0 }); }, [screen]);
 
   const path = useMemo(() => {
     const p = new URLSearchParams();
     if (tab !== "all") p.set("tab", tab);
     if (q) p.set("q", q);
     if (categ) p.set("categ", categ);
-    if (mode) p.set("mode", mode);
     p.set("sort", sort);
     p.set("limit", String(limit));
     return "/admin/products?" + p.toString();
-  }, [tab, q, categ, mode, sort, limit]);
+  }, [tab, q, categ, sort, limit]);
 
-  const { data, loading, error, reload } = useResource(path, { keepLast: true });
+  /* Paused while the editor or a product is open, and re-read on the way
+     back, so a save shows in the list at once. */
+  const [nonce, setNonce] = useState(0);
+  const { data, loading, error, reload } = useResource(path, { keepLast: true, enabled: !screen, deps: [nonce] });
   const rows = data?.rows || [];
   const tiles = data?.tiles || {};
   const counts = data?.counts || {};
   const currency = data?.currency;
-  const categName = (data?.categories || []).find((c) => String(c.id) === categ)?.name;
-  const why = [q && `"${q}"`, categName && `in ${categName}`, mode && (mode === "all" ? "on Express" : "on Quick")].filter(Boolean).join(", ");
+  const categories = data?.categories || [];
+  const categName = categories.find((c) => String(c.id) === categ)?.name;
+  const why = [q && `"${q}"`, categName && `in ${categName}`].filter(Boolean).join(", ");
   const TAB_EMPTY = { low: "Nothing is running low.", out: "Nothing is out of stock.", off: "Every product is live in the app." };
+  const anyFilter = !!(q || categ || tab !== "all");
+  const clearAll = () => { setTerm(""); setQ(""); setCateg(""); setTab("all"); };
+  const toList = () => { setScreen(null); setNonce((n) => n + 1); };
+
+  if (screen && "edit" in screen) {
+    return (
+      <ProductEditor key={String(screen.edit)} productId={screen.edit} currency={currency} flash={flash}
+        onClose={() => (screen.back ? setScreen(screen.back) : toList())}
+        onSaved={(id) => setScreen({ detail: id, row: null })} />
+    );
+  }
+  if (screen && "detail" in screen) {
+    return (
+      <ProductDetail key={screen.detail} id={screen.detail} row={screen.row} currency={currency} onBack={toList} go={go}
+        onEdit={() => setScreen({ edit: screen.detail, back: screen })} />
+    );
+  }
+
+  const openRow = (s) => setScreen({ detail: s.id, row: s });
+  const stockTile = (key, label, cls, value) => (
+    <button type="button" className={"pdk-tile " + cls + (tab === key ? " pdk-on" : "")} aria-pressed={tab === key}
+      title={tab === key ? "Show every product" : `Show only ${label.toLowerCase()}`}
+      onClick={() => setTab(tab === key ? "all" : key)}><small>{label}</small><b>{value}</b></button>
+  );
 
   return (
     <div className="ad-stack">
-      <section className="ad-mini-stats">
+      <div className="pdk-listhead">
+        <div>
+          <h2>Products</h2>
+          <p>Every product in the shop. Open one to see what its page shows, or change its details and photographs.</p>
+        </div>
+        <button className="ad-btn ad-primary" onClick={() => setScreen({ edit: null })}><Icon n="plus" size={16} />New product</button>
+      </div>
+
+      <section className="ad-mini-stats pdk-tiles">
         <span><small>Products</small><b>{tiles.count ?? 0}</b></span>
         <span><small>Stock value</small><b>{money(tiles.value ?? 0, currency)}</b></span>
-        <span className="ad-warn"><small>Low stock</small><b>{tiles.low ?? 0}</b></span>
-        <span className="ad-bad"><small>Out of stock</small><b>{tiles.out ?? 0}</b></span>
+        {stockTile("low", "Low stock", "ad-warn", tiles.low ?? 0)}
+        {stockTile("out", "Out of stock", "ad-bad", tiles.out ?? 0)}
       </section>
-
-      <p className="ad-hint ad-readonly">
-        <Icon n="info" size={14} />
-        <span>
-          Nothing here can be changed. Stock moves through an inventory adjustment, and
-          price and publishing are set on the product in Odoo — so this list always
-          agrees with what the app is selling.
-          {data && tiles.stock === false && " Inventory is not installed, so stock is not tracked."}
-        </span>
-      </p>
+      {data && tiles.stock === false && <p className="ad-hint"><Icon n="info" size={14} />Inventory is not installed, so stock is not tracked.</p>}
 
       <section className="ad-card">
         <div className="ad-toolbar">
           <Tabs value={tab} onChange={setTab} tabs={[["all", "All", counts.all ?? 0], ["low", "Low", counts.low ?? 0], ["out", "Out of stock", counts.out ?? 0], ["off", "Hidden", counts.off ?? 0]]} />
           <div className="ad-toolbar-right">
             <Search value={term} onChange={setTerm} placeholder="Name or code" />
-            <Select value={categ} onChange={setCateg} label="Category" options={[["", "All categories"], ...(data?.categories || []).map((c) => [String(c.id), c.name])]} />
-            <Select value={mode} onChange={setMode} label="Storefront" options={[["", "Both storefronts"], ["quick", "Quick"], ["all", "Express"]]} />
             <Select value={sort} onChange={setSort} label="Sort" options={SORT_LABEL} />
+            <div className="pdk-views" role="group" aria-label="View">
+              <button type="button" className={view === "cards" ? "pdk-on" : ""} aria-pressed={view === "cards"} title="Cards" aria-label="Cards" onClick={() => setView("cards")}><Icon n="dash" size={16} /></button>
+              <button type="button" className={view === "list" ? "pdk-on" : ""} aria-pressed={view === "list"} title="List" aria-label="List" onClick={() => setView("list")}><Icon n="menu" size={16} /></button>
+            </div>
           </div>
         </div>
-        {why && data && <p className="ad-hint"><Icon n="info" size={14} />Showing {rows.length} of {data.total} that match — the tiles count the whole shop.</p>}
+        {categories.length > 0 && (
+          <div className="pdk-chips" role="group" aria-label="Category">
+            <button type="button" className={"pdk-chip" + (!categ ? " pdk-on" : "")} aria-pressed={!categ} onClick={() => setCateg("")}>All categories</button>
+            {categories.map((c) => (
+              <button key={c.id} type="button" className={"pdk-chip" + (categ === String(c.id) ? " pdk-on" : "")} aria-pressed={categ === String(c.id)}
+                onClick={() => setCateg(categ === String(c.id) ? "" : String(c.id))}>{c.name}</button>
+            ))}
+          </div>
+        )}
+        {why && data && !loading && (
+          <p className="ad-hint pdk-why"><Icon n="info" size={14} />
+            <span>Showing {rows.length} of {data.total} that match {why}. The tiles count the whole shop.</span>
+            <button type="button" className="pdk-clear" onClick={clearAll}><Icon n="x" size={13} />Clear all filters<b>{[q, categ, tab !== "all"].filter(Boolean).length}</b></button>
+          </p>
+        )}
 
         <div className="ad-table-wrap">
           {error && !rows.length && <Empty icon="info" title="We could not reach the shop" text={error.message} action="Try again" onAction={reload} />}
           {loading && !rows.length && !error && <Empty icon="layers" title="Loading…" text="Fetching products." />}
-          {!!rows.length && (
-            <table className="ad-table">
-              <thead><tr><th>Product</th><th>Category</th><th>Delivery</th><th className="ad-num">Price</th><th className="ad-num">Sold / 7d</th><th className="ad-num">In stock</th><th>Live</th><th /></tr></thead>
+          {!!rows.length && view === "list" && (
+            <table className="ad-table pdk-table">
+              <thead><tr><th>Product</th><th>Category</th><th className="ad-num">Price</th><th className="ad-num">Sold / 7d</th><th className="ad-num">In stock</th><th>Live</th><th /></tr></thead>
               <tbody>
                 {rows.map((s, i) => (
                   <tr key={s.id} style={{ "--i": i % 12 }} className={s.state === "out" ? "ad-row-bad" : s.state === "low" ? "ad-row-warn" : ""}
-                    onClick={(e) => { if (!e.target.closest("button")) setOpen(s); }}>
+                    onClick={(e) => { if (!e.target.closest("button")) openRow(s); }}>
                     <td><span className="ad-cell-person"><Thumb src={s.image} /><span><b>{s.name}</b><small>{[s.unit, s.code].filter(Boolean).join(" · ")}</small></span></span></td>
                     <td><small>{s.cat || "—"}</small></td>
-                    <td><span className={"ad-tag " + (s.delivery ? "ad-tag-e" : "ad-tag-q")}>{s.delivery ? "Express" : "Quick"}</span></td>
                     <td className="ad-num">{money(s.price, currency)}</td>
                     <td className="ad-num">{s.sold7}</td>
                     <td className="ad-num ad-strong">{s.qty ?? "—"}</td>
                     <td>{s.active ? <span className="ad-pill ad-t-green"><i />Live</span> : <span className="ad-pill ad-t-grey"><i />Hidden</span>}</td>
-                    <td className="ad-row-act"><button className="ad-icon-btn" onClick={() => setOpen(s)} aria-label={`Details for ${s.name}`}><Icon n="right" size={16} /></button></td>
+                    <td className="ad-row-act pdk-row-act">
+                      <button className="ad-icon-btn" onClick={() => setScreen({ edit: s.id })} aria-label={`Edit ${s.name}`} title="Edit"><Icon n="edit" size={15} /></button>
+                      <button className="ad-icon-btn" onClick={() => openRow(s)} aria-label={`Details for ${s.name}`}><Icon n="right" size={16} /></button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           )}
+          {!!rows.length && view === "cards" && (
+            <div className="pdk-cards">
+              {rows.map((s, i) => (
+                <button key={s.id} type="button" className={"pdk-card" + (s.state ? " pd-" + s.state : "")} style={{ "--i": i % 12 }} onClick={() => openRow(s)}>
+                  <span className="pdk-card-img">
+                    {s.image ? <img src={s.image} alt="" loading="lazy" /> : <Icon n="layers" size={26} />}
+                    {!s.active && <em className="pdk-card-flag">Hidden</em>}
+                  </span>
+                  <span className="pdk-card-body">
+                    <b>{s.name}</b>
+                    <small>{[s.unit, s.cat].filter(Boolean).join(" · ") || " "}</small>
+                    <span className="pdk-card-foot">
+                      <strong>{money(s.price, currency)}</strong>
+                      {s.qty != null && <span className={"ad-pill ad-t-" + (STOCK[s.state]?.[1] || "grey")}><i />{s.state === "out" ? "Out" : `${s.qty} left`}</span>}
+                    </span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
           {!error && !loading && !rows.length && (
             <Empty icon="layers" title="No products match"
-              text={why ? `Nothing${tab !== "all" ? ` in "${tab}"` : ""} matches ${why}. Clear a filter to see more.` : TAB_EMPTY[tab] || "There are no products for sale yet."} />
+              text={why ? `Nothing${tab !== "all" ? ` in "${tab}"` : ""} matches ${why}. Clear a filter to see more.` : TAB_EMPTY[tab] || "There are no products for sale yet."}
+              action={anyFilter ? "Clear filters" : "New product"} onAction={anyFilter ? clearAll : () => setScreen({ edit: null })} />
           )}
           {data && rows.length > 0 && rows.length < data.total && (
             <div className="ad-more"><button className="ad-btn" onClick={() => setLimit((n) => n + 50)}>Show more ({data.total - rows.length} left)</button></div>
           )}
         </div>
       </section>
+    </div>
+  );
+}
 
-      {open && (
-        <Drawer title={open.name} sub={[open.unit, open.cat].filter(Boolean).join(" · ")} onClose={() => setOpen(null)}
-          foot={(close) => <button className="ad-btn ad-primary" onClick={close}>Close</button>}>
-          <div className="ad-prod-hero"><Thumb src={open.image} /><div><b>{money(open.price, currency)}</b>{open.mrp > open.price && <s>{money(open.mrp, currency)}</s>}<small>{open.sold7} sold in the last 7 days</small></div></div>
-          <div className="ad-kv">
-            <span><small>In stock</small>{open.qty ?? "—"}{STOCK[open.state] ? ` · ${STOCK[open.state][0]}` : ""}</span>
-            <span><small>Warn at</small>{open.reorder || "Off"}</span>
-            <span><small>Delivery</small>{open.delivery ? `Express${open.deliveryText ? ` · ${open.deliveryText}` : ""}` : "Quick"}</span>
-            <span><small>Status</small>{open.active ? "Live in app" : "Hidden"}</span>
+/* One product: its photographs, Odoo's own figures, and what its page shows
+   - each line with the layer it came from, so an inherited value does not
+   read like one set on this product. */
+function ProductDetail({ id, row, currency: listCurrency, onBack, onEdit, go }) {
+  const { data, error, loading, reload } = useResource(`/admin/products/${id}`);
+  const [viewing, setViewing] = useState(null);
+  useEffect(() => { reload(); }, []); // eslint-disable-line -- always fresh on open
+  const p = data?.product;
+  const stats = data?.stats || {};
+  const cur = stats.currency || listCurrency;
+  const name = p?.name || row?.name || "Product";
+  const photos = p ? [p.photo && { kind: "main", url: p.photo }, ...(p.photos || []).map((ph) => ({ kind: "saved", url: ph.url }))].filter(Boolean) : [];
+  const num = (v) => (v === null || v === undefined ? "—" : Number(v).toLocaleString());
+  const statTiles = Object.keys(stats).length ? [
+    ["On hand", num(stats.onHand)],
+    ["Forecast", num(stats.forecast)],
+    [`Sold, ${stats.soldDays || 30} days`, num(stats.sold)],
+    ["Price", money(stats.price || 0, cur)],
+    ["Cost", stats.cost ? money(stats.cost, cur) : "—"],
+    ["Margin", stats.margin == null ? "—" : `${stats.margin} %`, stats.margin != null && stats.margin < 0],
+  ] : [];
+  const valueOf = (f) => {
+    if (f.kind === "bool") return f.value === "1" ? "Yes" : f.value === "0" ? "No" : "Not set";
+    if ((f.key === "price" || f.key === "mrp") && f.value && !isNaN(Number(f.value))) return Number(f.value) ? money(Number(f.value), cur) : "Nothing set";
+    return f.value === "" || f.value == null ? "Nothing set" : String(f.value);
+  };
+  const shown = (data?.sections || []).reduce((n, s) => n + (s.show ? s.shown : 0), 0);
+
+  return (
+    <div className="ad-stack pdk-detail">
+      <header className="pdk-bar">
+        <button className="ad-btn ad-sm" onClick={onBack}><Icon n="left" size={15} />All products</button>
+        <div className="pdk-bar-title">
+          <h2>{name}</h2>
+          <small>{p ? [`${shown} parts on its page`, p.categories?.join(", ")].filter(Boolean).join(" · ") : loading ? "Loading…" : ""}</small>
+        </div>
+        <div className="pdk-bar-act">
+          {go && <button className="ad-btn" onClick={() => go("product-page")}><Icon n="note" size={15} />Edit page</button>}
+          <button className="ad-btn ad-primary" onClick={onEdit}><Icon n="edit" size={15} />Edit details</button>
+        </div>
+      </header>
+
+      {error && <section className="ad-card"><Empty icon="info" title="We could not open the product" text={error.message} action="Try again" onAction={reload} /></section>}
+
+      {(p || row) && (
+        <section className="ad-card pdk-hero">
+          <div className="pdk-hero-photos">
+            <button type="button" className="pdk-hero-main" onClick={() => photos.length && setViewing(0)} aria-label="View photographs" disabled={!photos.length}>
+              {photos[0] ? <img src={photos[0].url} alt="" /> : row?.image ? <img src={row.image} alt="" /> : <Icon n="layers" size={34} />}
+              {photos.length > 1 && <em>{photos.length} photos</em>}
+            </button>
+            {photos.length > 1 && (
+              <div className="pdk-hero-strip">
+                {photos.slice(1, 5).map((ph, i) => (
+                  <button key={ph.url} type="button" onClick={() => setViewing(i + 1)} aria-label={`Photograph ${i + 2}`}>
+                    <img src={ph.url} alt="" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
-          <p className="ad-hint"><Icon n="info" size={14} />"Warn at" is the stock level where the app starts saying "Only N left". Change it, the price or the stock on the product in Odoo.</p>
-        </Drawer>
+          <div className="pdk-hero-facts">
+            <div className="pdk-hero-price">
+              <b>{money(p?.price ?? row?.price ?? 0, cur)}</b>
+              {(p?.mrp || row?.mrp) > (p?.price ?? row?.price) && <s>{money(p?.mrp || row?.mrp, cur)}</s>}
+              {(p ? p.published : row?.active) ? <span className="ad-pill ad-t-green"><i />Live</span> : <span className="ad-pill ad-t-grey"><i />Hidden</span>}
+            </div>
+            <div className="ad-kv">
+              <span><small>Article ID</small>{p?.code || row?.code || "—"}</span>
+              <span><small>Unit</small>{p?.unit || row?.unit || "—"}</span>
+              <span><small>Categories</small>{p?.categories?.length ? p.categories.join(", ") : row?.cat || "None"}</span>
+              <span><small>In stock</small>{row?.qty ?? stats.onHand ?? "—"}{STOCK[row?.state] ? ` · ${STOCK[row.state][0]}` : ""}</span>
+            </div>
+            {p?.differs > 0 && <p className="ad-hint"><Icon n="info" size={14} />{p.differs} line{p.differs > 1 ? "s" : ""} on its page differ from the shop's defaults.</p>}
+          </div>
+        </section>
       )}
+
+      {statTiles.length > 0 && (
+        <section className="ad-mini-stats pdk-stats">
+          {statTiles.map(([label, value, bad]) => <span key={label} className={bad ? "ad-bad" : ""}><small>{label}</small><b>{value}</b></span>)}
+        </section>
+      )}
+
+      {data && !(data.sections || []).length && <section className="ad-card"><Empty icon="layers" title="No sections yet" text="The product page has nothing on it to show." /></section>}
+      {(data?.sections || []).map((s, i) => (
+        <section key={s.id} className={"ad-card pdk-page-sec" + (s.show ? "" : " pdk-off")} style={{ "--i": i }}>
+          <header className="pdk-sec-head">
+            <h3>{s.name}</h3>
+            <span className={"ad-pill " + (s.show ? "ad-t-grey" : "ad-t-amber")}><i />{s.show ? `${s.shown} of ${s.total} shown` : "Switched off"}</span>
+          </header>
+          <ul className="pdk-rows">
+            {s.fields.map((f) => (
+              <li key={f.id} className={s.show && f.visible ? "" : "pdk-off"}>
+                <span className="pdk-row-name">{f.name}{!(s.show && f.visible) && <small>hidden</small>}</span>
+                <span className={"pdk-row-value" + (f.value === "" || f.value == null ? " ad-dim" : "")}>{valueOf(f)}</span>
+                <span className="pdk-row-from">from {SOURCE[f.source] || f.source}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+      {loading && !data && !error && <section className="ad-card"><Empty icon="layers" title="Loading…" text="Reading the page." /></section>}
+
+      {viewing !== null && photos[viewing] && <PhotoViewer list={photos} index={viewing} onIndex={setViewing} onClose={() => setViewing(null)} />}
     </div>
   );
 }

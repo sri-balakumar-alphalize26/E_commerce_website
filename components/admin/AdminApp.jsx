@@ -389,7 +389,7 @@ export default function AdminApp({ section: initial = "dashboard", onSection, on
   else if (section === "product-page") body = <ProductPageSection flash={flash} />;
   else if (section === "orders") body = <OrdersSection openId={openId} setOpenId={setOpenId} query={orderQ} flash={flash} />;
   else if (section === "returns") body = <ReturnsSection flash={flash} />;
-  else if (section === "products") body = <ProductsSection key={"p" + seedQ.products} initialQ={seedQ.products} />;
+  else if (section === "products") body = <ProductsSection key={"p" + seedQ.products} initialQ={seedQ.products} flash={flash} go={go} />;
   else if (section === "customers") body = <CustomersSection key={"c" + seedQ.customers} initialQ={seedQ.customers} />;
   else if (section === "offers") body = <OffersSection flash={flash} />;
   else if (section === "reviews") body = <ReviewsSection flash={flash} />;

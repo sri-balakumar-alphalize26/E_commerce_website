@@ -134,6 +134,8 @@ html.ad-lock, html.ad-lock body { overflow: hidden; }
 .ad-select-open .ad-select-btn { border-color: var(--ad-blue); }
 .ad-select-open .ad-select-btn .hm-ic { transform: rotate(180deg); }
 .ad-select-menu { position: absolute; z-index: 40; top: calc(100% + 6px); left: 0; min-width: 100%; margin: 0; padding: 5px; list-style: none; background: #fff; border: 1px solid var(--ad-line); border-radius: 12px; box-shadow: 0 12px 30px rgba(16, 39, 54, 0.16); animation: ad-rise 160ms var(--ad-ease); }
+.ad-select-menu { overflow-y: auto; overscroll-behavior: contain; }
+.ad-select-menu.ad-select-up { top: auto; bottom: calc(100% + 6px); }
 .ad-select-menu li + li { margin-top: 1px; }
 .ad-select-menu button { display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 12px 8px 8px; border: 0; border-radius: 8px; background: transparent; font: inherit; font-size: 13px; color: var(--ad-ink); text-align: left; white-space: nowrap; cursor: pointer; }
 .ad-select-menu button:hover { background: #f1f6f9; }

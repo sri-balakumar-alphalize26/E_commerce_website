@@ -82,6 +82,20 @@ export function Select({ value, onChange, options, label }) {
   const [open, setOpen] = useState(false);
   const wrap = useRef(null);
   const current = options.find(([v]) => v === value);
+  /* Open upward when there is no room below (the last box on a page), and
+     scroll inside when even the bigger side is short. */
+  const [place, setPlace] = useState({ up: false, max: 320 });
+  const toggle = () => {
+    if (!open && wrap.current) {
+      const r = wrap.current.getBoundingClientRect();
+      const need = Math.min(options.length * 37 + 12, 320);
+      const below = window.innerHeight - r.bottom - 12;
+      const above = r.top - 12;
+      const up = below < need && above > below;
+      setPlace({ up, max: Math.max(Math.min(up ? above : below, 320) - 6, 120) });
+    }
+    setOpen((v) => !v);
+  };
 
   useEffect(() => {
     if (!open) return undefined;
@@ -106,16 +120,38 @@ export function Select({ value, onChange, options, label }) {
     if (v !== value) onChange(v);
   };
 
+  /* Type to select, like a native <select>: "c" picks cm, "kg" typed quickly
+     narrows to kg, and the same letter again steps to the next option with it. */
+  const typed = useRef({ text: "", at: 0 });
+  const onKey = (e) => {
+    if (e.key.length !== 1 || e.key === " " || e.ctrlKey || e.metaKey || e.altKey) return;
+    const t = typed.current;
+    const now = Date.now();
+    t.text = (now - t.at > 700 ? "" : t.text) + e.key.toLowerCase();
+    t.at = now;
+    const starts = (q) => options.filter(([, l]) => String(l).toLowerCase().startsWith(q));
+    let hit;
+    if ([...t.text].every((c) => c === t.text[0])) {
+      const list = starts(t.text[0]);
+      if (list.length) hit = list[(list.findIndex(([v]) => v === value) + 1) % list.length];
+    } else {
+      hit = starts(t.text)[0];
+    }
+    if (!hit) return;
+    e.preventDefault();
+    if (hit[0] !== value) onChange(hit[0]);
+  };
+
   return (
-    <div className={"ad-select" + (open ? " ad-select-open" : "")} ref={wrap}>
+    <div className={"ad-select" + (open ? " ad-select-open" : "")} ref={wrap} onKeyDown={onKey}>
       <button type="button" className="ad-select-btn" aria-label={label}
         aria-haspopup="listbox" aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}>
+        onClick={toggle}>
         <span>{current ? current[1] : ""}</span>
         <Icon n="chev" size={15} />
       </button>
       {open && (
-        <ul className="ad-select-menu" role="listbox" aria-label={label}>
+        <ul className={"ad-select-menu" + (place.up ? " ad-select-up" : "")} style={{ maxHeight: place.max }} role="listbox" aria-label={label}>
           {options.map(([v, l]) => (
             <li key={v}>
               <button type="button" role="option" aria-selected={v === value}
