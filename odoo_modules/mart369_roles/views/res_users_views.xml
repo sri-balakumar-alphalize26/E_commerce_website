@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Our role takes the place of Odoo's own "Role" line (User /
+         Administrator) at the top of the user form: the same horizontal radio,
+         with User / Packer / Manager / Owner. Owner carries Odoo's
+         Administrator right, so nothing Odoo's line could do is lost.
+         Hidden for portal logins (customers, sellers) exactly like Odoo's. -->
+    <record id="view_users_form_mart369_role" model="ir.ui.view">
+        <field name="name">res.users.form.mart369.role</field>
+        <field name="model">res.users</field>
+        <field name="inherit_id" ref="base.view_users_form"/>
+        <field name="arch" type="xml">
+            <field name="role" position="attributes">
+                <attribute name="invisible">1</attribute>
+            </field>
+            <field name="role" position="after">
+                <field name="mart369_role" string="Role" invisible="share" widget="radio" options="{'horizontal': true}"/>
+                <field name="mart369_accountant" invisible="share"/>
+                <field name="mart369_rider" invisible="share"/>
+            </field>
+        </field>
+    </record>
+
+    <!-- The users list shows the same role instead of User / Administrator. -->
+    <record id="view_users_list_mart369_role" model="ir.ui.view">
+        <field name="name">res.users.list.mart369.role</field>
+        <field name="model">res.users</field>
+        <field name="inherit_id" ref="base.view_users_tree"/>
+        <field name="arch" type="xml">
+            <field name="role" position="attributes">
+                <attribute name="column_invisible">1</attribute>
+            </field>
+            <field name="role" position="after">
+                <field name="mart369_role" string="Role" widget="badge"/>
+            </field>
+        </field>
+    </record>
+
+</odoo>

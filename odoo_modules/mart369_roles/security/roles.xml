@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--
+        The 369 Mart groups. Staff roles (Packer < Manager < Owner, Accountant,
+        Rider) are picked in the Roles block at the top of the user form - see
+        models/res_users.py and views/res_users_views.xml - so they carry no
+        privilege and do not appear a second time in the list below it.
+        Seller keeps its privilege: it is a portal login, and the top block is
+        hidden for portal users.
+    -->
+    <record id="module_category_369mart" model="ir.module.category">
+        <field name="name">369 Mart</field>
+        <field name="description">Who does what in the 369 Mart console and desks.</field>
+        <field name="sequence">5</field>
+    </record>
+
+    <!-- ============================================================ staff -->
+
+
+    <record id="group_packer" model="res.groups">
+        <field name="name">Packer</field>
+        <field name="sequence">10</field>
+        <field name="privilege_id" eval="False"/>
+        <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
+        <field name="comment">Sees the orders waiting to be packed, packs them and marks them packed. No prices to change, no customer lists, no settings, no money.</field>
+    </record>
+
+    <record id="group_manager" model="res.groups">
+        <field name="name">Manager</field>
+        <field name="sequence">20</field>
+        <field name="privilege_id" eval="False"/>
+        <!-- The website designer right is today's staff check on every
+             /369mart/admin/* route and on the console gate, so a Manager keeps
+             working everywhere until those checks read the roles themselves. -->
+        <field name="implied_ids" eval="[(4, ref('group_packer')), (4, ref('website.group_website_designer'))]"/>
+        <field name="comment">Runs the shop day to day: orders, returns, products, stock, customers, offers, delivery and support; approves sellers' products. Can look at money screens but not change payment settings or staff.</field>
+    </record>
+
+    <record id="group_owner" model="res.groups">
+        <field name="name">Owner</field>
+        <field name="sequence">30</field>
+        <field name="privilege_id" eval="False"/>
+        <!-- Owner replaces Odoo's own "Administrator" on the user form, so it
+             carries Odoo's settings right with it. -->
+        <field name="implied_ids" eval="[(4, ref('group_manager')), (4, ref('base.group_system'))]"/>
+        <field name="comment">Everything, in 369 Mart and every seller: payment methods, the cash-on-delivery limit, reward amounts, store details, and who has which role.</field>
+        <field name="user_ids" eval="[(4, ref('base.user_admin'))]"/>
+    </record>
+
+    <!-- ========================================================= accounts -->
+
+
+    <record id="group_accountant" model="res.groups">
+        <field name="name">Accountant</field>
+        <field name="sequence">10</field>
+        <field name="privilege_id" eval="False"/>
+        <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
+        <field name="comment">Payments, wallets, invoices, refunds and reports. Can look at orders but not change orders, products or settings.</field>
+    </record>
+
+    <!-- ========================================================= delivery -->
+
+
+    <record id="group_rider" model="res.groups">
+        <field name="name">Rider</field>
+        <field name="sequence">10</field>
+        <field name="privilege_id" eval="False"/>
+        <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
+        <field name="comment">Only their own deliveries: close each with the customer's code and record the cash collected.</field>
+    </record>
+
+    <!-- =========================================================== seller -->
+
+    <record id="privilege_seller" model="res.groups.privilege">
+        <field name="name">369 Mart Seller</field>
+        <field name="sequence">40</field>
+        <field name="category_id" ref="module_category_369mart"/>
+    </record>
+
+    <!-- A portal login: outside sellers never get the Odoo back office. It
+         grants nothing yet - the seller screens come with the seller plan. -->
+    <record id="group_seller" model="res.groups">
+        <field name="name">Seller</field>
+        <field name="sequence">10</field>
+        <field name="privilege_id" ref="privilege_seller"/>
+        <field name="implied_ids" eval="[(4, ref('base.group_portal'))]"/>
+        <field name="comment">An outside seller: adds their own products for approval and sees only their own products, stock and sales.</field>
+    </record>
+
+</odoo>

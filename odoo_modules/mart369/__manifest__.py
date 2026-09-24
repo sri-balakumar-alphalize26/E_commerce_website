@@ -41,6 +41,10 @@ you want from the Apps list.
     ],
     'assets': {
         'web.assets_backend': [
+            # Before anything else, so it runs before the web client starts:
+            # the top bar is always drawn from the server, never from a copy
+            # the browser kept from before the menus were regrouped.
+            'mart369/static/src/menus_fresh.js',
             # Listed first so the modules after it can use $mart-*. Never
             # @import this file: Odoo rejects local imports inside a bundle.
             'mart369/static/src/scss/_mart_vars.scss',

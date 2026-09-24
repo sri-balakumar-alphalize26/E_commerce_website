@@ -33,6 +33,7 @@ import { NotificationsSection } from "./AdminNotifications";
 import { BotAnswersSection } from "./AdminBotAnswers";
 import { DeliverySection } from "./AdminDelivery";
 import { SupportSection } from "./AdminSupport";
+import { StaffSection } from "./AdminStaff";
 import HomeSection from "./HomeSection";
 import { signOut, useAdminMe } from "./AdminGate";
 import ProductPageSection from "./ProductPageSection";
@@ -67,6 +68,9 @@ export const SECTIONS = [
   { key: "searches", label: "Searches", icon: "search", group: "Catalogue", live: true },
   { key: "products", label: "Products", icon: "layers", group: "Catalogue", live: true },
   { key: "settings", label: "Settings", icon: "gear", group: "Store", live: true },
+  /* Owner only: hidden from everyone else's sidebar, and the section itself
+     refuses them (the server does too). */
+  { key: "staff", label: "Staff & roles", icon: "users", group: "Store", live: true, owner: true },
 ];
 const TITLES = Object.fromEntries(SECTIONS.map((s) => [s.key, s.label]));
 const LIVE = new Set(SECTIONS.filter((s) => s.live).map((s) => s.key));
@@ -320,6 +324,7 @@ export default function AdminApp({ section: initial = "dashboard", onSection, on
      for a console mounted outside it. */
   const me = useAdminMe();
   const who = { name: me?.name || "Staff", email: me?.email || "" };
+  const isOwner = me?.role === "owner";
   /* The drop pinned the clock to a made-up date. Start at null and fill it in
      after mount, so the server and the browser render the same thing and the
      date shown is today's. */
@@ -399,6 +404,9 @@ export default function AdminApp({ section: initial = "dashboard", onSection, on
   else if (section === "bot-answers") body = <BotAnswersSection flash={flash} />;
   else if (section === "delivery") body = <DeliverySection flash={flash} />;
   else if (section === "support") body = <SupportSection openRef={openId} setOpenRef={setOpenId} flash={flash} />;
+  else if (section === "staff") body = isOwner
+    ? <StaffSection flash={flash} />
+    : <Empty icon="users" title="Only the Owner can manage staff" text="Ask the shop's Owner to change your role." />;
   else body = <SettingsSection flash={flash} />;
 
   const groups = [...new Set(SECTIONS.map((s) => s.group))];
@@ -414,7 +422,7 @@ export default function AdminApp({ section: initial = "dashboard", onSection, on
           {groups.map((g) => (
             <div key={g} className="ad-nav-group">
               <p>{g}</p>
-              {SECTIONS.filter((s) => s.group === g).map((s) => (
+              {SECTIONS.filter((s) => s.group === g && (!s.owner || isOwner)).map((s) => (
                 <button key={s.key} className={section === s.key ? "ad-cur" : ""} onClick={() => go(s.key)} title={s.label} aria-current={section === s.key ? "page" : undefined}>
                   <Icon n={s.icon} size={19} />
                   <span>{s.label}</span>

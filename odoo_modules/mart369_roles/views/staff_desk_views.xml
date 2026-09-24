@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Staff & roles, inside the 369 Mart app. Owner only: the menu is shown
+         to Owners, and the model refuses everyone else anyway. -->
+    <record id="action_mart369_staff_desk" model="ir.actions.client">
+        <field name="name">Staff &amp; roles</field>
+        <field name="tag">mart369_roles.staff</field>
+        <field name="path">mart-staff</field>
+    </record>
+
+    <menuitem id="menu_mart369_staff_desk"
+              name="Staff &amp; roles"
+              parent="mart369.menu_mart369_store"
+              action="action_mart369_staff_desk"
+              groups="mart369_roles.group_owner"
+              sequence="95"/>
+
+</odoo>

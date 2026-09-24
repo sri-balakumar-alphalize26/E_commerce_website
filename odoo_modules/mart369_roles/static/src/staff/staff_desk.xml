@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="mart369_roles.StaffDesk">
+        <Layout display="{ controlPanel: {} }" className="'o_mart369_desk h-100'">
+            <div class="mart-builder pe sf">
+
+                <header class="pe-head">
+                    <div>
+                        <h1>Staff &amp; roles</h1>
+                        <p>Who works at 369 Mart and what each person may do.</p>
+                    </div>
+                    <button class="mart-btn mart-btn-primary" t-on-click="() => this.invite()">
+                        <Icon n="'plus'" size="14"/> Invite staff
+                    </button>
+                </header>
+
+                <!-- One card per role: how many people have it, and what it means. -->
+                <div class="sf-roles">
+                    <div t-foreach="ROLES" t-as="r" t-key="r.key" class="sf-role">
+                        <span t-attf-class="mart-pill mart-t-{{ tone(r.key) }}" t-esc="r.label"/>
+                        <b t-esc="state.counts[r.key] or 0"/>
+                        <small t-esc="state.help[r.key]"/>
+                    </div>
+                </div>
+
+                <div class="pe-toolbar sf-toolbar">
+                    <div class="pe-toolbar-gap"/>
+                    <Search value="state.q" placeholder="'Name or email'" label="'Search staff'"
+                            onChange="(v) => this.onSearch(v)"/>
+                </div>
+
+                <p t-if="state.error" class="pe-error" role="alert" t-esc="state.error"/>
+
+                <div class="sf-queue">
+                    <p t-if="state.loading and !state.rows.length" class="pe-loading">Loading staff...</p>
+                    <p t-elif="!state.rows.length" class="pe-loading">Nobody matches.</p>
+                    <table t-else="" class="sf-table">
+                        <thead>
+                            <tr><th>Name</th><th>Role</th><th>Also</th><th>Shops</th><th>Last sign-in</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr t-foreach="state.rows" t-as="row" t-key="row.id" class="sf-row"
+                                t-on-click="() => this.open(row)">
+                                <td>
+                                    <b t-esc="row.name"/><t t-if="row.me"> (you)</t>
+                                    <small t-esc="row.email"/>
+                                </td>
+                                <td><span t-attf-class="mart-pill mart-t-{{ tone(row.role) }}" t-esc="roleLabel(row.role)"/></td>
+                                <td>
+                                    <span t-if="row.accountant" class="mart-pill mart-t-green">Accountant</span>
+                                    <span t-if="row.rider" class="mart-pill mart-t-amber">Rider</span>
+                                    <small t-if="!row.accountant and !row.rider">-</small>
+                                </td>
+                                <td><small><t t-esc="row.companies.map((c) => c.name).join(', ')"/></small></td>
+                                <td><small t-esc="ago(row.lastSeen)"/></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <t t-if="state.edit">
+                    <div class="sf-scrim" t-on-click="() => this.close()"/>
+                    <aside class="sf-panel" role="dialog" aria-label="Staff member">
+                        <h2 t-if="state.edit.invite">Invite staff</h2>
+                        <h2 t-else="" t-esc="state.edit.name"/>
+                        <small t-if="!state.edit.invite" t-esc="state.edit.email"/>
+
+                        <t t-if="state.edit.invite">
+                            <label class="sf-field"><span>Name</span>
+                                <input t-model="state.edit.name" placeholder="Full name"/></label>
+                            <label class="sf-field"><span>Email</span>
+                                <input type="email" t-model="state.edit.email" placeholder="They sign in with this"/></label>
+                        </t>
+
+                        <h4>Role - pick one</h4>
+                        <label t-foreach="ROLES" t-as="r" t-key="r.key"
+                               t-attf-class="sf-choice {{ state.edit.role === r.key ? 'sf-on' : '' }}">
+                            <input type="radio" name="role" t-att-checked="state.edit.role === r.key"
+                                   t-on-change="() => state.edit.role = r.key"/>
+                            <span><b t-esc="r.label"/><small t-esc="state.help[r.key]"/></span>
+                        </label>
+
+                        <h4>Also does - tick any</h4>
+                        <label class="sf-choice">
+                            <input type="checkbox" t-model="state.edit.accountant"/>
+                            <span><b>Accountant</b><small>Payments, wallets, invoices, refunds and reports.</small></span>
+                        </label>
+                        <label class="sf-choice">
+                            <input type="checkbox" t-model="state.edit.rider"/>
+                            <span><b>Rider</b><small>Delivers orders and closes them with the customer's code.</small></span>
+                        </label>
+
+                        <t t-if="!state.edit.invite and state.companies.length > 1">
+                            <h4>Works in</h4>
+                            <label t-foreach="state.companies" t-as="c" t-key="c.id" class="sf-choice sf-tight">
+                                <input type="checkbox" t-att-checked="state.edit.companies.includes(c.id)"
+                                       t-on-change="() => this.toggleCompany(c.id)"/>
+                                <span><b t-esc="c.name"/></span>
+                            </label>
+                        </t>
+
+                        <p t-if="state.formError" class="pe-error" role="alert" t-esc="state.formError"/>
+
+                        <footer class="sf-foot">
+                            <button class="mart-btn" t-on-click="() => this.close()">Cancel</button>
+                            <button class="mart-btn mart-btn-primary" t-att-disabled="state.busy"
+                                    t-on-click="() => this.save()">
+                                <t t-if="state.edit.invite">Send invite</t>
+                                <t t-else="">Save</t>
+                            </button>
+                        </footer>
+                    </aside>
+                </t>
+
+            </div>
+        </Layout>
+    </t>
+
+</templates>
