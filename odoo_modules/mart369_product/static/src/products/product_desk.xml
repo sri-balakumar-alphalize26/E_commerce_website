@@ -7,269 +7,189 @@
 
                 <!-- ========================================== the editor -->
                 <t t-if="state.form">
-                    <header class="pe-head pr-detail-head">
-                        <button class="mart-btn pr-back" t-on-click="() => this.closeForm()">
-                            <Icon n="'left'" size="14"/> Cancel
+                    <!-- The sticky bar, as on the web admin. -->
+                    <header class="pdk-bar">
+                        <button class="mart-btn ad-sm" t-on-click="() => this.cancelForm()">
+                            <Icon n="'left'" size="15"/> Back
                         </button>
-                        <div class="pr-title">
-                            <h1 t-esc="state.form.id ? 'Edit product' : 'New product'"/>
-                            <p t-if="!state.form.id">
-                                Everything is offered until a category is chosen -
-                                after that the page settings decide what is asked for.
-                            </p>
-                            <p t-else="">
-                                The product's own details. What its page shows is
-                                under Edit page.
-                            </p>
+                        <div class="pdk-bar-title">
+                            <h2 t-esc="state.form.id ? 'Edit product' : 'New product'"/>
+                            <small>
+                                <t t-esc="formStatus.name or (state.form.id ? '' : 'Not saved yet')"/>
+                                <em t-if="formStatus.dirty" class="pdk-unsaved">Unsaved changes</em>
+                            </small>
                         </div>
-                        <button class="mart-btn mart-btn-primary"
-                                t-att-disabled="state.saving"
-                                t-on-click="() => this.save()">
-                            <t t-esc="state.saving ? 'Saving...' : 'Save'"/>
-                        </button>
+                        <div class="pdk-bar-act">
+                            <button class="mart-btn" t-att-disabled="state.saving" t-on-click="() => this.cancelForm()">Cancel</button>
+                            <button class="mart-btn mart-btn-primary" t-att-disabled="state.saving"
+                                    t-on-click="() => this.save()">
+                                <Icon n="'check'" size="15"/>
+                                <t t-esc="state.saving ? 'Saving...' : (state.form.id ? 'Save' : 'Create product')"/>
+                            </button>
+                        </div>
                     </header>
 
-                    <p t-if="state.error" class="pe-error" role="alert">
+                    <p t-if="state.error" class="pe-error pdk-form-error" role="alert">
                         <t t-esc="state.error"/>
                     </p>
 
-                    <div class="pr-form">
-                        <!-- Photographs first: it is the thing that was
-                             impossible before and the first thing anybody
-                             wants to do. -->
-                        <section class="pr-sec">
-                            <header class="pr-sec-head"><h2>Photographs</h2></header>
-                            <div class="pr-photos">
-                                <div class="pr-photo pr-photo-main">
-                                    <img t-if="state.form.photo" t-att-src="state.form.photo" alt=""/>
-                                    <span t-else="" class="pr-photo-none">No photograph</span>
-                                    <label class="mart-btn">
-                                        Choose
-                                        <input type="file" accept="image/*" hidden=""
-                                               t-on-change="(ev) => this.onPhoto(ev, true)"/>
-                                    </label>
-                                    <button t-if="state.form.photo" class="mart-link"
-                                            t-on-click="() => this.clearPhoto()">Remove</button>
-                                    <small>On the card</small>
-                                </div>
-
-                                <div t-foreach="state.form.photos" t-as="ph" t-key="ph.id"
-                                     class="pr-photo">
-                                    <img t-att-src="ph.url" alt=""/>
-                                    <button class="mart-link"
-                                            t-on-click="() => this.dropPhoto(ph)">Remove</button>
-                                </div>
-                                <div t-foreach="pendingPhotos" t-as="ph" t-key="ph_index"
-                                     class="pr-photo pr-photo-new">
-                                    <img t-att-src="ph.url" alt=""/>
-                                    <button class="mart-link"
-                                            t-on-click="() => this.dropPhoto(ph)">Remove</button>
-                                    <small>Not saved yet</small>
-                                </div>
-
-                                <label class="pr-photo pr-photo-add">
-                                    <span>+ Add photographs</span>
-                                    <input type="file" accept="image/*" multiple="" hidden=""
-                                           t-on-change="(ev) => this.onPhoto(ev, false)"/>
-                                </label>
-                            </div>
-                            <p class="pr-hint">
-                                The first is the picture on the card. The rest become
-                                the gallery the shopper can swipe. With no photograph
-                                at all the app draws its own artwork instead.
-                            </p>
-                        </section>
-
-                        <section t-foreach="state.form.groups" t-as="g" t-key="g.title"
-                                 class="pr-sec">
-                            <header class="pr-sec-head"><h2 t-esc="g.title"/></header>
-                            <div class="pr-fields">
-                                <t t-foreach="g.boxes" t-as="b" t-key="b.name">
-                                    <!-- Categories are a checklist, not a box:
-                                         which ones a product is in decides
-                                         what the rest of this form asks for. -->
-                                    <label t-if="b.widget === 'categories'"
-                                           class="mart-field pr-field-wide">
-                                        <span t-esc="b.label"/>
-                                        <div class="pr-categs">
-                                            <button t-foreach="state.form.categories" t-as="c"
-                                                    t-key="c.id" type="button"
-                                                    t-attf-class="pr-categ {{ isChosen(c.id) ? 'mart-on' : '' }}"
-                                                    t-att-aria-pressed="isChosen(c.id) ? 'true' : 'false'"
-                                                    t-on-click="() => this.toggleCategory(c.id)">
-                                                <t t-esc="c.name"/>
-                                            </button>
-                                        </div>
-                                    </label>
-
-                                    <label t-elif="b.widget === 'text' or b.widget === 'html'"
-                                           class="mart-field pr-field-wide">
-                                        <span t-esc="b.label"/>
-                                        <textarea rows="4" t-att-value="state.form.values[b.name]"
-                                                  t-on-input="(ev) => this.setField(b.name, ev.target.value)"/>
-                                        <small t-if="b.help" t-esc="b.help"/>
-                                    </label>
-
-                                    <label t-elif="b.widget === 'number' or b.widget === 'integer'"
-                                           class="mart-field">
-                                        <span t-esc="b.label"/>
-                                        <input type="number"
-                                               t-att-step="b.widget === 'integer' ? '1' : '0.01'"
-                                               t-att-value="state.form.values[b.name]"
-                                               t-on-input="(ev) => this.setField(b.name, ev.target.value)"/>
-                                        <small t-if="b.help" t-esc="b.help"/>
-                                    </label>
-
-                                    <label t-else="" class="mart-field">
-                                        <span t-esc="b.label"/>
-                                        <input type="text" t-att-value="state.form.values[b.name]"
-                                               t-att-required="b.required ? 'required' : false"
-                                               t-on-input="(ev) => this.setField(b.name, ev.target.value)"/>
-                                        <small t-if="b.help" t-esc="b.help"/>
-                                    </label>
-                                </t>
-                            </div>
-                        </section>
-                    </div>
+                    <!-- The same editor Odoo's own product form carries. -->
+                    <ProductEditor t-key="state.form.key" data="state.form.data"
+                                   currency="state.currency" status="formStatus"
+                                   onReady="(editor) => this.editor = editor"/>
                 </t>
 
                 <!-- ============================================ the list -->
                 <t t-elif="!state.open">
-                    <header class="pe-head">
+                    <!-- The list, drawn as the web admin's Products list
+                         (components/admin/AdminCatalog.jsx), same classes.
+                         No Quick/Express here: that is decided per customer,
+                         by distance to the branch holding the stock. -->
+                    <div class="pdk-listhead">
                         <div>
-                            <h1>Products</h1>
-                            <p>Every product, and what its page will show.</p>
+                            <h2>Products</h2>
+                            <p>Every product in the shop. Open one to see what its page shows, or change its details and photographs.</p>
                         </div>
-                    </header>
-
-                    <div class="pe-toolbar pr-toolbar">
-                        <Search value="state.q" placeholder="'A product name or code'"
-                                label="'Search products'"
-                                onChange="(v) => this.onSearch(v)"/>
-                        <button class="mart-btn mart-btn-primary pr-new"
-                                t-on-click="() => this.newProduct()">
-                            New product
+                        <button class="mart-btn mart-btn-primary pr-new" t-on-click="() => this.newProduct()">
+                            <Icon n="'plus'" size="16"/> New product
                         </button>
-                        <div class="pe-toolbar-gap"/>
-                        <span class="pr-count">
-                            <t t-esc="state.total"/> of <t t-esc="state.allCount"/>
-                        </span>
-                        <!-- The same two Odoo offers on its own product list,
-                             in the same order, so the icons mean what they
-                             mean everywhere else in the backend. -->
-                        <div class="pr-views" role="group" aria-label="View">
-                            <button type="button"
-                                    t-attf-class="{{ state.view === 'kanban' ? 'mart-on' : '' }}"
-                                    t-att-aria-pressed="state.view === 'kanban' ? 'true' : 'false'"
-                                    title="Cards" t-on-click="() => this.setView('kanban')">
-                                <Icon n="'dash'" size="15"/>
-                            </button>
-                            <button type="button"
-                                    t-attf-class="{{ state.view === 'list' ? 'mart-on' : '' }}"
-                                    t-att-aria-pressed="state.view === 'list' ? 'true' : 'false'"
-                                    title="List" t-on-click="() => this.setView('list')">
-                                <Icon n="'menu'" size="15"/>
-                            </button>
-                        </div>
                     </div>
 
-                    <p t-if="state.error" class="pe-error" role="alert">
-                        We could not reach the shop. <t t-esc="state.error"/>
-                        <button class="mart-link" t-on-click="() => this.load()">Try again</button>
+                    <section t-if="state.tiles" class="ad-mini-stats pdk-tiles">
+                        <span><small>Products</small><b t-esc="state.tiles.count or 0"/></span>
+                        <span><small>Stock value</small><b t-esc="money(state.tiles.value or 0)"/></span>
+                        <button type="button" t-attf-class="pdk-tile ad-warn {{ state.tab === 'low' ? 'pdk-on' : '' }}"
+                                t-att-aria-pressed="state.tab === 'low' ? 'true' : 'false'"
+                                t-on-click="() => this.toggleTab('low')">
+                            <small>Low stock</small><b t-esc="state.tiles.low or 0"/>
+                        </button>
+                        <button type="button" t-attf-class="pdk-tile ad-bad {{ state.tab === 'out' ? 'pdk-on' : '' }}"
+                                t-att-aria-pressed="state.tab === 'out' ? 'true' : 'false'"
+                                t-on-click="() => this.toggleTab('out')">
+                            <small>Out of stock</small><b t-esc="state.tiles.out or 0"/>
+                        </button>
+                    </section>
+                    <p t-if="state.tiles and state.tiles.stock === false" class="ad-hint">
+                        <Icon n="'info'" size="14"/> Inventory is not installed, so stock is not tracked.
                     </p>
 
-                    <div class="pr-cols">
-                        <!-- The rail. Its counts are the server's, rolled up
-                             through the category tree. -->
-                        <aside class="pr-rail" aria-label="Categories">
-                            <button type="button"
-                                    t-attf-class="pr-rail-row {{ state.categ === null ? 'mart-on' : '' }}"
-                                    t-on-click="() => this.pickCateg(null)">
-                                <span>All products</span>
-                                <em t-esc="state.allCount"/>
-                            </button>
-                            <button t-foreach="topCategories" t-as="c" t-key="c.id"
-                                    type="button"
-                                    t-attf-class="pr-rail-row {{ state.categ === c.id ? 'mart-on' : '' }}"
-                                    t-on-click="() => this.pickCateg(c.id)">
-                                <span t-esc="c.name"/>
-                                <em t-esc="c.count"/>
-                            </button>
+                    <section class="ad-card pr-listcard">
+                        <div class="ad-toolbar">
+                            <Tabs t-if="state.tiles" tabs="tabItems" value="state.tab"
+                                  onChange="(k) => this.setFilter('tab', k)"/>
+                            <div class="ad-toolbar-right">
+                                <Search value="state.q" placeholder="'Name or code'" label="'Search products'"
+                                        onChange="(v) => this.onSearch(v)"/>
+                                <Pick t-if="state.tiles" value="state.sort" options="SORTS" label="'Sort'"
+                                      onChange="(v) => this.setFilter('sort', v)"/>
+                                <div class="pdk-views" role="group" aria-label="View">
+                                    <button type="button" t-attf-class="{{ state.view === 'kanban' ? 'pdk-on' : '' }}"
+                                            t-att-aria-pressed="state.view === 'kanban' ? 'true' : 'false'"
+                                            title="Cards" aria-label="Cards" t-on-click="() => this.setView('kanban')">
+                                        <Icon n="'dash'" size="16"/>
+                                    </button>
+                                    <button type="button" t-attf-class="{{ state.view === 'list' ? 'pdk-on' : '' }}"
+                                            t-att-aria-pressed="state.view === 'list' ? 'true' : 'false'"
+                                            title="List" aria-label="List" t-on-click="() => this.setView('list')">
+                                        <Icon n="'menu'" size="16"/>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pdk-chips" role="group" aria-label="Category">
+                            <button type="button" t-attf-class="pdk-chip {{ state.categ === null ? 'pdk-on' : '' }}"
+                                    t-on-click="() => this.pickCateg(null)">All categories</button>
+                            <button t-foreach="categChips" t-as="c" t-key="c.id" type="button"
+                                    t-attf-class="pdk-chip {{ state.categ === c.id ? 'pdk-on' : '' }}"
+                                    t-on-click="() => this.toggleCateg(c.id)" t-esc="c.label"/>
                             <button t-if="state.uncategorised" type="button"
-                                    t-attf-class="pr-rail-row {{ state.categ === 0 ? 'mart-on' : '' }}"
-                                    t-on-click="() => this.pickCateg(0)">
-                                <span>Uncategorised</span>
-                                <em t-esc="state.uncategorised"/>
-                            </button>
-                        </aside>
+                                    t-attf-class="pdk-chip {{ state.categ === 0 ? 'pdk-on' : '' }}"
+                                    t-on-click="() => this.toggleCateg(0)">Uncategorised</button>
+                        </div>
 
-                        <div class="pr-main">
+                        <p t-if="filtered and !state.loading" class="ad-hint pdk-why pr-why-pad">
+                            <Icon n="'info'" size="14"/>
+                            <span t-esc="matchLine"/>
+                            <button type="button" class="mart-link" t-on-click="() => this.clearFilters()">Clear filters</button>
+                        </p>
+
+                        <p t-if="state.error" class="pe-error" role="alert">
+                            We could not reach the shop. <t t-esc="state.error"/>
+                            <button class="mart-link" t-on-click="() => this.load()">Try again</button>
+                        </p>
+
+                        <div class="ad-table-wrap">
                             <Empty t-if="state.loading and !state.products.length"
-                                   icon="'box'" title="'Loading...'"
-                                   text="'Fetching the shop.'"/>
+                                   icon="'layers'" title="'Loading...'" text="'Fetching products.'"/>
+                            <Empty t-elif="!state.products.length" icon="'layers'" title="'No products match'"
+                                   text="filtered ? 'Nothing matches. Clear a filter to see more.' : 'There are no products for sale yet.'"/>
 
-                            <Empty t-elif="!state.products.length"
-                                   icon="'search'" title="'Nothing here'"
-                                   text="'No published product matches that.'"/>
-
-                            <!-- A table when there are columns worth lining
-                                 up, cards when the picture is the point. -->
-                            <table t-elif="state.view === 'list'" class="pr-list">
+                            <table t-elif="state.view === 'list'" class="ad-table pdk-table">
                                 <thead>
                                     <tr>
                                         <th>Product</th>
-                                        <th>Code</th>
                                         <th>Category</th>
-                                        <th class="pr-num">Price</th>
-                                        <th>Page</th>
+                                        <th class="ad-num">Price</th>
+                                        <th class="ad-num">Sold / 7d</th>
+                                        <th class="ad-num">In stock</th>
+                                        <th>Live</th>
+                                        <th/>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <tr t-foreach="state.products" t-as="p" t-key="p.id"
-                                        t-on-click="() => this.open(p)">
+                                        t-att-style="'--i: ' + (p_index % 12)"
+                                        t-attf-class="{{ rowTone(p) }}"
+                                        t-on-click="(ev) => this.onRowClick(ev, p)">
                                         <td>
-                                            <span class="pr-list-name">
-                                                <span class="pr-list-img">
-                                                    <img t-att-src="p.image" alt="" loading="lazy"/>
-                                                </span>
-                                                <b t-esc="p.name"/>
+                                            <span class="ad-cell-person">
+                                                <span class="ad-thumb"><img t-att-src="imageOf(p)" alt="" loading="lazy"/></span>
+                                                <span><b t-esc="p.name"/><small t-esc="unitCode(p)"/></span>
                                             </span>
                                         </td>
-                                        <td class="pr-dim" t-esc="p.code or '-'"/>
-                                        <td class="pr-dim" t-esc="p.categories.length ? p.categories.join(', ') : 'Uncategorised'"/>
-                                        <td class="pr-num" t-esc="money(p.price)"/>
+                                        <td><small t-esc="rowOf(p).cat or '-'"/></td>
+                                        <td class="ad-num" t-esc="money(p.price)"/>
+                                        <td class="ad-num" t-esc="rowOf(p).sold7 or 0"/>
+                                        <td class="ad-num ad-strong" t-esc="qtyText(p)"/>
                                         <td>
-                                            <span t-if="p.differs" class="mart-pill mart-t-blue">
-                                                <i aria-hidden="true"/>
-                                                <t t-esc="p.differs"/> changed
-                                            </span>
-                                            <span t-else="" class="pr-dim">Follows the shop</span>
+                                            <span t-if="rowOf(p).active !== false" class="ad-pill ad-t-green"><i/>Live</span>
+                                            <span t-else="" class="ad-pill ad-t-grey"><i/>Hidden</span>
+                                        </td>
+                                        <td class="ad-row-act pdk-row-act">
+                                            <button class="ad-icon-btn" t-att-aria-label="'Edit ' + p.name" title="Edit"
+                                                    t-on-click="() => this.openForm(p.id)"><Icon n="'pen'" size="15"/></button>
+                                            <button class="ad-icon-btn" t-att-aria-label="'Details for ' + p.name"
+                                                    t-on-click="() => this.open(p)"><Icon n="'right'" size="16"/></button>
                                         </td>
                                     </tr>
                                 </tbody>
                             </table>
 
-                            <div t-else="" class="pr-grid">
-                                <button t-foreach="state.products" t-as="p" t-key="p.id"
-                                        type="button" class="pr-card"
-                                        t-att-style="'--i: ' + p_index"
+                            <div t-else="" class="pdk-cards">
+                                <button t-foreach="state.products" t-as="p" t-key="p.id" type="button"
+                                        t-attf-class="pdk-card {{ cardTone(p) }}"
+                                        t-att-style="'--i: ' + (p_index % 12)"
                                         t-on-click="() => this.open(p)">
-                                    <span class="pr-card-img">
-                                        <img t-att-src="p.image" alt="" loading="lazy"/>
+                                    <span class="pdk-card-img">
+                                        <img t-if="imageOf(p)" t-att-src="imageOf(p)" alt="" loading="lazy"/>
+                                        <Icon t-else="" n="'layers'" size="26"/>
+                                        <em t-if="rowOf(p).active === false" class="pdk-card-flag">Hidden</em>
                                     </span>
-                                    <span class="pr-card-body">
+                                    <span class="pdk-card-body">
                                         <b t-esc="p.name"/>
-                                        <small t-if="p.code" t-esc="p.code"/>
-                                    </span>
-                                    <!-- Customised, so it is worth opening. -->
-                                    <span t-if="p.differs" class="mart-pill mart-t-blue pr-card-tag">
-                                        <i aria-hidden="true"/>
-                                        <t t-esc="p.differs"/> changed
+                                        <small t-esc="unitCat(p)"/>
+                                        <span class="pdk-card-foot">
+                                            <strong t-esc="money(p.price)"/>
+                                            <span t-if="hasQty(p)" t-attf-class="ad-pill ad-t-{{ stockTone(p) }}">
+                                                <i/><t t-esc="stockPill(p)"/>
+                                            </span>
+                                        </span>
                                     </span>
                                 </button>
                             </div>
                         </div>
-                    </div>
+                    </section>
                 </t>
 
                 <!-- ========================================== one product -->
@@ -307,6 +227,23 @@
                     <p t-if="state.error" class="pe-error" role="alert">
                         We could not reach the shop. <t t-esc="state.error"/>
                     </p>
+
+                    <!-- Odoo's own figures for this product; each opens the
+                         Odoo screen behind it. -->
+                    <div t-if="statTiles.length" class="pr-stats">
+                        <t t-foreach="statTiles" t-as="t" t-key="t.key">
+                            <button t-if="t.open" type="button" class="pr-stat pr-stat-open"
+                                    t-att-title="'Open ' + t.label + ' in Odoo'"
+                                    t-on-click="() => this.openStat(t)">
+                                <span t-esc="t.label"/>
+                                <b t-esc="t.value"/>
+                            </button>
+                            <div t-else="" t-attf-class="pr-stat {{ t.bad ? 'pr-stat-bad' : '' }}">
+                                <span t-esc="t.label"/>
+                                <b t-esc="t.value"/>
+                            </div>
+                        </t>
+                    </div>
 
                     <p class="pe-hintbar">
                         What this product's page shows, and where each line comes
@@ -360,5 +297,6 @@
             </div>
         </Layout>
     </t>
+
 
 </templates>

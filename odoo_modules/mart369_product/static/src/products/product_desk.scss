@@ -8,7 +8,97 @@
 .mart-builder.pr {
 
     /* -------------------------------------------------------------- list */
-    .pr-toolbar { margin-bottom: 14px; }
+    .pr-toolbar {
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 14px;
+    }
+
+    // The Stock desk's tiles, sized the same so the two screens match.
+    .pr-tiles {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        margin-bottom: 14px;
+    }
+
+    .pr-tile {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 12px 14px;
+        border: 1px solid $mart-line;
+        border-radius: 14px;
+        background: #fff;
+        color: $mart-ink;
+        font: inherit;
+        text-align: left;
+
+        b {
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            font-variant-numeric: tabular-nums;
+        }
+    }
+
+    .pr-tile-top { font-size: 12px; color: $mart-muted; }
+
+    button.pr-tile {
+        cursor: pointer;
+        transition: border-color 140ms ease, box-shadow 140ms ease;
+        &:hover { border-color: #cddae3; }
+    }
+
+    .pr-tile-on {
+        border-color: $mart-blue;
+        box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.14);
+    }
+
+    .pr-tile-warn b { color: #b7791f; }
+    .pr-tile-bad b { color: #c8433a; }
+
+    // The numbers strip on one product: Odoo's figures, the live ones
+    // pressable into Odoo's own screen.
+    .pr-stats {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 10px;
+        margin-bottom: 12px;
+    }
+
+    .pr-stat {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 10px 12px;
+        border: 1px solid $mart-line;
+        border-radius: 12px;
+        background: #fff;
+        font: inherit;
+        text-align: left;
+        color: $mart-ink;
+
+        span { font-size: 11.5px; color: $mart-muted; }
+        b { font-size: 17px; font-weight: 800; font-variant-numeric: tabular-nums; }
+    }
+
+    .pr-stat-open {
+        cursor: pointer;
+        transition: border-color 140ms ease;
+        &:hover { border-color: $mart-blue; }
+        span::after { content: " \2197"; color: $mart-blue; }
+    }
+
+    .pr-stat-bad b { color: #c8433a; }
+
+    @media (max-width: 900px) {
+        .pr-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+
+    .pr-qty { font-variant-numeric: tabular-nums; }
+    .pr-qty-low { color: #b7791f; font-weight: 700; }
+    .pr-qty-out { color: #c8433a; font-weight: 700; }
 
     .pr-count {
         font-size: 12px;
@@ -337,6 +427,320 @@
     // not, which is the whole reason for the grid above.
     .pr-field-wide { grid-column: 1 / -1; }
 
+    // A box's name with its eye button beside it.
+    .pr-box-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .pr-eye {
+        display: inline-grid;
+        place-items: center;
+        width: 24px;
+        height: 22px;
+        padding: 0;
+        border: 0;
+        border-radius: 6px;
+        background: none;
+        color: $mart-muted;
+        cursor: pointer;
+
+        &:hover { background: $mart-blue-soft; color: $mart-blue; }
+    }
+
+    // Number and unit side by side: 250 [g].
+    .pr-unit {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+
+        // builder.scss makes every box in a .mart-field full width; here the
+        // number takes the room and the unit keeps a fixed, readable width.
+        input {
+            flex: 1 1 60px;
+            width: auto;
+            min-width: 0;
+        }
+
+        .mart-select {
+            flex: 0 0 104px;
+            width: 104px;
+            min-width: 0;
+        }
+    }
+
+    .pr-per {
+        font-size: 12px;
+        font-weight: 700;
+        color: $mart-muted;
+    }
+
+    .pr-other { margin-top: 6px; }
+
+    // Key features: one box per point, numbered.
+    .pr-points {
+        margin: 0;
+        padding-left: 22px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+
+        li { display: flex; align-items: center; gap: 6px; }
+        li::marker { color: $mart-muted; font-size: 12px; font-weight: 700; }
+        input { flex: 1; min-width: 0; }
+    }
+
+    .pr-point-x {
+        display: grid;
+        place-items: center;
+        width: 28px;
+        height: 28px;
+        border: 0;
+        border-radius: 8px;
+        background: none;
+        color: $mart-muted;
+        cursor: pointer;
+
+        &:hover { background: $mart-soft; color: #c8433a; }
+    }
+
+    .pr-point-add { align-self: flex-start; margin-top: 4px; }
+
+    /* ------------------------------------------- "how it looks" popup */
+    // Floats beside the eye. Ignores the pointer, so moving off the eye is
+    // what hides it - the card can never sit under the mouse and hold itself open.
+    .pr-howto {
+        position: fixed;
+        z-index: 1050;
+        pointer-events: none;
+        animation: pr-howto 120ms ease;
+    }
+
+    .pr-howto-box {
+        width: 460px;
+        max-height: 440px;
+        overflow: hidden;
+    }
+
+    .pr-howto-body {
+        display: grid;
+        place-items: center;
+        padding: 20px;
+        background: $mart-soft;
+    }
+
+    .pr-howto-note {
+        margin: 0;
+        max-width: 360px;
+        font-size: 13px;
+        color: $mart-ink;
+        text-align: center;
+    }
+
+    .pr-howto-foot {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin: 0;
+        padding: 10px 16px;
+        border-top: 1px solid $mart-line;
+        font-size: 12px;
+        color: $mart-muted;
+    }
+
+    .pr-howto-key {
+        width: 14px;
+        height: 14px;
+        border: 2px solid #e8590c;
+        border-radius: 4px;
+    }
+
+    // The box being explained, outlined in the one colour nothing else uses.
+    .pr-on {
+        outline: 2px solid #e8590c;
+        outline-offset: 2px;
+        border-radius: 4px;
+        background: #fff4e6;
+    }
+
+    .pr-sample { color: #9aa7b0 !important; font-style: italic; }
+
+    .pr-mock-card {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        width: 190px;
+        padding: 10px;
+        border: 1px solid $mart-line;
+        border-radius: 14px;
+        background: #fff;
+        box-shadow: 0 6px 18px -12px rgba(19, 33, 43, 0.35);
+    }
+
+    .pr-mock-img {
+        position: relative;
+        height: 120px;
+        margin-bottom: 4px;
+        border-radius: 10px;
+        background: $mart-soft;
+        overflow: hidden;
+
+        img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    }
+
+    .pr-mock-badge {
+        position: absolute;
+        top: 6px;
+        left: 6px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: #0a78ab;
+        color: #fff;
+        font-size: 10px;
+        font-weight: 800;
+
+        &.pr-sample { color: #fff !important; background: #9aa7b0; }
+    }
+
+    .pr-mock-name {
+        font-size: 13px;
+        font-weight: 700;
+        color: $mart-ink;
+        line-height: 1.3;
+    }
+
+    .pr-mock-line { font-size: 11.5px; color: $mart-muted; }
+
+    .pr-mock-price {
+        display: flex;
+        align-items: baseline;
+        gap: 6px;
+        margin-top: 2px;
+
+        b { font-size: 14px; font-weight: 800; color: $mart-ink; }
+        s { font-size: 11px; color: $mart-muted; }
+    }
+
+    .pr-mock-small {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 10.5px;
+        color: $mart-muted;
+    }
+
+    .pr-mock-warn { font-size: 11px; font-weight: 700; color: #c8433a; }
+
+    .pr-mock-add {
+        margin-top: 6px;
+        padding: 6px;
+        border-radius: 9px;
+        background: #0a78ab;
+        color: #fff;
+        font-size: 12px;
+        font-weight: 800;
+        text-align: center;
+    }
+
+    .pr-mock-page {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        width: 100%;
+    }
+
+    .pr-mock-block {
+        padding: 10px 12px;
+        border: 1px solid $mart-line;
+        border-radius: 12px;
+        background: #fff;
+
+        h4 {
+            margin: 0 0 6px;
+            font-size: 12px;
+            font-weight: 800;
+            color: $mart-ink;
+        }
+
+        ul { margin: 0; padding: 0; list-style: none; }
+        li { display: flex; align-items: center; gap: 6px; font-size: 12px; color: $mart-ink; }
+        p { margin: 0; font-size: 12px; color: $mart-ink; }
+
+        table { width: 100%; font-size: 12px; border-collapse: collapse; }
+        th { width: 40%; padding: 4px 0; font-weight: 600; color: $mart-muted; text-align: left; }
+        td { padding: 4px 0; color: $mart-ink; }
+    }
+
+    // Narrows the category chips; the chips below keep their own look.
+    .pr-categ-filter {
+        max-width: 280px;
+        margin-bottom: 8px;
+    }
+
+    // On or off (Track inventory): a pill that says Yes or No.
+    .pr-switch {
+        align-self: flex-start;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        height: 38px;
+        padding: 0 14px 0 6px;
+        border: 1px solid #cfd8df;
+        border-radius: 999px;
+        background: #fff;
+        font: inherit;
+        font-size: 13px;
+        font-weight: 700;
+        color: $mart-muted;
+        cursor: pointer;
+
+        i {
+            width: 26px;
+            height: 26px;
+            border-radius: 999px;
+            background: $mart-soft;
+            transition: background-color 140ms ease;
+        }
+
+        &.mart-on {
+            border-color: $mart-blue;
+            color: $mart-blue-deep;
+            i { background: $mart-blue; }
+        }
+    }
+
+    // Several of a list (taxes): chips, then a dropdown to add one.
+    .pr-tags {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
+
+        .pr-categ { display: inline-flex; align-items: center; gap: 4px; cursor: default; }
+        .mart-select { width: 150px; }
+    }
+
+    .pr-tag-x {
+        display: grid;
+        place-items: center;
+        width: 18px;
+        height: 18px;
+        padding: 0;
+        border: 0;
+        border-radius: 999px;
+        background: none;
+        color: inherit;
+        cursor: pointer;
+        &:hover { background: rgba(10, 120, 171, 0.15); }
+    }
+
+    .pr-warn {
+        color: #b7791f !important;
+        font-weight: 700;
+    }
+
     .pr-categs {
         display: flex;
         flex-wrap: wrap;
@@ -370,56 +774,158 @@
         padding: 4px 2px 2px;
     }
 
+    // Every tile the same square, the picture filling it; tapping one opens
+    // the popup.
     .pr-photo {
         position: relative;
-        width: 128px;
-        min-height: 128px;
+        width: 120px;
+        height: 120px;
+        padding: 0;
         border: 1px solid $mart-line;
-        border-radius: 10px;
-        background: #fff;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 4px;
-        padding: 8px;
-        text-align: center;
+        border-radius: 12px;
+        background: $mart-soft;
+        overflow: hidden;
+        display: grid;
+        place-items: center;
+        cursor: pointer;
+        transition: border-color 140ms ease, transform 120ms ease;
+
+        &:hover { border-color: #b7c4ce; }
+        &:active { transform: scale(0.98); }
 
         img {
-            max-width: 100%;
-            max-height: 84px;
-            object-fit: contain;
-        }
-
-        small {
-            font-size: 10px;
-            letter-spacing: 0.04em;
-            text-transform: uppercase;
-            color: $mart-muted;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
         }
     }
 
+    .pr-photo-tag {
+        position: absolute;
+        left: 6px;
+        bottom: 6px;
+        padding: 2px 7px;
+        border-radius: 999px;
+        background: rgba(19, 33, 43, 0.72);
+        color: #fff;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+    }
+
     // The one that goes on the card, said rather than left to position.
-    .pr-photo-main { border-color: $mart-blue; }
+    .pr-photo-main { border: 2px solid $mart-blue; }
 
     // Added this visit and not written yet, so it is drawn as provisional -
     // pressing Cancel takes it away again, which a solid tile would not warn
     // anybody about.
-    .pr-photo-new { border-style: dashed; }
-
-    .pr-photo-none {
-        font-size: 12px;
-        color: $mart-muted;
-    }
+    .pr-photo-new { border-style: dashed; border-color: $mart-blue; }
 
     .pr-photo-add {
-        border-style: dashed;
-        cursor: pointer;
-        font-size: 12px;
-        font-weight: 600;
+        border: 2px dashed #c3ced6;
+        background: #fff;
         color: $mart-blue-deep;
 
+        &:hover { background: $mart-blue-soft; border-color: $mart-blue; }
+    }
+
+    .pr-photo-plus {
+        font-size: 38px;
+        font-weight: 300;
+        line-height: 1;
+    }
+
+    /* --------------------------------------------------------- the popup */
+    .pr-viewer {
+        position: fixed;
+        inset: 0;
+        z-index: 1050;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        background: rgba(19, 33, 43, 0.6);
+        outline: none;
+    }
+
+    .pr-viewer-box {
+        display: flex;
+        flex-direction: column;
+        // Not min(): Odoo's libsass reads it as its own function and fails
+        // on the mixed units, which takes the whole backend bundle with it.
+        width: 880px;
+        max-width: 100%;
+        max-height: 100%;
+        border-radius: 16px;
+        background: #fff;
+        overflow: hidden;
+        box-shadow: 0 24px 60px -20px rgba(19, 33, 43, 0.5);
+    }
+
+    .pr-viewer-head {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 12px 10px 16px;
+        border-bottom: 1px solid $mart-line;
+        font-size: 12.5px;
+        font-weight: 700;
+        color: $mart-muted;
+
+        span { flex: 1; }
+    }
+
+    .pr-viewer-remove { color: #c8433a; }
+
+    .pr-viewer-x {
+        display: grid;
+        place-items: center;
+        width: 32px;
+        height: 32px;
+        border: 0;
+        border-radius: 8px;
+        background: none;
+        color: $mart-ink;
+        cursor: pointer;
         &:hover { background: $mart-soft; }
+    }
+
+    .pr-viewer-img {
+        position: relative;
+        display: grid;
+        place-items: center;
+        min-height: 0;
+        padding: 16px;
+        background: $mart-soft;
+
+        img {
+            max-width: 100%;
+            max-height: calc(100vh - 160px);
+            object-fit: contain;
+        }
+    }
+
+    .pr-viewer-step {
+        position: absolute;
+        top: 50%;
+        left: 12px;
+        transform: translateY(-50%);
+        display: grid;
+        place-items: center;
+        width: 38px;
+        height: 38px;
+        border: 1px solid $mart-line;
+        border-radius: 999px;
+        background: #fff;
+        color: $mart-ink;
+        cursor: pointer;
+        box-shadow: 0 4px 12px -6px rgba(19, 33, 43, 0.4);
+    }
+
+    .pr-viewer-next { left: auto; right: 12px; }
+
+    @media (max-width: 900px) {
+        .pr-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
 
     @media (max-width: 1100px) {
@@ -429,6 +935,11 @@
         .pr-row { grid-template-columns: minmax(0, 1fr); gap: 2px; }
         .pr-row-from { white-space: normal; }
     }
+}
+
+@keyframes pr-howto {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: none; }
 }
 
 // Its own row keyframe, the way catalog, searches and coupons each carry one.
@@ -442,4 +953,102 @@
         opacity: 1;
         transform: none;
     }
+}
+
+// The list's filters, drawn as the web admin's Products list: one card with
+// the tabs and pickers on a row, the categories as a scrolling row of chips,
+// and a line saying what is shown.
+.mart-builder.pr {
+    .pr-listhead {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 14px;
+        flex-wrap: wrap;
+
+        .pr-new { display: inline-flex; align-items: center; gap: 6px; }
+    }
+
+    .pr-filters {
+        margin-bottom: 14px;
+        border: 1px solid $mart-line;
+        border-radius: 16px;
+        background: #fff;
+    }
+
+    .pr-filterbar {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
+        padding: 16px 18px 12px;
+    }
+
+    .pr-chips {
+        display: flex;
+        gap: 6px;
+        padding: 0 18px 12px;
+        overflow-x: auto;
+        scrollbar-width: thin;
+    }
+
+    .pr-chip {
+        flex: none;
+        height: 32px;
+        padding: 0 14px;
+        border: 1px solid $mart-line;
+        border-radius: 999px;
+        background: #fff;
+        color: $mart-ink;
+        font: inherit;
+        font-size: 13px;
+        font-weight: 600;
+        white-space: nowrap;
+        cursor: pointer;
+        transition: background-color 160ms, border-color 160ms, color 160ms;
+
+        &:hover { border-color: #c5d5df; }
+
+        &.mart-on {
+            background: #0b3c58;
+            border-color: #0b3c58;
+            color: #fff;
+        }
+    }
+
+    .pr-why {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin: 0;
+        padding: 10px 18px;
+        border-top: 1px solid $mart-line;
+        font-size: 12.5px;
+        color: $mart-muted;
+
+        .mart-link { margin-left: auto; }
+    }
+
+    .pr-listbody { min-width: 0; }
+}
+
+// Spacing the web admin gets from its .ad-stack wrapper.
+.o_mart369_desk .mart-builder.pr {
+    .pdk-listhead, .pdk-tiles, .pr-listcard { margin-bottom: 16px; }
+    .pr-why-pad { padding: 0 18px 12px; }
+}
+
+// The preview panel follows the page as it scrolls, as on the web admin
+// (.pdk-preview { position: sticky }). A sticky box sticks to its nearest
+// scrolling ancestor; inside Odoo's product form two boxes around the editor
+// are marked as scrolling without ever scrolling (the widget's own wrapper and
+// Odoo's form-sheet background), so the panel stuck to them and scrolled away.
+// Only around this editor are they let go; the page (.o_content) scrolls.
+.o_mart369_editor_widget {
+    overflow: visible !important;
+    height: auto !important;
+}
+.o_form_sheet_bg:has(.o_mart369_editor_widget) {
+    overflow: visible !important;
 }

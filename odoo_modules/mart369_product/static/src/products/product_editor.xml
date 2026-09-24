@@ -1,0 +1,394 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!-- The product editor, drawn the way the web admin's is
+         (components/admin/ProductEditor.jsx): the form on the left, "How
+         shoppers see it" fixed on the right. Hovering an eye or clicking into
+         a box outlines where the app prints it. One template for the Products
+         desk and Odoo's own product form, so the two cannot differ. -->
+    <t t-name="mart369_product.DetailsEditor">
+        <div t-ref="root" t-attf-class="pdk-editor {{ props.embedded ? 'pdk-embedded' : '' }}">
+            <div class="pdk-cols">
+                <div class="pdk-form">
+
+                    <!-- ============================================ photographs -->
+                    <section t-attf-class="ad-card pdk-sec pdk-photos-sec {{ state.dragging ? 'pdk-drag' : '' }}"
+                             t-on-dragover="onDragOver" t-on-dragleave="onDragLeave" t-on-drop="onDrop">
+                        <header class="pdk-sec-head">
+                            <h3>Photographs</h3>
+                            <small t-esc="photoList.length ? photoList.length + ' in all' : 'None yet'"/>
+                        </header>
+                        <div t-if="state.picked.length" class="pdk-photo-bar">
+                            <b t-esc="state.picked.length + ' selected'"/>
+                            <button type="button" class="mart-link" t-on-click="() => this.pickAll()">Select all</button>
+                            <button type="button" class="mart-link" t-on-click="() => this.clearPicked()">Clear</button>
+                            <button type="button" class="mart-btn pdk-danger" t-on-click="() => this.dropPicked()">
+                                <Icon n="'x'" size="13"/> Remove selected
+                            </button>
+                        </div>
+                        <div t-attf-class="pdk-photos {{ state.picked.length ? 'pdk-picking' : '' }}">
+                            <div t-foreach="photoList" t-as="ph" t-key="ph.kind + ph_index + ph.url.slice(-16)"
+                                 t-attf-class="pdk-photo {{ ph.kind === 'main' ? 'pdk-main' : '' }} {{ ph.kind === 'new' ? 'pdk-new' : '' }} {{ isPicked(ph) ? 'pdk-picked' : '' }}">
+                                <button type="button" class="pdk-photo-view"
+                                        t-att-aria-label="'View photograph ' + (ph_index + 1)"
+                                        t-on-click="() => this.viewPhoto(ph_index)">
+                                    <img t-att-src="ph.url" alt=""/>
+                                </button>
+                                <label class="pdk-photo-pick" title="Select">
+                                    <input type="checkbox" t-att-checked="isPicked(ph) ? 'checked' : false"
+                                           t-att-aria-label="'Select photograph ' + (ph_index + 1)"
+                                           t-on-change="() => this.togglePick(ph)"/>
+                                </label>
+                                <button type="button" class="pdk-photo-x" title="Remove"
+                                        t-att-aria-label="'Remove photograph ' + (ph_index + 1)"
+                                        t-on-click="() => this.dropPhoto(ph)">
+                                    <Icon n="'x'" size="12"/>
+                                </button>
+                                <small t-if="ph.kind === 'main'">On the card</small>
+                                <small t-elif="ph.kind === 'new'">Not saved</small>
+                                <small t-elif="ph.kind === 'demoted'">Was on the card</small>
+                            </div>
+                            <label class="pdk-photo pdk-add pdk-photo-add" aria-label="Add photographs">
+                                <Icon n="'plus'" size="22"/>
+                                <span>Add</span>
+                                <input type="file" accept="image/*" multiple="" hidden=""
+                                       t-on-change="(ev) => this.onPhotos(ev)"/>
+                            </label>
+                        </div>
+                        <p class="pdk-hint">
+                            Tap Add, or drop pictures here. The first is the picture on the
+                            card; the rest become the gallery shoppers swipe. Tap a picture
+                            to see it large, put it on the card, or remove it.
+                        </p>
+                    </section>
+
+                    <!-- =============================================== the boxes -->
+                    <section t-foreach="shownGroups" t-as="g" t-key="g.title" class="ad-card pdk-sec">
+                        <header class="pdk-sec-head"><h3 t-esc="g.title"/></header>
+                        <div class="pdk-fields">
+                            <t t-foreach="shownBoxes(g)" t-as="b" t-key="b.name">
+                                <t t-set="pt" t-value="state.form.parts[b.name]"/>
+
+                                <!-- One of a list: product type, a company, an Odoo category. -->
+                                <div t-if="b.kind === 'select'" class="pdk-field">
+                                    <t t-call="mart369_product.BoxLabel"/>
+                                    <Pick value="selectValue(b)" options="b.options" label="b.label"
+                                          onChange="(v) => this.pickField(b.name, v)"/>
+                                    <small t-if="b.help" t-esc="b.help"/>
+                                </div>
+
+                                <!-- On or off. -->
+                                <div t-elif="b.kind === 'bool'" class="pdk-field">
+                                    <t t-call="mart369_product.BoxLabel"/>
+                                    <label class="pdk-check">
+                                        <input type="checkbox" t-att-checked="state.form.values[b.name] ? 'checked' : false"
+                                               t-on-focus="() => this.setFocus(b.name)"
+                                               t-on-change="(ev) => this.setField(b.name, ev.target.checked)"/>
+                                        <span t-esc="state.form.values[b.name] ? 'Yes' : 'No'"/>
+                                    </label>
+                                    <small t-if="b.help" t-esc="b.help"/>
+                                </div>
+
+                                <!-- Several of a list: taxes. A chip per chosen one, a dropdown to add. -->
+                                <div t-elif="b.kind === 'tags'" class="pdk-field pdk-wide">
+                                    <t t-call="mart369_product.BoxLabel"/>
+                                    <div class="pdk-categs">
+                                        <button t-foreach="chosenTags(b)" t-as="tag" t-key="tag[0]" type="button"
+                                                class="pdk-categ pdk-on" t-att-aria-label="'Remove ' + tag[1]"
+                                                t-on-click="() => this.dropTag(b.name, tag[0])">
+                                            <t t-esc="tag[1]"/><Icon n="'x'" size="12"/>
+                                        </button>
+                                        <span t-if="!chosenTags(b).length" class="ad-dim">None chosen.</span>
+                                    </div>
+                                    <Pick t-if="tagChoices(b).length > 1" value="''" options="tagChoices(b)"
+                                          label="'Add to ' + b.label"
+                                          onChange="(v) => this.addTag(b.name, v)"/>
+                                    <small t-if="b.help" t-esc="b.help"/>
+                                </div>
+
+                                <!-- Digits only: the barcode. Text, so a leading zero stays. -->
+                                <div t-elif="b.kind === 'digits'" class="pdk-field">
+                                    <t t-call="mart369_product.BoxLabel"/>
+                                    <input type="text" inputmode="numeric" autocomplete="off"
+                                           t-att-maxlength="b.max" placeholder="e.g. 8901234567890"
+                                           t-att-value="state.form.values[b.name]"
+                                           t-on-focus="() => this.setFocus(b.name)"
+                                           t-on-input="(ev) => this.onDigits(ev, b.name, b.max)"/>
+                                    <small t-if="!isDigits(state.form.values[b.name])" class="pdk-warn">
+                                        This barcode has letters from before. Only digits can be typed here.
+                                    </small>
+                                    <small t-if="b.help" t-esc="b.help"/>
+                                </div>
+
+                                <!-- Number and unit, e.g. 250 + g. -->
+                                <div t-elif="b.kind === 'measure' or b.kind === 'per_unit'"
+                                     t-attf-class="pdk-field {{ b.kind === 'per_unit' ? 'pdk-wide' : '' }}">
+                                    <t t-call="mart369_product.BoxLabel"/>
+                                    <div t-if="pt.other !== null" class="pdk-unit">
+                                        <input type="text" t-att-value="pt.other"
+                                               t-on-focus="() => this.setFocus(b.name)"
+                                               t-on-input="(ev) => this.setPart(b.name, 'other', ev.target.value)"/>
+                                        <button type="button" class="mart-link"
+                                                t-on-click="() => this.useBoxes(b.name)">Use number and unit</button>
+                                    </div>
+                                    <div t-else="" class="pdk-unit">
+                                        <t t-if="b.kind === 'per_unit'">
+                                            <input type="text" inputmode="decimal" placeholder="Price" class="pdk-num"
+                                                   t-att-value="pt.price" t-att-aria-label="b.label + ' price'"
+                                                   t-on-focus="() => this.setFocus(b.name)"
+                                                   t-on-input="(ev) => this.onNumber(ev, b.name, 'price')"/>
+                                            <span class="pdk-per">per</span>
+                                        </t>
+                                        <input type="text" inputmode="decimal" class="pdk-num"
+                                               t-att-placeholder="b.range ? 'e.g. 3-5' : (b.kind === 'per_unit' ? 'e.g. 250' : 'Value')"
+                                               t-att-value="pt.value" t-att-aria-label="b.label + ' value'"
+                                               t-on-focus="() => this.setFocus(b.name)"
+                                               t-on-input="(ev) => this.onNumber(ev, b.name, 'value', !!b.range)"/>
+                                        <Pick value="pt.unit" options="unitOptions(b)" label="b.label + ' unit'"
+                                              onChange="(v) => this.setPart(b.name, 'unit', v)"/>
+                                    </div>
+                                    <small t-if="pt.other !== null">This was typed before the boxes existed. Keep it, or choose number and unit.</small>
+                                </div>
+
+                                <!-- A short list, and Other for anything else. -->
+                                <div t-elif="b.kind === 'choice'" class="pdk-field">
+                                    <t t-call="mart369_product.BoxLabel"/>
+                                    <Pick value="pt.choice" options="choiceOptions(b)" label="b.label"
+                                          onChange="(v) => this.pickPart(b.name, v)"/>
+                                    <input t-if="pt.choice === '__other'" type="text" placeholder="Type your own"
+                                           t-att-value="pt.other" t-att-aria-label="b.label + ', your own'"
+                                           t-on-focus="() => this.setFocus(b.name)"
+                                           t-on-input="(ev) => this.setPart(b.name, 'other', ev.target.value)"/>
+                                </div>
+
+                                <!-- One box per point. Enter starts the next. -->
+                                <div t-elif="b.kind === 'points'" class="pdk-field pdk-wide">
+                                    <t t-call="mart369_product.BoxLabel"/>
+                                    <ol class="pdk-points" t-att-data-name="b.name">
+                                        <li t-foreach="pt.list" t-as="line" t-key="line_index">
+                                            <input type="text" t-att-data-i="line_index" t-att-value="line"
+                                                   t-att-placeholder="b.sep ? 'An item, then Enter' : 'A feature, then Enter'"
+                                                   t-att-aria-label="b.label + ' ' + (line_index + 1)"
+                                                   t-on-focus="() => this.setFocus(b.name)"
+                                                   t-on-input="(ev) => this.setPoint(b.name, line_index, ev.target.value)"
+                                                   t-on-keydown="(ev) => this.onPointKey(ev, b.name, line_index)"/>
+                                            <button type="button" class="ad-icon-btn" aria-label="Remove this point"
+                                                    t-on-click="() => this.removePoint(b.name, line_index)">
+                                                <Icon n="'x'" size="13"/>
+                                            </button>
+                                        </li>
+                                    </ol>
+                                    <button type="button" class="mart-link pdk-add-point" t-on-click="() => this.addPoint(b.name)">
+                                        <Icon n="'plus'" size="13"/><t t-esc="b.sep ? 'Add an item' : 'Add a point'"/>
+                                    </button>
+                                </div>
+
+                                <!-- Categories: a dropdown over the form, so nothing below jumps. -->
+                                <div t-elif="b.widget === 'categories'" class="pdk-field pdk-wide">
+                                    <t t-call="mart369_product.BoxLabel"/>
+                                    <div t-ref="categ" t-attf-class="pdk-cdrop {{ state.categOpen ? 'pdk-open' : '' }}">
+                                        <button type="button" class="pdk-cdrop-btn" aria-haspopup="listbox"
+                                                t-att-aria-expanded="state.categOpen ? 'true' : 'false'"
+                                                t-on-click="() => this.toggleCateg(b.name)">
+                                            <span t-attf-class="{{ chosenCount ? '' : 'ad-dim' }}"
+                                                  t-esc="chosenCount ? chosenNames : 'Choose categories'"/>
+                                            <Icon n="'chev'" size="15"/>
+                                        </button>
+                                        <div t-if="state.categOpen" class="pdk-cdrop-panel">
+                                            <label class="ad-search">
+                                                <Icon n="'search'" size="15"/>
+                                                <input type="text" placeholder="Find a category" aria-label="Find a category"
+                                                       t-att-value="state.form.categQ"
+                                                       t-on-input="(ev) => this.setCategQ(ev.target.value)"/>
+                                            </label>
+                                            <ul class="pdk-cdrop-list" role="listbox" aria-multiselectable="true"
+                                                t-att-aria-label="b.label">
+                                                <li t-if="!shownCategories.length" class="ad-dim pdk-cdrop-none">No category matches.</li>
+                                                <li t-foreach="shownCategories" t-as="c" t-key="c.id">
+                                                    <label class="pdk-cdrop-row">
+                                                        <input type="checkbox" t-att-checked="isChosen(c.id) ? 'checked' : false"
+                                                               t-on-change="() => this.toggleCategory(c.id)"/>
+                                                        <span t-esc="c.name"/>
+                                                    </label>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    <small t-esc="chosenCount ? chosenCount + ' chosen' : 'Not in any category yet - shoppers will only find it by searching.'"/>
+                                </div>
+
+                                <!-- A paragraph. -->
+                                <div t-elif="b.widget === 'text' or b.widget === 'html'" class="pdk-field pdk-wide">
+                                    <t t-call="mart369_product.BoxLabel"/>
+                                    <textarea rows="4" t-att-value="state.form.values[b.name]"
+                                              t-on-focus="() => this.setFocus(b.name)"
+                                              t-on-input="(ev) => this.setField(b.name, ev.target.value)"/>
+                                    <small t-if="b.help" t-esc="b.help"/>
+                                </div>
+
+                                <!-- A plain number; money gets the shop's currency in front. -->
+                                <div t-elif="b.widget === 'number' or b.widget === 'integer'" class="pdk-field">
+                                    <t t-call="mart369_product.BoxLabel"/>
+                                    <div class="pdk-affix">
+                                        <em t-if="isMoney(b) and currencySymbol" t-esc="currencySymbol"/>
+                                        <input type="text" t-att-inputmode="b.widget === 'integer' ? 'numeric' : 'decimal'"
+                                               t-att-value="state.form.values[b.name]"
+                                               t-att-readonly="b.readonly ? 'readonly' : false"
+                                               t-on-focus="() => this.setFocus(b.name)"
+                                               t-on-input="(ev) => this.onPlainNumber(ev, b.name, b.widget === 'integer')"/>
+                                    </div>
+                                    <small t-if="b.name === 'compare_list_price' and mrpWarning" class="pdk-warn">
+                                        MRP is not above the price, so no discount will show.
+                                    </small>
+                                    <small t-if="b.help" t-esc="b.help"/>
+                                </div>
+
+                                <!-- Text. The name is required and says so. -->
+                                <div t-else=""
+                                     t-attf-class="pdk-field {{ b.name === 'name' ? 'pdk-wide' : '' }} {{ b.name === 'name' and state.nameBad ? 'pdk-bad' : '' }}">
+                                    <t t-call="mart369_product.BoxLabel"/>
+                                    <input type="text" t-att-value="state.form.values[b.name]"
+                                           t-att-data-box="b.name"
+                                           t-att-aria-invalid="b.name === 'name' and state.nameBad ? 'true' : 'false'"
+                                           t-on-focus="() => this.setFocus(b.name)"
+                                           t-on-input="(ev) => this.setField(b.name, ev.target.value)"/>
+                                    <small t-if="b.name === 'name' and state.nameBad" class="pdk-err">A product needs a name.</small>
+                                    <small t-if="b.help" t-esc="b.help"/>
+                                </div>
+                            </t>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- ====================================== how shoppers see it -->
+                <aside class="pdk-preview" aria-label="How it looks in the app">
+                    <div class="ad-card pdk-sec">
+                        <header class="pdk-sec-head">
+                            <h3>How shoppers see it</h3>
+                            <small>Grey text is only a sample</small>
+                        </header>
+
+                        <div class="pdk-mock-card">
+                            <div t-attf-class="pdk-mock-img{{ lit('image') }}">
+                                <img t-if="state.form.photo" t-att-src="state.form.photo" alt=""/>
+                                <Icon t-else="" n="'layers'" size="28"/>
+                                <span t-if="show('mart_home_tag')" t-attf-class="pdk-mock-badge{{ cls('mart_home_tag') }}"
+                                      t-esc="pv('mart_home_tag').text"/>
+                            </div>
+                            <b t-attf-class="pdk-mock-name{{ cls('name') }}" t-esc="pv('name').text"/>
+                            <span t-if="show('mart_unit_text')" t-attf-class="pdk-mock-line{{ cls('mart_unit_text') }}"
+                                  t-esc="pv('mart_unit_text').text"/>
+                            <span t-if="show('mart_note')" t-attf-class="pdk-mock-line{{ cls('mart_note') }}">(<t t-esc="pv('mart_note').text"/>)</span>
+                            <div class="pdk-mock-price">
+                                <b t-attf-class="{{ cls('list_price') }}" t-esc="money(pv('list_price').text)"/>
+                                <s t-if="show('compare_list_price')" t-attf-class="{{ cls('compare_list_price') }}"
+                                   t-esc="money(pv('compare_list_price').text)"/>
+                            </div>
+                            <span t-if="show('mart_per_unit')" t-attf-class="pdk-mock-small{{ cls('mart_per_unit') }}"
+                                  t-esc="pv('mart_per_unit').text"/>
+                            <span t-if="state.focus === 'mart_low_stock_at'" t-attf-class="pdk-mock-warn{{ cls('mart_low_stock_at') }}">
+                                Only <t t-esc="pv('mart_low_stock_at').text"/> left
+                            </span>
+                            <span t-if="show('mart_delivery_text')" t-attf-class="pdk-mock-small{{ cls('mart_delivery_text') }}">
+                                <Icon n="'truck'" size="12"/> <t t-esc="pv('mart_delivery_text').text"/>
+                            </span>
+                            <span class="pdk-mock-add">Add</span>
+                        </div>
+
+                        <div class="pdk-mock-page">
+                            <div t-attf-class="pdk-mock-block{{ lit('mart_features') }}">
+                                <h4>Key features</h4>
+                                <ul>
+                                    <li t-foreach="pvLines('mart_features')" t-as="f" t-key="f_index"
+                                        t-attf-class="{{ pv('mart_features').sample ? 'pdk-sample' : '' }}">
+                                        <Icon n="'check'" size="12"/> <t t-esc="f"/>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="pdk-mock-block">
+                                <h4>Product information</h4>
+                                <table>
+                                    <tbody>
+                                        <tr t-foreach="infoRows" t-as="row" t-key="row[0]" t-attf-class="{{ lit(row[0]) }}">
+                                            <th t-esc="row[1]"/>
+                                            <td t-attf-class="{{ pv(row[0]).sample ? 'pdk-sample' : '' }}">
+                                                <t t-esc="pv(row[0]).text"/><t t-if="row[0] === 'weight'"> kg</t>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div t-if="show('description_ecommerce')" t-attf-class="pdk-mock-block{{ lit('description_ecommerce') }}">
+                                <h4>Description</h4>
+                                <p t-attf-class="{{ pv('description_ecommerce').sample ? 'pdk-sample' : '' }}"
+                                   t-esc="pv('description_ecommerce').text"/>
+                            </div>
+                        </div>
+
+                        <p t-attf-class="pdk-hint pdk-preview-note{{ noteBeats ? ' pdk-beat' : '' }}">
+                            <t t-if="panelNote and panelNote.outlined">Outlined: <b t-esc="panelNote.text"/>.</t><t t-elif="panelNote"><b t-esc="panelNote.label + '.'"/> <t t-esc="panelNote.text"/></t>
+                            <t t-else="">Click into a box to see where the app prints it.</t>
+                        </p>
+                    </div>
+                </aside>
+            </div>
+
+            <!-- ================================================ photo viewer -->
+            <div t-if="viewed" class="pdk-viewer" t-on-click.self="() => this.closePhoto()">
+                <div class="pdk-viewer-box" role="dialog" aria-modal="true" aria-label="Photograph" tabindex="-1"
+                     t-ref="viewer" t-on-keydown="(ev) => this.onPopupKey(ev)">
+                    <header>
+                        <span>
+                            <b t-esc="state.viewing + 1"/> of <t t-esc="photoList.length"/>
+                            <em t-if="viewed.kind === 'main'">On the card</em>
+                            <em t-elif="viewed.kind === 'new'">Not saved yet</em>
+                            <em t-elif="viewed.kind === 'demoted'">Was on the card</em>
+                        </span>
+                        <button t-if="viewed.kind !== 'main'" type="button" class="mart-btn ad-sm"
+                                t-on-click="() => this.useOnCard(viewed)">
+                            <Icon n="'star'" size="14"/> Use on the card
+                        </button>
+                        <button type="button" class="mart-btn ad-sm pdk-danger-ghost" t-on-click="() => this.dropPhoto(viewed)">
+                            <Icon n="'trash'" size="14"/> Remove
+                        </button>
+                        <button type="button" class="ad-icon-btn" aria-label="Close" t-on-click="() => this.closePhoto()">
+                            <Icon n="'x'" size="17"/>
+                        </button>
+                    </header>
+                    <div class="pdk-viewer-img">
+                        <button t-if="photoList.length > 1" type="button" class="pdk-viewer-step" aria-label="Previous"
+                                t-on-click="() => this.stepPhoto(-1)"><Icon n="'left'" size="20"/></button>
+                        <img t-att-src="viewed.url" alt=""/>
+                        <button t-if="photoList.length > 1" type="button" class="pdk-viewer-step pdk-next" aria-label="Next"
+                                t-on-click="() => this.stepPhoto(1)"><Icon n="'right'" size="20"/></button>
+                    </div>
+                    <div t-if="photoList.length > 1" class="pdk-viewer-strip">
+                        <button t-foreach="photoList" t-as="p" t-key="p.kind + p_index" type="button"
+                                t-attf-class="{{ p_index === state.viewing ? 'pdk-on' : '' }}"
+                                t-att-aria-label="'Photograph ' + (p_index + 1)"
+                                t-on-click="() => this.viewPhoto(p_index)">
+                            <img t-att-src="p.url" alt=""/>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </t>
+
+    <!-- A box's name, a red * when required, and the ⓘ that lights its spot
+         on the panel - on hover, as on the web admin. -->
+    <t t-name="mart369_product.BoxLabel">
+        <span class="pdk-label">
+            <t t-esc="b.label"/>
+            <i t-if="b.required" class="pdk-req" aria-hidden="true">*</i>
+            <button t-if="hasPreview(b.name)" type="button"
+                    t-attf-class="pdk-eye {{ state.focus === b.name ? 'pdk-on' : '' }}"
+                    t-att-aria-label="'Show where ' + b.label + ' appears in the app'"
+                    t-on-mouseenter="() => this.point(b.name)"
+                    t-on-click.prevent="() => this.point(b.name)">
+                <Icon n="'info'" size="12"/>
+            </button>
+        </span>
+    </t>
+
+</templates>

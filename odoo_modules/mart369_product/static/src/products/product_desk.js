@@ -26,11 +26,11 @@
  * either - `mart369_desk_form` reads the same `mart_page_hidden` the Odoo
  * form reads.
  */
-import { Component, onWillStart, useState } from "@odoo/owl";
+import { Component, onWillStart, useExternalListener, useState } from "@odoo/owl";
 import { browser } from "@web/core/browser/browser";
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
-import { getDataURLFromFile } from "@web/core/utils/urls";
+import { ConfirmationDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
 import { _t } from "@web/core/l10n/translation";
 import { Layout } from "@web/search/layout";
 import { standardActionServiceProps } from "@web/webclient/actions/action_service";
@@ -38,9 +38,31 @@ import { Icon } from "@mart369/ui/icon";
 import { Search } from "@mart369/ui/search";
 import { Pill } from "@mart369/ui/pill";
 import { Empty } from "@mart369/ui/empty";
+import { Tabs } from "@mart369/ui/tabs";
+import { Pick } from "@mart369/ui/pick";
+import { ProductEditor, money } from "./product_editor";
 
 const FIELD = "mart369.product.field";
 const PRODUCT = "product.template";
+
+/* The Stock desk's four tiles, drawn only when mart369_catalog is installed
+   and sends them - it is the module that knows about stock. */
+const TILES = [
+    { key: "count", label: _t("Products"), icon: "layers", flat: true },
+    { key: "value", label: _t("Stock value"), icon: "wallet", flat: true, money: true },
+    { key: "low", tab: "low", label: _t("Low stock"), icon: "warn", warn: true },
+    { key: "out", tab: "out", label: _t("Out of stock"), icon: "warn", bad: true },
+];
+
+const TABS = [
+    ["all", _t("All")],
+    ["low", _t("Low")],
+    ["out", _t("Out of stock")],
+    ["off", _t("Hidden")],
+];
+
+const MODES = [["", _t("Both storefronts")], ["quick", _t("Quick")], ["all", _t("Express")]];
+const SORTS = [["name", _t("Name A-Z")], ["low", _t("Lowest stock")], ["sold", _t("Best selling")], ["price", _t("Highest price")]];
 
 /* Which layer a value came from, in the shop's words. `odoo` means the value
    is the product's own field rather than anything anybody typed here. */
@@ -62,14 +84,32 @@ function message(err) {
 
 export class ProductDesk extends Component {
     static template = "mart369_product.ProductDesk";
-    static components = { Layout, Icon, Search, Pill, Empty };
+    static components = { Layout, Icon, Search, Pill, Empty, Tabs, Pick, ProductEditor };
     static props = { ...standardActionServiceProps };
 
     setup() {
         this.orm = useService("orm");
+        this.dialog = useService("dialog");
         this.action = useService("action");
 
         this.SOURCE = SOURCE;
+        // Bumped each time the editor opens, so it starts from a fresh copy.
+        this.formKey = 0;
+        this.editor = null;
+        // What the sticky bar says about the product being edited; the
+        // editor keeps it up to date as boxes change.
+        this.formStatus = useState({ name: "", dirty: false });
+
+        // Ctrl/Cmd+S saves, like every other editor people already know.
+        useExternalListener(window, "keydown", (ev) => {
+            if (this.state.form && (ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === "s") {
+                ev.preventDefault();
+                this.save();
+            }
+        });
+        this.TILES = TILES;
+        this.MODES = MODES;
+        this.SORTS = SORTS;
 
         this.state = useState({
             // the list
@@ -80,6 +120,17 @@ export class ProductDesk extends Component {
             total: 0,
             categ: null,
             q: "",
+            tab: "all",
+            mode: "",
+            sort: "name",
+            // From mart369_catalog when it is installed; null leaves the
+            // tiles, stock tabs and filters off rather than drawing zeros.
+            tiles: null,
+            counts: {},
+            stock: {},
+            // {id: row} from mart369_catalog: unit, category, sold, stock, live.
+            rows: {},
+            currency: null,
             // Kanban or list, the two Odoo offers on its own product list.
             // Remembered per browser, because it is a reading preference and
             // being put back on cards every visit is its own small annoyance.
@@ -87,6 +138,8 @@ export class ProductDesk extends Component {
             // the product being read, or null for the list
             open: null,
             page: null,
+            // Its numbers strip, from mart369_catalog when installed.
+            stats: null,
             loading: true,
             error: "",
             // The editor, or null when nothing is being edited. `id` is null
@@ -95,6 +148,7 @@ export class ProductDesk extends Component {
             form: null,
             saving: false,
         });
+
 
         // Arriving from a product's own form means that product was asked
         // for, so open straight onto it rather than making somebody find it
@@ -123,12 +177,20 @@ export class ProductDesk extends Component {
             const data = await this.orm.call(PRODUCT, "mart369_page_picker", [], {
                 categ_id: this.state.categ,
                 q: this.state.q.trim() || "",
+                tab: this.state.tab,
+                mode: this.state.mode || null,
+                sort: this.state.sort,
             });
             this.state.tree = data.categories || [];
             this.state.products = data.products || [];
             this.state.allCount = data.all_count || 0;
             this.state.uncategorised = data.uncategorised || 0;
             this.state.total = data.total || 0;
+            this.state.tiles = data.tiles || null;
+            this.state.counts = data.counts || {};
+            this.state.stock = data.stock || {};
+            this.state.rows = data.rows || {};
+            this.state.currency = data.currency || null;
             this.state.error = "";
         } catch (err) {
             this.state.error = message(err);
@@ -150,9 +212,135 @@ export class ProductDesk extends Component {
         return this.state.tree.filter((c) => !c.parent_id);
     }
 
+    /** The category chips: every category, named the way the web admin
+     *  names them - "Peripherals / Keyboards". */
+    get categChips() {
+        const byId = Object.fromEntries(this.state.tree.map((c) => [c.id, c]));
+        const path = (c) => {
+            const names = [];
+            for (let at = c; at; at = at.parent_id ? byId[at.parent_id] : null) {
+                names.unshift(at.name);
+            }
+            return names.join(" / ");
+        };
+        return this.state.tree.map((c) => ({ id: c.id, label: path(c) }));
+    }
+
+    /** Anything narrowing the list, so the line under the chips says so and
+     *  offers to clear it. */
+    // ---- one product's line or card, as the web admin draws it
+
+    rowOf(p) {
+        return this.state.rows[p.id] || {};
+    }
+
+    imageOf(p) {
+        return this.rowOf(p).image || p.image || "";
+    }
+
+    unitCode(p) {
+        return [this.rowOf(p).unit, p.code].filter(Boolean).join(" · ");
+    }
+
+    unitCat(p) {
+        return [this.rowOf(p).unit, this.rowOf(p).cat].filter(Boolean).join(" · ") || " ";
+    }
+
+    hasQty(p) {
+        const q = this.rowOf(p).qty;
+        return q !== null && q !== undefined;
+    }
+
+    qtyText(p) {
+        return this.hasQty(p) ? this.rowOf(p).qty : "-";
+    }
+
+    /** The web admin's colours: red when out, orange when low, else green. */
+    stockTone(p) {
+        return { out: "red", low: "orange" }[this.rowOf(p).state] || "green";
+    }
+
+    stockPill(p) {
+        return this.rowOf(p).state === "out" ? _t("Out") : _t("%s left", this.rowOf(p).qty);
+    }
+
+    rowTone(p) {
+        const st = this.rowOf(p).state;
+        return st === "out" ? "ad-row-bad" : st === "low" ? "ad-row-warn" : "";
+    }
+
+    cardTone(p) {
+        const st = this.rowOf(p).state;
+        return st === "out" || st === "low" ? "pdk-" + st : "";
+    }
+
+    /** A row opens the product - unless a button in it was pressed. */
+    onRowClick(ev, p) {
+        if (!ev.target.closest("button")) {
+            this.open(p);
+        }
+    }
+
+    /** A tile or chip pressed again goes back to everything. */
+    toggleTab(tab) {
+        this.setFilter("tab", this.state.tab === tab ? "all" : tab);
+    }
+
+    toggleCateg(id) {
+        this.pickCateg(this.state.categ === id ? null : id);
+    }
+
+    get filtered() {
+        return !!(this.state.q.trim() || this.state.categ !== null || this.state.tab !== "all");
+    }
+
+    get matchLine() {
+        const shown = this.state.products.length;
+        const total = this.state.total;
+        if (!this.filtered) {
+            return _t("%s products. The tiles count the whole shop.", total);
+        }
+        const chip = this.categChips.find((c) => c.id === this.state.categ);
+        const where = this.state.categ === 0 ? _t("Uncategorised") : chip ? chip.label : "";
+        return where
+            ? _t("Showing %s of %s that match in %s. The tiles count the whole shop.", shown, total, where)
+            : _t("Showing %s of %s that match. The tiles count the whole shop.", shown, total);
+    }
+
+    clearFilters() {
+        Object.assign(this.state, { q: "", categ: null, tab: "all" });
+        this.load();
+    }
+
     pickCateg(id) {
         this.state.categ = id;
         this.load();
+    }
+
+    /** Tabs, tiles, storefront and sort all narrow the same list. */
+    setFilter(key, value) {
+        if (value !== undefined && value !== null) {
+            this.state[key] = value;
+            this.load();
+        }
+    }
+
+    /** All counts what the All tab lists - published products - rather than
+     *  the Products tile, which counts everything for sale. */
+    get tabItems() {
+        const counts = { ...this.state.counts, all: this.state.allCount };
+        return TABS.map(([key, label]) => [key, label, counts[key] ?? null]);
+    }
+
+    tileValue(tile) {
+        const v = this.state.tiles?.[tile.key] ?? 0;
+        return tile.money ? this.money(v, this.state.currency) : v;
+    }
+
+    /** [qty or null, 'ok' | 'low' | 'out'] for a row, or null with no stock
+     *  module to ask. */
+    stockOf(product) {
+        return this.state.stock[product.id] || null;
     }
 
     setView(view) {
@@ -170,10 +358,13 @@ export class ProductDesk extends Component {
     async open(product) {
         this.state.open = product;
         this.state.page = null;
+        this.state.stats = null;
         this.state.loading = true;
         try {
-            this.state.page = await this.orm.call(
-                FIELD, "mart369_product_page", [product.id]);
+            [this.state.page, this.state.stats] = await Promise.all([
+                this.orm.call(FIELD, "mart369_product_page", [product.id]),
+                this.orm.call(PRODUCT, "mart369_product_stats", [product.id]),
+            ]);
             this.state.error = "";
         } catch (err) {
             this.state.error = message(err);
@@ -185,6 +376,37 @@ export class ProductDesk extends Component {
     back() {
         this.state.open = null;
         this.state.page = null;
+        this.state.stats = null;
+    }
+
+    /** The numbers strip: Odoo's figures, each opening Odoo's own screen for
+     *  it. Empty (no strip) when mart369_catalog does not send them. */
+    get statTiles() {
+        const s = this.state.stats;
+        if (!s || !Object.keys(s).length) {
+            return [];
+        }
+        const cur = s.currency;
+        const num = (v) => (v === null || v === undefined ? "-" : Number(v).toLocaleString());
+        return [
+            { key: "onHand", label: _t("On hand"), value: num(s.onHand), open: s.open?.onHand },
+            { key: "forecast", label: _t("Forecast"), value: num(s.forecast), open: s.open?.forecast },
+            { key: "sold", label: _t("Sold, %s days", s.soldDays), value: num(s.sold), open: s.open?.sold },
+            { key: "price", label: _t("Price"), value: money(s.price, cur) },
+            { key: "cost", label: _t("Cost"), value: s.cost ? money(s.cost, cur) : "-" },
+            { key: "margin", label: _t("Margin"), value: s.margin === null ? "-" : `${s.margin} %`,
+              bad: s.margin !== null && s.margin < 0 },
+        ];
+    }
+
+    async openStat(tile) {
+        if (!tile.open) {
+            return;
+        }
+        const action = await this.orm.call(PRODUCT, tile.open, [[this.state.open.id]]);
+        if (action) {
+            await this.action.doAction(action);
+        }
     }
 
     /** The product itself - name, price, stock, category - which is Odoo's
@@ -229,21 +451,13 @@ export class ProductDesk extends Component {
         this.state.loading = true;
         this.state.error = "";
         try {
-            const form = await this.orm.call(
+            const data = await this.orm.call(
                 PRODUCT, "mart369_desk_form", [], { product_id: productId });
-            // `values` is what the boxes are bound to and is edited in place;
-            // `photos` is the gallery as saved, and `add` / `remove` are what
-            // this visit changed, applied only when Save is pressed.
-            this.state.form = {
-                id: form.id,
-                groups: form.groups,
-                values: { ...form.values },
-                categories: form.categories,
-                photo: form.photo,
-                photos: form.photos,
-                add: [],
-                remove: [],
-            };
+            // The editor keeps its own working copy of this; `key` gives it
+            // a fresh one each time a product is opened.
+            this.state.form = { id: data.id, data, key: ++this.formKey };
+            this.formStatus.name = data.values.name || "";
+            this.formStatus.dirty = false;
         } catch (err) {
             this.state.error = message(err);
         } finally {
@@ -253,68 +467,36 @@ export class ProductDesk extends Component {
 
     closeForm() {
         this.state.form = null;
+        this.editor = null;
     }
 
-    setField(name, value) {
-        this.state.form.values[name] = value;
-    }
-
-    /** Categories are a checklist rather than a picker: the four layers key
-     *  off them, so which ones a product is in decides what the rest of this
-     *  form even asks for. */
-    toggleCategory(id) {
-        const chosen = this.state.form.values.public_categ_ids || [];
-        this.state.form.values.public_categ_ids = chosen.includes(id)
-            ? chosen.filter((c) => c !== id)
-            : [...chosen, id];
-    }
-
-    isChosen(id) {
-        return (this.state.form.values.public_categ_ids || []).includes(id);
-    }
-
-    async onPhoto(ev, main) {
-        const files = [...(ev.target.files || [])];
-        ev.target.value = "";
-        for (const file of files) {
-            const data = (await getDataURLFromFile(file)).split(",")[1];
-            if (main) {
-                this.state.form.values.image_1920 = data;
-                this.state.form.photo = "data:image/png;base64," + data;
-                return; // only one picture goes on the card
-            }
-            this.state.form.add.push({ name: file.name, data });
+    /** Cancel. Asks first when something was typed, so a stray click does
+     *  not throw away a product's worth of wording. */
+    cancelForm() {
+        if (!this.formStatus.dirty) {
+            return this.closeForm();
         }
-    }
-
-    clearPhoto() {
-        // '' rather than leaving it out: the server reads the difference as
-        // "take it away" versus "was not mentioned".
-        this.state.form.values.image_1920 = "";
-        this.state.form.photo = "";
-    }
-
-    /** A saved photograph is marked for removal rather than removed, so
-     *  nothing is lost until Save; one added this visit simply leaves. */
-    dropPhoto(photo) {
-        if (photo.id) {
-            this.state.form.remove.push(photo.id);
-            this.state.form.photos = this.state.form.photos.filter(
-                (p) => p.id !== photo.id);
-        } else {
-            this.state.form.add = this.state.form.add.filter((p) => p !== photo);
-        }
-    }
-
-    get pendingPhotos() {
-        return this.state.form.add.map((p) => ({
-            ...p, url: "data:image/png;base64," + p.data }));
+        this.dialog.add(ConfirmationDialog, {
+            title: _t("Discard your changes?"),
+            body: _t("What you typed on this product has not been saved."),
+            confirmLabel: _t("Discard"),
+            cancelLabel: _t("Keep editing"),
+            confirm: () => this.closeForm(),
+            cancel: () => {},
+        });
     }
 
     async save() {
-        const form = this.state.form;
+        if (!this.editor || this.state.saving) {
+            return;
+        }
+        const form = this.editor.state.form;
         if (!(form.values.name || "").trim()) {
-            this.state.error = _t("A product needs a name.");
+            // Said at the box, as on the web admin, and the box brought into view.
+            this.editor.state.nameBad = true;
+            const box = this.editor.root.querySelector('[data-box="name"]');
+            box?.focus();
+            box?.scrollIntoView({ block: "center", behavior: "smooth" });
             return;
         }
         this.state.saving = true;
@@ -323,9 +505,14 @@ export class ProductDesk extends Component {
             const id = await this.orm.call(PRODUCT, "mart369_desk_save", [], {
                 values: form.values,
                 product_id: form.id,
-                photos: { add: form.add, remove: form.remove },
+                photos: {
+                    add: form.add,
+                    remove: form.remove,
+                    promote: form.promoted ? form.promoted.id : null,
+                    demote: form.demote,
+                },
             });
-            this.state.form = null;
+            this.closeForm();
             // The list's counts and cards are now stale either way - a new
             // product is not in it, and an edited one may have changed
             // category or name.
@@ -361,14 +548,18 @@ export class ProductDesk extends Component {
         if (row.kind === "bool") {
             return row.value === "1" ? _t("Yes") : row.value === "0" ? _t("No") : _t("Not set");
         }
+        // Price and MRP arrive as the bare number; drawn as money, the way
+        // the tiles and the list draw it.
+        if ((row.key === "price" || row.key === "mrp") && row.value && !isNaN(Number(row.value))) {
+            return Number(row.value) ? this.money(row.value) : _t("Nothing set");
+        }
         return row.value || _t("Nothing set");
     }
 
-    money(amount) {
-        return Number(amount || 0).toLocaleString(undefined, {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-        });
+    /** The same shape of money as the Stock desk: the shop's decimals and
+     *  symbol when the catalog module sends them, two plain decimals when not. */
+    money(amount, currency = this.state.currency) {
+        return money(amount, currency);
     }
 
     get visibleRows() {
