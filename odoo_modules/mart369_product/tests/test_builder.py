@@ -198,7 +198,9 @@ class TestProductPicker(TransactionCase):
 
     def test_shape(self):
         data = self.Product.mart369_page_picker()
-        self.assertEqual(set(data), PICKER_KEYS)
+        # At least these: mart369_catalog adds its stock tiles on top, through
+        # `_mart369_picker_extras`, when it is installed.
+        self.assertLessEqual(PICKER_KEYS, set(data))
         for categ in data['categories']:
             self.assertEqual(set(categ), PICKER_CATEG_KEYS)
         for product in data['products']:

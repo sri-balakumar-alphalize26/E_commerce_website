@@ -32,6 +32,10 @@ _GET = {'type': 'http', 'auth': 'user', 'methods': ['GET'],
         'csrf': False, 'sitemap': False}
 _PATCH = {'type': 'http', 'auth': 'user', 'methods': ['PATCH'],
           'csrf': False, 'sitemap': False}
+_GET_POST = {'type': 'http', 'auth': 'user', 'methods': ['GET', 'POST'],
+             'csrf': False, 'sitemap': False}
+_GET_PATCH = {'type': 'http', 'auth': 'user', 'methods': ['GET', 'PATCH'],
+              'csrf': False, 'sitemap': False}
 
 EDITOR_GROUP = 'website.group_website_designer'
 
@@ -112,16 +116,19 @@ class Mart369SearchAdminApi(http.Controller):
 
     # --------------------------------------------------------------- products
 
-    @http.route('/369mart/admin/products', **_GET)
+    @http.route('/369mart/admin/products', **_GET_POST)
     def products(self, tab=None, categ=None, mode=None, q=None, sort=None,
                  limit=None, offset=None, **kwargs):
         """The stock list: one page, the shop's tiles and the filter options.
 
-        Read-only. Price, stock and publishing are changed in Odoo - a stock
-        change is an inventory adjustment, not a number typed over.
+        GET reads. POST creates a product the way the Odoo Products desk does
+        (see `_desk_save`). Stock is still never typed over: a stock change is
+        an inventory adjustment, and the desk's allowlist has no stock column.
         """
         if not self._may_edit():
             return self._fail('You do not have access to this.', status=403)
+        if request.httprequest.method == 'POST':
+            return self._desk_save(None)
         try:
             payload = request.env['product.template'].mart369_admin_list(
                 tab=tab, categ=categ or None, mode=mode, q=q, sort=sort,
@@ -132,3 +139,98 @@ class Mart369SearchAdminApi(http.Controller):
             return self._fail(str(exc))
         payload['ok'] = True
         return self._json(payload)
+
+    # ------------------------------------------------ the Products desk's editor
+    #
+    # Thin wrappers over the same ORM methods the Odoo Products desk calls, so
+    # the app's console and the backend desk cannot disagree about which boxes
+    # exist, what they are called or what may be written. Those methods check
+    # the designer group again themselves; the check here refuses a shopper
+    # before anything is read.
+
+    def _desk_save(self, product_id):
+        body = self._body()
+        values = body.get('values')
+        photos = body.get('photos') or {}
+        if not isinstance(values, dict) or not isinstance(photos, dict):
+            return self._fail('Send the product as values and photos.')
+        try:
+            # A savepoint, because the failure is caught and answered: without
+            # one, a photograph that fails after the values were written would
+            # still commit those values, and half a save is worse than none.
+            with request.env.cr.savepoint():
+                new_id = request.env['product.template'].mart369_desk_save(
+                    values, product_id=product_id, photos=photos)
+        except AccessError as exc:
+            return self._fail(str(exc), status=403)
+        except (UserError, ValidationError) as exc:
+            return self._fail(str(exc))
+        except (ValueError, TypeError) as exc:
+            return self._fail('Some of the values are not valid: %s' % exc)
+        _logger.info('369 Mart: product %s %s by %s', new_id,
+                     'updated' if product_id else 'created',
+                     request.env.user.login)
+        return self._json({'ok': True, 'id': new_id})
+
+    @http.route('/369mart/admin/products/form', **_GET)
+    def product_form(self, id=None, **kwargs):  # noqa: A002 - the query name
+        """The editor's boxes, values and photographs. No id: a blank form."""
+        if not self._may_edit():
+            return self._fail('You do not have access to this.', status=403)
+        product_id = None
+        if id:
+            try:
+                product_id = int(id)
+            except ValueError:
+                return self._fail('That is not a product.', status=404)
+            if not request.env['product.template'].browse(product_id).exists():
+                return self._fail('That product no longer exists.', status=404)
+        try:
+            payload = request.env['product.template'].mart369_desk_form(product_id)
+        except AccessError as exc:
+            return self._fail(str(exc), status=403)
+        payload['ok'] = True
+        return self._json(payload)
+
+    @http.route('/369mart/admin/products/<int:product_id>', **_GET_PATCH)
+    def product_one(self, product_id, **kwargs):
+        """GET: the detail view - what its page shows, and Odoo's figures.
+        PATCH: save the editor."""
+        if not self._may_edit():
+            return self._fail('You do not have access to this.', status=403)
+        product = request.env['product.template'].browse(product_id).exists()
+        if not product:
+            return self._fail('That product no longer exists.', status=404)
+        if request.httprequest.method == 'PATCH':
+            return self._desk_save(product_id)
+        try:
+            page = request.env['mart369.product.field'].mart369_product_page(product_id)
+            stats = request.env['product.template'].mart369_product_stats(product_id)
+        except AccessError as exc:
+            return self._fail(str(exc), status=403)
+        fields = product._fields
+        photos = [{
+            'id': image.id,
+            'url': '/web/image/product.image/%s/image_512' % image.id,
+        } for image in product.product_template_image_ids] \
+            if 'product_template_image_ids' in fields else []
+        unique = int(product.write_date.timestamp()) if product.write_date else 0
+        info = dict(page.get('product') or {})
+        info.update({
+            'id': product.id,
+            'name': info.get('name') or product.display_name,
+            'code': product.default_code or '',
+            'published': bool(product.is_published),
+            'price': product.list_price,
+            'mrp': product.compare_list_price if 'compare_list_price' in fields else 0,
+            'unit': (product.mart_unit_text or '') if 'mart_unit_text' in fields else '',
+            'photo': ('/web/image/product.template/%s/image_512?unique=%s'
+                      % (product.id, unique)) if product.image_1920 else '',
+            'photos': photos,
+        })
+        return self._json({
+            'ok': True,
+            'product': info,
+            'sections': page.get('sections') or [],
+            'stats': stats or {},
+        })

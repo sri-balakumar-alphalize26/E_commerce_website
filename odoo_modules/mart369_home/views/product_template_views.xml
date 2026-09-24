@@ -16,7 +16,9 @@
                         here is optional - leave it empty and the app falls back
                         to the product's own name, unit and photo.
                     </div>
-                    <group>
+                    <!-- Named so mart369_product can take these off the form
+                         when it draws them in its own editor instead. -->
+                    <group name="mart369_home_card">
                         <group string="Wording">
                             <field name="mart_unit_text" placeholder="e.g. 1 kg"/>
                             <field name="mart_per_unit" placeholder="e.g. 17.25 / 250 g"/>
@@ -28,7 +30,7 @@
                             <field name="mart_delivery_text" placeholder="e.g. 3-5 days"/>
                         </group>
                     </group>
-                    <group string="Drawing (used only when the product has no photo)">
+                    <group string="Drawing (used only when the product has no photo)" name="mart369_home_drawing">
                         <group>
                             <field name="mart_art"/>
                             <field name="mart_color" widget="color"/>

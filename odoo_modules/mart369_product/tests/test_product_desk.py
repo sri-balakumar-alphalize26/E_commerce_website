@@ -145,3 +145,4 @@ class TestProductDesk(TransactionCase):
             for row in section['fields'] if row['visible']
         }
         self.assertEqual(desk_keys, shopper_keys)
+

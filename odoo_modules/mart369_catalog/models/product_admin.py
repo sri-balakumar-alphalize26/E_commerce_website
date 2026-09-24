@@ -68,9 +68,13 @@ class ProductTemplate(models.Model):
 
     def _mart369_admin_sold7(self):
         """{template id: units sold in the last 7 days}, in one grouped read."""
+        return self._mart369_admin_sold(7)
+
+    def _mart369_admin_sold(self, days):
+        """{template id: units sold in the last `days` days}, one grouped read."""
         if not self or 'sale.order.line' not in self.env:
             return {}
-        since = fields.Datetime.now() - timedelta(days=7)
+        since = fields.Datetime.now() - timedelta(days=days)
         groups = self.env['sale.order.line']._read_group(
             [('product_id.product_tmpl_id', 'in', self.ids),
              ('order_id.state', '=', 'sale'),
@@ -108,21 +112,12 @@ class ProductTemplate(models.Model):
             domain += ['|', ('name', 'ilike', term), ('default_code', 'ilike', term)]
         return domain
 
-    # ------------------------------------------------------------- reading
-
     @api.model
-    def mart369_admin_list(self, tab=None, categ=None, mode=None, q=None,
-                           sort=None, limit=50, offset=0):
-        """One page of the stock list, the whole shop's tiles, and the filters.
+    def _mart369_admin_shop(self):
+        """The whole shop, once: (products, qty, states, tiles, tab counts).
 
-        `total` counts the filter; the tiles and tab counts count the shop.
-        """
-        tab = tab if tab in TABS else 'all'
-        sort = sort if sort in SORTS else 'low'
-        limit = max(1, min(int(limit or 50), MAX_ROWS))
-        offset = max(0, int(offset or 0))
-
-        # The whole shop, once: tiles and tab counts.
+        Shared by this list and the Products desk, so the two sets of tiles
+        cannot disagree about what "low" means."""
         shop = self.search([('sale_ok', '=', True)])
         shop_qty = shop._mart369_admin_qty()
         states = {t.id: t._mart369_admin_state(shop_qty.get(t.id)) for t in shop}
@@ -143,6 +138,175 @@ class ProductTemplate(models.Model):
             'out': tiles['out'],
             'off': len(shop.filtered(lambda t: not t.is_published)),
         }
+        return shop, shop_qty, states, tiles, counts
+
+    # ------------------------------------------------------ the products desk
+    #
+    # mart369_product's desk lists products through its picker, which cannot
+    # see stock or storefronts on its own. These fill its hooks with the same
+    # rules as the list above.
+
+    @api.model
+    def _mart369_picker_domain(self, tab=None):
+        # Low and out count the whole shop, published or not, so the tab has
+        # to list the same set its badge counted.
+        if tab in ('low', 'out'):
+            return [('sale_ok', '=', True)]
+        return super()._mart369_picker_domain(tab)
+
+    @api.model
+    def _mart369_picker_mode_domain(self, mode=None):
+        if mode == 'all':
+            return self._mart369_admin_express_domain()
+        if mode == 'quick':
+            return ['!'] + self._mart369_admin_express_domain()
+        return super()._mart369_picker_mode_domain(mode)
+
+    @api.model
+    def _mart369_picker_narrow(self, found, tab=None, sort=None):
+        found = super()._mart369_picker_narrow(found, tab, sort)
+        if tab not in ('low', 'out') and sort not in ('low', 'sold', 'price'):
+            return found
+        qty = found._mart369_admin_qty()
+        if tab in ('low', 'out'):
+            found = found.filtered(
+                lambda t: t._mart369_admin_state(qty.get(t.id)) == tab)
+        if sort == 'low':
+            found = found.sorted(lambda t: (t.id not in qty, qty.get(t.id) or 0.0, t.name or ''))
+        elif sort == 'sold':
+            sold = found._mart369_admin_sold7()
+            found = found.sorted(lambda t: (-sold.get(t.id, 0.0), t.name or ''))
+        elif sort == 'price':
+            found = found.sorted(lambda t: (-t.list_price, t.name or ''))
+        return found
+
+    @api.model
+    def _mart369_picker_extras(self, page):
+        extras = super()._mart369_picker_extras(page)
+        __, __, __, tiles, counts = self._mart369_admin_shop()
+        qty = page._mart369_admin_qty()
+        sold = page._mart369_admin_sold7()  # one grouped read for the page
+        extras.update({
+            'tiles': tiles,
+            'counts': counts,
+            'currency': self.env['mart369.serializable']._mart369_currency(
+                self.env.company.currency_id),
+            # {id: [qty or None, 'ok' | 'low' | 'out']} for the rows on screen.
+            'stock': {
+                t.id: [None if t.id not in qty else round(qty[t.id], 2),
+                       t._mart369_admin_state(qty.get(t.id))]
+                for t in page},
+            # {id: row} - what the web admin's Products list shows per product
+            # (unit, category, sold in 7 days, in stock, live), so the desk's
+            # list and cards can show the same.
+            'rows': {
+                t.id: t._mart369_admin_row(qty.get(t.id), sold.get(t.id, 0.0))
+                for t in page},
+        })
+        return extras
+
+    # --------------------------------------------- On hand in the desk editor
+
+    @api.model
+    def _mart369_desk_on_hand_box(self, product):
+        """The On hand box: what is in stock now, typed over to recount it.
+
+        Offered only where one number can mean something - stock is kept, and
+        the product has a single variant. A product with sizes or colours has
+        a count per variant, which is Odoo's own form's job."""
+        if not self._mart369_admin_tracks_stock():
+            return None
+        box = {
+            'name': 'mart_on_hand',
+            'label': 'On hand',
+            'help': 'How many you have now. Change it and Save to recount - it '
+                    'is booked as an inventory adjustment, as in Odoo.',
+            'widget': 'number',
+            # Only asked for once the product is counted at all.
+            'showIf': 'is_storable',
+        }
+        if product and len(product.product_variant_ids) > 1:
+            box['readonly'] = True
+            box['help'] = 'This product has variants - count each one in Odoo.'
+        value = round(product.qty_available, 2) if product else ''
+        return box, value if value else ''
+
+    def _mart369_desk_set_on_hand(self, product, qty):
+        """Book `qty` as the counted stock, the way Odoo's own "Update
+        quantity" does: an inventory-mode quant, applied. Only when the
+        product is storable, single-variant, and the count really changed."""
+        if not self._mart369_admin_tracks_stock() or 'stock.quant' not in self.env:
+            return False
+        if 'is_storable' in product._fields and not product.is_storable:
+            return False
+        if len(product.product_variant_ids) != 1:
+            return False
+        if abs((product.qty_available or 0.0) - qty) < 1e-9:
+            return False
+        location = self.env['stock.warehouse'].search(
+            [('company_id', '=', self.env.company.id)], limit=1).lot_stock_id
+        if not location:
+            return False
+        Quant = self.env['stock.quant'].with_context(inventory_mode=True)
+        quant = Quant.search([('product_id', '=', product.product_variant_id.id),
+                              ('location_id', '=', location.id)], limit=1)
+        if quant:
+            quant.inventory_quantity = qty
+        else:
+            quant = Quant.create({
+                'product_id': product.product_variant_id.id,
+                'location_id': location.id,
+                'inventory_quantity': qty,
+            })
+        quant.action_apply_inventory()
+        return True
+
+    @api.model
+    def _mart369_product_stats(self, product):
+        """The numbers strip on the desk's product view: the same figures as
+        Odoo's own header - on hand, forecast, sales - plus price, cost and
+        margin. `open` says which of Odoo's own screens each tile can open."""
+        out = super()._mart369_product_stats(product)
+        tracks = self._mart369_admin_tracks_stock() and 'qty_available' in product._fields
+        tracked = tracks and ('is_storable' not in product._fields or product.is_storable)
+        price = product.list_price or 0.0
+        cost = product.standard_price or 0.0
+        out.update({
+            'onHand': round(product.qty_available, 2) if tracked else None,
+            'forecast': round(product.virtual_available, 2) if tracked else None,
+            'sold': round(product._mart369_admin_sold(30).get(product.id, 0.0), 2),
+            'soldDays': 30,
+            'price': price,
+            'cost': cost,
+            # Only when both are known: a margin off a missing cost is 100%,
+            # which is a number nobody should be shown.
+            'margin': round((price - cost) / price * 100) if price and cost else None,
+            'currency': self.env['mart369.serializable']._mart369_currency(
+                self.env.company.currency_id),
+            'open': {
+                'onHand': 'action_open_quants' if tracked and hasattr(product, 'action_open_quants') else None,
+                'forecast': 'action_product_tmpl_forecast_report' if tracked and hasattr(product, 'action_product_tmpl_forecast_report') else None,
+                'sold': 'action_view_sales' if hasattr(product, 'action_view_sales') else None,
+            },
+        })
+        return out
+
+    # ------------------------------------------------------------- reading
+
+    @api.model
+    def mart369_admin_list(self, tab=None, categ=None, mode=None, q=None,
+                           sort=None, limit=50, offset=0):
+        """One page of the stock list, the whole shop's tiles, and the filters.
+
+        `total` counts the filter; the tiles and tab counts count the shop.
+        """
+        tab = tab if tab in TABS else 'all'
+        sort = sort if sort in SORTS else 'low'
+        limit = max(1, min(int(limit or 50), MAX_ROWS))
+        offset = max(0, int(offset or 0))
+
+        shop, shop_qty, states, tiles, counts = self._mart369_admin_shop()
+        currency = self.env.company.currency_id
 
         # The filter, over the shop - then the stock tabs, then the sort.
         found = self.search(self._mart369_admin_domain(categ=categ, mode=mode, q=q))

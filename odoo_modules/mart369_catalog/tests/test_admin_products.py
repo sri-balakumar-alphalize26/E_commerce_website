@@ -101,6 +101,35 @@ class TestAdminProductList(TransactionCase):
         self.assertEqual(filtered['tiles'], everything)
         self.assertEqual(filtered['total'], 1)
 
+    # ------------------------------------------ the Products desk, same rules
+
+    def _picked(self, **kw):
+        data = self.Tmpl.mart369_page_picker(q='Zz Admin', **kw)
+        return data, [p['id'] for p in data['products']]
+
+    def test_products_desk_gets_the_stock_desk_tiles(self):
+        data, __ = self._picked()
+        self.assertEqual(data['tiles'], self.Tmpl.mart369_admin_list()['tiles'])
+        self.assertEqual(data['stock'][self.low.id], [3, 'low'])
+
+    def test_products_desk_tabs_filter_like_the_stock_desk(self):
+        __, low = self._picked(tab='low')
+        self.assertEqual(low, [self.low.id])
+        __, out = self._picked(tab='out')
+        self.assertEqual(out, [self.out.id])
+        __, hidden = self._picked(tab='off')
+        self.assertEqual(hidden, [self.hidden.id])
+        __, everything = self._picked()
+        self.assertNotIn(self.hidden.id, everything, 'All is the published shop')
+
+    def test_products_desk_storefront_and_sort(self):
+        __, express = self._picked(mode='all')
+        self.assertIn(self.express.id, express)
+        __, quick = self._picked(mode='quick')
+        self.assertNotIn(self.express.id, quick)
+        __, lowest = self._picked(sort='low')
+        self.assertEqual(lowest[0], self.out.id, 'lowest stock first')
+
 
 @tagged('post_install', '-at_install')
 class TestAdminProductRoutes(HttpCase):
@@ -124,3 +153,182 @@ class TestAdminProductRoutes(HttpCase):
         self.assertTrue(body['ok'])
         self.assertLessEqual(len(body['rows']), 1)
         self.assertIn('low', body['tiles'])
+
+
+@tagged('post_install', '-at_install')
+class TestProductStats(TransactionCase):
+    """The numbers strip on the desk's product view: Odoo's own figures."""
+
+    def test_the_strip_reads_odoos_figures(self):
+        Tmpl = self.env['product.template']
+        if 'free_qty' not in self.env['product.product']._fields:
+            raise unittest.SkipTest('Inventory is not installed')
+        product = _stocked(self.env, 'Zz Stats', 12, list_price=100.0)
+        product.standard_price = 60.0
+        stats = Tmpl.mart369_product_stats(product.id)
+        self.assertEqual(stats['onHand'], 12)
+        self.assertEqual(stats['price'], 100.0)
+        self.assertEqual(stats['cost'], 60.0)
+        self.assertEqual(stats['margin'], 40)
+        self.assertEqual(stats['open']['onHand'], 'action_open_quants')
+
+    def test_no_cost_means_no_margin(self):
+        """A margin worked out against a missing cost reads 100% - wrong."""
+        product = self.env['product.template'].create({'name': 'Zz No Cost', 'list_price': 50})
+        self.assertIsNone(self.env['product.template'].mart369_product_stats(product.id)['margin'])
+
+
+# A 1x1 PNG: the smallest picture Odoo will accept as an image.
+_PNG = ('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8'
+        '/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==')
+
+
+@tagged('post_install', '-at_install')
+class TestAdminProductEditRoutes(HttpCase):
+    """The app's console edits a product through the same desk methods as
+    Odoo's own Products desk - so the routes are thin, and these check the
+    wrapping: who may call them, and that what was sent is what was saved."""
+
+    def setUp(self):
+        super().setUp()
+        self.authenticate('admin', 'admin')
+        self.Tmpl = self.env['product.template']
+
+    def _send(self, method, url, body):
+        return self.url_open(url, json=body, method=method)
+
+    def test_blank_form_offers_every_box(self):
+        res = self.url_open('/369mart/admin/products/form')
+        self.assertEqual(res.status_code, 200)
+        body = res.json()
+        self.assertTrue(body['ok'])
+        self.assertIsNone(body['id'])
+        names = [b['name'] for g in body['groups'] for b in g['boxes']]
+        self.assertIn('name', names)
+        self.assertIn('list_price', names)
+        self.assertIn('categories', body)
+
+    def test_create_with_photos_then_edit(self):
+        categ = self.env['product.public.category'].create({'name': 'Zz Route Categ'})
+        res = self._send('POST', '/369mart/admin/products', {
+            'values': {'name': 'Zz Route Made', 'list_price': '12.5',
+                       'mart_unit_text': '250 g', 'image_1920': _PNG,
+                       'public_categ_ids': [categ.id]},
+            'photos': {'add': [{'name': 'side', 'data': _PNG}]},
+        })
+        self.assertEqual(res.status_code, 200, res.text)
+        new_id = res.json()['id']
+        product = self.Tmpl.browse(new_id)
+        self.assertEqual(product.name, 'Zz Route Made')
+        self.assertEqual(product.list_price, 12.5)
+        self.assertEqual(product.public_categ_ids, categ)
+        self.assertTrue(product.image_1920)
+        self.assertTrue(product.is_published, 'made on the desk means live')
+        self.assertEqual(len(product.product_template_image_ids), 1)
+
+        form = self.url_open('/369mart/admin/products/form?id=%s' % new_id).json()
+        self.assertEqual(form['values']['name'], 'Zz Route Made')
+        self.assertEqual(len(form['photos']), 1)
+        self.assertTrue(form['photo'])
+
+        gallery = product.product_template_image_ids
+        res = self._send('PATCH', '/369mart/admin/products/%s' % new_id, {
+            'values': {'name': 'Zz Route Renamed', 'list_price': 9},
+            'photos': {'remove': [gallery.id]},
+        })
+        self.assertEqual(res.status_code, 200, res.text)
+        product.invalidate_recordset()
+        self.assertEqual(product.name, 'Zz Route Renamed')
+        self.assertEqual(product.list_price, 9)
+        self.assertFalse(product.product_template_image_ids.exists())
+
+        detail = self.url_open('/369mart/admin/products/%s' % new_id).json()
+        self.assertTrue(detail['ok'])
+        self.assertEqual(detail['product']['name'], 'Zz Route Renamed')
+        self.assertTrue(detail['product']['photo'])
+        self.assertIn('sections', detail)
+        self.assertEqual(detail['stats'].get('price'), 9)
+
+    def test_set_a_gallery_photo_on_the_card(self):
+        product = self.Tmpl.create({'name': 'Zz Route Promote', 'image_1920': _PNG})
+        extra = self.env['product.image'].create({
+            'name': 'x', 'image_1920': _PNG, 'product_tmpl_id': product.id})
+        res = self._send('PATCH', '/369mart/admin/products/%s' % product.id, {
+            'values': {}, 'photos': {'promote': extra.id, 'demote': True}})
+        self.assertEqual(res.status_code, 200, res.text)
+        product.invalidate_recordset()
+        self.assertFalse(extra.exists(), 'promoted off the gallery')
+        self.assertEqual(len(product.product_template_image_ids), 1,
+                         'the old card picture moved into the gallery')
+
+    def test_a_nameless_product_is_refused_whole(self):
+        before = self.Tmpl.search_count([])
+        res = self._send('POST', '/369mart/admin/products', {
+            'values': {'name': '  ', 'list_price': 5}, 'photos': {}})
+        self.assertEqual(res.status_code, 400)
+        self.assertFalse(res.json()['ok'])
+        self.assertEqual(self.Tmpl.search_count([]), before)
+
+    def test_missing_product_is_404(self):
+        self.assertEqual(self.url_open('/369mart/admin/products/999999999').status_code, 404)
+        res = self._send('PATCH', '/369mart/admin/products/999999999',
+                         {'values': {'name': 'x'}, 'photos': {}})
+        self.assertEqual(res.status_code, 404)
+        self.assertEqual(
+            self.url_open('/369mart/admin/products/form?id=999999999').status_code, 404)
+
+    def test_a_shopper_may_not_edit(self):
+        self.env['res.users'].with_context(no_reset_password=True).create({
+            'name': 'Edit Snoop', 'login': 'edit.snoop@example.com',
+            'password': 'edit-snoop-369',
+            'group_ids': [(6, 0, [self.env.ref('base.group_portal').id])],
+        })
+        product = self.Tmpl.create({'name': 'Zz Route Guarded'})
+        self.authenticate('edit.snoop@example.com', 'edit-snoop-369')
+        self.assertEqual(self.url_open('/369mart/admin/products/form').status_code, 403)
+        self.assertEqual(
+            self.url_open('/369mart/admin/products/%s' % product.id).status_code, 403)
+        res = self._send('POST', '/369mart/admin/products',
+                         {'values': {'name': 'Zz Sneaked In'}, 'photos': {}})
+        self.assertEqual(res.status_code, 403)
+        res = self._send('PATCH', '/369mart/admin/products/%s' % product.id,
+                         {'values': {'name': 'Zz Defaced'}, 'photos': {}})
+        self.assertEqual(res.status_code, 403)
+        self.assertEqual(product.name, 'Zz Route Guarded')
+        self.assertFalse(self.Tmpl.search([('name', '=', 'Zz Sneaked In')]))
+
+
+@tagged('post_install', '-at_install')
+class TestDeskOnHand(TransactionCase):
+    """On hand typed on the desk is booked as Odoo's own inventory count."""
+
+    def setUp(self):
+        super().setUp()
+        if 'free_qty' not in self.env['product.product']._fields:
+            raise unittest.SkipTest('Inventory is not installed')
+        self.Tmpl = self.env['product.template']
+
+    def _box(self, form, name):
+        return next((b for g in form['groups'] for b in g['boxes'] if b['name'] == name), None)
+
+    def test_a_new_product_starts_with_its_count(self):
+        pid = self.Tmpl.mart369_desk_save({
+            'name': 'Zz Counted', 'type': 'consu', 'is_storable': True, 'mart_on_hand': '24'})
+        self.assertEqual(self.Tmpl.browse(pid).qty_available, 24)
+
+    def test_recounting_books_the_difference(self):
+        pid = self.Tmpl.mart369_desk_save({
+            'name': 'Zz Recount', 'type': 'consu', 'is_storable': True, 'mart_on_hand': '24'})
+        self.Tmpl.mart369_desk_save({'mart_on_hand': '20'}, product_id=pid)
+        product = self.Tmpl.browse(pid)
+        product.invalidate_recordset()
+        self.assertEqual(product.qty_available, 20)
+
+    def test_the_box_only_shows_once_the_product_is_counted(self):
+        box = self._box(self.Tmpl.mart369_desk_form(), 'mart_on_hand')
+        self.assertEqual(box['showIf'], 'is_storable')
+
+    def test_a_service_is_not_counted(self):
+        pid = self.Tmpl.mart369_desk_save({
+            'name': 'Zz Service', 'type': 'service', 'mart_on_hand': '5'})
+        self.assertEqual(self.Tmpl.browse(pid).qty_available, 0)

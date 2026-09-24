@@ -484,11 +484,17 @@ class Mart369ProductField(models.Model):
             rows = []
             for field in by_section.get(section, self.browse()):
                 visible = field._visible_for(product, overrides)
+                value = field._value_for(product, overrides, cat_values) or ''
+                if field.key == 'images' and not value:
+                    # Computed where the shopper's page is built, so it has no
+                    # stored value to read - which made this screen say
+                    # "Nothing set" beside a product with a photograph.
+                    value = self._mart369_photo_count(product)
                 rows.append({
                     'id': field.id,
                     'key': field.key or '',
                     'name': field.name or field.key or '',
-                    'value': field._value_for(product, overrides, cat_values) or '',
+                    'value': value,
                     # Which of the four layers won. Without it an inherited
                     # value is indistinguishable from one set on this product,
                     # which is how the same wording gets typed in two places.
@@ -521,6 +527,16 @@ class Mart369ProductField(models.Model):
             },
             'sections': sections,
         }
+
+    @api.model
+    def _mart369_photo_count(self, product):
+        """'1 photo', '3 photos', or '' - the card picture plus the gallery."""
+        count = 1 if product.image_1920 else 0
+        if 'product_template_image_ids' in product._fields:
+            count += len(product.product_template_image_ids)
+        if not count:
+            return ''
+        return '1 photo' if count == 1 else '%s photos' % count
 
     @api.model
     def _resolve_sections(self, product):

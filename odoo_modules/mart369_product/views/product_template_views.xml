@@ -1,39 +1,78 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-    <!-- The product-page values that genuinely belong to one product go on
-         the 369 Mart tab the base module owns, rather than a second tab
-         competing with it. The home page fills the same tab independently. -->
+    <!-- On General Information, under Odoo's own fields, so a product is
+         filled in on the page that opens first: the Products desk's editor,
+         then the two things the desk does not draw - the drawing used when a
+         product has no photo, and the per-product exceptions table.
+
+         The editor is the same component the desk uses (editor_widget.js), so
+         Inventory > Products and 369 Mart > Products ask the same questions in
+         the same boxes. It writes to this form's record: Odoo's own Save and
+         Discard apply to it, and there is no second Save button. -->
     <record id="mart369_product_page_form_inherit" model="ir.ui.view">
         <field name="name">product.template.form.mart369.page</field>
         <field name="model">product.template</field>
         <field name="inherit_id" ref="mart369.view_product_template_form_mart369"/>
         <field name="arch" type="xml">
-            <xpath expr="//page[@name='mart369']" position="inside">
-                <separator string="Product page"/>
+            <xpath expr="//page[@name='general_information']/group" position="after">
+                <separator string="369 Mart"/>
                 <div class="text-muted small mb-2">
-                    Everything repeated across a whole category - sold by,
-                    manufacturer, return policy, shelf life - is set once in
-                    369 Mart &gt; Product Page, not here.
+                    What this product looks like in the app - the same boxes as
+                    369 Mart &gt; Products. Hover an eye to see where a box shows.
+                    Saved with the form's own Save.
                 </div>
-                <!-- These boxes used to live here. They are on General
-                     Information now, with the photographs and the rest, so a
-                     product is filled in on one page instead of four. Only
-                     the exceptions table below stays on the tab: it is a
-                     thing you consult, not a thing you fill in. -->
-                <group string="What this product shows">
+
+                <!-- Everything the editor writes has to be on the view, or the
+                     record will not save it. Invisible here; the editor is
+                     what draws them. The x2many and categories are already on
+                     the form (website_sale), with the sub-fields they need. -->
+                <field name="mart_page_hidden" invisible="1"/>
+                <field name="write_date" invisible="1"/>
+                <field name="default_code" invisible="1"/>
+                <field name="list_price" invisible="1"/>
+                <field name="compare_list_price" invisible="1"/>
+                <field name="standard_price" invisible="1"/>
+                <field name="mart_unit_text" invisible="1"/>
+                <field name="mart_per_unit" invisible="1"/>
+                <field name="mart_note" invisible="1"/>
+                <field name="mart_home_tag" invisible="1"/>
+                <field name="mart_features" invisible="1"/>
+                <field name="mart_in_the_box" invisible="1"/>
+                <field name="mart_material" invisible="1"/>
+                <field name="mart_item_height" invisible="1"/>
+                <field name="mart_item_length" invisible="1"/>
+                <field name="mart_item_width" invisible="1"/>
+                <field name="weight" invisible="1"/>
+                <field name="description_ecommerce" invisible="1"/>
+                <field name="mart_low_stock_at" invisible="1"/>
+                <field name="mart_delivery_text" invisible="1"/>
+
+                <widget name="mart369_product_editor"/>
+
+                <separator string="Drawing (used only when the product has no photo)"/>
+                <group name="mart369_drawing">
+                    <group>
+                        <field name="mart_art"/>
+                        <field name="mart_color" widget="color"/>
+                    </group>
+                    <group>
+                        <field name="mart_badge" placeholder="e.g. ATTA"/>
+                    </group>
+                </group>
+
+                <separator string="Product page exceptions"/>
+                <group>
                     <div colspan="2" class="text-muted small mb-2">
                         Every field follows the shop-wide setting unless it is
                         listed here - so this table is the exceptions, not the
                         page. To read the whole page, open it.
                     </div>
-                    <!-- The way in. Until now this said "edit it in 369 Mart &gt;
-                         Product Page" and left you to find the menu and hunt
-                         for the product again; the screen has always taken a
-                         product in its context, nothing ever passed one. -->
+                    <!-- The way in. The screen takes a product in its context,
+                         so it opens straight onto this one. -->
                     <button name="%(mart369_product.action_mart369_products)d"
                             type="action" colspan="2"
-                            string="Open this product's page"
+                            string="Open in 369 Mart &gt; Products"
                             class="btn-link" icon="fa-external-link"
                             context="{'mart369_product_id': id}"/>
                     <field name="mart_page_differs" string="Fields differing from the default"/>
@@ -52,103 +91,27 @@
                             confirm="This product will follow the shop-wide settings again. Any wording typed only for this product is removed."/>
                 </group>
             </xpath>
+            <!-- Everything it held is on General Information now, so the tab
+                 would only be an empty page to click into. -->
+            <xpath expr="//page[@name='mart369']" position="attributes">
+                <attribute name="invisible">1</attribute>
+            </xpath>
         </field>
     </record>
 
-
-    <!-- Everything a product needs for the app, on the page you are already
-         on. It used to be spread across four places: this tab, General
-         Information, the Inventory tab for the weight, and the Sales tab for
-         the description and - buried under "eCommerce Media" - the only box
-         that accepted extra photographs. Nobody ever found that one: checked
-         against the live shop, not a single product had a second photograph.
-
-         Below Odoo's own two columns rather than woven into them, so nothing
-         of Odoo's moves and an Odoo upgrade has nothing to collide with.
-
-         Each box that the product page can be told not to print carries
-         `invisible="',column,' in mart_page_hidden"`. The commas at both ends
-         are not a typo: without them `mart_item_width` would match inside a
-         longer column name. See `_compute_mart_page_hidden`. -->
+    <!-- General Information's old boxes. mart369_home puts its
+         card boxes there (so it works without this module); with this module
+         installed they are in the editor drawn just below instead, and
+         showing both would put every box on the form twice. Inherits
+         mart369_home's view so it runs after it and can find its nodes. -->
     <record id="mart369_product_general_info_inherit" model="ir.ui.view">
         <field name="name">product.template.form.mart369.general</field>
         <field name="model">product.template</field>
-        <field name="inherit_id" ref="mart369.view_product_template_form_mart369"/>
+        <field name="inherit_id" ref="mart369_home.mart369_product_template_form_inherit"/>
         <field name="arch" type="xml">
-            <xpath expr="//page[@name='general_information']/group" position="after">
-                <field name="mart_page_hidden" invisible="1"/>
-
-                <separator string="369 Mart"/>
-                <div class="text-muted small mb-3">
-                    What this product looks like in the app. All of it is
-                    optional - anything left empty falls back to the product's
-                    own name, unit and photograph. Boxes the product page has
-                    been told not to print are not shown here at all.
-                </div>
-
-                <group string="Photographs" name="mart369_photos">
-                    <div colspan="2" class="text-muted small mb-2">
-                        The first is the picture on the card. The rest become
-                        the gallery on the product page, which the shopper can
-                        swipe and zoom. With no photograph at all the app draws
-                        its own artwork instead - see Drawing, below.
-                    </div>
-                    <field name="image_1920" widget="image" class="oe_avatar" nolabel="1"/>
-                    <field name="product_template_image_ids"
-                           colspan="2" nolabel="1" mode="kanban"
-                           add-label="Add a photograph"
-                           context="{'default_name': name}"
-                           class="o_website_sale_image_list"
-                           widget="x2_many_media_viewer"
-                           options="{'convert_to_webp': True}"/>
-                </group>
-
-                <!-- Pack size and Express delivery are mart369_home's and
-                     are already on this page, just above: that module loads
-                     first and puts them here. Repeating them would put the
-                     same box on the form twice. -->
-                <group string="Price on the card" name="mart369_card">
-                    <field name="compare_list_price"
-                           invisible="',compare_list_price,' in mart_page_hidden"/>
-                </group>
-
-                <group string="What the page shows" name="mart369_page">
-                    <field name="mart_features" nolabel="1" colspan="2"
-                           invisible="',mart_features,' in mart_page_hidden"
-                           placeholder="Key features, one per line, e.g.&#10;Hand-picked and quality checked&#10;Stored cold from farm to door"/>
-                    <field name="mart_in_the_box" placeholder="e.g. Product, cable, manual"
-                           invisible="',mart_in_the_box,' in mart_page_hidden"/>
-                    <field name="mart_material" placeholder="e.g. Stainless steel"
-                           invisible="',mart_material,' in mart_page_hidden"/>
-                    <field name="mart_item_height" placeholder="e.g. 12 cm"
-                           invisible="',mart_item_height,' in mart_page_hidden"/>
-                    <field name="mart_item_length" placeholder="e.g. 8 cm"
-                           invisible="',mart_item_length,' in mart_page_hidden"/>
-                    <field name="mart_item_width" placeholder="e.g. 6 cm"
-                           invisible="',mart_item_width,' in mart_page_hidden"/>
-                    <!-- The page calls this Article ID. Odoo calls it the
-                         internal Reference, and in 19 does not put it on this
-                         form at all - checked, it is nowhere in the assembled
-                         arch - so without this box the page row could never be
-                         filled in. -->
-                    <field name="default_code" string="Article ID"
-                           placeholder="e.g. SPX-CHG-014"
-                           invisible="',default_code,' in mart_page_hidden"/>
-                    <field name="weight" string="Net weight"
-                           invisible="',weight,' in mart_page_hidden"/>
-                    <field name="description_ecommerce" colspan="2"
-                           invisible="',description_ecommerce,' in mart_page_hidden"
-                           placeholder="A short paragraph for the product page."/>
-                </group>
-            </xpath>
-            <!-- mart369_home's pack-size box is a row on the product page
-                 too, so it answers to the same switch as the rest. At the
-                 root of the arch, not inside the xpath above: nested, this is
-                 not a modifier - Odoo inserts it as a second, unlabelled
-                 field, which is exactly what it did. -->
-            <field name="mart_unit_text" position="attributes">
-                <attribute name="invisible">',mart_unit_text,' in mart_page_hidden</attribute>
-            </field>
+            <xpath expr="//group[@name='mart369_home_card']/preceding-sibling::div[1]" position="replace"/>
+            <xpath expr="//group[@name='mart369_home_card']" position="replace"/>
+            <xpath expr="//group[@name='mart369_home_drawing']" position="replace"/>
         </field>
     </record>
 
