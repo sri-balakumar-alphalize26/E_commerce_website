@@ -34,6 +34,9 @@ class TestMart369AddressApi(HttpCase):
         # The phone rule follows the company's country; pin it so the numbers
         # below mean what they say.
         self.env.company.partner_id.country_id = self.env.ref('base.in')
+        # Real lookups are cached in the database; the pincode tests need the
+        # stubbed India Post, not an answer left behind by a live one.
+        self.env['ir.config_parameter'].sudo().search([('key', '=like', 'mart369.pin.%')]).unlink()
 
     # ------------------------------------------------------------- plumbing
 
@@ -57,11 +60,15 @@ class TestMart369AddressApi(HttpCase):
     def _login(self, email):
         return self._post('/369mart/auth/login', {'login': email, 'password': 'secret123'})
 
+    def _tn(self):
+        return self.env['res.country.state'].search([
+            ('country_id.code', '=', 'IN'), ('name', '=', 'Tamil Nadu')], limit=1)
+
     def _add(self, **over):
         payload = {
             'label': 'Home', 'name': 'Arun Kumar', 'phone': '9486020356',
             'line': '5/2 Sivamurugan Colony, 2nd Street', 'area': 'Sandai Road',
-            'city': 'Dindigul 624003',
+            'city': 'Dindigul 624003', 'state_id': self._tn().id,
         }
         payload.update(over)
         return self._post('/369mart/addresses', payload)
@@ -125,6 +132,137 @@ class TestMart369AddressApi(HttpCase):
         flags = {a['id']: a['default'] for a in listed['addresses']}
         self.assertTrue(flags[second])
         self.assertFalse(flags[first], 'setting one default clears the other')
+
+    # ------------------------------------------------- the Flipkart form
+
+    def test_the_form_sends_every_line_apart(self):
+        """The new form sends town and pincode apart, plus a landmark and a
+        state; they come back apart too, and the one-line `city` still works
+        for the screens that show it that way."""
+        self._signup()
+        created = self._add(city=None, town='Dindigul', pin='624003', landmark='Near the bus stand')
+        self.assertEqual(created.status_code, 201, created.text)
+        address = created.json()['address']
+        self.assertEqual(address['town'], 'Dindigul')
+        self.assertEqual(address['pin'], '624003')
+        self.assertEqual(address['city'], 'Dindigul 624003')
+        self.assertEqual(address['landmark'], 'Near the bus stand')
+        self.assertEqual(address['state'], 'Tamil Nadu')
+        self.assertEqual(address['state_id'], self._tn().id)
+        record = self.env['res.partner'].browse(address['id'])
+        self.assertEqual(record.country_id.code, 'IN', 'the shop country, so the phone rule follows it')
+
+    def test_each_missing_line_names_its_field(self):
+        self._signup()
+        for key, field in (('name', 'name'), ('line', 'line'), ('area', 'area'),
+                           ('state_id', 'state'), ('phone', 'phone')):
+            refused = self._add(**{key: ''})
+            self.assertEqual(refused.status_code, 400, key)
+            self.assertEqual(refused.json()['field'], field, key)
+        for over, field in (({'city': None, 'town': '', 'pin': '624003'}, 'town'),
+                            ({'city': None, 'town': 'Dindigul', 'pin': ''}, 'pin'),
+                            ({'city': None, 'town': 'Dindigul', 'pin': '62400'}, 'pin')):
+            refused = self._add(**over)
+            self.assertEqual(refused.status_code, 400, over)
+            self.assertEqual(refused.json()['field'], field, over)
+        self.assertEqual(self._req('GET', '/369mart/addresses').json()['addresses'], [])
+
+    def test_a_state_from_another_country_is_refused(self):
+        self._signup()
+        elsewhere = self.env['res.country.state'].search([('country_id.code', '=', 'US')], limit=1)
+        refused = self._add(state_id=elsewhere.id)
+        self.assertEqual(refused.status_code, 400)
+        self.assertEqual(refused.json()['field'], 'state')
+
+    def test_edit_landmark_and_state(self):
+        self._signup()
+        pid = self._add().json()['address']['id']
+        kerala = self.env['res.country.state'].search([
+            ('country_id.code', '=', 'IN'), ('name', '=', 'Kerala')], limit=1)
+        changed = self._req('PATCH', '/369mart/addresses/%s' % pid, {
+            'landmark': 'Opposite the temple', 'state_id': kerala.id,
+            'town': 'Kochi', 'pin': '682001'})
+        self.assertEqual(changed.status_code, 200, changed.text)
+        address = changed.json()['address']
+        self.assertEqual((address['landmark'], address['state'], address['city']),
+                         ('Opposite the temple', 'Kerala', 'Kochi 682001'))
+        blanked = self._req('PATCH', '/369mart/addresses/%s' % pid, {'area': ''})
+        self.assertEqual(blanked.json()['field'], 'area', 'an edit may not blank a required line')
+
+    def test_form_meta_follows_the_shop_country(self):
+        self._signup()
+        meta = self._req('GET', '/369mart/addresses/form').json()
+        self.assertEqual(meta['country']['code'], 'IN')
+        self.assertEqual(meta['phone']['dial'], '+91')
+        self.assertEqual(meta['pin_length'], 6)
+        self.assertIn('Tamil Nadu', [s['name'] for s in meta['states']])
+
+    def test_the_picked_country_sets_the_rules(self):
+        """Amazon-style: the form's country decides the phone prefix, the
+        states and the pincode length - not where the company sits."""
+        self.env.company.partner_id.country_id = self.env.ref('base.om')
+        # Signing up still follows the company's phone rule, so an Omani number.
+        self.assertEqual(self._signup(phone='92123456').status_code, 201)
+        india = self._req('GET', '/369mart/addresses/form').json()
+        self.assertEqual(india['country']['code'], 'IN', 'a new address starts in India')
+        self.assertEqual(india['phone']['dial'], '+91')
+        self.assertIn('OM', [c['code'] for c in india['countries']])
+
+        oman = self._req('GET', '/369mart/addresses/form?country=OM').json()
+        self.assertEqual((oman['country']['code'], oman['phone']['dial'], oman['pin_length']),
+                         ('OM', '+968', 0))
+
+        # An Indian address with an Indian number, though the shop is in Oman.
+        created = self._add()
+        self.assertEqual(created.status_code, 201, created.text)
+        self.assertEqual(created.json()['address']['phone'], '+919486020356')
+        self.assertEqual(created.json()['address']['country_code'], 'IN')
+
+        # Moving it to Oman: the number is now checked as Omani, and the
+        # Indian state no longer fits.
+        pid = created.json()['address']['id']
+        refused = self._req('PATCH', '/369mart/addresses/%s' % pid, {
+            'country_id': 'OM', 'phone': '9486020356', 'pin': '112', 'state_id': self._tn().id})
+        self.assertEqual(refused.status_code, 400, refused.text)
+        self.assertIn(refused.json()['field'], ('phone', 'state'))
+        no_state = self._req('PATCH', '/369mart/addresses/%s' % pid, {
+            'country_id': 'OM', 'phone': '92123456', 'pin': '112'})
+        self.assertEqual(no_state.json()['field'], 'state', 'Oman has states; one must be picked')
+        muscat = self.env['res.country.state'].search([('country_id.code', '=', 'OM')], limit=1)
+        moved = self._req('PATCH', '/369mart/addresses/%s' % pid, {
+            'country_id': 'OM', 'phone': '92123456', 'pin': '112', 'state_id': muscat.id})
+        self.assertEqual(moved.status_code, 200, moved.text)
+        address = moved.json()['address']
+        self.assertEqual((address['country_code'], address['phone'], address['state_id']),
+                         ('OM', '+96892123456', muscat.id))
+
+    def test_pincode_fills_town_state_and_areas(self):
+        class Reply:
+            def raise_for_status(self):
+                pass
+
+            def json(self):
+                return [{'Status': 'Success', 'PostOffice': [
+                    {'Name': 'Begampur', 'District': 'Dindigul', 'State': 'Tamil Nadu'},
+                    {'Name': 'Anna Nagar', 'District': 'Dindigul', 'State': 'Tamil Nadu'},
+                ]}]
+
+        target = 'odoo.addons.mart369_address.models.address_rules.requests.get'
+        with patch(target, return_value=Reply()) as called:
+            found = self._req('GET', '/369mart/pincode/624003').json()
+            again = self._req('GET', '/369mart/pincode/624003').json()
+        self.assertEqual(called.call_count, 1, 'the second answer comes from the cache')
+        self.assertEqual(found, again)
+        self.assertTrue(found['ok'])
+        self.assertEqual(found['town'], 'Dindigul')
+        self.assertEqual(found['state_id'], self._tn().id)
+        self.assertEqual(found['areas'], ['Begampur', 'Anna Nagar'])
+
+    def test_pincode_lookup_failing_leaves_the_form_manual(self):
+        target = 'odoo.addons.mart369_address.models.address_rules.requests.get'
+        with patch(target, side_effect=OSError('offline')):
+            self.assertFalse(self._req('GET', '/369mart/pincode/600001').json()['ok'])
+        self.assertFalse(self._req('GET', '/369mart/pincode/12').json()['ok'])
 
     # ------------------------------------------------------ the phone rule
 

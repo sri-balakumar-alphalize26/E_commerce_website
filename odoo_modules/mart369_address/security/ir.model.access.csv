@@ -1,1 +1,3 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_mart369_address_wizard_manager,mart369.address.wizard manager,model_mart369_address_wizard,website.group_website_designer,1,1,1,1
+access_mart369_address_wizard_system,mart369.address.wizard system,model_mart369_address_wizard,base.group_system,1,1,1,1

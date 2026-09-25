@@ -1,6 +1,6 @@
 {
     'name': '369 Mart Delivery Addresses',
-    'version': '19.0.1.2.0',
+    'version': '19.0.1.4.0',
     'category': 'Website',
     'summary': "Customers' delivery addresses, found from their live location.",
     'description': """
@@ -35,6 +35,7 @@ where a missing pincode, mobile or map fix is called out in red.
         # The desk action first: the menu in address_views.xml points at it,
         # and Odoo resolves an xmlid as it reads, not afterwards.
         'views/address_desk_views.xml',
+        'views/address_wizard_views.xml',
         'views/address_views.xml',
         'data/address_demo.xml',
     ],
@@ -43,6 +44,11 @@ where a missing pincode, mobile or map fix is called out in red.
         'static/description/customer_addresses.png',
         'static/description/addresses_board.png',
         'static/description/addresses_list.png',
+        'static/description/storefront_address_form.png',
+        'static/description/storefront_address_card.png',
+        'static/description/storefront_address_country.png',
+        'static/description/storefront_address_state.png',
+        'static/description/storefront_address_checkout.png',
     ],
     'installable': True,
     'application': False,

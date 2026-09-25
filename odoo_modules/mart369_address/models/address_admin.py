@@ -65,12 +65,20 @@ class Mart369AddressAdmin(models.Model):
             'id': self.id,
             'customer': self.parent_id.display_name or 'Someone',
             'customerId': self.parent_id.id,
+            # The customer's login, so a screen can open the customer itself.
+            'customerUser': self.parent_id.user_ids[:1].id or False,
             'label': self.mart369_label or '',
             'name': self.name or '',
             'phone': self.phone or '',
             'altPhone': self.mart369_alt_phone or '',
             'line': ', '.join(p for p in (self.street, self.street2) if p),
+            'building': self.street or '',
+            'area': self.street2 or '',
+            'landmark': self.mart369_landmark or '',
             'city': self._mart369_city_line(),
+            'town': self.city or '',
+            'state': self.state_id.name or '',
+            'country': self.country_id.name or '',
             'zip': self.zip or '',
             # The nouns the backend prints in red, as a list rather than the
             # joined string, so a screen can draw them however it likes.
@@ -110,7 +118,7 @@ class Mart369AddressAdmin(models.Model):
 
         payload = self.mart369_admin_counts()
         payload.update({
-            'addresses': [a._mart369_admin_row() for a in rows],
+            'addresses': self._mart369_admin_rows_with_totals(books, domain, rows),
             'total': books.search_count(domain),
             'limit': limit,
             'offset': offset,
@@ -210,3 +218,21 @@ class Mart369AddressAdmin(models.Model):
 
         _logger.info('369 Mart: seeded %s example address(es)', len(made))
         return True
+
+    @api.model
+    def _mart369_admin_rows_with_totals(self, books, domain, rows):
+        """The rows, each carrying how many addresses its customer has under
+        this tab - so a screen grouping them by customer can say "3 addresses"
+        even when the page stops half way through somebody's list."""
+        parents = rows.parent_id
+        totals = {}
+        if parents:
+            for parent, count in books._read_group(
+                    list(domain) + [('parent_id', 'in', parents.ids)], ['parent_id'], ['__count']):
+                totals[parent.id] = count
+        out = []
+        for address in rows:
+            row = address._mart369_admin_row()
+            row['customerTotal'] = totals.get(address.parent_id.id, 1)
+            out.append(row)
+        return out

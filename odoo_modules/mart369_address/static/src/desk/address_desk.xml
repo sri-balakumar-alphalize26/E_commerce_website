@@ -76,12 +76,26 @@
                             <p class="ad-count">
                                 <t t-esc="state.total"/> address<t t-if="state.total !== 1">es</t>
                             </p>
+                            <!-- One block per customer, their addresses under them - the
+                                 way a support desk thinks: "Ravi has three addresses". -->
+                            <ul class="ad-groups">
+                            <li t-foreach="groups" t-as="group" t-key="group.key" class="ad-group">
+                                <button type="button" class="ad-group-head" t-att-disabled="!group.user"
+                                        t-att-title="group.user ? 'Open this customer' : ''"
+                                        t-on-click="() => this.openCustomer(group)">
+                                    <span class="ad-initial" t-esc="(group.customer or '?').slice(0, 1).toUpperCase()"/>
+                                    <b class="ad-who" t-esc="group.customer"/>
+                                    <span class="ad-group-count">
+                                        <t t-esc="group.total"/> address<t t-if="group.total !== 1">es</t>
+                                        <t t-if="group.rows.length &lt; group.total"> · <t t-esc="group.rows.length"/> on this page</t>
+                                    </span>
+                                    <span t-if="group.user" class="ad-group-go" aria-hidden="true">›</span>
+                                </button>
                             <ul class="ad-rows">
-                                <li t-foreach="state.rows" t-as="row" t-key="row.id"
+                                <li t-foreach="group.rows" t-as="row" t-key="row.id"
                                     t-attf-class="ad-row {{ row.archived ? 'ad-row-gone' : '' }} {{ row.gaps.length ? 'ad-row-gap' : '' }}">
                                     <span class="ad-line1">
-                                        <b class="ad-who" t-esc="row.customer"/>
-                                        <span t-if="row.label" class="ad-tag" t-esc="row.label"/>
+                                        <b class="ad-label" t-esc="row.label or 'Address'"/>
                                         <span t-if="row.isDefault" class="ad-ships">Ships here</span>
                                         <span t-if="row.archived" class="ad-tag">Removed</span>
                                     </span>
@@ -95,6 +109,8 @@
                                         Missing <t t-esc="row.gaps.join(', ')"/>
                                     </span>
                                 </li>
+                            </ul>
+                            </li>
                             </ul>
 
                             <div t-if="state.rows.length &lt; state.total" class="ad-more">

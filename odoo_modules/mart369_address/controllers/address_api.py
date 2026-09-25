@@ -7,6 +7,10 @@ The one rule that matters here: a customer may only ever touch an address that
 hangs off their own partner. Every route goes through _own() to get there, and
 _own() returns nothing for anyone else's id - so guessing ids gets a 404, not
 somebody else's home address.
+
+What an address must contain, and how an edit to one an order has used is kept
+away from that order, lives on res.partner (models/address_rules.py): the staff
+routes and the Odoo dialog save addresses through the same methods.
 """
 
 import json
@@ -26,6 +30,7 @@ _DELETE = {'type': 'http', 'auth': 'user', 'methods': ['DELETE'], 'csrf': False,
 
 # Geocoding is public: the app asks before anyone has signed in.
 _GEO = {'type': 'http', 'auth': 'public', 'methods': ['POST'], 'csrf': False, 'sitemap': False}
+_GET_PUBLIC = {'type': 'http', 'auth': 'public', 'methods': ['GET'], 'csrf': False, 'sitemap': False}
 
 
 class Mart369AddressApi(http.Controller):
@@ -53,10 +58,7 @@ class Mart369AddressApi(http.Controller):
 
     def _mine(self):
         """Every address belonging to the signed-in customer."""
-        return request.env['res.partner'].sudo().search([
-            ('parent_id', '=', self._me().id),
-            ('type', 'in', ADDRESS_TYPES),
-        ], order='mart369_default desc, id asc')
+        return self._me().sudo()._mart369_book()
 
     def _own(self, pid):
         """One address, but only if it is this customer's. Anything else -
@@ -74,46 +76,8 @@ class Mart369AddressApi(http.Controller):
 
     def _values(self, body, address=None):
         """Map what the app sent onto partner fields. Returns (values, error)."""
-        Partner = request.env['res.partner']
-        values = {}
-        if 'label' in body:
-            values['mart369_label'] = (body.get('label') or 'Home').strip() or 'Home'
-        if 'name' in body:
-            name = (body.get('name') or '').strip()
-            if not name and not address:
-                return None, ('Enter the name this is delivered to.', 'name')
-            if name:
-                values['name'] = name
-        if 'line' in body:
-            line = (body.get('line') or '').strip()
-            if not line and not address:
-                return None, ('Enter the flat, house or building.', 'line')
-            values['street'] = line
-        if 'area' in body:
-            values['street2'] = (body.get('area') or '').strip()
-        if 'city' in body:
-            city, pin = Partner._mart369_split_city(body.get('city'))
-            values['city'] = city
-            values['zip'] = pin
-        if 'phone' in body:
-            ok, phone = Partner._mart369_check_mobile(
-                body.get('phone'), partner=address, required=not address)
-            if not ok:
-                return None, (phone, 'phone')
-            values['phone'] = phone
-        if 'alt' in body:
-            ok, alt = Partner._mart369_check_mobile(
-                body.get('alt'), partner=address, required=False)
-            if not ok:
-                return None, (alt, 'alt')
-            values['mart369_alt_phone'] = alt
-        for key, field in (('lat', 'partner_latitude'), ('lng', 'partner_longitude')):
-            if body.get(key):
-                try:
-                    values[field] = float(body[key])
-                except (TypeError, ValueError):
-                    pass
-        return values, None
+        return request.env['res.partner'].sudo()._mart369_address_values(
+            body, address=address, parent=self._me())
 
     def _list(self):
         mine = self._mine()
@@ -139,10 +103,7 @@ class Mart369AddressApi(http.Controller):
         values, error = self._values(body)
         if error:
             return self._fail(error[0], error[1])
-        values.update({'parent_id': self._me().id, 'type': 'other'})
-        address = request.env['res.partner'].sudo().create(values)
-        if len(self._mine()) == 1 or not self._mine().filtered('mart369_default'):
-            address._mart369_set_default()   # the first address is the chosen one
+        address = self._me().sudo()._mart369_add_address(values)
         return self._json({'ok': True, 'address': address._mart369_serialize()}, status=201)
 
     @http.route('/369mart/addresses/<int:pid>', **_PATCH)
@@ -153,7 +114,9 @@ class Mart369AddressApi(http.Controller):
         values, error = self._values(self._body(), address=address)
         if error:
             return self._fail(error[0], error[1])
-        address.write(values)
+        # An address an order has used is copied, not rewritten; the answer
+        # carries the address to use from now on, which may have a new id.
+        address = address._mart369_revise(values)
         return self._json({'ok': True, 'address': address._mart369_serialize()})
 
     @http.route('/369mart/addresses/<int:pid>', **_DELETE)
@@ -191,6 +154,23 @@ class Mart369AddressApi(http.Controller):
             return self._fail('No such address.', status=404)
         address._mart369_set_default()
         return self._json(self._list())
+
+    # ----------------------------------------------------------- the form
+
+    @http.route('/369mart/addresses/form', **_GET)
+    def form(self, country=None, **kwargs):
+        """What the address form needs to draw itself for one country - the
+        one picked (?country=IN), else where a new address starts. The form
+        hard-codes none of it."""
+        return self._json(request.env['res.partner']._mart369_form_meta(country, parent=self._me()))
+
+    # ------------------------------------------------------- pincode lookup
+
+    @http.route('/369mart/pincode/<string:pin>', **_GET_PUBLIC)
+    def pincode(self, pin, **kwargs):
+        """City, state and the post offices for an Indian pincode, so the form
+        can fill itself in the way Flipkart's does."""
+        return self._json(request.env['res.partner']._mart369_pincode_lookup(pin))
 
     # ------------------------------------------------------------- geocoding
 
@@ -240,6 +220,7 @@ class Mart369AddressApi(http.Controller):
             'line': address.get('road') or '',
             'city': city,
             'state': state.name or address.get('state') or '',
+            'state_id': state.id or False,
             'zip': address.get('postcode') or '',
             'country': country.name or address.get('country') or '',
         }

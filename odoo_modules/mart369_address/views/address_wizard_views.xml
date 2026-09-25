@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Staff add or fix a customer's address. The same boxes, in the same
+         order, as the customer's own form in the app. -->
+    <record id="mart369_address_wizard_form" model="ir.ui.view">
+        <field name="name">mart369.address.wizard.form</field>
+        <field name="model">mart369.address.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Delivery address">
+                <field name="customer_id" invisible="1"/>
+                <field name="address_id" invisible="1"/>
+                <field name="has_states" invisible="1"/>
+                <div class="text-muted small mb-3">
+                    For <strong><field name="customer_id" readonly="1" nolabel="1" class="d-inline"/></strong>
+                    <span invisible="not address_id">
+                        If an order already went to this address, the order keeps
+                        the old one and the customer carries on with the new.
+                    </span>
+                </div>
+                <field name="label" widget="radio" options="{'horizontal': true}" nolabel="1"/>
+                <group>
+                    <group>
+                        <field name="country_id" options="{'no_create': True, 'no_open': True}"/>
+                        <field name="name"/>
+                        <label for="phone"/>
+                        <div class="o_row">
+                            <field name="phone" placeholder="Mobile number"/>
+                            <span class="text-muted text-nowrap" invisible="not phone_hint">
+                                <field name="phone_hint" readonly="1" nolabel="1"/>
+                            </span>
+                        </div>
+                        <field name="alt"/>
+                    </group>
+                    <group>
+                        <label for="zip"/>
+                        <div>
+                            <field name="zip" placeholder="624003"/>
+                            <div class="text-success small" invisible="not pin_found">
+                                <field name="pin_found" nolabel="1"/>
+                            </div>
+                        </div>
+                        <field name="city"/>
+                        <field name="state_id" invisible="not has_states" required="has_states"
+                               options="{'no_create': True, 'no_open': True}"/>
+                    </group>
+                </group>
+                <group>
+                    <field name="street"/>
+                    <field name="street2"/>
+                    <field name="landmark" placeholder="Near the bus stand (optional)"/>
+                </group>
+                <footer>
+                    <button name="action_save" type="object" string="Save address" class="btn-primary"/>
+                    <button string="Cancel" special="cancel" class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+</odoo>

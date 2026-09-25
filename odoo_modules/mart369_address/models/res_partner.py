@@ -39,6 +39,10 @@ class ResPartner(models.Model):
     mart369_alt_phone = fields.Char(
         string='Alternate phone',
         help="A second number to try if the first does not answer. Optional.")
+    mart369_landmark = fields.Char(
+        string='Landmark',
+        help="Something a rider can see from the road - \"near the bus stand\". "
+             "Optional.")
     mart369_default = fields.Boolean(
         string='Default address',
         help="The address the app selects for this customer. Exactly one "
@@ -80,8 +84,18 @@ class ResPartner(models.Model):
             'alt': self.mart369_alt_phone or '',
             'line': self.street or '',
             'area': self.street2 or '',
+            'landmark': self.mart369_landmark or '',
+            # `city` stays "Dindigul 624003" for the screens that show it as
+            # one line; the address form edits `town` and `pin` apart.
             'city': self._mart369_city_line(),
+            'town': self.city or '',
+            'pin': self.zip or '',
             'state': self.state_id.name or '',
+            'state_id': self.state_id.id or False,
+            'state_code': self.state_id.code or '',
+            'country_id': self.country_id.id or False,
+            'country_code': self.country_id.code or '',
+            'country': self.country_id.name or '',
             'icon': self._mart369_icon(),
             'default': self.mart369_default,
             'lat': self.partner_latitude or 0.0,
@@ -155,3 +169,26 @@ class ResPartner(models.Model):
         for address in self:
             address._mart369_set_default()
         return True
+
+    # ------------------------------------------- staff: add or fix an address
+
+    @api.model
+    def _mart369_address_dialog(self, customer=None, address=None):
+        """The dialog staff add or edit a customer's address in."""
+        context = {'default_customer_id': (customer or address.parent_id).id}
+        if address:
+            context['default_address_id'] = address.id
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Edit address') if address else _('Add address'),
+            'res_model': 'mart369.address.wizard',
+            'view_mode': 'form',
+            'views': [(False, 'form')],
+            'target': 'new',
+            'context': context,
+        }
+
+    def action_mart369_edit_address(self):
+        """Edit on an address card."""
+        self.ensure_one()
+        return self._mart369_address_dialog(address=self)

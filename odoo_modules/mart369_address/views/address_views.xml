@@ -17,6 +17,7 @@
                 <field name="phone" string="Mobile"/>
                 <field name="street" string="Flat / building"/>
                 <field name="street2" string="Area" optional="hide"/>
+                <field name="mart369_landmark" optional="hide"/>
                 <field name="city"/>
                 <field name="zip" string="Pincode"/>
                 <field name="state_id" optional="hide"/>
@@ -67,8 +68,11 @@
                                 <span t-if="record.street2.raw_value" class="text-muted">
                                     <field name="street2"/>
                                 </span>
+                                <span t-if="record.mart369_landmark.raw_value" class="text-muted">
+                                    Near <field name="mart369_landmark"/>
+                                </span>
                                 <span class="text-muted">
-                                    <field name="city"/> <field name="zip"/>
+                                    <field name="city"/><t t-if="record.state_id.raw_value">, <field name="state_id"/></t> <field name="zip"/>
                                 </span>
                             </div>
                         </div>
@@ -182,6 +186,19 @@
         <field name="inherit_id" ref="mart369_auth.view_mart369_customer_form"/>
         <field name="arch" type="xml">
             <xpath expr="//page[@name='addresses']/field[@name='child_ids']" position="replace">
+                <!-- Support staff fix addresses the way Amazon's do: Edit a card or
+                     add one, never delete - removing is the customer's call. -->
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="text-muted">
+                        <field name="mart369_address_total" class="fw-bold" readonly="1"/> saved
+                        <span invisible="mart369_address_total != 1">address</span>
+                        <span invisible="mart369_address_total == 1">addresses</span>
+                        · the default is where orders ship
+                    </span>
+                    <button name="action_mart369_add_address" type="object" class="btn btn-sm btn-primary"
+                            icon="fa-plus" string="Add address"
+                            groups="website.group_website_designer,base.group_system"/>
+                </div>
                 <field name="mart369_address_ids" nolabel="1" mode="kanban" class="o_mart369_addresses">
                     <kanban create="0" delete="0">
                         <field name="mart369_default"/>
@@ -202,22 +219,32 @@
                                             <span t-if="record.mart369_default.raw_value"
                                                   class="badge rounded-pill text-bg-success">&#10003; Default</span>
                                         </div>
-                                        <field name="name"/>
+                                        <span><field name="name"/> · <field name="phone"/></span>
+                                        <span class="text-muted"><field name="street"/></span>
                                         <span class="text-muted">
-                                            <field name="street"/>
-                                            <t t-if="record.street2.raw_value">, <field name="street2"/></t>
+                                            <field name="street2"/>
+                                            <t t-if="record.mart369_landmark.raw_value">, <field name="mart369_landmark"/></t>
                                         </span>
                                         <span class="text-muted">
-                                            <field name="city"/> <field name="zip"/>
+                                            <field name="city"/><t t-if="record.state_id.raw_value">, <field name="state_id"/></t>
+                                            <field name="zip"/>
+                                            <t t-if="record.country_id.raw_value"> · <field name="country_id"/></t>
                                         </span>
-                                        <field name="phone" class="text-muted"/>
+                                        <span t-if="record.mart369_alt_phone.raw_value" class="text-muted">
+                                            Alternate <field name="mart369_alt_phone"/>
+                                        </span>
                                     </div>
-                                    <button t-if="!record.mart369_default.raw_value"
-                                            name="action_mart369_make_default" type="object"
-                                            class="btn btn-sm btn-secondary"
-                                            confirm="Use this as the customer's default delivery address?">
-                                        Make default
-                                    </button>
+                                    <div class="d-flex flex-column gap-1 align-items-end">
+                                        <button name="action_mart369_edit_address" type="object"
+                                                class="btn btn-sm btn-secondary" icon="fa-pencil" string="Edit"
+                                                groups="website.group_website_designer,base.group_system"/>
+                                        <button t-if="!record.mart369_default.raw_value"
+                                                name="action_mart369_make_default" type="object"
+                                                class="btn btn-sm btn-link p-0"
+                                                confirm="Use this as the customer's default delivery address?">
+                                            Make default
+                                        </button>
+                                    </div>
                                 </div>
                                 <div t-if="record.mart369_gap_label.raw_value"
                                      class="o_mart369_nudge o_mart369_nudge_warm mt-2">
@@ -232,8 +259,9 @@
         </field>
     </record>
 
-    <!-- The same addresses on the stock user form, editable in place, so a wrong
-         flat number is fixed without leaving the customer. -->
+    <!-- The same addresses on the stock user form, to read. They are edited
+         from the customer form's Delivery addresses tab, where an order's
+         address is kept safe; editing here in place would rewrite it. -->
     <record id="view_users_form_mart369_addresses" model="ir.ui.view">
         <field name="name">res.users.form.mart369.addresses</field>
         <field name="model">res.users</field>
@@ -241,8 +269,9 @@
         <field name="arch" type="xml">
             <xpath expr="//page[@name='mart369']" position="inside">
                 <separator string="Delivery addresses"/>
-                <field name="mart369_address_ids" nolabel="1">
-                    <list editable="bottom" decoration-danger="mart369_gap_label">
+                <div class="text-muted small mb-1">Edit these from 369 Mart → Customers → the customer's Delivery addresses tab.</div>
+                <field name="mart369_address_ids" nolabel="1" readonly="1">
+                    <list create="0" delete="0" decoration-danger="mart369_gap_label">
                         <field name="mart369_label" string="Type"/>
                         <field name="name" string="Delivered to"/>
                         <field name="phone" string="Mobile"/>

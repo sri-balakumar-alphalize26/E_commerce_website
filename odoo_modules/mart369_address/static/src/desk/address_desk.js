@@ -174,7 +174,40 @@ export class AddressDesk extends Component {
 
     /** One line of address, as a person would read it out. */
     where(row) {
-        return [row.name, row.line, row.city].filter(Boolean).join(" · ");
+        const street = [row.building, row.area, row.landmark ? "near " + row.landmark : ""]
+            .filter(Boolean).join(", ") || row.line;
+        const place = row.town
+            ? [row.town, row.state].filter(Boolean).join(", ") + (row.zip ? " " + row.zip : "")
+            : row.city;
+        return [row.name, street, place].filter(Boolean).join(" · ");
+    }
+
+    /** The page's addresses, one block per customer. The server already sorts
+     *  them by customer, the default first, so neighbours are grouped. */
+    get groups() {
+        const out = [];
+        for (const row of this.state.rows) {
+            const last = out[out.length - 1];
+            if (last && last.key === row.customerId) {
+                last.rows.push(row);
+            } else {
+                out.push({ key: row.customerId, customer: row.customer, user: row.customerUser,
+                           total: row.customerTotal || 1, rows: [row] });
+            }
+        }
+        return out;
+    }
+
+    /** The customer's full profile, on its Delivery addresses tab - where
+     *  support adds, fixes and chooses the default. */
+    openCustomer(group) {
+        if (!group.user) {
+            return;
+        }
+        this.action.doAction("mart369_auth.action_mart369_customers", {
+            viewType: "form",
+            props: { resId: group.user },
+        });
     }
 
     /** The kanban, for what this screen does not do: grouping, the form, and
