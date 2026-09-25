@@ -172,6 +172,7 @@ export class OrderDesk extends Component {
             cashDue: "",
             sel: null,        // the ref of the order the panel is showing
             detail: null,
+            addrPick: null, // the address being chosen while "Change" is open
             reason: "",       // what a cancellation would be recorded as
             loading: true,
             busy: false,
@@ -585,11 +586,54 @@ export class OrderDesk extends Component {
     }
 
     get address() {
-        const a = this.state.detail?.address;
+        return this.addressLines(this.state.detail?.address).join(", ");
+    }
+
+    /** An address as the lines a parcel label reads, top to bottom. */
+    addressLines(a) {
         if (!a) {
-            return "";
+            return [];
         }
-        return [a.line, a.area, a.city].filter(Boolean).join(", ");
+        const near = a.landmark && !/^(near|opp|opposite|behind|beside|next to)\b/i.test(a.landmark)
+            ? "near " + a.landmark : a.landmark;
+        const place = a.town
+            ? `${a.town}${a.state ? ", " + a.state : ""}${a.pin ? " " + a.pin : ""}`
+            : [a.city, a.state].filter(Boolean).join(", ");
+        return [a.line, [a.area, near].filter(Boolean).join(", "), place].filter(Boolean);
+    }
+
+    // ------------------------------------------------- where the order goes
+
+    startAddressChange() {
+        this.state.addrPick = this.state.detail?.address?.id ?? null;
+        if (this.state.addrPick === null && this.state.detail?.addresses?.length) {
+            this.state.addrPick = this.state.detail.addresses[0].id;
+        }
+    }
+
+    pickAddress(id) {
+        this.state.addrPick = id;
+    }
+
+    cancelAddressChange() {
+        this.state.addrPick = null;
+    }
+
+    /* The order decides whether it may still move (placed or packed), so a
+       stale screen is refused there and reloads like any other write. */
+    async saveAddressChange() {
+        const ref = this.state.detail?.ref;
+        const id = this.state.addrPick;
+        if (!ref || id === null) {
+            return;
+        }
+        const done = await this.run(() =>
+            this.orm.call("sale.order", "mart369_admin_set_address", [ref, id])
+        );
+        this.state.addrPick = null;
+        if (done) {
+            this.notification.add(_t("#%s will be delivered to the new address", ref), { type: "success" });
+        }
     }
 
     /* What the panel says about the delivery code. Never the code itself and

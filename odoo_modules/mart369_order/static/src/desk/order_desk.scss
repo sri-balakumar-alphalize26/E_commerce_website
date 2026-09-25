@@ -481,6 +481,53 @@
 
     .od-kv-wide > div { display: block; dd { text-align: left; } }
 
+    /* Deliver to, and the picker that changes it before the parcel leaves. */
+    .od-deliver dd {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 10px;
+        text-align: left;
+    }
+
+    .od-addr {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+
+        small { color: #6b7a86; }
+    }
+
+    .od-addr-change { flex-direction: column; align-items: stretch !important; }
+
+    .od-addr-pick {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+
+        label {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 8px 10px;
+            border: 1px solid #e3e9ee;
+            border-radius: 10px;
+            cursor: pointer;
+            margin: 0;
+
+            &.od-on { border-color: #0a78ab; background: #f3f9fd; }
+            input { margin-top: 3px; }
+            span { display: flex; flex-direction: column; }
+            em { font-style: normal; font-size: 11px; font-weight: 700; color: #0f6b3d; }
+            small { color: #6b7a86; }
+        }
+    }
+
+    .od-addr-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+
     .od-bill-total {
         margin-top: 4px;
         padding-top: 8px;

@@ -1,6 +1,6 @@
 {
     'name': '369 Mart Orders',
-    'version': '19.0.1.1.0',
+    'version': '19.0.1.2.0',
     'category': 'Website',
     'summary': 'Real orders behind the app - placed, packed, delivered, returned.',
     'description': """

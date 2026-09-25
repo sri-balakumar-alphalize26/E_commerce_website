@@ -7,3 +7,5 @@ from . import test_admin_orders
 from . import test_order_desk
 from . import test_returns_admin
 from . import test_invoicing
+
+from . import test_order_address

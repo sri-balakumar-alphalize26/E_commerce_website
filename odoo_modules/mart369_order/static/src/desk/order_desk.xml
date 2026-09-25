@@ -164,7 +164,48 @@
                             <dd><a t-attf-href="tel:{{ o.customer.phone }}" t-esc="o.customer.phone"/></dd>
                         </div>
                         <div><dt>Orders</dt><dd t-esc="o.customer.orderCount"/></div>
-                        <div t-if="desk.address"><dt>Deliver to</dt><dd t-esc="desk.address"/></div>
+                        <!-- Where it goes. Until the parcel leaves the store, support can
+                             send it to another of the customer's saved addresses; the
+                             order keeps a record of the change. -->
+                        <div t-if="o.address or o.addressChangeable" class="od-kv-wide od-deliver">
+                            <dt>Deliver to</dt>
+                            <dd t-if="state.addrPick === null">
+                                <span class="od-addr">
+                                    <b t-if="o.address" t-esc="o.address.label"/>
+                                    <span t-foreach="desk.addressLines(o.address)" t-as="line" t-key="line_index" t-esc="line"/>
+                                    <small t-if="o.address and o.address.phone">
+                                        <t t-esc="o.address.name"/> &#183; <t t-esc="o.address.phone"/>
+                                    </small>
+                                </span>
+                                <button t-if="o.addressChangeable and o.addresses.length &gt; 1"
+                                        class="mart-btn mart-btn-sm" t-on-click="() => desk.startAddressChange()">
+                                    Change
+                                </button>
+                            </dd>
+                            <dd t-else="" class="od-addr-change">
+                                <ul class="od-addr-pick" role="radiogroup" aria-label="Deliver to">
+                                    <li t-foreach="o.addresses" t-as="a" t-key="a.id">
+                                        <label t-attf-class="{{ state.addrPick === a.id ? 'od-on' : '' }}">
+                                            <input type="radio" name="od-addr" t-att-checked="state.addrPick === a.id"
+                                                   t-on-change="() => desk.pickAddress(a.id)"/>
+                                            <span>
+                                                <b t-esc="a.label"/>
+                                                <em t-if="o.address and a.id === o.address.id">now</em>
+                                                <small t-esc="desk.addressLines(a).join(', ')"/>
+                                            </span>
+                                        </label>
+                                    </li>
+                                </ul>
+                                <span class="od-addr-actions">
+                                    <button class="mart-btn mart-btn-sm" t-on-click="() => desk.cancelAddressChange()">Cancel</button>
+                                    <button class="mart-btn mart-btn-sm mart-btn-primary"
+                                            t-att-disabled="state.busy or !o.address or state.addrPick === o.address.id"
+                                            t-on-click="() => desk.saveAddressChange()">
+                                        Deliver here
+                                    </button>
+                                </span>
+                            </dd>
+                        </div>
                         <div t-if="o.slot"><dt>Slot</dt><dd t-esc="o.slot"/></div>
                         <div t-if="o.dueAt"><dt>Promised</dt><dd t-esc="desk.when(o.dueAt)"/></div>
                         <div t-if="o.instructions" class="od-kv-wide">
@@ -260,8 +301,11 @@
                      a PDF, so letting the browser fetch it keeps the download
                      behaviour people expect. Shown only once there is one -
                      an order billed later would otherwise offer a 404. -->
-                <a t-if="o.hasInvoice" class="mart-btn od-invoice"
-                   t-att-href="invoiceHref(o.ref)">
+                <!-- Guarded like everything else in here: the dialog opens
+                     before the order has loaded, and `o` is only set once it
+                     has - reading it bare was a crash on a slow answer. -->
+                <a t-if="state.detail and state.detail.hasInvoice" class="mart-btn od-invoice"
+                   t-att-href="invoiceHref(state.detail.ref)">
                     <Icon n="'download'" size="14"/>
                     Invoice
                 </a>

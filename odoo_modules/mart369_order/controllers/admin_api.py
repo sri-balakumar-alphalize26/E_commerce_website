@@ -224,3 +224,21 @@ class Mart369OrderAdminApi(http.Controller):
         except AccessError as exc:
             return self._fail(str(exc), status=403)
         return self._json({'ok': True, 'order': order._mart369_admin_detail()})
+
+    @http.route('/369mart/admin/orders/<string:ref>/address', **_POST)
+    def set_address(self, ref, **kwargs):
+        """Send an order that has not left yet to another of the customer's
+        saved addresses. The rules are the order's (`mart369_admin_set_address`),
+        so the backend desk and the console agree on them."""
+        if not self._may_edit():
+            return self._fail('You do not have access to this.', status=403)
+        if not self._order(ref):
+            return self._fail('There is no such order.', status=404)
+        try:
+            detail = self._orders().mart369_admin_set_address(ref, self._body().get('address_id'))
+        except UserError as exc:
+            # Shipped already, or not one of this customer's addresses.
+            return self._fail(str(exc), status=409)
+        except AccessError as exc:
+            return self._fail(str(exc), status=403)
+        return self._json({'ok': True, 'order': detail})
