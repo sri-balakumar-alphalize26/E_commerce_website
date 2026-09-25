@@ -91,6 +91,9 @@ export class AddressDesk extends Component {
             incomplete: 0,
             loading: true,
             error: "",
+            // Customers whose addresses are showing, by customerId. Kept across
+            // the quiet poll and tab changes, so an open row never snaps shut.
+            open: {},
         });
 
         /* The box writes to state at once, so typing is never swallowed by
@@ -183,7 +186,8 @@ export class AddressDesk extends Component {
     }
 
     /** The page's addresses, one block per customer. The server already sorts
-     *  them by customer, the default first, so neighbours are grouped. */
+     *  them by customer, the default first, so neighbours are grouped.
+     *  A search opens every group, so a match is never hidden in a closed row. */
     get groups() {
         const out = [];
         for (const row of this.state.rows) {
@@ -195,7 +199,16 @@ export class AddressDesk extends Component {
                            total: row.customerTotal || 1, rows: [row] });
             }
         }
+        const searching = !!this.state.q.trim();
+        for (const group of out) {
+            group.expanded = searching || !!this.state.open[group.key];
+            group.gaps = group.rows.some((row) => row.gaps.length);
+        }
         return out;
+    }
+
+    toggle(group) {
+        this.state.open[group.key] = !this.state.open[group.key];
     }
 
     /** The customer's full profile, on its Delivery addresses tab - where

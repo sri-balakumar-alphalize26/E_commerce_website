@@ -141,30 +141,60 @@
         padding: 0;
         display: flex;
         flex-direction: column;
-        gap: 14px;
+        gap: 8px;
     }
 
     .ad-group {
         background: #fff;
         border: 1px solid var(--ad-line);
         border-radius: 16px;
-        padding: 6px 10px 10px;
+        padding: 2px 10px;
+    }
+
+    .ad-group-open { padding-bottom: 10px; }
+
+    /* The toggle, View and the chevron on one line; the whole row toggles. */
+    .ad-group-headrow {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
     }
 
     .ad-group-head {
-        width: 100%;
+        flex: 1;
+        min-width: 0;
         display: flex;
         align-items: center;
         gap: 10px;
-        padding: 8px 4px 10px;
+        padding: 8px 4px;
         border: 0;
         background: none;
         text-align: left;
         cursor: pointer;
         border-radius: 10px;
 
-        &:hover:not(:disabled) .ad-who { color: var(--ad-blue, #0a78ab); }
-        &:disabled { cursor: default; }
+        &:hover .ad-who { color: var(--ad-blue, #0a78ab); }
+    }
+
+    .ad-group-open .ad-group-headrow { padding-bottom: 2px; }
+
+    .ad-group-view {
+        flex: none;
+        height: 30px;
+        padding: 0 10px;
+        font-size: 12.5px;
+    }
+
+    /* The customer's number down the list - "3" is quicker to say on a call. */
+    .ad-sno {
+        flex: none;
+        min-width: 22px;
+        text-align: right;
+        font-size: 12.5px;
+        font-weight: 800;
+        color: var(--ad-muted);
+        font-variant-numeric: tabular-nums;
     }
 
     .ad-initial {
@@ -186,10 +216,22 @@
     }
 
     .ad-group-go {
-        margin-left: auto;
+        flex: none;
+        width: 16px;
+        text-align: center;
         font-size: 20px;
         line-height: 1;
         color: var(--ad-muted);
+        transition: transform 0.15s;
+    }
+
+    .ad-group-open .ad-group-go { transform: rotate(90deg); }
+
+    /* Something missing in a closed group - still visible without opening it. */
+    .ad-group-warn {
+        display: inline-flex;
+        margin-left: auto;
+        color: #b7791f;
     }
 
     .ad-label { font-size: 13.5px; font-weight: 700; }

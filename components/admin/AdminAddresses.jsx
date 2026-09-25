@@ -20,6 +20,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useResource } from "@/lib/useFetch";
 import { Avatar, Empty, Icon, Search, Tabs } from "./AdminUI";
+import { CustomerDrawer } from "./AdminCatalog";
 
 const PAGE = 30;
 
@@ -37,6 +38,11 @@ export function AddressesSection({ flash }) {
   const [term, setTerm] = useState("");
   const [q, setQ] = useState("");
   const [limit, setLimit] = useState(PAGE);
+  // Customers whose addresses are showing, by customerId. Survives the poll
+  // and tab changes, so an open row never snaps shut.
+  const [open, setOpen] = useState({});
+  // The customer whose details drawer is up - the same drawer Customers uses.
+  const [viewing, setViewing] = useState(null);
 
   useEffect(() => {
     const id = setTimeout(() => { setQ(term.trim()); setLimit(PAGE); }, 300);
@@ -56,6 +62,18 @@ export function AddressesSection({ flash }) {
   const rows = data?.addresses || [];
   const counts = data?.counts || {};
   const total = data?.total || 0;
+
+  const groups = useMemo(() => {
+    const out = [];
+    for (const a of rows) {
+      const last = out[out.length - 1];
+      if (last && last.key === a.customerId) last.rows.push(a);
+      else out.push({ key: a.customerId, customer: a.customer, user: a.customerUser,
+                      total: a.customerTotal || 1, rows: [a] });
+    }
+    for (const g of out) g.gaps = g.rows.some((a) => a.gaps?.length);
+    return out;
+  }, [rows]);
 
   return (
     <div className="ad-stack">
@@ -82,32 +100,66 @@ export function AddressesSection({ flash }) {
         )}
 
         {!error && !!rows.length && (
-          <ul className="ad-places">
-            {rows.map((a, i) => (
-              <li key={a.id} style={{ "--i": i }} className={a.archived ? "ad-place-gone" : ""}>
-                <Avatar name={a.customer} size={38}
-                  tone={a.gaps?.length ? "ad-a-orange" : "ad-a-blue"} />
-                <div className="ad-place-body">
-                  <div className="ad-place-top">
-                    <b>{a.customer}</b>
-                    {a.label && <span className="ad-place-tag">{a.label}</span>}
-                    {a.isDefault && <span className="ad-place-default">Ships here</span>}
-                    {a.archived && <span className="ad-place-tag">Removed</span>}
+          /* One row per customer, closed until tapped - "Ravi, 3 addresses ›".
+             The server sorts by customer, the default first, so neighbours
+             group; a search opens every group so a match is never hidden. */
+          <ul className="ad-owners">
+            {groups.map((g, i) => {
+              const expanded = !!q || !!open[g.key];
+              return (
+                <li key={g.key} style={{ "--i": i }} className={expanded ? "ad-owner ad-owner-open" : "ad-owner"}>
+                  {/* The row takes the click, so the chevron beyond View full profile toggles
+                      too; the button stops it. */}
+                  <div className="ad-owner-headrow" onClick={() => setOpen((o) => ({ ...o, [g.key]: !o[g.key] }))}>
+                    <button type="button" className="ad-owner-head" aria-expanded={expanded}>
+                      <span className="ad-owner-sno">{i + 1}</span>
+                      <Avatar name={g.customer} size={38} tone={g.gaps ? "ad-a-orange" : "ad-a-blue"} />
+                      <b>{g.customer}</b>
+                      <small>
+                        {g.total} address{g.total === 1 ? "" : "es"}
+                        {g.rows.length < g.total ? ` · ${g.rows.length} on this page` : ""}
+                      </small>
+                      {g.gaps && <span className="ad-owner-warn" title="Missing something"><Icon n="info" size={15} /></span>}
+                    </button>
+                    {g.user && (
+                      <button type="button" className="ad-btn ad-sm ad-owner-view"
+                        onClick={(e) => { e.stopPropagation(); setViewing({ id: g.user, name: g.customer }); }}>
+                        <Icon n="users" size={14} /> View full profile
+                      </button>
+                    )}
+                    <span className="ad-owner-chev"><Icon n="chev" size={16} /></span>
                   </div>
-                  <small>
-                    {[a.name, a.line, a.city].filter(Boolean).join(" · ")}
-                    {a.phone ? ` · ${a.phone}` : ""}
-                  </small>
-                  {/* The same nouns the backend prints in red. */}
-                  {!!a.gaps?.length && (
-                    <p className="ad-place-gaps">
-                      <Icon n="info" size={14} />
-                      Missing {a.gaps.join(", ")}
-                    </p>
+                  {expanded && (
+                    <div className="ad-owner-body">
+                      <ul className="ad-places">
+                        {g.rows.map((a) => (
+                          <li key={a.id} className={a.archived ? "ad-place-gone" : ""}>
+                            <div className="ad-place-body">
+                              <div className="ad-place-top">
+                                <b>{a.label || "Address"}</b>
+                                {a.isDefault && <span className="ad-place-default">Ships here</span>}
+                                {a.archived && <span className="ad-place-tag">Removed</span>}
+                              </div>
+                              <small>
+                                {[a.name, a.line, a.city].filter(Boolean).join(" · ")}
+                                {a.phone ? ` · ${a.phone}` : ""}
+                              </small>
+                              {/* The same nouns the backend prints in red. */}
+                              {!!a.gaps?.length && (
+                                <p className="ad-place-gaps">
+                                  <Icon n="info" size={14} />
+                                  Missing {a.gaps.join(", ")}
+                                </p>
+                              )}
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   )}
-                </div>
-              </li>
-            ))}
+                </li>
+              );
+            })}
           </ul>
         )}
 
@@ -127,6 +179,8 @@ export function AddressesSection({ flash }) {
           </div>
         )}
       </section>
+
+      {viewing && <CustomerDrawer row={viewing} onClose={() => setViewing(null)} />}
     </div>
   );
 }

@@ -41,6 +41,7 @@ where a missing pincode, mobile or map fix is called out in red.
     ],
     'images': [
         'static/description/address_desk.png',
+        'static/description/address_desk_open.png',
         'static/description/customer_addresses.png',
         'static/description/addresses_board.png',
         'static/description/addresses_list.png',

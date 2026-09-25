@@ -44,8 +44,8 @@ class ResUsers(models.Model):
     # partner, which is usually blank: where they live is in their address
     # book. These read the book too.
 
-    def _mart369_admin_row(self, wallets=None):
-        row = super()._mart369_admin_row(wallets=wallets)
+    def _mart369_admin_row(self, wallets=None, **kwargs):
+        row = super()._mart369_admin_row(wallets=wallets, **kwargs)
         book = self.partner_id.sudo()._mart369_book()
         row['addressCount'] = len(book)
         home = book.filtered('mart369_default')[:1] or book[:1]

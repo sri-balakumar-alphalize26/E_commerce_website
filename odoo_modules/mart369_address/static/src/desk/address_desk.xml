@@ -79,18 +79,34 @@
                             <!-- One block per customer, their addresses under them - the
                                  way a support desk thinks: "Ravi has three addresses". -->
                             <ul class="ad-groups">
-                            <li t-foreach="groups" t-as="group" t-key="group.key" class="ad-group">
-                                <button type="button" class="ad-group-head" t-att-disabled="!group.user"
-                                        t-att-title="group.user ? 'Open this customer' : ''"
-                                        t-on-click="() => this.openCustomer(group)">
-                                    <span class="ad-initial" t-esc="(group.customer or '?').slice(0, 1).toUpperCase()"/>
-                                    <b class="ad-who" t-esc="group.customer"/>
-                                    <span class="ad-group-count">
-                                        <t t-esc="group.total"/> address<t t-if="group.total !== 1">es</t>
-                                        <t t-if="group.rows.length &lt; group.total"> · <t t-esc="group.rows.length"/> on this page</t>
-                                    </span>
-                                    <span t-if="group.user" class="ad-group-go" aria-hidden="true">›</span>
-                                </button>
+                            <li t-foreach="groups" t-as="group" t-key="group.key"
+                                t-attf-class="ad-group {{ group.expanded ? 'ad-group-open' : '' }}">
+                                <!-- Closed by default: one line per customer, tap to see
+                                     their addresses. The row takes the click, so the
+                                     chevron beyond View full profile toggles too; the button stops it. -->
+                                <div class="ad-group-headrow" t-on-click="() => this.toggle(group)">
+                                    <button type="button" class="ad-group-head"
+                                            t-att-aria-expanded="group.expanded ? 'true' : 'false'">
+                                        <span class="ad-sno" t-esc="group_index + 1"/>
+                                        <span class="ad-initial" t-esc="(group.customer or '?').slice(0, 1).toUpperCase()"/>
+                                        <b class="ad-who" t-esc="group.customer"/>
+                                        <span class="ad-group-count">
+                                            <t t-esc="group.total"/> address<t t-if="group.total !== 1">es</t>
+                                            <t t-if="group.rows.length &lt; group.total"> · <t t-esc="group.rows.length"/> on this page</t>
+                                        </span>
+                                        <span t-if="group.gaps" class="ad-group-warn" title="Missing something">
+                                            <Icon n="'warn'" size="14"/>
+                                        </span>
+                                    </button>
+                                    <button t-if="group.user" type="button" class="mart-btn ad-group-view"
+                                            title="Open this customer"
+                                            t-on-click.stop="() => this.openCustomer(group)">
+                                        <Icon n="'users'" size="14"/>
+                                        View full profile
+                                    </button>
+                                    <span class="ad-group-go" aria-hidden="true">›</span>
+                                </div>
+                            <t t-if="group.expanded">
                             <ul class="ad-rows">
                                 <li t-foreach="group.rows" t-as="row" t-key="row.id"
                                     t-attf-class="ad-row {{ row.archived ? 'ad-row-gone' : '' }} {{ row.gaps.length ? 'ad-row-gap' : '' }}">
@@ -110,6 +126,7 @@
                                     </span>
                                 </li>
                             </ul>
+                            </t>
                             </li>
                             </ul>
 
