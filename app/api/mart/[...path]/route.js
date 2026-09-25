@@ -77,8 +77,9 @@ async function handle(req, ctx) {
   const session = (await cookies()).get(SESSION_COOKIE)?.value;
   const target = "/369mart/" + path.join("/") + new URL(req.url).search;
 
-  /* A few routes answer bytes rather than JSON: an invoice is a PDF, and a
-     return's photos are images. `odooFetch` runs `await r.json()` over
+  /* A few routes answer bytes rather than JSON: an invoice is a PDF, so are
+     the packing slips and picklist the Orders screen prints, and a return's
+     photos are images. `odooFetch` runs `await r.json()` over
      everything, which would turn a perfectly good file into {ok:false}, so
      these stream through untouched.
 
@@ -86,7 +87,7 @@ async function handle(req, ctx) {
      made before the body is read. Either of them can still answer JSON — an
      invoice that has not been posted, a photo that is not there — and that
      case is handed back to the app to read as usual. */
-  if (path.includes("invoice") || path.includes("photo")) {
+  if (path.includes("invoice") || path.includes("photo") || path.includes("print")) {
     const r = await odooRaw(target, { session });
     if (!r) return NextResponse.json({ ok: false, error: "Can't reach the store. Try again in a moment." }, { status: 503 });
     const type = r.headers.get("content-type") || "application/octet-stream";

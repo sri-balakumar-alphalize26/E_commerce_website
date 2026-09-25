@@ -475,6 +475,24 @@ html.ad-lock { overflow: hidden; }
 .ad-items { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .ad-items li { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 11px; background: var(--ad-ground); font-size: 13.5px; }
 .ad-items li > span:nth-child(2) { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.ad-items .ad-remove { padding: 2px 9px; color: #b3350c; }
+.ad-items .ad-replace { padding: 2px 9px; }
+.ad-items li { flex-wrap: wrap; }
+.ad-offer { display: inline-flex; align-items: center; gap: 6px; flex-basis: 100%; padding: 5px 9px; border-radius: 9px; background: #eef7fc; color: #0f5d86; font-size: 12px; font-weight: 700; }
+.ad-offer .ad-btn { margin-left: auto; padding: 2px 9px; }
+.ad-waiting { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 999px; background: #eef7fc; border: 1px solid #cfe6f3; color: #0f5d86; font-size: 12px; font-weight: 700; }
+.ad-replace-modal { width: min(520px, 100%); text-align: left; }
+.ad-replace-modal p { font-size: 13px; }
+.ad-replace-list { list-style: none; margin: 10px 0 16px; padding: 0; max-height: 320px; overflow: auto; display: flex; flex-direction: column; gap: 6px; }
+.ad-replace-list button { width: 100%; display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--ad-line); border-radius: 11px; background: #fff; font: inherit; text-align: left; cursor: pointer; }
+.ad-replace-list button.ad-on { border-color: var(--ad-blue); box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.14); }
+.ad-replace-list img, .ad-replace-img { width: 36px; height: 36px; object-fit: contain; border-radius: 8px; background: var(--ad-ground); flex: none; }
+.ad-replace-list span { display: flex; flex-direction: column; }
+.ad-replace-list small { font-size: 12px; color: var(--ad-muted); }
+.ad-items li.ad-removed { opacity: 0.75; }
+.ad-items li.ad-removed small { color: #b3350c; }
+.ad-failed { display: flex; align-items: center; gap: 6px; margin: 8px 0 0; padding: 6px 10px; border-radius: 9px; background: #fdeee7; color: #b3350c; font-size: 12.5px; font-weight: 700; }
+.ad-fail { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; padding: 10px; border-radius: 11px; background: var(--ad-ground); font-size: 13px; }
 .ad-items small { font-size: 11.5px; color: var(--ad-muted); }
 .ad-qty-chip { flex: none; min-width: 30px; height: 26px; padding: 0 6px; border-radius: 8px; background: #fff; border: 1px solid var(--ad-line); display: grid; place-items: center; font-size: 12px; font-weight: 800; }
 .ad-bill { margin: 12px 0 0; padding-top: 10px; border-top: 1px dashed var(--ad-line); font-size: 13.5px; }
@@ -496,6 +514,8 @@ html.ad-lock { overflow: hidden; }
 .ad-timeline span { display: flex; flex-direction: column; }
 .ad-timeline b { font-size: 13.5px; font-weight: 700; }
 .ad-timeline small { font-size: 12px; color: var(--ad-muted); }
+.ad-timeline .ad-next b { color: var(--ad-muted); font-weight: 600; }
+.ad-timeline .ad-now small { color: var(--ad-green); font-weight: 700; }
 .ad-prod-hero { display: flex; align-items: center; gap: 14px; padding: 14px; background: #fff; border: 1px solid var(--ad-line); border-radius: 14px; }
 .ad-prod-hero .ad-thumb { width: 72px; height: 72px; border-radius: 14px; }
 .ad-prod-hero b { font-size: 20px; font-weight: 800; }
@@ -844,6 +864,7 @@ html.ad-lock { overflow: hidden; }
 .ad-order-items { font-size: 12.5px; color: var(--ad-muted); white-space: nowrap; }
 .ad-order-total { margin-left: auto; font-size: 15px; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .ad-order-promise, .ad-order-pay { font-size: 12.5px; color: var(--ad-muted); }
+.ad-order-promise.ad-due { display: inline-flex; align-items: center; gap: 5px; font-weight: 700; color: #0f5d86; }
 .ad-order-act { margin-left: auto; display: flex; align-items: center; gap: 8px; }
 .ad-late { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 700; color: #b3350c; background: #fdeee7; border: 1px solid #f6cdbc; padding: 3px 9px; border-radius: 999px; }
 
@@ -1183,3 +1204,106 @@ html.ad-lock { overflow: hidden; }
 .ad-cat-locked { display: flex; align-items: flex-start; gap: 8px; margin: 0; padding: 9px 12px; border-radius: 10px; background: #f3f6f8; font-size: 12.5px; color: var(--ad-muted); }
 .ad-cat-locked svg { flex: none; margin-top: 2px; }
 .ad-nowrap { white-space: nowrap; }
+/* The order drawer, read top to bottom - the Odoo desk's order dialog says
+   the same things in the same order (order_desk.xml .od2). */
+.ad-dsec h4 .hm-ic { color: var(--ad-muted); }
+.ad-ord-now { background: #f7fafc; }
+.ad-ord-steps { display: flex; list-style: none; margin: 0 0 10px; padding: 0; }
+.ad-ord-steps li { flex: 1; position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center; font-size: 12px; color: var(--ad-muted); }
+.ad-ord-steps li i { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #c9d6de; background: #fff; z-index: 1; }
+.ad-ord-steps li::before { content: ""; position: absolute; top: 6px; left: -50%; right: 50%; height: 2px; background: #d8e2e8; }
+.ad-ord-steps li:first-child::before { display: none; }
+.ad-ord-steps li b { font-weight: 700; }
+.ad-ord-steps li small { font-size: 11px; min-height: 14px; }
+.ad-ord-steps li.ad-done { color: var(--ad-ink); }
+.ad-ord-steps li.ad-done i { background: var(--ad-green); border-color: var(--ad-green); }
+.ad-ord-steps li.ad-done::before { background: var(--ad-green); }
+.ad-ord-steps li.ad-on i { background: var(--ad-blue); border-color: var(--ad-blue); box-shadow: 0 0 0 4px rgba(10, 120, 171, 0.18); }
+.ad-ord-status { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 13px; font-weight: 600; }
+.ad-ord-late { color: #c2410c; }
+.ad-ord-next { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed #d8e2e8; }
+.ad-ord-next > span { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ad-muted); }
+.ad-ord-who { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; }
+.ad-ord-who small { font-size: 12px; color: var(--ad-muted); }
+.ad-ord-name { display: inline-flex; align-items: center; gap: 3px; padding: 0; border: 0; background: none; font: inherit; font-size: 15px; font-weight: 800; color: var(--ad-blue); cursor: pointer; }
+.ad-ord-name:disabled { color: var(--ad-ink); cursor: default; }
+.ad-dsec .ad-risk-line { margin-top: 8px; }
+.ad-dsec .ad-cust-reach { margin-top: 8px; }
+.ad-ord-h5 { margin: 14px 0 4px; font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ad-muted); }
+.ad-ord-addr { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.ad-ord-addr > span { display: flex; flex-direction: column; gap: 2px; }
+.ad-ord-addr b { font-size: 13.5px; }
+.ad-ord-addr small { font-size: 12.5px; color: var(--ad-muted); }
+.ad-ord-addrpick { display: flex; flex-direction: column; gap: 6px; }
+.ad-ord-addrpick label { display: flex; gap: 8px; align-items: flex-start; padding: 8px 10px; border: 1px solid var(--ad-line); border-radius: 10px; cursor: pointer; }
+.ad-ord-addrpick label.ad-on { border-color: var(--ad-blue); background: #f3f9fd; }
+.ad-ord-addrpick span { display: flex; flex-direction: column; }
+.ad-ord-addrpick small { font-size: 12px; color: var(--ad-muted); }
+.ad-ord-line { margin: 8px 0 0; font-size: 13px; }
+.ad-ord-line b { display: inline-block; min-width: 96px; margin-right: 6px; font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ad-muted); }
+.ad-ord-gone { margin: 6px 0 0; font-size: 12px; color: var(--ad-muted); }
+.ad-ord-pay { display: flex; align-items: center; gap: 6px; margin: 10px 0 0; font-size: 13px; font-weight: 600; }
+.ad-ord-rider { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ad-ord-rider > span { font-size: 12px; font-weight: 700; color: var(--ad-muted); }
+.ad-ord-rider small { font-size: 12.5px; color: var(--ad-muted); }
+.ad-ord-history summary { cursor: pointer; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ad-muted); }
+.ad-ord-history[open] summary { margin-bottom: 10px; }
+.ad-ord-activity { list-style: none; margin: 0 0 10px; padding: 0; }
+.ad-ord-activity li { padding: 6px 0; border-bottom: 1px solid var(--ad-line); }
+.ad-ord-activity p { margin: 0; font-size: 12.5px; }
+.ad-ord-activity small { font-size: 11px; color: var(--ad-muted); }
+/* The Orders list, easy to read - grouped by the next step on "Needs me", the
+   name first, then order / type / items / age, then the facts (late, payment in
+   plain words, rider, failed tries); price and next step on the right. The Odoo
+   desk draws the same (order_desk.scss .od-row2). */
+.ad-order-group { list-style: none; }
+.ad-order-group > ul { list-style: none; margin: 0; padding: 0; }
+.ad-order-group > h3 { display: flex; align-items: center; gap: 8px; margin: 0; padding: 14px 16px 8px; font-size: 12px; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ad-muted); background: #f7fafc; border-bottom: 1px solid var(--ad-line); }
+.ad-order-group > h3 em { font-style: normal; padding: 1px 8px; border-radius: 999px; background: #e8eef2; color: var(--ad-ink); font-size: 11px; }
+.ad-order2-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.ad-order2-top { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; }
+.ad-order2-top b { font-size: 14.5px; font-weight: 800; }
+.ad-order2-top small { font-size: 12.5px; color: var(--ad-muted); }
+.ad-order2-top .ad-pill { padding: 1px 8px; font-size: 11px; }
+.ad-order2-sub { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; font-size: 12px; color: var(--ad-muted); }
+.ad-order2-facts { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; margin-top: 2px; }
+.ad-order2-pay { display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; font-weight: 600; color: var(--ad-green); }
+.ad-order2-cash { color: #8a5a12; }
+.ad-order2-side { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex: none; }
+.ad-order2-side b { font-size: 14.5px; }
+
+/* Reviews: clickable tiles, the report strip, chips on a row, and the drawer
+   (photos, reply, hide with a reason) - the Odoo Reviews desk's twin. */
+.ad-rev-tiles .ad-rev-tile { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 12px 14px; border: 1px solid var(--ad-line); border-radius: 14px; background: #fff; font: inherit; color: var(--ad-ink); text-align: left; cursor: pointer; }
+.ad-rev-tiles .ad-rev-tile small { font-size: 12px; color: var(--ad-muted); }
+.ad-rev-tiles .ad-rev-tile b { font-size: 22px; font-weight: 800; }
+.ad-rev-tiles .ad-rev-tile.ad-on { border-color: var(--ad-blue); box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.12); }
+.ad-rev-report { padding: 12px 16px; display: flex; flex-direction: column; gap: 6px; }
+.ad-rev-report p { margin: 0; font-size: 13px; }
+.ad-rev-report b { display: inline-block; min-width: 180px; margin-right: 8px; font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ad-muted); }
+.ad-reviews li.ad-rev-row { cursor: pointer; align-items: flex-start; }
+.ad-reviews li.ad-rev-row:hover { border-color: #c5d5df; background: #fbfdfe; }
+.ad-reviews li.ad-rev-row > .hm-ic { flex: none; margin-top: 10px; color: var(--ad-muted); }
+.ad-rev-who { display: block; margin-top: 2px; font-size: 12px; color: var(--ad-muted); }
+.ad-rev-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.ad-rev-chips:empty { display: none; }
+.ad-rev-chips .ad-pill, .ad-review-top .ad-pill { padding: 2px 9px; font-size: 11.5px; }
+.ad-rev-text { margin: 10px 0 6px; font-size: 14px; line-height: 1.5; white-space: pre-wrap; }
+.ad-rev-tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 6px; }
+.ad-rev-media { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.ad-rev-media li { display: flex; flex-direction: column; gap: 6px; padding: 8px; border: 1px solid var(--ad-line); border-radius: 12px; background: #fff; }
+.ad-rev-media img, .ad-rev-media video { width: 100%; height: 120px; object-fit: cover; border-radius: 8px; background: var(--ad-ground); }
+.ad-rev-media .ad-pill { align-self: flex-start; padding: 2px 8px; font-size: 11px; }
+.ad-rev-media-act { display: flex; gap: 6px; }
+.ad-rev-reply { width: 100%; margin-top: 8px; padding: 10px 12px; border: 1px solid var(--ad-line); border-radius: 11px; font: inherit; font-size: 13.5px; resize: vertical; outline: none; background: #fff; overscroll-behavior: contain; }
+.ad-rev-reply:focus { border-color: var(--ad-blue); }
+.ad-rev-reply-act { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 8px; }
+.ad-rev-reply-act small { margin-right: auto; font-size: 12px; color: var(--ad-muted); }
+.ad-rev-hide { display: inline-flex; align-items: center; gap: 6px; margin-right: auto; }
+/* Settings > Reviews: the blocked-words box sits under its label. */
+.ad-row-set.ad-row-tall { align-items: flex-start; }
+.ad-row-set.ad-row-tall .ad-row-txt { flex: 1; }
+.ad-row-set.ad-row-tall textarea { margin-top: 8px; }
+/* A narrow number box with a word after it ("MB", "sec", a currency) needs
+   more room on the right than a one-letter unit. */
+.ad-narrow:has(em) input { padding-right: 46px; }

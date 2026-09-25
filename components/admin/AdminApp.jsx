@@ -387,7 +387,9 @@ export default function AdminApp({ section: initial = "dashboard", onSection, on
   if (section === "dashboard") body = <Dashboard go={go} />;
   else if (section === "home") body = <HomeSection flash={flash} />;
   else if (section === "product-page") body = <ProductPageSection flash={flash} />;
-  else if (section === "orders") body = <OrdersSection openId={openId} setOpenId={setOpenId} query={orderQ} flash={flash} />;
+  else if (section === "orders") body = <OrdersSection openId={openId} setOpenId={setOpenId} query={orderQ} flash={flash}
+    onOpenCustomer={(id) => { setOpenId(null); go("customers"); history.replaceState(null, "", `/admin/customers?customer=${id}`); }}
+    onOpenTicket={(ref) => { setOpenId(ref); go("support"); }} />;
   else if (section === "returns") body = <ReturnsSection flash={flash} />;
   else if (section === "products") body = <ProductsSection key={"p" + seedQ.products} initialQ={seedQ.products} flash={flash} go={go} />;
   else if (section === "customers") body = <CustomersSection key={"c" + seedQ.customers} initialQ={seedQ.customers}

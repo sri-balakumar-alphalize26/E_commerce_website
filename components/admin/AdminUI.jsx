@@ -22,6 +22,7 @@ const EXTRA = {
   layers: <><path d="m12 3 9 5-9 5-9-5z" /><path d="m3 13 9 5 9-5" /></>,
   live: <><circle cx="12" cy="12" r="3" /><path d="M7.5 7.5a6.4 6.4 0 0 0 0 9M16.5 16.5a6.4 6.4 0 0 0 0-9M4.5 4.5a10.6 10.6 0 0 0 0 15M19.5 19.5a10.6 10.6 0 0 0 0-15" /></>,
   sort: <><path d="M7 4v15M3.5 15.5 7 19l3.5-3.5" /><path d="M17 20V5M13.5 8.5 17 5l3.5 3.5" /></>,
+  camera: <><path d="M4 8h3l2-2.5h6L17 8h3v11H4z" /><circle cx="12" cy="13" r="3.5" /></>,
 };
 
 export const Icon = ({ n, size = 20, className = "" }) =>
