@@ -48,6 +48,8 @@
                 <filter name="no_mobile" string="No mobile" domain="[('phone', '=', False)]"/>
                 <filter name="signed_up_week" string="Signed up this week"
                         domain="[('create_date', '&gt;=', (context_today() - relativedelta(days=7)).strftime('%Y-%m-%d'))]"/>
+                <filter name="signed_up_month" string="Signed up this month"
+                        domain="[('create_date', '&gt;=', (context_today() - relativedelta(days=30)).strftime('%Y-%m-%d'))]"/>
                 <separator/>
                 <filter name="archived" string="Archived" domain="[('active', '=', False)]"/>
                 <group>
@@ -135,8 +137,8 @@
                         </div>
                         <div t-if="record.mart369_status.raw_value == 'dormant'" class="o_mart369_nudge o_mart369_nudge_warm">
                             <i title="Quiet" class="fa fa-clock-o"/>
-                            <t t-if="record.phone.raw_value">Quiet for 60+ days. Call or message.</t>
-                            <t t-else="">Quiet for 60+ days. No mobile, email only.</t>
+                            <t t-if="record.phone.raw_value">Quiet for a long while. Call or message.</t>
+                            <t t-else="">Quiet for a long while. No mobile, email only.</t>
                         </div>
                         <footer class="o_mart369_card_foot">
                             <span>Since <field name="create_date" options="{'show_time': false}"/></span>

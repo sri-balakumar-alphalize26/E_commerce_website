@@ -94,7 +94,8 @@ class TestAdminSettingsRoutes(HttpCase):
         self.authenticate('admin', 'admin')
         body = self.url_open('/369mart/admin/settings').json()
         self.assertTrue(body['ok'])
-        self.assertEqual(set(body['settings']), {'store', 'alerts', 'pay'})
+        # other modules add groups of their own (mart369_auth: customers)
+        self.assertLessEqual({'store', 'alerts', 'pay'}, set(body['settings']))
         res = self.url_open('/369mart/admin/settings/alerts', data=json.dumps({'newOrder': False}),
                             headers={'Content-Type': 'application/json'}).json()
         self.assertTrue(res['ok'])

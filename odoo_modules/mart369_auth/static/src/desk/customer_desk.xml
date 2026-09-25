@@ -37,6 +37,10 @@
                           onChange="(v) => this.set('joined', v)"/>
                     <Pick value="state.wallet" options="WALLET" label="'Wallet'"
                           onChange="(v) => this.set('wallet', v)"/>
+                    <Pick t-if="state.allTags.length" value="state.tag" options="tagOptions" label="'Tag'"
+                          onChange="(v) => this.set('tag', v)"/>
+                    <Pick value="state.sort" options="SORTS" label="'Sort'" icon="'sort'"
+                          onChange="(v) => this.set('sort', v)"/>
                 </div>
 
                 <p t-if="state.error" class="pe-error" role="alert">
@@ -83,6 +87,10 @@
                                             <span>
                                                 <b t-esc="row.name"/>
                                                 <small t-if="row.joined">Joined <t t-esc="day(row.joined)"/></small>
+                                                <span t-if="row.tags and row.tags.length" class="cu-tags">
+                                                    <span t-foreach="row.tags" t-as="tag" t-key="tag.id"
+                                                          t-attf-class="mart-pill mart-t-{{ tone(tag) }}" t-esc="tag.name"/>
+                                                </span>
                                             </span>
                                         </span>
                                     </td>
@@ -92,9 +100,12 @@
                                     <td class="cu-num" t-esc="row.orders"/>
                                     <td class="cu-num cu-strong" t-esc="money(row.spent)"/>
                                     <td class="cu-num" t-esc="money(row.wallet)"/>
-                                    <td><small t-esc="ago(row.last)"/></td>
+                                    <td><small t-esc="ago(row.lastPlaced or row.last)"/></td>
                                     <td>
-                                        <span t-attf-class="mart-pill mart-t-{{ status(row)[1] }}" t-esc="status(row)[0]"/>
+                                        <span class="cu-pills">
+                                            <span t-foreach="badges(row)" t-as="badge" t-key="badge[0]"
+                                                  t-attf-class="mart-pill mart-t-{{ badge[1] }}" t-esc="badge[0]"/>
+                                        </span>
                                     </td>
                                 </tr>
                             </tbody>
@@ -120,7 +131,7 @@
                                     <t t-if="state.open.phone"> · <t t-esc="state.open.phone"/></t>
                                 </small>
                                 <small>
-                                    <t t-esc="state.open.area or 'No area'"/> · <t t-esc="status(state.open)[0]"/>
+                                    <t t-esc="state.open.area or 'No area'"/> · <t t-esc="badgeLine(state.open)"/>
                                 </small>
                             </div>
                             <button class="cu-x" aria-label="Close" t-on-click="() => this.close()">
@@ -128,11 +139,64 @@
                             </button>
                         </header>
 
+                        <!-- Reach them without copying the number. -->
+                        <div class="cu-reach">
+                            <a t-if="callHref" class="mart-btn" t-att-href="callHref">
+                                <Icon n="'phone'" size="14"/> Call
+                            </a>
+                            <span t-else="" class="mart-btn cu-off"><Icon n="'phone'" size="14"/> Call</span>
+                            <a t-if="waHref" class="mart-btn" t-att-href="waHref" target="_blank" rel="noopener">
+                                <Icon n="'chat'" size="14"/> WhatsApp
+                            </a>
+                            <span t-else="" class="mart-btn cu-off"><Icon n="'chat'" size="14"/> WhatsApp</span>
+                        </div>
+
+                        <!-- What support reads before picking up the phone. -->
+                        <p t-if="state.detail and state.detail.risk and (riskLine(state.detail.risk) or state.detail.risk.codOff)" class="cu-risk">
+                            <Icon n="'warn'" size="14"/>
+                            <span t-esc="riskLine(state.detail.risk)"/>
+                            <span t-if="state.detail.risk.codOff" class="mart-pill mart-t-red">COD off</span>
+                        </p>
+                        <div t-if="state.detail and state.detail.risk" class="cu-cod">
+                            <span><b>Cash on delivery</b><small>Off: this customer pays online only.</small></span>
+                            <Switch on="!state.detail.risk.codOff" label="'Cash on delivery for this customer'"
+                                    onChange="() => this.setCod(!state.detail.risk.codOff)"/>
+                        </div>
+
+                        <!-- Staff-only labels. Saved at once; Odoo's own contact tags. -->
+                        <h4>Tags</h4>
+                        <div class="cu-tagrow">
+                            <span t-foreach="currentTags()" t-as="tag" t-key="tag.id"
+                                  t-attf-class="mart-pill mart-t-{{ tone(tag) }} cu-tag">
+                                <t t-esc="tag.name"/>
+                                <button type="button" t-att-aria-label="'Remove ' + tag.name"
+                                        t-att-disabled="state.busy" t-on-click="() => this.removeTag(tag)">×</button>
+                            </span>
+                            <button t-if="!state.tagging" type="button" class="cu-tag-add"
+                                    t-on-click="() => { state.tagging = true; }">+ Add tag</button>
+                        </div>
+                        <div t-if="state.tagging" class="cu-tagpick">
+                            <input type="text" placeholder="Type a tag…" t-att-value="state.tagText"
+                                   t-on-input="(ev) => { state.tagText = ev.target.value; }"
+                                   t-on-keydown="onTagKey" autofocus="autofocus"/>
+                            <ul>
+                                <li t-foreach="tagChoices" t-as="tag" t-key="tag.id">
+                                    <button type="button" t-on-click="() => this.addTag(tag.name)" t-esc="tag.name"/>
+                                </li>
+                                <li t-if="tagIsNew">
+                                    <button type="button" class="cu-tag-new" t-on-click="() => this.addTag(state.tagText)">
+                                        + Create "<t t-esc="state.tagText.trim()"/>"
+                                    </button>
+                                </li>
+                                <li t-if="!tagChoices.length and !tagIsNew" class="cu-dim">Type a name to make a new tag.</li>
+                            </ul>
+                        </div>
+
                         <div class="cu-figs">
                             <span><small>Orders</small><b t-esc="state.open.orders"/></span>
                             <span><small>Spent</small><b t-esc="money(state.open.spent)"/></span>
                             <span><small>Wallet</small><b t-esc="money(state.open.wallet)"/></span>
-                            <span><small>Last order</small><b t-esc="ago(state.open.last)"/></span>
+                            <span><small>Last order</small><b t-esc="ago(state.open.lastPlaced or state.open.last)"/></span>
                         </div>
 
                         <!-- Every address the customer keeps, the default first - what
@@ -159,7 +223,67 @@
                             <p t-if="state.detail.removedAddresses" class="cu-dim">
                                 + <t t-esc="state.detail.removedAddresses"/> removed by the customer
                             </p>
+                            <button t-if="hasBooks()" type="button" class="cu-tag-add cu-addr-add"
+                                    t-on-click="() => this.addAddress()">+ Add address</button>
                         </t>
+
+                        <!-- Money into the wallet with a reason, as a reward. -->
+                        <div t-if="state.detail and state.detail.risk" class="cu-goodwill">
+                            <button t-if="!state.giving" type="button" class="cu-tag-add"
+                                    t-on-click="() => { state.giving = true; }">+ Goodwill credit</button>
+                            <t t-else="">
+                                <h4>Goodwill credit</h4>
+                                <div class="cu-goodwill-row">
+                                    <input type="text" inputmode="decimal" placeholder="Amount" t-att-value="state.giveAmount"
+                                           t-on-input="(ev) => this.setGiveAmount(ev.target.value)"/>
+                                    <input type="text" maxlength="120" placeholder="Reason, e.g. late delivery" t-att-value="state.giveReason"
+                                           t-on-input="(ev) => { state.giveReason = ev.target.value; }"/>
+                                </div>
+                                <span class="cu-note-edit-act">
+                                    <button class="mart-btn" t-on-click="() => { state.giving = false; }">Cancel</button>
+                                    <button class="mart-btn mart-btn-primary"
+                                            t-att-disabled="!canGive"
+                                            t-on-click="() => this.giveGoodwill()">Add to wallet</button>
+                                </span>
+                                <small class="cu-dim">The customer sees it in their wallet as "Goodwill credit", with your reason and name.</small>
+                            </t>
+                        </div>
+
+                        <!-- Only staff read these - never the customer. -->
+                        <h4>Staff notes</h4>
+                        <div class="cu-note-new">
+                            <textarea rows="2" maxlength="1000" placeholder="Write a note for the team…"
+                                      t-att-value="state.note"
+                                      t-on-input="(ev) => { state.note = ev.target.value; }"/>
+                            <button class="mart-btn mart-btn-primary" t-att-disabled="state.busy or !state.note.trim() or !state.detail"
+                                    t-on-click="() => this.addNote()">Add</button>
+                        </div>
+                        <p t-if="state.detail and state.detail.notes and !state.detail.notes.length" class="cu-dim">No notes yet.</p>
+                        <ul t-if="state.detail and state.detail.notes and state.detail.notes.length" class="cu-notes">
+                            <li t-foreach="state.detail.notes" t-as="n" t-key="n.id">
+                                <t t-if="state.editing === n.id">
+                                    <textarea class="cu-note-edit" rows="2" maxlength="1000" t-att-value="state.editText"
+                                              t-on-input="(ev) => { state.editText = ev.target.value; }"/>
+                                    <span class="cu-note-edit-act">
+                                        <button class="mart-btn" t-on-click="() => { state.editing = null; }">Cancel</button>
+                                        <button class="mart-btn mart-btn-primary" t-att-disabled="state.busy or !state.editText.trim()"
+                                                t-on-click="() => this.saveEdit(n)">Save</button>
+                                    </span>
+                                </t>
+                                <p t-else="" t-esc="n.text"/>
+                                <small>
+                                    <t t-esc="n.author"/> · <t t-esc="ago(n.at)"/>
+                                    <button t-if="n.mine and state.editing !== n.id" type="button" class="cu-note-del cu-note-pen" aria-label="Edit note"
+                                            t-att-disabled="state.busy" t-on-click="() => this.startEdit(n)">
+                                        <Icon n="'pen'" size="13"/>
+                                    </button>
+                                    <button t-if="n.mine" type="button" class="cu-note-del" aria-label="Delete note"
+                                            t-att-disabled="state.busy" t-on-click="() => this.deleteNote(n)">
+                                        <Icon n="'trash'" size="13"/>
+                                    </button>
+                                </small>
+                            </li>
+                        </ul>
 
                         <h4>Recent orders</h4>
                         <p t-if="!state.detail" class="pe-loading">Loading...</p>

@@ -44,6 +44,8 @@ not try to do.
         'mart369',
         'mart369_cart',
         'mart369_payment',
+        # Riders are staff with the Rider role; an order is given to one.
+        'mart369_roles',
         'stock',
         'account',
     ],

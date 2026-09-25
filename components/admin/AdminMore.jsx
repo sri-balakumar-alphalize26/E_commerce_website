@@ -3,6 +3,7 @@
    369 Mart admin — Offers · Reviews · Settings
    ========================================================================== */
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { api } from "@/lib/api";
 import { money } from "@/lib/money";
 import { useAction, useResource } from "@/lib/useFetch";
@@ -762,6 +763,59 @@ export function ReviewsSection({ flash }) {
    really decides it - the company, Odoo's payment providers, the shared
    settings record - so there is no second copy here to drift from them. What
    lives where is written down on the server, in mart369/models/settings_admin.py. */
+/* The usual choices for "New for" and "Dormant after"; anything else is
+   Custom, asked for in a small popup. A saved number that is not one of these
+   is listed too, marked custom, so the box shows what is really set. */
+const DAY_PRESETS = [15, 30, 45, 60, 90, 120, 150];
+
+function DaysField({ label, value, onChange, prompt }) {
+  const [asking, setAsking] = useState(false);
+  const days = DAY_PRESETS.includes(value) || !value ? DAY_PRESETS : [...DAY_PRESETS, value].sort((a, b) => a - b);
+  const options = [
+    ...days.map((d) => [String(d), DAY_PRESETS.includes(d) ? `${d} days` : `${d} days (custom)`]),
+    ["custom", "Custom…"],
+  ];
+  return (
+    /* A div, not a label: the popup is a portal, and React bubbles its clicks
+       up here - a label would pass them on to the dropdown and reopen it. */
+    <div className="ad-field">
+      <span>{label}</span>
+      <Select value={String(value)} options={options} label={label}
+        onChange={(v) => (v === "custom" ? setAsking(true) : onChange(Number(v)))} />
+      {asking && <DaysPrompt title={prompt} value={value} onCancel={() => setAsking(false)}
+        onDone={(d) => { onChange(d); setAsking(false); }} />}
+    </div>
+  );
+}
+
+function DaysPrompt({ title, value, onCancel, onDone }) {
+  const [text, setText] = useState(String(value || ""));
+  const days = Number(text);
+  const ok = Number.isInteger(days) && days >= 1 && days <= 3650;
+  if (typeof document === "undefined") return null;
+  return createPortal(
+    <div className="ad-modal-wrap" onClick={onCancel}>
+      <div className="ad-modal ad-days" role="dialog" aria-modal="true" aria-label={title} onClick={(e) => e.stopPropagation()}>
+        <span className="ad-modal-ic"><Icon n="clock" size={22} /></span>
+        <h3>{title}</h3>
+        <label className="ad-field ad-days-in">
+          <span className="ad-field-in">
+            <input autoFocus inputMode="numeric" value={text} placeholder="e.g. 21" aria-label="Days"
+              onChange={(e) => setText(e.target.value.replace(/\D/g, ""))}
+              onKeyDown={(e) => { if (e.key === "Enter" && ok) onDone(days); if (e.key === "Escape") onCancel(); }} />
+            <em>days</em>
+          </span>
+        </label>
+        <div>
+          <button type="button" className="ad-btn" onClick={onCancel}>Cancel</button>
+          <button type="button" className="ad-btn ad-primary" disabled={!ok} onClick={() => onDone(days)}>Use this</button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 function Field({ label, value, onChange, suffix, wide, type = "text", placeholder }) {
   return (
     <label className={"ad-field" + (wide ? " ad-span2" : "")}>
@@ -830,7 +884,7 @@ export function SettingsSection({ flash }) {
     <div className="ad-stack">
       <section className="ad-card">
         <div className="ad-toolbar">
-          <Tabs value={tab} onChange={(t) => { setTab(t); setErr(""); }} tabs={[["store", "Store"], ...(pay ? [["payments", "Payments"]] : []), ["alerts", "Alerts"]]} />
+          <Tabs value={tab} onChange={(t) => { setTab(t); setErr(""); }} tabs={[["store", "Store"], ...(pay ? [["payments", "Payments"]] : []), ...(draft.customers ? [["customers", "Customers"]] : []), ["alerts", "Alerts"]]} />
           <div className="ad-toolbar-right">
             {dirty && <span className="ad-dim">Unsaved changes</span>}
             <button className="ad-btn" disabled={!dirty || busy} onClick={() => { setDraft(saved); setErr(""); }}>Reset</button>
@@ -883,6 +937,18 @@ export function SettingsSection({ flash }) {
               </div>
             )}
             <p className="ad-hint"><Icon n="info" size={14} />These are Odoo's payment providers — the checkout offers exactly what is switched on here.{pay.more ? ` ${pay.more} more are switched off and set up in Odoo.` : ""}</p>
+          </div>
+        )}
+
+        {/* How long a customer is New, and when a quiet one turns Dormant.
+            Saving updates every customer's badge at once. */}
+        {tab === "customers" && draft.customers && (
+          <div className="ad-form ad-form-pad">
+            <DaysField label="New for" value={draft.customers.newDays}
+              onChange={set("customers", "newDays")} prompt="New for how many days?" />
+            <DaysField label="Dormant after, without a sign-in" value={draft.customers.dormantDays}
+              onChange={set("customers", "dormantDays")} prompt="Dormant after how many days?" />
+            <p className="ad-hint ad-span2"><Icon n="info" size={14} />A customer is New for this many days after signing up, then Active. Saving updates every customer's badge straight away.</p>
           </div>
         )}
 

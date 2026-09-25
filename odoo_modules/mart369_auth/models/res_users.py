@@ -17,8 +17,6 @@ from odoo.exceptions import ValidationError
 
 AMBIGUOUS = object()
 
-NEW_DAYS = 7        # signed up this recently -> "New"
-DORMANT_DAYS = 60   # no sign-in for this long -> "Dormant"
 
 STATUSES = [
     ('new', 'New'),
@@ -44,8 +42,9 @@ class ResUsers(models.Model):
     mart369_status = fields.Selection(
         STATUSES, string='Customer status', default='new', index=True, copy=False,
         group_expand='_mart369_expand_status',
-        help="New: signed up in the last 7 days. Dormant: no sign-in for 60 days. "
-             "Archived: sign-in blocked. Everyone else is Active.")
+        help="New: signed up recently. Dormant: no sign-in for a long while - "
+             "both set in Settings > Customers. Archived: sign-in blocked. "
+             "Everyone else is Active.")
 
     mart369_currency_id = fields.Many2one(
         'res.currency', compute='_compute_mart369_orders', string='Order currency')
@@ -91,23 +90,43 @@ class ResUsers(models.Model):
             keys.append('archived')
         return keys
 
-    def _mart369_status_for(self, now):
+    @api.model
+    def _mart369_status_days(self):
+        """(new, dormant): how many days a customer is New for, and after how
+        many days without a sign-in they are Dormant - Settings > Customers."""
+        config = self.env['mart369.config'].sudo()._get()
+        return config.customer_new_days or 30, config.customer_dormant_days or 90
+
+    def _mart369_status_for(self, now, days=None):
         self.ensure_one()
+        new_days, dormant_days = days or self._mart369_status_days()
         if not self.active:
             return 'archived'
-        if self.create_date and self.create_date >= now - timedelta(days=NEW_DAYS):
+        if self.create_date and self.create_date >= now - timedelta(days=new_days):
             return 'new'
         seen = self.login_date or self.create_date
-        if seen and seen < now - timedelta(days=DORMANT_DAYS):
+        if seen and seen < now - timedelta(days=dormant_days):
             return 'dormant'
         return 'active'
+
+    def _mart369_new_days_left(self, now=None, days=None):
+        """Whole days until a New customer turns Active: 1 on the last day,
+        None for anyone who is not New."""
+        self.ensure_one()
+        if self.mart369_status != 'new' or not self.create_date:
+            return None
+        new_days = (days or self._mart369_status_days())[0]
+        ends = self.create_date + timedelta(days=new_days)
+        seconds = (ends - (now or fields.Datetime.now())).total_seconds()
+        return max(1, -(-int(seconds) // 86400))
 
     def _mart369_refresh_status(self):
         """Recompute the status, writing only the accounts that changed."""
         now = fields.Datetime.now()
+        days = self._mart369_status_days()
         changed = {}
         for user in self.with_context(active_test=False).filtered('share'):
-            status = user._mart369_status_for(now)
+            status = user._mart369_status_for(now, days)
             if user.mart369_status != status:
                 changed.setdefault(status, self.browse())
                 changed[status] |= user
@@ -233,7 +252,7 @@ class ResUsers(models.Model):
         base = [('share', '=', True)] + ([('id', '!=', public.id)] if public else [])
         live = Users.search(base + [('active', '=', True)])
         archived = Users.search_count(base + [('active', '=', False)])
-        new_week = live.filtered(lambda u: u.create_date and u.create_date >= now - timedelta(days=NEW_DAYS))
+        new_week = live.filtered(lambda u: u.mart369_status == 'new')
         with_mobile = live.filtered('phone')
         ordered = 0
         if live and 'sale.order' in self.env:
@@ -256,6 +275,9 @@ class ResUsers(models.Model):
             'total': total,
             'archived': archived,
             'new_week': len(new_week),
+            # Settings > Customers, so the strip can say what New and Dormant mean.
+            'new_days': self._mart369_status_days()[0],
+            'dormant_days': self._mart369_status_days()[1],
             'dormant': len(live.filtered(lambda u: u.mart369_status == 'dormant')),
             'ordered_30': ordered,
             'ordered_pct': round(ordered * 100 / total) if total else 0,

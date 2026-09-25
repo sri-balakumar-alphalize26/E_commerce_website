@@ -9,3 +9,6 @@ from . import test_returns_admin
 from . import test_invoicing
 
 from . import test_order_address
+from . import test_customer_last_placed
+from . import test_customer_profile
+from . import test_customer_risk

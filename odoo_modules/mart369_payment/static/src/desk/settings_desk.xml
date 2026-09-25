@@ -86,6 +86,26 @@
                             </p>
                         </div>
 
+                        <!-- Customers: how long New lasts, when Dormant starts. -->
+                        <div t-if="state.tab === 'customers' and state.draft.customers" class="st-form">
+                            <div class="st-field">
+                                <span>New for</span>
+                                <Pick label="'New for'" value="dayValue('newDays')"
+                                      options="dayOptions('newDays')" disabled="state.busy"
+                                      onChange="(v) => this.pickDays('newDays', v, 'New for how many days?')"/>
+                            </div>
+                            <div class="st-field">
+                                <span>Dormant after, without a sign-in</span>
+                                <Pick label="'Dormant after'" value="dayValue('dormantDays')"
+                                      options="dayOptions('dormantDays')" disabled="state.busy"
+                                      onChange="(v) => this.pickDays('dormantDays', v, 'Dormant after how many days?')"/>
+                            </div>
+                            <p class="st-hint st-span2">
+                                <Icon n="'info'" size="14"/>
+                                <span>A customer is New for this many days after signing up, then Active. Saving updates every customer's badge straight away.</span>
+                            </p>
+                        </div>
+
                         <!-- Alerts: the shared settings record. -->
                         <div t-if="state.tab === 'alerts'" class="st-rows">
                             <div t-foreach="ALERTS" t-as="a" t-key="a.key" class="st-row">
@@ -110,6 +130,24 @@
 
             </div>
         </Layout>
+    </t>
+
+    <!-- A custom number of days for New or Dormant. -->
+    <t t-name="mart369_payment.DaysDialog">
+        <Dialog size="'sm'" title="props.title">
+            <label class="d-block">
+                <span class="form-label d-block mb-1">Days</span>
+                <input type="text" class="form-control" inputmode="numeric" autofocus="autofocus" t-att-value="state.value"
+                       placeholder="e.g. 21"
+                       t-on-input="(ev) => this.edit(ev)"
+                       t-on-keydown="(ev) => ev.key === 'Enter' and this.save()"/>
+            </label>
+            <t t-set-slot="footer">
+                <button class="mart-btn mart-btn-primary" t-att-disabled="!canSave"
+                        t-on-click="() => this.save()">Use this</button>
+                <button class="mart-btn" t-on-click="() => this.props.close()">Cancel</button>
+            </t>
+        </Dialog>
     </t>
 
 </templates>

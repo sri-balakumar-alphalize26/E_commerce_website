@@ -52,8 +52,9 @@ class TestAdminCustomerList(TransactionCase, _Customers):
 
     def test_row_carries_what_the_table_draws(self):
         row = self.meera._mart369_admin_row({})
-        self.assertEqual(set(row), {'id', 'name', 'email', 'phone', 'area', 'orders',
-                                    'spent', 'wallet', 'last', 'joined', 'status'})
+        # Other modules add to the row (mart369_address: addressCount).
+        self.assertLessEqual({'id', 'name', 'email', 'phone', 'area', 'orders', 'spent',
+                              'wallet', 'last', 'joined', 'status', 'newDaysLeft', 'lastPlaced'}, set(row))
         self.assertEqual(row['area'], 'Kakkanad')
 
     def test_only_storefront_accounts(self):

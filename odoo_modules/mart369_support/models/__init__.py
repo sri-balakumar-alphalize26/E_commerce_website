@@ -6,3 +6,4 @@ from . import ticket_admin
 from . import whatsapp
 from . import sale_order
 from . import support_board
+from . import customer_tickets

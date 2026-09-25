@@ -17,6 +17,8 @@ import { standardActionServiceProps } from "@web/webclient/actions/action_servic
 import { Icon } from "@mart369/ui/icon";
 import { Tabs } from "@mart369/ui/tabs";
 import { Switch } from "@mart369/ui/switch";
+import { Pick } from "@mart369/ui/pick";
+import { Dialog } from "@web/core/dialog/dialog";
 
 const MODEL = "mart369.config";
 
@@ -69,15 +71,55 @@ function money(amount, currency) {
 
 const copy = (v) => JSON.parse(JSON.stringify(v));
 
+// The usual choices for "New for" and "Dormant after"; anything else is Custom.
+const DAY_PRESETS = [15, 30, 45, 60, 90, 120, 150];
+
+/** Custom number of days, asked for in a small dialog. */
+export class DaysDialog extends Component {
+    static template = "mart369_payment.DaysDialog";
+    static components = { Dialog };
+    static props = {
+        close: { type: Function },
+        title: { type: String },
+        value: { type: Number },
+        onSave: { type: Function },
+    };
+
+    setup() {
+        this.state = useState({ value: String(this.props.value || "") });
+    }
+
+    get days() {
+        return Number(this.state.value);
+    }
+
+    get canSave() {
+        return Number.isInteger(this.days) && this.days >= 1 && this.days <= 3650;
+    }
+
+    edit(ev) {
+        this.state.value = ev.target.value.replace(/\D/g, "");
+    }
+
+    save() {
+        if (!this.canSave) {
+            return;
+        }
+        this.props.onSave(this.days);
+        this.props.close();
+    }
+}
+
 export class SettingsDesk extends Component {
     static template = "mart369_payment.SettingsDesk";
-    static components = { Layout, Icon, Tabs, Switch };
+    static components = { Layout, Icon, Tabs, Switch, Pick };
     static props = { ...standardActionServiceProps };
 
     setup() {
         this.orm = useService("orm");
         this.action = useService("action");
         this.notification = useService("notification");
+        this.dialog = useService("dialog");
 
         this.STORE_FIELDS = STORE_FIELDS;
         this.ALERTS = ALERTS;
@@ -128,6 +170,10 @@ export class SettingsDesk extends Component {
         if (this.state.saved?.pay) {
             tabs.push(["payments", _t("Payments"), null]);
         }
+        // Added by mart369_auth: how long New lasts, when Dormant starts.
+        if (this.state.saved?.customers) {
+            tabs.push(["customers", _t("Customers"), null]);
+        }
         tabs.push(["alerts", _t("Alerts"), null]);
         return tabs;
     }
@@ -147,6 +193,38 @@ export class SettingsDesk extends Component {
 
     setField(group, key, value) {
         this.state.draft[group][key] = value;
+    }
+
+    /** The day choices as Pick takes them. A saved number that is not one of
+     *  the usual ones is listed too, marked custom, so it shows as chosen. */
+    dayOptions(key) {
+        const current = this.state.draft.customers[key];
+        const days = DAY_PRESETS.includes(current) || !current
+            ? DAY_PRESETS
+            : [...DAY_PRESETS, current].sort((a, b) => a - b);
+        return [
+            ...days.map((d) => [String(d), DAY_PRESETS.includes(d) ? _t("%s days", d) : _t("%s days (custom)", d)]),
+            ["custom", _t("Custom…")],
+        ];
+    }
+
+    /** The Pick takes strings; the setting is a number. */
+    dayValue(key) {
+        return String(this.state.draft.customers[key]);
+    }
+
+    pickDays(key, value, title) {
+        if (value !== "custom") {
+            this.state.draft.customers[key] = Number(value);
+            return;
+        }
+        this.dialog.add(DaysDialog, {
+            title,
+            value: this.state.draft.customers[key],
+            onSave: (days) => {
+                this.state.draft.customers[key] = days;
+            },
+        });
     }
 
     setCod(value) {

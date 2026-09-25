@@ -29,6 +29,7 @@ SORTS = {
     'old': 'create_date asc, id asc',
     'seen': 'login_date desc, id desc',
     'name': 'name asc, id asc',
+    'name_desc': 'name desc, id desc',
 }
 
 
@@ -47,6 +48,33 @@ class ResUsers(models.Model):
         return domain
 
     @api.model
+    def _mart369_admin_last_placed(self, partners):
+        """{commercial partner id: when they last placed an order}, in one
+        grouped read.
+
+        Placed, not confirmed: a cash-on-delivery order is placed long before
+        anyone confirms it, and a customer who has just ordered must not read
+        as "Not ordered yet". Unpaid online orders (`draft`) and cancelled ones
+        do not count. Empty without the orders module - mart369_auth does not
+        depend on it.
+        """
+        if 'sale.order' not in self.env or not partners:
+            return {}
+        Order = self.env['sale.order'].sudo()
+        if 'mart369_placed_at' not in Order._fields:
+            return {}
+        groups = Order._read_group(
+            [('partner_id', 'child_of', partners.ids),
+             ('mart369_placed_at', '!=', False),
+             ('mart369_state', 'not in', ('draft', 'cancelled'))],
+            groupby=['partner_id'], aggregates=['mart369_placed_at:max'])
+        out = {}
+        for partner, last in groups:
+            key = partner.commercial_partner_id.id
+            if last and (key not in out or last > out[key]):
+                out[key] = last
+        return out
+
     def _mart369_admin_wallets(self, partners=None):
         """{commercial partner id: wallet balance}, in one grouped read.
 
@@ -109,12 +137,13 @@ class ResUsers(models.Model):
         users = self.search(domain, limit=limit, offset=offset,
                             order=SORTS.get(sort or 'new', SORTS['new']))
         wallets = self._mart369_admin_wallets(users.partner_id.commercial_partner_id)
+        placed = self._mart369_admin_last_placed(users.partner_id.commercial_partner_id)
         base = self._mart369_admin_base()
         counts = {'all': self.search_count(base)}
         for key in TABS[1:]:
             counts[key] = self.search_count(base + [('mart369_status', '=', key)])
         return {
-            'rows': [u._mart369_admin_row(wallets) for u in users],
+            'rows': [u._mart369_admin_row(wallets, placed=placed) for u in users],
             'total': self.search_count(domain),
             'limit': limit,
             'offset': offset,
@@ -131,12 +160,15 @@ class ResUsers(models.Model):
         names = {p.city or p.street2 for p in users.partner_id if p.city or p.street2}
         return sorted(names, key=str.lower)
 
-    def _mart369_admin_row(self, wallets=None):
+    def _mart369_admin_row(self, wallets=None, placed=None):
         """One line of the list. Everything the row draws, and nothing more."""
         self.ensure_one()
         partner = self.partner_id
         if wallets is None:
             wallets = self._mart369_admin_wallets(partner.commercial_partner_id)
+        if placed is None:
+            placed = self._mart369_admin_last_placed(partner.commercial_partner_id)
+        last_placed = placed.get(partner.commercial_partner_id.id)
         last = self.mart369_last_order_date
         return {
             'id': self.id,
@@ -150,6 +182,11 @@ class ResUsers(models.Model):
             'last': int(last.timestamp() * 1000) if last else None,
             'joined': int(self.create_date.timestamp() * 1000) if self.create_date else None,
             'status': self.mart369_status or 'active',
+            # How long a New customer stays New - the badge says so.
+            'newDaysLeft': self._mart369_new_days_left(),
+            # When they last placed an order - what the badge's "ordered 2 d
+            # ago" and a New customer's Active / Not ordered yet read.
+            'lastPlaced': int(last_placed.timestamp() * 1000) if last_placed else None,
         }
 
     @api.model

@@ -119,6 +119,25 @@ class Mart369OrderFixtures(Mart369PaymentFixtures):
         tx._post_process()
         return tx
 
+    def _cash(self, order):
+        """A cash-on-delivery payment the way /pay makes one: pending until
+        the door."""
+        cod = self.env.ref('delivery.payment_provider_cod').sudo()
+        cod.write({'state': 'test'})
+        tx = self.env['payment.transaction'].sudo().create({
+            'provider_id': cod.id,
+            'payment_method_id': cod.payment_method_ids[:1].id,
+            'partner_id': self.partner.id,
+            'amount': order.amount_total,
+            'currency_id': order.currency_id.id,
+            'operation': 'online_direct',
+            'mart369_kind': 'order',
+            'mart369_order_ref': order.mart369_ref,
+        })
+        tx._set_pending()
+        tx._post_process()
+        return tx
+
 
 class Mart369OrderCase(Mart369OrderFixtures, TransactionCase):
     pass

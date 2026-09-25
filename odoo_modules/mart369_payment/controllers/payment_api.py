@@ -430,6 +430,11 @@ class Mart369PaymentApi(http.Controller):
                 method, self._me(), payable, currency,
                 order=self._order(body.get('order_ref')) or None)
             if not provider:
+                me = self._me().commercial_partner_id
+                if method == 'cod' and 'mart369_cod_off' in me._fields and me.mart369_cod_off:
+                    # Switched off for this customer by staff (mart369_order).
+                    return self._fail(_(
+                        "Cash on delivery isn't available on this account. Please pay online."), 'method')
                 if method == 'cod':
                     return self._fail(_(
                         "Cash on delivery is available on orders up to %s.",

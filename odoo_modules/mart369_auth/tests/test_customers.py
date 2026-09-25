@@ -2,7 +2,7 @@ from datetime import timedelta
 from unittest.mock import patch
 
 from odoo import fields
-from odoo.exceptions import ValidationError
+from odoo.exceptions import UserError, ValidationError
 from odoo.tests import TransactionCase, tagged
 
 
@@ -29,9 +29,9 @@ class TestMart369Customers(TransactionCase):
         self.meera._mart369_refresh_status()
         self.assertEqual(self.meera.mart369_status, 'new')
 
-        self._age(self.meera, 30)
+        self._age(self.meera, 45)
         self.meera._mart369_refresh_status()
-        self.assertEqual(self.meera.mart369_status, 'active')
+        self.assertEqual(self.meera.mart369_status, 'active', 'New lasts 30 days by default')
 
         self._age(self.joseph, 120)
         self.joseph._mart369_refresh_status()
@@ -41,6 +41,30 @@ class TestMart369Customers(TransactionCase):
         self.assertEqual(self.joseph.mart369_status, 'archived')
         self.joseph.action_unarchive()
         self.assertEqual(self.joseph.mart369_status, 'dormant')
+
+    def test_the_days_come_from_settings_and_apply_at_once(self):
+        config = self.env['mart369.config']._get()
+        config.write({'customer_new_days': 30, 'customer_dormant_days': 90})
+        self._age(self.meera, 20)
+        self._age(self.joseph, 70)
+        (self.meera | self.joseph)._mart369_refresh_status()
+        self.assertEqual(self.meera.mart369_status, 'new')
+        self.assertEqual(self.meera._mart369_new_days_left(), 10, '30 days, 20 gone')
+        self.assertEqual(self.joseph.mart369_status, 'active', '70 quiet days is not yet 90')
+        self.assertIsNone(self.joseph._mart369_new_days_left())
+
+        # Saving from the Settings screen recomputes everyone there and then.
+        Config = self.env['mart369.config']
+        Config.mart369_admin_save('customers', {'newDays': 14, 'dormantDays': 60})
+        self.assertEqual(self.meera.mart369_status, 'active', 'New for 14 days: 20 is past it')
+        self.assertEqual(self.joseph.mart369_status, 'dormant', 'quiet 70 days, Dormant after 60')
+        self.assertEqual(Config.mart369_admin_settings()['customers'], {'newDays': 14, 'dormantDays': 60})
+
+        with self.assertRaises(UserError):
+            Config.mart369_admin_save('customers', {'newDays': 0})
+
+        row = self.meera._mart369_admin_row()
+        self.assertIn('newDaysLeft', row)
 
     def test_mobile_is_checked_and_normalised(self):
         self.meera.phone = '98470 21536'

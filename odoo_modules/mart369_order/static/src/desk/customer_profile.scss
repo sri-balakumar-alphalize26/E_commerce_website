@@ -1,0 +1,137 @@
+// The customer profile page. Tags, notes, address cards, figures and the
+// reach buttons come from the Customers desk's own styles (mart369_auth
+// customer_desk.scss, under `.mart-builder.cu`); only the page is drawn here.
+.o_mart369_desk .mart-builder.cu.cu-prof {
+    display: block;
+    height: auto;
+    overflow: auto;
+    padding-bottom: 24px;
+
+    h4 {
+        margin: 0 0 10px;
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+        color: var(--cu-muted);
+    }
+
+    .cu-prof-top {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 12px;
+
+        .mart-btn { display: inline-flex; align-items: center; gap: 6px; }
+    }
+
+    .cu-prof-card {
+        margin-bottom: 14px;
+        padding: 16px;
+        background: #fff;
+        border: 1px solid var(--cu-line);
+        border-radius: 16px;
+    }
+
+    .cu-prof-head {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 18px;
+    }
+
+    .cu-prof-who {
+        flex: 1;
+        min-width: 220px;
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+
+        h2 { margin: 0 0 2px; font-size: 22px; font-weight: 800; }
+        small { font-size: 13px; color: var(--cu-muted); }
+        .cu-pills { margin-top: 6px; }
+    }
+
+    .cu-prof-risk {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 8px;
+        padding: 12px;
+
+        .cu-prof-hint { grid-column: 1 / -1; margin: 2px 4px 0; font-size: 12.5px; }
+    }
+
+    .cu-risk-tile {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 10px 12px;
+        border: 1px solid var(--cu-line);
+        border-radius: 12px;
+
+        small { font-size: 11.5px; color: var(--cu-muted); }
+        b { font-size: 18px; font-weight: 800; }
+    }
+
+    .cu-risk-warn { border-color: #f3dcb4; background: #fffaf0; b { color: var(--cu-amber); } }
+    .cu-risk-bad { border-color: #f4c5c0; background: #fff5f4; b { color: #c8433a; } }
+    .cu-risk-cod > span { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+
+    .cu-prof-figs {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        margin-bottom: 14px;
+
+        span { background: #fff; }
+    }
+
+    .cu-prof-wallet {
+        position: relative;
+
+        .cu-tag-add { position: absolute; top: 8px; right: 8px; }
+    }
+
+    .cu-goodwill-row input:last-of-type { flex: 1; }
+
+    .cu-prof-grid {
+        display: grid;
+        grid-template-columns: minmax(280px, 380px) minmax(0, 1fr);
+        gap: 14px;
+        align-items: start;
+    }
+
+    .cu-prof-table { width: 100%; }
+    .cu-nowrap { white-space: nowrap; }
+    .cu-prof-in { color: #0f6b3d; }
+
+    .cu-prof-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+
+        li > button, li > div {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 6px;
+            border: 0;
+            border-bottom: 1px solid var(--cu-line);
+            background: none;
+            text-align: left;
+            font: inherit;
+            color: var(--cu-ink);
+        }
+
+        li:last-child > button, li:last-child > div { border-bottom: 0; }
+        li > button { cursor: pointer; border-radius: 8px; }
+        li > button:hover { background: var(--cu-ground); }
+        li > * > span:first-child { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+        b { font-size: 13.5px; }
+        small { font-size: 12px; color: var(--cu-muted); }
+    }
+
+    @media (max-width: 1000px) {
+        .cu-prof-grid { grid-template-columns: minmax(0, 1fr); }
+        .cu-prof-risk { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        .cu-prof-figs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+}

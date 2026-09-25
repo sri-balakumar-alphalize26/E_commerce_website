@@ -26,10 +26,10 @@
                 </span>
             </button>
             <button type="button" class="o_mart369_kpi" t-on-click="() => this.applyFilter('status_new')"
-                    title="Show customers who signed up this week">
+                    t-attf-title="Show customers who signed up in the last {{ d.new_days }} days">
                 <span class="o_mart369_tile o_mart369_tile_orange"><Icon n="'star'" size="14"/></span>
                 <span class="o_mart369_kpi_txt">
-                    <small>New this week</small>
+                    <small>New customers</small>
                     <strong t-out="d.new_week"/>
                     <span class="o_mart369_bars" aria-label="Sign-ups over the last 14 days">
                         <t t-foreach="bars" t-as="b" t-key="b.day">
@@ -63,7 +63,7 @@
                 <span class="o_mart369_kpi_txt">
                     <small>Dormant</small>
                     <strong t-out="d.dormant"/>
-                    <span>no sign-in for 60 days</span>
+                    <span>no sign-in for <t t-out="d.dormant_days"/> days</span>
                 </span>
             </button>
         </div>
