@@ -57,6 +57,11 @@ to, and a flag when the two disagree. Open one to see the full ledger.
 Both screens use `mart369_auth`'s stylesheet, so they and the Customers screen are
 one design.
 
+**369 Mart → Settings** draws every group the shop's settings hand it: Store,
+Payments (this module), Alerts, and **Customers** when `mart369_auth` is
+installed - how many days a customer is New, and when a quiet one turns Dormant.
+See `mart369_auth`'s README.
+
 ## The API
 
 Called by the storefront's own server, not the browser. All `auth='user'`.

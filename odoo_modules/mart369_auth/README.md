@@ -12,7 +12,7 @@ See who has signed up under **369 Mart → Customers**.
 
 Styled like the storefront (navy / ocean blue / orange, rounded cards, pill buttons).
 
-- **List** (default): a numbers strip on top — customers, new this week (with a
+- **List** (default): a numbers strip on top — customers, new customers (with a
   14-day sign-up chart), ordered in 30 days, mobile on file, dormant. Click a tile
   to filter. One row per customer: avatar, name, email, mobile, city, signed up,
   last sign-in, orders, spent, status.
@@ -28,8 +28,43 @@ Styled like the storefront (navy / ocean blue / orange, rounded cards, pill butt
 ![A customer profile](static/description/customer_profile.png)
 ![Password & access](static/description/customer_password.png)
 
-Status: *New* = signed up in the last 7 days, *Dormant* = no sign-in for 60 days,
-*Archived* = sign-in blocked, everyone else *Active*. Refreshed at every sign-in
+Status: *New* = signed up in the last 30 days, *Dormant* = no sign-in for 90 days,
+*Archived* = sign-in blocked, everyone else *Active*. Both numbers are set in
+**Settings → Customers**, and saving them recomputes every customer at once. A
+New customer's badge says how long it has left: "New · 12 days left".
+
+A New customer has a second badge: **Active · ordered 2 h ago** once they have
+placed an order, **Not ordered yet** until then. Every Active and Dormant badge
+says when the customer last ordered ("Active · ordered 3 d ago", "Dormant ·
+no orders"), and so does the Last order column. *Placed* counts: a
+cash-on-delivery order counts before anyone confirms it; an unpaid online
+order or a cancelled one does not.
+
+![The Customers desk: days left, and ordered or not](static/description/customers_new_days_left.png)
+![The same in the web admin](static/description/web_admin_customers_days_left.png)
+
+**Demo customers for Dormant.** `tools/seed_demo_customers.py` adds five
+long-quiet customers - back-dated sign-up, last sign-in and (with the orders
+module) orders placed months ago - so the Dormant tab has something to show:
+
+    "C:\Program Files\Odoo 19.0.20260119\python\python.exe" odoo-bin shell ^
+        -c odoo.conf -d <db> --no-http < tools/seed_demo_customers.py
+
+Safe to run again: the same customers are moved back to the same dates and
+their demo orders (`369M-DORM-…`) replaced. Run it from `cmd`, not by piping in
+PowerShell - PowerShell adds a byte-order mark Python refuses.
+
+![Dormant customers, with when they last ordered](static/description/customers_dormant.png)
+![The same in the web admin](static/description/web_admin_customers_dormant.png)
+
+**Settings → Customers** (Odoo's Settings screen and the web admin's) picks each
+number from 15, 30, 45, 60, 90, 120 or 150 days, or **Custom…**, which asks for
+any number in a small popup. A saved custom number shows as "21 days (custom)".
+
+![Settings → Customers in Odoo, a custom 21 picked](static/description/settings_customers.png)
+![The choices, in the web admin](static/description/settings_customers_dropdown.png)
+![Custom… in Odoo](static/description/settings_customers_custom_odoo.png)
+![Custom… in the web admin](static/description/settings_customers_custom_web_admin.png) Refreshed at every sign-in
 and by the daily job "369 Mart: refresh customer status".
 
 A mobile typed on the profile is checked for the customer's country and saved
