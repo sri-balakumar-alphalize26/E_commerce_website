@@ -562,6 +562,23 @@ html.ad-lock, html.ad-lock body { overflow: hidden; }
 .ad-place-default { font-size: 11.5px; font-weight: 700; color: #0f6b3d; background: #e8f5ec; border-radius: 7px; padding: 2px 7px; }
 .ad-place-gaps { display: inline-flex; align-items: center; gap: 6px; margin: 6px 0 0; font-size: 12px; font-weight: 700; color: var(--ad-amber); }
 
+/* One row per customer, closed until tapped; their addresses open beneath. */
+.ad-owners { list-style: none; margin: 0; padding: 12px 18px 18px; display: flex; flex-direction: column; gap: 8px; }
+.ad-owner { border: 1px solid var(--ad-line); border-radius: 14px; background: #fff; animation: ad-row 360ms var(--ad-ease) backwards; animation-delay: calc(var(--i) * 40ms); }
+.ad-owner-head { width: 100%; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 0; background: none; text-align: left; color: var(--ad-ink); border-radius: 14px; cursor: pointer; }
+.ad-owner-head b { font-size: 14.5px; font-weight: 700; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ad-owner-head small { font-size: 12px; font-weight: 700; color: var(--ad-muted); white-space: nowrap; }
+.ad-owner-head:hover b { color: var(--ad-blue, #0a78ab); }
+.ad-owner-warn { margin-left: auto; display: inline-flex; color: var(--ad-amber); }
+.ad-owner-chev { margin-left: auto; display: inline-flex; color: var(--ad-muted); transform: rotate(-90deg); transition: transform 180ms var(--ad-ease); }
+.ad-owner-warn + .ad-owner-chev { margin-left: 0; }
+.ad-owner-open .ad-owner-chev { transform: none; }
+.ad-owner-body { padding: 0 12px 12px; }
+.ad-owner-body .ad-places { padding: 0; gap: 8px; }
+.ad-owner-body .ad-places li { animation: none; }
+.ad-owner-link { margin: 10px 2px 0; padding: 0; border: 0; background: none; font-size: 12.5px; font-weight: 700; color: var(--ad-blue, #0a78ab); cursor: pointer; }
+.ad-owner-link:hover { text-decoration: underline; }
+
 @media (max-width: 720px) { .ad-places li { flex-wrap: wrap; } }
 
 /* ------------------------------------------------------ notifications ----
@@ -963,6 +980,29 @@ html.ad-lock, html.ad-lock body { overflow: hidden; }
 .ad-cat-tiles i { font-style: normal; font-size: 11.5px; color: var(--ad-muted); }
 .ad-cat-count { margin: 0; padding: 12px 18px 0; font-size: 12.5px; font-weight: 700; color: var(--ad-muted); }
 .ad-cats li.ad-cat-new { box-shadow: 0 0 0 2px var(--ad-blue) inset; }
+/* Main category as a heading, its sub-categories indented under it. */
+.ad-cat-groups { list-style: none; margin: 0; padding: 10px 14px 14px; display: flex; flex-direction: column; gap: 14px; }
+.ad-cat-group { border: 1px solid var(--ad-line); border-radius: 16px; overflow: hidden; background: #fff; animation: ad-rise 380ms var(--ad-ease) backwards; animation-delay: calc(var(--i, 0) * 45ms); }
+.ad-cat-head { display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: var(--tone); }
+.ad-cat-head .ad-cat-top b { font-size: 16px; font-weight: 800; color: var(--accent); }
+.ad-cat-head .ad-cat-swatch { background: #fff !important; }
+.ad-cat-head.ad-cat-off { filter: saturate(0.4); }
+.ad-cat-head.ad-cat-new { box-shadow: 0 0 0 2px var(--ad-blue) inset; }
+.ad-cat-stub { flex-direction: column; align-items: flex-start; gap: 2px; }
+.ad-cat-stub b { font-size: 15px; font-weight: 800; color: var(--accent); }
+.ad-cat-stub small { font-size: 12px; color: var(--ad-muted); }
+.ad-cats.ad-cat-subs { position: relative; padding: 10px 14px 12px 40px; gap: 8px; }
+.ad-cats.ad-cat-subs::before { content: ""; position: absolute; left: 24px; top: 4px; bottom: 30px; width: 2px; border-radius: 2px; background: var(--ad-line); }
+.ad-cats.ad-cat-subs > li { position: relative; padding: 10px 12px; }
+.ad-cats.ad-cat-subs > li::before { content: ""; position: absolute; left: -16px; top: 50%; width: 14px; height: 2px; background: var(--ad-line); }
+.ad-cats.ad-cat-subs .ad-cat-swatch { width: 36px; height: 36px; border-radius: 50%; font-size: 12px; }
+@media (max-width: 720px) {
+  .ad-cat-head, .ad-cats.ad-cat-subs > li { flex-wrap: wrap; }
+  .ad-cat-head .ad-cat-act, .ad-cats.ad-cat-subs .ad-cat-act { width: 100%; }
+  .ad-cats.ad-cat-subs { padding-left: 28px; }
+  .ad-cats.ad-cat-subs::before { left: 14px; }
+  .ad-cats.ad-cat-subs > li::before { left: -14px; width: 12px; }
+}
 .ad-cat-how { margin: -2px 0 4px; padding: 8px 12px; list-style: none; border-radius: 10px; background: #f3f6f8; font-size: 12.5px; color: var(--ad-muted); }
 .ad-cat-how li + li { margin-top: 2px; }
 .ad-cat-how b { color: var(--ad-ink); }

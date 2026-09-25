@@ -42,6 +42,25 @@ touched — and a 40-product page costs two extra queries in total, not eighty.
 product count, and the two colours the app paints the page with. The board view
 shows each category in its own colours, so you see what the shopper will see.
 
+Each main category is a heading in its own colours, with its sub-categories
+listed under it; the web admin's Catalog screen is laid out the same way. A
+search that matches only a sub-category still shows its main category, as a
+plain heading, so a sub-category is never shown without its home.
+
+![The desk: main categories as headings, sub-categories under them](static/description/catalog_desk_grouped.png)
+![Searching "Mice" keeps it under Peripherals](static/description/catalog_desk_grouped_search.png)
+![The web admin's Catalog, the same layout](static/description/web_admin_categories_grouped.png)
+
+**Colours reach the home page.** A home-page tile linked to a category - main
+or sub - wears that category's background and heading colour
+(`models/home_tile.py`), so recolouring a category recolours its tile too. A
+tile pointing anywhere else keeps its own colours. On the category page each
+sub-category's circle is drawn in its own colours. Below, Processors was set
+to orange: its home tile and its circle follow, the rest keep theirs.
+
+![Home tiles in their categories' colours](static/description/home_tiles_category_colours.png)
+![Each sub-category's circle in its own colours](static/description/category_page_sub_colours.png)
+
 **369 Mart → Searches** is what people typed. Read from the top it is a demand
 list; filtered to *Found nothing* — which is how it opens — it is a list of
 things customers wanted and you do not stock.

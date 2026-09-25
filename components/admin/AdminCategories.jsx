@@ -102,6 +102,60 @@ export function CategoriesSection({ flash }) {
     setEditing(null);
   }
 
+  /* Main categories as headings, each with its sub-categories under it. A
+     sub-category that matches the filter when its main one does not still
+     gets its heading, drawn plainly, so it is never shown without a home. */
+  const groups = useMemo(() => {
+    const byId = new Map(rows.map((r) => [r.id, r]));
+    const out = [], index = new Map();
+    for (const r of rows) {
+      const key = r.parentId || r.id;
+      let g = index.get(key);
+      if (!g) {
+        g = { main: r.parentId ? byId.get(r.parentId) || { id: r.parentId, name: r.parent, stub: true } : r, subs: [] };
+        index.set(key, g); out.push(g);
+      }
+      if (r.parentId) g.subs.push(r);
+    }
+    return out;
+  }, [rows]);
+  const subCount = rows.filter((r) => r.parentId).length;
+  const mains = rows.length - subCount;
+  const rowClass = (r) => (r.inApp ? "" : "ad-cat-off") + (fresh === r.id ? " ad-cat-new" : "");
+
+  const catRow = (r) => (
+    <>
+      {/* The two colours shown as what they are: ink on its own
+          background, rather than two hex codes in a table. */}
+      <span className="ad-cat-swatch"
+        style={{ background: r.tone || "#f4f6f8", color: r.accent || "#0b4a6e" }}
+        title={`Background ${r.tone}, heading ${r.accent}`}>Aa</span>
+
+      <div className="ad-cat-body">
+        <div className="ad-cat-top">
+          <b>{r.name}</b>
+          {!r.inApp && <span className="ad-pill ad-t-grey"><i />Hidden</span>}
+          {!r.products && <span className="ad-pill ad-t-amber"><i />Nothing in it</span>}
+        </div>
+        <small>
+          <code>/{r.slug}</code>
+          {` · ${r.products} product${r.products === 1 ? "" : "s"}`}
+          {r.parentId ? "" : ` · ${r.children || 0} sub-categor${r.children === 1 ? "y" : "ies"}`}
+        </small>
+        {r.blurb ? <p className="ad-cat-blurb">{r.blurb}</p> : null}
+      </div>
+
+      <div className="ad-cat-act">
+        <button className="ad-btn ad-sm" disabled={act.busy}
+          onClick={() => open(r, "edit")}><Icon n="edit" size={13} />Edit</button>
+        <button className="ad-btn ad-sm" disabled={act.busy}
+          onClick={() => open(r, "look")}>How it looks</button>
+        <button className="ad-btn ad-sm" disabled={act.busy}
+          onClick={() => toggleShown(r)}>{r.inApp ? "Hide" : "Show"}</button>
+      </div>
+    </>
+  );
+
   return (
     <div className="ad-stack">
       {/* The tiles double as a filter, like the Odoo desk's. */}
@@ -151,39 +205,24 @@ export function CategoriesSection({ flash }) {
 
         {!error && !!rows.length && (
           <>
-          <p className="ad-cat-count">{rows.length} categor{rows.length === 1 ? "y" : "ies"}</p>
-          <ul className="ad-cats">
-            {rows.map((r, i) => (
-              <li key={r.id} className={(r.inApp ? "" : "ad-cat-off") + (fresh === r.id ? " ad-cat-new" : "")} style={{ "--i": i }}>
-                {/* The two colours shown as what they are: ink on its own
-                    background, rather than two hex codes in a table. */}
-                <span className="ad-cat-swatch"
-                  style={{ background: r.tone || "#f4f6f8", color: r.accent || "#0b4a6e" }}
-                  title={`Background ${r.tone}, heading ${r.accent}`}>Aa</span>
-
-                <div className="ad-cat-body">
-                  <div className="ad-cat-top">
-                    <b>{r.name}</b>
-                    {!r.inApp && <span className="ad-pill ad-t-grey"><i />Hidden</span>}
-                    {!r.products && <span className="ad-pill ad-t-amber"><i />Nothing in it</span>}
-                  </div>
-                  <small>
-                    <code>/{r.slug}</code>
-                    {r.parent ? ` · under ${r.parent}` : ""}
-                    {` · ${r.products} product${r.products === 1 ? "" : "s"}`}
-                    {r.children ? ` · ${r.children} sub${r.children === 1 ? "" : "s"}` : ""}
-                  </small>
-                  {r.blurb ? <p className="ad-cat-blurb">{r.blurb}</p> : null}
-                </div>
-
-                <div className="ad-cat-act">
-                  <button className="ad-btn ad-sm" disabled={act.busy}
-                    onClick={() => open(r, "edit")}><Icon n="edit" size={13} />Edit</button>
-                  <button className="ad-btn ad-sm" disabled={act.busy}
-                    onClick={() => open(r, "look")}>How it looks</button>
-                  <button className="ad-btn ad-sm" disabled={act.busy}
-                    onClick={() => toggleShown(r)}>{r.inApp ? "Hide" : "Show"}</button>
-                </div>
+          <p className="ad-cat-count">
+            {mains} categor{mains === 1 ? "y" : "ies"} · {subCount} sub-categor{subCount === 1 ? "y" : "ies"}
+          </p>
+          {/* Each main category is a heading, its sub-categories listed under
+              it - the two levels the app draws, drawn the same way here. */}
+          <ul className="ad-cat-groups">
+            {groups.map((g, gi) => (
+              <li key={g.main.id} className="ad-cat-group" style={{ "--i": gi, "--tone": g.main.tone || "#f4f6f8", "--accent": g.main.accent || "#0b4a6e" }}>
+                {g.main.stub ? (
+                  <div className="ad-cat-head ad-cat-stub"><b>{g.main.name}</b><small>Main category · not in this list</small></div>
+                ) : (
+                  <div className={"ad-cat-head " + rowClass(g.main)}>{catRow(g.main, gi)}</div>
+                )}
+                {!!g.subs.length && (
+                  <ul className="ad-cats ad-cat-subs" aria-label={`Sub-categories of ${g.main.name}`}>
+                    {g.subs.map((r, i) => <li key={r.id} className={rowClass(r)} style={{ "--i": i }}>{catRow(r, i)}</li>)}
+                  </ul>
+                )}
               </li>
             ))}
           </ul>
