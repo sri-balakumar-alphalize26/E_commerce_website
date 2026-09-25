@@ -314,6 +314,42 @@
         }
     }
 
+    .cu-addrs {
+        list-style: none;
+        margin: 0 0 6px;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+
+        li {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+            padding: 9px 11px;
+            border: 1px solid var(--cu-line);
+            border-radius: 10px;
+
+            &.cu-addr-on {
+                border-color: #9cc9e0;
+                background: #f3f9fd;
+            }
+
+            small {
+                color: var(--cu-muted);
+                font-size: 12px;
+            }
+        }
+    }
+
+    .cu-addr-head {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-bottom: 2px;
+    }
+
     .cu-chip {
         display: grid;
         place-items: center;

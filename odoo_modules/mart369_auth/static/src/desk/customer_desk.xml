@@ -65,6 +65,7 @@
                                     <th>Customer</th>
                                     <th>Contact</th>
                                     <th>Area</th>
+                                    <th class="cu-num" t-if="hasBooks()">Addresses</th>
                                     <th class="cu-num">Orders</th>
                                     <th class="cu-num">Spent</th>
                                     <th class="cu-num">Wallet</th>
@@ -87,6 +88,7 @@
                                     </td>
                                     <td><small><t t-esc="row.email"/><br/><t t-esc="row.phone"/></small></td>
                                     <td><small t-esc="row.area or '-'"/></td>
+                                    <td class="cu-num" t-if="hasBooks()" t-esc="row.addressCount"/>
                                     <td class="cu-num" t-esc="row.orders"/>
                                     <td class="cu-num cu-strong" t-esc="money(row.spent)"/>
                                     <td class="cu-num" t-esc="money(row.wallet)"/>
@@ -133,6 +135,32 @@
                             <span><small>Last order</small><b t-esc="ago(state.open.last)"/></span>
                         </div>
 
+                        <!-- Every address the customer keeps, the default first - what
+                             Amazon's support sees. Filled in by mart369_address; without
+                             it the block simply is not there. Editing is on the full
+                             profile, in the Delivery addresses tab. -->
+                        <t t-if="state.detail and state.detail.addresses">
+                            <h4>Addresses (<t t-esc="state.detail.addresses.length"/>)</h4>
+                            <p t-if="!state.detail.addresses.length" class="cu-dim">No saved addresses yet.</p>
+                            <ul t-else="" class="cu-addrs">
+                                <li t-foreach="state.detail.addresses" t-as="a" t-key="a.id"
+                                    t-attf-class="{{ a.default ? 'cu-addr-on' : '' }}">
+                                    <span class="cu-addr-head">
+                                        <b t-esc="a.label"/>
+                                        <span t-if="a.default" class="mart-pill mart-t-green">Ships here</span>
+                                        <span t-if="a.gaps and a.gaps.length" class="mart-pill mart-t-orange">
+                                            Missing <t t-esc="a.gaps.join(', ')"/>
+                                        </span>
+                                    </span>
+                                    <small><t t-esc="a.name"/><t t-if="a.phone"> · <t t-esc="a.phone"/></t></small>
+                                    <small t-foreach="addressLines(a)" t-as="line" t-key="line_index" t-esc="line"/>
+                                </li>
+                            </ul>
+                            <p t-if="state.detail.removedAddresses" class="cu-dim">
+                                + <t t-esc="state.detail.removedAddresses"/> removed by the customer
+                            </p>
+                        </t>
+
                         <h4>Recent orders</h4>
                         <p t-if="!state.detail" class="pe-loading">Loading...</p>
                         <p t-elif="state.detail.error" class="pe-error" t-esc="state.detail.error"/>
@@ -142,7 +170,7 @@
                                 <span class="cu-chip" t-esc="o.items"/>
                                 <span>
                                     <b>#<t t-esc="o.ref"/></b>
-                                    <small><t t-esc="day(o.at)"/><t t-if="o.method"> · <t t-esc="o.method"/></t></small>
+                                    <small><t t-esc="day(o.at)"/><t t-if="o.method"> · <t t-esc="o.method"/></t><t t-if="o.addressLabel"> · to <t t-esc="o.addressLabel"/></t></small>
                                 </span>
                                 <b t-esc="money(o.total)"/>
                             </li>

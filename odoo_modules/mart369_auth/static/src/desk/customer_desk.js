@@ -245,6 +245,21 @@ export class CustomerDesk extends Component {
     status(row) {
         return STATUS[row?.status] || STATUS.active;
     }
+
+    /** Whether the rows carry an address count - mart369_address adds it. */
+    hasBooks() {
+        return this.state.rows.length > 0 && this.state.rows[0].addressCount !== undefined;
+    }
+
+    /** An address as the lines a parcel label reads, top to bottom. */
+    addressLines(a) {
+        const near = a.landmark && !/^(near|opp|opposite|behind|beside|next to)\b/i.test(a.landmark)
+            ? "near " + a.landmark : a.landmark;
+        const place = a.town
+            ? `${a.town}${a.state ? ", " + a.state : ""}${a.pin ? " " + a.pin : ""}`
+            : [a.city, a.state].filter(Boolean).join(", ");
+        return [a.line, [a.area, near].filter(Boolean).join(", "), place].filter(Boolean);
+    }
 }
 
 registry.category("actions").add("mart369_auth.customers", CustomerDesk);
