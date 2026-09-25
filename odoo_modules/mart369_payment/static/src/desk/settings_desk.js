@@ -71,6 +71,29 @@ function money(amount, currency) {
 
 const copy = (v) => JSON.parse(JSON.stringify(v));
 
+// How long a customer has to answer a replacement, in minutes.
+// Settings > Reviews: what a customer may attach (mart369_account).
+const REVIEW_PRESETS = {
+    maxPhotos: { values: [1, 3, 5, 8], label: (n) => _t("%s photos", n), unit: _t("Photos") },
+    photoMb: { values: [2, 5, 10], label: (n) => _t("%s MB", n), unit: _t("MB") },
+    videoSeconds: { values: [15, 30, 60], label: (n) => _t("%s seconds", n), unit: _t("Seconds") },
+    videoMb: { values: [10, 25, 50], label: (n) => _t("%s MB", n), unit: _t("MB") },
+};
+
+const WAIT_PRESETS = {
+    substituteQuick: [5, 10, 15, 20, 30],
+    substituteExpress: [30, 60, 120, 240, 480, 1440],
+};
+
+function waitLabel(mins) {
+    if (mins < 60) {
+        return _t("%s min", mins);
+    }
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return m ? _t("%s h %s min", h, m) : _t("%s h", h);
+}
+
 // The usual choices for "New for" and "Dormant after"; anything else is Custom.
 const DAY_PRESETS = [15, 30, 45, 60, 90, 120, 150];
 
@@ -83,10 +106,15 @@ export class DaysDialog extends Component {
         title: { type: String },
         value: { type: Number },
         onSave: { type: Function },
+        unit: { type: String, optional: true }, // "Days" (default) or "Minutes"
     };
 
     setup() {
         this.state = useState({ value: String(this.props.value || "") });
+    }
+
+    get unit() {
+        return this.props.unit || _t("Days");
     }
 
     get days() {
@@ -94,7 +122,7 @@ export class DaysDialog extends Component {
     }
 
     get canSave() {
-        return Number.isInteger(this.days) && this.days >= 1 && this.days <= 3650;
+        return Number.isInteger(this.days) && this.days >= 1 && this.days <= 43200;
     }
 
     edit(ev) {
@@ -174,6 +202,14 @@ export class SettingsDesk extends Component {
         if (this.state.saved?.customers) {
             tabs.push(["customers", _t("Customers"), null]);
         }
+        // Added by mart369_order: how long a customer has to answer a replacement.
+        if (this.state.saved?.orders) {
+            tabs.push(["orders", _t("Orders"), null]);
+        }
+        // Added by mart369_account: photo/video limits and blocked words.
+        if (this.state.saved?.reviews) {
+            tabs.push(["reviews", _t("Reviews"), null]);
+        }
         tabs.push(["alerts", _t("Alerts"), null]);
         return tabs;
     }
@@ -206,6 +242,75 @@ export class SettingsDesk extends Component {
             ...days.map((d) => [String(d), DAY_PRESETS.includes(d) ? _t("%s days", d) : _t("%s days (custom)", d)]),
             ["custom", _t("Custom…")],
         ];
+    }
+
+    /** The wait for a replacement answer, as Pick options. A saved number
+     *  that is not one of the usual ones is listed too, marked custom. */
+    waitOptions(key) {
+        const presets = WAIT_PRESETS[key];
+        const current = this.state.draft.orders[key];
+        const mins = presets.includes(current) || !current
+            ? presets
+            : [...presets, current].sort((a, b) => a - b);
+        return [
+            ...mins.map((m) => [String(m), presets.includes(m) ? waitLabel(m) : _t("%s (custom)", waitLabel(m))]),
+            ["custom", _t("Custom…")],
+        ];
+    }
+
+    waitValue(key) {
+        return String(this.state.draft.orders[key]);
+    }
+
+    /** A review limit as Pick options, a saved odd number marked custom. */
+    reviewOptions(key) {
+        const preset = REVIEW_PRESETS[key];
+        const current = this.state.draft.reviews[key];
+        const values = preset.values.includes(current) || !current
+            ? preset.values
+            : [...preset.values, current].sort((a, b) => a - b);
+        return [
+            ...values.map((v) => [String(v), preset.values.includes(v) ? preset.label(v) : _t("%s (custom)", preset.label(v))]),
+            ["custom", _t("Custom…")],
+        ];
+    }
+
+    reviewValue(key) {
+        return String(this.state.draft.reviews[key]);
+    }
+
+    pickReview(key, value, title) {
+        if (value !== "custom") {
+            this.state.draft.reviews[key] = Number(value);
+            return;
+        }
+        this.dialog.add(DaysDialog, {
+            title,
+            unit: REVIEW_PRESETS[key].unit,
+            value: this.state.draft.reviews[key],
+            onSave: (n) => {
+                this.state.draft.reviews[key] = n;
+            },
+        });
+    }
+
+    setReviewWords(ev) {
+        this.state.draft.reviews.blockedWords = ev.target.value;
+    }
+
+    pickWait(key, value, title) {
+        if (value !== "custom") {
+            this.state.draft.orders[key] = Number(value);
+            return;
+        }
+        this.dialog.add(DaysDialog, {
+            title,
+            unit: _t("Minutes"),
+            value: this.state.draft.orders[key],
+            onSave: (mins) => {
+                this.state.draft.orders[key] = mins;
+            },
+        });
     }
 
     /** The Pick takes strings; the setting is a number. */

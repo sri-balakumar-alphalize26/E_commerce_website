@@ -106,6 +106,70 @@
                             </p>
                         </div>
 
+                        <!-- Reviews: what a customer may attach, and words that hold a review. -->
+                        <div t-if="state.tab === 'reviews' and state.draft.reviews" class="st-form">
+                            <div class="st-field">
+                                <span>Photos per review</span>
+                                <Pick label="'Photos per review'" value="reviewValue('maxPhotos')"
+                                      options="reviewOptions('maxPhotos')" disabled="state.busy"
+                                      onChange="(v) => this.pickReview('maxPhotos', v, 'How many photos?')"/>
+                            </div>
+                            <div class="st-field">
+                                <span>Max size per photo</span>
+                                <Pick label="'Max size per photo'" value="reviewValue('photoMb')"
+                                      options="reviewOptions('photoMb')" disabled="state.busy"
+                                      onChange="(v) => this.pickReview('photoMb', v, 'Largest photo, in MB?')"/>
+                            </div>
+                            <div class="st-field st-span2">
+                                <span>Allow one video per review</span>
+                                <Switch on="!!state.draft.reviews.video" label="'Allow a video'"
+                                        disabled="state.busy"
+                                        onChange="(v) => this.setField('reviews', 'video', v)"/>
+                            </div>
+                            <div t-if="state.draft.reviews.video" class="st-field">
+                                <span>Max video length</span>
+                                <Pick label="'Max video length'" value="reviewValue('videoSeconds')"
+                                      options="reviewOptions('videoSeconds')" disabled="state.busy"
+                                      onChange="(v) => this.pickReview('videoSeconds', v, 'Longest video, in seconds?')"/>
+                            </div>
+                            <div t-if="state.draft.reviews.video" class="st-field">
+                                <span>Max video size</span>
+                                <Pick label="'Max video size'" value="reviewValue('videoMb')"
+                                      options="reviewOptions('videoMb')" disabled="state.busy"
+                                      onChange="(v) => this.pickReview('videoMb', v, 'Largest video, in MB?')"/>
+                            </div>
+                            <label class="st-field st-span2">
+                                <span>Also hold reviews with these words - one per line, any language</span>
+                                <textarea rows="6" class="st-words" t-att-value="state.draft.reviews.blockedWords"
+                                          placeholder="e.g.&#10;idiot&#10;&#2980;&#3015;&#2997;&#2975;&#3007;&#2991;&#3006;&#10;&#1581;&#1585;&#1575;&#1605;&#1740;"
+                                          t-on-input="(ev) => this.setReviewWords(ev)"/>
+                            </label>
+                            <p class="st-hint st-span2">
+                                <Icon n="'info'" size="14"/>
+                                <span>Photos are shrunk to 1600px before saving. Limits are checked on the Odoo server, so the app cannot upload bigger files. Phone numbers, links and common abusive words (English, Tamil, Malayalam, Telugu, Urdu, Arabic) are always held; the words here are added to them. Changes apply to new reviews and uploads.</span>
+                            </p>
+                        </div>
+
+                        <!-- Orders: how long a customer has to answer a replacement. -->
+                        <div t-if="state.tab === 'orders' and state.draft.orders" class="st-form">
+                            <div class="st-field">
+                                <span>Quick orders: answer a replacement within</span>
+                                <Pick label="'Quick orders'" value="waitValue('substituteQuick')"
+                                      options="waitOptions('substituteQuick')" disabled="state.busy"
+                                      onChange="(v) => this.pickWait('substituteQuick', v, 'Quick orders: how many minutes?')"/>
+                            </div>
+                            <div class="st-field">
+                                <span>Express orders: answer a replacement within</span>
+                                <Pick label="'Express orders'" value="waitValue('substituteExpress')"
+                                      options="waitOptions('substituteExpress')" disabled="state.busy"
+                                      onChange="(v) => this.pickWait('substituteExpress', v, 'Express orders: how many minutes?')"/>
+                            </div>
+                            <p class="st-hint st-span2">
+                                <Icon n="'info'" size="14"/>
+                                <span>When an item runs out and you offer a replacement, the customer has this long to accept it. No answer: the item is refunded to their 369 Wallet. A change applies to offers made from now on.</span>
+                            </p>
+                        </div>
+
                         <!-- Alerts: the shared settings record. -->
                         <div t-if="state.tab === 'alerts'" class="st-rows">
                             <div t-foreach="ALERTS" t-as="a" t-key="a.key" class="st-row">
@@ -136,7 +200,7 @@
     <t t-name="mart369_payment.DaysDialog">
         <Dialog size="'sm'" title="props.title">
             <label class="d-block">
-                <span class="form-label d-block mb-1">Days</span>
+                <span class="form-label d-block mb-1" t-esc="unit"/>
                 <input type="text" class="form-control" inputmode="numeric" autofocus="autofocus" t-att-value="state.value"
                        placeholder="e.g. 21"
                        t-on-input="(ev) => this.edit(ev)"
