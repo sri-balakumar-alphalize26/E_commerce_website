@@ -666,7 +666,7 @@ export default function Home({
   } else if (view === "cart") {
     body = (
       <main className="hm-wrap hm-view-cart" key="cart">
-        <CartPage cart={cart} setQty={setQty} byId={byId} recommended={recommended} alsoLike={alsoLike}
+        <CartPage cart={cart} setQty={setQty} byId={byId} recommended={recommended} alsoLike={alsoLike} addressId={address?.id}
           onBack={() => nav("home")} onCheckout={startCheckout} />
       </main>
     );

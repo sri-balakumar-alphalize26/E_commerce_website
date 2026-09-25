@@ -59,6 +59,16 @@
                 <span>No service area is on, so every pincode is told we do not
                     deliver there yet.</span>
             </p>
+            <p t-if="unready.length" class="dv-warn" role="status">
+                <Icon n="'warn'" size="14"/>
+                <span>
+                    Quick is on at
+                    <t t-foreach="unready" t-as="branch" t-key="branch.id">
+                        <b t-esc="branch.name"/><t t-if="!branch_last">, </t>
+                    </t>
+                    but it has no map pin or no reach, so it delivers Quick to nobody.
+                </span>
+            </p>
 
             <div class="pe-toolbar dv-toolbar">
                 <div class="mart-tabs" role="tablist">
@@ -234,6 +244,64 @@
                 </p>
             </div>
 
+            <!-- ============================= branches ============================= -->
+            <div t-if="state.tab === 'branches'" class="dv-table-wrap">
+                <p class="mart-hint dv-branch-hint">
+                    An item is <b>Quick</b> when a branch with Quick on is within its
+                    reach of the customer's map pin <b>and</b> has the item in stock.
+                    Otherwise it ships Express. An address with no map pin follows its
+                    pincode in Service areas.
+                </p>
+                <table t-if="state.branches.length" class="dv-table">
+                    <thead>
+                        <tr>
+                            <th>Branch</th><th>Company</th><th>Map pin</th>
+                            <th>Quick</th><th>Reach</th><th/>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr t-foreach="state.branches" t-as="branch" t-key="branch.id"
+                            t-attf-class="{{ branch.quick ? '' : 'dv-row-off' }}">
+                            <td>
+                                <b t-esc="branch.name"/>
+                                <small t-esc="branch.code"/>
+                            </td>
+                            <td t-esc="branch.company or '—'"/>
+                            <td>
+                                <t t-if="branch.lat !== null">
+                                    <t t-esc="branch.lat.toFixed(4)"/>, <t t-esc="branch.lng.toFixed(4)"/>
+                                </t>
+                                <span t-else="" class="mart-pill mart-t-grey">No pin</span>
+                            </td>
+                            <td>
+                                <span t-if="branch.unready" class="mart-pill mart-t-amber">Not ready</span>
+                                <span t-elif="branch.quick" class="mart-pill mart-t-green">On</span>
+                                <span t-else="" class="mart-pill mart-t-grey">Off</span>
+                            </td>
+                            <td>
+                                <t t-if="branch.quickKm"><t t-esc="branch.quickKm"/> km</t>
+                                <t t-else="">—</t>
+                            </td>
+                            <td class="dv-act">
+                                <button class="mart-btn mart-btn-sm" t-att-disabled="state.busy"
+                                        t-on-click="() => this.openBranch(branch)">Edit</button>
+                                <button class="mart-btn mart-btn-sm" t-att-disabled="state.busy"
+                                        t-on-click="() => this.toggleBranch(branch)">
+                                    <t t-if="branch.quick">Quick off</t>
+                                    <t t-else="">Quick on</t>
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <p t-if="!state.loading and !state.branches.length" class="mart-empty">
+                    <b>No branches yet</b>
+                    A branch is a warehouse. Add one in Inventory, then set its
+                    Quick reach here.
+                </p>
+            </div>
+
         </div>
     </Layout>
 </t>
@@ -341,6 +409,58 @@
                 <t t-if="state.draft.id">Save changes</t>
                 <t t-else="">Add slot</t>
             </button>
+            <button class="mart-btn" t-on-click="() => this.props.close()">Cancel</button>
+        </t>
+    </Dialog>
+</t>
+
+<!-- ============================= branch dialog ============================= -->
+<t t-name="mart369_cart.BranchDialog">
+    <Dialog contentClass="'dv-dialog'" title="'Quick delivery from ' + props.branch.name">
+        <div class="dv-dialog-body">
+            <p t-if="state.error" class="dv-error" role="alert" t-esc="state.error"/>
+
+            <div class="dv-rows">
+                <div class="dv-row">
+                    <span><b>Quick delivery</b><small>This branch delivers Quick near it</small></span>
+                    <Switch on="state.draft.quick"
+                            label="'Quick delivery'"
+                            onChange="() => this.set('quick', !state.draft.quick)"/>
+                </div>
+            </div>
+
+            <h3>How far</h3>
+            <div class="dv-form">
+                <label class="dv-field"><span>Reach (km)</span>
+                    <input type="text" inputmode="decimal" placeholder="5"
+                           t-att-value="state.draft.quickKm"
+                           t-on-input="(ev) => this.set('quickKm', ev.target.value)"/></label>
+            </div>
+            <p class="mart-hint">
+                A straight line from the branch. Roads are longer, so set it a
+                little under what a rider covers in the Quick time.
+            </p>
+
+            <h3>Where the branch is</h3>
+            <div class="dv-form">
+                <label class="dv-field"><span>Latitude</span>
+                    <input type="text" inputmode="decimal" placeholder="23.5880"
+                           t-att-value="state.draft.lat"
+                           t-on-input="(ev) => this.pastePin(ev)"/></label>
+                <label class="dv-field"><span>Longitude</span>
+                    <input type="text" inputmode="decimal" placeholder="58.3829"
+                           t-att-value="state.draft.lng"
+                           t-on-input="(ev) => this.set('lng', ev.target.value)"/></label>
+            </div>
+            <p class="mart-hint">
+                In Google Maps, right-click the branch and click the numbers at the
+                top to copy them. Paste both into Latitude.
+            </p>
+        </div>
+
+        <t t-set-slot="footer">
+            <button class="mart-btn mart-btn-primary" t-att-disabled="state.busy"
+                    t-on-click="() => this.save()">Save</button>
             <button class="mart-btn" t-on-click="() => this.props.close()">Cancel</button>
         </t>
     </Dialog>

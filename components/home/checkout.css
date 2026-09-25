@@ -287,6 +287,8 @@
 .co-paybtn:disabled::after { display: none; }
 .co-paybtn.co-soft { filter: saturate(0.7); }
 .co-hintline { margin: 4px 16px 0; text-align: center; font-size: 12.5px; font-weight: 600; color: #b25a00; animation: hm-rise 300ms var(--hm-ease) both; }
+/* Quick items the shop moved to Express for this address, and why. */
+.co-moved { display: flex; align-items: center; gap: 6px; margin: 0 0 10px; font-size: 12.5px; font-weight: 600; color: #b25a00; }
 .co-small { margin: 8px 16px 0; font-size: 12.5px; }
 .co-small .co-link { font-size: 12.5px; }
 .co-trust { display: flex; gap: 6px; margin: 10px 16px 14px; font-size: 12px; color: var(--hm-muted); line-height: 1.4; }

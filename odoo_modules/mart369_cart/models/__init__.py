@@ -4,3 +4,4 @@ from . import delivery_slot
 from . import coupon
 from . import deal
 from . import cart
+from . import branch

@@ -16,6 +16,17 @@ What is returned is what the cart page prints:
     mrp, items, sub{quick,all}, fees, couponValid, couponOff, total, saved,
     count, blocked
 
+plus `modes`, `movedToExpress`, `movedWhy` and `branch` (below).
+
+**Quick or Express, per line.** With no address the product decides, as it
+always has: a delivery promise (`mart_delivery_text`) makes it Express. With
+an address, a Quick product stays Quick only if a branch that does Quick is
+within its reach of the address's map pin *and* has the item in stock there
+(see branch.py). An address with no pin falls back to its pincode's area. Until
+a single branch is set up for Quick, and for a pincode no area covers, nothing
+changes - the product decides, so switching this on is not a day when every
+basket turns Express.
+
 `groups`, `lines` and `feeFor` are not returned. The first two are the whole
 product objects, which the app already holds, and the third is a function -
 there is no JSON for a function. The app keeps building those itself.
@@ -64,14 +75,57 @@ class Mart369Cart(models.AbstractModel):
         return [(tmpl, wanted[tmpl.id]) for tmpl in templates]
 
     @api.model
-    def _mart369_mode_of(self, product):
-        return EXPRESS if product.mart_delivery_text else QUICK
+    def _mart369_where(self, address):
+        """What the per-line rule needs to know about an address, worked out
+        once per bill rather than once per line.
+
+        {'branches': [(branch, km)] or None, 'area_quick': bool or None,
+         'reason': str}. None means "no opinion": fall back to the product.
+        """
+        where = {'branches': None, 'area_quick': None, 'reason': ''}
+        if not address:
+            return where
+        Branch = self.env['stock.warehouse'].sudo()
+        any_ready = any(b._mart369_ready()
+                        for b in Branch.search([('mart369_quick', '=', True)]))
+        lat, lng = address.partner_latitude, address.partner_longitude
+        if any_ready and (lat or lng):
+            where['branches'] = Branch._mart369_quick_branches(lat, lng)
+            if not where['branches']:
+                where['reason'] = 'far'
+            return where
+        area = self.env['mart369.service.area']._mart369_match(address.zip)
+        if area:
+            where['area_quick'] = bool(area.quick)
+            if not area.quick:
+                where['reason'] = 'area'
+        return where
+
+    @api.model
+    def _mart369_mode_of(self, product, qty=1, where=None):
+        """(mode, branch) for one line. `branch` is the one that would hand it
+        over, when Quick came from a branch; otherwise an empty recordset."""
+        none = self.env['stock.warehouse'].browse()
+        if product.mart_delivery_text:
+            return EXPRESS, none
+        where = where or {}
+        if where.get('branches') is not None:
+            for branch, __ in where['branches']:
+                if branch._mart369_has_stock(product, qty):
+                    return QUICK, branch
+            return EXPRESS, none
+        if where.get('area_quick') is not None:
+            return (QUICK if where['area_quick'] else EXPRESS), none
+        return QUICK, none
 
     # ---------------------------------------------------------- the totals
 
     @api.model
-    def _mart369_bill(self, items, coupon=None, slot_fee=0.0):
-        """The whole bill, in the shape the cart page prints."""
+    def _mart369_bill(self, items, coupon=None, slot_fee=0.0, address=None):
+        """The whole bill, in the shape the cart page prints.
+
+        `address` is a res.partner the caller has already checked belongs to
+        the customer; see the module docstring for what it changes."""
         Rule = self.env['mart369.delivery.rule']
         rules = Rule._mart369_rules()
         lines = self._mart369_resolve(items)
@@ -83,6 +137,10 @@ class Mart369Cart(models.AbstractModel):
         sub = {QUICK: 0.0, EXPRESS: 0.0}
         present = {QUICK: False, EXPRESS: False}
         count = 0
+        where = self._mart369_where(address)
+        modes = {}
+        branches = self.env['stock.warehouse'].browse()
+        moved = 0
 
         for tmpl, qty in lines:
             entry = price_ctx.get(tmpl.id) or {}
@@ -91,7 +149,11 @@ class Mart369Cart(models.AbstractModel):
                 price = tmpl.list_price
             was = entry.get('mrp') or price
 
-            mode = self._mart369_mode_of(tmpl)
+            mode, branch = self._mart369_mode_of(tmpl, qty, where)
+            modes[str(tmpl.id)] = mode
+            branches |= branch
+            if mode == EXPRESS and not tmpl.mart_delivery_text:
+                moved += 1
             present[mode] = True
             sub[mode] += price * qty
             gross += price * qty
@@ -147,6 +209,15 @@ class Mart369Cart(models.AbstractModel):
             'count': count,
             'blocked': blocked,
             'unknown': self._mart369_unknown(items, lines),
+            # Which storefront each line landed in, so the cart groups by the
+            # server's answer and not by its own reading of the product.
+            'modes': modes,
+            # Quick items that went Express because of where they are going,
+            # and why: 'far' (no Quick branch reaches the pin), 'stock' (one
+            # does, but not with this item), 'area' (the pincode is Express).
+            'movedToExpress': moved,
+            'movedWhy': (where['reason'] or 'stock') if moved else '',
+            'branch': branches[:1].name or '',
         }
 
     @api.model

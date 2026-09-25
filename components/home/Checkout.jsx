@@ -180,6 +180,15 @@ function SlotStep({ bill, slots, slot, setSlot, onContinue }) {
               {bill.groups[g].length > 5 && <em>+{bill.groups[g].length - 5}</em>}
             </span>
           </div>
+          {g === "all" && bill.movedToExpress > 0 && (
+            <p className="co-moved">
+              <Icon n="info" size={13} />
+              {bill.movedToExpress} item{bill.movedToExpress === 1 ? "" : "s"} ship{bill.movedToExpress === 1 ? "s" : ""} Express
+              {bill.movedWhy === "far" ? ": your address is outside our Quick delivery area."
+                : bill.movedWhy === "area" ? ": Quick delivery doesn't reach this pincode yet."
+                : ": not in stock at the store near you."}
+            </p>
+          )}
           <div className="co-slots" role="radiogroup" aria-label={`${g === "quick" ? "Quick" : "Express"} delivery slot`}>
             {slots[g].map((s, k) => {
               const on = slot[g] === s.key;
@@ -476,10 +485,16 @@ export default function CheckoutPage({
      this page: it is handed the number and works out the total. Which number
      comes from the chosen chip, which is the operator's to set - not a
      constant in this file that nobody outside it could change. */
-  const shape = useMemo(() => computeBill({ cart, byId }), [cart, byId]);
+  /* Which items are Express depends on the address - near a branch that has
+     them or not - and only the shop's last bill knows. The fee this adds goes
+     into the next bill, so it reads the last answer rather than waiting on
+     the one it is about to ask for. */
+  const modesSeen = useRef(null);
+  const shape = useMemo(() => computeBill({ cart, byId, modes: modesSeen.current }), [cart, byId, modesSeen.current]); // eslint-disable-line
   const chosen = slots.all.find((s) => s.key === slot.all);
   const priority = shape.groups.all.length ? Number(chosen?.fee) || 0 : 0;
-  const bill = useBill({ cart, byId, rules, coupon, slotFee: priority });
+  const bill = useBill({ cart, byId, rules, coupon, slotFee: priority, addressId: address?.id });
+  modesSeen.current = bill.modes;
   /* The shop's slots arrive after the first paint, and the keys it offers are
      the operator's, not this file's. Keep the pick on a chip that exists, or
      "std" would stay selected against a list that no longer has it and the

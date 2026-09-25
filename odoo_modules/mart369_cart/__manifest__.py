@@ -1,6 +1,6 @@
 {
     'name': '369 Mart Delivery & Pricing',
-    'version': '19.0.1.4.0',
+    'version': '19.0.1.5.0',
     'category': 'Website',
     'summary': 'The bill, delivery fees, coupons, service areas and slots.',
     'description': """
@@ -27,7 +27,7 @@ them in **369 Mart -> Delivery & Pricing**.
     'author': '369 Mart',
     'license': 'LGPL-3',
     'depends': [
-        'mart369', 'mart369_catalog', 'mart369_address', 'delivery'],
+        'mart369', 'mart369_catalog', 'mart369_address', 'delivery', 'stock'],
     'data': [
         'security/ir.model.access.csv',
         'data/cart_data.xml',
@@ -51,6 +51,8 @@ them in **369 Mart -> Delivery & Pricing**.
         'static/description/delivery_desk_slots.png',
         'static/description/delivery_desk_slot_dialog.png',
         'static/description/delivery_desk_areas.png',
+        'static/description/delivery_desk_branches.png',
+        'static/description/delivery_desk_branch_dialog.png',
         # Then deals and coupons: what staff open this module for day to day.
         'static/description/deal_desk.png',
         'static/description/deal_desk_dialog.png',

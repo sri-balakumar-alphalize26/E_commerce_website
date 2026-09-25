@@ -138,10 +138,14 @@ class Mart369DeliveryRule(models.Model):
         rules = self.with_context(active_test=False).search([])
         slot_rows = slots.search([])
         area_rows = areas.search([])
+        # Every branch in every company - sudo, because the screen decides
+        # Quick for the whole shop, not for whichever company is selected.
+        branch_rows = self.env['stock.warehouse'].sudo().search([])
         return {
             'rules': [r._mart369_admin_row() for r in rules],
             'slots': [s._mart369_admin_row() for s in slot_rows],
             'areas': [a._mart369_admin_row() for a in area_rows],
+            'branches': [b._mart369_admin_row() for b in branch_rows],
             # The words for the two choice rows travel with the lists, so
             # neither screen keeps its own copy of what a storefront is
             # called - and a third storefront would appear in both at once.
@@ -154,5 +158,6 @@ class Mart369DeliveryRule(models.Model):
                 'rules': len(rules.filtered('active')),
                 'slots': len(slot_rows.filtered('active')),
                 'areas': len(area_rows.filtered('active')),
+                'branches': len(branch_rows.filtered('mart369_quick')),
             },
         }

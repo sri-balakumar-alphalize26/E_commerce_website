@@ -82,8 +82,10 @@ class SaleOrder(models.Model):
             raise UserError(self.env._('There is nothing in this basket.'))
 
         slot, slot_fee = self._mart369_slot_for(body)
+        # With the address, so Quick or Express is decided for where this is
+        # going - near a branch that has it, or not.
         bill = self.env['mart369.cart'].sudo()._mart369_bill(
-            items, coupon=body.get('coupon'), slot_fee=slot_fee)
+            items, coupon=body.get('coupon'), slot_fee=slot_fee, address=address)
 
         if bill['blocked']:
             raise UserError(self.env._(
@@ -97,7 +99,9 @@ class SaleOrder(models.Model):
         if coupon:
             self._mart369_check_coupon(coupon, partner)
 
-        mode = body.get('mode') or self._mart369_mode_of_bill(bill)
+        # The server's answer, not the app's: which items are Quick now depends
+        # on the address and the branches' stock, which the browser cannot see.
+        mode = self._mart369_mode_of_bill(bill)
 
         # 4. The order.
         values = {

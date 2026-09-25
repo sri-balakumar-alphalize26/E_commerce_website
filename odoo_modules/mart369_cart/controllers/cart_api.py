@@ -61,7 +61,10 @@ class Mart369CartApi(http.Controller):
         """What this basket costs.
 
         Body: {"items": {"<product id>": qty, ...}, "coupon": "QUICK20",
-               "slotFee": 49}
+               "slotFee": 49, "addressId": 42}
+
+        `addressId` is optional. With it, each line is Quick or Express for
+        that address - see `_mart369_bill` - and `modes` says which.
         """
         body = self._body()
         items = body.get('items')
@@ -74,9 +77,29 @@ class Mart369CartApi(http.Controller):
             slot_fee = 0.0
 
         bill = request.env['mart369.cart'].sudo()._mart369_bill(
-            items, coupon=body.get('coupon'), slot_fee=slot_fee)
+            items, coupon=body.get('coupon'), slot_fee=slot_fee,
+            address=self._own_address(body.get('addressId')))
         bill['ok'] = True
         return request.make_json_response(bill)
+
+    def _own_address(self, address_id):
+        """The signed-in customer's own address, or nothing.
+
+        Someone else's id - or any id from a guest - is quietly ignored rather
+        than refused: the bill still adds up, it just cannot say which items
+        are Quick where. Placing the order checks the address properly.
+        """
+        Partner = request.env['res.partner']
+        user = request.env.user
+        if not address_id or user._is_public():
+            return Partner.browse()
+        try:
+            address = Partner.sudo().browse(int(address_id)).exists()
+        except (TypeError, ValueError):
+            return Partner.browse()
+        if not address or address.parent_id != user.partner_id:
+            return Partner.browse()
+        return address
 
     # ------------------------------------------------------ serviceability
 

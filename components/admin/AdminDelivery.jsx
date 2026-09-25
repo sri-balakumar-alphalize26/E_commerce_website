@@ -10,6 +10,13 @@
      Fees          one rule per storefront — the four numbers the basket shows
      Slots         the chips the checkout offers, with their windows and caps
      Service areas which pincodes we reach, and how fast
+     Branches      which branches do Quick, and how far each one reaches
+
+   **Quick is decided per item, for the address.** An item is Quick when a
+   branch with Quick on is within its reach of the customer's map pin and has
+   it in stock; anything else ships Express. An address with no pin follows its
+   pincode in Service areas. The shop works this out, not this screen - here
+   is only where the branches' pin and reach are set.
 
    **Hours are stored as numbers, not as text.** 18.5 is half past six in the
    evening. The table prints "6:30 PM" beside the box so nobody has to hold
@@ -38,6 +45,7 @@ const TABS = [
   ["fees", "Fees"],
   ["slots", "Slots"],
   ["areas", "Service areas"],
+  ["branches", "Branches"],
 ];
 
 const ON_TONE = {
@@ -49,6 +57,12 @@ const BLANK_SLOT = {
   mode: "quick", kind: "window", key: "", top: "Today", sub: "", label: "",
   from_hour: 18, to_hour: 20, day_offset: 0, order_before: 24,
   fee: 0, capacity: 0, sequence: 10, active: true,
+};
+
+const QUICK_TONE = {
+  on: { label: "On", tone: "green" },
+  off: { label: "Off", tone: "grey" },
+  unready: { label: "Not ready", tone: "amber" },
 };
 
 const BLANK_AREA = { pincode: "", name: "", quick: true, express: true, eta: "13 mins", active: true };
@@ -401,11 +415,97 @@ function AreaDrawer({ area, onClose, onSaved }) {
   );
 }
 
+/* ============================== branch form ============================== */
+/* A branch is a warehouse, made in Odoo's Inventory. Delivery owns only these
+   four things about it, so there is no "New branch" here. */
+function BranchDrawer({ branch, onClose, onSaved }) {
+  const act = useAction();
+  const [form, setForm] = useState({
+    quick: branch.quick, quickKm: branch.quickKm ? String(branch.quickKm) : "",
+    lat: branch.lat ?? "", lng: branch.lng ?? "",
+  });
+  const [error, setError] = useState("");
+  const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+
+  /* A pin copied from Google Maps arrives as "23.588, 58.3829" in one box. */
+  const setLat = (v) => {
+    const parts = v.split(",").map((x) => x.trim());
+    if (parts.length === 2 && parts.every((x) => x !== "" && !isNaN(Number(x)))) {
+      setForm((f) => ({ ...f, lat: parts[0], lng: parts[1] }));
+    } else set("lat", v);
+  };
+
+  const save = async () => {
+    setError("");
+    const done = await act.run(async () => {
+      await api(`/admin/delivery/branches/${branch.id}`, { method: "PATCH", body: form });
+      return true;
+    });
+    if (done === null) {
+      setError(act.error?.message || "That could not be saved.");
+      return;
+    }
+    onSaved(`${branch.name} saved`);
+  };
+
+  return (
+    <Drawer onClose={onClose} title={`Quick delivery from ${branch.name}`}
+      sub={[branch.company, branch.code].filter(Boolean).join(" · ")}
+      foot={(close) => (
+        <>
+          <button className="ad-btn" onClick={close}>Cancel</button>
+          <button className="ad-btn ad-primary" disabled={act.busy} onClick={save}>
+            Save<Icon n="right" size={15} />
+          </button>
+        </>
+      )}>
+
+      {error && <p className="ad-form-error" role="alert">{error}</p>}
+
+      <section className="ad-dsec">
+        <div className="ad-kv-rows">
+          <label className="ad-kv-row">
+            <span>Quick delivery<small>This branch delivers Quick near it</small></span>
+            <Switch on={!!form.quick} onChange={(v) => set("quick", v)} label="Quick delivery" />
+          </label>
+        </div>
+      </section>
+
+      <section className="ad-dsec">
+        <h4>How far</h4>
+        <div className="ad-form">
+          <Field label="Reach" value={form.quickKm} onChange={(v) => set("quickKm", v)}
+            placeholder="5" suffix="km" decimal />
+        </div>
+        <p className="ad-hint">
+          <Icon n="info" size={14} />
+          A straight line from the branch. Roads are longer, so set it a little
+          under what a rider covers in the Quick time.
+        </p>
+      </section>
+
+      <section className="ad-dsec">
+        <h4>Where the branch is</h4>
+        <div className="ad-form">
+          <Field label="Latitude" value={form.lat} onChange={setLat} placeholder="23.5880" decimal />
+          <Field label="Longitude" value={form.lng} onChange={(v) => set("lng", v)} placeholder="58.3829" decimal />
+        </div>
+        <p className="ad-hint">
+          <Icon n="info" size={14} />
+          In Google Maps, right-click the branch and click the numbers at the top
+          to copy them. Paste both into Latitude.
+        </p>
+      </section>
+    </Drawer>
+  );
+}
+
 /* ================================ the page ============================== */
 export function DeliverySection({ flash }) {
   const [tab, setTab] = useState("fees");
   const [slotEdit, setSlotEdit] = useState(null); // a slot, or {} for a new one
   const [areaEdit, setAreaEdit] = useState(null);
+  const [branchEdit, setBranchEdit] = useState(null);
   const [drop, setDrop] = useState(null); // {kind, row}
 
   const { data, loading, error, reload } = useResource("/admin/delivery",
@@ -418,6 +518,7 @@ export function DeliverySection({ flash }) {
   const currency = data?.currency;
   const slots = data?.slots || [];
   const areas = data?.areas || [];
+  const branches = data?.branches || [];
   const modes = data?.modes || [];
   const kinds = data?.kinds || [];
 
@@ -425,7 +526,9 @@ export function DeliverySection({ flash }) {
     fees: rules.filter((r) => r.active).length,
     slots: slots.filter((s) => s.active).length,
     areas: areas.filter((a) => a.active).length,
-  }), [rules, slots, areas]);
+    branches: branches.filter((b) => b.quick).length,
+  }), [rules, slots, areas, branches]);
+  const unready = branches.filter((b) => b.unready);
 
   /* Read-after-write, like every live section. Two caches have to be dropped,
      not one: the console's own list, and whichever shopper feed this edit
@@ -469,6 +572,10 @@ export function DeliverySection({ flash }) {
   const retireArea = (area, retired) =>
     run(() => api(`/admin/delivery/areas/${area.id}`, { method: "PATCH", body: { active: !retired } }),
       retired ? "Area switched off" : "Area back on");
+
+  const toggleBranch = (branch) =>
+    run(() => api(`/admin/delivery/branches/${branch.id}`, { method: "PATCH", body: { quick: !branch.quick } }),
+      branch.quick ? `Quick switched off at ${branch.name}` : `Quick switched on at ${branch.name}`);
 
   const saved = (setter) => async (msg) => {
     setter(null);
@@ -517,6 +624,14 @@ export function DeliverySection({ flash }) {
 
         {errorState}
         {loadingState}
+
+        {!!unready.length && (
+          <p className="ad-hint ad-hint-warn">
+            <Icon n="info" size={14} />
+            Quick is on at {unready.map((b) => b.name).join(", ")} but it has no map pin
+            or no reach, so it delivers Quick to nobody.
+          </p>
+        )}
 
         {/* ------------------------------------------------------- fees */}
         {tab === "fees" && !error && !!rules.length && (
@@ -623,6 +738,49 @@ export function DeliverySection({ flash }) {
           <Empty icon="pin" title="Nowhere is covered"
             text="With no area on the list every pincode is told we do not deliver there. Add the ones you reach." />
         )}
+
+        {/* --------------------------------------------------- branches */}
+        {tab === "branches" && !error && !!branches.length && (
+          <div className="ad-table-wrap">
+            <p className="ad-hint ad-branch-hint">
+              <Icon n="info" size={14} />
+              An item is Quick when a branch with Quick on is within its reach of the
+              customer's map pin and has the item in stock. Otherwise it ships Express.
+              An address with no map pin follows its pincode in Service areas.
+            </p>
+            <table className="ad-table">
+              <thead>
+                <tr>
+                  <th>Branch</th><th>Company</th><th>Map pin</th><th>Quick</th>
+                  <th className="ad-num">Reach</th><th />
+                </tr>
+              </thead>
+              <tbody>
+                {branches.map((b, i) => (
+                  <tr key={b.id} style={{ "--i": i }} className={b.unready ? "ad-row-warn" : ""}>
+                    <td><b>{b.name}</b><small className="ad-sub">{b.code}</small></td>
+                    <td>{b.company || "—"}</td>
+                    <td>{b.lat !== null
+                      ? `${b.lat.toFixed(4)}, ${b.lng.toFixed(4)}`
+                      : <span className="ad-sub">No pin</span>}</td>
+                    <td><Pill s={b.unready ? "unready" : b.quick ? "on" : "off"} map={QUICK_TONE} /></td>
+                    <td className="ad-num">{b.quickKm ? `${b.quickKm} km` : "—"}</td>
+                    <td className="ad-row-act">
+                      <button className="ad-btn ad-sm" disabled={act.busy}
+                        onClick={() => setBranchEdit(b)}>Edit</button>
+                      <button className="ad-btn ad-sm" disabled={act.busy}
+                        onClick={() => toggleBranch(b)}>{b.quick ? "Quick off" : "Quick on"}</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {tab === "branches" && !loading && !branches.length && !error && (
+          <Empty icon="store" title="No branches yet"
+            text="A branch is a warehouse. Add one in Odoo's Inventory, then set its Quick reach here." />
+        )}
       </section>
 
       {slotEdit && (
@@ -633,6 +791,11 @@ export function DeliverySection({ flash }) {
       {areaEdit && (
         <AreaDrawer area={areaEdit.id ? areaEdit : null}
           onClose={() => setAreaEdit(null)} onSaved={saved(setAreaEdit)} />
+      )}
+
+      {branchEdit && (
+        <BranchDrawer branch={branchEdit}
+          onClose={() => setBranchEdit(null)} onSaved={saved(setBranchEdit)} />
       )}
 
       {drop && (

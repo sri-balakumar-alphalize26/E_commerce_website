@@ -766,3 +766,22 @@ class Mart369DeliveryAdminApi(Mart369CouponAdminApi):
             return self._fail('That pincode has just been added.',
                               field='pincode', status=409)
         return self._json({'ok': True, 'area': area._mart369_admin_row()})
+
+    @http.route('/369mart/admin/delivery/branches/<int:branch_id>', **_PATCH)
+    def update_branch(self, branch_id, **kwargs):
+        """Switch Quick on or off for a branch, and set its pin and reach.
+
+        No create and no delete: a branch is a warehouse, made in Inventory.
+        The model does the work so the desk in Odoo refuses the same things.
+        """
+        if not self._may_edit():
+            return self._fail('You do not have access to this.', status=403)
+        if not request.env['stock.warehouse'].sudo().browse(branch_id).exists():
+            return self._fail('There is no such branch.', status=404)
+        try:
+            with request.env.cr.savepoint():
+                row = request.env['stock.warehouse'].mart369_admin_save(
+                    branch_id, self._body())
+        except (AccessError, UserError, ValidationError) as exc:
+            return self._fail(str(exc))
+        return self._json({'ok': True, 'branch': row})

@@ -11,6 +11,10 @@
  *  - **Fees** - what each storefront charges, and when it stops charging.
  *  - **Slots** - the windows the checkout offers, with their caps.
  *  - **Service areas** - the pincodes we reach, and how fast.
+ *  - **Branches** - which branches do Quick, and how far each one reaches.
+ *    An item is Quick only when such a branch is within reach of the
+ *    customer's map pin and has it in stock; an address with no pin falls
+ *    back to its pincode's area.
  *
  * What the three list views next door cannot say, and this does:
  *
@@ -45,12 +49,14 @@ const M = {
     rule: "mart369.delivery.rule",
     slot: "mart369.delivery.slot",
     area: "mart369.service.area",
+    branch: "stock.warehouse",
 };
 
 export const TABS = [
     { key: "fees", label: _t("Fees"), icon: "money" },
     { key: "slots", label: _t("Slots"), icon: "clock" },
     { key: "areas", label: _t("Service areas"), icon: "pin" },
+    { key: "branches", label: _t("Branches"), icon: "store" },
 ];
 
 /** Money, in whatever the shop quotes in. The same function the deals desk
@@ -259,6 +265,69 @@ export class AreaDialog extends Component {
     }
 }
 
+/** One branch's Quick settings. Branches themselves are made in Inventory,
+ *  so this edits the four things delivery owns and nothing else. */
+export class BranchDialog extends Component {
+    static template = "mart369_cart.BranchDialog";
+    static components = { Dialog, Switch, Icon };
+    static props = {
+        branch: Object,
+        onSaved: Function,
+        close: Function,
+    };
+
+    setup() {
+        this.orm = useService("orm");
+        const b = this.props.branch;
+        this.state = useState({
+            draft: {
+                quick: b.quick,
+                quickKm: b.quickKm ? String(b.quickKm) : "",
+                lat: b.lat ?? "",
+                lng: b.lng ?? "",
+            },
+            error: "",
+            busy: false,
+        });
+    }
+
+    set(field, value) {
+        this.state.draft[field] = value;
+    }
+
+    /** A pin pasted from Google Maps arrives as "23.588, 58.3829" in one box. */
+    pastePin(ev) {
+        const parts = (ev.target.value || "").split(",").map((x) => x.trim());
+        if (parts.length === 2 && parts.every((x) => x !== "" && !isNaN(Number(x)))) {
+            this.state.draft.lat = parts[0];
+            this.state.draft.lng = parts[1];
+            ev.target.value = parts[0];
+        } else {
+            this.state.draft.lat = ev.target.value;
+        }
+    }
+
+    async save() {
+        if (this.state.busy) {
+            return;
+        }
+        this.state.busy = true;
+        this.state.error = "";
+        const d = this.state.draft;
+        try {
+            await this.orm.call(M.branch, "mart369_admin_save", [this.props.branch.id, {
+                quick: !!d.quick, quickKm: d.quickKm, lat: d.lat, lng: d.lng,
+            }]);
+            this.props.close();
+            await this.props.onSaved(_t("%s saved.", this.props.branch.name));
+        } catch (err) {
+            this.state.error = message(err, _t("That could not be saved."));
+        } finally {
+            this.state.busy = false;
+        }
+    }
+}
+
 export class DeliveryDesk extends Component {
     static template = "mart369_cart.DeliveryDesk";
     static components = { Layout, Switch, Icon };
@@ -276,6 +345,7 @@ export class DeliveryDesk extends Component {
             rules: [],
             slots: [],
             areas: [],
+            branches: [],
             modes: [],
             kinds: [],
             counts: {},
@@ -302,6 +372,7 @@ export class DeliveryDesk extends Component {
             this.state.rules = data.rules;
             this.state.slots = data.slots;
             this.state.areas = data.areas;
+            this.state.branches = data.branches || [];
             this.state.modes = data.modes;
             this.state.kinds = data.kinds;
             this.state.counts = data.counts;
@@ -495,6 +566,31 @@ export class DeliveryDesk extends Component {
             () => this.orm.write(M.area, [area.id], { active: true }),
             _t("Area back on.")
         );
+    }
+
+    // ------------------------------------------------------------ branches
+
+    openBranch(branch) {
+        this.dialog.add(BranchDialog, {
+            branch,
+            onSaved: async (msg) => {
+                await this.load();
+                this.notification.add(msg, { type: "success" });
+            },
+        });
+    }
+
+    toggleBranch(branch) {
+        return this.run(
+            () => this.orm.call(M.branch, "mart369_admin_save", [branch.id, { quick: !branch.quick }]),
+            branch.quick ? _t("Quick switched off at %s.", branch.name)
+                         : _t("Quick switched on at %s.", branch.name)
+        );
+    }
+
+    /** Branches with Quick on that cannot actually reach anyone yet. */
+    get unready() {
+        return this.state.branches.filter((b) => b.unready);
     }
 
     // -------------------------------------------------------------- saying

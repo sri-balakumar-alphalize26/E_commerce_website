@@ -26,12 +26,18 @@ export function useRules() {
 
 /* What is in the basket, and which storefront each line ships from. This is
    layout, not money: which lines sit under "Delivery in 13 mins" and which
-   under "2-3 days", and how many things there are in total. */
-export function computeBill({ cart, byId }) {
+   under "2-3 days", and how many things there are in total.
+
+   `modes` is the shop's answer from the bill: with a delivery address, an
+   item is Quick only when a branch near it has it in stock, which only the
+   shop knows. Until that answer arrives the product decides, as it always
+   has - a delivery promise makes it Express. */
+export function computeBill({ cart, byId, modes = null }) {
   const groups = { quick: [], all: [] };
   Object.entries(cart).forEach(([id, qty]) => {
     const p = byId[id];
-    if (p && qty > 0) groups[p.delivery ? "all" : "quick"].push({ p, qty });
+    const mode = modes?.[id] || (p?.delivery ? "all" : "quick");
+    if (p && qty > 0) groups[mode].push({ p, qty });
   });
   const lines = [...groups.quick, ...groups.all];
   return { groups, lines, count: lines.reduce((s, l) => s + l.qty, 0) };
@@ -46,19 +52,21 @@ export function computeBill({ cart, byId }) {
    `feeFor` stays here because it is a function, which no JSON can carry, but
    it is the shop's rule applied to the shop's subtotal, not a second opinion
    about either. */
-export function useBill({ cart, byId, rules, coupon = null, slotFee = 0 }) {
-  const shape = useMemo(() => computeBill({ cart, byId }), [cart, byId]);
+export function useBill({ cart, byId, rules, coupon = null, slotFee = 0, addressId = null }) {
   const [money, setMoney] = useState(null);
   const [error, setError] = useState(null);
+  const shape = useMemo(() => computeBill({ cart, byId, modes: money?.modes }), [cart, byId, money]);
   const tick = useRef(0);
-  const key = JSON.stringify([cart, coupon || "", slotFee]);
+  const key = JSON.stringify([cart, coupon || "", slotFee, addressId || ""]);
 
   useEffect(() => {
     if (!shape.count) { setMoney(null); setError(null); return undefined; }
     const mine = ++tick.current;
     /* A stepper is held down, not tapped once. Wait for the hand to stop. */
     const timer = setTimeout(() => {
-      api("/cart/bill", { method: "POST", body: { items: cart, coupon: coupon || "", slotFee } })
+      const body = { items: cart, coupon: coupon || "", slotFee };
+      if (addressId) body.addressId = addressId;
+      api("/cart/bill", { method: "POST", body })
         .then((r) => { if (mine === tick.current) { setMoney(r); setError(null); } })
         .catch((e) => { if (mine === tick.current) { setMoney(null); setError(e); } });
     }, 200);
@@ -71,6 +79,7 @@ export function useBill({ cart, byId, rules, coupon = null, slotFee = 0 }) {
     ...shape,
     mrp: 0, items: 0, fees: 0, couponOff: 0, total: 0, saved: 0,
     couponValid: false, blocked: false, coupons: [], unknown: [],
+    modes: null, movedToExpress: 0, movedWhy: "", branch: "",
     ...(money || {}),
     sub, feeFor, priced: !!money, error,
   };
@@ -206,7 +215,7 @@ const INSTRUCTIONS = [
   { key: "pet", label: "Pet at home", icon: "paw" },
 ];
 
-export default function CartPage({ cart, setQty, byId, recommended = [], alsoLike = [], onBack, onCheckout }) {
+export default function CartPage({ cart, setQty, byId, recommended = [], alsoLike = [], onBack, onCheckout, addressId = null }) {
   const [couponOpen, setCouponOpen] = useState(false);
   const [coupon, setCoupon] = useState(null);
   const [whatsapp, setWhatsapp] = useState(true);
@@ -216,7 +225,7 @@ export default function CartPage({ cart, setQty, byId, recommended = [], alsoLik
   const [paying, setPaying] = useState("");
 
   const { rules, coupons } = useRules();
-  const bill = useBill({ cart, byId, rules, coupon });
+  const bill = useBill({ cart, byId, rules, coupon, addressId });
   const { groups, mrp, items, sub, feeFor, couponValid, couponOff, total, saved, blocked, count, priced } = bill;
   /* The shop decides a coupon no longer applies, not the page. */
   useEffect(() => { if (priced && coupon && !couponValid) { setCoupon(null); flash(`${coupon} removed — cart no longer qualifies`); } }, [couponValid, priced]); // eslint-disable-line

@@ -189,7 +189,9 @@
 .ls-radio i { width: 10px; height: 10px; border-radius: 50%; background: var(--hm-blue); transform: scale(0); transition: transform 260ms var(--hm-spring); }
 .ls-on .ls-radio { border-color: var(--hm-blue); }
 .ls-on .ls-radio i { transform: scale(1); }
-html.ls-lock, html.ls-lock body { overflow: hidden; }
+/* <html> only - see html.ad-lock in admin.css: locking <body> too makes the
+   sticky header and side panels jump when a sheet opens. */
+html.ls-lock { overflow: hidden; }
 
 /* ---------------- category ---------------- */
 .cg-hero {
