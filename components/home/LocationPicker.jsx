@@ -8,6 +8,7 @@
    ========================================================================== */
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Icon } from "./shared";
+import { addressText } from "@/lib/address";
 
 
 
@@ -57,6 +58,8 @@ export default function LocationPicker({ open, onClose, anchorSelector = ".hm-lo
     navigator.geolocation.getCurrentPosition(
       async ({ coords }) => {
         const found = onLocate ? await onLocate(coords) : null; /* reverse-geocode on your server */
+        /* The shop opened the address form, filled in, for the shopper to finish. */
+        if (found?.prefill) { setLocating("done"); setTimeout(onClose, 650); return; }
         finish(found || { id: "current", label: "Current location", line: `${coords.latitude.toFixed(4)}, ${coords.longitude.toFixed(4)}`, city: "", icon: "gps" });
       },
       () => fallback("Allow location access, or enter a pincode below."),
@@ -131,7 +134,7 @@ export default function LocationPicker({ open, onClose, anchorSelector = ".hm-lo
                   <li key={a.id} className="lp-in" style={{ "--i": 3 + i }}>
                     <button className={"lp-addr" + (on ? " lp-on" : "")} aria-pressed={on} onClick={() => { onSelect(a); setTimeout(onClose, 380); }}>
                       <span className="lp-addr-ic"><Icon n={a.icon || "pin"} size={17} /></span>
-                      <span className="lp-addr-txt"><b>{a.label}</b><small>{a.line}{a.city ? `, ${a.city}` : ""}</small></span>
+                      <span className="lp-addr-txt"><b>{a.label}</b><small>{addressText(a)}</small></span>
                       <span className="lp-radio" aria-hidden="true"><i /></span>
                     </button>
                   </li>

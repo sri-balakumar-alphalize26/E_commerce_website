@@ -1,0 +1,104 @@
+/* ==========================================================================
+   369 Mart — Delivery address form (.af-*) and the address cards around it.
+   Fields are checkout.css's floating-label .co-field; this adds the phone
+   prefix, the searchable Country / State pickers and the pincode's "found" line.
+   Kept out of home.css on purpose: mart369_home's storefront.scss is
+   generated from that file, and this has nothing to do with the builder.
+   ========================================================================== */
+.af-form { padding-top: 12px; }
+.af-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.af-top .co-chips { margin-bottom: 0; }
+
+/* +91 sits inside the box on the line the digits are typed on, cut off from
+   them by a hairline. Its label always rides at the top, so the prefix and an
+   empty box never look misaligned. --af-pre is the prefix's length in
+   characters (+91 is 3, +968 is 4), so the digits start just after it. */
+.af-pre-field .af-pre {
+  position: absolute; left: 13px; top: 19px; height: 26px; display: flex; align-items: center; padding-right: 9px;
+  border-right: 1px solid #d5dee5; font-size: 15px; font-weight: 600; color: var(--hm-ink); pointer-events: none;
+  font-variant-numeric: tabular-nums;
+}
+.af-pre-field input { padding-left: calc(13px + var(--af-pre, 3) * 1ch + 19px); font-variant-numeric: tabular-nums; }
+.af-pre-field > span { top: 13px; font-size: 11px; font-weight: 600; }
+
+/* the areas India Post knows for this pincode, one tap each */
+.af-areas { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; animation: hm-rise 260ms var(--hm-ease) both; }
+.af-areas small { flex-basis: 100%; font-size: 12px; font-weight: 600; color: var(--hm-muted); }
+.af-areas button {
+  height: 30px; padding: 0 12px; border-radius: 999px; border: 1px solid #d5dee5; background: #fff;
+  font: inherit; font-size: 12.5px; font-weight: 600; color: var(--hm-ink); cursor: pointer; transition: border-color 160ms, background-color 160ms;
+}
+.af-areas button:hover { border-color: var(--hm-blue); background: #eaf5fb; color: var(--hm-blue-d, var(--hm-navy)); }
+
+/* ---- searchable picker (Country, State): Pick.jsx ----
+   The box wears the same border, height and raised label as the inputs. */
+.af-pick-btn {
+  width: 100%; height: 50px; display: flex; align-items: center; gap: 8px; padding: 19px 12px 5px; text-align: left;
+  border: 1.5px solid #d5dee5; border-radius: 11px; background: #fff; font: inherit; font-size: 15px; color: var(--hm-ink);
+  cursor: pointer; outline: none; transition: border-color 200ms, box-shadow 200ms;
+}
+.af-pick-btn:hover:not(:disabled) { border-color: #b9cad6; }
+.af-pick-btn:focus-visible, .af-pick.af-open .af-pick-btn { border-color: var(--hm-blue); box-shadow: 0 0 0 4px rgba(10, 120, 171, 0.12); }
+.af-pick-btn:disabled { cursor: progress; background: var(--hm-soft); color: var(--hm-muted); }
+.af-pick-val { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.af-pick-val.af-ph { color: #8594a0; }
+.af-pick-hint { flex: none; font-size: 13px; font-weight: 600; color: var(--hm-muted); font-variant-numeric: tabular-nums; }
+.af-pick-chev { flex: none; margin-top: -14px; color: #8594a0; transition: transform 220ms var(--hm-ease); }
+.af-pick.af-open .af-pick-chev { transform: rotate(180deg); color: var(--hm-blue); }
+.af-pick > span { top: 13px; font-size: 11px; font-weight: 600; }
+.af-pick.af-open > span { color: var(--hm-blue); }
+.af-pick.co-err .af-pick-btn { border-color: var(--co-red, #c8433a); animation: co-wiggle 360ms var(--hm-ease); }
+
+/* the panel: portalled to <body>, fixed under (or over) its box */
+.af-pop {
+  position: fixed; z-index: 1300; display: flex; flex-direction: column; overflow: hidden;
+  background: #fff; border: 1px solid #dfe7ed; border-radius: 14px;
+  box-shadow: 0 22px 44px -18px rgba(19, 33, 43, 0.35), 0 4px 12px -6px rgba(19, 33, 43, 0.12);
+  transform-origin: top center; animation: af-pop-in 180ms var(--hm-ease) both;
+}
+.af-pop.af-up { transform-origin: bottom center; }
+@keyframes af-pop-in { from { opacity: 0; transform: translateY(-4px) scale(0.98); } }
+.af-pop-find { flex: none; display: flex; align-items: center; gap: 8px; margin: 8px; padding: 0 12px; height: 42px; border-radius: 10px; background: var(--hm-soft); color: #8594a0; }
+.af-pop-find:focus-within { box-shadow: inset 0 0 0 1.5px var(--hm-blue); color: var(--hm-blue); }
+.af-pop-find input { flex: 1; min-width: 0; border: 0; outline: none; background: transparent; font: inherit; font-size: 14.5px; color: var(--hm-ink); }
+.af-pop-list { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; margin: 0; padding: 0 6px 8px; list-style: none; }
+.af-pop-list ul { margin: 0; padding: 0; list-style: none; }
+.af-pop-group {
+  position: sticky; top: 0; z-index: 1; display: block; padding: 10px 10px 6px; background: #fff;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--hm-muted);
+}
+.af-pop-list [role="option"] {
+  display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 0 10px; border-radius: 9px;
+  font-size: 14.5px; color: var(--hm-ink); cursor: pointer;
+}
+.af-pop-list [role="option"] > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.af-pop-list [role="option"] small { flex: none; font-size: 12.5px; font-weight: 600; color: var(--hm-muted); font-variant-numeric: tabular-nums; }
+.af-pop-list [role="option"].af-act { background: #eef5fa; }
+.af-pop-list [role="option"].af-on { color: var(--hm-blue-d, var(--hm-navy)); font-weight: 600; }
+.af-pop-list [role="option"].af-on small { color: var(--hm-blue); }
+.af-tick { flex: none; width: 15px; display: grid; place-items: center; color: var(--hm-blue); font-style: normal; }
+.af-pop-empty { padding: 18px 12px; font-size: 13.5px; color: var(--hm-muted); text-align: center; }
+
+/* "Dindigul, Tamil Nadu" under the pincode once the shop has found it */
+.af-hint { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: 12px; font-weight: 600; color: var(--hm-muted); animation: hm-rise 260ms var(--hm-ease) both; }
+.af-hint.af-good { color: var(--co-green, #1a7f3c); }
+.af-spin { width: 11px; height: 11px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: af-spin 700ms linear infinite; }
+@keyframes af-spin { to { transform: rotate(360deg); } }
+
+/* a saved address, read as lines */
+.af-lines { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.af-lines > span { font-size: 13px; color: var(--hm-muted); overflow-wrap: anywhere; }
+.af-who { font-size: 13px; color: var(--hm-ink); font-weight: 600; }
+
+@media (prefers-reduced-motion: reduce) {
+  .af-hint, .af-spin, .af-areas, .af-pop, .af-pick-btn { animation: none; }
+}
+
+/* Checkout: the whole card picks the address, so Edit sits beside it, not in it */
+.af-card { position: relative; display: grid; }
+.af-card .co-addr { padding-right: 52px; height: 100%; }
+.af-edit { position: absolute; top: 13px; right: 14px; font-size: 12.5px !important; }
+
+/* Account: an address card reads as lines now, and the form opens as a card */
+.ac-addr { align-items: flex-start; }
+.ac-addr-edit { padding: 4px 16px 16px; }

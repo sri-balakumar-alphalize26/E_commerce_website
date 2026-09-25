@@ -21,6 +21,8 @@ import { useContext, useEffect, useLayoutEffect, useRef, useState } from "react"
 import { Icon, OpenContext, QtyControl, Thumb, WishContext, money } from "./shared";
 import { NotifsSec, PaymentsSec, ReferSec, ReviewsSec, RewardsSec, WalletSec, useNotifications } from "./AccountExtras";
 import { fmtPlaced } from "./orderState";
+import AddressForm from "./AddressForm";
+import { addressLines, phoneText } from "@/lib/address";
 import { api } from "@/lib/api";
 import { useAction } from "@/lib/useFetch";
 
@@ -165,50 +167,64 @@ function ListSec({ byId, cart, setQty, onBrowse }) {
   );
 }
 
-function AddressSec({ addresses, onAddAddress, onRemoveAddress, selected, onSelect, busy, error }) {
-  const [adding, setAdding] = useState(false);
-  const [draft, setDraft] = useState({ label: "Home", line: "", city: "" });
-  const add = async (e) => {
-    e.preventDefault();
-    if (!draft.line.trim() || !draft.city.trim()) return;
-    /* The shop mints the id, works out the icon and splits the pincode off the
-       city. A locally invented id could never be ordered against. */
-    const saved = await onAddAddress(draft);
-    if (!saved) return; /* the error is shown under the form */
-    setAdding(false); setDraft({ label: "Home", line: "", city: "" });
+function AddressSec({ addresses, onSaveAddress, formMeta, me, prefill, onPrefillUsed, onRemoveAddress, selected, onSelect, busy, error }) {
+  /* The "new" form stays drawn while it folds away; every opening gets a fresh
+     one (n), seeded from "use my location" when that is how we got here. */
+  const [adding, setAdding] = useState(!!prefill);
+  const [fresh, setFresh] = useState({ n: 0, init: prefill || undefined });
+  const [editId, setEditId] = useState(null);
+  const dial = formMeta?.phone?.dial;
+  const openNew = (init) => { setFresh((x) => ({ n: x.n + 1, init })); setAdding(true); setEditId(null); };
+  useEffect(() => { if (prefill) openNew(prefill); }, [prefill?.key]); // eslint-disable-line
+  const closeNew = () => { setAdding(false); onPrefillUsed?.(); };
+  /* The shop mints the id and works out the icon; a locally invented id could
+     never be ordered against. */
+  const saveNew = async (body) => {
+    const r = await onSaveAddress(null, body);
+    if (!r?.error) closeNew();
+    return r;
+  };
+  const saveEdit = (id) => async (body) => {
+    const r = await onSaveAddress(id, body);
+    if (!r?.error) setEditId(null);
+    return r;
   };
   return (
     <div className="ac-stack">
-      <button className={"ac-card ac-add" + (adding ? " ac-open" : "")} onClick={() => setAdding((v) => !v)} aria-expanded={adding}>
+      <button className={"ac-card ac-add" + (adding ? " ac-open" : "")} onClick={() => (adding ? closeNew() : openNew())} aria-expanded={adding}>
         <span className="ac-add-ic"><Icon n="plus" size={18} /></span>Add a new address
       </button>
       <div className={"ac-collapse" + (adding ? " ac-show" : "")}>
-        <div>
-        <form className="ac-card ac-addr-form" onSubmit={add}>
-          <div className="ac-chips">
-            {["Home", "Work", "Other"].map((l) => (
-              <button type="button" key={l} className={draft.label === l ? "ac-on" : ""} onClick={() => setDraft({ ...draft, label: l })} tabIndex={adding ? 0 : -1}>{l}</button>
-            ))}
-          </div>
-          <input placeholder="House / flat, street, area" value={draft.line} onChange={(e) => setDraft({ ...draft, line: e.target.value })} tabIndex={adding ? 0 : -1} />
-          <input placeholder="City and pincode" value={draft.city} onChange={(e) => setDraft({ ...draft, city: e.target.value })} tabIndex={adding ? 0 : -1} />
-          {error && <p className="co-error" key={error}>{error}</p>}
-          <button className="ac-primary" type="submit" tabIndex={adding ? 0 : -1} disabled={busy}>{busy ? "Saving…" : "Save address"}</button>
-        </form>
+        <div inert={!adding}>
+          {fresh.n > 0 && (
+            <div className="ac-card ac-addr-edit">
+              <AddressForm key={fresh.n} initial={fresh.init} meta={formMeta} me={me} onSave={saveNew} onCancel={closeNew} />
+            </div>
+          )}
         </div>
       </div>
+      {error && <p className="co-error" key={error}>{error}</p>}
       {addresses.map((a, i) => {
         const on = selected?.id === a.id;
+        if (editId === a.id) {
+          return (
+            <div key={a.id} className="ac-card ac-addr-edit">
+              <AddressForm initial={a} meta={formMeta} me={me} onSave={saveEdit(a.id)} onCancel={() => setEditId(null)} saveLabel="Save changes" />
+            </div>
+          );
+        }
         return (
           <div key={a.id} className={"ac-card ac-addr" + (on ? " ac-on" : "")} style={{ "--i": i }}>
             <span className="ac-addr-ic"><Icon n={a.icon || "pin"} size={18} /></span>
-            <div className="ac-addr-txt">
+            <div className="ac-addr-txt af-lines">
               <b>{a.label}{on && <em>Default</em>}</b>
-              <small>{a.line}{a.city ? `, ${a.city}` : ""}</small>
+              {(a.name || a.phone) && <span className="af-who">{[a.name, phoneText(a.phone, dial)].filter(Boolean).join(" · ")}</span>}
+              {addressLines(a).map((l) => <span key={l}>{l}</span>)}
             </div>
             <div className="ac-addr-act">
-              {!on && <button className="ac-link" onClick={() => onSelect(a)}>Set as default</button>}
-              <button className="ac-link ac-danger" onClick={() => onRemoveAddress(a)}>Remove</button>
+              <button className="ac-link" onClick={() => { setEditId(a.id); setAdding(false); }} disabled={busy}>Edit</button>
+              {!on && <button className="ac-link" onClick={() => onSelect(a)} disabled={busy}>Set as default</button>}
+              <button className="ac-link ac-danger" onClick={() => onRemoveAddress(a)} disabled={busy}>Remove</button>
             </div>
           </div>
         );
@@ -364,7 +380,7 @@ function LegalSec() {
 export default function AccountPage({
   user: initialUser = { name: "Demo", email: "abc", phone: "" },
   section: initialSection = "list",
-  byId, cart, setQty, addresses, onAddAddress, onRemoveAddress, selectedAddress, onSelectAddress, addrBusy, addrError,
+  byId, cart, setQty, addresses, onSaveAddress, addressForm, addrMe, addrPrefill, onPrefillUsed, onRemoveAddress, selectedAddress, onSelectAddress, addrBusy, addrError,
   orders = [], onBrowse, onReorder, onTrack, onSignOut,
   wallet = 0, onWallet, onNav, onSection,
 }) {
@@ -412,7 +428,7 @@ export default function AccountPage({
   let body;
   if (section === "profile") body = <ProfileSec user={user} onSave={setUser} />;
   else if (section === "list") body = <ListSec byId={byId} cart={cart} setQty={setQty} onBrowse={onBrowse} />;
-  else if (section === "address") body = <AddressSec addresses={addresses} onAddAddress={onAddAddress} onRemoveAddress={onRemoveAddress} selected={selectedAddress} onSelect={onSelectAddress} busy={addrBusy} error={addrError} />;
+  else if (section === "address") body = <AddressSec addresses={addresses} onSaveAddress={onSaveAddress} formMeta={addressForm} me={addrMe} prefill={addrPrefill} onPrefillUsed={onPrefillUsed} onRemoveAddress={onRemoveAddress} selected={selectedAddress} onSelect={onSelectAddress} busy={addrBusy} error={addrError} />;
   else if (section === "orders") body = <OrdersSec orders={orders} byId={byId} onReorder={onReorder} onTrack={onTrack} />;
   else if (section === "reviews") body = <ReviewsSec orders={orders} byId={byId} onOpen={openProduct} flash={flash} />;
   else if (section === "notifications") body = <NotifsSec orders={orders} onNav={onNav} goSection={go} />;

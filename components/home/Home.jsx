@@ -33,6 +33,7 @@ import { useAction, useResource } from "@/lib/useFetch";
 import { absorb, ensure, useProducts } from "@/lib/products";
 import { setCurrency, useCurrency } from "@/lib/money";
 import { ApiError, api } from "@/lib/api";
+import { addressText } from "@/lib/address";
 import { BuyAgainPage, CategoryPage, NotFoundView, OffersPage, SearchResults, SiteFooter } from "./Browse";
 
 /* ---------- header ---------- */
@@ -88,7 +89,7 @@ function StoreHeader({ unread = 0, count, mode, onMode, modeText, onCart, onAcco
           <span className="hm-loc-ic" key={mode + (address?.id || "")}><Icon n={mode === "quick" ? "bolt" : "truck"} size={18} className={mode === "quick" ? "hm-fill" : ""} /></span>
           <span className="hm-loc-txt" key={address?.id || "none"}>
             <b>{address ? (mode === "quick" ? address.label : `Deliver to ${address.label}`) : (mode === "quick" ? "Delivery in minutes" : "Deliver to")} <Icon n="chev" size={14} className="hm-loc-chev" /></b>
-            <small>{address ? `${address.line}${address.city ? ", " + address.city : ""}` : "Set your delivery location"}</small>
+            <small>{address ? addressText(address) : "Set your delivery location"}</small>
           </span>
         </button>
         <button className="hm-search" onClick={onSearch} aria-label="Search products">
@@ -325,7 +326,17 @@ export default function Home({
      kept in this browser could only ever disagree with it. */
   const { data: addrData, reload: reloadAddresses } = useResource("/addresses");
   const addresses = useMemo(() => addrData?.addresses || [], [addrData]);
-  const address = useMemo(() => addresses.find((a) => a.id === addrData?.selected) || null, [addresses, addrData]);
+  /* The card tapped, while the shop is being told. A round trip to Oman takes
+     seconds, and a radio that sits still that long reads as a tap that missed.
+     It goes back to the shop's answer the moment that answer is in - or the
+     save fails - so it can never outlive a disagreement. */
+  const [picking, setPicking] = useState(null);
+  const address = useMemo(() => addresses.find((a) => a.id === (picking ?? addrData?.selected)) || null, [addresses, addrData, picking]);
+  /* What the address form needs from the shop: phone prefix, pincode length,
+     the country's states. The shop delivers in one country; the form follows. */
+  const { data: addressForm } = useResource("/addresses/form");
+  /* "Use my location" fills the form rather than saving half an address. */
+  const [addrPrefill, setAddrPrefill] = useState(null);
   const addrAct = useAction();
   const [recentIds, setRecentIds] = useState([]);
   const [draft, setDraft] = useState({});
@@ -342,23 +353,26 @@ export default function Home({
     try { const d = JSON.parse(sessionStorage.getItem("369mart.checkout") || "null"); if (d) setDraft(d); } catch (e) {}
   }, []);
   /* Choosing an address is telling the shop which one to ship to. */
-  const pickAddress = (a) =>
-    addrAct.run(async () => { await api(`/addresses/${a.id}/default`, { method: "POST" }); api.invalidate("/addresses"); await reloadAddresses(); });
-  const addAddress = (draft) =>
-    addrAct.run(async () => {
-      /* The shop needs a name and a number to deliver to. The account form asks
-         for neither, so they default to whoever is signed in - which is what
-         "the name this is delivered to" means for all but a gift. */
-      const body = { name: me?.name || "", phone: me?.phone || "", ...draft };
-      if (!body.name.trim()) {
-        /* Signed out, or the account has not finished loading. Sending a blank
-           name just earns a 400 from the shop a moment later. */
-        throw new ApiError("We need a name to deliver to. Sign in, or try again in a moment.", { field: "name" });
-      }
-      const r = await api("/addresses", { method: "POST", body });
+  const pickAddress = async (a) => {
+    setPicking(a.id);
+    try {
+      await addrAct.run(async () => { await api(`/addresses/${a.id}/default`, { method: "POST" }); api.invalidate("/addresses"); await reloadAddresses(); });
+    } finally {
+      setPicking((p) => (p === a.id ? null : p)); /* a later tap keeps its own */
+    }
+  };
+  /* Add (id null) or change one address. Answers {address} or {error}, the
+     error still carrying the field the shop named so the form can put it
+     under the right box. */
+  const saveAddress = async (id, body) => {
+    try {
+      const r = await api(id ? `/addresses/${id}` : "/addresses", { method: id ? "PATCH" : "POST", body });
       api.invalidate("/addresses"); await reloadAddresses();
-      return r?.address || null;
-    });
+      return { address: r?.address || null };
+    } catch (e) {
+      return { error: e instanceof ApiError ? e : new ApiError(e?.message || "Could not save that address. Try again.") };
+    }
+  };
   const removeAddress = (a) =>
     addrAct.run(async () => { await api(`/addresses/${a.id}`, { method: "DELETE" }); api.invalidate("/addresses"); await reloadAddresses(); });
   /* One line for anything the page has to say back to a tap - a heart is the
@@ -639,7 +653,8 @@ export default function Home({
     body = (
       <main className="hm-wrap hm-view-account" key={"account-" + (route.param || "")}>
         <AccountPage user={me || undefined} byId={byId} cart={cart} setQty={setQty} section={route.param || undefined}
-          addresses={addresses} onAddAddress={addAddress} onRemoveAddress={removeAddress}
+          addresses={addresses} onSaveAddress={saveAddress} addressForm={addressForm} addrMe={me}
+          addrPrefill={addrPrefill} onPrefillUsed={() => setAddrPrefill(null)} onRemoveAddress={removeAddress}
           selectedAddress={address} onSelectAddress={pickAddress} addrBusy={addrAct.busy} addrError={addrAct.error?.message} orders={orders}
           onBrowse={() => nav("home")}
           onReorder={reorder} onTrack={(o) => nav("track", o.id)}
@@ -659,7 +674,7 @@ export default function Home({
     body = (
       <main className="hm-wrap hm-view-checkout" key="checkout">
         <CheckoutPage cart={cart} byId={byId} draft={draft} ready={ready}
-          addresses={addresses} onAddAddress={addAddress} address={address} onSelectAddress={pickAddress} phoneHint={addrData?.phone}
+          addresses={addresses} onSaveAddress={saveAddress} addressForm={addressForm} me={me} address={address} onSelectAddress={pickAddress} addrBusy={addrAct.busy}
           walletBalance={wallet} onBack={() => nav("cart")} onPlaced={orderPlaced} />
       </main>
     );
@@ -764,11 +779,15 @@ export default function Home({
         onAddAddress={() => { setLocOpen(false); nav("account", "address"); }}
         onCheckPincode={(pin) => api(`/serviceability?pin=${encodeURIComponent(pin)}`, { raw: true })}
         onLocate={async (c) => {
-          /* Reverse geocoding gives an address, not a saved one. Save it, so the
-             thing the shopper just chose is a real address an order can ship to. */
+          /* A GPS fix gives the area, town, state and pincode - never the flat
+             number or who to hand it to. So it opens the address form filled
+             in, and the shopper finishes it. If the lookup fails the form
+             still opens, empty, with the map pin kept. */
           const g = await api("/geocode/reverse", { method: "POST", body: { lat: c.latitude, lng: c.longitude }, raw: true });
-          if (!g?.ok) return null;
-          return addAddress({ label: "Current location", line: [g.line, g.area].filter(Boolean).join(", "), city: [g.city, g.zip].filter(Boolean).join(" ").trim() });
+          const found = g?.ok ? { area: g.area || g.line || "", town: g.city || "", pin: g.zip || "", state_id: g.state_id || "" } : {};
+          setAddrPrefill({ ...found, lat: c.latitude, lng: c.longitude, key: Date.now() });
+          nav("account", "address");
+          return { prefill: true };
         }} />
     </div>
     </OpenContext.Provider>

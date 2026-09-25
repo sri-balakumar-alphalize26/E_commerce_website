@@ -12,6 +12,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Icon, money } from "./shared";
 import { audioRunning, onAudioState, playPrint, playRewind, playRip, playTug, unlockAudio } from "./sound";
+import { addressText } from "@/lib/address";
 
 const SOUND_KEY = "369mart.sound";
 const reduced = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
@@ -94,7 +95,7 @@ function ReceiptPaper({ order, byId, paperRef, torn }) {
       {order.bill.mrp - order.bill.items + (b.couponOff || 0) > 0 && <p className="rc-saved">YOU SAVED {money(order.bill.mrp - order.bill.items + (b.couponOff || 0), cur)} ON THIS ORDER</p>}
       <div className="rc-deliver">
         <b>DELIVER TO {order.address?.label?.toUpperCase()}</b>
-        <span>{order.address?.line}{order.address?.city ? ", " + order.address.city : ""}</span>
+        <span>{addressText(order.address)}</span>
         <span>{order.slot}</span>
       </div>
       <p className="rc-thanks">THANK YOU FOR SHOPPING!</p>

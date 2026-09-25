@@ -21,6 +21,7 @@ import {
 } from "./orderState";
 import { api } from "@/lib/api";
 import { useAction } from "@/lib/useFetch";
+import { addressText } from "@/lib/address";
 
 const reduced = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 const lineName = (o, byId, id) => byId[id]?.name || o.snap?.[id]?.name || "Item";
@@ -147,7 +148,7 @@ function Journey({ s, o }) {
     [0, "Order confirmed by seller", "Kochi"],
     [1, "Shipped · in transit to Kochi hub", "Bengaluru hub"],
     [2, "Out for delivery", "Kochi hub"],
-    [3, "Delivered", o.address?.city || "Kochi"],
+    [3, "Delivered", o.address?.town || o.address?.city || "Kochi"],
   ].filter(([i]) => i <= s.idx).reverse();
   return (
     <div className="ot-journey">
@@ -572,7 +573,7 @@ export default function OrderTrack({ order: o, byId, onChanged, onBack, onReceip
           </section>
 
           <section className="ot-card ot-info">
-            <div><Icon n="pin" size={16} /><span><small>Delivering to</small><b>{o.address?.label || "Home"}</b>{o.address?.line ? `${o.address.line}${o.address.city ? ", " + o.address.city : ""}` : "Flat 4B, Palm Grove Apartments, MG Road, Kochi"}</span></div>
+            <div><Icon n="pin" size={16} /><span><small>Delivering to</small><b>{o.address?.label || "Home"}</b>{o.address?.line ? addressText(o.address) : "Flat 4B, Palm Grove Apartments, MG Road, Kochi"}</span></div>
             <div><Icon n={o.method === "cod" ? "cash" : "card"} size={16} /><span><small>Payment</small><b>{o.pay}</b>{o.txn ? `Txn ${o.txn}` : ""}</span></div>
             {o.slot && <div><Icon n="clock" size={16} /><span><small>Slot</small><b>{o.slot}</b></span></div>}
           </section>

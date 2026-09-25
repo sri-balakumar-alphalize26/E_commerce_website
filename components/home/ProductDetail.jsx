@@ -26,6 +26,7 @@ import { Icon, OpenContext, Rail, Thumb, WishContext, flyTo, flyToCart, money } 
 import { getDetails } from "./productDetails";
 import { Crumbs } from "./Browse";
 import { STAR_WORDS, fmtDate, useRemote } from "./accountStore";
+import { addressText } from "@/lib/address";
 
 const ZOOM = 2.6;
 
@@ -435,7 +436,7 @@ export default function ProductDetail({
               <span className="pd-addr-ic"><Icon n="pin" size={18} /></span>
               <span className="pd-addr-txt">
                 <b>{address ? address.label : "Add a delivery address"}</b>
-                <small>{address ? `${address.line}${address.city ? ", " + address.city : ""}` : "See delivery time and charges for your area"}</small>
+                <small>{address ? addressText(address) : "See delivery time and charges for your area"}</small>
                 <em className={quick ? "pd-quick" : "pd-express"}><Icon n={quick ? "bolt" : "truck"} size={11} className={quick ? "hm-fill" : ""} />{quick ? "Quick delivery in 10–20 mins" : `Express delivery in ${p.delivery}`}</em>
               </span>
               <Icon n="right" size={18} />

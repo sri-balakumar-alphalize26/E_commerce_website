@@ -15,6 +15,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Icon, Thumb, money } from "./shared";
+import AddressForm from "./AddressForm";
+import { addressLines, addressText, phoneText } from "@/lib/address";
 import { Amount, computeBill, useBill, useRules } from "./Cart";
 import { useRemote } from "./accountStore";
 import { BANKS, BRAND_LABEL, UPI_APPS, newOrderId } from "./payment";
@@ -110,83 +112,56 @@ function Radio({ on }) {
 }
 
 /* ---------------- 1 address ---------------- */
-function AddressStep({ addresses, onAddAddress, selected, onSelect, onContinue, phoneHint }) {
-  const [adding, setAdding] = useState(!addresses.length);
-  const [d, setD] = useState({ label: "Home", name: "", phone: "", line: "", city: "", pin: "" });
-  const [err, setErr] = useState({});
-  const [saving, setSaving] = useState(false);
-  const save = async (e) => {
-    e.preventDefault();
-    const x = {};
-    if (!d.name.trim()) x.name = "Enter the receiver's name";
-    /* The shop knows what a phone number looks like where it trades, and sends
-       the rule with the address book. A hard-coded 10-digit Indian number was
-       rejecting numbers the shop itself would have accepted. */
-    const len = phoneHint?.length || 10;
-    if (!new RegExp("^\\d{" + len + "}$").test(d.phone)) x.phone = `Enter a ${len}-digit mobile number`;
-    if (d.line.trim().length < 6) x.line = "Add house / flat and street";
-    if (!d.city.trim()) x.city = "Enter city";
-    if (!/^\d{6}$/.test(d.pin)) x.pin = "6-digit pincode";
-    setErr(x);
-    if (Object.keys(x).length) return;
-    setSaving(true);
-    const a = await onAddAddress({
-      label: d.label, name: d.name.trim(), phone: d.phone,
-      line: d.line.trim(), city: `${d.city.trim()} ${d.pin}`,
-    });
-    setSaving(false);
-    if (!a) { setErr({ line: "Could not save that address. Try again." }); return; }
-    onSelect(a); setAdding(false);
-    setD({ label: "Home", name: "", phone: "", line: "", city: "", pin: "" });
+function AddressStep({ addresses, onSaveAddress, formMeta, me, selected, onSelect, onContinue, busy }) {
+  /* null, "new", or the saved address being edited */
+  const [editing, setEditing] = useState(addresses.length ? null : "new");
+  /* What the form shows. It stays drawn while the form folds away, and every
+     opening gets a fresh one - reopening "new" must not bring back the last. */
+  const [shown, setShown] = useState(editing ? { what: editing, n: 0 } : null);
+  useEffect(() => { if (editing) setShown((x) => ({ what: editing, n: (x?.n || 0) + 1 })); }, [editing]);
+  const dial = formMeta?.phone?.dial;
+  const save = async (body) => {
+    const id = editing === "new" ? null : editing?.id;
+    const r = await onSaveAddress(id, body);
+    if (r?.error) return r;
+    if (!id && r?.address) onSelect(r.address); /* a new address is the one being delivered to */
+    setEditing(null);
+    return r;
   };
-  const field = (k, label, props = {}) => (
-    <label className={"co-field" + (err[k] ? " co-err" : "")}>
-      <input value={d[k]} placeholder=" " onChange={(e) => { setD({ ...d, [k]: props.digits ? e.target.value.replace(/\D/g, "").slice(0, props.digits) : e.target.value }); setErr({ ...err, [k]: undefined }); }} inputMode={props.digits ? "numeric" : undefined} autoComplete={props.ac} />
-      <span>{label}</span>
-      {err[k] && <em key={err[k]}>{err[k]}</em>}
-    </label>
-  );
   return (
     <>
       <div className="co-addrs" role="radiogroup" aria-label="Delivery address">
         {addresses.map((a, i) => {
           const on = selected?.id === a.id;
           return (
-            <button key={a.id} role="radio" aria-checked={on} className={"co-addr" + (on ? " co-on" : "")} style={{ "--i": i }} onClick={() => onSelect(a)}>
-              <Radio on={on} />
-              <span className="co-addr-ic"><Icon n={a.icon || "pin"} size={17} /></span>
-              <span className="co-addr-txt">
-                <b>{a.label}{a.name ? <small> · {a.name}</small> : null}</b>
-                <span>{a.line}{a.city ? ", " + a.city : ""}</span>
-                {a.phone && <span className="co-muted">+91 {a.phone}</span>}
-              </span>
-            </button>
+            <div key={a.id} className="af-card">
+              <button role="radio" aria-checked={on} className={"co-addr" + (on ? " co-on" : "")} style={{ "--i": i }} onClick={() => onSelect(a)}>
+                <Radio on={on} />
+                <span className="co-addr-ic"><Icon n={a.icon || "pin"} size={17} /></span>
+                <span className="co-addr-txt">
+                  <b>{a.label}{a.name ? <small> · {a.name}</small> : null}</b>
+                  {addressLines(a).map((l) => <span key={l}>{l}</span>)}
+                  {a.phone && <span className="co-muted">{phoneText(a.phone, dial)}</span>}
+                </span>
+              </button>
+              <button type="button" className="co-link af-edit" onClick={() => setEditing(a)} aria-label={`Edit ${a.label} address`}>Edit</button>
+            </div>
           );
         })}
       </div>
-      <div className={"co-grow" + (adding ? " co-show" : "")}>
-        <div inert={!adding}>
-          <form className="co-addr-form" onSubmit={save} noValidate>
-            <div className="co-chips">
-              {["Home", "Work", "Other"].map((l) => <button type="button" key={l} className={d.label === l ? "co-on" : ""} onClick={() => setD({ ...d, label: l })}>{l}</button>)}
-            </div>
-            <div className="co-form-grid">
-              {field("name", "Receiver's name", { ac: "name" })}
-              {field("phone", "Mobile number", { digits: 10, ac: "tel-national" })}
-              <div className="co-span2">{field("line", "House / flat, street, area", { ac: "street-address" })}</div>
-              {field("city", "City", { ac: "address-level2" })}
-              {field("pin", "Pincode", { digits: 6, ac: "postal-code" })}
-            </div>
-            <div className="co-row-end">
-              {addresses.length > 0 && <button type="button" className="co-ghost" onClick={() => setAdding(false)}>Cancel</button>}
-              <button className="co-primary" type="submit">Save address</button>
-            </div>
-          </form>
+      <div className={"co-grow" + (editing ? " co-show" : "")}>
+        <div inert={!editing}>
+          {shown && (
+            <AddressForm key={shown.n} initial={shown.what === "new" ? undefined : shown.what}
+              meta={formMeta} me={me} onSave={save}
+              saveLabel={shown.what === "new" ? "Save and deliver here" : "Save changes"}
+              onCancel={addresses.length ? () => setEditing(null) : undefined} />
+          )}
         </div>
       </div>
       <div className="co-row-between">
-        {!adding ? <button className="co-link co-add" onClick={() => setAdding(true)}><Icon n="plus" size={16} />Add a new address</button> : <span />}
-        <button className="co-primary co-hide-m" disabled={!selected} onClick={onContinue}>Deliver here</button>
+        {!editing ? <button className="co-link co-add" onClick={() => setEditing("new")}><Icon n="plus" size={16} />Add a new address</button> : <span />}
+        <button className="co-primary co-hide-m" disabled={!selected || busy} onClick={onContinue}>Deliver here</button>
       </div>
     </>
   );
@@ -489,7 +464,7 @@ function PaySheet({ job, amount, onDone, onFail, onCancel, onRetry, onChangeMeth
 
 /* ---------------- page ---------------- */
 export default function CheckoutPage({
-  cart, byId, draft = {}, addresses, onAddAddress, address, onSelectAddress, phoneHint,
+  cart, byId, draft = {}, addresses, onSaveAddress, addressForm, me, address, onSelectAddress, addrBusy = false,
   walletBalance = 0, onBack, onPlaced, ready = true,
 }) {
   const coupon = draft.coupon || null;
@@ -677,9 +652,9 @@ export default function CheckoutPage({
       <div className="co-grid">
         <div className="co-main">
           <Step n={1} icon="pin" title="Delivery address" open={step === 1} done={!!address && step > 1}
-            summary={address ? `${address.label} · ${address.line}${address.city ? ", " + address.city : ""}` : ""} onEdit={() => setStep(1)}>
-            <AddressStep addresses={addresses} onAddAddress={onAddAddress} selected={address} onSelect={onSelectAddress}
-              onContinue={() => setStep(2)} phoneHint={phoneHint} />
+            summary={address ? `${address.label} · ${addressText(address)}` : ""} onEdit={() => setStep(1)}>
+            <AddressStep addresses={addresses} onSaveAddress={onSaveAddress} formMeta={addressForm} me={me}
+              selected={address} onSelect={onSelectAddress} onContinue={() => setStep(2)} busy={addrBusy} />
           </Step>
           <Step n={2} icon="clock" title="Delivery slot" open={step === 2} done={step > 2} summary={step > 2 ? slotLabel : ""} onEdit={() => setStep(2)}>
             <SlotStep bill={bill} slots={slots} slot={slot} setSlot={setSlot} onContinue={async () => { if (await draftOrder()) setStep(3); }} />
@@ -713,7 +688,7 @@ export default function CheckoutPage({
               <div className="co-total"><dt>{pay.method === "cod" && !wallet.covers ? "To pay on delivery" : "To pay"}</dt><dd><Amount value={payable} /></dd></div>
             </dl>
             {bill.saved > 0 && <p className="co-saving" key={bill.saved}><Icon n="gift" size={15} />You're saving {money(bill.saved)} on this order</p>}
-            <button className={"co-primary co-paybtn" + (step === 3 && !methodReady ? " co-soft" : "")} disabled={step === 1 && !address || bill.blocked || !bill.priced || !!job || place.busy} onClick={cta.go}>
+            <button className={"co-primary co-paybtn" + (step === 3 && !methodReady ? " co-soft" : "")} disabled={step === 1 && (!address || addrBusy) || bill.blocked || !bill.priced || !!job || place.busy} onClick={cta.go}>
               {job ? <i className="co-spin co-spin-w" /> : <>{step === 3 && <Icon n="lock" size={15} />}{cta.label}</>}
             </button>
             {step === 3 && hint && <p className="co-hintline" key={hint}>{hint}</p>}
@@ -725,7 +700,7 @@ export default function CheckoutPage({
 
       <div className="co-mbar">
         <div><small>{step === 3 ? "To pay" : "Total"}</small><Amount value={step === 3 ? payable : gross} /></div>
-        <button className="co-primary" disabled={(step === 1 && !address) || bill.blocked || !bill.priced || !!job || place.busy} onClick={cta.go}>{job || place.busy ? <i className="co-spin co-spin-w" /> : cta.label}</button>
+        <button className="co-primary" disabled={(step === 1 && (!address || addrBusy)) || bill.blocked || !bill.priced || !!job || place.busy} onClick={cta.go}>{job || place.busy ? <i className="co-spin co-spin-w" /> : cta.label}</button>
       </div>
 
       {job && (
