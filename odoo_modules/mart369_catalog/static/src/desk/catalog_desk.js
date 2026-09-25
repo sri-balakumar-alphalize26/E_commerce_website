@@ -469,6 +469,43 @@ export class CatalogDesk extends Component {
 
     // --------------------------------------------------------------- drawing
 
+    /** Main categories as headings, each with its sub-categories under it.
+     *  A sub-category matching the filter when its main one does not still
+     *  gets its heading, drawn plainly, so it never shows without a home. */
+    get groups() {
+        const rows = this.state.rows;
+        const byId = new Map(rows.map((r) => [r.id, r]));
+        const out = [];
+        const index = new Map();
+        for (const r of rows) {
+            const key = r.parentId || r.id;
+            let group = index.get(key);
+            if (!group) {
+                group = {
+                    main: r.parentId
+                        ? byId.get(r.parentId) || { id: r.parentId, name: r.parent, stub: true }
+                        : r,
+                    subs: [],
+                };
+                index.set(key, group);
+                out.push(group);
+            }
+            if (r.parentId) {
+                group.subs.push(r);
+            }
+        }
+        return out;
+    }
+
+    get counted() {
+        const subs = this.state.rows.filter((r) => r.parentId).length;
+        return { mains: this.state.rows.length - subs, subs };
+    }
+
+    groupStyle(group, index) {
+        return `--i: ${index}; --tone: ${group.main.tone || "#f4f6f8"}; --accent: ${group.main.accent || "#0b4a6e"};`;
+    }
+
     swatch(row) {
         return `background: ${row.tone || "#f4f6f8"}; color: ${row.accent || "#0b4a6e"};`;
     }

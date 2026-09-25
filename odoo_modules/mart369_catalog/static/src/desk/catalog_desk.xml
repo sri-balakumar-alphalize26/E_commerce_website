@@ -84,66 +84,33 @@
 
                         <t t-else="">
                             <p class="cd-count">
-                                <t t-esc="state.rows.length"/>
-                                categor<t t-if="state.rows.length === 1">y</t><t t-else="">ies</t>
+                                <t t-esc="counted.mains"/>
+                                categor<t t-if="counted.mains === 1">y</t><t t-else="">ies</t>
+                                &#183;
+                                <t t-esc="counted.subs"/>
+                                sub-categor<t t-if="counted.subs === 1">y</t><t t-else="">ies</t>
                             </p>
-                            <ul class="cd-rows">
-                                <li t-foreach="state.rows" t-as="row" t-key="row.id"
-                                    t-attf-class="cd-row {{ row.inApp ? '' : 'cd-row-off' }} {{ state.fresh === row.id ? 'cd-row-new' : '' }}"
-                                    t-att-style="'--i: ' + row_index">
-
-                                    <!-- The colours, shown as what they are: the
-                                         pale background and the ink on top of it. -->
-                                    <span class="cd-swatch" t-att-style="swatch(row)"
-                                          t-attf-title="Background {{ row.tone }}, heading {{ row.accent }}">
-                                        Aa
-                                    </span>
-
-                                    <div class="cd-body">
-                                        <div class="cd-top">
-                                            <b t-esc="row.name"/>
-                                            <span t-if="!row.inApp" class="mart-pill mart-t-grey">
-                                                Hidden
-                                            </span>
-                                            <span t-if="!row.products" class="mart-pill mart-t-amber">
-                                                Nothing in it
-                                            </span>
-                                        </div>
-                                        <p class="cd-sub">
-                                            <code t-esc="'/' + row.slug"/>
-                                            <t t-if="row.parent">
-                                                <span class="cd-dot">&#183;</span>
-                                                under <t t-esc="row.parent"/>
-                                            </t>
-                                            <span class="cd-dot">&#183;</span>
-                                            <t t-esc="row.products"/> product<t t-if="row.products !== 1">s</t>
-                                            <t t-if="row.children">
-                                                <span class="cd-dot">&#183;</span>
-                                                <t t-esc="row.children"/> sub<t t-if="row.children !== 1">s</t>
-                                            </t>
-                                        </p>
-                                        <p t-if="row.blurb" class="cd-blurb" t-esc="row.blurb"/>
+                            <!-- Each main category is a heading, its sub-categories
+                                 under it: the two levels the app draws. -->
+                            <ul class="cd-groups">
+                                <li t-foreach="groups" t-as="group" t-key="group.main.id"
+                                    class="cd-group" t-att-style="groupStyle(group, group_index)">
+                                    <div t-if="group.main.stub" class="cd-head cd-head-stub">
+                                        <b t-esc="group.main.name"/>
+                                        <small>Main category &#183; not in this list</small>
                                     </div>
-
-                                    <div class="cd-act">
-                                        <button class="mart-btn mart-btn-sm"
-                                                t-att-disabled="state.busy"
-                                                t-on-click="() => this.editAll(row)">
-                                            <Icon n="'pen'" size="13"/>
-                                            Edit
-                                        </button>
-                                        <button class="mart-btn mart-btn-sm"
-                                                t-att-disabled="state.busy"
-                                                t-on-click="() => this.edit(row)">
-                                            How it looks
-                                        </button>
-                                        <button class="mart-btn mart-btn-sm"
-                                                t-att-disabled="state.busy"
-                                                t-on-click="() => this.toggleShown(row)">
-                                            <t t-if="row.inApp">Hide</t>
-                                            <t t-else="">Show</t>
-                                        </button>
+                                    <div t-else=""
+                                         t-attf-class="cd-head {{ group.main.inApp ? '' : 'cd-row-off' }} {{ state.fresh === group.main.id ? 'cd-row-new' : '' }}">
+                                        <t t-set="row" t-value="group.main"/>
+                                        <t t-call="mart369_catalog.CategoryRow"/>
                                     </div>
+                                    <ul t-if="group.subs.length" class="cd-rows cd-subs">
+                                        <li t-foreach="group.subs" t-as="row" t-key="row.id"
+                                            t-attf-class="cd-row {{ row.inApp ? '' : 'cd-row-off' }} {{ state.fresh === row.id ? 'cd-row-new' : '' }}"
+                                            t-att-style="'--i: ' + row_index">
+                                            <t t-call="mart369_catalog.CategoryRow"/>
+                                        </li>
+                                    </ul>
                                 </li>
                             </ul>
                         </t>
@@ -153,6 +120,60 @@
 
             </div>
         </Layout>
+    </t>
+
+    <!-- One category's row: its colours, name, address, counts and buttons.
+         Drawn as a main category's heading and as each sub-category under it. -->
+    <t t-name="mart369_catalog.CategoryRow">
+
+        <!-- The colours, shown as what they are: the
+             pale background and the ink on top of it. -->
+        <span class="cd-swatch" t-att-style="swatch(row)"
+              t-attf-title="Background {{ row.tone }}, heading {{ row.accent }}">
+            Aa
+        </span>
+
+        <div class="cd-body">
+            <div class="cd-top">
+                <b t-esc="row.name"/>
+                <span t-if="!row.inApp" class="mart-pill mart-t-grey">
+                    Hidden
+                </span>
+                <span t-if="!row.products" class="mart-pill mart-t-amber">
+                    Nothing in it
+                </span>
+            </div>
+            <p class="cd-sub">
+                <code t-esc="'/' + row.slug"/>
+                <span class="cd-dot">&#183;</span>
+                <t t-esc="row.products"/> product<t t-if="row.products !== 1">s</t>
+                <t t-if="!row.parentId">
+                    <span class="cd-dot">&#183;</span>
+                    <t t-esc="row.children or 0"/> sub-categor<t t-if="row.children === 1">y</t><t t-else="">ies</t>
+                </t>
+            </p>
+            <p t-if="row.blurb" class="cd-blurb" t-esc="row.blurb"/>
+        </div>
+
+        <div class="cd-act">
+            <button class="mart-btn mart-btn-sm"
+                    t-att-disabled="state.busy"
+                    t-on-click="() => this.editAll(row)">
+                <Icon n="'pen'" size="13"/>
+                Edit
+            </button>
+            <button class="mart-btn mart-btn-sm"
+                    t-att-disabled="state.busy"
+                    t-on-click="() => this.edit(row)">
+                How it looks
+            </button>
+            <button class="mart-btn mart-btn-sm"
+                    t-att-disabled="state.busy"
+                    t-on-click="() => this.toggleShown(row)">
+                <t t-if="row.inApp">Hide</t>
+                <t t-else="">Show</t>
+            </button>
+        </div>
     </t>
 
     <t t-name="mart369_catalog.CategoryDialog">
