@@ -376,8 +376,13 @@ class SaleOrder(models.Model):
                 tx._set_canceled(
                     state_message=reason or self.env._('Cancelled by the customer.'))
                 tx._post_process()
-            elif tx.state == 'done':
-                tx._mart369_refund_wallet_leg()
+        # Whatever was paid - UPI, card and wallet alike - goes back to the
+        # 369 Wallet in full, with a credit note (order_refund.py).
+        refund = self.sudo()._mart369_refund_to_wallet(
+            self._mart369_paid_amount(), self.env._('Order cancelled'))
+        if refund:
+            self.sudo().mart369_cancel_refund = refund
+            self.sudo()._mart369_credit_note(refund, self.env._('Cancelled: %s', reason or ''))
         self._mart369_set_state('cancelled', note=reason)
         if self.state != 'cancel':
             self.with_context(disable_cancel_warning=True).action_cancel()
@@ -403,6 +408,8 @@ class SaleOrder(models.Model):
         is handed and every later screen consumes.
         """
         self.ensure_one()
+        # Refund a replacement nobody answered in time before showing it.
+        self.sudo()._mart369_expire_substitutes(self)
         currency = self.currency_id
         lines = self._mart369_app_lines()
         placed = self.mart369_placed_at or self.create_date or fields.Datetime.now()
@@ -436,6 +443,20 @@ class SaleOrder(models.Model):
             'whatsapp': bool(self.mart369_whatsapp),
             'timeline': [s._mart369_serialize() for s in self.mart369_stamp_ids],
             'returns': [r._mart369_serialize() for r in self.mart369_return_ids],
+            'removed': self._mart369_removed_lines(),
+            # Replacements offered for items that ran out (order_substitute.py):
+            # the open one asks the customer; answered ones say what happened.
+            'substitutes': [s._mart369_serialize() for s in self.sudo().mart369_substitute_ids],
+            # A delivery that did not happen (order_delivery.py).
+            'attempts': self.mart369_attempts,
+            'failedReason': self.mart369_failed_reason or '',
+            # Cancelled or came back to the store: where the money went.
+            'cancel': ({'reason': (self.mart369_failed_reason or '') if self.mart369_returned else '',
+                        'returned': bool(self.mart369_returned),
+                        'refundTo': 'wallet' if (self.mart369_returned_refund or self.mart369_cancel_refund) else '',
+                        'amount': currency.round((self.mart369_returned_refund or 0.0)
+                                                 + (self.mart369_cancel_refund or 0.0))}
+                       if self.mart369_state == 'cancelled' else None),
             'canCancel': self.mart369_state == 'placed',
             # The code for the doorstep. Only ever reaches the customer who
             # owns the order - every route that calls this serializer is fenced
@@ -456,6 +477,10 @@ class SaleOrder(models.Model):
         out = []
         for line in self.order_line:
             if line.display_type or line.is_delivery or line.mart369_kind:
+                continue
+            # Taken out because the store ran out (order_items.py): shown
+            # under `removed`, not as an item of quantity 0.
+            if line.product_uom_qty <= 0 and line.mart369_removed_qty:
                 continue
             tmpl = line.product_id.product_tmpl_id
             out.append((tmpl.id, int(line.product_uom_qty), {

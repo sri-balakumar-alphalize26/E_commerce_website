@@ -129,6 +129,26 @@ class Mart369OrderApi(http.Controller):
             return self._fail(str(exc), status=409)
         return self._json({'ok': True, 'order': order._mart369_serialize()})
 
+    @http.route('/369mart/orders/<string:ref>/substitute/<int:offer_id>', **_POST)
+    def substitute(self, ref, offer_id, **kwargs):
+        """The customer's answer to a replacement offer. Body: {accept,
+        product_id} - the replacement they picked when there are several.
+
+        Only for their own order (`_own`), and only for an offer on it."""
+        order = self._own(ref)
+        if not order:
+            return self._fail('No such order.', status=404)
+        offer = order.sudo().mart369_substitute_ids.filtered(lambda s: s.id == offer_id)
+        if not offer:
+            return self._fail('No such replacement.', status=404)
+        try:
+            body = self._body()
+            picked = request.env['product.product'].sudo().browse(int(body.get('product_id') or 0)).exists()
+            order.sudo()._mart369_answer_substitute(offer, bool(body.get('accept')), product=picked or None)
+        except UserError as exc:
+            return self._fail(str(exc), status=409)
+        return self._json({'ok': True, 'order': order._mart369_serialize()})
+
     @http.route('/369mart/orders/<string:ref>/return', **_POST)
     def open_return(self, ref, **kwargs):
         """Ask for a refund or a replacement, with the photos really kept."""

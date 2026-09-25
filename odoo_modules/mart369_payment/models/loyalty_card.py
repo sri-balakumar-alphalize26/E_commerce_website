@@ -222,8 +222,11 @@ class LoyaltyCard(models.Model):
 
         credit = kind in CREDIT_KINDS
         if credit:
+            # The limit is on money *added*. A refund is the customer's own
+            # money coming back - refusing it because the wallet is full
+            # would keep it.
             limit = self._mart369_limit()
-            if currency.compare_amounts(balance + amount, limit) > 0:
+            if kind != 'refund' and currency.compare_amounts(balance + amount, limit) > 0:
                 room = max(0.0, limit - balance)
                 raise UserError(_(
                     "You can add up to %(room)s more (wallet limit %(limit)s).",

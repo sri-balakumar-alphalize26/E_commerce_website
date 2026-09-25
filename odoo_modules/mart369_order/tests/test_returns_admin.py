@@ -123,12 +123,12 @@ class TestReturnsQueue(Mart369OrderCase):
 
     # ---------------------------------------------------------- the money
 
-    def test_the_refund_split_is_honest_about_the_gateway(self):
-        """`_mart369_refund` moves the wallet leg and nothing else, so the
-        screen has to show which part it will not put back."""
+    def test_the_whole_refund_goes_to_the_wallet(self):
+        """Paid by the gateway or not, `_mart369_refund` puts all of it in
+        the 369 Wallet (order_refund.py) - nothing is left for the gateway."""
         split = self.ret._mart369_refund_split()
-        self.assertEqual(split['wallet'], 0.0)
-        self.assertEqual(split['gateway'], split['total'])
+        self.assertEqual(split['wallet'], split['total'])
+        self.assertEqual(split['gateway'], 0.0)
 
     def test_a_wallet_paid_order_splits_the_other_way(self):
         order = self._place(ref='369M-WALLET')

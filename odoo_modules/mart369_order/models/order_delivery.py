@@ -93,10 +93,6 @@ class SaleOrder(models.Model):
         """Close an order that came back. Returns what went to the wallet."""
         self.ensure_one()
         currency = self.currency_id
-        # Already refunded for items taken out (order_items.py), when present.
-        removed = (sum(self.order_line.mapped('mart369_removed_refund'))
-                   if 'mart369_removed_refund' in self.order_line._fields else 0.0)
-        refund = currency.round(max(0.0, (self.mart369_paid or 0.0) - removed))
 
         self._mart369_release_slot()
         self._mart369_release_coupon()
@@ -109,10 +105,11 @@ class SaleOrder(models.Model):
         for tx in pending:
             tx._set_canceled(state_message=_('Returned to store: %s', reason))
             tx._post_process()
+        # Everything still owed, to the 369 Wallet, with a credit note
+        # (order_refund.py).
+        refund = self._mart369_refund_to_wallet(self._mart369_paid_amount(), _('Order returned to store'))
         if refund:
-            card = self.env['loyalty.card'].sudo()._mart369_wallet(self.partner_id)
-            card._mart369_move(refund, 'refund', _('Order returned to store'),
-                               sub=_('Order #%s', self.mart369_ref), order=self)
+            self._mart369_credit_note(refund, _('Returned to store: %s', reason))
 
         self.write({'mart369_returned': True, 'mart369_returned_refund': refund})
         note = _('Returned to store: %s', reason)

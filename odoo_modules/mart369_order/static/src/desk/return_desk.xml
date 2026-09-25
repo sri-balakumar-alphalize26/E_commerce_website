@@ -182,30 +182,19 @@
 
                         <h4 class="rd-h">The money</h4>
                         <dl class="rd-bill">
-                            <div>
-                                <dt>Wallet &#8212; goes back automatically</dt>
+                            <div class="rd-bill-total">
+                                <dt>To the customer's 369 Wallet</dt>
                                 <dd t-esc="money(r.refund.wallet, r.currency)"/>
                             </div>
-                            <div>
-                                <dt>
-                                    Paid by <t t-esc="r.refund.method or 'gateway'"/>
-                                    &#8212; refund it there
-                                </dt>
-                                <dd t-esc="money(r.refund.gateway, r.currency)"/>
-                            </div>
-                            <div class="rd-bill-total">
-                                <dt>Total</dt>
-                                <dd t-esc="money(r.refund.total, r.currency)"/>
-                            </div>
                         </dl>
-                        <!-- The refund moves the wallet leg and nothing else.
-                             Somebody has to know that before they press the
-                             button, not after. -->
-                        <p t-if="!r.refund.wallet" class="mart-hint">
-                            None of this was paid from the wallet, so marking it
-                            refunded here moves no money. The
-                            <t t-esc="r.refund.method or 'gateway'"/> refund is
-                            done in the gateway.
+                        <!-- The whole refund goes to the wallet, however they
+                             paid (order_refund.py). -->
+                        <p class="mart-hint">
+                            Paid by <t t-esc="r.refund.method or 'card'"/> or not, the whole refund goes to
+                            the 369 Wallet the moment it is issued, with a credit note for the books.
+                            <t t-if="r.refund.wallet &lt; r.refund.total">
+                                <t t-esc="money(r.refund.total - r.refund.wallet, r.currency)"/> of it was already given back.
+                            </t>
                         </p>
 
                         <h4 class="rd-h">Progress</h4>

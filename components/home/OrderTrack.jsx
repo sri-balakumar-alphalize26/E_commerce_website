@@ -28,7 +28,10 @@ const lineName = (o, byId, id) => byId[id]?.name || o.snap?.[id]?.name || "Item"
 /* An amount off this order, printed in the money that order was charged
    in - not whatever the shop happens to be quoting today. */
 const moneyOf = (o) => (n) => money(n, o?.currency);
-const linePrice = (o, byId, id) => byId[id]?.price ?? o.snap?.[id]?.price ?? 0;
+/* What this order was charged for the item, not today's catalogue price - a
+   price change, or a replacement the shop paid the difference on, must not
+   rewrite what the customer sees they paid. */
+const linePrice = (o, byId, id) => o.snap?.[id]?.price ?? byId[id]?.price ?? 0;
 
 /* ---------------- bottom sheet / dialog ---------------- */
 function Sheet({ title, onClose, children, foot, wide }) {
@@ -467,6 +470,7 @@ export default function OrderTrack({ order: o, byId, onChanged, onBack, onReceip
   const [sheet, setSheet] = useState(null); // cancel | return | help
   const [toast, setToast] = useState("");
   const [otpShown, setOtpShown] = useState(false);
+  const [subPick, setSubPick] = useState({}); // replacement offer id -> the option picked
   const rateRef = useRef(null);
   const flash = (m) => { setToast(m); clearTimeout(flash.t); flash.t = setTimeout(() => setToast(""), 2600); };
 
@@ -480,7 +484,7 @@ export default function OrderTrack({ order: o, byId, onChanged, onBack, onReceip
   }, [s.key]); // eslint-disable-line
 
   const cancelled = s.key === "cancelled";
-  const title = cancelled ? "Order cancelled" : s.key === "delivered" ? "Order delivered" : s.key === "out" ? (s.mode === "quick" ? "On the way" : "Out for delivery") : s.key === "placed" ? "Order confirmed" : s.mode === "quick" ? "Packing your order" : "Shipped";
+  const title = cancelled ? (o.cancel?.returned ? "Returned to store" : "Order cancelled") : s.key === "delivered" ? "Order delivered" : s.key === "out" ? (s.mode === "quick" ? "On the way" : "Out for delivery") : s.key === "placed" ? "Order confirmed" : s.mode === "quick" ? "Packing your order" : "Shipped";
   const sub = cancelled ? (o.cancel?.refundTo === "wallet" ? `${m(o.cancel.amount)} added to your 369 Wallet` : o.cancel?.refundTo ? `Refund of ${m(o.cancel.amount)} to ${o.pay} in 3–5 working days` : "No payment was taken for this order")
     : s.key === "delivered" ? `Delivered ${s.times[3] ? "at " + fmtTime(s.times[3]) : ""} · ${o.address?.label || "Home"}`
     : o.eta || (s.key === "out" ? "Arriving today" : `Expected ${fmtDay(o.at, 3)}`);
@@ -510,6 +514,47 @@ export default function OrderTrack({ order: o, byId, onChanged, onBack, onReceip
             flash(sent ? (r.tip ? `Thanks! ${m(r.tip)} tip sent` : "Thanks for your feedback") : act.error?.message || "We couldn't send that just now");
           }} /></div>}
           {ret && <ReturnTracker ret={ret} cur={o.currency} />}
+          {/* An item ran out and the shop offers something else: the customer
+              decides. No answer by the deadline is a refund. */}
+          {(o.substitutes || []).filter((x) => x.state === "offered").map((x) => {
+            const options = x.options?.length ? x.options : [{ id: 0, name: x.offered, image: x.offeredImage, youPay: x.youPay, shopPays: x.shopPays, difference: x.difference }];
+            const chosen = options.find((p) => p.id === subPick[x.id]) || options[0];
+            return (
+              <section key={x.id} className="ot-card ot-sub">
+                <h3 className="ot-h3">{options.length > 1 ? `Choose a replacement (${options.length} options)` : "Choose a replacement"}</h3>
+                <p className="ot-sub-was"><s>{x.qty} × {x.was}</s> is out of stock.</p>
+                <div className="ot-sub-opts" role="radiogroup" aria-label="Replacements">
+                  {options.map((p) => (
+                    <button key={p.id} type="button" role="radio" aria-checked={chosen.id === p.id}
+                      className={"ot-sub-new" + (chosen.id === p.id ? " ot-on" : "")} onClick={() => setSubPick((s) => ({ ...s, [x.id]: p.id }))}>
+                      {p.image ? <img src={p.image} alt="" /> : <span className="ot-mini"><Icon n="box" size={16} /></span>}
+                      <span><b>{x.qty} × {p.name}</b>
+                        <small>{p.shopPays > 0 ? `You pay ${m(p.youPay * x.qty)} — no extra, we cover ${m(p.shopPays)}`
+                          : p.difference > 0 ? `You pay ${m(p.youPay * x.qty)} — ${m(p.difference)} ${o.method === "cod" ? "less at the door" : "back to your 369 Wallet"}`
+                          : `You pay ${m(p.youPay * x.qty)} — same as before`}</small></span>
+                    </button>
+                  ))}
+                </div>
+                <p className="ot-fine"><Icon n="clock" size={14} />Answer within {Math.max(0, Math.round((x.deadline - Date.now()) / 60000))} min, or we'll refund the item.</p>
+                <div className="ot-sub-act">
+                  <button className="ot-primary" disabled={act.busy}
+                    onClick={async () => flash((await ask(`/substitute/${x.id}`, { accept: true, product_id: chosen.id || undefined })) ? "Replacement added" : act.error?.message || "We couldn't save that")}>
+                    {options.length > 1 ? "Accept this one" : "Accept replacement"}</button>
+                  <button className="ot-ghost" disabled={act.busy}
+                    onClick={async () => flash((await ask(`/substitute/${x.id}`, { accept: false })) ? "Refund on its way" : act.error?.message || "We couldn't save that")}>No, refund me</button>
+                </div>
+              </section>
+            );
+          })}
+
+          {/* The rider could not deliver it and it is going out again. */}
+          {!cancelled && s.key === "out" && o.attempts > 0 && (
+            <section className="ot-card ot-failed">
+              <Icon n="info" size={18} />
+              <span><b>We couldn't deliver it{o.failedReason ? ` — ${o.failedReason.toLowerCase()}` : ""}</b>
+                <small>We'll try again. Your delivery code has changed — use the new one below.</small></span>
+            </section>
+          )}
 
           {!cancelled && (
             <section className="ot-card ot-tracker">
@@ -560,6 +605,13 @@ export default function OrderTrack({ order: o, byId, onChanged, onBack, onReceip
                   <button className="ot-mini" onClick={() => byId[id] && open?.(byId[id], null)} aria-label={`Open ${lineName(o, byId, id)}`}>{byId[id] ? <Thumb p={byId[id]} /> : <Icon n="box" size={16} />}</button>
                   <span><b>{lineName(o, byId, id)}</b><small>{q} × {m(linePrice(o, byId, id))}</small></span>
                   <em>{m(linePrice(o, byId, id) * q)}</em>
+                </li>
+              ))}
+              {/* Taken out by the store because it ran out. */}
+              {(o.removed || []).map((g, i) => (
+                <li key={"gone" + i} className="ot-removed" style={{ "--i": o.items.length + i }}>
+                  <span className="ot-mini" aria-hidden="true"><Icon n="box" size={16} /></span>
+                  <span><b><s>{g.name}</s></b><small>Removed — {g.reason || "Out of stock"}{g.refund ? ` · ${m(g.refund)} refunded to your 369 Wallet` : ""}</small></span>
                 </li>
               ))}
             </ul>

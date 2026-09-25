@@ -99,37 +99,38 @@ function Timeline({ d }) {
     return <p className="ad-hint">This return was refused, so it never went any further.</p>;
   }
   const at = d.flow.findIndex((s) => s.state === d.state);
+  const finished = at === d.flow.length - 1;
+  /* Drawn like the order's progress: a ticked dot for each step reached, the
+     one it is at marked "Now", the rest greyed out. */
   return (
     <ol className="ad-timeline">
-      {d.flow.map((s, i) => (
-        <li key={s.state} className={i < at ? "ad-done" : i === at ? "ad-now" : ""} style={{ "--i": i }}>
-          <b>{s.label}</b>
-        </li>
-      ))}
+      {d.flow.map((s, i) => {
+        const reached = i <= at;
+        const now = i === at && !finished;
+        return (
+          <li key={s.state} className={(reached ? "ad-done" : "ad-next") + (now ? " ad-now" : "")} style={{ "--i": i }}>
+            <i>{reached ? <Icon n="check" size={11} /> : null}</i>
+            <span><b>{s.label}</b><small>{now ? "Now" : reached ? "Done" : "Next"}</small></span>
+          </li>
+        );
+      })}
     </ol>
   );
 }
 
-/* What pressing "Issue refund" will and will not do.
-
-   The model returns the wallet leg and leaves the gateway to the gateway, so
-   this says both numbers. When there is no wallet leg it says so outright,
-   because "Issue refund" on that return moves no money at all and somebody
-   has to know that before they press it. */
+/* What pressing "Issue refund" does: the whole refund goes to the customer's
+   369 Wallet at once, however they paid, never more than they are still owed
+   (an item already taken out or an earlier return is not refunded twice). */
 function Refund({ r, currency }) {
   if (!r || !r.total) return null;
   return (
     <div className="ad-bill">
-      <div><span>Wallet — goes back automatically</span><b>{money(r.wallet, currency)}</b></div>
-      <div><span>Paid by {r.method || "gateway"} — refund it there</span><b>{money(r.gateway, currency)}</b></div>
-      <div className="ad-bill-total"><span>Total</span><b>{money(r.total, currency)}</b></div>
-      {!r.wallet && (
-        <p className="ad-hint">
-          None of this was paid from the wallet, so marking it refunded here
-          moves no money. The {r.method || "gateway"} refund is done in the
-          gateway.
-        </p>
-      )}
+      <div className="ad-bill-total"><span>To the customer's 369 Wallet</span><b>{money(r.wallet, currency)}</b></div>
+      <p className="ad-hint">
+        Paid by {r.method || "card"} or not, the whole refund goes to the 369 Wallet the moment it is issued,
+        with a credit note for the books.
+        {r.wallet < r.total ? ` ${money(r.total - r.wallet, currency)} of it was already given back.` : ""}
+      </p>
     </div>
   );
 }

@@ -4,10 +4,10 @@ In the app a return was a patch in localStorage and its photos were a counter -
 `OrderTrack.jsx:361` counted how many the customer picked and then dropped them.
 Here a return is a record and the photos are real attachments.
 
-The refund is **not** a credit note. `_mart369_refund` hands back the wallet leg
-and leaves the gateway's share to the gateway's own refund, which an operator
-starts there - so nothing here reverses the invoice. A return that should show
-in the books as a credit note still needs one raising by hand.
+The refund is the whole amount, straight to the customer's 369 Wallet, however
+they paid - UPI and card included - with a credit note against the invoice
+(order_refund.py). Never more than they are still owed: an item already taken
+out or an earlier return is not refunded twice.
 
 The four steps are the app's own RETURN_STEPS (orderState.js:27-32), so the
 tracking screen's progress bar reads this without changing.
@@ -52,6 +52,9 @@ class Mart369OrderReturn(models.Model):
     reason = fields.Char(string='Reason', required=True)
     detail = fields.Text(string='What happened')
     amount = fields.Monetary(string='Refund', help="What goes back to the customer.")
+    refunded = fields.Monetary(
+        string='Refunded to wallet', readonly=True, copy=False,
+        help='What actually went to the 369 Wallet when the refund was issued.')
 
     photo_ids = fields.Many2many(
         'ir.attachment', string='Photos',
@@ -98,25 +101,20 @@ class Mart369OrderReturn(models.Model):
         return True
 
     def _mart369_refund(self):
-        """Put the money back the way it came.
+        """The whole refund, to the customer's 369 Wallet, and a credit note.
 
-        The wallet leg goes to the wallet, because that is where it came from;
-        anything settled through a gateway is left to the gateway's own refund,
-        which is a finance decision rather than something an operator should be
-        able to trigger from a board.
+        Once per return: `refunded` records it, so moving a finished return on
+        again cannot pay twice.
         """
         self.ensure_one()
-        order = self.order_id
-        amount = self.amount or order.amount_total
-        if not amount:
+        if self.refunded:
             return False
-        wallet_leg = min(amount, order.mart369_wallet_used or 0.0)
-        if wallet_leg:
-            card = self.env['loyalty.card'].sudo()._mart369_wallet(order.partner_id)
-            if card:
-                card._mart369_move(
-                    wallet_leg, 'refund', self.env._('Return'),
-                    sub=self.env._('Order #%s', order.mart369_ref or ''))
+        order = self.order_id.sudo()
+        paid = order._mart369_refund_to_wallet(
+            self.amount or order.amount_total, self.env._('Return refund'))
+        self.sudo().refunded = paid
+        if paid:
+            order._mart369_credit_note(paid, self.env._('Return: %s', self.reason or ''))
         return True
 
     def _mart369_serialize(self):
@@ -128,6 +126,9 @@ class Mart369OrderReturn(models.Model):
             'reason': self.reason or '',
             'detail': self.detail or '',
             'amount': self.currency_id.round(self.amount or 0.0),
+            # Where the money went once the refund was issued.
+            'refunded': self.currency_id.round(self.refunded or 0.0),
+            'refundTo': 'wallet',
             'photos': len(self.photo_ids),
             'at': int(self.create_date.timestamp() * 1000) if self.create_date else None,
         }

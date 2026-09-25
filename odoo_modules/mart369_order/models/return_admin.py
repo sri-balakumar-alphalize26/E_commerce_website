@@ -66,22 +66,20 @@ class Mart369OrderReturnAdmin(models.Model):
                 'label': self.env._(NEXT_LABEL.get(self.state, 'Move on'))}
 
     def _mart369_refund_split(self):
-        """How much of the money this screen can actually put back.
-
-        `_mart369_refund` returns the wallet leg and leaves anything taken by a
-        gateway to the gateway's own refund - a finance decision, deliberately
-        not an operator's button. So the screen has to say which is which, or
-        somebody reads "refunded", closes the ticket, and the customer is still
-        out of pocket.
-        """
+        """What the refund will be - all of it to the 369 Wallet
+        (order_refund.py) - so the screen can say so before it is issued.
+        `gateway` stays 0: nothing is left for a gateway refund any more."""
         self.ensure_one()
         order = self.order_id
-        amount = self.amount or order.amount_total
-        wallet = min(amount, order.mart369_wallet_used or 0.0)
+        currency = order.currency_id
+        if self.refunded:
+            wallet = self.refunded
+        else:
+            wallet = min(self.amount or order.amount_total, order._mart369_refundable())
         return {
-            'total': order.currency_id.round(amount),
-            'wallet': order.currency_id.round(wallet),
-            'gateway': order.currency_id.round(max(0.0, amount - wallet)),
+            'total': currency.round(self.amount or order.amount_total),
+            'wallet': currency.round(wallet),
+            'gateway': 0.0,
             'method': order.mart369_method or '',
         }
 

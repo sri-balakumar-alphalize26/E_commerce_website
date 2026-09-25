@@ -118,23 +118,22 @@ class TestInvoicing(Mart369OrderCase):
         order._mart369_invoice()
         self.assertFalse(self._invoices(order))
 
-    def test_cancelling_after_the_bill_leaves_the_bill_standing(self):
-        """Pinning the gap rather than pretending it is closed.
-
-        An order can only be cancelled while `placed`, which it reaches by
-        being paid - and paying is what invoices it. So by the time cancelling
-        is allowed the invoice already exists, and nothing here reverses it:
-        that needs a credit note, which this suite does not raise. The books
-        therefore still show the sale until somebody credits it by hand.
-        """
+    def test_cancelling_after_the_bill_credits_it(self):
+        """An order can only be cancelled while `placed`, which it reaches by
+        being paid - and paying is what invoices it. Cancelling refunds the
+        whole amount to the 369 Wallet and credits the invoice
+        (order_refund.py), so the books stop showing the sale."""
         order = self._place()
         self._pay(order)
         self.assertEqual(len(self._invoices(order)), 1)
 
         order._mart369_cancel(reason='Store closed')
         self.assertEqual(order.mart369_state, 'cancelled')
-        self.assertEqual(len(self._invoices(order)), 1,
-                         'still there, and still needing a credit note')
+        self.assertEqual(len(self._invoices(order).filtered(lambda m: m.move_type == 'out_invoice')), 1,
+                         'the invoice stays')
+        notes = order.invoice_ids.filtered(lambda m: m.move_type == 'out_refund' and m.state == 'posted')
+        self.assertEqual(len(notes), 1, 'and a credit note answers it')
+        self.assertAlmostEqual(notes.amount_total, order.mart369_cancel_refund, places=2)
 
     def test_an_order_that_cannot_be_invoiced_does_not_raise(self):
         """The money is already taken by the time this runs. An unbilled order
