@@ -202,7 +202,7 @@ export class HomeBuilder extends Component {
         return "";
     }
     tileStyle(t) {
-        return `background:${t.bg || "#f1f4f6"};`;
+        return `background:${t.paint_bg || t.bg || "#f1f4f6"};`;
     }
     toneStyle(tone) {
         return `background:${TONE_CSS[tone] || TONE_CSS.green};`;

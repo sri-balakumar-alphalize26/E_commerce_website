@@ -72,7 +72,12 @@ class Mart369HomeTile(models.Model):
         help='Optional short word drawn inside, e.g. ATTA.')
     bg = fields.Char(
         string='Tile background', default='#f1f4f6',
-        help='The colour behind the tile, e.g. #fdecec.')
+        help='The colour behind the tile, e.g. #fdecec. With the catalogue '
+             'installed, a tile linked to a category wears its colours instead.')
+    colour_from = fields.Char(
+        string='Colours from', compute='_compute_colour_from',
+        help='The category whose colours this tile wears. Change them in '
+             'Catalogue > Categories.')
 
     preview_html = fields.Html(
         string='Preview', compute='_compute_preview_html', sanitize=False)
@@ -120,33 +125,50 @@ class Mart369HomeTile(models.Model):
             else:
                 rec.image_path = ''
 
+    # ------------------------------------------------------------- colours
+
+    def _mart369_colours(self):
+        """(background, drawing colour) as the app paints them: the tile's
+        own. mart369_catalog overrides this so a tile linked to a category
+        wears that category's colours - the catalogue owns them, and it
+        already depends on this module, so the link lives there."""
+        self.ensure_one()
+        return self.bg or '#f1f4f6', self.color or ''
+
+    @api.depends('public_categ_id')
+    def _compute_colour_from(self):
+        """Whose colours the tile wears when not its own (mart369_catalog)."""
+        self.colour_from = False
+
     @api.depends('name', 'bg', 'color', 'badge', 'image_path')
     def _compute_preview_html(self):
         for rec in self:
-            swatch = escape(rec.bg or '#f1f4f6')
+            bg, ink = rec._mart369_colours()
+            swatch = escape(bg)
             inner = escape(rec.badge or (rec.art or '')[:6] or '')
             rec.preview_html = Markup(
                 '<div class="mart-pv"><div class="mart-pv-tile">'
                 '<span class="mart-pv-tile-art" style="background:%s;color:%s">%s</span>'
                 '<span class="mart-pv-tile-label">%s</span>'
                 '</div></div>'
-            ) % (swatch, escape(rec.color or '#5b6b76'), inner,
+            ) % (swatch, escape(ink or '#5b6b76'), inner,
                  escape(rec.name or 'Untitled'))
 
     # ------------------------------------------------------------- serialise
 
     def _serialize(self):
         self.ensure_one()
+        bg, ink = self._mart369_colours()
         vals = {
             'key': self.key,
             'image': self.image_path or '',
             'label': self.name,
             'art': self.art or 'Pack',
-            'bg': self.bg or '',
+            'bg': bg,
         }
         # Optional keys are left out entirely, never sent as null.
-        if self.color:
-            vals['color'] = self.color
+        if ink:
+            vals['color'] = ink
         if self.badge:
             vals['t'] = self.badge
         if self.route:
@@ -177,6 +199,10 @@ class Mart369HomeTile(models.Model):
             'color': self.color or '',
             'badge': self.badge or '',
             'bg': self.bg or '#f1f4f6',
+            # What the tile actually wears, and whose colours those are.
+            'paint_bg': self._mart369_colours()[0],
+            'paint_color': self._mart369_colours()[1],
+            'colour_from': self.colour_from or '',
             'active': self.active,
             'sequence': self.sequence,
             'has_image': bool(self.image_1920),

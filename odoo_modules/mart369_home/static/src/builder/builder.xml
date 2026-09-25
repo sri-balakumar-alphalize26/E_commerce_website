@@ -107,7 +107,7 @@
                                         <a t-foreach="activeTiles" t-as="tile" t-key="tile.id" class="hm-cat" t-attf-style="--i:{{ tile_index }}">
                                             <span class="hm-cat-img" t-att-style="tileStyle(tile)">
                                                 <img t-if="tile.image_path" t-att-src="tile.image_path" alt=""/>
-                                                <span t-else="" class="mart-art" t-att-style="tile.color ? 'color:' + tile.color : ''">
+                                                <span t-else="" class="mart-art" t-att-style="(tile.paint_color or tile.color) ? 'color:' + (tile.paint_color or tile.color) : ''">
                                                     <t t-esc="tile.badge || tile.art"/>
                                                 </span>
                                             </span>
@@ -638,7 +638,10 @@
                             </div>
                             <div class="mart-field"><label>Text on it</label><input type="text" t-att-value="tl.badge" placeholder="e.g. ATTA" t-on-input="(ev) => this.onField('mart369.home.tile', tl, 'badge', ev)"/></div>
                         </div>
-                        <div class="mart-row">
+                        <div t-if="tl.colour_from" class="mart-hint">
+                            Colours come from <b t-esc="tl.colour_from"/>. Change them in Catalogue → Categories.
+                        </div>
+                        <div t-else="" class="mart-row">
                             <div class="mart-field"><label>Tile background</label><input type="color" t-att-value="tl.bg || '#f1f4f6'" t-on-input="(ev) => this.onField('mart369.home.tile', tl, 'bg', ev)"/></div>
                             <div class="mart-field"><label>Drawing colour</label><input type="color" t-att-value="tl.color || '#5b6b76'" t-on-input="(ev) => this.onField('mart369.home.tile', tl, 'color', ev)"/></div>
                         </div>

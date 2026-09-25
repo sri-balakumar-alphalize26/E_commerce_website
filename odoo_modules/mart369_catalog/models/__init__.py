@@ -4,3 +4,4 @@ from . import serializers
 from . import search_term
 from . import res_partner
 from . import product_admin
+from . import home_tile

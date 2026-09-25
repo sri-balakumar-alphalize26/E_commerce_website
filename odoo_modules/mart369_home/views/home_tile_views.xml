@@ -93,11 +93,12 @@
                     <group string="The drawing (used when there is no picture)">
                         <group>
                             <field name="art"/>
-                            <field name="color" widget="color"/>
+                            <field name="color" widget="color" invisible="colour_from"/>
                         </group>
                         <group>
                             <field name="badge" placeholder="e.g. ATTA"/>
-                            <field name="bg" widget="color"/>
+                            <field name="bg" widget="color" invisible="colour_from"/>
+                            <field name="colour_from" invisible="not colour_from"/>
                         </group>
                     </group>
                 </sheet>
