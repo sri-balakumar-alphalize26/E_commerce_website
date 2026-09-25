@@ -22,6 +22,7 @@ const ICONS = {
     search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
     bolt: '<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>',
     chev: '<path d="m6 9 6 6 6-6"/>',
+    sort: '<path d="M7 4v15M3.5 15.5 7 19l3.5-3.5"/><path d="M17 20V5M13.5 8.5 17 5l3.5 3.5"/>',
     right: '<path d="m9 6 6 6-6 6"/>',
     cart: '<path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.5L21 8H6"/><circle cx="10" cy="20" r="1.3"/><circle cx="17" cy="20" r="1.3"/>',
     user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',

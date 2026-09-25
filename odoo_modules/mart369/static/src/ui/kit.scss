@@ -471,3 +471,31 @@ button.mart-switch {
 
     .modal-footer { border-top: 0; gap: 8px; }
 }
+
+// Pick drawn as an icon alone (the sort button). The dot says the list is not
+// in its first order.
+.mart-select.mart-select-icon {
+    position: relative;
+    justify-content: center;
+    width: 32px;
+    padding: 0;
+    color: $mart-muted;
+
+    &:hover { color: $mart-ink; }
+}
+
+.mart-select.mart-select-moved {
+    color: $mart-blue;
+
+    &::after {
+        content: "";
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: $mart-orange;
+        border: 1.5px solid #fff;
+    }
+}

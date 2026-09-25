@@ -36,8 +36,16 @@ export class Pick extends Component {
            Passed on as `!!` because an absent optional prop arrives as
            undefined, which OWL's Boolean check refuses in dev mode. */
         disabled: { type: Boolean, optional: true },
+        /* Optional: draw the button as this icon alone - a sort order, say.
+           It wears a dot while anything but the first option is chosen, so a
+           changed order is never invisible. */
+        icon: { type: String, optional: true },
         onChange: { type: Function },
     };
+
+    get moved() {
+        return this.props.value !== this.props.options[0]?.[0];
+    }
 
     get current() {
         const hit = this.props.options.find(([v]) => v === this.props.value);

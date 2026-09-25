@@ -3,7 +3,14 @@
 
     <t t-name="mart369.Pick">
         <Dropdown position="'bottom-start'" menuClass="'mart-select-menu'" disabled="!!props.disabled">
-            <button class="mart-select" type="button" t-att-aria-label="props.label"
+            <button t-if="props.icon" type="button"
+                    t-attf-class="mart-select mart-select-icon {{ moved ? 'mart-select-moved' : '' }}"
+                    t-att-aria-label="props.label + ': ' + current" t-att-title="current"
+                    t-att-disabled="props.disabled or false"
+                    t-on-keydown="onKeydown">
+                <Icon n="props.icon" size="16"/>
+            </button>
+            <button t-else="" class="mart-select" type="button" t-att-aria-label="props.label"
                     t-att-disabled="props.disabled or false"
                     t-on-keydown="onKeydown">
                 <span t-esc="current"/>

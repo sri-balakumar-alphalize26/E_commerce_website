@@ -21,6 +21,7 @@ const EXTRA = {
   store: <><path d="M4 9.5 5.6 5h12.8L20 9.5" /><path d="M4 9.5a2.4 2.4 0 0 0 4 1.6 2.4 2.4 0 0 0 4 0 2.4 2.4 0 0 0 4 0 2.4 2.4 0 0 0 4-1.6" /><path d="M5.5 11.6V20h13v-8.4" /><path d="M10 20v-5h4v5" /></>,
   layers: <><path d="m12 3 9 5-9 5-9-5z" /><path d="m3 13 9 5 9-5" /></>,
   live: <><circle cx="12" cy="12" r="3" /><path d="M7.5 7.5a6.4 6.4 0 0 0 0 9M16.5 16.5a6.4 6.4 0 0 0 0-9M4.5 4.5a10.6 10.6 0 0 0 0 15M19.5 19.5a10.6 10.6 0 0 0 0-15" /></>,
+  sort: <><path d="M7 4v15M3.5 15.5 7 19l3.5-3.5" /><path d="M17 20V5M13.5 8.5 17 5l3.5 3.5" /></>,
 };
 
 export const Icon = ({ n, size = 20, className = "" }) =>
@@ -168,6 +169,57 @@ export function Select({ value, onChange, options, label }) {
   );
 }
 
+/* Sort order behind one icon. The options are the same [value, label] pairs
+   Select takes; the first one is the default, and the button wears a dot
+   whenever the list is sorted some other way, so a changed order is never
+   invisible. */
+export function SortMenu({ value, onChange, options, label = "Sort" }) {
+  const [open, setOpen] = useState(false);
+  const wrap = useRef(null);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const away = (e) => { if (!wrap.current?.contains(e.target)) setOpen(false); };
+    const key = (e) => {
+      if (e.key !== "Escape") return;
+      setOpen(false);
+      wrap.current?.querySelector(".ad-sort-btn")?.focus();
+    };
+    document.addEventListener("mousedown", away);
+    document.addEventListener("keydown", key);
+    return () => {
+      document.removeEventListener("mousedown", away);
+      document.removeEventListener("keydown", key);
+    };
+  }, [open]);
+
+  const current = options.find(([v]) => v === value);
+  const moved = value !== options[0]?.[0];
+  return (
+    <div className={"ad-select ad-sort" + (open ? " ad-select-open" : "")} ref={wrap}>
+      <button type="button" className={"ad-sort-btn" + (moved ? " ad-sort-moved" : "")}
+        aria-label={current ? `${label}: ${current[1]}` : label} title={current ? current[1] : label}
+        aria-haspopup="listbox" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+        <Icon n="sort" size={17} />
+      </button>
+      {open && (
+        <ul className="ad-select-menu" role="listbox" aria-label={label}>
+          {options.map(([v, l]) => (
+            <li key={v}>
+              <button type="button" role="option" aria-selected={v === value}
+                className={v === value ? "ad-select-on" : ""}
+                onClick={() => { setOpen(false); if (v !== value) onChange(v); }}>
+                <Icon n="check" size={14} />
+                {l}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 export function Empty({ icon = "box", title, text, action, onAction }) {
   return (
     <div className="ad-empty">
@@ -179,7 +231,9 @@ export function Empty({ icon = "box", title, text, action, onAction }) {
 }
 
 /* right-side drawer (bottom sheet on phones) */
-export function Drawer({ title, sub, onClose, children, foot, wide }) {
+/* `lead` is drawn before the title - an avatar, say - and `sub` may be a node,
+   for a header that needs more than one line under the name. */
+export function Drawer({ title, sub, lead, onClose, children, foot, wide }) {
   const [out, setOut] = useState(false);
   /* 240ms, because that is how long the exit actually takes: `.ad-out
      .ad-drawer` and `.ad-out .ad-scrim` both run their keyframe in reverse
@@ -197,7 +251,8 @@ export function Drawer({ title, sub, onClose, children, foot, wide }) {
     <div className={"ad-drawer-wrap" + (out ? " ad-out" : "")} onClick={close}>
       <section className={"ad-drawer" + (wide ? " ad-drawer-wide" : "")} role="dialog" aria-modal="true" aria-label={title} onClick={(e) => e.stopPropagation()}>
         <header>
-          <div><h3>{title}</h3>{sub && <small>{sub}</small>}</div>
+          {lead}
+          <div className="ad-drawer-title"><h3>{title}</h3>{sub && <small>{sub}</small>}</div>
           <button className="ad-icon-btn" onClick={close} aria-label="Close"><Icon n="x" size={17} /></button>
         </header>
         <div className="ad-drawer-body">{children}</div>
