@@ -7,3 +7,5 @@ from . import whatsapp
 from . import sale_order
 from . import support_board
 from . import customer_tickets
+from . import order_tickets
+from . import review_tickets

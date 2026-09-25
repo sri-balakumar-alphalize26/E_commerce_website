@@ -23,6 +23,7 @@ from datetime import timedelta
 from odoo import api, fields, models
 from odoo.exceptions import UserError
 
+from .order_delivery import FAIL_REASONS
 from .sale_order import LIVE_STATES
 
 # The label for the button that moves an order on one step, by the state it is
@@ -54,6 +55,8 @@ TABS = {
 }
 
 SORTS = {
+    # The promise nearest to breaking first - what a packer works through.
+    'due': 'mart369_due_at asc, id asc',
     'old': 'mart369_placed_at asc, id asc',
     'new': 'mart369_placed_at desc, id desc',
     'value': 'amount_total desc, id desc',
@@ -79,7 +82,7 @@ class SaleOrder(models.Model):
     # ------------------------------------------------------------- searching
 
     @api.model
-    def _mart369_admin_domain(self, tab=None, mode=None, when=None, q=None):
+    def _mart369_admin_domain(self, tab=None, mode=None, when=None, q=None, pay=None):
         """The console's list, as a domain.
 
         Filtered here rather than in the browser. The sample screen this
@@ -90,6 +93,11 @@ class SaleOrder(models.Model):
         domain += TABS.get(tab or 'needs', TABS['needs'])
         if mode in ('quick', 'all'):
             domain += [('mart369_mode', '=', mode)]
+        # Cash on delivery, or paid before it left (UPI, card, wallet...).
+        if pay == 'cod':
+            domain += [('mart369_method', '=', 'cod')]
+        elif pay == 'prepaid':
+            domain += ['|', ('mart369_method', '=', False), ('mart369_method', '!=', 'cod')]
         if when in ('today', '7d'):
             today = fields.Date.context_today(self)
             days = 0 if when == 'today' else 6
@@ -105,13 +113,16 @@ class SaleOrder(models.Model):
 
     @api.model
     def mart369_admin_list(self, tab=None, mode=None, when=None, q=None,
-                           sort=None, limit=30, offset=0):
+                           sort=None, limit=30, offset=0, pay=None):
         """One page of the console's list, plus how many there are in total."""
-        domain = self._mart369_admin_domain(tab=tab, mode=mode, when=when, q=q)
+        domain = self._mart369_admin_domain(tab=tab, mode=mode, when=when, q=q, pay=pay)
         limit = max(1, min(int(limit or 30), MAX_ROWS))
         offset = max(0, int(offset or 0))
         order = SORTS.get(sort or 'old', SORTS['old'])
         orders = self.search(domain, limit=limit, offset=offset, order=order)
+        # A replacement offer past its deadline is refunded before anyone
+        # sees it still "waiting" (order_substitute.py).
+        self._mart369_expire_substitutes(orders)
         return {
             'orders': [o._mart369_admin_row() for o in orders],
             'total': self.search_count(domain),
@@ -144,6 +155,15 @@ class SaleOrder(models.Model):
             # as how many orders have one - hence its own name.
             'returnsOpen': self.env['mart369.order.return'].search_count(
                 [('state', 'in', ('requested', 'pickup', 'picked'))]),
+            # The newest orders waiting to be packed. Both screens poll this
+            # and chime for any they have not seen yet.
+            'latest': [{
+                'ref': o.mart369_ref,
+                'total': o.currency_id.round(o.amount_total),
+                'currency': self.env['mart369.serializable']._mart369_currency(o.currency_id),
+                'at': int(o.mart369_placed_at.timestamp() * 1000) if o.mart369_placed_at else None,
+            } for o in self.search(base + [('mart369_state', '=', 'placed')],
+                                   order='mart369_placed_at desc, id desc', limit=5)],
         }
 
     # ------------------------------------------------------------- one order
@@ -242,6 +262,15 @@ class SaleOrder(models.Model):
             # Worked out here because only the order knows its own flow.
             'next': self._mart369_admin_next(),
             'canCancel': self.mart369_state == 'placed',
+            # Who has it, and whether the door has already said no
+            # (order_delivery.py).
+            'rider': self.mart369_rider_id.name or '',
+            'riderId': self.mart369_rider_id.id or False,
+            'attempts': self.mart369_attempts,
+            'failedReason': self.mart369_failed_reason or '',
+            # A replacement the customer has not answered yet: its deadline.
+            'substituteUntil': min((int(s.deadline.timestamp() * 1000)
+                                    for s in self._mart369_open_substitutes()), default=None),
         }
 
     def _mart369_admin_next(self):
@@ -259,11 +288,23 @@ class SaleOrder(models.Model):
     def _mart369_admin_detail(self):
         """The drawer: the row, plus everything worth opening it for."""
         self.ensure_one()
+        self._mart369_expire_substitutes(self)
         row = self._mart369_admin_row()
         partner = self.partner_shipping_id
         row.update({
-            'items': [{'name': snap['name'], 'price': snap['price'], 'qty': qty}
-                      for __, qty, snap in self._mart369_app_lines()],
+            'items': [{'lineId': line.id,
+                       'name': line.name or line.product_id.display_name,
+                       'price': self.currency_id.round(line.price_unit),
+                       'qty': int(line.product_uom_qty)}
+                      for line in self._mart369_item_lines()],
+            # Out of stock after ordering: take one item out, refund it.
+            'canRemove': self._mart369_can_remove(),
+            'riders': [{'id': u.id, 'name': u.name} for u in self._mart369_riders()],
+            'canFail': self.mart369_state == 'out',
+            'canReplace': self.mart369_state in ('placed', 'packed', 'shipped'),
+            'substitutes': [s._mart369_serialize() for s in self.mart369_substitute_ids],
+            'failReasons': FAIL_REASONS,
+            'removed': self._mart369_removed_lines(),
             'bill': self._mart369_bill_snapshot(),
             'paid': self.currency_id.round(self.mart369_paid or 0.0),
             'walletUsed': self.currency_id.round(self.mart369_wallet_used or 0.0),

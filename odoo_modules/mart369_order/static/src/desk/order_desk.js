@@ -60,11 +60,19 @@ export const STATUS = {
    `mart369_admin_counts`, the same counts the kanban's KPI strip shows. */
 export const TILES = [
     { tab: "placed", label: _t("To pack"), icon: "box" },
-    { tab: "packing", label: _t("Packed & shipped"), icon: "archive" },
-    { tab: "out", label: _t("Out"), icon: "truck" },
+    { tab: "packing", label: _t("Ready to send"), icon: "archive" },
+    { tab: "out", label: _t("Out for delivery"), icon: "truck" },
     { tab: "late", label: _t("Late"), icon: "clock", warn: true },
     { tab: "cash", label: _t("Cash to collect"), icon: "money", amount: true },
 ];
+
+/* "Needs me", grouped by what you do next - the state says which group. */
+const NEXT_GROUPS = [
+    { key: "pack", label: _t("To pack"), states: ["placed"] },
+    { key: "send", label: _t("Ready to send"), states: ["packed", "shipped"] },
+    { key: "out", label: _t("Out for delivery"), states: ["out"] },
+];
+const PAID_BY = { upi: "UPI", card: _t("card"), netbanking: _t("net banking"), wallet: _t("369 Wallet") };
 
 export const TABS = [
     { key: "needs", label: _t("Needs me"), badge: "needs" },
@@ -162,7 +170,8 @@ export class OrderDesk extends Component {
             tab: "needs",
             mode: "",
             when: "all",
-            sort: "old",
+            pay: "",
+            sort: "due",
             q: "",
             limit: PAGE,
             rows: [],
@@ -171,9 +180,12 @@ export class OrderDesk extends Component {
             counts: null,
             cashDue: "",
             sel: null,        // the ref of the order the panel is showing
+            picked: [],       // the refs ticked for a bulk action
             detail: null,
             addrPick: null, // the address being chosen while "Change" is open
             reason: "",       // what a cancellation would be recorded as
+            failReason: "",   // what went wrong at the door
+            sound: soundWanted(), // chime for a new order
             loading: true,
             busy: false,
             error: "",
@@ -215,6 +227,7 @@ export class OrderDesk extends Component {
                     tab: this.state.tab,
                     mode: this.state.mode || null,
                     when: this.state.when === "all" ? null : this.state.when,
+                    pay: this.state.pay || null,
                     q: this.state.q.trim() || null,
                     sort: this.state.sort,
                     limit: this.state.limit,
@@ -229,6 +242,7 @@ export class OrderDesk extends Component {
             }
             this.state.counts = counts.counts;
             this.state.cashDue = counts.cashDue;
+            this.announce(counts.latest || []);
             this.state.error = "";
             /* An order that has left the tab the panel was opened from is
                still worth showing - it was just moved on, most likely by the
@@ -263,6 +277,10 @@ export class OrderDesk extends Component {
     async select(ref) {
         this.state.sel = ref;
         this.state.detail = null;
+        // Each order starts from the first reason, not whatever was picked
+        // on the last one opened.
+        this.state.reason = this.state.reasons[0] || "";
+        this.state.failReason = "";
         this.dialog.add(
             OrderDialog,
             { desk: this },
@@ -290,7 +308,77 @@ export class OrderDesk extends Component {
     pick(tab) {
         this.state.tab = tab;
         this.state.limit = PAGE;
+        this.state.picked = [];
         this.load();
+    }
+
+    // ------------------------------------------------------------ ticking
+
+    isPicked(row) {
+        return this.state.picked.includes(row.ref);
+    }
+
+    togglePick(row) {
+        const picked = this.state.picked;
+        this.state.picked = picked.includes(row.ref)
+            ? picked.filter((r) => r !== row.ref)
+            : [...picked, row.ref];
+    }
+
+    get allPicked() {
+        return this.state.rows.length > 0 && this.state.rows.every((r) => this.isPicked(r));
+    }
+
+    toggleAll() {
+        this.state.picked = this.allPicked ? [] : this.state.rows.map((r) => r.ref);
+    }
+
+    get pickedRows() {
+        return this.state.rows.filter((r) => this.isPicked(r));
+    }
+
+    get canMoveAll() {
+        return this.pickedRows.some((r) => r.next && !this.needsCode(r));
+    }
+
+    /** Move every ticked order one step on, one at a time, the way pressing
+     *  each row's button would. Orders at the door are skipped - they need the
+     *  customer's code - and so is anything the shop refuses; the count says
+     *  how many went. */
+    async moveAll() {
+        const chosen = this.pickedRows.filter((r) => r.next && !this.needsCode(r));
+        if (!chosen.length || this.state.busy) {
+            return;
+        }
+        this.state.busy = true;
+        let moved = 0;
+        const refused = [];
+        try {
+            for (const row of chosen) {
+                try {
+                    await this.orm.call("sale.order", "mart369_admin_advance", [row.ref]);
+                    moved += 1;
+                } catch {
+                    refused.push(row.ref);
+                }
+            }
+        } finally {
+            this.state.busy = false;
+            this.state.picked = [];
+            await this.load({ quiet: true });
+        }
+        this.notification.add(
+            refused.length
+                ? _t("Moved %s of %s. Not moved: #%s", moved, chosen.length, refused.join(", #"))
+                : _t("Moved %s order(s) on", moved),
+            { type: refused.length ? "warning" : "success" });
+    }
+
+    /** Packing slips or the picklist for the ticked orders, as a PDF in a new
+     *  tab (controllers/admin_api.py, print_orders). */
+    printPicked(kind) {
+        const refs = encodeURIComponent(this.state.picked.join(","));
+        window.open(`/369mart/admin/orders/print?kind=${kind}&refs=${refs}`, "_blank");
     }
 
     setFilter(key, value) {
@@ -378,11 +466,12 @@ export class OrderDesk extends Component {
         const reason = this.state.reason || this.state.reasons[0] || "";
         this.dialog.add(Confirm, {
             title: _t("Cancel order %s?", order.ref),
-            body: _t(
-                'The money goes back the way it was paid, and the customer is ' +
-                    'told "%s" on their own tracking screen.',
-                reason
-            ),
+            // Says how much, like the console does: cash orders owe nothing,
+            // paid ones get their money back.
+            body: order.method === "cod"
+                ? _t('It was cash on delivery, so there is nothing to refund. The customer is told "%s" on their own tracking screen.', reason)
+                : _t("%s goes to the customer's 369 Wallet straight away, and they are told \"%s\" on their own tracking screen.",
+                    this.money(order.paid || order.bill?.total || order.total, order.currency), reason),
             confirmLabel: _t("Cancel the order"),
             confirmClass: "btn-danger",
             confirm: () =>
@@ -391,6 +480,57 @@ export class OrderDesk extends Component {
                 ),
             cancel: () => {},
         });
+    }
+
+    /** Take one item out because the store ran out of it. Paid orders get its
+     *  price back in the 369 Wallet at once; cash orders owe less at the door. */
+    askRemove(order, line) {
+        const value = this.money(line.price * line.qty, order.currency);
+        const cash = order.method === "cod";
+        this.dialog.add(Confirm, {
+            title: _t("Take %s x %s out of #%s?", line.qty, line.name, order.ref),
+            body: cash
+                ? _t("It is marked out of stock and the cash to collect drops by %s.", value)
+                : _t("It is marked out of stock and %s goes to the customer's 369 Wallet straight away.", value),
+            confirmLabel: _t("Take it out"),
+            confirmClass: "btn-danger",
+            confirm: () =>
+                this.run(() =>
+                    this.orm.call("sale.order", "mart369_admin_remove_line",
+                        [order.ref, line.lineId, _t("Out of stock")])
+                ),
+            cancel: () => {},
+        });
+    }
+
+    /** Offer the customer another product for an item that ran out. */
+    askReplace(order, line) {
+        this.dialog.add(ReplaceDialog, {
+            order,
+            line,
+            money: (v) => this.money(v, order.currency),
+            onSent: () => {
+                this.notification.add(
+                    _t("Replacement sent - #%s waits for the customer", order.ref), { type: "success" });
+                this.load({ quiet: true });
+            },
+        });
+    }
+
+    /** The offer for this item, if one was made. */
+    offerFor(order, line) {
+        return (order.substitutes || []).find((s) => s.lineId === line.lineId && s.state === "offered");
+    }
+
+    withdraw(order, offer) {
+        return this.run(() =>
+            this.orm.call("sale.order", "mart369_admin_withdraw_substitute", [order.ref, offer.id]));
+    }
+
+    /** "8 min left" on an offer the customer has not answered yet. */
+    leftOf(ms) {
+        const mins = Math.max(0, Math.round((ms - Date.now()) / 60000));
+        return mins < 60 ? _t("%s min left", mins) : _t("%s h left", Math.round(mins / 60));
     }
 
     setReason(reason) {
@@ -402,6 +542,97 @@ export class OrderDesk extends Component {
      *  sentence is both what is shown and what is sent. */
     get reasonOptions() {
         return this.state.reasons.map((reason) => [reason, reason]);
+    }
+
+    // ---------------------------------------------------------- new orders
+
+    /** A pop-up, and a chime, for every order placed since the screen last
+     *  looked. The first look only remembers what is there. */
+    announce(latest) {
+        if (!this.seen) {
+            this.seen = new Set(latest.map((o) => o.ref));
+            return;
+        }
+        const fresh = latest.filter((o) => !this.seen.has(o.ref));
+        if (!fresh.length) {
+            return;
+        }
+        for (const o of fresh.reverse()) {
+            this.seen.add(o.ref);
+            this.notification.add(
+                _t("#%s · %s", o.ref, this.money(o.total, o.currency)),
+                { title: _t("New order"), type: "info" });
+        }
+        if (this.state.sound) {
+            chime();
+        }
+    }
+
+    toggleSound() {
+        this.state.sound = !this.state.sound;
+        try {
+            window.localStorage.setItem(SOUND_KEY, this.state.sound ? "on" : "off");
+        } catch {
+            // Remembered for this visit only.
+        }
+        if (this.state.sound) {
+            chime(); // the click that lets the browser play it later
+        }
+    }
+
+    // ------------------------------------------------ rider, failed delivery
+
+    riderValue(order) {
+        return order.riderId ? String(order.riderId) : "";
+    }
+
+    setFailReason(reason) {
+        this.state.failReason = reason;
+    }
+
+    riderOptions(order) {
+        return [["", _t("No rider yet")], ...(order.riders || []).map((r) => [String(r.id), r.name])];
+    }
+
+    setRider(order, value) {
+        return this.run(() =>
+            this.orm.call("sale.order", "mart369_admin_set_rider", [order.ref, Number(value) || false])
+        );
+    }
+
+    failOptions(order) {
+        return (order.failReasons || []).map((r) => [r, r]);
+    }
+
+    /** It could not be delivered: out again with a new code, or back to the
+     *  store with the money in the customer's 369 Wallet. */
+    failed(order, then) {
+        const reason = this.state.failReason || (order.failReasons || [])[0] || "";
+        const go = () =>
+            this.run(async () => {
+                const r = await this.orm.call("sale.order", "mart369_admin_failed", [order.ref, reason, then]);
+                this.notification.add(
+                    then === "retry"
+                        ? _t("#%s goes out again with a new door code", order.ref)
+                        : r.refund
+                          ? _t("#%s returned · %s to the 369 Wallet", order.ref, this.money(r.refund, order.currency))
+                          : _t("#%s returned to the store", order.ref),
+                    { type: "success" });
+            });
+        if (then === "retry") {
+            return go();
+        }
+        this.dialog.add(Confirm, {
+            title: _t("Return #%s to the store?", order.ref),
+            body: order.method === "cod"
+                ? _t('The order is closed as "%s". It was cash on delivery, so there is nothing to refund.', reason)
+                : _t('The order is closed as "%s" and %s goes to the customer\'s 369 Wallet straight away.',
+                     reason, this.money(order.paid || order.total, order.currency)),
+            confirmLabel: _t("Return to store"),
+            confirmClass: "btn-danger",
+            confirm: go,
+            cancel: () => {},
+        });
     }
 
     /* What is on screen, not what is in the shop - hence "these" on the
@@ -524,6 +755,24 @@ export class OrderDesk extends Component {
         return _t("%s d ago", Math.floor(mins / 1440));
     }
 
+    /* Counts down to the promise while it can still be kept: "due in 14 min".
+       Once it is broken `overdue` takes over and counts up. */
+    dueIn(ms) {
+        const mins = Math.max(0, Math.round((ms - Date.now()) / 60000));
+        if (mins < 1) {
+            return _t("due now");
+        }
+        if (mins < 60) {
+            return _t("due in %s min", mins);
+        }
+        if (mins < 1440) {
+            const h = Math.floor(mins / 60);
+            const m = mins % 60;
+            return m ? _t("due in %s h %s min", h, m) : _t("due in %s h", h);
+        }
+        return _t("due in %s d", Math.floor(mins / 1440));
+    }
+
     /* Counts up rather than back: somebody looking at an overdue order is
        asking how late it is, not when it was placed. */
     overdue(ms) {
@@ -544,16 +793,54 @@ export class OrderDesk extends Component {
         return [["", _t("All types")], ["quick", _t("Quick")], ["all", _t("Express")]];
     }
 
+    get payOptions() {
+        return [["", _t("Any payment")], ["cod", _t("Cash on delivery")], ["prepaid", _t("Prepaid")]];
+    }
+
     get whenOptions() {
         return [["all", _t("All time")], ["today", _t("Today")], ["7d", _t("Last 7 days")]];
     }
 
     get sortOptions() {
         return [
+            ["due", _t("Most urgent first")],
             ["old", _t("Longest wait first")],
             ["new", _t("Newest first")],
             ["value", _t("Highest value")],
         ];
+    }
+
+    /** The rows as the list draws them. "Needs me" is split by the next
+     *  thing to do; every other tab is one plain list. */
+    get groups() {
+        const rows = this.state.rows;
+        if (this.state.tab !== "needs") {
+            return [{ key: "all", label: "", rows }];
+        }
+        const out = NEXT_GROUPS.map((g) => ({ ...g, rows: rows.filter((r) => g.states.includes(r.state)) }))
+            .filter((g) => g.rows.length);
+        const rest = rows.filter((r) => !NEXT_GROUPS.some((g) => g.states.includes(r.state)));
+        if (rest.length) {
+            out.push({ key: "other", label: _t("Other"), rows: rest });
+        }
+        return out;
+    }
+
+    /** Payment in plain words: is the money in, or still to collect? */
+    payText(row) {
+        if (row.method === "cod") {
+            if (row.state === "delivered") {
+                return _t("Cash collected");
+            }
+            return row.state === "cancelled" ? _t("Cash on delivery") : _t("Cash on delivery - collect at the door");
+        }
+        const how = PAID_BY[row.method] || row.payNote || row.method;
+        return how ? _t("Paid by %s", how) : _t("Paid");
+    }
+
+    tagTone(tag) {
+        const tones = ["grey", "red", "orange", "amber", "blue", "violet", "green", "blue", "red", "violet", "green", "orange"];
+        return tones[(tag.color || 0) % tones.length];
     }
 
     get steps() {
@@ -645,11 +932,11 @@ export class OrderDesk extends Component {
             return _t("No code has been issued for this order yet.");
         }
         if (otp.usedAt) {
-            return _t("Used at %s.", this.clock(otp.usedAt));
+            return _t("Used %s.", this.when(otp.usedAt));
         }
         return _t(
-            "Issued %s, not used yet. The customer has it in their app.",
-            this.clock(otp.issuedAt)
+            "Sent %s, not used yet. The customer has it in their app.",
+            this.when(otp.issuedAt)
         );
     }
 }
@@ -662,6 +949,115 @@ export class OrderDesk extends Component {
  * this component to it, so a write on the desk redraws in here without the two
  * ever holding separate copies of the same order.
  */
+/* A new order's chime: two short notes made here, so there is no sound file
+   to ship. Browsers only play sound after somebody has clicked on the page,
+   which is what the "Sound on" switch is for - switching it on is the click. */
+const SOUND_KEY = "mart369.orders.sound";
+let audio = null;
+
+export function chime() {
+    try {
+        audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+        if (audio.state === "suspended") {
+            audio.resume();
+        }
+        const start = audio.currentTime;
+        [880, 1318.5].forEach((freq, i) => {
+            const osc = audio.createOscillator();
+            const gain = audio.createGain();
+            osc.type = "sine";
+            osc.frequency.value = freq;
+            const at = start + i * 0.16;
+            gain.gain.setValueAtTime(0.0001, at);
+            gain.gain.exponentialRampToValueAtTime(0.25, at + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.35);
+            osc.connect(gain).connect(audio.destination);
+            osc.start(at);
+            osc.stop(at + 0.4);
+        });
+    } catch {
+        // No sound on this browser - the pop-up still says it.
+    }
+}
+
+function soundWanted() {
+    try {
+        return window.localStorage.getItem(SOUND_KEY) !== "off";
+    } catch {
+        return true;
+    }
+}
+
+/** Pick a replacement for an item that ran out and send it to the customer,
+ *  who accepts or refuses it on their order page (order_substitute.py). */
+export class ReplaceDialog extends Component {
+    static template = "mart369_order.ReplaceDialog";
+    static components = { Dialog, Icon };
+    static props = {
+        close: { type: Function },
+        order: { type: Object },
+        line: { type: Object },
+        money: { type: Function },
+        onSent: { type: Function },
+    };
+
+    setup() {
+        this.orm = useService("orm");
+        // Up to three: the customer picks one of them.
+        this.state = useState({ q: "", products: [], picked: [], loading: true, busy: false, error: "" });
+        this.search = useDebounced(() => this.load(), 300);
+        onWillStart(() => this.load());
+    }
+
+    async load() {
+        this.state.loading = true;
+        try {
+            this.state.products = await this.orm.call("sale.order", "mart369_admin_substitutes",
+                [this.props.order.ref, this.props.line.lineId, this.state.q.trim() || null]);
+            this.state.error = "";
+        } catch (err) {
+            this.state.error = err.data?.message || err.message || String(err);
+        } finally {
+            this.state.loading = false;
+        }
+    }
+
+    isPicked(product) {
+        return this.state.picked.includes(product.id);
+    }
+
+    pick(product) {
+        const picked = this.state.picked;
+        if (picked.includes(product.id)) {
+            this.state.picked = picked.filter((id) => id !== product.id);
+        } else if (picked.length < 3) {
+            this.state.picked = [...picked, product.id];
+        }
+    }
+
+    type(ev) {
+        this.state.q = ev.target.value;
+        this.search();
+    }
+
+    async send() {
+        if (!this.state.picked.length || this.state.busy) {
+            return;
+        }
+        this.state.busy = true;
+        try {
+            await this.orm.call("sale.order", "mart369_admin_offer_substitute",
+                [this.props.order.ref, this.props.line.lineId, this.state.picked]);  // one to three ids
+            this.props.onSent();
+            this.props.close();
+        } catch (err) {
+            this.state.error = err.data?.message || err.message || String(err);
+        } finally {
+            this.state.busy = false;
+        }
+    }
+}
+
 export class OrderDialog extends Component {
     static template = "mart369_order.OrderDialog";
     static components = { Dialog, Pick, Icon, Pill };
@@ -673,12 +1069,141 @@ export class OrderDialog extends Component {
     setup() {
         this.desk = this.props.desk;
         this.state = useState(this.props.desk.state);
+        // The dialog's own bits: the note being written or changed.
+        this.local = useState({ note: "", editing: null, editText: "", busy: false });
+    }
+
+    // ------------------------------------------------ plain-words helpers
+
+    /** Where the order stands, as one sentence. */
+    statusLine(o) {
+        const promised = o.dueAt ? this.desk.clock(o.dueAt) : "";
+        if (o.state === "cancelled") {
+            return _t("Cancelled.");
+        }
+        if (o.state === "delivered") {
+            return _t("Delivered.");
+        }
+        if (o.late) {
+            return promised
+                ? _t("%s - it was promised by %s.", this.desk.overdue(o.dueAt), promised)
+                : _t("%s.", this.desk.overdue(o.dueAt));
+        }
+        return promised ? _t("On time - %s (promised by %s).", this.desk.dueIn(o.dueAt), promised) : _t("On time.");
+    }
+
+    whenLine(o) {
+        const promised = o.dueAt ? _t("promised by %s", this.desk.when(o.dueAt)) : "";
+        return [o.slot, promised].filter(Boolean).join(" · ") || "-";
+    }
+
+    payLine(o) {
+        const total = this.desk.money(o.bill.total, o.currency);
+        if (o.method === "cod") {
+            return o.state === "delivered" ? _t("Cash on delivery - collected at the door.")
+                : o.state === "cancelled" ? _t("Cash on delivery - nothing to collect.")
+                : _t("Cash on delivery - collect %s at the door.", total);
+        }
+        const how = o.payNote || o.method || _t("Paid online");
+        return o.txn ? _t("%s - paid %s (ref %s).", how, total, o.txn) : _t("%s - paid %s.", how, total);
+    }
+
+    orderOrdinal(o) {
+        const n = o.customer.orderCount || 0;
+        return n <= 1 ? _t("first order") : _t("%s orders so far", n);
+    }
+
+    riskLine(o) {
+        const r = o.customer.risk;
+        if (!r) {
+            return "";
+        }
+        return [
+            r.cancelledByCustomer && _t("%s cancelled by them", r.cancelledByCustomer),
+            r.refused && _t("%s refused at the door", r.refused),
+            r.returned && _t("%s returned", r.returned),
+            r.codOff && _t("cash on delivery is off for them"),
+        ].filter(Boolean).join(" · ");
+    }
+
+    tone(tag) {
+        const tones = ["grey", "red", "orange", "amber", "blue", "violet", "green", "blue", "red", "violet", "green", "orange"];
+        return tones[(tag.color || 0) % tones.length];
+    }
+
+    callHref(o) {
+        const p = o.customer.phone;
+        return p ? "tel:" + p.replace(/[^\d+]/g, "") : "";
+    }
+
+    waHref(o) {
+        return o.customer.waPhone ? "https://wa.me/" + o.customer.waPhone : "";
+    }
+
+    // --------------------------------------------------------- navigating
+
+    openCustomer(o) {
+        if (!o.customer.userId) {
+            return;
+        }
+        this.props.close();
+        this.desk.action.doAction({
+            type: "ir.actions.client", tag: "mart369_order.customer_profile",
+            name: o.customer.name, params: { userId: o.customer.userId },
+        });
+    }
+
+    openTicket(t) {
+        this.props.close();
+        this.desk.action.doAction({
+            type: "ir.actions.act_window", res_model: "mart369.ticket", res_id: t.id,
+            views: [[false, "form"]], target: "current",
+        });
+    }
+
+    // -------------------------------------------------------------- notes
+
+    async noteCall(method, args) {
+        if (this.local.busy) {
+            return false;
+        }
+        this.local.busy = true;
+        try {
+            this.state.detail.notes = await this.desk.orm.call("sale.order", method, args);
+            return true;
+        } catch (err) {
+            this.desk.notification.add(err?.data?.message || err?.message || _t("That did not work."), { type: "danger" });
+            return false;
+        } finally {
+            this.local.busy = false;
+        }
+    }
+
+    async addNote(o) {
+        if (await this.noteCall("mart369_admin_add_order_note", [o.ref, this.local.note.trim()])) {
+            this.local.note = "";
+        }
+    }
+
+    async saveNote(o, n) {
+        if (await this.noteCall("mart369_admin_edit_order_note", [o.ref, n.id, this.local.editText.trim()])) {
+            this.local.editing = null;
+        }
+    }
+
+    deleteNote(o, n) {
+        return this.noteCall("mart369_admin_delete_order_note", [o.ref, n.id]);
     }
 
     /** The invoice's own URL. A method rather than an expression in the
      *  template: an OWL template is evaluated without globals, so
      *  `encodeURIComponent` in there is a ReferenceError at render time
      *  rather than a mistake anybody sees while writing it. */
+    /** This one order's packing slip - the same report the bulk print uses. */
+    slipHref(ref) {
+        return `/369mart/admin/orders/print?kind=slips&refs=${encodeURIComponent(ref)}`;
+    }
+
     invoiceHref(ref) {
         return `/369mart/admin/orders/${encodeURIComponent(ref)}/invoice`;
     }

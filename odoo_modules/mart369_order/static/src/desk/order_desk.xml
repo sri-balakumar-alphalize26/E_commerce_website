@@ -8,7 +8,7 @@
             <header class="pe-head">
                 <div>
                     <h1>Orders</h1>
-                    <p>What needs doing, longest wait first.</p>
+                    <p>What needs doing, most urgent first.</p>
                 </div>
                 <button class="mart-btn" t-on-click="() => this.moreViews()">
                     <Icon n="'menu'" size="14"/>
@@ -30,22 +30,32 @@
                     </span>
                     <b t-esc="tileValue(tile)"/>
                     <small t-if="tile.amount"><t t-esc="state.counts and state.counts.cash or 0"/> orders</small>
-                    <small t-else="">Show these</small>
+                    <small t-else="">Tap to filter</small>
                 </button>
             </div>
 
             <div class="pe-toolbar od-toolbar">
                 <Tabs tabs="tabItems" value="state.tab"
                       onChange="(k) => this.pick(k)"/>
-                <div class="pe-toolbar-gap"/>
+            </div>
+            <!-- Search and filters on their own row, like the console. -->
+            <div class="pe-toolbar od-toolbar od-toolbar2">
                 <Search value="state.q" placeholder="'Order, name or phone'" label="'Search orders'"
                             onChange="(v) => this.onSearch(v)"/>
                 <Pick label="'Storefront'" value="state.mode" options="modeOptions"
                       onChange="(v) => this.setFilter('mode', v)"/>
                 <Pick label="'Period'" value="state.when" options="whenOptions"
                       onChange="(v) => this.setFilter('when', v)"/>
+                <Pick label="'Payment'" value="state.pay" options="payOptions"
+                      onChange="(v) => this.setFilter('pay', v)"/>
                 <Pick label="'Sort'" value="state.sort" options="sortOptions"
                       onChange="(v) => this.setFilter('sort', v)"/>
+                <button class="mart-btn od-sound" t-att-aria-pressed="state.sound ? 'true' : 'false'"
+                        t-att-title="state.sound ? 'A chime plays for each new order' : 'New orders arrive silently'"
+                        t-on-click="() => this.toggleSound()">
+                    <Icon n="state.sound ? 'megaphone' : 'x'" size="14"/>
+                    <t t-if="state.sound">Sound on</t><t t-else="">Sound off</t>
+                </button>
                 <button class="mart-btn od-export" t-att-disabled="!state.rows.length"
                         t-on-click="() => this.exportCsv()">
                     <Icon n="'download'" size="14"/>
@@ -72,47 +82,94 @@
                     </p>
 
                     <t t-else="">
-                        <p class="od-count">
-                            <t t-esc="state.total"/> order<t t-if="state.total !== 1">s</t>
-                        </p>
+                        <div class="od-count">
+                            <label class="od-check" t-on-click.stop="() => {}">
+                                <input type="checkbox" t-att-checked="allPicked"
+                                       aria-label="Tick every order shown"
+                                       t-on-change="() => this.toggleAll()"/>
+                            </label>
+                            <span><t t-esc="state.total"/> order<t t-if="state.total !== 1">s</t></span>
+                        </div>
+                        <!-- What to do with the ticked orders. -->
+                        <div t-if="state.picked.length" class="od-bulk">
+                            <span><b t-esc="state.picked.length"/> ticked</span>
+                            <button class="mart-btn mart-btn-sm mart-btn-primary"
+                                    t-att-disabled="state.busy or !canMoveAll"
+                                    t-on-click="() => this.moveAll()">Move all on</button>
+                            <button class="mart-btn mart-btn-sm" t-on-click="() => this.printPicked('slips')">
+                                <Icon n="'box'" size="13"/> Packing slips
+                            </button>
+                            <button class="mart-btn mart-btn-sm" t-on-click="() => this.printPicked('picklist')">
+                                <Icon n="'layers'" size="13"/> Picklist
+                            </button>
+                            <button class="mart-btn mart-btn-sm od-bulk-clear"
+                                    t-on-click="() => { this.state.picked = []; }">Clear</button>
+                        </div>
+                        <t t-foreach="groups" t-as="group" t-key="group.key">
+                        <h3 t-if="group.label" class="od-group">
+                            <t t-esc="group.label"/> <em t-esc="group.rows.length"/>
+                        </h3>
                         <ul class="od-rows">
-                            <li t-foreach="state.rows" t-as="row" t-key="row.ref"
-                                t-attf-class="od-row {{ state.sel === row.ref ? 'od-row-on' : '' }} {{ row.late ? 'od-row-late' : '' }}"
+                            <li t-foreach="group.rows" t-as="row" t-key="row.ref"
+                                t-attf-class="od-row od-row2 {{ state.sel === row.ref ? 'od-row-on' : '' }} {{ row.late ? 'od-row-late' : '' }}"
                                 t-on-click="() => this.select(row.ref)">
-                                <span class="od-line1">
-                                    <span class="od-ref">
-                                        <Icon n="row.mode === 'quick' ? 'fa-bolt' : 'fa-truck'" size="15"/>
-                                        #<t t-esc="row.ref"/>
+                                <label class="od-check" t-on-click.stop="() => {}">
+                                    <input type="checkbox" t-att-checked="isPicked(row)"
+                                           t-attf-aria-label="Tick order {{ row.ref }}"
+                                           t-on-change="() => this.togglePick(row)"/>
+                                </label>
+                                <!-- Who first: the name is what a person reads out. -->
+                                <span class="od2-row-main">
+                                    <span class="od2-row-top">
+                                        <b class="od2-row-name" t-esc="row.customer.name"/>
+                                        <small t-if="row.customer.area" class="od-area">· <t t-esc="row.customer.area"/></small>
+                                        <span t-foreach="row.customer.tags or []" t-as="tag" t-key="tag.id"
+                                              t-attf-class="mart-pill mart-t-{{ tagTone(tag) }} od2-row-tag" t-esc="tag.name"/>
+                                        <span t-if="row.customer.codOff" class="mart-pill mart-t-red od2-row-tag">COD off</span>
                                     </span>
-                                    <span class="od-ago" t-esc="ago(row.at)"/>
-                                    <span class="od-who" t-esc="row.customer.name"/>
-                                    <small t-if="row.customer.area" class="od-area">
-                                        · <t t-esc="row.customer.area"/>
+                                    <small class="od2-row-sub">
+                                        #<t t-esc="row.ref"/> ·
+                                        <Icon n="row.mode === 'quick' ? 'bolt' : 'truck'" size="12"/>
+                                        <t t-esc="row.mode === 'quick' ? 'Quick' : 'Express'"/> ·
+                                        <t t-esc="row.itemCount"/> item<t t-if="row.itemCount !== 1">s</t> ·
+                                        <t t-esc="ago(row.at)"/>
                                     </small>
-                                    <span class="od-items">
-                                        <t t-esc="row.itemCount"/> item<t t-if="row.itemCount !== 1">s</t>
+                                    <span class="od-line2 od2-row-facts">
+                                        <Pill t-if="group.key === 'all' or group.key === 'other'" s="row.state" map="STATUS"/>
+                                        <span t-if="row.late" class="od-late">
+                                            <Icon n="'warn'" size="13"/> <t t-esc="overdue(row.dueAt)"/>
+                                        </span>
+                                        <span t-elif="row.dueAt and ['placed', 'packed', 'shipped', 'out'].includes(row.state)"
+                                              class="od-promise od-due">
+                                            <Icon n="'clock'" size="13"/> <t t-esc="dueIn(row.dueAt)"/>
+                                        </span>
+                                        <span t-attf-class="od2-row-pay {{ row.method === 'cod' and row.state !== 'delivered' and row.state !== 'cancelled' ? 'od2-row-cash' : '' }}">
+                                            <Icon n="row.method === 'cod' ? 'money' : 'check'" size="13"/> <t t-esc="payText(row)"/>
+                                        </span>
+                                        <span t-if="row.rider" class="od-pay od-rider-name">
+                                            <Icon n="'scooter'" size="13"/> <t t-esc="row.rider"/>
+                                        </span>
+                                        <span t-if="row.substituteUntil" class="od-waiting">
+                                            <Icon n="'clock'" size="13"/> Replacement waiting · <t t-esc="leftOf(row.substituteUntil)"/>
+                                        </span>
+                                        <span t-if="row.attempts and row.state === 'out'" class="od-late">
+                                            <Icon n="'warn'" size="13"/>
+                                            <t t-esc="row.attempts"/> failed <t t-if="row.attempts === 1">try</t><t t-else="">tries</t> - <t t-esc="row.failedReason"/>
+                                        </span>
                                     </span>
-                                    <b class="od-total" t-esc="money(row.total, row.currency)"/>
                                 </span>
-                                <span class="od-line2">
-                                    <Pill s="row.state" map="STATUS"/>
-                                    <span t-if="row.late" class="od-late">
-                                        <Icon n="'clock'" size="14"/>
-                                        <t t-esc="overdue(row.dueAt)"/>
-                                    </span>
-                                    <span t-else="" class="od-promise"
-                                          t-esc="row.slot or row.eta or ''"/>
-                                    <span class="od-pay" t-esc="row.payNote or row.method or ''"/>
-                                    <!-- The label is the server's. This screen does not
-                                         know that packed follows placed on a quick order
-                                         and shipped does on an express one. -->
-                                    <button t-if="row.next" class="mart-btn mart-btn-sm od-next"
+                                <span class="od2-row-side">
+                                    <b class="od-total" t-esc="money(row.total, row.currency)"/>
+                                    <!-- The label is the server's. -->
+                                    <button t-if="row.next" class="mart-btn mart-btn-sm mart-btn-primary od-next"
                                             t-att-disabled="state.busy"
-                                            t-on-click.stop="() => this.advance(row)"
-                                            t-esc="row.next.label"/>
+                                            t-on-click.stop="() => this.advance(row)">
+                                        <t t-esc="row.next.label"/> <Icon n="'right'" size="12"/>
+                                    </button>
                                 </span>
                             </li>
                         </ul>
+                        </t>
                         <div t-if="state.rows.length &lt; state.total" class="od-more">
                             <button class="mart-btn" t-att-disabled="state.loading"
                                     t-on-click="() => this.showMore()">
@@ -135,6 +192,43 @@
          It holds nothing of its own - `desk` is the queue component, so there
          is one `state.detail` and every write and helper is the one that was
          already there. -->
+    <!-- Pick a replacement and send it to the customer. -->
+    <t t-name="mart369_order.ReplaceDialog">
+        <Dialog size="'md'" title="'Offer a replacement'" contentClass="'od-replace-dialog'">
+            <p class="text-muted">
+                <b t-esc="props.line.name"/> (<t t-esc="props.line.qty"/> x <t t-esc="props.money(props.line.price)"/>) is out of stock.
+                Tick up to three - the customer picks one on their order page and pays no more than they did.
+            </p>
+            <input type="search" class="form-control mb-2" placeholder="Search products"
+                   t-att-value="state.q" t-on-input="(ev) => this.type(ev)"/>
+            <p t-if="state.error" class="text-danger" t-esc="state.error"/>
+            <p t-if="state.loading and !state.products.length" class="text-muted">Looking...</p>
+            <p t-elif="!state.products.length" class="text-muted">Nothing in stock matches.</p>
+            <div class="list-group" style="max-height: 320px; overflow: auto;">
+                <button t-foreach="state.products" t-as="p" t-key="p.id" type="button"
+                        t-attf-class="list-group-item list-group-item-action d-flex align-items-center gap-2 {{ this.isPicked(p) ? 'active' : '' }}"
+                        t-on-click="() => this.pick(p)">
+                    <img t-if="p.image" t-att-src="p.image" alt="" width="36" height="36" style="object-fit: contain;"/>
+                    <span class="flex-grow-1 text-start">
+                        <b t-esc="p.name"/>
+                        <small class="d-block">
+                            <t t-esc="props.money(p.price)"/>
+                            <t t-if="p.shopPays"> · shop pays +<t t-esc="props.money(p.shopPays)"/></t>
+                            <t t-if="p.toWallet"> · <t t-esc="props.money(p.toWallet)"/> back to the customer</t>
+                        </small>
+                    </span>
+                </button>
+            </div>
+            <t t-set-slot="footer">
+                <button class="btn btn-primary" t-att-disabled="!state.picked.length or state.busy"
+                        t-on-click="() => this.send()">
+                    Send <t t-esc="state.picked.length || ''"/> to customer
+                </button>
+                <button class="btn btn-secondary" t-on-click="() => this.props.close()">Cancel</button>
+            </t>
+        </Dialog>
+    </t>
+
     <t t-name="mart369_order.OrderDialog">
         <Dialog size="'lg'" contentClass="'od-dialog'"
                 title="state.detail ? '#' + state.detail.ref : 'Order'">
@@ -143,132 +237,206 @@
 
             <t t-else="">
                 <t t-set="o" t-value="state.detail"/>
-                <p class="od-dialog-sub">
-                    <t t-esc="desk.modeLabel(o.mode)"/> &#183; <t t-esc="desk.when(o.at)"/>
-                </p>
-                <div class="od-dialog-cols">
-                    <p class="od-chips">
-                        <Pill s="o.state" map="desk.STATUS"/>
-                        <span t-if="o.late" class="od-late">
-                            <Icon n="'clock'" size="14"/>
-                            <t t-esc="desk.overdue(o.dueAt)"/>
-                        </span>
-                        <span class="od-pay" t-esc="o.payNote or o.method or ''"/>
-                    </p>
+                <div class="od2">
+                    <!-- 1. Where it is, and what to do now - the answer first. -->
+                    <section class="od2-now">
+                        <p class="od2-sub"><t t-esc="desk.modeLabel(o.mode)"/> · placed <t t-esc="desk.when(o.at)"/></p>
+                        <ol class="od2-steps">
+                            <li t-foreach="desk.steps" t-as="step" t-key="step.key"
+                                t-attf-class="{{ step.done ? 'od2-done' : '' }} {{ step.now ? 'od2-on' : '' }} {{ step.cancelled ? 'od2-cancel' : '' }}">
+                                <i/><b t-esc="step.label"/><small t-esc="step.at"/>
+                            </li>
+                        </ol>
+                        <p t-attf-class="od2-status {{ o.late ? 'od2-late' : '' }}">
+                            <Icon n="o.late ? 'warn' : 'clock'" size="14"/>
+                            <span t-esc="statusLine(o)"/>
+                        </p>
+                        <div t-if="o.next" class="od2-next">
+                            <span>Next step</span>
+                            <button class="mart-btn mart-btn-primary" t-att-disabled="state.busy" t-on-click="() => desk.advance(o)">
+                                <t t-esc="o.next.label"/> <Icon n="'right'" size="14"/>
+                            </button>
+                        </div>
+                    </section>
 
-                    <h4 class="od-h">Customer</h4>
-                    <dl class="od-kv">
-                        <div><dt>Name</dt><dd t-esc="o.customer.name"/></div>
-                        <div t-if="o.customer.phone">
-                            <dt>Phone</dt>
-                            <dd><a t-attf-href="tel:{{ o.customer.phone }}" t-esc="o.customer.phone"/></dd>
+                    <!-- 2. Who, where, when. -->
+                    <section class="od2-sec">
+                        <h4><Icon n="'user'" size="14"/> Who</h4>
+                        <div class="od2-who">
+                            <button type="button" class="od2-name" t-att-disabled="!o.customer.userId"
+                                    t-on-click="() => this.openCustomer(o)">
+                                <t t-esc="o.customer.name"/> <Icon t-if="o.customer.userId" n="'right'" size="13"/>
+                            </button>
+                            <small><t t-esc="orderOrdinal(o)"/></small>
+                            <span t-foreach="o.customer.tags or []" t-as="tag" t-key="tag.id"
+                                  t-attf-class="mart-pill mart-t-{{ tone(tag) }}" t-esc="tag.name"/>
                         </div>
-                        <div><dt>Orders</dt><dd t-esc="o.customer.orderCount"/></div>
-                        <!-- Where it goes. Until the parcel leaves the store, support can
-                             send it to another of the customer's saved addresses; the
-                             order keeps a record of the change. -->
-                        <div t-if="o.address or o.addressChangeable" class="od-kv-wide od-deliver">
-                            <dt>Deliver to</dt>
-                            <dd t-if="state.addrPick === null">
-                                <span class="od-addr">
-                                    <b t-if="o.address" t-esc="o.address.label"/>
-                                    <span t-foreach="desk.addressLines(o.address)" t-as="line" t-key="line_index" t-esc="line"/>
-                                    <small t-if="o.address and o.address.phone">
-                                        <t t-esc="o.address.name"/> &#183; <t t-esc="o.address.phone"/>
-                                    </small>
-                                </span>
-                                <button t-if="o.addressChangeable and o.addresses.length &gt; 1"
-                                        class="mart-btn mart-btn-sm" t-on-click="() => desk.startAddressChange()">
-                                    Change
-                                </button>
-                            </dd>
-                            <dd t-else="" class="od-addr-change">
-                                <ul class="od-addr-pick" role="radiogroup" aria-label="Deliver to">
-                                    <li t-foreach="o.addresses" t-as="a" t-key="a.id">
-                                        <label t-attf-class="{{ state.addrPick === a.id ? 'od-on' : '' }}">
-                                            <input type="radio" name="od-addr" t-att-checked="state.addrPick === a.id"
-                                                   t-on-change="() => desk.pickAddress(a.id)"/>
-                                            <span>
-                                                <b t-esc="a.label"/>
-                                                <em t-if="o.address and a.id === o.address.id">now</em>
-                                                <small t-esc="desk.addressLines(a).join(', ')"/>
-                                            </span>
-                                        </label>
-                                    </li>
-                                </ul>
-                                <span class="od-addr-actions">
-                                    <button class="mart-btn mart-btn-sm" t-on-click="() => desk.cancelAddressChange()">Cancel</button>
-                                    <button class="mart-btn mart-btn-sm mart-btn-primary"
-                                            t-att-disabled="state.busy or !o.address or state.addrPick === o.address.id"
-                                            t-on-click="() => desk.saveAddressChange()">
-                                        Deliver here
-                                    </button>
-                                </span>
-                            </dd>
+                        <p t-if="riskLine(o)" class="od2-risk"><Icon n="'warn'" size="13"/> <t t-esc="riskLine(o)"/></p>
+                        <div class="od2-reach">
+                            <a t-if="callHref(o)" class="mart-btn mart-btn-sm" t-att-href="callHref(o)"><Icon n="'phone'" size="13"/> Call</a>
+                            <a t-if="waHref(o)" class="mart-btn mart-btn-sm" t-att-href="waHref(o)" target="_blank" rel="noopener"><Icon n="'chat'" size="13"/> WhatsApp</a>
                         </div>
-                        <div t-if="o.slot"><dt>Slot</dt><dd t-esc="o.slot"/></div>
-                        <div t-if="o.dueAt"><dt>Promised</dt><dd t-esc="desk.when(o.dueAt)"/></div>
-                        <div t-if="o.instructions" class="od-kv-wide">
-                            <dt>Note</dt><dd t-esc="o.instructions"/>
-                        </div>
-                    </dl>
 
-                    <!-- Not a rider. There is no rider model behind this,
-                         and a control that saves nowhere is worse than no
-                         control. What is real is whether the customer has a
-                         door code and whether it has been used. -->
-                    <h4 class="od-h">Delivery code</h4>
-                    <p class="mart-hint" t-esc="desk.doorstep"/>
-
-                    <h4 class="od-h">Items <em t-esc="o.items.length"/></h4>
-                    <ul class="od-items-list">
-                        <li t-foreach="o.items" t-as="line" t-key="line_index">
-                            <span class="od-qty"><t t-esc="line.qty"/>x</span>
-                            <span class="od-item-name" t-esc="line.name"/>
-                            <b t-esc="desk.money(line.price * line.qty, o.currency)"/>
-                        </li>
-                    </ul>
-                    <dl class="od-bill">
-                        <div><dt>Items</dt><dd t-esc="desk.money(o.bill.items, o.currency)"/></div>
-                        <div><dt>Delivery</dt>
-                            <dd t-esc="o.bill.fees ? desk.money(o.bill.fees, o.currency) : 'Free'"/></div>
-                        <div t-if="o.bill.couponOff">
-                            <dt>Coupon <t t-if="o.coupon">· <t t-esc="o.coupon"/></t></dt>
-                            <dd>-<t t-esc="desk.money(o.bill.couponOff, o.currency)"/></dd>
+                        <h5>Deliver to</h5>
+                        <div t-if="state.addrPick === null" class="od2-addr">
+                            <span>
+                                <b t-if="o.address"><t t-esc="o.address.label"/><t t-if="o.address.name"> · <t t-esc="o.address.name"/></t><t t-if="o.address.phone"> · <t t-esc="o.address.phone"/></t></b>
+                                <small t-if="o.address" t-esc="desk.addressLines(o.address).join(', ')"/>
+                                <small t-else="">No address on the order.</small>
+                            </span>
+                            <button t-if="o.addressChangeable and o.addresses.length &gt; 1"
+                                    class="mart-btn mart-btn-sm" t-on-click="() => desk.startAddressChange()">Change</button>
                         </div>
-                        <div t-if="o.walletUsed">
-                            <dt>From wallet</dt><dd>-<t t-esc="desk.money(o.walletUsed, o.currency)"/></dd>
+                        <div t-else="" class="od-addr-change">
+                            <ul class="od-addr-pick" role="radiogroup" aria-label="Deliver to">
+                                <li t-foreach="o.addresses" t-as="a" t-key="a.id">
+                                    <label t-attf-class="{{ state.addrPick === a.id ? 'od-on' : '' }}">
+                                        <input type="radio" name="od-addr" t-att-checked="state.addrPick === a.id"
+                                               t-on-change="() => desk.pickAddress(a.id)"/>
+                                        <span>
+                                            <b t-esc="a.label"/>
+                                            <em t-if="o.address and a.id === o.address.id">now</em>
+                                            <small t-esc="desk.addressLines(a).join(', ')"/>
+                                        </span>
+                                    </label>
+                                </li>
+                            </ul>
+                            <span class="od-addr-actions">
+                                <button class="mart-btn mart-btn-sm" t-on-click="() => desk.cancelAddressChange()">Cancel</button>
+                                <button class="mart-btn mart-btn-sm mart-btn-primary"
+                                        t-att-disabled="state.busy or !o.address or state.addrPick === o.address.id"
+                                        t-on-click="() => desk.saveAddressChange()">Deliver here</button>
+                            </span>
                         </div>
-                        <div class="od-bill-total"><dt>Total</dt><dd t-esc="desk.money(o.bill.total, o.currency)"/></div>
-                    </dl>
+                        <p class="od2-line"><b>When</b> <t t-esc="whenLine(o)"/></p>
+                        <p t-if="o.instructions" class="od2-line"><b>Customer's note</b> <t t-esc="o.instructions"/></p>
+                    </section>
 
-                    <t t-if="o.returns.length">
-                        <h4 class="od-h">Returns <em t-esc="o.returns.length"/></h4>
+                    <!-- 3. What's in it, and the money. -->
+                    <section class="od2-sec">
+                        <h4><Icon n="'bag'" size="14"/> Items (<t t-esc="o.items.length"/>)</h4>
                         <ul class="od-items-list">
-                            <li t-foreach="o.returns" t-as="ret" t-key="ret.id">
-                                <span class="od-item-name">
-                                    <t t-esc="ret.reason"/>
-                                    <small> · <t t-esc="ret.state"/></small>
+                            <li t-foreach="o.items" t-as="line" t-key="line_index">
+                                <span class="od-qty"><t t-esc="line.qty"/>x</span>
+                                <span class="od-item-name" t-esc="line.name"/>
+                                <b t-esc="desk.money(line.price * line.qty, o.currency)"/>
+                                <t t-set="offer" t-value="desk.offerFor(o, line)"/>
+                                <button t-if="o.canReplace and !offer" class="mart-btn mart-btn-sm od-replace"
+                                        t-att-disabled="state.busy" title="Out of stock: offer the customer something else"
+                                        t-on-click="() => desk.askReplace(o, line)">Replace</button>
+                                <button t-if="o.canRemove and !offer" class="mart-btn mart-btn-sm od-remove"
+                                        t-att-disabled="state.busy" title="Out of stock: take it out and refund it"
+                                        t-on-click="() => desk.askRemove(o, line)">Remove</button>
+                                <span t-if="offer" class="od-offer">
+                                    <Icon n="'clock'" size="12"/>
+                                    <t t-esc="offer.offered"/> offered · waiting · <t t-esc="desk.leftOf(offer.deadline)"/>
+                                    <button class="mart-btn mart-btn-sm" t-att-disabled="state.busy"
+                                            t-on-click="() => desk.withdraw(o, offer)">Withdraw</button>
                                 </span>
-                                <b t-if="ret.amount" t-esc="desk.money(ret.amount, o.currency)"/>
                             </li>
                         </ul>
-                        <p class="mart-hint">
-                            Returns are moved on under 369 Mart &gt; Returns.
+                        <p t-if="(o.removed or []).length" class="od2-gone">
+                            <b>Taken out or replaced: </b>
+                            <t t-foreach="o.removed" t-as="gone" t-key="'gone' + gone_index">
+                                <span><t t-esc="gone.qty"/>× <t t-esc="gone.name"/><t t-if="gone.reason"> (<t t-esc="gone.reason"/>)</t><t t-if="!gone_last">; </t></span>
+                            </t>
                         </p>
-                    </t>
+                        <dl class="od-bill">
+                            <div><dt>Items</dt><dd t-esc="desk.money(o.bill.items, o.currency)"/></div>
+                            <div><dt>Delivery</dt><dd t-esc="o.bill.fees ? desk.money(o.bill.fees, o.currency) : 'Free'"/></div>
+                            <div t-if="o.bill.couponOff"><dt>Coupon <t t-if="o.coupon">· <t t-esc="o.coupon"/></t></dt>
+                                <dd>-<t t-esc="desk.money(o.bill.couponOff, o.currency)"/></dd></div>
+                            <div t-if="o.walletUsed"><dt>From wallet</dt><dd>-<t t-esc="desk.money(o.walletUsed, o.currency)"/></dd></div>
+                            <div class="od-bill-total"><dt>Total</dt><dd t-esc="desk.money(o.bill.total, o.currency)"/></div>
+                        </dl>
+                        <p class="od2-pay"><Icon n="'money'" size="14"/> <t t-esc="payLine(o)"/></p>
+                    </section>
 
-                    <h4 class="od-h">Progress</h4>
-                    <ol class="od-steps">
-                        <li t-foreach="desk.steps" t-as="step" t-key="step.key"
-                            t-attf-class="{{ step.done ? 'od-done' : '' }} {{ step.now ? 'od-now' : '' }} {{ step.cancelled ? 'od-step-cancelled' : '' }}">
-                            <i/>
-                            <span>
-                                <b t-esc="step.label"/>
-                                <small t-esc="step.at or 'Pending'"/>
-                            </span>
-                        </li>
-                    </ol>
+                    <!-- 4. Getting it there. -->
+                    <section class="od2-sec">
+                        <h4><Icon n="'truck'" size="14"/> Delivery</h4>
+                        <div class="od-rider">
+                            <span class="od2-label">Rider</span>
+                            <Pick label="'Rider'" value="desk.riderValue(o)" options="desk.riderOptions(o)"
+                                  disabled="state.busy or !o.riders.length" onChange="(v) => desk.setRider(o, v)"/>
+                            <small t-if="!o.riders.length" class="mart-hint">Nobody has the Rider role yet - give it under Staff &amp; roles.</small>
+                        </div>
+                        <p class="od2-line"><b>Door code</b> <t t-esc="desk.doorstep"/></p>
+                        <p t-if="o.attempts" class="od-failed"><Icon n="'warn'" size="14"/> Attempt <t t-esc="o.attempts"/> failed: <t t-esc="o.failedReason"/></p>
+                        <div t-if="o.canFail" class="od2-fail">
+                            <b>Couldn't deliver?</b>
+                            <Pick label="'What went wrong'" value="state.failReason or o.failReasons[0]"
+                                  options="desk.failOptions(o)" onChange="(v) => desk.setFailReason(v)"/>
+                            <button class="mart-btn mart-btn-sm" t-att-disabled="state.busy" t-on-click="() => desk.failed(o, 'retry')">Try again</button>
+                            <button class="mart-btn mart-btn-sm mart-btn-danger" t-att-disabled="state.busy" t-on-click="() => desk.failed(o, 'return')">Return to store</button>
+                        </div>
+                    </section>
+
+                    <!-- 5. The team's notes on this order. -->
+                    <section class="od2-sec">
+                        <h4><Icon n="'pen'" size="14"/> Staff notes</h4>
+                        <div class="od2-note-new">
+                            <textarea rows="2" maxlength="1000" placeholder="e.g. Called, no answer - gate is locked"
+                                      t-att-value="local.note" t-on-input="(ev) => { local.note = ev.target.value; }"/>
+                            <button class="mart-btn mart-btn-primary mart-btn-sm" t-att-disabled="local.busy or !local.note.trim()"
+                                    t-on-click="() => this.addNote(o)">Add</button>
+                        </div>
+                        <ul t-if="(o.notes or []).length" class="od2-notes">
+                            <li t-foreach="o.notes" t-as="n" t-key="n.id">
+                                <t t-if="local.editing === n.id">
+                                    <textarea rows="2" maxlength="1000" t-att-value="local.editText"
+                                              t-on-input="(ev) => { local.editText = ev.target.value; }"/>
+                                    <span class="od2-note-act">
+                                        <button class="mart-btn mart-btn-sm" t-on-click="() => { local.editing = null; }">Cancel</button>
+                                        <button class="mart-btn mart-btn-sm mart-btn-primary" t-att-disabled="local.busy or !local.editText.trim()"
+                                                t-on-click="() => this.saveNote(o, n)">Save</button>
+                                    </span>
+                                </t>
+                                <p t-else="" t-esc="n.text"/>
+                                <small>
+                                    <t t-esc="n.author"/> · <t t-esc="desk.ago(n.at)"/>
+                                    <button t-if="n.mine and local.editing !== n.id" type="button" aria-label="Edit note"
+                                            t-on-click="() => { local.editing = n.id; local.editText = n.text; }"><Icon n="'pen'" size="12"/></button>
+                                    <button t-if="n.mine" type="button" aria-label="Delete note"
+                                            t-att-disabled="local.busy" t-on-click="() => this.deleteNote(o, n)"><Icon n="'trash'" size="12"/></button>
+                                </small>
+                            </li>
+                        </ul>
+                    </section>
+
+                    <!-- 6. Anything the customer raised about it. -->
+                    <section t-if="(o.tickets or []).length or o.returns.length" class="od2-sec">
+                        <h4><Icon n="'chat'" size="14"/> Support &amp; returns</h4>
+                        <ul class="od2-list">
+                            <li t-foreach="o.tickets or []" t-as="t" t-key="'t' + t.id">
+                                <button type="button" t-on-click="() => this.openTicket(t)">
+                                    <span><b><t t-esc="t.ref"/> · <t t-esc="t.subject"/></b><small t-esc="t.stateLabel or t.state"/></span>
+                                    <Icon n="'right'" size="13"/>
+                                </button>
+                            </li>
+                            <li t-foreach="o.returns" t-as="ret" t-key="'r' + ret.id">
+                                <div><span><b><t t-esc="ret.kind === 'replace' ? 'Replacement' : 'Refund'"/>: <t t-esc="ret.reason"/></b><small t-esc="ret.state"/></span>
+                                    <b t-if="ret.amount" t-esc="desk.money(ret.amount, o.currency)"/></div>
+                            </li>
+                        </ul>
+                    </section>
+
+                    <!-- 7. Who did what, when - folded away. -->
+                    <details class="od2-history">
+                        <summary>History<t t-if="(o.activity or []).length"> · <t t-esc="o.activity.length"/> updates</t></summary>
+                        <ul t-if="(o.activity or []).length" class="od2-activity">
+                            <li t-foreach="o.activity" t-as="n" t-key="'a' + n.id">
+                                <p t-esc="n.text"/>
+                                <small><t t-esc="n.author"/> · <t t-esc="desk.ago(n.at)"/></small>
+                            </li>
+                        </ul>
+                        <ol class="od-steps">
+                            <li t-foreach="desk.steps" t-as="step" t-key="step.key"
+                                t-attf-class="{{ step.done ? 'od-done' : '' }} {{ step.now ? 'od-now' : '' }} {{ step.cancelled ? 'od-step-cancelled' : '' }}">
+                                <i/><span><b t-esc="step.label"/><small t-esc="step.at or 'Pending'"/></span>
+                            </li>
+                        </ol>
+                    </details>
                 </div>
             </t>
 
@@ -277,6 +445,7 @@
                     <t t-set="o" t-value="state.detail"/>
                     <!-- Hidden rather than disabled past `placed`: the model
                          refuses it, so offering the button is a trap. -->
+
                     <t t-if="o.canCancel">
                         <label class="mart-field od-reason">
                             <span>If you cancel, tell the customer</span>
@@ -304,6 +473,11 @@
                 <!-- Guarded like everything else in here: the dialog opens
                      before the order has loaded, and `o` is only set once it
                      has - reading it bare was a crash on a slow answer. -->
+                <a t-if="state.detail" class="mart-btn od-invoice" target="_blank"
+                   t-att-href="slipHref(state.detail.ref)">
+                    <Icon n="'box'" size="14"/>
+                    Packing slip
+                </a>
                 <a t-if="state.detail and state.detail.hasInvoice" class="mart-btn od-invoice"
                    t-att-href="invoiceHref(state.detail.ref)">
                     <Icon n="'download'" size="14"/>

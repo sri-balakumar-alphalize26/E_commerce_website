@@ -39,6 +39,8 @@ Operators work these in **369 Mart -> Support**.
     'depends': [
         'mart369',
         'mart369_order',
+        # A one- or two-star rating opens a ticket (models/review_tickets.py).
+        'mart369_account',
         'mail',
     ],
     'data': [

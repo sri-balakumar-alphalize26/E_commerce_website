@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <!-- Printed from the Orders screens for the orders ticked there
+         (controllers/admin_api.py, /369mart/admin/orders/print).
+
+         The packing slip goes in the bag and doubles as the label: order
+         number, slot, who and where, what is in it, and whether to collect
+         cash. Never the delivery code - that is the customer's to say at the
+         door, and a slip travels with the parcel.
+
+         The picklist is one page for the whole batch: every item once, with
+         how many and for which orders, grouped by category
+         (models/order_print.py). -->
+
+    <record id="action_report_mart369_packing_slip" model="ir.actions.report">
+        <field name="name">369 Mart packing slips</field>
+        <field name="model">sale.order</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">mart369_order.report_packing_slip</field>
+        <field name="report_file">mart369_order.report_packing_slip</field>
+        <field name="binding_model_id" eval="False"/>
+    </record>
+
+    <record id="action_report_mart369_picklist" model="ir.actions.report">
+        <field name="name">369 Mart picklist</field>
+        <field name="model">sale.order</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">mart369_order.report_picklist</field>
+        <field name="report_file">mart369_order.report_picklist</field>
+        <field name="binding_model_id" eval="False"/>
+    </record>
+
+    <template id="print_style">
+        <style>
+            .m369p { font-size: 12px; color: #13212b; }
+            .m369p h2 { margin: 0; font-size: 22px; font-weight: 800; color: #0b4a6e; }
+            .m369p-head { display: flex; justify-content: space-between; gap: 24px; border-bottom: 2px solid #13212b; padding-bottom: 8px; margin-bottom: 12px; }
+            .m369p-meta { text-align: right; font-size: 12px; }
+            .m369p-meta b { display: block; font-size: 15px; }
+            .m369p-to { font-size: 13px; margin-bottom: 12px; }
+            .m369p-to strong { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: #6b7a86; }
+            .m369p-to .name { font-size: 16px; font-weight: 800; }
+            .m369p table { width: 100%; border-collapse: collapse; }
+            .m369p th { text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7a86; border-bottom: 1px solid #c9d3da; padding: 4px 6px; }
+            .m369p td { border-bottom: 1px solid #eef2f5; padding: 6px; vertical-align: top; }
+            .m369p .tick { width: 18px; }
+            .m369p .tick span { display: inline-block; width: 13px; height: 13px; border: 1.5px solid #13212b; border-radius: 2px; }
+            .m369p .qty { width: 60px; text-align: right; font-weight: 800; font-size: 14px; }
+            .m369p-pay { margin-top: 14px; padding: 10px 12px; border: 2px solid #13212b; border-radius: 6px; font-size: 16px; font-weight: 800; text-align: center; }
+            .m369p-pay.paid { border-color: #1f7a4c; color: #1f7a4c; }
+            .m369p-cat td { background: #eef3f7; font-weight: 800; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+            .m369p-refs { font-size: 10.5px; color: #6b7a86; }
+        </style>
+    </template>
+
+    <template id="report_packing_slip">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="doc">
+                <t t-call="web.basic_layout">
+                    <div class="page m369p">
+                        <t t-call="mart369_order.print_style"/>
+                        <div class="m369p-head">
+                            <div>
+                                <h2>#<t t-esc="doc.mart369_ref"/></h2>
+                                <div t-esc="doc.company_id.name"/>
+                            </div>
+                            <div class="m369p-meta">
+                                <b t-esc="doc.mart369_mode == 'quick' and 'Quick' or 'Express'"/>
+                                <div t-if="doc.mart369_slot_label" t-esc="doc.mart369_slot_label"/>
+                                <div t-if="'mart369_rider_id' in doc and doc.mart369_rider_id">
+                                    Rider: <t t-esc="doc.mart369_rider_id.name"/>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="m369p-to">
+                            <strong>Deliver to</strong>
+                            <div class="name" t-esc="doc.partner_shipping_id.name or doc.partner_id.name"/>
+                            <div t-foreach="doc._mart369_print_address()" t-as="line" t-esc="line"/>
+                            <div t-esc="doc.partner_shipping_id.phone or doc.partner_id.phone or ''"/>
+                        </div>
+
+                        <table>
+                            <thead><tr><th class="tick"/><th>Item</th><th class="qty">Qty</th></tr></thead>
+                            <tbody>
+                                <tr t-foreach="doc._mart369_print_lines()" t-as="line">
+                                    <td class="tick"><span/></td>
+                                    <td t-esc="line.product_id.display_name"/>
+                                    <td class="qty" t-esc="'%g' % line.product_uom_qty"/>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <t t-set="pay" t-value="doc._mart369_print_payment()"/>
+                        <div t-if="pay[0] == 'collect'" class="m369p-pay">
+                            Collect cash:
+                            <span t-esc="pay[1]" t-options="{'widget': 'monetary', 'display_currency': doc.currency_id}"/>
+                        </div>
+                        <div t-else="" class="m369p-pay paid">
+                            Paid -
+                            <span t-esc="pay[1]" t-options="{'widget': 'monetary', 'display_currency': doc.currency_id}"/>
+                            - nothing to collect
+                        </div>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+
+    <template id="report_picklist">
+        <t t-call="web.html_container">
+            <t t-call="web.basic_layout">
+                <div class="page m369p">
+                    <t t-call="mart369_order.print_style"/>
+                    <div class="m369p-head">
+                        <div>
+                            <h2>Picklist</h2>
+                            <div><t t-esc="len(docs)"/> order<t t-if="len(docs) != 1">s</t></div>
+                        </div>
+                        <div class="m369p-meta">
+                            <span t-esc="context_timestamp(datetime.datetime.now()).strftime('%d %b %Y, %H:%M')"/>
+                        </div>
+                    </div>
+                    <table>
+                        <thead><tr><th class="tick"/><th>Item</th><th class="qty">Qty</th><th>For</th></tr></thead>
+                        <tbody>
+                            <t t-foreach="docs._mart369_picklist()" t-as="group">
+                                <tr class="m369p-cat"><td colspan="4" t-esc="group['category']"/></tr>
+                                <tr t-foreach="group['items']" t-as="item">
+                                    <td class="tick"><span/></td>
+                                    <td t-esc="item['name']"/>
+                                    <td class="qty" t-esc="'%g' % item['qty']"/>
+                                    <td class="m369p-refs" t-esc="', '.join('#' + r for r in item['refs'])"/>
+                                </tr>
+                            </t>
+                        </tbody>
+                    </table>
+                </div>
+            </t>
+        </t>
+    </template>
+
+</odoo>

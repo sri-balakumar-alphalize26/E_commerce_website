@@ -19,7 +19,7 @@ second copy of the ladder is a second thing to get wrong.
 
 import logging
 
-from odoo import http
+from odoo import fields, http
 from odoo.exceptions import AccessError, UserError
 from odoo.http import request
 
@@ -64,6 +64,12 @@ class Mart369OrderAdminApi(http.Controller):
         """Refused, not filtered. A shopper must not learn this exists."""
         return request.env.user.has_group(EDITOR_GROUP)
 
+    def _may_print(self):
+        """Printing and the invoice: console staff, and Odoo sales staff too -
+        the backend Orders screen opens these links, and its users may have the
+        sales role without the website one."""
+        return self._may_edit() or request.env.user.has_group('sales_team.group_sale_salesman')
+
     def _orders(self):
         """Not sudo'd - on purpose. See the module docstring."""
         return request.env['sale.order']
@@ -80,13 +86,13 @@ class Mart369OrderAdminApi(http.Controller):
 
     @http.route('/369mart/admin/orders', **_GET)
     def orders(self, tab=None, mode=None, when=None, q=None, sort=None,
-               limit=None, offset=None, **kwargs):
+               limit=None, offset=None, pay=None, **kwargs):
         """One page of the list the console draws."""
         if not self._may_edit():
             return self._fail('You do not have access to this.', status=403)
         try:
             page = self._orders().mart369_admin_list(
-                tab=tab, mode=mode, when=when, q=q, sort=sort,
+                tab=tab, mode=mode, when=when, q=q, sort=sort, pay=pay,
                 limit=limit or 30, offset=offset or 0)
         except (AccessError, UserError, ValueError) as exc:
             return self._fail(str(exc))
@@ -179,6 +185,103 @@ class Mart369OrderAdminApi(http.Controller):
             return self._fail(str(exc), status=403)
         return self._json({'ok': True, 'order': order._mart369_admin_detail()})
 
+    @http.route('/369mart/admin/orders/<string:ref>/substitutes', **_GET)
+    def substitutes(self, ref, line_id=None, q=None, **kwargs):
+        """Products the shop could send instead of an item that ran out."""
+        if not self._may_edit():
+            return self._fail('You do not have access to this.', status=403)
+        try:
+            found = self._orders().mart369_admin_substitutes(ref, line_id, q)
+        except (AccessError, UserError, ValueError) as exc:
+            return self._fail(str(exc), status=409)
+        return self._json({'ok': True, 'products': found})
+
+    @http.route('/369mart/admin/orders/<string:ref>/substitute', **_POST)
+    def offer_substitute(self, ref, **kwargs):
+        """Offer the customer replacements. Body: {line_id, product_ids}
+        (up to three; a single product_id is still accepted)."""
+        if not self._may_edit():
+            return self._fail('You do not have access to this.', status=403)
+        body = self._body()
+        try:
+            order = self._orders().mart369_admin_offer_substitute(
+                ref, body.get('line_id'), body.get('product_ids') or body.get('product_id'))
+        except (AccessError, UserError, ValueError) as exc:
+            return self._fail(str(exc), status=409)
+        return self._json({'ok': True, 'order': order})
+
+    @http.route('/369mart/admin/orders/<string:ref>/substitute/<int:offer_id>/withdraw', **_POST)
+    def withdraw_substitute(self, ref, offer_id, **kwargs):
+        if not self._may_edit():
+            return self._fail('You do not have access to this.', status=403)
+        try:
+            order = self._orders().mart369_admin_withdraw_substitute(ref, offer_id)
+        except (AccessError, UserError, ValueError) as exc:
+            return self._fail(str(exc), status=409)
+        return self._json({'ok': True, 'order': order})
+
+    @http.route('/369mart/admin/orders/<string:ref>/rider', **_POST)
+    def set_rider(self, ref, **kwargs):
+        """Give the order to a rider. Body: {user_id} (empty takes it back)."""
+        if not self._may_edit():
+            return self._fail('You do not have access to this.', status=403)
+        try:
+            order = self._orders().mart369_admin_set_rider(ref, self._body().get('user_id'))
+        except (AccessError, UserError, ValueError) as exc:
+            return self._fail(str(exc), status=409)
+        return self._json({'ok': True, 'order': order})
+
+    @http.route('/369mart/admin/orders/<string:ref>/failed', **_POST)
+    def failed(self, ref, **kwargs):
+        """It could not be delivered. Body: {reason, then: 'retry'|'return'}."""
+        if not self._may_edit():
+            return self._fail('You do not have access to this.', status=403)
+        body = self._body()
+        try:
+            result = self._orders().mart369_admin_failed(ref, body.get('reason'), body.get('then'))
+        except (AccessError, UserError, ValueError) as exc:
+            return self._fail(str(exc), status=409)
+        return self._json(dict(result, ok=True))
+
+    @http.route('/369mart/admin/orders/<string:ref>/remove', **_POST)
+    def remove_line(self, ref, **kwargs):
+        """Take one item out because the store ran out of it. Body:
+        {line_id, reason}. Paid orders get its price back in the 369 Wallet."""
+        if not self._may_edit():
+            return self._fail('You do not have access to this.', status=403)
+        body = self._body()
+        try:
+            result = self._orders().mart369_admin_remove_line(
+                ref, body.get('line_id'), body.get('reason'))
+        except (AccessError, UserError, ValueError) as exc:
+            return self._fail(str(exc), status=409)
+        return self._json(dict(result, ok=True))
+
+    @http.route('/369mart/admin/orders/print', **_GET)
+    def print_orders(self, kind=None, refs=None, **kwargs):
+        """Packing slips or a picklist for the orders ticked on the screen,
+        as one PDF. `refs` is the order numbers, comma separated."""
+        if not self._may_print():
+            return self._fail('You do not have access to this.', status=403)
+        report = {'slips': 'mart369_order.report_packing_slip',
+                  'picklist': 'mart369_order.report_picklist'}.get(kind)
+        if not report:
+            return self._fail('Print packing slips or a picklist.', status=400)
+        wanted = [r.strip() for r in (refs or '').split(',') if r.strip()][:200]
+        orders = self._orders().search(
+            self._orders()._mart369_board_domain() + [('mart369_ref', 'in', wanted)],
+            order='mart369_due_at asc, id asc') if wanted else self._orders()
+        if not orders:
+            return self._fail('Tick the orders to print first.', status=404)
+        pdf, __ = request.env['ir.actions.report'].sudo()._render_qweb_pdf(
+            report, res_ids=orders.ids)
+        filename = '369mart-%s-%s.pdf' % (kind, fields.Date.context_today(orders))
+        return request.make_response(pdf, headers=[
+            ('Content-Type', 'application/pdf'),
+            ('Content-Length', len(pdf)),
+            ('Content-Disposition', 'inline; filename="%s"' % filename),
+        ])
+
     @http.route('/369mart/admin/orders/<string:ref>/invoice', **_GET)
     def invoice(self, ref, **kwargs):
         """The same document the customer can download, for the operator.
@@ -187,7 +290,7 @@ class Mart369OrderAdminApi(http.Controller):
         fenced to the signed-in customer's own orders, so staff opening it for
         anybody else's order would get a 404 and no clue why.
         """
-        if not self._may_edit():
+        if not self._may_print():
             return self._fail('You do not have access to this.', status=403)
         order = self._order(ref)
         if not order:

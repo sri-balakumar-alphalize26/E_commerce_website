@@ -10,5 +10,9 @@ from . import test_invoicing
 
 from . import test_order_address
 from . import test_customer_last_placed
+from . import test_order_workbench
 from . import test_customer_profile
+from . import test_order_replacement
 from . import test_customer_risk
+from . import test_order_customer
+from . import test_refunds

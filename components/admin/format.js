@@ -26,6 +26,8 @@ export const clock = (t) => {
 };
 export const dateShort = (t) => { const d = new Date(t + IST); return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`; };
 export const dateLong = (t) => { const d = new Date(t + IST); return `${WEEKDAYS[d.getUTCDay()]}, ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`; };
+/* "17 Sep 2026" - a date that may be from another year, like when somebody joined. */
+export const dateYear = (t) => { const d = new Date(t + IST); return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`; };
 export const dateTime = (t) => `${dateShort(t)}, ${clock(t)}`;
 
 /* How long ago, and - for a promise that has already passed - how overdue.
@@ -33,6 +35,15 @@ export const dateTime = (t) => `${dateShort(t)}, ${clock(t)}`;
 export const since = (t, now = Date.now()) => {
   const m = Math.max(0, Math.round((now - t) / 60000));
   return m < 1 ? "just now" : m < 60 ? `${m} min ago` : m < 1440 ? `${Math.floor(m / 60)} h ago` : `${Math.floor(m / 1440)} d ago`;
+};
+
+/* "due in 14 min": the countdown to a promise that can still be kept. */
+export const dueIn = (due, now = Date.now()) => {
+  const m = Math.max(0, Math.round((due - now) / 60000));
+  if (m < 1) return "due now";
+  if (m < 60) return `due in ${m} min`;
+  if (m < 1440) return `due in ${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60} min` : ""}`;
+  return `due in ${Math.floor(m / 1440)} d`;
 };
 
 /* "6 min late". Reads the other way round from `since`, because an operator

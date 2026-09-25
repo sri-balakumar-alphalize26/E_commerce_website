@@ -137,7 +137,40 @@
         overflow: hidden;
     }
 
+    /* The tick box for bulk actions: pinned left on each row, and on the
+       count line for "all shown". */
+    .od-check {
+        display: inline-flex;
+        align-items: center;
+        margin: 0;
+        cursor: pointer;
+
+        input { width: 16px; height: 16px; cursor: pointer; accent-color: $m369-blue; }
+    }
+
+    .od-row > .od-check {
+        position: absolute;
+        left: 16px;
+        top: 13px;
+    }
+
+    .od-bulk {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 8px 16px;
+        background: #eef7fc;
+        border-bottom: 1px solid $m369-line;
+        font-size: 12.5px;
+
+        .od-bulk-clear { margin-left: auto; }
+    }
+
     .od-count {
+        display: flex;
+        align-items: center;
+        gap: 12px;
         margin: 0;
         padding: 10px 16px;
         font-size: 12.5px;
@@ -156,10 +189,11 @@
        to do next underneath. Denser than one long row at the same
        information, and it survives a narrow window without a scrollbar. */
     .od-row {
+        position: relative;
         display: flex;
         flex-direction: column;
         gap: 6px;
-        padding: 11px 16px;
+        padding: 11px 16px 11px 44px;
         border-bottom: 1px solid $m369-line;
         cursor: pointer;
 
@@ -211,6 +245,29 @@
     }
 
     .od-next { margin-left: auto; }
+
+    /* Waiting for the customer to answer about a replacement. */
+    .od-waiting {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 12px;
+        font-weight: 700;
+        color: #0f5d86;
+        background: #eef7fc;
+        border: 1px solid #cfe6f3;
+        padding: 2px 8px;
+        border-radius: 999px;
+    }
+
+    /* The countdown to the promise, before it is broken. */
+    .od-due {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-weight: 700;
+        color: #0f5d86;
+    }
 
     .od-late {
         display: inline-flex;
@@ -554,6 +611,33 @@
         }
 
         b { margin-left: auto; font-variant-numeric: tabular-nums; }
+
+        /* Out of stock: take one item out. */
+        .od-remove { padding: 1px 8px; font-size: 11.5px; color: #b3350c; }
+        .od-replace { padding: 1px 8px; font-size: 11.5px; }
+        li { flex-wrap: wrap; }
+
+        /* A replacement the customer has not answered yet. */
+        .od-offer {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            width: 100%;
+            padding: 4px 8px;
+            border-radius: 8px;
+            background: #eef7fc;
+            color: #0f5d86;
+            font-size: 12px;
+            font-weight: 700;
+
+            .mart-btn { margin-left: auto; padding: 1px 8px; font-size: 11.5px; }
+        }
+
+        .od-removed {
+            color: $m369-muted;
+
+            small { color: #b3350c; }
+        }
     }
 
     .od-qty {
@@ -704,4 +788,364 @@
     }
 
     .modal-footer > .mart-btn { flex: 1; margin: 0; }
+}
+
+/* Rider and a failed delivery, in the order dialog (a portal, so under
+   .od-dialog like the rest of it). */
+.od-dialog {
+    .od-rider {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 8px;
+    }
+
+    .od-failed {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin: 0 0 10px;
+        padding: 6px 10px;
+        border-radius: 8px;
+        background: #fdeee7;
+        color: #b3350c;
+        font-size: 12.5px;
+        font-weight: 700;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// The order pop-up, one column, read top to bottom: where it stands and what to
+// do next; who, where and when; items and money; delivery; staff notes;
+// support; history (folded). The old two-column grid put every heading on the
+// left and its contents on the right, out of line.
+.od-dialog .od2 {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+
+    h4 {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin: 0 0 8px;
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: $m369-muted;
+    }
+
+    h5 {
+        margin: 12px 0 4px;
+        font-size: 11.5px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: $m369-muted;
+    }
+
+    .od2-sec, .od2-now {
+        padding: 14px 16px;
+        border: 1px solid #e4eaef;
+        border-radius: 14px;
+        background: #fff;
+    }
+
+    .od2-now { background: #f7fafc; }
+    .od2-sub { margin: 0 0 10px; font-size: 12px; color: $m369-muted; }
+
+    .od2-steps {
+        display: flex;
+        list-style: none;
+        margin: 0 0 10px;
+        padding: 0;
+
+        li {
+            flex: 1;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            text-align: center;
+            font-size: 12px;
+            color: $m369-muted;
+
+            i {
+                width: 14px;
+                height: 14px;
+                border-radius: 50%;
+                border: 2px solid #c9d6de;
+                background: #fff;
+                z-index: 1;
+            }
+
+            &::before {
+                content: "";
+                position: absolute;
+                top: 6px;
+                left: -50%;
+                right: 50%;
+                height: 2px;
+                background: #d8e2e8;
+            }
+
+            &:first-child::before { display: none; }
+            b { font-weight: 700; }
+            small { font-size: 11px; min-height: 14px; }
+        }
+
+        .od2-done { color: $m369-ink; i { background: #1a7f3c; border-color: #1a7f3c; } &::before { background: #1a7f3c; } }
+        .od2-on i { box-shadow: 0 0 0 4px rgba(10, 120, 171, 0.18); background: $m369-blue; border-color: $m369-blue; }
+        .od2-cancel { color: #c8433a; i { background: #c8433a; border-color: #c8433a; } }
+    }
+
+    .od2-status {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin: 0;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .od2-late { color: #c2410c; }
+
+    .od2-next {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px dashed #d8e2e8;
+
+        span { font-size: 12px; font-weight: 800; text-transform: uppercase; color: $m369-muted; }
+        .mart-btn { display: inline-flex; align-items: center; gap: 6px; }
+    }
+
+    .od2-who {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 6px 8px;
+
+        small { color: $m369-muted; font-size: 12px; }
+    }
+
+    .od2-name {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 0;
+        border: 0;
+        background: none;
+        font-size: 15px;
+        font-weight: 800;
+        color: $m369-blue;
+        cursor: pointer;
+
+        &:disabled { color: $m369-ink; cursor: default; }
+    }
+
+    .od2-risk {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin: 8px 0 0;
+        padding: 6px 10px;
+        border-radius: 8px;
+        background: #fffaf0;
+        border: 1px solid #f3dcb4;
+        color: #8a5a12;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .od2-reach {
+        display: flex;
+        gap: 6px;
+        margin-top: 8px;
+
+        .mart-btn { display: inline-flex; align-items: center; gap: 5px; text-decoration: none; color: $m369-ink; }
+    }
+
+    .od2-addr {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 10px;
+
+        span { display: flex; flex-direction: column; gap: 2px; }
+        b { font-size: 13px; }
+        small { font-size: 12.5px; color: $m369-muted; }
+    }
+
+    .od2-line {
+        margin: 8px 0 0;
+        font-size: 13px;
+
+        b {
+            display: inline-block;
+            min-width: 92px;
+            font-size: 11.5px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: $m369-muted;
+        }
+    }
+
+    .od2-gone { margin: 6px 0 0; font-size: 12px; color: $m369-muted; }
+    .od2-pay { display: flex; align-items: center; gap: 6px; margin: 10px 0 0; font-size: 13px; font-weight: 600; }
+    .od2-label { font-size: 12px; font-weight: 700; color: $m369-muted; margin-right: 6px; }
+
+    .od2-fail {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 10px;
+        padding: 10px;
+        border-radius: 10px;
+        background: #fff5f4;
+    }
+
+    .od2-note-new {
+        display: flex;
+        gap: 8px;
+        align-items: flex-end;
+
+        textarea { flex: 1; min-height: 48px; padding: 8px 10px; border: 1px solid #e4eaef; border-radius: 10px; font: inherit; font-size: 13px; }
+    }
+
+    .od2-notes {
+        list-style: none;
+        margin: 10px 0 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+
+        li { padding: 8px 10px; border: 1px solid #e4eaef; border-left: 3px solid #b7791f; border-radius: 10px; background: #fffdf8; }
+        p { margin: 0 0 2px; font-size: 13px; white-space: pre-wrap; }
+        textarea { width: 100%; min-height: 48px; padding: 6px 8px; border: 1px solid $m369-blue; border-radius: 8px; font: inherit; font-size: 13px; }
+
+        small {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11.5px;
+            color: $m369-muted;
+
+            button { padding: 2px; border: 0; background: none; color: $m369-muted; cursor: pointer; }
+            button:first-of-type { margin-left: auto; }
+        }
+    }
+
+    .od2-note-act { display: flex; justify-content: flex-end; gap: 6px; margin: 4px 0; }
+
+    .od2-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+
+        li > button, li > div {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 4px;
+            border: 0;
+            border-bottom: 1px solid #eef2f5;
+            background: none;
+            text-align: left;
+            font: inherit;
+        }
+
+        li > button { cursor: pointer; }
+        li > * > span { flex: 1; display: flex; flex-direction: column; }
+        small { font-size: 12px; color: $m369-muted; }
+    }
+
+    .od2-history {
+        padding: 10px 16px;
+        border: 1px solid #e4eaef;
+        border-radius: 14px;
+
+        summary { cursor: pointer; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: $m369-muted; }
+        .od-steps { margin-top: 10px; }
+    }
+}
+
+.od-dialog .od2 .od2-activity {
+    list-style: none;
+    margin: 10px 0 0;
+    padding: 0;
+
+    li { padding: 6px 0; border-bottom: 1px solid #eef2f5; }
+    p { margin: 0; font-size: 12.5px; }
+    small { font-size: 11px; color: $m369-muted; }
+}
+
+// ---------------------------------------------------------------------------
+// The list, easy to read: grouped by the next step on "Needs me", the name
+// first, then order number / type / items / age, then the facts that matter
+// (late, payment in plain words, rider, failed tries), price and next step on
+// the right.
+.mart-builder .od-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 18px 4px 8px;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: $m369-muted;
+
+    em { font-style: normal; padding: 1px 8px; border-radius: 999px; background: #e8eef2; color: $m369-ink; }
+}
+
+.mart-builder .od-row.od-row2 {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 12px;
+
+    .od2-row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+    .od2-row-top { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; }
+    .od2-row-name { font-size: 14.5px; font-weight: 800; }
+    .od2-row-tag { padding: 1px 8px; font-size: 11px; }
+    .od2-row-sub { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; font-size: 12px; color: $m369-muted; }
+    .od2-row-facts { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; margin-top: 2px; }
+    .od2-row-pay { display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; color: #1a7f3c; font-weight: 600; }
+    .od2-row-cash { color: #8a5a12; }
+    .od2-row-side { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+    .od-next { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+}
+
+// Tabs on one row, search + filters + sound + export on the next - the
+// console's toolbar, so the two Orders screens read the same.
+.mart-builder .od-toolbar2 {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: -4px;
+
+    .o_mart369_search, .mart-search { flex: 1 1 240px; }
+}
+
+// Links drawn as buttons in the order pop-up's footer (Packing slip, Invoice):
+// .mart-btn leans on <button> to centre its label, so a link needs it said.
+.od-dialog .modal-footer a.mart-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    line-height: 1;
+    text-decoration: none;
+    color: $m369-ink;
 }

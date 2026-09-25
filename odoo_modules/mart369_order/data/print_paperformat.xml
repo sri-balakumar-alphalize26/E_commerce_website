@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <!-- The packing slip and the picklist, printed edge to edge.
+
+         Without a paper format of their own they took the company default,
+         whose top margin (about 40 mm) is kept for a letterhead - and these
+         never print one. The slip opened with a blank band a quarter of the
+         page tall, which in a PDF viewer reads as an empty page. -->
+    <record id="paperformat_mart369_slips" model="report.paperformat">
+        <field name="name">369 Mart slips</field>
+        <field name="format">A4</field>
+        <field name="orientation">Portrait</field>
+        <field name="margin_top">8</field>
+        <field name="margin_bottom">8</field>
+        <field name="margin_left">7</field>
+        <field name="margin_right">7</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">0</field>
+        <field name="dpi">90</field>
+    </record>
+
+    <record id="mart369_order.action_report_mart369_packing_slip" model="ir.actions.report">
+        <field name="paperformat_id" ref="paperformat_mart369_slips"/>
+    </record>
+
+    <record id="mart369_order.action_report_mart369_picklist" model="ir.actions.report">
+        <field name="paperformat_id" ref="paperformat_mart369_slips"/>
+    </record>
+
+</odoo>

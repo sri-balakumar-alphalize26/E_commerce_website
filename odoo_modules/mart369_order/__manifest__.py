@@ -55,6 +55,9 @@ not try to do.
         # The invoice document. The record it draws is an ordinary posted
         # account.move; only the paper is ours.
         'report/invoice_report.xml',
+        # Packing slips and the picklist, printed for the ticked orders.
+        'report/order_print_report.xml',
+        'data/print_paperformat.xml',
         'views/order_views.xml',
         'views/return_views.xml',
         'views/return_desk_views.xml',
