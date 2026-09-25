@@ -141,6 +141,60 @@ class Mart369AccountApi(http.Controller):
         row.sudo().unlink()
         return self._json({'ok': True})
 
+    # ------------------------------------------- review photos, video, votes
+
+    @http.route('/369mart/reviews/<int:product_id>/media', **_POST)
+    def review_media(self, product_id, **kwargs):
+        """Attach one photo or video to the customer's own review of this
+        product. Body: {name, mime, data (base64)}. The limits in Settings >
+        Reviews are checked on the server (review_media.py); the item waits
+        for staff before anyone else sees it."""
+        row = request.env['rating.rating']._mart369_review_for(self._me(), self._product(product_id))
+        if not row:
+            return self._fail('Write the review first, then add photos.', status=404)
+        body = self._body()
+        try:
+            media = row._mart369_add_media(body.get('name'), body.get('mime'), body.get('data'))
+        except UserError as exc:
+            return self._fail(str(exc), 'media', status=400)
+        return self._json({'ok': True, 'media': media._mart369_serialize(),
+                           'review': row._mart369_serialize()}, status=201)
+
+    @http.route('/369mart/reviews/media/<int:media_id>', **_DELETE)
+    def drop_review_media(self, media_id, **kwargs):
+        media = request.env['mart369.review.media'].sudo().browse(media_id).exists()
+        if not media or media.rating_id.partner_id != self._me():
+            return self._fail('No such photo.', status=404)
+        row = media.rating_id
+        media.unlink()
+        return self._json({'ok': True, 'review': row._mart369_serialize()})
+
+    @http.route('/369mart/reviews/<int:rating_id>/vote', **_POST)
+    def vote_review(self, rating_id, **kwargs):
+        """Helpful, or Report with a reason - once each per customer."""
+        row = request.env['rating.rating'].sudo().search([
+            ('id', '=', rating_id), ('res_model', '=', 'product.template'),
+            ('mart369_state', '=', 'published')], limit=1)
+        if not row:
+            return self._fail('No such review.', status=404)
+        body = self._body()
+        try:
+            counted = row._mart369_vote(self._me(), body.get('kind'), body.get('reason'))
+        except UserError as exc:
+            return self._fail(str(exc), status=400)
+        return self._json({'ok': True, 'counted': counted, 'helpful': row.mart369_helpful or 0})
+
+    @http.route('/369mart/reviews/photo/<int:media_id>', type='http', auth='public',
+                methods=['GET'], csrf=False, sitemap=False)
+    def review_photo(self, media_id, **kwargs):
+        """A review photo or video, for anybody - but only once staff have
+        approved it and only while its review is live."""
+        media = request.env['mart369.review.media'].sudo().browse(media_id).exists()
+        if not media or media.state != 'approved' or media.rating_id.mart369_state != 'published':
+            return request.not_found()
+        return request.env['ir.binary']._get_stream_from(
+            media.attachment_id, 'datas').get_response(immutable=True)
+
     @http.route('/369mart/orders/<string:ref>/rate', **_POST)
     def rate_order(self, ref, **kwargs):
         """The order and rider rating the app kept in orderPatches."""

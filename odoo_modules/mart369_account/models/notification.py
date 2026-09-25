@@ -14,6 +14,8 @@ Promotional notifications are records, because somebody has to write them.
 Order notifications are derived, because an order already knows where it is.
 """
 
+from datetime import timedelta
+
 from odoo import api, fields, models
 
 TYPE_CHOICES = [
@@ -30,8 +32,10 @@ ORDER_NOTES = {
             "%(ref)s is out for delivery. %(eta)s", 'track'),
     'shipped': ('shipped', "Order shipped",
                 "%(ref)s has been handed to our delivery partner.", 'track'),
+    # Opens the order's own rating card; a second note two days later asks
+    # for the product reviews (below).
     'delivered': ('delivered', "Delivered · rate your order",
-                  "How was %(ref)s? Tell us in a moment.", 'reviews'),
+                  "How was %(ref)s? Tell us in a moment.", 'track'),
     'cancelled': ('cancelled', "Order cancelled",
                   "%(ref)s was cancelled. Any refund is on its way.", 'track'),
     'placed': ('placed', "Order confirmed",
@@ -130,6 +134,63 @@ class Mart369Notifications(models.AbstractModel):
                                     'eta': order.mart369_eta or ''},
                 'at': int(when.timestamp() * 1000) if when else None,
                 'go': go,
+            })
+            out.extend(self._mart369_substitute_notes(order))
+            # Two days after it arrives, once the things have been used: ask
+            # for a review of the items themselves.
+            if order.mart369_state == 'delivered' and when                     and when <= fields.Datetime.now() - timedelta(days=2):
+                out.append({
+                    'id': 'n-%s-review' % order.mart369_ref,
+                    'type': 'order',
+                    'title': 'How are your items?',
+                    'text': 'Review what came in %s - photos and a video help other shoppers.'
+                            % order.mart369_ref,
+                    'at': int((when + timedelta(days=2)).timestamp() * 1000),
+                    'go': ['account', 'reviews'],
+                })
+        return out
+
+    @api.model
+    def _mart369_substitute_notes(self, order):
+        """A replacement offered for an item that ran out: asking while it is
+        open, then what happened (mart369_order/models/order_substitute.py)."""
+        if 'mart369_substitute_ids' not in order._fields:
+            return []
+        out = []
+        currency = order.currency_id
+        for offer in order.mart369_substitute_ids:
+            if offer.state == 'withdrawn':
+                continue
+            was = offer.line_id.product_id.display_name
+            if offer.state == 'offered':
+                title = 'Choose a replacement'
+                options = offer._mart369_options() if hasattr(offer, '_mart369_options') else offer.product_id
+                text = ('%s is out of stock in %s. We can send %s instead - tap to choose.' % (
+                    was, order.mart369_ref, options.display_name) if len(options) == 1 else
+                    '%s is out of stock in %s. Pick one of %d replacements - tap to choose.' % (
+                    was, order.mart369_ref, len(options)))
+                when = offer.create_date
+            elif offer.state == 'accepted':
+                title = 'Replacement added'
+                text = '%s will come instead of %s.' % (offer.product_id.display_name, was)
+                when = offer.answered_at
+            elif offer.refund:
+                title = 'Refunded to your 369 Wallet'
+                text = '%s was out of stock in %s. %s refunded to your 369 Wallet.' % (
+                    was, order.mart369_ref, currency.format(offer.refund))
+                when = offer.answered_at
+            else:
+                title = 'Item taken out'
+                text = '%s was out of stock in %s, so it was taken out - you pay less at the door.' % (
+                    was, order.mart369_ref)
+                when = offer.answered_at
+            out.append({
+                'id': 'n-%s-sub-%s-%s' % (order.mart369_ref, offer.id, offer.state),
+                'type': 'order',
+                'title': title,
+                'text': text,
+                'at': int(when.timestamp() * 1000) if when else None,
+                'go': ['track', order.mart369_ref],
             })
         return out
 

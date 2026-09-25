@@ -17,7 +17,15 @@ is a *stored related* field on `message_id.is_internal`, so with no message
 behind the rating it has to be written explicitly rather than left to default.
 """
 
-from odoo import api, fields, models
+from datetime import timedelta
+
+from odoo import _, api, fields, models
+from odoo.exceptions import UserError
+
+from . import review_filter
+from .review_media import REPORT_REASONS, REPORTS_TO_HOLD
+
+HIDE_REASONS = ['Abusive', 'Not about the product', 'Personal details', 'Spam', 'Other']
 
 # What the app's review form collects, beyond a score and a comment.
 TAGS_UP = ['Fresh', 'Well packed', 'Good value', 'As described', 'Fast delivery']
@@ -41,6 +49,11 @@ class RatingRating(models.Model):
         string='Verified purchase', default=False, readonly=True,
         help="Set when the customer really bought this, checked against their "
              "own order lines.")
+    # Moderation (review_filter.py): why a review waits, and why staff hid one.
+    mart369_held_reason = fields.Char(string='Held because', readonly=True)
+    mart369_hidden_reason = fields.Char(string='Hidden because')
+    mart369_reports = fields.Integer(string='Reported by shoppers', default=0, readonly=True)
+    mart369_media_ids = fields.One2many('mart369.review.media', 'rating_id', string='Photos and video')
 
     # ------------------------------------------------------------- writing
 
@@ -77,11 +90,22 @@ class RatingRating(models.Model):
             'is_internal': False,
         }
 
+        # Clean goes live at once; anything the filter holds waits for staff.
+        extra = self.env['mart369.config'].sudo()._get().review_blocked_words
+        reasons = review_filter.check(write['mart369_title'] or '', write['feedback'], extra)
+        write['mart369_held_reason'] = ', '.join(reasons) or False
+
         existing = self._mart369_review_for(partner, product)
         if existing:
-            # `mart369_state` is deliberately absent from `write`. Moderation is
-            # the store's, not the customer's: a review staff hid must not come
-            # back because its author retyped it.
+            # A review staff hid stays hidden however its author retypes it -
+            # moderation is the store's. One the filter held is looked at
+            # again: fixed, it goes live; newly flagged, it waits.
+            if existing.mart369_state != 'hidden':
+                if reasons:
+                    write['mart369_state'] = 'pending'
+                elif existing.mart369_held_reason and existing.mart369_state == 'pending':
+                    write['mart369_state'] = 'published'
+            write.pop('mart369_photos', None)
             existing.sudo().write(write)
             return existing
 
@@ -90,9 +114,41 @@ class RatingRating(models.Model):
             'res_id': product.id,
             'partner_id': partner.id,
             'mart369_verified': self._mart369_has_bought(partner, product),
-            'mart369_state': 'published',
+            'mart369_state': 'pending' if reasons else 'published',
+            'mart369_photos': 0,
         })
         return self.sudo().create(write)
+
+    # ------------------------------------------------ what shoppers can do
+
+    def _mart369_vote(self, partner, kind, reason=None):
+        """Helpful or Report, once each per customer. Three reports send a
+        live review back to Waiting."""
+        self.ensure_one()
+        if kind not in ('helpful', 'report'):
+            raise UserError(_('Unknown vote.'))
+        if partner == self.partner_id:
+            raise UserError(_('That is your own review.'))
+        Vote = self.env['mart369.review.vote'].sudo()
+        if Vote.search_count([('rating_id', '=', self.id), ('partner_id', '=', partner.id),
+                              ('kind', '=', kind)]):
+            return False
+        Vote.create({'rating_id': self.id, 'partner_id': partner.id, 'kind': kind,
+                     'reason': reason if reason in REPORT_REASONS else (reason and 'Other')})
+        me = self.sudo()
+        if kind == 'helpful':
+            me.mart369_helpful = (me.mart369_helpful or 0) + 1
+        else:
+            me.mart369_reports = (me.mart369_reports or 0) + 1
+            if me.mart369_reports >= REPORTS_TO_HOLD and me.mart369_state == 'published':
+                me.write({'mart369_state': 'pending', 'mart369_held_reason': 'reported by shoppers'})
+        return True
+
+    def _mart369_add_media(self, name, mime, data):
+        self.ensure_one()
+        media = self.env['mart369.review.media']._mart369_add(self, name, mime, data)
+        self.sudo().mart369_photos = len(self.sudo().mart369_media_ids.filtered(lambda m: m.kind == 'photo'))
+        return media
 
     @api.model
     def _mart369_clean_tags(self, tags, stars):
@@ -174,6 +230,9 @@ class RatingRating(models.Model):
             'verified': bool(self.mart369_verified),
             # Their own review, so they are told why nobody else can see it.
             'state': self.mart369_state or 'published',
+            'heldReason': self.mart369_held_reason or '',
+            'media': [m._mart369_serialize() for m in self.sudo().mart369_media_ids],
+            'reply': self.publisher_comment or '',
         }
 
     # ---------------------------------------------------------- the console
@@ -215,6 +274,13 @@ class RatingRating(models.Model):
             'helpful': self.mart369_helpful or 0,
             'at': int(self.create_date.timestamp() * 1000) if self.create_date else None,
             'state': self.mart369_state or 'published',
+            'heldReason': self.mart369_held_reason or '',
+            'hiddenReason': self.mart369_hidden_reason or '',
+            'reports': self.mart369_reports or 0,
+            'media': [m._mart369_serialize(staff=True) for m in self.sudo().mart369_media_ids],
+            'mediaWaiting': len(self.sudo().mart369_media_ids.filtered(lambda m: m.state == 'pending')),
+            'reply': self.publisher_comment or '',
+            'replyBy': self.publisher_id.name or '',
         }
 
     @api.model
@@ -299,4 +365,80 @@ class RatingRating(models.Model):
             # Rounded here so the console never has to decide what to do with
             # a rating out of an empty list.
             'average': round(sum(scored) / len(scored), 1) if scored else 0.0,
+            'report': self._mart369_admin_report(every),
+            'hideReasons': HIDE_REASONS,
         }
+
+    @api.model
+    def _mart369_admin_report(self, every):
+        """Worst-rated products (three reviews or more) and the complaints
+        ticked most in the last 30 days."""
+        per = {}
+        for r in every:
+            if (r.mart369_state or 'published') != 'hidden':
+                per.setdefault(r.res_id, []).append(r.rating)
+        worst = sorted((sum(v) / len(v), len(v), pid) for pid, v in per.items() if len(v) >= 3)[:5]
+        names = {p.id: p.display_name for p in self.env['product.template'].sudo().browse(
+            [pid for __, __, pid in worst]).exists()}
+        since = fields.Datetime.now() - timedelta(days=30)
+        tally = {}
+        for r in every.filtered(lambda x: x.create_date and x.create_date >= since):
+            for tag in (r.mart369_tags or '').split(','):
+                if tag in TAGS_DOWN:
+                    tally[tag] = tally.get(tag, 0) + 1
+        return {
+            'worst': [{'productId': pid, 'product': names.get(pid, ''), 'average': round(avg, 1),
+                       'count': n} for avg, n, pid in worst],
+            'complaints': [{'tag': t, 'count': n}
+                           for t, n in sorted(tally.items(), key=lambda kv: -kv[1])],
+        }
+
+    # ------------------------------------------------------ staff actions
+
+    def _mart369_staff_one(self, rating_id):
+        row = self.search(self.ADMIN_DOMAIN + [('id', '=', int(rating_id or 0))], limit=1)
+        if not row:
+            raise UserError(_('There is no such review.'))
+        return row
+
+    @api.model
+    def mart369_admin_moderate(self, rating_id, state, reason=None):
+        """Publish, or hide with a reason."""
+        row = self._mart369_staff_one(rating_id)
+        if state == 'hidden':
+            if reason not in HIDE_REASONS:
+                raise UserError(_('Pick why it is hidden.'))
+            row.write({'mart369_state': 'hidden', 'mart369_hidden_reason': reason})
+        elif state == 'published':
+            row.write({'mart369_state': 'published', 'mart369_hidden_reason': False,
+                       'mart369_held_reason': False})
+        else:
+            raise UserError(_('Publish or hide.'))
+        return row._mart369_admin_serialize()
+
+    @api.model
+    def mart369_admin_reply(self, rating_id, text):
+        """The shop's public reply, shown under the review."""
+        row = self._mart369_staff_one(rating_id)
+        text = (text or '').strip()[:1000]
+        row.sudo().write({'publisher_comment': text or False,
+                          'publisher_id': self.env.user.partner_id.id if text else False,
+                          'publisher_datetime': fields.Datetime.now() if text else False})
+        return row._mart369_admin_serialize()
+
+    @api.model
+    def mart369_admin_media(self, media_id, action):
+        """Show a photo or video, or remove it (and its file)."""
+        media = self.env['mart369.review.media'].sudo().browse(int(media_id or 0)).exists()
+        if not media:
+            raise UserError(_('That photo or video is gone.'))
+        row = self._mart369_staff_one(media.rating_id.id)
+        if action == 'approve':
+            media.state = 'approved'
+        elif action == 'remove':
+            media.unlink()
+            row.sudo().mart369_photos = len(
+                row.sudo().mart369_media_ids.filtered(lambda m: m.kind == 'photo'))
+        else:
+            raise UserError(_('Approve or remove.'))
+        return row._mart369_admin_serialize()

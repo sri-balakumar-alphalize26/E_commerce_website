@@ -8,3 +8,7 @@ access_mart369_scratch_user,mart369.scratch user,model_mart369_scratch,base.grou
 access_mart369_notice_system,mart369.notice system,model_mart369_notice,base.group_system,1,1,1,1
 access_mart369_notice_sale,mart369.notice sale,model_mart369_notice,sales_team.group_sale_salesman,1,1,1,0
 access_mart369_notice_user,mart369.notice user,model_mart369_notice,base.group_user,1,0,0,0
+access_mart369_review_media_system,mart369.review.media system,model_mart369_review_media,base.group_system,1,1,1,1
+access_mart369_review_media_user,mart369.review.media user,model_mart369_review_media,base.group_user,1,1,1,1
+access_mart369_review_vote_system,mart369.review.vote system,model_mart369_review_vote,base.group_system,1,1,1,1
+access_mart369_review_vote_user,mart369.review.vote user,model_mart369_review_vote,base.group_user,1,0,0,0

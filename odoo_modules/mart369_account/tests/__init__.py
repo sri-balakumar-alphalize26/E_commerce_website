@@ -8,3 +8,5 @@ from . import test_ownership
 from . import test_admin_referrals
 from . import test_rewards_admin
 from . import test_notices_admin
+from . import test_review_features
+from . import test_review_console_routes

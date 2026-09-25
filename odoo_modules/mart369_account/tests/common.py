@@ -33,8 +33,13 @@ class Mart369AccountFixtures(Mart369OrderFixtures):
         body = {'stars': 5, 'title': 'Very good', 'text': 'Arrived cold and fresh.',
                 'tags': ['Fresh'], 'photos': 0}
         body.update(values)
-        return self.env['rating.rating']._mart369_write_review(
+        row = self.env['rating.rating']._mart369_write_review(
             self.partner, product or self.quick_product, body)
+        # The photo count now comes from real attachments (review_media.py);
+        # the filter tests only need the count, so it is set as uploads would.
+        if body.get('photos'):
+            row.sudo().mart369_photos = body['photos']
+        return row
 
     def _other_customer(self):
         """A second signed-up customer, for the ownership tests."""

@@ -43,6 +43,7 @@ import { Search } from "@mart369/ui/search";
 import { Pick } from "@mart369/ui/pick";
 import { Icon } from "@mart369/ui/icon";
 import { Tabs } from "@mart369/ui/tabs";
+import { Dialog } from "@web/core/dialog/dialog";
 
 const MODEL = "rating.rating";
 
@@ -118,6 +119,8 @@ export class ReviewDesk extends Component {
             rows: [],
             counts: null,
             average: 0,
+            report: null,       // worst-rated products, top complaints
+            hideReasons: [],
             loading: true,
             busy: false,
             error: "",
@@ -167,6 +170,8 @@ export class ReviewDesk extends Component {
             this.state.rows = page.reviews || [];
             this.state.counts = page.counts || null;
             this.state.average = page.average || 0;
+            this.state.report = page.report || null;
+            this.state.hideReasons = page.hideReasons || [];
             this.state.error = "";
         } catch (err) {
             this.state.error = message(err);
@@ -232,29 +237,45 @@ export class ReviewDesk extends Component {
         }
     }
 
-    moderate(row, state) {
+    moderate(row, state, reason = null) {
         return this.run(() =>
-            this.orm.call(MODEL, "write", [[row.id], { mart369_state: state }])
+            this.orm.call(MODEL, "mart369_admin_moderate", [row.id, state, reason])
         );
+    }
+
+    /** One review in full: its photos and video to approve or remove, the
+     *  shop's reply, and Publish / Hide with a reason. */
+    open(row) {
+        this.dialog.add(ReviewDialog, { desk: this, reviewId: row.id });
+    }
+
+    rowById(id) {
+        return this.state.rows.find((r) => r.id === id);
+    }
+
+    media(row, item, action) {
+        return this.run(() => this.orm.call(MODEL, "mart369_admin_media", [item.id, action]));
+    }
+
+    reply(row, text) {
+        return this.run(async () => {
+            await this.orm.call(MODEL, "mart369_admin_reply", [row.id, text]);
+            this.notification.add(text ? _t("Reply saved - it shows under the review") : _t("Reply removed"),
+                { type: "success" });
+        });
     }
 
     publish(row) {
         return this.moderate(row, "published");
     }
 
-    /** Asked first, and the question says what it costs: the star goes too,
-     *  which is the half nobody expects. */
+    /** Hiding asks why - the reason stays with the review for whoever looks
+     *  next - and says what it costs: the star goes too. */
     askHide(row) {
-        this.dialog.add(Confirm, {
-            title: _t("Hide this review?"),
-            body: _t(
-                "%s by %s will no longer show on the product page, and will stop counting towards its rating.",
-                row.title || _t("This review"),
-                row.by
-            ),
-            confirmLabel: _t("Hide review"),
-            confirm: () => this.moderate(row, "hidden"),
-            cancel: () => {},
+        this.dialog.add(HideDialog, {
+            row,
+            reasons: this.state.hideReasons,
+            onHide: (reason) => this.moderate(row, "hidden", reason),
         });
     }
 
@@ -302,6 +323,62 @@ export class ReviewDesk extends Component {
 
     ago(ms) {
         return ago(ms);
+    }
+}
+
+/** Why a review is hidden, picked before it goes. */
+export class HideDialog extends Component {
+    static template = "mart369_account.ReviewHideDialog";
+    static components = { Dialog, Pick };
+    static props = { close: Function, row: Object, reasons: Array, onHide: Function };
+
+    setup() {
+        this.state = useState({ reason: this.props.reasons[0] || "" });
+    }
+
+    get options() {
+        return this.props.reasons.map((r) => [r, r]);
+    }
+
+    pickReason(reason) {
+        this.state.reason = reason;
+    }
+
+    hide() {
+        this.props.onHide(this.state.reason);
+        this.props.close();
+    }
+}
+
+/** One review in full. Reads the row off the desk, so it redraws whenever the
+ *  desk reloads after an action. */
+export class ReviewDialog extends Component {
+    static template = "mart369_account.ReviewDialog";
+    static components = { Dialog, Icon };
+    static props = { close: Function, desk: Object, reviewId: Number };
+
+    setup() {
+        this.desk = this.props.desk;
+        this.state = useState(this.desk.state);
+        const row = this.desk.rowById(this.props.reviewId);
+        this.draft = useState({ reply: row?.reply || "" });
+    }
+
+    /** Read through this dialog's own reactive handle on the desk's state,
+     *  so the panel redraws when the desk reloads after an action. */
+    get row() {
+        return this.state.rows.find((r) => r.id === this.props.reviewId);
+    }
+
+    editReply(ev) {
+        this.draft.reply = ev.target.value;
+    }
+
+    /** "240 KB" or "9.4 MB". */
+    size(bytes) {
+        return bytes < 1024 * 1024
+            ? `${Math.max(1, Math.round(bytes / 1024))} KB`
+            : `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
     }
 }
 

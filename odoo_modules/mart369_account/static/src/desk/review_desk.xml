@@ -61,6 +61,25 @@
                     <button class="mart-link" t-on-click="() => this.load()">Try again</button>
                 </p>
 
+                <!-- What the reviews add up to: the products people like
+                     least, and what they complain about most. -->
+                <div t-if="state.report and (state.report.worst.length or state.report.complaints.length)"
+                     class="rv-report">
+                    <div t-if="state.report.worst.length">
+                        <h4>Worst rated</h4>
+                        <span t-foreach="state.report.worst" t-as="w" t-key="w.productId" class="rv-report-item">
+                            <b t-esc="w.product"/> <span t-attf-class="rv-stars {{ starClass(w.average) }}"><t t-esc="w.average"/>&#9733;</span>
+                            <small>(<t t-esc="w.count"/>)</small>
+                        </span>
+                    </div>
+                    <div t-if="state.report.complaints.length">
+                        <h4>Top complaints &#183; 30 days</h4>
+                        <span t-foreach="state.report.complaints" t-as="c" t-key="c.tag" class="rv-report-item">
+                            <t t-esc="c.tag"/> <b>&#215;<t t-esc="c.count"/></b>
+                        </span>
+                    </div>
+                </div>
+
                 <div class="rv-queue-wrap">
                     <div class="rv-queue">
 
@@ -110,9 +129,30 @@
                                             </small>
                                         </div>
                                         <p t-esc="row.text"/>
+                                        <div class="rv-chips">
+                                            <span t-if="row.state === 'pending' and row.heldReason" class="mart-pill mart-t-amber">
+                                                Held: <t t-esc="row.heldReason"/>
+                                            </span>
+                                            <span t-if="row.state === 'hidden' and row.hiddenReason" class="mart-pill mart-t-grey">
+                                                Hidden: <t t-esc="row.hiddenReason"/>
+                                            </span>
+                                            <span t-if="row.mediaWaiting" class="mart-pill mart-t-blue">
+                                                <t t-esc="row.mediaWaiting"/> photo/video waiting
+                                            </span>
+                                            <span t-if="row.reports" class="mart-pill mart-t-red">
+                                                Reported &#215;<t t-esc="row.reports"/>
+                                            </span>
+                                            <span t-if="row.ticket" class="mart-pill mart-t-orange">
+                                                Ticket <t t-esc="row.ticket"/>
+                                            </span>
+                                            <span t-if="row.reply" class="mart-pill mart-t-green">Replied</span>
+                                        </div>
                                     </div>
 
                                     <div class="rv-act">
+                                        <button class="mart-btn mart-btn-sm" t-on-click="() => this.open(row)">
+                                            Open
+                                        </button>
                                         <button t-if="row.state !== 'published'"
                                                 class="mart-btn mart-btn-sm mart-btn-primary"
                                                 t-att-disabled="state.busy"
@@ -135,6 +175,87 @@
 
             </div>
         </Layout>
+    </t>
+
+    <!-- Hide, with why. -->
+    <t t-name="mart369_account.ReviewHideDialog">
+        <Dialog size="'sm'" title="'Hide this review?'">
+            <p>
+                <t t-esc="props.row.title or 'This review'"/> by <t t-esc="props.row.by"/> will no longer
+                show on the product page, and will stop counting towards its rating.
+            </p>
+            <label class="d-block">
+                <span class="form-label d-block mb-1">Why</span>
+                <Pick label="'Why'" value="state.reason" options="options" onChange="(v) => this.pickReason(v)"/>
+            </label>
+            <t t-set-slot="footer">
+                <button class="btn btn-danger" t-att-disabled="!state.reason" t-on-click="() => this.hide()">Hide review</button>
+                <button class="btn btn-secondary" t-on-click="() => this.props.close()">Cancel</button>
+            </t>
+        </Dialog>
+    </t>
+
+    <!-- One review in full. -->
+    <t t-name="mart369_account.ReviewDialog">
+        <Dialog size="'lg'" title="row ? row.product : 'Review'" contentClass="'rv-dialog'">
+            <t t-if="row">
+                <p class="rv-d-head">
+                    <span t-attf-class="rv-stars {{ desk.starClass(row.stars) }}"><t t-esc="row.stars"/>&#9733;</span>
+                    <b t-esc="row.title or 'No headline'"/>
+                    <span t-if="row.verified" class="mart-pill mart-t-green">Verified purchase</span>
+                </p>
+                <p class="text-muted"><t t-esc="row.by"/> &#183; <t t-esc="desk.ago(row.at)"/></p>
+                <p class="rv-d-text" t-esc="row.text"/>
+                <p t-if="row.state === 'pending' and row.heldReason" class="rv-d-note">
+                    Held because: <b t-esc="row.heldReason"/>
+                </p>
+                <p t-if="row.state === 'hidden' and row.hiddenReason" class="rv-d-note">
+                    Hidden because: <b t-esc="row.hiddenReason"/>
+                </p>
+                <p t-if="row.tags.length" class="text-muted">Tags: <t t-esc="row.tags.join(' · ')"/></p>
+                <p t-if="row.ticket" class="rv-d-note">
+                    Support ticket <b t-esc="row.ticket"/> was opened for this low rating.
+                </p>
+                <p class="text-muted">&#128681; Reported <t t-esc="row.reports"/> &#183; &#128077; Helpful <t t-esc="row.helpful"/></p>
+
+                <h5 class="rv-d-h">Photos and video</h5>
+                <p t-if="!row.media.length" class="text-muted">None attached.</p>
+                <p t-else="" class="text-muted small">Shoppers see an item only once you approve it. Removing one deletes the file.</p>
+                <div class="rv-media">
+                    <div t-foreach="row.media" t-as="m" t-key="m.id" t-attf-class="rv-media-item {{ m.state === 'approved' ? 'rv-media-on' : '' }}">
+                        <img t-if="m.kind === 'photo'" t-att-src="m.url" alt="Review photo"/>
+                        <video t-else="" t-att-src="m.url" controls="controls" preload="metadata"/>
+                        <small>
+                            <t t-if="m.kind === 'video'"><t t-esc="m.seconds"/> s &#183; </t><t t-esc="size(m.bytes)"/>
+                            &#183; <t t-if="m.state === 'approved'">Shown</t><t t-else="">Waiting</t>
+                        </small>
+                        <span class="rv-media-act">
+                            <button t-if="m.state !== 'approved'" class="btn btn-sm btn-primary"
+                                    t-att-disabled="state.busy" t-on-click="() => desk.media(row, m, 'approve')">Approve</button>
+                            <button class="btn btn-sm btn-outline-danger"
+                                    t-att-disabled="state.busy" t-on-click="() => desk.media(row, m, 'remove')">Remove</button>
+                        </span>
+                    </div>
+                </div>
+
+                <h5 class="rv-d-h">Reply from 369 Mart</h5>
+                <p class="text-muted small">Shown under the review on the product page.</p>
+                <textarea class="form-control" rows="3" placeholder="e.g. Sorry about this - we have sent a replacement."
+                          t-att-value="draft.reply" t-on-input="(ev) => this.editReply(ev)"/>
+                <p t-if="row.replyBy" class="text-muted small mt-1">Last reply by <t t-esc="row.replyBy"/></p>
+            </t>
+            <t t-set-slot="footer">
+                <t t-if="row">
+                    <button class="btn btn-primary" t-att-disabled="state.busy"
+                            t-on-click="() => desk.reply(row, draft.reply)">Save reply</button>
+                    <button t-if="row.state !== 'published'" class="btn btn-success" t-att-disabled="state.busy"
+                            t-on-click="() => desk.publish(row)">Publish</button>
+                    <button t-if="row.state !== 'hidden'" class="btn btn-outline-danger" t-att-disabled="state.busy"
+                            t-on-click="() => desk.askHide(row)">Hide&#8230;</button>
+                </t>
+                <button class="btn btn-secondary" t-on-click="() => this.props.close()">Close</button>
+            </t>
+        </Dialog>
     </t>
 
 </templates>

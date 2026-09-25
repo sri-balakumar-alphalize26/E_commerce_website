@@ -620,15 +620,133 @@ export function DealsBlock({ flash }) {
 }
 
 /* =============================== reviews ================================
-   Moderation, read and written in the shop.
+   Moderation, read and written in the shop - the twin of the Odoo Reviews
+   desk (mart369_account review_desk), which works the same three model
+   methods: publish or hide with a reason, reply, approve or remove a photo.
 
-   Every review is published the moment it is written, and Waiting is a list
-   to read afterwards rather than a gate to pass - a product page that waits
-   for somebody to work a queue goes quiet the first week nobody does.
+   Every review is published the moment it is written, unless the word filter
+   holds it (a phone number, a link, a blocked word) or shoppers report it
+   three times - those wait, with the reason on a chip. Waiting is a list to
+   read afterwards rather than a gate to pass.
 
-   Staff decide whether a review is shown. They never edit one: the server's
-   allow-list takes `state` and nothing else, so there is no control here for
-   the stars, the headline or the words. */
+   Staff never edit a review's words or stars. They decide whether it shows,
+   reply to it in public, and approve or remove its photos. */
+const REVIEW_TONE = (s) => (s >= 4 ? "ad-a-green" : s >= 3 ? "ad-a-orange" : "ad-a-red");
+const mediaSrc = (m) => (m.url || "").replace(/^\/369mart\//, "/api/mart/");
+
+/* One review, opened: everything about it, and every action on it. */
+function ReviewDrawer({ review: start, hideReasons, onClose, onChanged }) {
+  const [r, setR] = useState(start);
+  const [reply, setReply] = useState(start.reply || "");
+  const [reason, setReason] = useState(hideReasons?.[0] || "");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [removing, setRemoving] = useState(null);
+
+  const call = async (path, body, ok) => {
+    setBusy(true); setError("");
+    try {
+      const res = await api(path, { method: "POST", body });
+      setR(res.review);
+      setReply(res.review.reply || "");
+      onChanged(ok);
+      return true;
+    } catch (e) {
+      setError(e.message || "That did not work.");
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  };
+  const moderate = (state) => call(`/admin/reviews/${r.id}/moderate`, state === "hidden" ? { state, reason } : { state },
+    state === "hidden" ? "Review hidden" : "Review published");
+
+  return (
+    <>
+      <Drawer title={r.title || "No headline"} sub={`${r.by} · ${r.product} · ${since(r.at)}`} onClose={onClose}
+        foot={(close) => (
+          <>
+            {r.state !== "hidden" && (
+              <span className="ad-rev-hide">
+                <Select value={reason} onChange={setReason} label="Why hide it"
+                  options={(hideReasons || []).map((x) => [x, x])} />
+                <button className="ad-btn ad-danger-ghost" disabled={busy || !reason} onClick={() => moderate("hidden")}>Hide</button>
+              </span>
+            )}
+            {r.state !== "published" && (
+              <button className="ad-btn ad-primary" disabled={busy} onClick={() => moderate("published")}>Publish</button>
+            )}
+            <button className="ad-btn" onClick={close}>Close</button>
+          </>
+        )}>
+        {error && <p className="ad-form-error" role="alert">{error}</p>}
+
+        <section className="ad-dsec">
+          <div className="ad-review-top">
+            <span className={"ad-stars ad-s" + r.stars}>{r.stars}★</span>
+            {r.verified && <span className="ad-pill ad-t-green">Verified buyer</span>}
+            <span className={"ad-pill ad-t-" + (r.state === "published" ? "green" : r.state === "hidden" ? "grey" : "amber")}>
+              {r.state === "published" ? "Published" : r.state === "hidden" ? "Hidden" : "Waiting"}
+            </span>
+          </div>
+          <p className="ad-rev-text">{r.text || "No words - stars only."}</p>
+          {!!r.tags?.length && <p className="ad-rev-tags">{r.tags.map((t) => <span key={t} className="ad-pill ad-t-blue">{t}</span>)}</p>}
+          <p className="ad-hint">
+            {r.helpful ? `${r.helpful} found it helpful` : "Nobody has marked it helpful yet"}
+            {r.reports ? ` · reported ${r.reports}×` : ""}
+          </p>
+          {r.heldReason && r.state === "pending" && <p className="ad-risk-line"><Icon n="info" size={14} />Held because: {r.heldReason}</p>}
+          {r.hiddenReason && r.state === "hidden" && <p className="ad-risk-line"><Icon n="info" size={14} />Hidden because: {r.hiddenReason}</p>}
+        </section>
+
+        {!!r.media?.length && (
+          <section className="ad-dsec">
+            <h4>Photos &amp; videos <em>{r.media.length}</em></h4>
+            <ul className="ad-rev-media">
+              {r.media.map((m) => (
+                <li key={m.id}>
+                  {m.kind === "video"
+                    ? <video src={mediaSrc(m)} controls preload="metadata" />
+                    : <img src={mediaSrc(m)} alt="Customer photo" />}
+                  <span className={"ad-pill ad-t-" + (m.state === "approved" ? "green" : "amber")}>{m.state === "approved" ? "Shown" : "Waiting"}</span>
+                  <span className="ad-rev-media-act">
+                    {m.state !== "approved" && (
+                      <button className="ad-btn ad-sm ad-primary" disabled={busy}
+                        onClick={() => call(`/admin/reviews/media/${m.id}`, { action: "approve" }, "Photo shown")}>Approve</button>
+                    )}
+                    <button className="ad-btn ad-sm ad-danger-ghost" disabled={busy} onClick={() => setRemoving(m)}>Remove</button>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        <section className="ad-dsec">
+          <h4>Reply from the shop</h4>
+          <p className="ad-hint"><Icon n="info" size={14} />Shows under the review on the product page. Leave it empty and save to remove it.</p>
+          <textarea className="ad-rev-reply" rows={3} maxLength={1000} value={reply}
+            placeholder="e.g. Sorry about that - we've sent a replacement." onChange={(e) => setReply(e.target.value)} />
+          <div className="ad-rev-reply-act">
+            {r.reply && <small>Last reply by {r.replyBy || "the shop"}</small>}
+            <button className="ad-btn ad-sm ad-primary" disabled={busy || reply.trim() === (r.reply || "")}
+              onClick={() => call(`/admin/reviews/${r.id}/reply`, { text: reply }, reply.trim() ? "Reply saved" : "Reply removed")}>
+              {reply.trim() || !r.reply ? "Save reply" : "Remove reply"}
+            </button>
+          </div>
+        </section>
+      </Drawer>
+
+      {removing && (
+        <Confirm danger title="Remove this photo?" confirmLabel="Remove it"
+          text="It is deleted for good - shoppers will not see it and it cannot be brought back."
+          onCancel={() => setRemoving(null)}
+          onConfirm={() => { const m = removing; setRemoving(null); call(`/admin/reviews/media/${m.id}`, { action: "remove" }, "Photo removed"); }} />
+      )}
+    </>
+  );
+}
+
 export function ReviewsSection({ flash }) {
   const [tab, setTab] = useState("pending");
   /* What is typed, and what has been asked for. Orders separates these too:
@@ -640,7 +758,7 @@ export function ReviewsSection({ flash }) {
      unchanged - "off" has to survive the trip, and `bool("0")` is true. */
   const [verified, setVerified] = useState("");
   const [photos, setPhotos] = useState("");
-  const [drop, setDrop] = useState(null);
+  const [open, setOpen] = useState(null);
 
   useEffect(() => {
     const id = setTimeout(() => setQ(term.trim()), 300);
@@ -657,46 +775,54 @@ export function ReviewsSection({ flash }) {
     return "/admin/reviews" + (qs ? `?${qs}` : "");
   }, [tab, q, verified, photos]);
 
-  /* No `deps`: useResource already keys its fetch on `path`. */
-  const { data, loading, error, reload } = useResource(path);
-  const act = useAction();
+  /* Every 30 s, like the Odoo desk: a report can send a review back to
+     Waiting while this screen is open. */
+  const { data, loading, error, reload } = useResource(path, { pollMs: 30000, keepLast: true });
 
   const rows = data?.reviews || [];
   const counts = data?.counts || {};
+  const report = data?.report;
 
-  /* Read-after-write. The tile numbers and which tab a review now belongs to
-     are both the server's, and a row patched locally would sit in a tab it no
-     longer matches until the next reload. */
-  const run = (fn, ok) =>
-    act.run(async () => {
-      await fn();
-      api.invalidate("/admin/reviews");
-      await reload();
-      if (ok) flash?.(ok);
-      return true;
-    }).then((r) => {
-      if (r === null) flash?.(act.error?.message || "That did not work.", "bad");
-      return r;
-    });
+  /* Read-after-write: which tab a review now belongs to is the server's. */
+  const changed = async (ok) => {
+    api.invalidate("/admin/reviews");
+    await reload();
+    if (ok) flash?.(ok);
+  };
 
-  const setState = (r, state, ok) =>
-    run(() => api(`/admin/reviews/${r.id}`, { method: "PATCH", body: { state } }), ok);
+  const tile = (key, label, n, tone) => (
+    <button type="button" className={"ad-rev-tile" + (tab === key ? " ad-on" : "") + (tone ? " " + tone : "")}
+      aria-pressed={tab === key} onClick={() => setTab(key)}>
+      <small>{label}</small><b>{n ?? 0}</b>
+    </button>
+  );
 
   return (
     <div className="ad-stack">
-      <section className="ad-mini-stats">
+      <section className="ad-mini-stats ad-rev-tiles">
         <span><small>Average rating</small><b>{(data?.average ?? 0).toFixed(1)} ★</b></span>
-        <span className="ad-warn"><small>Waiting</small><b>{counts.pending ?? 0}</b></span>
-        <span><small>Published</small><b>{counts.published ?? 0}</b></span>
-        <span className="ad-bad"><small>Hidden</small><b>{counts.hidden ?? 0}</b></span>
+        {tile("pending", "Waiting", counts.pending, "ad-warn")}
+        {tile("published", "Published", counts.published)}
+        {tile("hidden", "Hidden", counts.hidden, "ad-bad")}
       </section>
+
+      {/* The same strip the Odoo desk shows: what to fix, not just what to read. */}
+      {!!(report?.worst?.length || report?.complaints?.length) && (
+        <section className="ad-card ad-rev-report">
+          {!!report.worst?.length && (
+            <p><b>Lowest rated</b>{report.worst.map((w) => `${w.product} ${Number(w.average).toFixed(1)}★ (${w.count})`).join(" · ")}</p>
+          )}
+          {!!report.complaints?.length && (
+            <p><b>Top complaints (30 days)</b>{report.complaints.map((c) => `${c.tag} ${c.count}`).join(" · ")}</p>
+          )}
+        </section>
+      )}
 
       <section className="ad-card">
         <div className="ad-toolbar">
           <Tabs value={tab} onChange={setTab} tabs={[["pending", "Waiting", counts.pending ?? 0], ["published", "Published", counts.published ?? 0], ["hidden", "Hidden", counts.hidden ?? 0], ["all", "All"]]} />
           <div className="ad-toolbar-right">
             <Search value={term} onChange={setTerm} placeholder="Product, customer or text" />
-            {/* The two the Odoo search view has always had and this never did. */}
             <Select value={verified} onChange={setVerified} label="Bought it"
               options={[["", "Bought or not"], ["1", "Verified purchase"], ["0", "Not verified"]]} />
             <Select value={photos} onChange={setPhotos} label="Photos"
@@ -704,7 +830,7 @@ export function ReviewsSection({ flash }) {
           </div>
         </div>
 
-        {error && (
+        {error && !rows.length && (
           <Empty icon="info" title="We could not reach the shop" text={error.message}
             action="Try again" onAction={reload} />
         )}
@@ -712,29 +838,29 @@ export function ReviewsSection({ flash }) {
           <Empty icon="star" title="Loading…" text="Fetching reviews." />
         )}
 
-        {!error && !!rows.length && (
+        {!!rows.length && (
           <ul className="ad-reviews">
             {rows.map((r, i) => (
-              <li key={r.id} style={{ "--i": i }}>
-                <Avatar name={r.by} size={38} tone={r.stars >= 4 ? "ad-a-green" : r.stars >= 3 ? "ad-a-orange" : "ad-a-red"} />
+              <li key={r.id} style={{ "--i": i }} className="ad-rev-row" onClick={() => setOpen(r)}>
+                <Avatar name={r.by} size={38} tone={REVIEW_TONE(r.stars)} />
                 <div className="ad-review-body">
                   <div className="ad-review-top">
                     <span className={"ad-stars ad-s" + r.stars}>{r.stars}★</span>
                     <b>{r.title || "No headline"}</b>
-                    <small>{r.by} · {r.product} · {since(r.at)}</small>
+                    {r.verified && <span className="ad-pill ad-t-green">Verified</span>}
+                    {!!r.photos && <small>📷 {r.photos}</small>}
                   </div>
+                  <small className="ad-rev-who">{r.by} · {r.product} · {since(r.at)}</small>
                   <p>{r.text}</p>
+                  <div className="ad-rev-chips">
+                    {r.heldReason && r.state === "pending" && <span className="ad-pill ad-t-amber">Held: {r.heldReason}</span>}
+                    {r.hiddenReason && r.state === "hidden" && <span className="ad-pill ad-t-grey">Hidden: {r.hiddenReason}</span>}
+                    {!!r.mediaWaiting && <span className="ad-pill ad-t-amber">{r.mediaWaiting} photo{r.mediaWaiting === 1 ? "" : "s"} waiting</span>}
+                    {!!r.reports && <span className="ad-pill ad-t-red">Reported ×{r.reports}</span>}
+                    {r.reply && <span className="ad-pill ad-t-blue">Replied</span>}
+                  </div>
                 </div>
-                <div className="ad-review-act">
-                  {r.state !== "published" && (
-                    <button className="ad-btn ad-sm ad-primary" disabled={act.busy}
-                      onClick={() => setState(r, "published", "Review published")}>Publish</button>
-                  )}
-                  {r.state !== "hidden" && (
-                    <button className="ad-btn ad-sm" disabled={act.busy}
-                      onClick={() => setDrop(r)}>Hide</button>
-                  )}
-                </div>
+                <Icon n="right" size={16} />
               </li>
             ))}
           </ul>
@@ -748,11 +874,8 @@ export function ReviewsSection({ flash }) {
         )}
       </section>
 
-      {drop && (
-        <Confirm danger title="Hide this review?" confirmLabel="Hide review"
-          text={`“${drop.title || "This review"}” by ${drop.by} will no longer show on the product page, and will stop counting towards its rating.`}
-          onCancel={() => setDrop(null)}
-          onConfirm={() => { const r = drop; setDrop(null); setState(r, "hidden", "Review hidden"); }} />
+      {open && (
+        <ReviewDrawer review={open} hideReasons={data?.hideReasons} onClose={() => setOpen(null)} onChanged={changed} />
       )}
     </div>
   );
@@ -768,11 +891,19 @@ export function ReviewsSection({ flash }) {
    is listed too, marked custom, so the box shows what is really set. */
 const DAY_PRESETS = [15, 30, 45, 60, 90, 120, 150];
 
-function DaysField({ label, value, onChange, prompt }) {
+/* How long a customer has to answer a replacement (Settings > Orders), in
+   minutes. */
+const WAIT_PRESETS = {
+  substituteQuick: [5, 10, 15, 20, 30],
+  substituteExpress: [30, 60, 120, 240, 480, 1440],
+};
+const waitLabel = (m) => (m < 60 ? `${m} min` : `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60} min` : ""}`);
+
+function DaysField({ label, value, onChange, prompt, presets = DAY_PRESETS, fmt = (d) => `${d} days`, unit = "days" }) {
   const [asking, setAsking] = useState(false);
-  const days = DAY_PRESETS.includes(value) || !value ? DAY_PRESETS : [...DAY_PRESETS, value].sort((a, b) => a - b);
+  const days = presets.includes(value) || !value ? presets : [...presets, value].sort((a, b) => a - b);
   const options = [
-    ...days.map((d) => [String(d), DAY_PRESETS.includes(d) ? `${d} days` : `${d} days (custom)`]),
+    ...days.map((d) => [String(d), presets.includes(d) ? fmt(d) : `${fmt(d)} (custom)`]),
     ["custom", "Custom…"],
   ];
   return (
@@ -782,16 +913,16 @@ function DaysField({ label, value, onChange, prompt }) {
       <span>{label}</span>
       <Select value={String(value)} options={options} label={label}
         onChange={(v) => (v === "custom" ? setAsking(true) : onChange(Number(v)))} />
-      {asking && <DaysPrompt title={prompt} value={value} onCancel={() => setAsking(false)}
+      {asking && <DaysPrompt title={prompt} value={value} unit={unit} onCancel={() => setAsking(false)}
         onDone={(d) => { onChange(d); setAsking(false); }} />}
     </div>
   );
 }
 
-function DaysPrompt({ title, value, onCancel, onDone }) {
+function DaysPrompt({ title, value, unit = "days", onCancel, onDone }) {
   const [text, setText] = useState(String(value || ""));
   const days = Number(text);
-  const ok = Number.isInteger(days) && days >= 1 && days <= 3650;
+  const ok = Number.isInteger(days) && days >= 1 && days <= 43200;
   if (typeof document === "undefined") return null;
   return createPortal(
     <div className="ad-modal-wrap" onClick={onCancel}>
@@ -803,7 +934,7 @@ function DaysPrompt({ title, value, onCancel, onDone }) {
             <input autoFocus inputMode="numeric" value={text} placeholder="e.g. 21" aria-label="Days"
               onChange={(e) => setText(e.target.value.replace(/\D/g, ""))}
               onKeyDown={(e) => { if (e.key === "Enter" && ok) onDone(days); if (e.key === "Escape") onCancel(); }} />
-            <em>days</em>
+            <em>{unit}</em>
           </span>
         </label>
         <div>
@@ -884,7 +1015,7 @@ export function SettingsSection({ flash }) {
     <div className="ad-stack">
       <section className="ad-card">
         <div className="ad-toolbar">
-          <Tabs value={tab} onChange={(t) => { setTab(t); setErr(""); }} tabs={[["store", "Store"], ...(pay ? [["payments", "Payments"]] : []), ...(draft.customers ? [["customers", "Customers"]] : []), ["alerts", "Alerts"]]} />
+          <Tabs value={tab} onChange={(t) => { setTab(t); setErr(""); }} tabs={[["store", "Store"], ...(pay ? [["payments", "Payments"]] : []), ...(draft.customers ? [["customers", "Customers"]] : []), ...(draft.orders ? [["orders", "Orders"]] : []), ...(draft.reviews ? [["reviews", "Reviews"]] : []), ["alerts", "Alerts"]]} />
           <div className="ad-toolbar-right">
             {dirty && <span className="ad-dim">Unsaved changes</span>}
             <button className="ad-btn" disabled={!dirty || busy} onClick={() => { setDraft(saved); setErr(""); }}>Reset</button>
@@ -949,6 +1080,54 @@ export function SettingsSection({ flash }) {
             <DaysField label="Dormant after, without a sign-in" value={draft.customers.dormantDays}
               onChange={set("customers", "dormantDays")} prompt="Dormant after how many days?" />
             <p className="ad-hint ad-span2"><Icon n="info" size={14} />A customer is New for this many days after signing up, then Active. Saving updates every customer's badge straight away.</p>
+          </div>
+        )}
+
+        {/* How long a customer has to answer a replacement offer. */}
+        {tab === "orders" && draft.orders && (
+          <div className="ad-form ad-form-pad">
+            <DaysField label="Quick orders: answer a replacement within" value={draft.orders.substituteQuick}
+              presets={WAIT_PRESETS.substituteQuick} fmt={waitLabel} unit="min"
+              onChange={set("orders", "substituteQuick")} prompt="Quick orders: how many minutes?" />
+            <DaysField label="Express orders: answer a replacement within" value={draft.orders.substituteExpress}
+              presets={WAIT_PRESETS.substituteExpress} fmt={waitLabel} unit="min"
+              onChange={set("orders", "substituteExpress")} prompt="Express orders: how many minutes?" />
+            <p className="ad-hint ad-span2"><Icon n="info" size={14} />When an item runs out and you offer a replacement, the customer has this long to accept it. No answer: the item is refunded to their 369 Wallet. A change applies to offers made from now on.</p>
+          </div>
+        )}
+
+        {/* What a review may carry, and which words hold it for a look - the
+            Odoo Settings screen's Reviews group (mart369_account config.py). */}
+        {tab === "reviews" && draft.reviews && (
+          <div className="ad-rows">
+            {[["maxPhotos", "Photos per review", "How many photos a customer can add. 0 turns photos off.", ""],
+              ["photoMb", "Largest photo", "Bigger photos are refused.", "MB"]].map(([k, t, d, unit], i) => (
+              <div key={k} className="ad-row-set" style={{ "--i": i }}>
+                <span className="ad-row-ic"><Icon n="camera" size={18} /></span>
+                <span className="ad-row-txt"><b>{t}</b><small>{d}</small></span>
+                <span className="ad-field-in ad-narrow"><input value={draft.reviews[k]} inputMode="numeric" aria-label={t}
+                  onChange={(e) => set("reviews", k)(parseInt(e.target.value.replace(/D/g, ""), 10) || 0)} />{unit && <em>{unit}</em>}</span>
+              </div>
+            ))}
+            <div className="ad-row-set" style={{ "--i": 2 }}>
+              <span className="ad-row-ic"><Icon n="live" size={18} /></span>
+              <span className="ad-row-txt"><b>Allow a video</b><small>One short clip per review, checked before it shows.</small></span>
+              <Switch on={!!draft.reviews.video} onChange={set("reviews", "video")} label="Allow a video" />
+            </div>
+            {draft.reviews.video && [["videoSeconds", "Longest video", "Longer clips are refused.", "sec"], ["videoMb", "Largest video", "Bigger clips are refused.", "MB"]].map(([k, t, d, unit], i) => (
+              <div key={k} className="ad-row-set" style={{ "--i": 3 + i }}>
+                <span className="ad-row-ic"><Icon n="live" size={18} /></span>
+                <span className="ad-row-txt"><b>{t}</b><small>{d}</small></span>
+                <span className="ad-field-in ad-narrow"><input value={draft.reviews[k]} inputMode="numeric" aria-label={t}
+                  onChange={(e) => set("reviews", k)(parseInt(e.target.value.replace(/D/g, ""), 10) || 0)} /><em>{unit}</em></span>
+              </div>
+            ))}
+            <div className="ad-row-set ad-row-tall" style={{ "--i": 5 }}>
+              <span className="ad-row-ic"><Icon n="shield" size={18} /></span>
+              <span className="ad-row-txt"><b>Blocked words</b><small>A review with any of these waits in Waiting for someone to read it. One per line or comma-separated. Phone numbers and links are always held.</small>
+                <textarea className="ad-rev-reply" rows={3} value={draft.reviews.blockedWords || ""} aria-label="Blocked words"
+                  onChange={(e) => set("reviews", "blockedWords")(e.target.value)} placeholder="e.g. scam, fake" /></span>
+            </div>
           </div>
         )}
 

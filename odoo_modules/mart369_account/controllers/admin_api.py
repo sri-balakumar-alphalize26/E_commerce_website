@@ -101,6 +101,16 @@ class Mart369ReviewAdminApi(http.Controller):
         payload['ok'] = True
         return self._json(payload)
 
+    @http.route('/369mart/admin/reviews/photo/<int:media_id>', **_GET)
+    def review_photo(self, media_id, **kwargs):
+        """A review photo or video for staff, waiting or not."""
+        if not self._may_edit():
+            return self._fail('You do not have access to this.', status=403)
+        media = request.env['mart369.review.media'].sudo().browse(media_id).exists()
+        if not media:
+            return self._fail('No such photo.', status=404)
+        return request.env['ir.binary']._get_stream_from(media.attachment_id, 'datas').get_response()
+
     @http.route('/369mart/admin/reviews/counts', **_GET)
     def counts(self, **kwargs):
         """The three tallies alone, for the sidebar badge.
