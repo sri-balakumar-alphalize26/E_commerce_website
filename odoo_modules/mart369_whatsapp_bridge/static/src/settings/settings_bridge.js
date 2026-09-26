@@ -34,12 +34,22 @@ patch(SettingsDesk.prototype, {
         return tabs;
     },
 
+    /** Pick takes strings; the session is an id or false. "" is "whichever". */
     get waSessionOptions() {
         const sessions = this.state.draft?.whatsapp?.sessions || [];
         return [
-            [false, _t("Whichever is connected")],
-            ...sessions.map((s) => [s.id, `${s.name} (${s.status})`]),
+            ["", _t("Whichever is connected")],
+            ...sessions.map((s) => [String(s.id), `${s.name} (${s.status})`]),
         ];
+    },
+
+    waSessionValue() {
+        const id = this.state.draft?.whatsapp?.sessionId;
+        return id ? String(id) : "";
+    },
+
+    pickWaSession(value) {
+        this.setField("whatsapp", "sessionId", value ? Number(value) : false);
     },
 
     waSession() {

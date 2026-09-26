@@ -10,9 +10,9 @@
                     <span>Send order updates from</span>
                     <div class="st-wa-session">
                         <Pick label="'WhatsApp session'"
-                              value="state.draft.whatsapp.sessionId"
+                              value="waSessionValue()"
                               options="waSessionOptions"
-                              onChange="(v) => this.setField('whatsapp', 'sessionId', v)"/>
+                              onChange="(v) => this.pickWaSession(v)"/>
                         <span t-if="waSession()"
                               t-attf-class="mart-pill mart-t-{{ waSession().status === 'connected' ? 'green' : 'orange' }}"
                               t-esc="waSession().status"/>

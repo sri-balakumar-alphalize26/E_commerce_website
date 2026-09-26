@@ -5,3 +5,4 @@ from . import test_notify
 from . import test_rider
 from . import test_partner
 from . import test_catalog
+from . import test_stock

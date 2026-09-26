@@ -30,6 +30,8 @@ What it does:
         'mart369_address',
         'mart369_auth',
         'mart369_catalog',
+        # The product's own "Sell when Out-of-Stock" (models/stock_rule.py).
+        'website_sale_stock',
         'sales_automation_store',
         'sales_automation_confirm',
     ],
