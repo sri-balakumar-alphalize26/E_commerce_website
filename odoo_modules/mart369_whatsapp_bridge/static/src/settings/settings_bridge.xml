@@ -20,6 +20,11 @@
                                 t-on-click="() => this.waCheckNow()">Check now</button>
                     </div>
                 </div>
+                <p class="st-hint st-span2">
+                    The WhatsApp NEW ORDER menu follows the website's category
+                    navigation. Which vendors are asked for something out of
+                    stock still comes from the product's Odoo category.
+                </p>
 
                 <div t-foreach="WA_STEPS" t-as="step" t-key="step[0]" class="st-field st-span2 st-wa-step">
                     <Switch on="!!state.draft.whatsapp.on[step[0]]"

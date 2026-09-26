@@ -188,10 +188,9 @@ class SaleOrder(models.Model):
     def _mart369_cancel(self, reason=None):
         """Cancelling a WhatsApp order is the stack's cancel.
 
-        No wallet refund and no credit note from the website's machinery: the
-        WhatsApp customer's money is handled by the stack's own Refund button
-        on the Store screen. `action_cancel` (sales_automation_delivery)
-        cancels the job and tells the customer and the rider.
+        `action_cancel` (sales_automation_delivery) cancels the job and tells
+        the customer and the rider; the money comes back to the customer's
+        369 Wallet with a credit note on the way out (money_back.py).
         """
         if self.mart369_channel != 'whatsapp':
             return super()._mart369_cancel(reason=reason)

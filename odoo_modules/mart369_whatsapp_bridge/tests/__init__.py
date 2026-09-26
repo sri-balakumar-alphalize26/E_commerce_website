@@ -6,3 +6,4 @@ from . import test_rider
 from . import test_partner
 from . import test_catalog
 from . import test_stock
+from . import test_money_back
