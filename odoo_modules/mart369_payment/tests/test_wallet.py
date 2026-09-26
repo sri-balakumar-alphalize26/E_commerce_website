@@ -72,6 +72,15 @@ class TestMart369Wallet(TransactionCase):
         with self.assertRaises(UserError, msg='a bare write would desync the ledger'):
             self.wallet.write({'points': 9999})
 
+    def test_writing_the_same_balance_is_not_a_change(self):
+        """`sale_loyalty` confirms an order by writing `points += 0` on the
+        wallet. Refusing that made a paid order fail to confirm."""
+        self.wallet._mart369_move(40, 'add', 'Money added')
+        before = len(self.wallet.history_ids)
+        self.wallet.write({'points': self.wallet.points})
+        self.assertEqual(self.wallet.points, 40)
+        self.assertEqual(len(self.wallet.history_ids), before, 'nothing moved, nothing written')
+
     def test_points_can_still_be_written_on_an_ordinary_coupon(self):
         program = self.env['loyalty.program'].create({
             'name': 'Not a wallet',

@@ -21,6 +21,7 @@ import logging
 
 from odoo import _, api, fields, models, tools
 from odoo.exceptions import AccessError, UserError
+from odoo.tools import float_compare
 
 _logger = logging.getLogger(__name__)
 
@@ -124,7 +125,15 @@ class LoyaltyCard(models.Model):
         `points` directly silently desynchronises the ledger.
         """
         if 'points' in vals and not self.env.context.get('mart369_wallet_move'):
-            if self.filtered('mart369_is_wallet'):
+            # Only a real change is refused. `sale_loyalty` confirms an order by
+            # writing `points += change` on every card the order touches - the
+            # wallet included, with a change of 0 - and refusing that no-op
+            # made the whole confirm fail: a paid order stayed a quotation, with
+            # no invoice and no delivery.
+            new = float(vals['points'] or 0.0)
+            changed = self.filtered('mart369_is_wallet').filtered(
+                lambda c: float_compare(c.points, new, precision_digits=2) != 0)
+            if changed:
                 raise UserError(_(
                     "The 369 Wallet balance can only change through a wallet movement, "
                     "so that every change leaves a record the customer can see."))
