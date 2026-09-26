@@ -120,6 +120,71 @@ class TestBooks(Mart369OrderCase):
         self.assertEqual(product.with_context(location=location.id).qty_available, 7,
                          'validating again moves nothing')
 
+    # ------------------------------------------------------------- returns
+
+    def _delivered_rice(self):
+        """3 of a stocked product delivered out of 10: 7 left on the shelf."""
+        template = self._mart369_product('Test Atta 5kg', 300.0)
+        template.write({'is_storable': True})
+        product = template.product_variant_id
+        order = self._place(items={str(template.id): 3})
+        location = order.warehouse_id.lot_stock_id
+        self.env['stock.quant'].sudo()._update_available_quantity(product, location, 10)
+        self._pay(order)
+        self._deliver(order)
+        on_hand = lambda: product.with_context(location=location.id).qty_available  # noqa: E731
+        self.assertEqual(on_hand(), 7)
+        return order, on_hand
+
+    def _return(self, order):
+        return self.env['mart369.order.return'].sudo().create({
+            'order_id': order.id, 'reason': 'Damaged', 'amount': order.amount_total})
+
+    def _finish(self, ret):
+        while ret.state != 'done':
+            ret.mart369_action_advance()
+
+    def test_a_finished_return_puts_the_goods_back_in_stock(self):
+        order, on_hand = self._delivered_rice()
+        ret = self._return(order)
+        self._finish(ret)
+        self.assertEqual(on_hand(), 10, 'the goods are back on the shelf')
+        self.assertEqual(ret.return_picking_id.picking_type_code, 'incoming')
+        self.assertEqual(ret.return_picking_id.state, 'done')
+        self.assertTrue(ret.refunded, 'and the refund still happens')
+
+        ret._mart369_restock()
+        self.assertEqual(on_hand(), 10, 'restocking again moves nothing')
+
+    def test_a_second_return_on_the_same_order_restocks_nothing(self):
+        order, on_hand = self._delivered_rice()
+        self._finish(self._return(order))
+        second = self._return(order)
+        self._finish(second)
+        self.assertEqual(on_hand(), 10, 'the goods came back once')
+        self.assertFalse(second.return_picking_id)
+
+    def test_a_return_refused_after_pickup_leaves_stock_alone(self):
+        order, on_hand = self._delivered_rice()
+        ret = self._return(order)
+        ret.mart369_action_advance()
+        ret.mart369_action_advance()
+        self.assertEqual(ret.state, 'picked')
+        ret.mart369_action_refuse()
+        self.assertEqual(on_hand(), 7, 'the goods go back to the customer')
+        self.assertFalse(ret.return_picking_id)
+
+    def test_a_return_with_nothing_delivered_still_refunds(self):
+        """An older order whose delivery was never validated."""
+        order = self._place()
+        self._pay(order)
+        order.picking_ids.action_cancel()
+        order.write({'mart369_state': 'delivered'})
+        ret = self._return(order)
+        self._finish(ret)
+        self.assertTrue(ret.refunded)
+        self.assertFalse(ret.return_picking_id)
+
     # ---------------------------------------------------------- cancelling
 
     def test_a_cash_order_cancelled_before_the_door_is_no_longer_billed(self):
