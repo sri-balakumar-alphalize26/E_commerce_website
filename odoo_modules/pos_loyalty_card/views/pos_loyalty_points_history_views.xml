@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Embedded Tree View for use in Loyalty Card form -->
+    <record id="view_pos_loyalty_points_history_tree_embedded" model="ir.ui.view">
+        <field name="name">pos.loyalty.points.history.tree.embedded</field>
+        <field name="model">pos.loyalty.points.history</field>
+        <field name="priority">100</field>
+        <field name="arch" type="xml">
+            <list string="Points History" default_order="date desc" create="0" delete="0">
+                <field name="date" readonly="1"/>
+                <field name="description" readonly="1"/>
+                <field name="transaction_type" widget="badge"
+                       decoration-success="transaction_type == 'earned'"
+                       decoration-danger="transaction_type == 'redeemed'"
+                       decoration-warning="transaction_type == 'expired'"
+                       decoration-info="transaction_type == 'adjusted'" readonly="1"/>
+                <field name="points" readonly="1"/>
+                <field name="amount" optional="show" readonly="1"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Points History Form View -->
+    <record id="view_pos_loyalty_points_history_form" model="ir.ui.view">
+        <field name="name">pos.loyalty.points.history.form</field>
+        <field name="model">pos.loyalty.points.history</field>
+        <field name="arch" type="xml">
+            <form string="Points History">
+                <sheet>
+                    <group>
+                        <group string="Transaction Details">
+                            <field name="card_id"/>
+                            <field name="card_number" readonly="1"/>
+                            <field name="customer_name" readonly="1"/>
+                            <field name="date"/>
+                        </group>
+                        <group string="Points">
+                            <field name="transaction_type"/>
+                            <field name="points"/>
+                            <field name="amount"/>
+                        </group>
+                    </group>
+                    <group>
+                        <field name="description"/>
+                        <field name="pos_order_id" readonly="1"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Points History List View -->
+    <record id="view_pos_loyalty_points_history_list" model="ir.ui.view">
+        <field name="name">pos.loyalty.points.history.list</field>
+        <field name="model">pos.loyalty.points.history</field>
+        <field name="arch" type="xml">
+            <list string="Points History" default_order="date desc" create="0">
+                <field name="date"/>
+                <field name="card_number"/>
+                <field name="customer_name"/>
+                <field name="description"/>
+                <field name="transaction_type" widget="badge"
+                       decoration-success="transaction_type == 'earned'"
+                       decoration-danger="transaction_type == 'redeemed'"
+                       decoration-warning="transaction_type == 'expired'"
+                       decoration-info="transaction_type == 'adjusted'"/>
+                <field name="points" sum="Total Points"/>
+                <field name="amount" sum="Total Amount" optional="show"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Points History Search View -->
+    <record id="view_pos_loyalty_points_history_search" model="ir.ui.view">
+        <field name="name">pos.loyalty.points.history.search</field>
+        <field name="model">pos.loyalty.points.history</field>
+        <field name="arch" type="xml">
+            <search string="Search Points History">
+                <field name="card_id"/>
+                <field name="card_number"/>
+                <field name="customer_name"/>
+                <field name="description"/>
+                <separator/>
+                <filter name="earned" string="Earned" domain="[('transaction_type', '=', 'earned')]"/>
+                <filter name="redeemed" string="Redeemed" domain="[('transaction_type', '=', 'redeemed')]"/>
+                <separator/>
+                <filter name="group_card" string="Card" context="{'group_by': 'card_id'}"/>
+                <filter name="group_type" string="Type" context="{'group_by': 'transaction_type'}"/>
+                <filter name="group_date" string="Date" context="{'group_by': 'date:day'}"/>
+            </search>
+        </field>
+    </record>
+
+    <!-- Action: Points History -->
+    <record id="action_loyalty_points_history" model="ir.actions.act_window">
+        <field name="name">Points History</field>
+        <field name="res_model">pos.loyalty.points.history</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No points transactions yet
+            </p>
+            <p>
+                Points history will appear here as customers earn and redeem points.
+            </p>
+        </field>
+    </record>
+</odoo>

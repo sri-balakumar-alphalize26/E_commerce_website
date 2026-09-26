@@ -1,0 +1,254 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- =========================================================================
+         DELETED LOYALTY CARDS - Popup Views (defined first)
+         ========================================================================= -->
+
+    <!-- Deleted Cards List View (shown in popup) -->
+    <record id="view_deleted_loyalty_card_list" model="ir.ui.view">
+        <field name="name">pos.loyalty.card.deleted.list</field>
+        <field name="model">pos.loyalty.card</field>
+        <field name="priority">99</field>
+        <field name="arch" type="xml">
+            <list string="Deleted Loyalty Cards" create="false" edit="false" default_order="deleted_date desc">
+                <header>
+                    <button name="action_restore" string="Restore Selected" type="object" class="btn-success"/>
+                    <button name="action_permanent_delete" string="Delete Permanently" type="object" class="btn-danger" confirm="Are you sure you want to PERMANENTLY delete the selected loyalty cards? This action cannot be undone and all associated points history will be lost!"/>
+                </header>
+                <field name="card_number"/>
+                <field name="name" string="Customer Name"/>
+                <field name="phone" string="Mobile Number"/>
+                <field name="total_points"/>
+                <field name="points_value"/>
+                <field name="registration_date" optional="show"/>
+                <field name="deleted_date" string="Deleted On"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Deleted Cards Form View -->
+    <record id="view_deleted_loyalty_card_form" model="ir.ui.view">
+        <field name="name">pos.loyalty.card.deleted.form</field>
+        <field name="model">pos.loyalty.card</field>
+        <field name="priority">99</field>
+        <field name="arch" type="xml">
+            <form string="Deleted Loyalty Card" create="false" edit="false">
+                <header>
+                    <button name="action_restore" string="Restore Card" type="object" class="btn-success"/>
+                    <button name="action_permanent_delete" string="Delete Permanently" type="object" class="btn-danger" confirm="Are you sure you want to PERMANENTLY delete this loyalty card? This action cannot be undone!"/>
+                </header>
+                <sheet>
+                    <div class="alert alert-warning" role="alert">
+                        <strong>This loyalty card has been deleted.</strong> You can restore it or permanently delete it.
+                    </div>
+                    <div class="oe_title">
+                        <h1><field name="card_number" readonly="1"/></h1>
+                    </div>
+                    <group>
+                        <group string="Customer Information">
+                            <field name="name" readonly="1"/>
+                            <field name="phone" readonly="1"/>
+                            <field name="email" readonly="1"/>
+                        </group>
+                        <group string="Card Details">
+                            <field name="total_points" readonly="1"/>
+                            <field name="points_value" readonly="1"/>
+                            <field name="registration_date" readonly="1"/>
+                            <field name="deleted_date" readonly="1"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Points History" name="history">
+                            <field name="history_ids" readonly="1" nolabel="1">
+                                <list string="Points History" default_order="create_date desc">
+                                    <field name="create_date" string="Date"/>
+                                    <field name="type" widget="badge" 
+                                           decoration-success="type == 'earned'" 
+                                           decoration-danger="type == 'redeemed'"
+                                           decoration-warning="type == 'returned'"
+                                           decoration-info="type == 'redeem_returned'"/>
+                                    <field name="points" string="Points"/>
+                                    <field name="description"/>
+                                    <field name="order_id" column_invisible="1"/>
+                                    <button name="action_open_order" type="object" string="View Order"
+                                            icon="fa-external-link" class="btn-link" invisible="not order_id"/>
+                                    <field name="amount" string="Order Amount" optional="show"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Deleted Cards Search View -->
+    <record id="view_deleted_loyalty_card_search" model="ir.ui.view">
+        <field name="name">pos.loyalty.card.deleted.search</field>
+        <field name="model">pos.loyalty.card</field>
+        <field name="priority">99</field>
+        <field name="arch" type="xml">
+            <search string="Search Deleted Loyalty Cards">
+                <field name="card_number" string="Card/Name/Phone" 
+                       filter_domain="['|', '|', ('card_number', 'ilike', self), ('name', 'ilike', self), ('phone', 'ilike', self)]"/>
+                <field name="name" string="Customer Name"/>
+                <field name="phone" string="Mobile Number"/>
+            </search>
+        </field>
+    </record>
+
+    <!-- =========================================================================
+         MAIN LOYALTY CARD VIEWS
+         ========================================================================= -->
+
+    <record id="view_loyalty_card_form" model="ir.ui.view">
+        <field name="name">pos.loyalty.card.form</field>
+        <field name="model">pos.loyalty.card</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_activate" string="Activate" type="object" class="btn-primary" invisible="state != 'draft'"/>
+                    <button name="action_suspend" string="Suspend" type="object" class="btn-warning" invisible="state != 'active'"/>
+                    <button name="action_reactivate" string="Reactivate" type="object" class="btn-success" invisible="state != 'suspended'"/>
+                    <button name="action_add_test_points" string="Add 500 Test Points" type="object" class="btn-info" invisible="state != 'active'"/>
+                    <!-- =========================================================================
+                         PRINT CARD BUTTON (integrated from File 2)
+                         ========================================================================= -->
+                    <button name="action_view_card"
+                            string="View Card"
+                            type="object"
+                            class="btn-secondary"
+                            invisible="state == 'draft'"/>
+                    <button name="action_print_card"
+                            string="Print Card"
+                            type="object"
+                            class="btn-secondary"
+                            invisible="state == 'draft'"/>
+                    <!-- =========================================================================
+                         WHATSAPP BUTTON (integrated from File 2)
+                         ========================================================================= -->
+                    <button name="action_send_whatsapp" 
+                            string="Send WhatsApp" 
+                            type="object" 
+                            class="btn-success"
+                            invisible="state == 'draft'"/>
+                    <button name="action_email_card"
+                            string="Email Card"
+                            type="object"
+                            class="btn-secondary"
+                            invisible="state == 'draft'"/>
+                    <field name="state" widget="statusbar"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="card_number"/></h1>
+                    </div>
+                    <group>
+                        <group string="Customer Information">
+                            <field name="name"/>
+                            <field name="phone"/>
+                            <field name="email"/>
+                        </group>
+                        <group string="Card Details">
+                            <field name="total_points"/>
+                            <field name="points_value"/>
+                            <field name="barcode" readonly="1"/>
+                            <field name="registration_date" readonly="1"/>
+                            <field name="partner_id"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <!-- 
+                            =========================================================================
+                            POINTS HISTORY TAB - Shows both EARNED and REDEEMED transactions
+                            =========================================================================
+                        -->
+                        <page string="Points History" name="history">
+                            <field name="history_ids" readonly="1" nolabel="1">
+                                <list string="Points History" default_order="create_date desc" editable="bottom">
+                                    <field name="create_date" string="Date"/>
+                                    <field name="type" widget="badge" 
+                                           decoration-success="type == 'earned'" 
+                                           decoration-danger="type == 'redeemed'"
+                                           decoration-warning="type == 'returned'"
+                                           decoration-info="type == 'redeem_returned'"/>
+                                    <field name="points" string="Points" 
+                                           decoration-success="type == 'earned'"
+                                           decoration-danger="type == 'redeemed'"
+                                           decoration-warning="type == 'returned'"
+                                           decoration-info="type == 'redeem_returned'"/>
+                                    <field name="description"/>
+                                    <field name="order_id" column_invisible="1"/>
+                                    <button name="action_open_order" type="object" string="View Order"
+                                            icon="fa-external-link" class="btn-link" invisible="not order_id"/>
+                                    <field name="amount" string="Order Amount" optional="show"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_loyalty_card_list" model="ir.ui.view">
+        <field name="name">pos.loyalty.card.list</field>
+        <field name="model">pos.loyalty.card</field>
+        <field name="arch" type="xml">
+            <list>
+                <header>
+                    <button name="action_open_delete_wizard" string="Delete Selected" type="object" class="btn-danger"/>
+                </header>
+                <field name="card_number"/>
+                <field name="name"/>
+                <field name="phone"/>
+                <field name="total_points"/>
+                <field name="points_value"/>
+                <field name="registration_date" optional="show"/>
+                <field name="state" widget="badge" decoration-success="state == 'active'" decoration-warning="state == 'suspended'" decoration-info="state == 'draft'"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Search View -->
+    <record id="view_loyalty_card_search" model="ir.ui.view">
+        <field name="name">pos.loyalty.card.search</field>
+        <field name="model">pos.loyalty.card</field>
+        <field name="arch" type="xml">
+            <search string="Search Loyalty Cards">
+                <!-- Global search field - searches card_number, name, phone -->
+                <field name="card_number" string="Card/Name/Phone" 
+                       filter_domain="['|', '|', ('card_number', 'ilike', self), ('name', 'ilike', self), ('phone', 'ilike', self)]"/>
+                <field name="name" string="Customer Name"/>
+                <field name="phone" string="Mobile Number"/>
+                <field name="email"/>
+                <field name="barcode"/>
+                <separator/>
+                <filter name="active_cards" string="Active" domain="[('state', '=', 'active')]"/>
+                <filter name="draft_cards" string="Draft" domain="[('state', '=', 'draft')]"/>
+                <filter name="suspended_cards" string="Suspended" domain="[('state', '=', 'suspended')]"/>
+                <separator/>
+                <filter name="group_state" string="Status" context="{'group_by': 'state'}"/>
+                <filter name="group_date" string="Registration Date" context="{'group_by': 'registration_date:month'}"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_loyalty_card" model="ir.actions.act_window">
+        <field name="name">Loyalty Cards</field>
+        <field name="res_model">pos.loyalty.card</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('is_deleted', '=', False)]</field>
+        <field name="context">{'search_default_active_cards': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Register a new loyalty card customer
+            </p>
+            <p>
+                Create loyalty cards for customers to earn and redeem points on their purchases.
+            </p>
+        </field>
+    </record>
+</odoo>

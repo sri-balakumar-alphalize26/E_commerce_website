@@ -1,0 +1,366 @@
+/* =============================================
+   Loyalty Card Redemption System - Styles
+   Odoo 19 POS Module
+   ============================================= */
+
+/* ============================================
+   Button Styles
+   ============================================ */
+.loyalty-redeem-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    color: white !important;
+    border: none !important;
+    margin-top: 8px;
+    transition: all 0.3s ease;
+}
+
+.loyalty-redeem-btn:hover {
+    background: linear-gradient(135deg, #764ba2 0%, #667eea 100%) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.loyalty-redeem-btn:active {
+    transform: translateY(0);
+}
+
+.loyalty-customer-badge {
+    transition: all 0.2s ease;
+}
+
+.loyalty-customer-badge:hover {
+    background-color: rgba(25, 135, 84, 0.1) !important;
+}
+
+/* ============================================
+   Popup Common Styles
+   ============================================ */
+.loyalty-identify-popup,
+.loyalty-redeem-confirm-popup,
+.loyalty-redeem-details-popup,
+.loyalty-redeem-summary-popup,
+.loyalty-redeem-popup {
+    min-height: 200px;
+}
+
+/* Icon Circle */
+.loyalty-icon-circle {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Avatar */
+.loyalty-avatar {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+}
+
+/* Card Found Animation */
+.loyalty-card-found {
+    animation: cardFoundSlide 0.4s ease-out;
+}
+
+@keyframes cardFoundSlide {
+    0% {
+        transform: translateY(-10px);
+        opacity: 0;
+    }
+    100% {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Success Icon Animation */
+.loyalty-success-icon {
+    animation: successPulse 0.6s ease-out;
+}
+
+@keyframes successPulse {
+    0% {
+        transform: scale(0.5);
+        opacity: 0;
+    }
+    50% {
+        transform: scale(1.2);
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* ============================================
+   Form Controls Enhancement
+   ============================================ */
+.loyalty-identify-popup .form-control-lg,
+.loyalty-redeem-confirm-popup .form-control-lg,
+.loyalty-redeem-details-popup .form-control-lg {
+    font-size: 1.15rem;
+    padding: 12px 16px;
+    border-radius: 8px;
+}
+
+.loyalty-identify-popup .btn-lg,
+.loyalty-redeem-confirm-popup .btn-lg,
+.loyalty-redeem-details-popup .btn-lg,
+.loyalty-redeem-summary-popup .btn-lg {
+    padding: 14px 24px;
+    font-size: 1.1rem;
+    font-weight: 500;
+    border-radius: 8px;
+}
+
+/* Input group styling */
+.loyalty-identify-popup .input-group-text,
+.loyalty-redeem-confirm-popup .input-group-text,
+.loyalty-redeem-details-popup .input-group-text {
+    border-radius: 8px 0 0 8px;
+}
+
+.loyalty-identify-popup .input-group .form-control,
+.loyalty-redeem-confirm-popup .input-group .form-control,
+.loyalty-redeem-details-popup .input-group .form-control {
+    border-radius: 0;
+}
+
+.loyalty-identify-popup .input-group .btn,
+.loyalty-redeem-confirm-popup .input-group .btn,
+.loyalty-redeem-details-popup .input-group .btn {
+    border-radius: 0 8px 8px 0;
+}
+
+/* ============================================
+   Card Styles
+   ============================================ */
+.loyalty-identify-popup .card,
+.loyalty-redeem-confirm-popup .card,
+.loyalty-redeem-details-popup .card,
+.loyalty-redeem-summary-popup .card {
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+}
+
+.loyalty-identify-popup .card-header,
+.loyalty-redeem-confirm-popup .card-header,
+.loyalty-redeem-details-popup .card-header,
+.loyalty-redeem-summary-popup .card-header {
+    font-weight: 600;
+}
+
+/* ============================================
+   Amount Display (Payment Screen)
+   ============================================ */
+.loyalty-amount-breakdown {
+    padding: 15px 0;
+    border-bottom: 2px dashed #dee2e6;
+    margin-bottom: 15px;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.loyalty-amount-breakdown .text-danger {
+    font-weight: 600;
+}
+
+/* ============================================
+   Summary Stats
+   ============================================ */
+.redemption-stat {
+    padding: 10px;
+    border-radius: 8px;
+    background: #f8f9fa;
+}
+
+.redemption-stat h5 {
+    font-weight: 700;
+}
+
+/* ============================================
+   Custom Color Classes
+   ============================================ */
+.bg-purple-subtle {
+    background-color: rgba(102, 126, 234, 0.15) !important;
+}
+
+.text-purple {
+    color: #667eea !important;
+}
+
+.bg-success-subtle {
+    background-color: rgba(25, 135, 84, 0.1) !important;
+}
+
+.bg-warning-subtle {
+    background-color: rgba(255, 193, 7, 0.15) !important;
+}
+
+.bg-primary-subtle {
+    background-color: rgba(13, 110, 253, 0.1) !important;
+}
+
+/* ============================================
+   Responsive Adjustments
+   ============================================ */
+@media (max-width: 576px) {
+    .loyalty-icon-circle {
+        width: 60px;
+        height: 60px;
+    }
+    
+    .loyalty-icon-circle i {
+        font-size: 1.5rem !important;
+    }
+    
+    .loyalty-identify-popup .btn-lg,
+    .loyalty-redeem-confirm-popup .btn-lg,
+    .loyalty-redeem-details-popup .btn-lg,
+    .loyalty-redeem-summary-popup .btn-lg {
+        padding: 12px 16px;
+        font-size: 1rem;
+    }
+    
+    .loyalty-redeem-details-popup .display-4 {
+        font-size: 2rem;
+    }
+}
+
+/* ============================================
+   Verification Checkbox
+   ============================================ */
+.loyalty-redeem-details-popup .form-check-input:checked {
+    background-color: #ffc107;
+    border-color: #ffc107;
+}
+
+.loyalty-redeem-details-popup .form-check-input:focus {
+    box-shadow: 0 0 0 0.25rem rgba(255, 193, 7, 0.25);
+}
+
+/* ============================================
+   Loading States
+   ============================================ */
+.fa-spinner {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Disabled button state */
+.btn:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+/* ============================================
+   Alert Enhancements
+   ============================================ */
+.loyalty-identify-popup .alert,
+.loyalty-redeem-confirm-popup .alert,
+.loyalty-redeem-details-popup .alert,
+.loyalty-redeem-summary-popup .alert {
+    border-radius: 10px;
+    border: none;
+}
+
+.alert-success {
+    background-color: rgba(25, 135, 84, 0.1);
+    color: #0f5132;
+}
+
+.alert-warning {
+    background-color: rgba(255, 193, 7, 0.15);
+    color: #664d03;
+}
+
+.alert-danger {
+    background-color: rgba(220, 53, 69, 0.1);
+    color: #842029;
+}
+
+.alert-info {
+    background-color: rgba(13, 202, 240, 0.1);
+    color: #055160;
+}
+
+/* ============================================
+   Points Input Styling
+   ============================================ */
+.loyalty-redeem-details-popup input[type="number"] {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.loyalty-redeem-details-popup input[type="number"]::-webkit-inner-spin-button,
+.loyalty-redeem-details-popup input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.loyalty-redeem-details-popup input[type="number"] {
+    -moz-appearance: textfield;
+}
+
+/* ============================================
+   Transition Effects
+   ============================================ */
+.loyalty-identify-popup *,
+.loyalty-redeem-confirm-popup *,
+.loyalty-redeem-details-popup *,
+.loyalty-redeem-summary-popup * {
+    transition: background-color 0.2s ease, 
+                border-color 0.2s ease,
+                box-shadow 0.2s ease;
+}
+
+/* Focus states */
+.form-control:focus,
+.form-check-input:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.25);
+}
+
+/* ============================================
+   Display Typography
+   ============================================ */
+.display-4 {
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+/* ============================================
+   Badge Enhancements
+   ============================================ */
+.badge {
+    font-weight: 500;
+    letter-spacing: 0.02em;
+}
+
+.fs-6 {
+    font-size: 1rem !important;
+}

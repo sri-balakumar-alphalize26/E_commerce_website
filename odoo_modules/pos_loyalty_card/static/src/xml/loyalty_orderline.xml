@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <!--
+        Override the Orderline template to hide the "LOYALTY_DISCOUNT" marker.
+        We replace the customer_note <li> with a version that checks:
+        only show customer_note if it's NOT "LOYALTY_DISCOUNT".
+    -->
+    <t t-inherit="point_of_sale.Orderline" t-inherit-mode="extension">
+        <!-- Replace the customer_note li: add condition to hide LOYALTY_DISCOUNT -->
+        <xpath expr="//li[hasclass('customer-note')]" position="attributes">
+            <attribute name="t-if">line.customer_note and line.customer_note !== 'LOYALTY_DISCOUNT'</attribute>
+        </xpath>
+    </t>
+
+    <!--
+        Override the OrderReceipt template to hide "LOYALTY_DISCOUNT" marker
+        from the receipt's customer note slot content as well.
+    -->
+    <t t-inherit="point_of_sale.OrderReceipt" t-inherit-mode="extension">
+        <xpath expr="//li[hasclass('customer-note')]" position="attributes">
+            <attribute name="t-if">line.customerNote and line.customerNote !== 'LOYALTY_DISCOUNT'</attribute>
+        </xpath>
+    </t>
+</templates>

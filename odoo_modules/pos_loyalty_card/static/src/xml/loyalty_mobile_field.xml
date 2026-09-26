@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="pos_loyalty_card.LoyaltyMobileField">
+        <div class="o_field_loyalty_mobile">
+            <t t-if="isReadonly">
+                <span>+<t t-esc="cfg.dial"/> <t t-esc="localValue"/></span>
+            </t>
+            <t t-else="">
+                <div class="input-group" style="max-width: 260px;">
+                    <span class="input-group-text" title="Country code (change it in Loyalty Settings)">+<t t-esc="cfg.dial"/></span>
+                    <input type="tel" inputmode="numeric" class="form-control"
+                           t-att-value="localValue"
+                           t-att-maxlength="cfg.length"
+                           t-att-placeholder="placeholder"
+                           t-on-input="onInput"/>
+                </div>
+            </t>
+        </div>
+    </t>
+
+</templates>

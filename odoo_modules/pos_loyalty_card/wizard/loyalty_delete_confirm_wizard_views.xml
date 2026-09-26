@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Delete Confirmation Wizard Form -->
+    <record id="view_loyalty_delete_confirm_wizard_form" model="ir.ui.view">
+        <field name="name">loyalty.delete.confirm.wizard.form</field>
+        <field name="model">loyalty.delete.confirm.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Confirm Delete">
+                <field name="source_model" invisible="1"/>
+                <field name="loyalty_card_ids" invisible="1"/>
+                <field name="partner_ids" invisible="1"/>
+                <field name="linked_loyalty_ids" invisible="1"/>
+                <field name="linked_partner_ids" invisible="1"/>
+                <group>
+                    <field name="warning_message" nolabel="1" colspan="2" readonly="1"/>
+                </group>
+                <footer>
+                    <button name="action_confirm_delete" string="Confirm Delete" type="object" class="btn-danger"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+</odoo>

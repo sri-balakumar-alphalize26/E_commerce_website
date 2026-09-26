@@ -1,0 +1,297 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Seed one active settings record -->
+    <data noupdate="1">
+        <record id="default_card_settings" model="pos.loyalty.card.settings">
+            <field name="name">Default</field>
+            <field name="is_active" eval="True"/>
+        </record>
+    </data>
+
+    <!-- List view: create many, one active -->
+    <record id="view_loyalty_card_settings_list" model="ir.ui.view">
+        <field name="name">pos.loyalty.card.settings.list</field>
+        <field name="model">pos.loyalty.card.settings</field>
+        <field name="arch" type="xml">
+            <list string="Loyalty Settings">
+                <field name="is_active" widget="loyalty_active_toggle" string="Active"/>
+                <field name="name"/>
+                <field name="country_id"/>
+                <field name="country_dial_code" string="Dial (+)"/>
+                <field name="mobile_number_length" string="Mobile digits"/>
+                <field name="card_width" string="W (mm)"/>
+                <field name="card_height" string="H (mm)"/>
+                <field name="font_family" string="Font"/>
+                <field name="background_color" widget="color" string="BG"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Settings form -->
+    <record id="view_loyalty_card_settings_form" model="ir.ui.view">
+        <field name="name">pos.loyalty.card.settings.form</field>
+        <field name="model">pos.loyalty.card.settings</field>
+        <field name="arch" type="xml">
+            <form string="Loyalty Settings">
+                <header>
+                    <button name="action_activate" type="object" string="Set as Active"
+                            class="btn-primary" invisible="is_active"
+                            confirm="Switch the active Loyalty Settings to this one? The currently active settings will be turned off."/>
+                    <button name="action_reset_defaults" type="object" string="Reset to Default"
+                            class="btn-secondary"
+                            confirm="Reset card size, fonts and colors to the default (visiting-card) values?"/>
+                    <field name="is_active" widget="boolean_toggle" string="Active" readonly="1"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <label for="name"/>
+                        <h1><field name="name" placeholder="e.g. Diwali Card"/></h1>
+                    </div>
+                    <group>
+                        <group string="Loyalty System">
+                            <field name="enable_loyalty" widget="boolean_toggle"/>
+                            <field name="email_card_enabled" widget="boolean_toggle"
+                                   invisible="not enable_loyalty"/>
+                        </group>
+                    </group>
+                    <separator string="Loyalty per Shop (turn on/off for each POS)" invisible="not enable_loyalty"/>
+                    <field name="pos_config_ids" invisible="not enable_loyalty">
+                        <list editable="bottom" create="0" delete="0">
+                            <field name="name" readonly="1"/>
+                            <field name="enable_loyalty_cards" widget="boolean_toggle" string="Loyalty ON"/>
+                        </list>
+                    </field>
+                    <group>
+                        <group string="Mobile Number (all loyalty)">
+                            <field name="country_id" options="{'no_create': True, 'no_open': True}"/>
+                            <field name="country_dial_code" string="Dial Code (+)" readonly="1"/>
+                            <field name="mobile_number_length"/>
+                        </group>
+                        <group string="Card Number Format">
+                            <field name="card_prefix"/>
+                            <field name="card_use_mobile" widget="boolean_toggle"/>
+                            <field name="card_mobile_digits" invisible="not card_use_mobile"/>
+                            <field name="card_counter_padding"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group string="Card Size (Print)">
+                            <field name="card_width"/>
+                            <field name="card_height"/>
+                            <field name="font_family"/>
+                        </group>
+                        <group string="Colors">
+                            <field name="background_color" widget="color"/>
+                            <field name="text_color" widget="color"/>
+                            <field name="title_color" widget="color"/>
+                            <field name="name_color" widget="color"/>
+                            <field name="company_color" widget="color"/>
+                            <field name="status_color" widget="color"/>
+                            <field name="since_color" widget="color"/>
+                            <field name="points_color" widget="color"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group string="Font Sizes (mm)">
+                            <field name="title_font_size"/>
+                            <field name="number_font_size"/>
+                            <field name="name_font_size"/>
+                            <field name="company_font_size"/>
+                            <field name="status_font_size"/>
+                            <field name="since_font_size"/>
+                            <field name="points_font_size"/>
+                        </group>
+                        <group string="Preview">
+                            <widget name="loyalty_card_preview"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group string="Card Image / WhatsApp">
+                            <field name="card_company_name" placeholder="e.g. GROCERY SHOP"/>
+                            <field name="card_image_retention_months"/>
+                        </group>
+                    </group>
+                    <widget name="loyalty_card_number_preview"/>
+                    <div class="alert alert-info mt-3" role="alert">
+                        <h5 class="fw-bold mb-2"><i class="fa fa-book me-1"/> Field Guide — what each setting does</h5>
+                        <div class="row">
+                            <div class="col-lg-6">
+                                <b>Mobile Number (all loyalty)</b>
+                                <ul class="ps-3">
+                                    <li><b>Country</b> — sets the dial code and the expected mobile length used everywhere in loyalty.</li>
+                                    <li><b>Dial Code (+)</b> — filled automatically from the country (read-only here).</li>
+                                    <li><b>Mobile Number Length</b> — how many digits a local mobile number must have.</li>
+                                </ul>
+                                <b>Card Number Format</b>
+                                <ul class="ps-3">
+                                    <li><b>Card Prefix</b> — the leading letters of the number (e.g. LC). Editable.</li>
+                                    <li><b>Include Mobile Digits</b> — toggle ON to add part of the mobile into the number; OFF to skip it.</li>
+                                    <li><b>Mobile Digits Used</b> — how many digits from the end of the mobile to insert.</li>
+                                    <li><b>Counter Digits</b> — length of the running number (6 → 000001).</li>
+                                </ul>
+                            </div>
+                            <div class="col-lg-6">
+                                <b>Card Size (Print)</b>
+                                <ul class="ps-3">
+                                    <li><b>Card Width / Height (mm)</b> — printed card dimensions (auto-clamped to a safe range; 86 x 54 = ATM/visiting card).</li>
+                                    <li><b>Font Style</b> — the font family used on the printed card.</li>
+                                </ul>
+                                <b>Colors</b>
+                                <ul class="ps-3">
+                                    <li><b>Background</b> — the card background color.</li>
+                                    <li><b>Text / Number</b> — main text and card-number color.</li>
+                                    <li><b>Title</b> — color of the "LOYALTY CARD" title.</li>
+                                    <li><b>Customer Name</b> — color of the customer name.</li>
+                                </ul>
+                                <b>Font Sizes &amp; Card Fields (mm)</b>
+                                <ul class="ps-3">
+                                    <li>All text sizes are in <b>mm</b> (same scale as the card size).</li>
+                                    <li>Company, Status, Since and Points have their own <b>Colour</b> (in Colors) and <b>Size</b> (in Font Sizes).</li>
+                                    <li>Each size is <b>capped from the card height</b> (a bigger card allows bigger text), so text never overflows the card.</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="text-muted small mt-1">
+                            Only the <b>Active</b> record is used everywhere in loyalty; turning one on turns the others off.
+                        </div>
+                    </div>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Menu opens the list (create many, toggle the active one).
+         res_id / view_id explicitly cleared: earlier versions pinned this action
+         to a single record's form, and Odoo does not auto-clear omitted fields. -->
+    <record id="action_loyalty_card_settings" model="ir.actions.act_window">
+        <field name="name">Loyalty Settings</field>
+        <field name="res_model">pos.loyalty.card.settings</field>
+        <field name="view_mode">list,form</field>
+        <field name="res_id" eval="False"/>
+        <field name="view_id" eval="False"/>
+        <field name="target">current</field>
+    </record>
+
+    <menuitem id="menu_loyalty_card_settings"
+              name="Loyalty Settings"
+              parent="menu_sec_loyalty"
+              action="action_loyalty_card_settings"
+              sequence="40"/>
+
+    <!-- ============================================================
+         EMAIL SETTINGS: own screen under Loyalty, gated on master switch
+         ============================================================ -->
+    <record id="view_loyalty_email_settings_form" model="ir.ui.view">
+        <field name="name">pos.loyalty.card.settings.email.form</field>
+        <field name="model">pos.loyalty.card.settings</field>
+        <field name="priority">99</field>
+        <field name="arch" type="xml">
+            <form string="Email Settings" create="false" duplicate="false">
+                <sheet>
+                    <div class="oe_title">
+                        <h1>Email Settings</h1>
+                    </div>
+                    <div class="alert alert-danger" role="alert" invisible="enable_loyalty">
+                        <strong>Please enable "Enable Loyalty (master)" first.</strong>
+                        <div style="margin-top:6px;">
+                            Turn it on here, or in <b>Loyalty &#8594; Loyalty Settings</b>.
+                        </div>
+                        <div style="margin-top:8px;">
+                            <field name="enable_loyalty" widget="boolean_toggle"/>
+                            <span style="margin-left:6px;">Enable Loyalty (master)</span>
+                        </div>
+                    </div>
+                    <group string="Email Sending (the account cards are sent FROM)"
+                           invisible="not enable_loyalty">
+                        <div colspan="2" class="text-muted" style="margin-bottom:6px;">
+                            Set the email account your shop sends loyalty cards from. For Gmail /
+                            Google Workspace, use an App Password (Google Account &#8594; Security
+                            &#8594; App passwords), not your normal login password.
+                        </div>
+                        <field name="mail_from_name" placeholder="MyShop Loyalty"/>
+                        <field name="mail_from_email" placeholder="you@example.com"/>
+                        <field name="mail_smtp_host"/>
+                        <field name="mail_smtp_port"/>
+                        <field name="mail_smtp_encryption"/>
+                        <field name="mail_smtp_user" placeholder="usually same as From Email"/>
+                        <field name="mail_smtp_pass" widget="password" password="True"/>
+                        <field name="mail_configured" widget="boolean_toggle" readonly="1"/>
+                        <div colspan="2" style="margin-top:8px;">
+                            <button name="action_save_email_settings" type="object"
+                                    string="Save Email Settings" class="btn-primary"/>
+                            <button name="action_send_test_email" type="object"
+                                    string="Send Test Email" class="btn-secondary"
+                                    style="margin-left:8px;"/>
+                        </div>
+                        <separator string="Welcome message for new customers (WhatsApp + Email)" colspan="2"/>
+                        <field name="whatsapp_send_card_pdf" widget="boolean_toggle"/>
+                        <field name="welcome_mode" widget="radio" colspan="2"/>
+                        <field name="welcome_header" colspan="2" invisible="welcome_mode != 'simple'"/>
+                        <field name="welcome_show_greeting" widget="boolean_toggle" invisible="welcome_mode != 'simple'"/>
+                        <field name="welcome_show_intro" widget="boolean_toggle" invisible="welcome_mode != 'simple'"/>
+                        <field name="welcome_intro" colspan="2" invisible="welcome_mode != 'simple' or not welcome_show_intro"/>
+                        <field name="welcome_show_card" widget="boolean_toggle" invisible="welcome_mode != 'simple'"/>
+                        <field name="welcome_show_mobile" widget="boolean_toggle" invisible="welcome_mode != 'simple'"/>
+                        <field name="welcome_show_points" widget="boolean_toggle" invisible="welcome_mode != 'simple'"/>
+                        <field name="welcome_show_instructions" widget="boolean_toggle" invisible="welcome_mode != 'simple'"/>
+                        <field name="welcome_instructions" colspan="2" invisible="welcome_mode != 'simple' or not welcome_show_instructions"/>
+                        <field name="welcome_footer" colspan="2" invisible="welcome_mode != 'simple'"/>
+                        <div colspan="2" class="text-muted" invisible="welcome_mode != 'advanced'">
+                            Placeholders: {name}, {card_number}, {phone}, {points}. Use *stars* for bold.
+                        </div>
+                        <field name="welcome_message" nolabel="1" colspan="2" invisible="welcome_mode != 'advanced'"/>
+                        <div colspan="2" style="margin-top:6px;">
+                            <button name="action_reset_welcome_default" type="object"
+                                    string="Reset Message to Default" class="btn-secondary"
+                                    confirm="Reset the welcome message back to the default text?"/>
+                        </div>
+                        <separator string="Live Preview" colspan="2"/>
+                        <field name="welcome_preview" nolabel="1" colspan="2" readonly="1"
+                               style="white-space: pre-wrap; background:#f6f6f6; padding:12px; border-radius:8px;"/>
+                    </group>
+                    <div class="alert alert-warning" role="alert" style="margin-top:12px;">
+                        <strong>📧 How to get your Gmail Username &amp; Password (App Password)</strong>
+                        <div style="margin-top:6px;">
+                            Gmail does <b>not</b> accept your normal login password here. You must create a
+                            16-digit <b>App Password</b>. Do this once:
+                        </div>
+                        <ol style="margin-top:6px; margin-bottom:6px; padding-left:20px;">
+                            <li>
+                                <b>Turn on 2-Step Verification</b> for your Google account (required before
+                                app passwords are available):<br/>
+                                <a href="https://myaccount.google.com/signinoptions/twosv" target="_blank"
+                                   rel="noopener noreferrer">https://myaccount.google.com/signinoptions/twosv</a>
+                            </li>
+                            <li style="margin-top:4px;">
+                                <b>Create an App Password</b> — type any app name (e.g. "Odoo Loyalty") and
+                                Google generates a <b>16-character code</b>:<br/>
+                                <a href="https://myaccount.google.com/apppasswords" target="_blank"
+                                   rel="noopener noreferrer">https://myaccount.google.com/apppasswords</a>
+                            </li>
+                        </ol>
+                        <div>
+                            <b>Username</b> = your full Gmail address (same as the <i>From Email</i> above).<br/>
+                            <b>Password</b> = paste the 16-digit App Password into the
+                            <i>Password / App Password</i> field above (spaces are optional).
+                        </div>
+                    </div>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_loyalty_email_settings_server" model="ir.actions.server">
+        <field name="name">Email Settings</field>
+        <field name="model_id" ref="model_pos_loyalty_card_settings"/>
+        <field name="state">code</field>
+        <field name="code">action = model.action_open_email_settings()</field>
+    </record>
+
+    <menuitem id="menu_loyalty_email_settings"
+              name="Email Settings"
+              parent="menu_sec_email"
+              action="action_loyalty_email_settings_server"
+              sequence="10"/>
+
+</odoo>

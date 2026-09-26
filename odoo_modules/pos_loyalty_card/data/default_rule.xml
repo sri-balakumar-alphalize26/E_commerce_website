@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <record id="default_loyalty_rule" model="pos.loyalty.rule">
+            <field name="name">Default Rule</field>
+            <field name="active">True</field>
+            <field name="is_active" eval="True"/>
+            <field name="spend_amount">100</field>
+            <field name="points_earned">10</field>
+            <field name="min_redeem_points">100</field>
+            <field name="points_per_currency">10</field>
+            <field name="max_redeem_percent">100</field>
+        </record>
+    </data>
+</odoo>

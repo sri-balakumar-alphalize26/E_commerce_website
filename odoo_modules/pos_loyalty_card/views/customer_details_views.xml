@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- =========================================================================
+         DELETED CUSTOMERS - Popup Views (defined first)
+         ========================================================================= -->
+
+    <!-- Deleted Customers List View (shown in popup) -->
+    <record id="view_deleted_customer_details_list" model="ir.ui.view">
+        <field name="name">res.partner.deleted.customer.list</field>
+        <field name="model">res.partner</field>
+        <field name="priority">100</field>
+        <field name="arch" type="xml">
+            <list string="Deleted Customers" create="false" edit="false" default_order="customer_deleted_date desc">
+                <header>
+                    <button name="action_restore_customer" string="Restore Selected" type="object" class="btn-success"/>
+                    <button name="action_permanent_delete_customer" string="Delete Permanently" type="object" class="btn-danger" confirm="Are you sure you want to PERMANENTLY delete the selected customers? This action cannot be undone! Their POS orders will be unlinked (not deleted)."/>
+                </header>
+                <field name="id" string="Customer ID" readonly="1"/>
+                <field name="name" string="Customer Name"/>
+                <field name="phone" string="Mobile Number"/>
+                <field name="email" string="Email" optional="show"/>
+                <field name="city" optional="hide"/>
+                <field name="create_date" string="Registered On" widget="date" optional="show"/>
+                <field name="customer_deleted_date" string="Deleted On"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Deleted Customers Form View -->
+    <record id="view_deleted_customer_details_form" model="ir.ui.view">
+        <field name="name">res.partner.deleted.customer.form</field>
+        <field name="model">res.partner</field>
+        <field name="priority">100</field>
+        <field name="arch" type="xml">
+            <form string="Deleted Customer" create="false" edit="false">
+                <header>
+                    <button name="action_restore_customer" string="Restore Customer" type="object" class="btn-success"/>
+                    <button name="action_permanent_delete_customer" string="Delete Permanently" type="object" class="btn-danger" confirm="Are you sure you want to PERMANENTLY delete this customer? This action cannot be undone!"/>
+                </header>
+                <sheet>
+                    <div class="alert alert-warning" role="alert">
+                        <strong>This customer has been deleted.</strong> You can restore them or permanently delete them.
+                    </div>
+                    <div class="oe_title">
+                        <h1><field name="name" readonly="1"/></h1>
+                    </div>
+                    <group>
+                        <group string="Contact Information">
+                            <field name="phone" string="Mobile Number" readonly="1"/>
+                            <field name="email" readonly="1"/>
+                        </group>
+                        <group string="Details">
+                            <field name="id" string="Customer ID" readonly="1"/>
+                            <field name="city" readonly="1"/>
+                            <field name="create_date" string="Registered On" readonly="1"/>
+                            <field name="customer_deleted_date" string="Deleted On" readonly="1"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Loyalty Cards" name="loyalty_cards">
+                            <field name="loyalty_card_ids" readonly="1" nolabel="1">
+                                <list string="Loyalty Cards">
+                                    <field name="card_number"/>
+                                    <field name="total_points"/>
+                                    <field name="points_value"/>
+                                    <field name="registration_date" widget="date"/>
+                                    <field name="state" widget="badge"
+                                           decoration-success="state == 'active'"
+                                           decoration-warning="state == 'suspended'"
+                                           decoration-info="state == 'draft'"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="POS Orders" name="pos_orders">
+                            <field name="pos_order_ids" readonly="1" nolabel="1">
+                                <list string="POS Orders" default_order="date_order desc">
+                                    <field name="name" string="Order Ref"/>
+                                    <field name="date_order" string="Date"/>
+                                    <field name="amount_total" string="Total" widget="monetary"/>
+                                    <field name="state" widget="badge"
+                                           decoration-success="state == 'done' or state == 'paid'"
+                                           decoration-info="state == 'draft'"
+                                           decoration-warning="state == 'invoiced'"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Deleted Customers Search View -->
+    <record id="view_deleted_customer_details_search" model="ir.ui.view">
+        <field name="name">res.partner.deleted.customer.search</field>
+        <field name="model">res.partner</field>
+        <field name="priority">100</field>
+        <field name="arch" type="xml">
+            <search string="Search Deleted Customers">
+                <field name="name" string="Name/Phone/Email"
+                       filter_domain="['|', '|', ('name', 'ilike', self), ('phone', 'ilike', self), ('email', 'ilike', self)]"/>
+                <field name="phone" string="Mobile Number"/>
+                <field name="email" string="Email"/>
+            </search>
+        </field>
+    </record>
+
+    <!-- =========================================================================
+         MAIN CUSTOMER DETAILS VIEWS
+         ========================================================================= -->
+
+    <!-- Customer Details - List View -->
+    <record id="view_customer_details_list" model="ir.ui.view">
+        <field name="name">res.partner.customer.details.list</field>
+        <field name="model">res.partner</field>
+        <field name="priority">99</field>
+        <field name="arch" type="xml">
+            <list string="Customer Details" default_order="create_date desc">
+                <header>
+                    <button name="action_open_delete_wizard" string="Delete Selected" type="object" class="btn-danger"/>
+                </header>
+                <field name="id" string="Customer ID" readonly="1"/>
+                <field name="name" string="Customer Name"/>
+                <field name="phone" string="Mobile Number"/>
+                <field name="email" string="Email" optional="show"/>
+                <field name="city" optional="hide"/>
+                <field name="create_date" string="Registered On" widget="date" optional="show"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Customer Details - Form View -->
+    <record id="view_customer_details_form" model="ir.ui.view">
+        <field name="name">res.partner.customer.details.form</field>
+        <field name="model">res.partner</field>
+        <field name="priority">99</field>
+        <field name="arch" type="xml">
+            <form string="Customer Details">
+                <header>
+                    <button name="action_generate_loyalty_card" string="Generate Loyalty Card" type="object" class="btn-primary"/>
+                    <button name="action_open_delete_wizard" string="Delete Customer" type="object" class="btn-danger"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button class="oe_stat_button" type="object"
+                                name="action_view_pos_orders"
+                                icon="fa-shopping-cart">
+                            <field name="pos_order_count" widget="statinfo" string="POS Orders"/>
+                        </button>
+                    </div>
+                    <div class="oe_title">
+                        <h1><field name="name" placeholder="Customer Name"/></h1>
+                    </div>
+                    <group>
+                        <group string="Contact Information">
+                            <field name="phone" string="Mobile Number" widget="loyalty_mobile"/>
+                            <field name="email"/>
+                        </group>
+                        <group string="Details">
+                            <field name="id" string="Customer ID" readonly="1"/>
+                            <field name="street" string="Address"/>
+                            <field name="city"/>
+                            <field name="state_id" string="State"/>
+                            <field name="country_id"/>
+                            <field name="create_date" string="Registered On" readonly="1"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Loyalty Cards" name="loyalty_cards">
+                            <field name="loyalty_card_ids" readonly="1" nolabel="1">
+                                <list string="Loyalty Cards">
+                                    <field name="card_number"/>
+                                    <field name="total_points"/>
+                                    <field name="points_value"/>
+                                    <field name="registration_date" widget="date"/>
+                                    <field name="state" widget="badge"
+                                           decoration-success="state == 'active'"
+                                           decoration-warning="state == 'suspended'"
+                                           decoration-info="state == 'draft'"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="POS Orders" name="pos_orders">
+                            <field name="pos_order_ids" readonly="1" nolabel="1">
+                                <list string="POS Orders" default_order="date_order desc">
+                                    <field name="name" string="Order Ref"/>
+                                    <field name="date_order" string="Date"/>
+                                    <field name="amount_total" string="Total" widget="monetary"/>
+                                    <field name="state" widget="badge"
+                                           decoration-success="state == 'done' or state == 'paid'"
+                                           decoration-info="state == 'draft'"
+                                           decoration-warning="state == 'invoiced'"/>
+                                    <field name="session_id" string="Session" optional="hide"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Customer Details - Search View -->
+    <record id="view_customer_details_search" model="ir.ui.view">
+        <field name="name">res.partner.customer.details.search</field>
+        <field name="model">res.partner</field>
+        <field name="priority">99</field>
+        <field name="arch" type="xml">
+            <search string="Search Customers">
+                <field name="name" string="Name"/>
+                <field name="phone" string="Mobile Number"/>
+                <field name="email" string="Email"/>
+                <separator/>
+                <filter name="has_phone" string="With Mobile" domain="[('phone', '!=', False)]"/>
+                <filter name="has_email" string="With Email" domain="[('email', '!=', False)]"/>
+                <filter name="not_deleted" string="Not Deleted" domain="[('is_customer_deleted', '=', False)]"/>
+                <separator/>
+                <filter name="group_city" string="City" context="{'group_by': 'city'}"/>
+                <filter name="group_date" string="Registration Date" context="{'group_by': 'create_date:month'}"/>
+            </search>
+        </field>
+    </record>
+
+    <!-- Customer Details - Action
+         IMPORTANT: Domain uses ONLY standard res.partner fields to avoid
+         registry crash if column doesn't exist yet during first install.
+         The is_customer_deleted filter is applied via search_default context. -->
+    <record id="action_customer_details" model="ir.actions.act_window">
+        <field name="name">Customer Details</field>
+        <field name="res_model">res.partner</field>
+        <field name="view_mode">list,form</field>
+        <field name="view_ids" eval="[(5, 0, 0),
+            (0, 0, {'view_mode': 'list', 'view_id': ref('view_customer_details_list')}),
+            (0, 0, {'view_mode': 'form', 'view_id': ref('view_customer_details_form')})]"/>
+        <field name="search_view_id" ref="view_customer_details_search"/>
+        <field name="domain">[('phone', '!=', False), ('is_company', '=', False), ('is_customer_deleted', '=', False)]</field>
+        <field name="context">{'search_default_has_phone': 1, 'customer_details_view': True}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No customers found
+            </p>
+            <p>
+                Customers are created from the POS when entering their mobile number during checkout.
+                You can also create customers manually here.
+            </p>
+        </field>
+    </record>
+
+</odoo>

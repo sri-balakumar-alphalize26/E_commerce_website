@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- =========================================================================
+         POS CUSTOMERS - List View
+         ========================================================================= -->
+
+    <record id="view_pos_customer_list" model="ir.ui.view">
+        <field name="name">res.partner.pos.customer.list</field>
+        <field name="model">res.partner</field>
+        <field name="priority">50</field>
+        <field name="arch" type="xml">
+            <list string="POS Customers" editable="bottom">
+                <field name="name" string="Customer Name"/>
+                <field name="phone" string="Mobile Number"/>
+                <field name="email" optional="show"/>
+                <field name="loyalty_card_count" string="Loyalty Cards" optional="show"/>
+                <field name="create_date" string="Registered" optional="show"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- =========================================================================
+         POS CUSTOMERS - Form View
+         ========================================================================= -->
+
+    <record id="view_pos_customer_form" model="ir.ui.view">
+        <field name="name">res.partner.pos.customer.form</field>
+        <field name="model">res.partner</field>
+        <field name="priority">50</field>
+        <field name="arch" type="xml">
+            <form string="POS Customer">
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="name" placeholder="Customer Name"/></h1>
+                    </div>
+                    <group>
+                        <group string="Contact Information">
+                            <field name="phone" string="Mobile Number"/>
+                            <field name="email"/>
+                        </group>
+                        <group string="Details">
+                            <field name="is_pos_customer" invisible="1"/>
+                            <field name="loyalty_card_count" string="Loyalty Cards"/>
+                            <field name="create_date" string="Registered On" readonly="1"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Loyalty Cards" name="loyalty_cards">
+                            <field name="loyalty_card_ids" readonly="1" nolabel="1">
+                                <list string="Loyalty Cards" default_order="create_date desc">
+                                    <field name="card_number"/>
+                                    <field name="total_points"/>
+                                    <field name="points_value"/>
+                                    <field name="state" widget="badge"
+                                           decoration-success="state == 'active'"
+                                           decoration-warning="state == 'suspended'"
+                                           decoration-info="state == 'draft'"/>
+                                    <field name="registration_date" string="Created"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- =========================================================================
+         POS CUSTOMERS - Search View
+         ========================================================================= -->
+
+    <record id="view_pos_customer_search" model="ir.ui.view">
+        <field name="name">res.partner.pos.customer.search</field>
+        <field name="model">res.partner</field>
+        <field name="priority">50</field>
+        <field name="arch" type="xml">
+            <search string="Search POS Customers">
+                <field name="name" string="Name/Phone/Email"
+                       filter_domain="['|', '|', ('name', 'ilike', self), ('phone', 'ilike', self), ('email', 'ilike', self)]"/>
+                <field name="phone" string="Mobile Number"/>
+                <field name="email"/>
+                <separator/>
+                <filter name="has_loyalty_card" string="Has Loyalty Card"
+                        domain="[('loyalty_card_ids', '!=', False)]"/>
+                <filter name="no_loyalty_card" string="No Loyalty Card"
+                        domain="[('loyalty_card_ids', '=', False)]"/>
+            </search>
+        </field>
+    </record>
+
+    <!-- =========================================================================
+         POS CUSTOMERS - Action
+         ========================================================================= -->
+
+    <record id="action_pos_customers" model="ir.actions.act_window">
+        <field name="name">POS Customers</field>
+        <field name="res_model">res.partner</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('is_pos_customer', '=', True)]</field>
+        <field name="context">{'default_is_pos_customer': True}</field>
+        <field name="view_ids" eval="[(5, 0, 0),
+            (0, 0, {'view_mode': 'list', 'view_id': ref('view_pos_customer_list')}),
+            (0, 0, {'view_mode': 'form', 'view_id': ref('view_pos_customer_form')})]"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No POS customers yet
+            </p>
+            <p>
+                Customers created or linked via POS will appear here.
+                You can also manually add customers.
+            </p>
+        </field>
+    </record>
+
+</odoo>

@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_loyalty_rule_form" model="ir.ui.view">
+        <field name="name">pos.loyalty.rule.form</field>
+        <field name="model">pos.loyalty.rule</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_activate" type="object" string="Set as Active"
+                            class="btn-primary" invisible="is_active"
+                            confirm="Switch the active Points Rule to this one? The currently active rule will be turned off."/>
+                    <field name="is_active" widget="boolean_toggle" string="Active" readonly="1"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group string="General">
+                            <field name="name"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group string="Earning Rules">
+                            <field name="spend_amount"/>
+                            <field name="points_earned"/>
+                        </group>
+                        <group string="Redemption Rules">
+                            <field name="min_redeem_points"/>
+                            <field name="points_per_currency"/>
+                            <field name="max_redeem_percent"/>
+                        </group>
+                    </group>
+                    <div class="text-muted">
+                        Only the <b>Active</b> rule is used for earning and redeeming points.
+                        Turning one on turns the others off.
+                    </div>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_loyalty_rule_list" model="ir.ui.view">
+        <field name="name">pos.loyalty.rule.list</field>
+        <field name="model">pos.loyalty.rule</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="is_active" widget="loyalty_active_toggle" string="Active"/>
+                <field name="name"/>
+                <field name="spend_amount"/>
+                <field name="points_earned"/>
+                <field name="min_redeem_points"/>
+                <field name="points_per_currency"/>
+                <field name="max_redeem_percent"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_loyalty_rule" model="ir.actions.act_window">
+        <field name="name">Loyalty Rules</field>
+        <field name="res_model">pos.loyalty.rule</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- =========================================================================
+         REPORT TEMPLATE - card size / fonts / colors driven by
+         pos.loyalty.card.settings (Configuration > Loyalty > Card Settings)
+         `cfg` is injected by report.pos_loyalty_card.report_loyalty_card_document
+         ========================================================================= -->
+
+    <template id="report_loyalty_card_document">
+        <t t-call="web.html_container">
+            <!-- Force the PDF page box to exactly the card size (no A4 white waste). -->
+            <style>
+                @page { size: <t t-esc="cfg.card_width or 86"/>mm <t t-esc="cfg.card_height or 54"/>mm; margin: 0; }
+                html, body { height: 100% !important; margin: 0 !important; padding: 0 !important; overflow: hidden; background: <t t-esc="cfg.background_color or '#1a237e'"/>; }
+            </style>
+            <t t-foreach="docs" t-as="o">
+                <t t-call="pos_loyalty_card.report_loyalty_card_content"/>
+            </t>
+        </t>
+    </template>
+
+    <!-- Just the card elements. The caller supplies a sized, positioned box; the
+         SINCE/POINTS + barcode use position:absolute bottom and anchor to it. -->
+    <template id="report_loyalty_card_inner">
+        <!-- Vertical gaps scale with card height, matching the PNG card image
+             (which spreads the top block ~halfway down instead of clustering it). -->
+        <t t-set="ch" t-value="cfg.card_height or 54"/>
+        <!-- Company name: big, centered, top -->
+        <div t-att-style="'text-align: center; font-weight: bold; color: %s; font-size: %smm; line-height: 1.1; margin: %smm 0 %smm 0;' % (cfg.company_color or '#ffd700', cfg.company_font_size or 5, ch*0.03, ch*0.05)">
+            <t t-esc="cfg.card_company_name or (o.company_id.name if o.company_id else '')"/>
+        </div>
+        <!-- LOYALTY CARD -->
+        <div t-att-style="'font-weight: bold; color: %s; font-size: %smm; line-height: 1.1; margin-bottom: %smm;' % (cfg.title_color or '#ffd700', cfg.title_font_size or 4, ch*0.03)">LOYALTY CARD</div>
+        <!-- Card Number -->
+        <div t-att-style="'font-weight: bold; letter-spacing: 1px; font-size: %smm; line-height: 1.2; margin-bottom: %smm;' % (cfg.number_font_size or 6, ch*0.03)"><t t-esc="o.card_number"/></div>
+        <!-- Status -->
+        <div t-att-style="'font-weight: bold; color: %s; font-size: %smm; line-height: 1.1; margin-bottom: %smm;' % (cfg.status_color or '#4caf50', cfg.status_font_size or 3.5, ch*0.02)">
+            <t t-esc="dict(o._fields['state'].selection).get(o.state, 'NEW').upper()"/>
+        </div>
+        <!-- Customer Name -->
+        <div t-att-style="'text-transform: uppercase; letter-spacing: 1px; color: %s; font-size: %smm; line-height: 1.1;' % (cfg.name_color or '#e0e0e0', cfg.name_font_size or 4)"><t t-esc="o.name"/></div>
+
+        <!-- SINCE + POINTS: bottom-left -->
+        <div style="position: absolute; left: 4px; bottom: 3px;">
+            <div t-att-style="'color: %s; font-size: %smm;' % (cfg.since_color or '#aaaaaa', cfg.since_font_size or 2.5)">SINCE:
+                <t t-if="o.registration_date" t-esc="o.registration_date.strftime('%b %Y')"/>
+            </div>
+            <div t-att-style="'font-weight: bold; color: %s; font-size: %smm;' % (cfg.points_color or '#ffd700', cfg.points_font_size or 3.5)">POINTS: <t t-esc="int(round(o.total_points or 0))"/></div>
+        </div>
+
+        <!-- Barcode: fixed bottom-right, scannable — sized to match the PNG (~30% of card height). -->
+        <t t-if="o.card_number and o.card_number != 'New'">
+            <div style="position: absolute; right: 4px; bottom: 3px; background: white; padding: 3px 4px; border-radius: 4px; text-align: center;">
+                <img t-att-src="'/report/barcode/?barcode_type=%s&amp;value=%s&amp;width=%s&amp;height=%s&amp;humanreadable=0' % ('Code128', o.card_number, 700, 160)"
+                     t-att-style="'height: %smm; width: auto; display: block; margin: 0 auto; image-rendering: crisp-edges;' % (ch*0.16)"/>
+                <div t-att-style="'font-family: monospace; font-size: %smm; color: #333; letter-spacing: 1px;' % (ch*0.04)"><t t-esc="o.card_number"/></div>
+            </div>
+        </t>
+    </template>
+
+    <!-- PDF surface: fill the page box exactly. We avoid an explicit mm height here
+         because wkhtmltopdf's WebKit ignores mm heights on block divs and
+         shrink-wraps to content; top/left/right/bottom:0 derives the height from the
+         page (with html,body height:100%) so the card fills it and the bottom
+         elements sit at the bottom. -->
+    <template id="report_loyalty_card_content">
+        <!-- Render the card as the exact PNG used on WhatsApp, full-page. This makes
+             the PDF look identical to the card image (perfect placement) and avoids
+             wkhtmltopdf's mm scaling quirks. Falls back to the HTML card only if
+             image generation is unavailable. -->
+        <t t-set="cardimg" t-value="o.env['pos.loyalty.whatsapp.service'].sudo()._generate_loyalty_card_image(o, True)"/>
+        <img t-if="cardimg" t-att-src="'data:image/png;base64,%s' % cardimg"
+             style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: block;"/>
+        <div t-else="" t-att-style="'position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: %s; border-radius: 8px; padding: 3px 4px; color: %s; font-family: %s; box-sizing: border-box; overflow: hidden;' % (cfg.background_color or '#1a237e', cfg.text_color or '#ffffff', cfg.font_family or 'Arial, sans-serif')">
+            <t t-call="pos_loyalty_card.report_loyalty_card_inner"/>
+        </div>
+    </template>
+
+    <!-- On-screen "View Card" page: centered card + Print button -->
+    <template id="card_view_page">
+        <html>
+            <head>
+                <meta charset="utf-8"/>
+                <title>Loyalty Card <t t-esc="o.card_number"/></title>
+                <style>
+                    body{margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;background:#f2f3f5;font-family:Arial,sans-serif;}
+                    .lc-toolbar{margin-bottom:20px;}
+                    .lc-toolbar a{display:inline-block;padding:10px 22px;background:#0d6efd;color:#fff;border-radius:6px;text-decoration:none;font-weight:bold;font-size:14px;}
+                    @media print{.lc-toolbar{display:none;}body{background:#fff;min-height:0;}}
+                </style>
+            </head>
+            <body>
+                <div class="lc-toolbar">
+                    <a t-att-href="'/report/pdf/pos_loyalty_card.report_loyalty_card_document/%s' % o.id" target="_blank">🖨 Print Card</a>
+                </div>
+                <!-- On-screen: show the same PNG card image so it looks identical to
+                     the PDF and the WhatsApp card. Falls back to the HTML card. -->
+                <t t-set="cardimg" t-value="o.env['pos.loyalty.whatsapp.service'].sudo()._generate_loyalty_card_image(o, False)"/>
+                <img t-if="cardimg" t-att-src="'data:image/png;base64,%s' % cardimg"
+                     t-att-style="'width: %smm; height: %smm; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.25); display: block;' % (cfg.card_width or 86, cfg.card_height or 54)"/>
+                <div t-else="" t-att-style="'position: relative; width: %smm; height: %smm; background-color: %s; color: %s; font-family: %s; border-radius: 8px; padding: 3px 4px; box-sizing: border-box; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.25);' % (cfg.card_width or 86, cfg.card_height or 54, cfg.background_color or '#1a237e', cfg.text_color or '#ffffff', cfg.font_family or 'Arial, sans-serif')">
+                    <t t-call="pos_loyalty_card.report_loyalty_card_inner"/>
+                </div>
+            </body>
+        </html>
+    </template>
+</odoo>

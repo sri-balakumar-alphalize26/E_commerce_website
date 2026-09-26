@@ -1,0 +1,790 @@
+.loyalty-btn {
+    background: linear-gradient(135deg, #667eea, #764ba2) !important;
+    color: white !important;
+    border: none !important;
+    margin-top: 5px;
+}
+.loyalty-btn:hover {
+    background: linear-gradient(135deg, #764ba2, #667eea) !important;
+}
+
+/* ============================================
+   CUSTOMER DETAILS CARD - Payment Screen
+   ============================================ */
+.customer-details-card {
+    background: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    margin-bottom: 8px;
+    overflow: hidden;
+}
+
+.customer-details-card .cd-header {
+    background: linear-gradient(135deg, #37474f, #455a64);
+    color: white;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+
+.customer-details-card .cd-body {
+    padding: 8px 12px;
+}
+
+.customer-details-card .cd-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 3px 0;
+    font-size: 13px;
+}
+
+.customer-details-card .cd-row:not(:last-child) {
+    border-bottom: 1px solid #eee;
+}
+
+.customer-details-card .cd-label {
+    color: #757575;
+    font-weight: 500;
+}
+
+.customer-details-card .cd-value {
+    color: #212121;
+    font-weight: 600;
+}
+
+/* ============================================
+   MODERN POPUP STYLES - Loyalty Card & Redeem
+   ============================================ */
+
+/* Common Popup Container */
+.loyalty-card-popup,
+.loyalty-redeem-popup {
+    min-height: 200px;
+}
+
+/* Icon Circle - Centered icon with background */
+.loyalty-card-popup .loyalty-icon-circle,
+.loyalty-redeem-popup .loyalty-icon-circle {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Avatar - Small circular icon */
+.loyalty-card-popup .loyalty-avatar,
+.loyalty-redeem-popup .loyalty-avatar {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+/* Header Strip for New Card */
+.popup-header-strip {
+    margin: -1rem -1rem 0 -1rem;
+    padding: 12px 16px;
+    border-radius: 8px 8px 0 0;
+    font-weight: 600;
+    font-size: 14px;
+    letter-spacing: 0.5px;
+}
+
+/* Card Found Animation */
+.loyalty-card-popup .loyalty-card-found,
+.loyalty-redeem-popup .loyalty-card-found {
+    animation: cardFoundSlide 0.4s ease-out;
+}
+
+@keyframes cardFoundSlide {
+    0% {
+        transform: translateY(-10px);
+        opacity: 0;
+    }
+    100% {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Form Controls Enhancement */
+.loyalty-card-popup .form-control-lg,
+.loyalty-redeem-popup .form-control-lg {
+    font-size: 1.1rem;
+    padding: 12px 16px;
+    border-radius: 8px;
+}
+
+.loyalty-card-popup .form-control,
+.loyalty-redeem-popup .form-control {
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.loyalty-card-popup .form-control:focus,
+.loyalty-redeem-popup .form-control:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+
+/* Button Styles */
+.loyalty-card-popup .btn-lg,
+.loyalty-redeem-popup .btn-lg {
+    padding: 14px 24px;
+    font-size: 1.05rem;
+    font-weight: 500;
+    border-radius: 8px;
+}
+
+.loyalty-card-popup .btn-outline-secondary,
+.loyalty-redeem-popup .btn-outline-secondary {
+    border-width: 2px;
+}
+
+/* Input Group Styling */
+.loyalty-card-popup .input-group-text,
+.loyalty-redeem-popup .input-group-text {
+    border-radius: 8px 0 0 8px;
+    border-right: none;
+}
+
+.loyalty-card-popup .input-group .form-control,
+.loyalty-redeem-popup .input-group .form-control {
+    border-radius: 0;
+}
+
+.loyalty-card-popup .input-group .btn,
+.loyalty-redeem-popup .input-group .btn {
+    border-radius: 0 8px 8px 0;
+}
+
+/* Card Styles */
+.loyalty-card-popup .card,
+.loyalty-redeem-popup .card {
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+}
+
+.loyalty-card-popup .card-header,
+.loyalty-redeem-popup .card-header {
+    font-weight: 600;
+}
+
+.loyalty-card-popup .card-body,
+.loyalty-redeem-popup .card-body {
+    padding: 1.25rem;
+}
+
+/* Alert Styles */
+.loyalty-card-popup .alert,
+.loyalty-redeem-popup .alert {
+    border-radius: 10px;
+    border: none;
+}
+
+/* Redemption Stats */
+.loyalty-redeem-popup .redemption-stat {
+    padding: 12px;
+    border-radius: 10px;
+    background: #f8f9fa;
+}
+
+.loyalty-redeem-popup .redemption-stat h2 {
+    font-weight: 700;
+}
+
+/* Color Classes */
+.bg-purple-subtle {
+    background-color: rgba(102, 126, 234, 0.15) !important;
+}
+
+.text-purple {
+    color: #667eea !important;
+}
+
+.bg-success-subtle {
+    background-color: rgba(25, 135, 84, 0.1) !important;
+}
+
+.bg-warning-subtle {
+    background-color: rgba(255, 193, 7, 0.15) !important;
+}
+
+.bg-primary-subtle {
+    background-color: rgba(13, 110, 253, 0.1) !important;
+}
+
+/* Loading Spinner */
+.loyalty-card-popup .fa-spinner,
+.loyalty-redeem-popup .fa-spinner {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Transitions */
+.loyalty-card-popup *,
+.loyalty-redeem-popup * {
+    transition: background-color 0.2s ease, 
+                border-color 0.2s ease,
+                box-shadow 0.2s ease;
+}
+
+/* Responsive */
+@media (max-width: 576px) {
+    .loyalty-card-popup .loyalty-icon-circle,
+    .loyalty-redeem-popup .loyalty-icon-circle {
+        width: 60px;
+        height: 60px;
+    }
+    
+    .loyalty-card-popup .loyalty-icon-circle i,
+    .loyalty-redeem-popup .loyalty-icon-circle i {
+        font-size: 1.5rem !important;
+    }
+    
+    .loyalty-card-popup .btn-lg,
+    .loyalty-redeem-popup .btn-lg {
+        padding: 12px 16px;
+        font-size: 1rem;
+    }
+    
+    .popup-header-strip {
+        margin: -1rem -0.75rem 0 -0.75rem;
+        padding: 10px 12px;
+        font-size: 13px;
+    }
+}
+
+/* Small indicator on left side when redemption active */
+.loyalty-active-indicator {
+    background: linear-gradient(135deg, #43a047, #66bb6a);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 8px;
+    margin-top: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.loyalty-active-indicator:hover {
+    background: linear-gradient(135deg, #388e3c, #4caf50);
+}
+
+.loyalty-active-indicator .remove-hint {
+    opacity: 0.7;
+    font-size: 12px;
+}
+
+.loyalty-active-indicator:hover .remove-hint {
+    opacity: 1;
+    color: #ffcdd2;
+}
+
+/* ============================================
+   MAIN PAYMENT SUMMARY - MATCH PAYMENT LINES WIDTH
+   ============================================ */
+
+/* ============================================
+   CUSTOMER DETAILS SUMMARY - RIGHT SIDE (like Loyalty Redemption)
+   ============================================ */
+.customer-details-summary {
+    background: linear-gradient(135deg, #37474f, #455a64);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin: 16px auto;
+    color: white;
+    box-shadow: 0 4px 20px rgba(55, 71, 79, 0.3);
+    position: relative;
+    width: 100%;
+    max-width: 555px;
+    box-sizing: border-box;
+    flex-shrink: 0;
+}
+
+.payment-screen .customer-details-summary,
+.payment-screen-content .customer-details-summary,
+.right-panel .customer-details-summary {
+    max-width: 555px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.customer-details-summary .summary-header-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.2);
+}
+
+.customer-details-summary .summary-title {
+    flex: 1 1 auto;
+    font-size: 16px;
+    font-weight: 600;
+    color: #b0bec5;
+    display: flex;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+    border: none;
+}
+
+.customer-details-summary .summary-title i {
+    margin-right: 10px;
+    color: #80cbc4;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.customer-details-summary .remove-btn {
+    flex: 0 0 auto;
+    font-size: 12px;
+    padding: 6px 14px;
+    border: 1px solid rgba(255,255,255,0.5);
+    color: rgba(255,255,255,0.9);
+    border-radius: 6px;
+    background: transparent;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.customer-details-summary .remove-btn:hover {
+    background: rgba(244, 67, 54, 0.9);
+    border-color: transparent;
+    color: white;
+}
+
+.customer-details-summary .summary-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.customer-details-summary .summary-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 15px;
+}
+
+.customer-details-summary .summary-row .label {
+    flex: 1 1 auto;
+    color: rgba(255,255,255,0.7);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.customer-details-summary .summary-row .value {
+    flex: 0 0 auto;
+    min-width: 110px;
+    font-weight: 600;
+    font-size: 16px;
+    text-align: right;
+    white-space: nowrap;
+    color: #ffffff;
+}
+
+@media (max-width: 768px) {
+    .customer-details-summary {
+        padding: 16px;
+        margin: 12px auto;
+        max-width: calc(100% - 24px);
+    }
+}
+
+/* ============================================
+   LOYALTY PAYMENT SUMMARY
+   ============================================ */
+.loyalty-payment-summary {
+    background: linear-gradient(135deg, #1a237e, #283593);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin: 16px auto;
+    color: white;
+    box-shadow: 0 4px 20px rgba(26, 35, 126, 0.3);
+    position: relative;
+    /* Match the payment lines container width */
+    width: 100%;
+    max-width: 555px;
+    box-sizing: border-box;
+    flex-shrink: 0;
+}
+
+/* Ensure banner aligns with payment lines in payment screen */
+.payment-screen .loyalty-payment-summary,
+.payment-screen-content .loyalty-payment-summary,
+.right-panel .loyalty-payment-summary {
+    max-width: 555px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* Header Row: Title + Remove Button on same line */
+.loyalty-payment-summary .summary-header-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.2);
+}
+
+.loyalty-payment-summary .summary-title {
+    flex: 1 1 auto;
+    font-size: 16px;
+    font-weight: 600;
+    color: #b3e5fc;
+    display: flex;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+    border: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.loyalty-payment-summary .summary-title i {
+    margin-right: 10px;
+    color: #ffd54f;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.loyalty-payment-summary .remove-btn {
+    flex: 0 0 auto;
+    font-size: 12px;
+    padding: 6px 14px;
+    border: 1px solid rgba(255,255,255,0.5);
+    color: rgba(255,255,255,0.9);
+    border-radius: 6px;
+    background: transparent;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.loyalty-payment-summary .remove-btn:hover {
+    background: rgba(244, 67, 54, 0.9);
+    border-color: transparent;
+    color: white;
+}
+
+/* Detail Rows Grid */
+.loyalty-payment-summary .summary-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Each Detail Row: Label on left, Amount on right */
+.loyalty-payment-summary .summary-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 15px;
+}
+
+.loyalty-payment-summary .summary-row .label {
+    flex: 1 1 auto;
+    color: rgba(255,255,255,0.9);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.loyalty-payment-summary .summary-row .value {
+    flex: 0 0 auto;
+    min-width: 110px;
+    font-weight: 600;
+    font-size: 16px;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.loyalty-payment-summary .summary-row.discount {
+    color: #81c784;
+}
+
+.loyalty-payment-summary .summary-row.discount .value {
+    color: #a5d6a7;
+}
+
+.loyalty-payment-summary .summary-row.final {
+    margin-top: 10px;
+    padding-top: 14px;
+    border-top: 2px solid rgba(255,255,255,0.3);
+    font-size: 17px;
+}
+
+.loyalty-payment-summary .summary-row.final .label {
+    color: #fff;
+    font-weight: 700;
+}
+
+.loyalty-payment-summary .summary-row.final .value {
+    color: #4caf50;
+    font-size: 22px;
+    font-weight: 700;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .loyalty-payment-summary {
+        padding: 16px;
+        margin: 12px auto;
+        max-width: calc(100% - 24px);
+    }
+    
+    .loyalty-payment-summary .summary-header-row {
+        gap: 8px;
+    }
+    
+    .loyalty-payment-summary .summary-title {
+        font-size: 14px;
+    }
+    
+    .loyalty-payment-summary .remove-btn {
+        padding: 4px 10px;
+        font-size: 11px;
+    }
+    
+    .loyalty-payment-summary .summary-row {
+        font-size: 14px;
+        gap: 8px;
+    }
+    
+    .loyalty-payment-summary .summary-row .value {
+        min-width: 90px;
+        font-size: 14px;
+    }
+    
+    .loyalty-payment-summary .summary-row.final .value {
+        font-size: 18px;
+    }
+}
+
+/* =========================================================================
+   ATTRACTIVE GRADIENT THEME  —  Loyalty popup / New Card / Redeem popup
+   Cohesive indigo→violet primary, teal→green success, violet accent.
+   ========================================================================= */
+
+/* ---- Dialog shell: rounded, elevated, gradient header bar ---- */
+.modal:has(.loyalty-card-popup) .modal-content,
+.modal:has(.loyalty-redeem-popup) .modal-content {
+    border: none;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 28px 70px rgba(76, 40, 130, 0.30);
+    animation: loyaltyPopIn 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes loyaltyPopIn {
+    0%   { transform: translateY(14px) scale(0.97); opacity: 0; }
+    100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+.modal:has(.loyalty-card-popup) .modal-header,
+.modal:has(.loyalty-redeem-popup) .modal-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-bottom: none;
+    padding: 16px 22px;
+}
+.modal:has(.loyalty-card-popup) .modal-header .modal-title,
+.modal:has(.loyalty-redeem-popup) .modal-header .modal-title {
+    color: #fff;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    font-size: 1.18rem;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+.modal:has(.loyalty-card-popup) .modal-header .btn-close,
+.modal:has(.loyalty-redeem-popup) .modal-header .btn-close {
+    filter: brightness(0) invert(1);
+    opacity: 0.85;
+}
+.modal:has(.loyalty-card-popup) .modal-header .btn-close:hover,
+.modal:has(.loyalty-redeem-popup) .modal-header .btn-close:hover {
+    opacity: 1;
+}
+.modal:has(.loyalty-card-popup) .modal-body,
+.modal:has(.loyalty-redeem-popup) .modal-body {
+    background: linear-gradient(180deg, #fbfbff 0%, #ffffff 60%);
+}
+
+/* ---- Icon circles: gradient fills, white glyphs, soft glow ---- */
+.loyalty-card-popup .loyalty-icon-circle,
+.loyalty-redeem-popup .loyalty-icon-circle {
+    box-shadow: 0 10px 24px rgba(102, 126, 234, 0.30);
+}
+.loyalty-card-popup .loyalty-icon-circle i,
+.loyalty-redeem-popup .loyalty-icon-circle i {
+    color: #fff !important;
+}
+.loyalty-card-popup .loyalty-icon-circle.bg-primary-subtle {
+    background: linear-gradient(135deg, #667eea, #764ba2) !important;
+}
+.loyalty-card-popup .loyalty-icon-circle.bg-info-subtle {
+    background: linear-gradient(135deg, #00c6fb, #005bea) !important;
+}
+.loyalty-card-popup .loyalty-icon-circle.bg-success-subtle {
+    background: linear-gradient(135deg, #22c55e, #15803d) !important;
+    box-shadow: 0 10px 24px rgba(34, 197, 94, 0.30);
+}
+.loyalty-redeem-popup .loyalty-icon-circle.bg-purple-subtle {
+    background: linear-gradient(135deg, #8e2de2, #4a00e0) !important;
+    box-shadow: 0 10px 24px rgba(142, 45, 226, 0.32);
+}
+
+/* ---- Gradient buttons with lift on hover ---- */
+.loyalty-card-popup .btn-primary,
+.loyalty-redeem-popup .btn-primary {
+    background: linear-gradient(135deg, #667eea, #764ba2) !important;
+    border: none !important;
+    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.35);
+}
+.loyalty-card-popup .btn-primary:hover,
+.loyalty-redeem-popup .btn-primary:hover {
+    background: linear-gradient(135deg, #5a67e8, #6a3f97) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 10px 22px rgba(102, 126, 234, 0.45);
+}
+.loyalty-card-popup .btn-success,
+.loyalty-redeem-popup .btn-success {
+    background: linear-gradient(135deg, #22c55e, #15803d) !important;
+    border: none !important;
+    box-shadow: 0 6px 16px rgba(21, 128, 61, 0.35);
+}
+.loyalty-card-popup .btn-success:hover,
+.loyalty-redeem-popup .btn-success:hover {
+    background: linear-gradient(135deg, #16a34a, #166534) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 10px 22px rgba(21, 128, 61, 0.45);
+}
+.loyalty-card-popup .btn-outline-secondary:hover,
+.loyalty-redeem-popup .btn-outline-secondary:hover {
+    transform: translateY(-2px);
+}
+
+/* ---- Search box + country-code prefix chip ---- */
+.loyalty-card-popup .input-group > .input-group-text:not(:first-child),
+.loyalty-redeem-popup .input-group > .input-group-text:not(:first-child) {
+    border-radius: 0;
+}
+.loyalty-card-popup .input-group-text.fw-bold,
+.loyalty-redeem-popup .input-group-text.fw-bold {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: #fff;
+    border: none;
+    font-weight: 700 !important;
+    letter-spacing: 0.4px;
+    padding-inline: 14px;
+}
+
+/* ---- Found-card panel: gradient tint + gradient avatar + points chip ---- */
+.loyalty-card-popup .loyalty-card-found {
+    background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 70%) !important;
+    border: 1px solid rgba(34, 197, 94, 0.35) !important;
+}
+.loyalty-card-popup .loyalty-avatar.bg-success,
+.loyalty-redeem-popup .loyalty-avatar.bg-success {
+    background: linear-gradient(135deg, #22c55e, #15803d) !important;
+    box-shadow: 0 6px 14px rgba(21, 128, 61, 0.35);
+}
+.loyalty-card-popup .loyalty-card-found .text-primary {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 800;
+}
+
+/* ---- New Card header strip: gradient ---- */
+.popup-header-strip.bg-success {
+    background: linear-gradient(135deg, #22c55e, #15803d) !important;
+    box-shadow: 0 6px 16px rgba(21, 128, 61, 0.25);
+}
+
+/* ---- Redeem popup: gradient card header, discount tile, stat tiles ---- */
+.loyalty-redeem-popup .card-header.bg-primary {
+    background: linear-gradient(135deg, #667eea, #764ba2) !important;
+    border: none;
+}
+.loyalty-redeem-popup .loyalty-avatar.bg-white {
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.15);
+}
+.loyalty-redeem-popup .bg-success {
+    background: linear-gradient(135deg, #22c55e, #15803d) !important;
+    box-shadow: 0 8px 18px rgba(21, 128, 61, 0.30);
+}
+.loyalty-redeem-popup .redemption-stat {
+    background: linear-gradient(135deg, #f4f6ff, #eef1ff) !important;
+    border: 1px solid rgba(102, 126, 234, 0.15);
+}
+.loyalty-redeem-popup .redemption-stat h2.text-primary {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* ---- Focus rings tuned to the theme ---- */
+.loyalty-card-popup .form-control:focus,
+.loyalty-redeem-popup .form-control:focus {
+    border-color: #764ba2;
+    box-shadow: 0 0 0 0.2rem rgba(118, 75, 162, 0.20);
+}
+
+/* =========================================================================
+   PAYMENT-SCREEN loyalty buttons — blue gradient, clearly visible
+   (Add Loyalty Card + linked-card button, matching the Redeem Points look)
+   ========================================================================= */
+.loyalty-info-btn,
+.loyalty-add-btn {
+    background: linear-gradient(135deg, #2196f3, #1565c0) !important;
+    color: #fff !important;
+    border: none !important;
+    font-weight: 600 !important;
+    box-shadow: 0 4px 12px rgba(21, 101, 192, 0.35);
+    transition: all 0.2s ease;
+}
+.loyalty-info-btn:hover,
+.loyalty-add-btn:hover {
+    background: linear-gradient(135deg, #1e88e5, #0d47a1) !important;
+    color: #fff !important;
+    box-shadow: 0 6px 18px rgba(13, 71, 161, 0.45);
+    transform: translateY(-1px);
+}
+.loyalty-info-btn .loyalty-info-badge {
+    background: rgba(255, 255, 255, 0.28) !important;
+    color: #fff !important;
+    font-weight: 700;
+    font-size: 0.8rem;
+    padding: 0.35em 0.6em;
+}

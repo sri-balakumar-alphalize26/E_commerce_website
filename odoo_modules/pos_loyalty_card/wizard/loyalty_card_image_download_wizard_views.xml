@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_loyalty_card_image_download_wizard_form" model="ir.ui.view">
+        <field name="name">pos.loyalty.card.image.download.wizard.form</field>
+        <field name="model">pos.loyalty.card.image.download.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Download Card Images">
+                <group>
+                    <field name="mode" widget="radio"/>
+                    <field name="card_id" invisible="mode != 'card'" required="mode == 'card'"/>
+                    <field name="date_from" invisible="mode != 'date'" required="mode == 'date'"/>
+                    <field name="date_to" invisible="mode != 'date'" required="mode == 'date'"/>
+                </group>
+                <footer>
+                    <button name="action_download" type="object" string="Download ZIP" class="btn-primary"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

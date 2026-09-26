@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Loyalty Card Form View -->
+    <record id="view_pos_loyalty_card_form" model="ir.ui.view">
+        <field name="name">pos.loyalty.card.form</field>
+        <field name="model">pos.loyalty.card</field>
+        <field name="arch" type="xml">
+            <form string="Loyalty Card Registration">
+                <header>
+                    <button name="action_activate" 
+                            string="Activate" 
+                            type="object" 
+                            class="btn-primary"
+                            invisible="state != 'draft'"/>
+                    <button name="action_suspend" 
+                            string="Suspend" 
+                            type="object" 
+                            class="btn-warning"
+                            invisible="state != 'active'"/>
+                    <button name="action_reactivate" 
+                            string="Reactivate" 
+                            type="object" 
+                            class="btn-success"
+                            invisible="state != 'suspended'"/>
+                    <button name="action_print_card" 
+                            string="Print Card" 
+                            type="object" 
+                            class="btn-secondary"
+                            invisible="state == 'draft'"/>
+                    <button name="action_send_whatsapp" 
+                            string="Send WhatsApp" 
+                            type="object" 
+                            class="btn-success"
+                            invisible="state == 'draft'"/>
+                    <button name="action_add_test_points" 
+                            string="Add 500 Test Points" 
+                            type="object" 
+                            class="btn-info"
+                            invisible="state != 'active'"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,active,suspended"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <label for="card_number"/>
+                        <h1>
+                            <field name="card_number" readonly="1"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group string="Customer Information">
+                            <field name="name" placeholder="Enter customer name"/>
+                            <field name="phone" placeholder="+91 XXXXX XXXXX"/>
+                            <field name="email" placeholder="email@example.com"/>
+                            <field name="partner_id" readonly="1"/>
+                        </group>
+                        <group string="Card Details">
+                            <field name="barcode" readonly="1"/>
+                            <field name="total_points" readonly="1"/>
+                            <field name="points_value" readonly="1"/>
+                            <field name="registration_date" readonly="1"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Points History" name="points_history">
+                            <field name="points_history_ids" readonly="1" nolabel="1"/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Loyalty Card List View -->
+    <record id="view_pos_loyalty_card_list" model="ir.ui.view">
+        <field name="name">pos.loyalty.card.list</field>
+        <field name="model">pos.loyalty.card</field>
+        <field name="arch" type="xml">
+            <list string="Loyalty Cards" default_order="registration_date desc">
+                <field name="card_number"/>
+                <field name="name"/>
+                <field name="phone"/>
+                <field name="email" optional="show"/>
+                <field name="total_points"/>
+                <field name="points_value"/>
+                <field name="registration_date"/>
+                <field name="state" widget="badge" 
+                       decoration-success="state == 'active'"
+                       decoration-warning="state == 'suspended'"
+                       decoration-info="state == 'draft'"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Loyalty Card Search View -->
+    <record id="view_pos_loyalty_card_search" model="ir.ui.view">
+        <field name="name">pos.loyalty.card.search</field>
+        <field name="model">pos.loyalty.card</field>
+        <field name="arch" type="xml">
+            <search string="Search Loyalty Cards">
+                <field name="card_number"/>
+                <field name="name"/>
+                <field name="phone"/>
+                <field name="email"/>
+                <field name="barcode"/>
+                <separator/>
+                <filter name="active_cards" string="Active" domain="[('state', '=', 'active')]"/>
+                <filter name="draft_cards" string="Draft" domain="[('state', '=', 'draft')]"/>
+                <filter name="suspended_cards" string="Suspended" domain="[('state', '=', 'suspended')]"/>
+                <separator/>
+                <filter name="group_state" string="Status" context="{'group_by': 'state'}"/>
+                <filter name="group_date" string="Registration Date" context="{'group_by': 'registration_date:month'}"/>
+            </search>
+        </field>
+    </record>
+
+    <!-- Action: Loyalty Registration -->
+    <record id="action_pos_loyalty_card" model="ir.actions.act_window">
+        <field name="name">Loyalty Registration</field>
+        <field name="res_model">pos.loyalty.card</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{'search_default_active_cards': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Register a new loyalty card customer
+            </p>
+            <p>
+                Create loyalty cards for customers to earn and redeem points on their purchases.
+            </p>
+        </field>
+    </record>
+
+    <!-- Action: Loyalty Report (All Customers) -->
+    <record id="action_loyalty_report" model="ir.actions.act_window">
+        <field name="name">Loyalty Report</field>
+        <field name="res_model">pos.loyalty.card</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No loyalty cards found
+            </p>
+            <p>
+                This report shows all registered customers with their card numbers, points earned, and points history.
+            </p>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!-- Clickable toggle; wrapper stops the click from opening the record form. -->
+    <t t-name="pos_loyalty_card.LoyaltyActiveToggle">
+        <span class="d-inline-block" t-on-click.stop="stopClick">
+            <CheckBox value="state.value"
+                      className="'o_field_boolean o_boolean_toggle form-switch'"
+                      disabled="false"
+                      onChange.bind="onChange">
+                &#8203;
+            </CheckBox>
+        </span>
+    </t>
+
+</templates>

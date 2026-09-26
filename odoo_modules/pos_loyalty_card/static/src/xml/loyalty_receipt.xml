@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!--
+        Extend the OrderReceipt to add a LOYALTY CARD section
+        at the bottom of the receipt (before footer).
+        Shows: Card No, Member, Points Earned, Points Redeemed, Point Balance
+    -->
+    <t t-inherit="point_of_sale.OrderReceipt" t-inherit-mode="extension">
+        <xpath expr="//div[hasclass('before-footer')]" position="before">
+            <t t-if="loyaltyReceiptData and loyaltyReceiptData.card_number">
+                <div class="loyalty-receipt-section" style="margin-top: 12px;">
+                    <!-- Separator -->
+                    <div style="border-top: 1px dashed #000; margin: 8px 0;"/>
+
+                    <!-- Loyalty Header -->
+                    <div class="text-center" style="font-weight: bold; font-size: 13px; margin: 8px 0;">
+                        ★ LOYALTY CARD ★
+                    </div>
+
+                    <div style="border-top: 1px dashed #000; margin: 8px 0;"/>
+
+                    <!-- Card Number -->
+                    <div class="d-flex justify-content-between" style="font-size: 12px; margin: 4px 0;">
+                        <span>Card No:</span>
+                        <span class="fw-bold" t-esc="loyaltyReceiptData.card_number"/>
+                    </div>
+
+                    <!-- Member Name -->
+                    <div class="d-flex justify-content-between" style="font-size: 12px; margin: 4px 0;">
+                        <span>Member:</span>
+                        <span t-esc="loyaltyReceiptData.member_name"/>
+                    </div>
+
+                    <!-- Points Earned -->
+                    <div class="d-flex justify-content-between" style="font-size: 12px; margin: 4px 0;">
+                        <span>Points Earned:</span>
+                        <span style="color: #28a745;" t-esc="'+' + loyaltyReceiptData.points_earned_display"/>
+                    </div>
+
+                    <!-- Points Redeemed (only show if redeemed) -->
+                    <t t-if="loyaltyReceiptData.points_redeemed > 0">
+                        <div class="d-flex justify-content-between" style="font-size: 12px; margin: 4px 0;">
+                            <span>Points Redeemed:</span>
+                            <span style="color: #dc3545;" t-esc="'-' + loyaltyReceiptData.points_redeemed_display"/>
+                        </div>
+                    </t>
+
+                    <div style="border-top: 1px dashed #000; margin: 8px 0;"/>
+
+                    <!-- Point Balance -->
+                    <div class="d-flex justify-content-between" style="font-size: 13px; font-weight: bold; margin: 4px 0;">
+                        <span>Point Balance:</span>
+                        <span t-esc="loyaltyReceiptData.point_balance_display + ' pts'"/>
+                    </div>
+
+                    <div style="border-top: 1px dashed #000; margin: 8px 0;"/>
+                </div>
+            </t>
+        </xpath>
+    </t>
+
+</templates>

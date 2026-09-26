@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="pos_loyalty_card.LoyaltyCardPreview">
+        <div class="o_loyalty_card_preview p-2">
+            <div class="text-muted small mb-2">Live preview (updates as you edit)</div>
+            <div t-att-style="cardStyle">
+                <div t-att-style="companyStyle"><t t-esc="companyName"/></div>
+                <div t-att-style="titleStyle">LOYALTY CARD</div>
+                <div t-att-style="numberStyle"><t t-esc="cardNumber"/></div>
+                <div t-att-style="statusStyle">ACTIVE</div>
+                <div t-att-style="nameStyle">JOHN DOE</div>
+                <div style="flex:1;"></div>
+                <div style="padding-right:120px;">
+                    <div t-att-style="sinceStyle">SINCE: <t t-esc="sinceText"/></div>
+                    <div t-att-style="pointsStyle">POINTS: 0</div>
+                </div>
+                <div style="position:absolute;right:12px;bottom:10px;background:#fff;padding:4px 6px;border-radius:4px;text-align:center;">
+                    <img t-att-src="barcodeSrc" style="height:22px;width:auto;display:block;margin:0 auto;"/>
+                    <div style="font-family:monospace;font-size:7px;color:#333;letter-spacing:1px;"><t t-esc="cardNumber"/></div>
+                </div>
+            </div>
+        </div>
+    </t>
+
+</templates>

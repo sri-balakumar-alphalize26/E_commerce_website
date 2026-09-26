@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Top-level "Loyalty" menu, just before Configuration (seq 100) -->
+    <menuitem id="menu_loyalty_root" name="Loyalty" parent="point_of_sale.menu_point_root" sequence="95"/>
+
+    <!-- Section sub-headings (action-less) -->
+    <menuitem id="menu_sec_loyalty" name="Loyalty" parent="menu_loyalty_root" sequence="10"/>
+    <menuitem id="menu_sec_email" name="Email" parent="menu_loyalty_root" sequence="15"/>
+    <menuitem id="menu_sec_images" name="Images" parent="menu_loyalty_root" sequence="30"/>
+
+    <!-- Loyalty section -->
+    <menuitem id="menu_customer_details" name="Customer Details" parent="menu_sec_loyalty" action="action_customer_details" sequence="5"/>
+    <menuitem id="menu_loyalty_cards" name="Loyalty Cards" parent="menu_sec_loyalty" action="action_loyalty_card" sequence="10"/>
+    <menuitem id="menu_loyalty_rules" name="Points Rules" parent="menu_sec_loyalty" action="action_loyalty_rule" sequence="20"/>
+    <menuitem id="menu_loyalty_history" name="Points History" parent="menu_sec_loyalty" action="action_loyalty_history" sequence="30"/>
+
+    <!-- Points History under Reporting menu -->
+    <menuitem id="menu_loyalty_history_reporting" name="Points History" parent="point_of_sale.menu_point_rep" action="action_loyalty_history" sequence="50"/>
+</odoo>

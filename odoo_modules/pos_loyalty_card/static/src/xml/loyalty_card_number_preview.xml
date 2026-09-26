@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="pos_loyalty_card.LoyaltyCardNumberPreview">
+        <div class="alert alert-warning p-3" style="width:100%;">
+            <div class="fw-bold mb-2">
+                <i class="fa fa-id-card me-1"/> Card Number Format
+            </div>
+            <div class="d-flex align-items-center flex-wrap" style="gap:10px;">
+                <div class="text-center">
+                    <div class="badge bg-primary" style="font-size:14px;padding:8px 12px;">
+                        <t t-esc="prefix"/>
+                    </div>
+                    <div class="small text-muted">Prefix</div>
+                </div>
+                <span class="fw-bold fs-5">+</span>
+                <t t-if="useMobile">
+                    <div class="text-center">
+                        <div class="badge bg-success" style="font-size:14px;padding:8px 12px;">
+                            <t t-esc="sampleMobile"/>
+                        </div>
+                        <div class="small text-muted">Mobile (last <t t-esc="mobileDigits"/>)</div>
+                    </div>
+                    <span class="fw-bold fs-5">+</span>
+                </t>
+                <div class="text-center">
+                    <div class="badge bg-secondary" style="font-size:14px;padding:8px 12px;">
+                        <t t-esc="counter"/>
+                    </div>
+                    <div class="small text-muted">Counter</div>
+                </div>
+                <span class="fw-bold fs-5">=</span>
+                <div class="text-center">
+                    <div style="font-size:15px;padding:8px 14px;letter-spacing:1px;font-weight:bold;color:#111;background:#fff;border:2px solid #f0ad4e;border-radius:6px;display:inline-block;">
+                        <t t-esc="example"/>
+                    </div>
+                    <div class="small text-muted">Example</div>
+                </div>
+            </div>
+        </div>
+    </t>
+
+</templates>
