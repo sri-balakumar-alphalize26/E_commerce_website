@@ -38,8 +38,15 @@ class Mart369BridgeFixtures(Mart369OrderFixtures):
             cls.wa_documents.append((phone, report_xmlid, record))
             return True
 
+        def send_text_mentioning(self, phone, message, mention=''):
+            # The group flow's `_say` takes this door when it can @-mention.
+            cls.wa_sent.append((phone, message))
+            return True
+
         cls._wa_patchers = [
             patch.object(Session, 'send_message', send_message),
+            patch.object(Session, 'sa_send_text_mentioning',
+                         send_text_mentioning),
             patch.object(Session, 'send_odoo_report', send_odoo_report),
             patch.object(Session, 'send_document',
                          lambda self, *a, **kw: True),

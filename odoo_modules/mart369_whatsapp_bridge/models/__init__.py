@@ -5,4 +5,5 @@ from . import stock_picking
 from . import whatsapp_notify
 from . import config
 from . import partner_link
+from . import res_partner
 from . import catalog_menu
