@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+
+        <!-- The line a points discount hangs off, like mart369_order's coupon. -->
+        <record id="product_points" model="product.template">
+            <field name="name">Loyalty points</field>
+            <field name="type">service</field>
+            <field name="list_price">0.0</field>
+            <field name="sale_ok" eval="False"/>
+            <field name="purchase_ok" eval="False"/>
+            <field name="is_published" eval="False"/>
+            <field name="description_sale">Loyalty points spent on a 369 Mart order.</field>
+        </record>
+
+    </data>
+
+    <!-- The counter's settings record is made on first use - which, for an
+         online shop, would be the first bill, on a read-only cursor. Make it
+         now instead. Does nothing when it already exists. -->
+    <function model="pos.loyalty.card.settings" name="get_settings"/>
+
+    <!-- "After the return window" is not a step an order moves through, so
+         nothing calls it: this does, once a day (models/sale_order.py). -->
+    <record id="ir_cron_mart369_loyalty_settle" model="ir.cron">
+        <field name="name">369 Mart: loyalty points once the return window closes</field>
+        <field name="model_id" ref="sale.model_sale_order"/>
+        <field name="state">code</field>
+        <field name="code">model._mart369_loyalty_settle_cron()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">days</field>
+        <field name="active" eval="True"/>
+    </record>
+
+    <!-- Points held by a basket that was never paid for go back to the card. -->
+    <record id="ir_cron_mart369_loyalty_release" model="ir.cron">
+        <field name="name">369 Mart: give back points held by unpaid baskets</field>
+        <field name="model_id" ref="sale.model_sale_order"/>
+        <field name="state">code</field>
+        <field name="code">model._mart369_loyalty_release_cron()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">hours</field>
+        <field name="active" eval="True"/>
+    </record>
+</odoo>

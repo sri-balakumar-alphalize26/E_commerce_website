@@ -23,6 +23,7 @@ import { createPortal } from "react-dom";
 import { Icon, Thumb, money } from "./shared";
 import { Amount, useRules } from "./Cart";
 import { BRAND_LABEL, UPI_APPS, upiOk } from "./payment";
+import { EARN_WHEN, pointsText } from "./points";
 import {
   REFER_GOAL, STAR_WORDS, ago, fmtDate, fmtDateTime, useRemote,
 } from "./accountStore";
@@ -190,6 +191,97 @@ export function WalletSec({ onNav }) {
         ))}
       </div>
 
+    </div>
+  );
+}
+
+/* ==========================================================================
+   Loyalty points — one card per customer, earned on app orders and on orders
+   the shop makes in Odoo, and spent at checkout. All of it is one list.
+   ========================================================================== */
+const POINT_META = {
+  earned: { icon: "coin", sign: "+" },
+  redeemed: { icon: "bag", sign: "−" },
+  returned: { icon: "reorder", sign: "−" },
+  redeem_returned: { icon: "reorder", sign: "+" },
+};
+
+export function PointsSec({ onNav }) {
+  const { data, loading } = useRemote("/loyalty");
+  const log = useMemo(() => data?.history || [], [data]);
+  const card = data?.card;
+  const rule = data?.rule;
+  const [tab, setTab] = useState("all");
+  const sum = (kinds) => log.filter((t) => kinds.includes(t.kind)).reduce((s, t) => s + t.points, 0);
+  const list = log.filter((t) => tab === "all" || (tab === "earned" ? t.credit : !t.credit));
+  const groups = [];
+  list.forEach((t) => {
+    const m = new Date(t.at).toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+    const g = groups[groups.length - 1];
+    if (g && g.m === m) g.items.push(t); else groups.push({ m, items: [t] });
+  });
+  let row = 0;
+
+  if (!loading && data && !data.enabled) {
+    return (
+      <div className="ac-card"><div className="ac-empty"><span className="ac-empty-art"><Icon n="coin" size={30} /></span>
+        <h3>Loyalty points are resting</h3><p>They aren't available right now. Anything you've earned is kept.</p></div></div>
+    );
+  }
+  return (
+    <div className="ac-stack">
+      <section className="ax-wallet ax-points">
+        <span className="ax-wallet-sheen" aria-hidden="true" />
+        <span className="ax-wallet-deco" aria-hidden="true"><i /><i /><i /></span>
+        <div className="ax-wallet-top">
+          <span className="ax-wallet-ic"><Icon n="coin" size={22} /></span>
+          <span>
+            <small>Loyalty points</small>
+            <b className="ax-wallet-amt">{loading ? <i className="ax-wait">…</i> : pointsText(card?.points || 0)}</b>
+            {card?.number && <span className="ax-points-num">{card.number}</span>}
+          </span>
+        </div>
+        <div className="ax-wallet-stats">
+          <span style={{ "--i": 0 }}><small>Worth</small><b>{money(card?.value || 0)}</b></span>
+          <span style={{ "--i": 1 }}><small>Earned</small><b>{pointsText(sum(["earned", "redeem_returned"]))}</b></span>
+          <span style={{ "--i": 2 }}><small>Used</small><b>{pointsText(sum(["redeemed", "returned"]))}</b></span>
+        </div>
+        <p className="ax-wallet-note"><Icon n="bolt" size={13} className="hm-fill" />
+          {card ? (data.redeem ? "Use your points at checkout." : "Keep earning - using points at checkout is coming back soon.") : "Your card starts with your first order, on the mobile number in your profile."}
+        </p>
+      </section>
+
+      {rule && (
+        <div className="ac-card ax-points-how">
+          <span style={{ "--i": 0 }}><Icon n="bag" size={18} /><span><b>Earn {pointsText(rule.earn)} points</b>for every <bdi>{money(rule.spend)}</bdi> you spend, {EARN_WHEN[data.earnOn] || EARN_WHEN.delivered}</span></span>
+          <span style={{ "--i": 1 }}><Icon n="coin" size={18} /><span><b>{pointsText(rule.perRupee)} points = <bdi>{money(1)}</bdi></b>off your order at checkout{data.redeem ? "" : " (paused for now)"}</span></span>
+          <span style={{ "--i": 2 }}><Icon n="check" size={18} /><span><b>Use from {pointsText(rule.minRedeem)} points</b>{rule.maxPercent < 100 ? `up to ${pointsText(rule.maxPercent)}% of an order, ` : ""}once a day</span></span>
+        </div>
+      )}
+
+      <Tabs value={tab} onChange={setTab} tabs={[["all", "All"], ["earned", "Earned"], ["used", "Used"]]} />
+      <div className="ac-card ax-txns" key={tab}>
+        {!list.length && !loading && (
+          <div className="ac-empty"><span className="ac-empty-art"><Icon n="coin" size={30} /></span><h3>Nothing here yet</h3><p>Points you earn and use will show up in this tab.</p></div>
+        )}
+        {groups.map((g) => (
+          <div key={g.m} className="ax-txn-group">
+            <p className="ax-month">{g.m}</p>
+            {g.items.map((t) => {
+              const m = POINT_META[t.kind] || POINT_META.earned;
+              const i = row++;
+              return (
+                <button key={t.id} className={"ax-txn ax-k-" + t.kind} style={{ "--i": i }} disabled={!t.orderRef} onClick={() => t.orderRef && onNav?.("track", t.orderRef)}>
+                  <span className="ax-txn-ic"><Icon n={m.icon} size={17} /></span>
+                  <span className="ax-txn-txt"><b>{t.title}</b><small>{t.sub ? t.sub + " · " : ""}{fmtDateTime(t.at)}</small></span>
+                  <span className="ax-txn-amt">{m.sign}{pointsText(t.points)}</span>
+                  {t.orderRef && <Icon n="right" size={15} className="ax-go" />}
+                </button>
+              );
+            })}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

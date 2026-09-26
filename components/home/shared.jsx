@@ -82,6 +82,7 @@ const P = {
   upi: <><path d="M9 4 5 20" /><path d="m13 4-4 16" /><path d="m15 7 4 5-6 7" /></>,
   bank: <><path d="M3 9.5 12 4l9 5.5" /><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18" /></>,
   wallet: <><path d="M4 7a2 2 0 0 1 2-2h11v4" /><rect x="3" y="7" width="18" height="13" rx="2.5" /><path d="M16 13.5h3" /></>,
+  coin: <><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5.5" /><path d="M12 9.5v5" /></>,
   sort: <><path d="M7 4v16M3.5 16.5 7 20l3.5-3.5" /><path d="M17 20V4M13.5 7.5 17 4l3.5 3.5" /></>,
   filter: <><path d="M4 6h16M7 12h10M10 18h4" /></>,
   scooter: <><circle cx="6" cy="17" r="2.5" /><circle cx="18" cy="17" r="2.5" /><path d="M8.5 17h6.5l2-6h-4l-2 4M15 5h3l1 6" /></>,

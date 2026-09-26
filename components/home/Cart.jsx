@@ -52,12 +52,12 @@ export function computeBill({ cart, byId, modes = null }) {
    `feeFor` stays here because it is a function, which no JSON can carry, but
    it is the shop's rule applied to the shop's subtotal, not a second opinion
    about either. */
-export function useBill({ cart, byId, rules, coupon = null, slotFee = 0, addressId = null }) {
+export function useBill({ cart, byId, rules, coupon = null, slotFee = 0, addressId = null, usePoints = false }) {
   const [money, setMoney] = useState(null);
   const [error, setError] = useState(null);
   const shape = useMemo(() => computeBill({ cart, byId, modes: money?.modes }), [cart, byId, money]);
   const tick = useRef(0);
-  const key = JSON.stringify([cart, coupon || "", slotFee, addressId || ""]);
+  const key = JSON.stringify([cart, coupon || "", slotFee, addressId || "", !!usePoints]);
 
   useEffect(() => {
     if (!shape.count) { setMoney(null); setError(null); return undefined; }
@@ -66,6 +66,9 @@ export function useBill({ cart, byId, rules, coupon = null, slotFee = 0, address
     const timer = setTimeout(() => {
       const body = { items: cart, coupon: coupon || "", slotFee };
       if (addressId) body.addressId = addressId;
+      /* Loyalty points are priced by the shop, like a coupon: it says how
+         many may go on this bill and what they take off. */
+      if (usePoints) body.usePoints = true;
       api("/cart/bill", { method: "POST", body })
         .then((r) => { if (mine === tick.current) { setMoney(r); setError(null); } })
         .catch((e) => { if (mine === tick.current) { setMoney(null); setError(e); } });
@@ -78,7 +81,7 @@ export function useBill({ cart, byId, rules, coupon = null, slotFee = 0, address
   return {
     ...shape,
     mrp: 0, items: 0, fees: 0, couponOff: 0, total: 0, saved: 0,
-    couponValid: false, blocked: false, coupons: [], unknown: [],
+    couponValid: false, blocked: false, coupons: [], unknown: [], points: null,
     modes: null, movedToExpress: 0, movedWhy: "", branch: "",
     ...(money || {}),
     sub, feeFor, priced: !!money, error,

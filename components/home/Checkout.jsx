@@ -20,6 +20,7 @@ import { addressLines, addressText, phoneText } from "@/lib/address";
 import { Amount, computeBill, useBill, useRules } from "./Cart";
 import { useRemote } from "./accountStore";
 import { BANKS, BRAND_LABEL, UPI_APPS, newOrderId } from "./payment";
+import { EARN_WHEN, pointsText, pointsWhy } from "./points";
 import { api } from "@/lib/api";
 import { useAction, useResource } from "@/lib/useFetch";
 
@@ -204,6 +205,33 @@ function SlotStep({ bill, slots, slot, setSlot, onContinue }) {
       ))}
       <div className="co-row-end"><button className="co-primary co-hide-m" onClick={onContinue}>Continue to payment</button></div>
     </>
+  );
+}
+
+/* ---------------- 3 payment: loyalty points ---------------- */
+/* The counter's loyalty card, online. Shown only to a customer who has one
+   and a shop that lets it be spent here; when it cannot go on this bill the
+   row says why instead of vanishing, so nobody wonders where their points went. */
+function PointsRow({ points, on, onChange, busy, error = "" }) {
+  if (!points?.card || points.reason === "off" || !(points.balance > 0)) return null;
+  const blocked = pointsWhy(points);
+  const why = error || blocked;
+  const can = !blocked && points.usable > 0;
+  return (
+    <label className={"co-wallet co-points" + (on && can ? " co-on" : "") + (can ? "" : " co-dim")}>
+      <span className="co-wallet-ic"><Icon n="coin" size={20} /></span>
+      <span className="co-wallet-txt">
+        <b>Loyalty points</b>
+        <small>
+          {pointsText(points.balance)} points
+          {can && <> · use {pointsText(points.usable)} to save <bdi>{money(points.usableValue)}</bdi></>}
+        </small>
+        {why && <small className="co-points-why">{why}</small>}
+      </span>
+      {on && points.off > 0 && <em key={points.off} className="co-wallet-used">−{money(points.off)}</em>}
+      <input type="checkbox" checked={on && can} disabled={!can || busy} onChange={(e) => onChange(e.target.checked)} />
+      <i className="co-switch" aria-hidden="true" />
+    </label>
   );
 }
 
@@ -493,7 +521,8 @@ export default function CheckoutPage({
   const shape = useMemo(() => computeBill({ cart, byId, modes: modesSeen.current }), [cart, byId, modesSeen.current]); // eslint-disable-line
   const chosen = slots.all.find((s) => s.key === slot.all);
   const priority = shape.groups.all.length ? Number(chosen?.fee) || 0 : 0;
-  const bill = useBill({ cart, byId, rules, coupon, slotFee: priority, addressId: address?.id });
+  const [usePoints, setUsePoints] = useState(false);
+  const bill = useBill({ cart, byId, rules, coupon, slotFee: priority, addressId: address?.id, usePoints });
   modesSeen.current = bill.modes;
   /* The shop's slots arrive after the first paint, and the keys it offers are
      the operator's, not this file's. Keep the pick on a chip that exists, or
@@ -567,27 +596,48 @@ export default function CheckoutPage({
     : "";
 
 
+  const orderBody = (points) => ({
+    ref: ref.current,
+    items: cart,
+    address_id: address?.id,
+    coupon: coupon || "",
+    usePoints: !!points,
+    mode: bill.groups.quick.length ? "quick" : "all",
+    slot_key: bill.groups.all.length ? slot.all : slot.quick,
+    slot: slotLabel,
+    eta: bill.groups.quick.length && slot.quick === "now" ? "Arriving in 10–20 mins" : slotLabel,
+    instructions: instructionLine(draft.instructions),
+    whatsapp: !!draft.whatsapp,
+  });
+
   const draftOrder = () => {
     if (!ref.current) ref.current = newOrderId(bill.groups.quick.length ? "quick" : "all");
     return place.run(async () => {
-      await api("/orders", {
-        method: "POST",
-        body: {
-          ref: ref.current,
-          items: cart,
-          address_id: address?.id,
-          coupon: coupon || "",
-          mode: bill.groups.quick.length ? "quick" : "all",
-          slot_key: bill.groups.all.length ? slot.all : slot.quick,
-          slot: slotLabel,
-          eta: bill.groups.quick.length && slot.quick === "now" ? "Arriving in 10–20 mins" : slotLabel,
-          instructions: instructionLine(draft.instructions),
-          whatsapp: !!draft.whatsapp,
-        },
-      });
+      await api("/orders", { method: "POST", body: orderBody(usePoints) });
       setOrdered(ref.current);
       return ref.current;
     });
+  };
+
+  /* Points are spent by the order, not by the payment: the shop holds them
+     when it writes the order. So switching them on or off once the order is
+     written writes it again - the same draft, re-priced - and puts the
+     switch back, saying why, if the shop says no (the balance changed
+     meanwhile, or they were used at the store today). */
+  const [pointsBusy, setPointsBusy] = useState(false);
+  const [pointsErr, setPointsErr] = useState("");
+  const togglePoints = async (on) => {
+    setUsePoints(on); setPointsErr("");
+    if (!ordered) return;
+    setPointsBusy(true);
+    try {
+      await api("/orders", { method: "POST", body: orderBody(on) });
+    } catch (e) {
+      setUsePoints(!on);
+      setPointsErr(e.message || "Your points could not be used right now.");
+    } finally {
+      setPointsBusy(false);
+    }
   };
 
   /* The amount is not sent. The shop prices the basket it already holds and
@@ -676,6 +726,7 @@ export default function CheckoutPage({
           </Step>
           <Step n={3} icon="card" title="Payment" open={step === 3} done={false}>
             <div key={nudge} className={nudge ? "co-nudge" : ""}>
+              <PointsRow points={bill.points} on={usePoints} onChange={togglePoints} busy={place.busy || pointsBusy} error={pointsErr} />
               <PaymentStep payable={payable} pay={pay} setPay={setPay} wallet={wallet} walletUse={walletUse} setWalletUse={setWalletUse} walletBal={walletBalance} offered={offered} optionsPending={!options} codLimit={options?.codLimit || 0} cards={cards} upis={savedPay.upis} />
             </div>
           </Step>
@@ -699,9 +750,11 @@ export default function CheckoutPage({
               <div><dt>Delivery</dt><dd>{bill.fees - priority > 0 ? <Amount value={bill.fees - priority} /> : <span className="co-free">FREE</span>}</dd></div>
               {priority > 0 && <div className="co-rowin"><dt>Priority delivery</dt><dd>{money(priority)}</dd></div>}
               {bill.couponOff > 0 && <div className="co-green"><dt>Coupon {coupon}</dt><dd><Amount value={bill.couponOff} prefix="−" /></dd></div>}
+              {bill.points?.off > 0 && <div className="co-green"><dt>Loyalty points</dt><dd><Amount value={bill.points.off} prefix="−" /></dd></div>}
               {walletUsed > 0 && <div className="co-green co-rowin"><dt>369 Wallet</dt><dd><Amount value={walletUsed} prefix="−" /></dd></div>}
               <div className="co-total"><dt>{pay.method === "cod" && !wallet.covers ? "To pay on delivery" : "To pay"}</dt><dd><Amount value={payable} /></dd></div>
             </dl>
+            {bill.points?.earn > 0 && <p className="co-earn" key={bill.points.earn}><Icon n="coin" size={15} />You'll earn {pointsText(bill.points.earn)} points {EARN_WHEN[bill.points.earnOn] || EARN_WHEN.delivered}</p>}
             {bill.saved > 0 && <p className="co-saving" key={bill.saved}><Icon n="gift" size={15} />You're saving {money(bill.saved)} on this order</p>}
             <button className={"co-primary co-paybtn" + (step === 3 && !methodReady ? " co-soft" : "")} disabled={step === 1 && (!address || addrBusy) || bill.blocked || !bill.priced || !!job || place.busy} onClick={cta.go}>
               {job ? <i className="co-spin co-spin-w" /> : <>{step === 3 && <Icon n="lock" size={15} />}{cta.label}</>}

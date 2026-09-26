@@ -9,6 +9,7 @@ import { useResource } from "@/lib/useFetch";
 import { Avatar, Drawer, Empty, Icon, Search, Select, SortMenu, Switch, Tabs } from "./AdminUI";
 import ProductEditor, { PhotoViewer } from "./ProductEditor";
 import AddressForm from "../home/AddressForm";
+import { pointsText } from "../home/points";
 import { RIDERS, clock, groupIN, isToday } from "./adminData";
 import { dateShort, dateYear, since } from "./format";
 
@@ -999,6 +1000,25 @@ function CustomerProfile({ userId, onBack, onOpenTicket }) {
               </ul>
             )}
           </div>
+
+          {/* The store's loyalty card: the till's rows and the app's together
+              (mart369_loyalty customer_profile.py). Only when they have one. */}
+          {c.points && (
+            <div className="ad-card">
+              <div className="ad-prof-cardhead"><h4>Loyalty points · {pointsText(c.points.points)}{c.points.number ? ` · ${c.points.number}` : ""}</h4></div>
+              {!(c.points.moves || []).length && <Empty icon="coin" title="No points yet" text="Points earned and spent, at the store or in the app, show here." />}
+              {!!(c.points.moves || []).length && (
+                <ul className="ad-prof-moves">
+                  {c.points.moves.map((m) => (
+                    <li key={m.id}>
+                      <span><b>{m.title}</b><small>{[m.sub, m.at ? dateYear(m.at) : ""].filter(Boolean).join(" · ")}</small></span>
+                      <b className={m.credit ? "ad-prof-in" : "ad-prof-out"}>{m.credit ? "+" : "−"}{pointsText(m.points)}</b>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

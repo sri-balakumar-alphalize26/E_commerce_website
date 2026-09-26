@@ -3,7 +3,7 @@
    369 Mart — Account
    Sidebar: profile card · My Profile · My List · Delivery Address · Orders ·
    Ratings & reviews · Notifications ·
-   Payments & rewards (369 Wallet, Saved payments, Coupons & rewards, Refer & earn) ·
+   Payments & rewards (369 Wallet, Loyalty points, Saved payments, Coupons & rewards, Refer & earn) ·
    Help & information (Help, About us, Legal information) · Sign out.
    The extras live in AccountExtras.jsx (+ accountStore.js, acx.css).
 
@@ -19,7 +19,7 @@
    ========================================================================== */
 import { useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Icon, OpenContext, QtyControl, Thumb, WishContext, money } from "./shared";
-import { NotifsSec, PaymentsSec, ReferSec, ReviewsSec, RewardsSec, WalletSec, useNotifications } from "./AccountExtras";
+import { NotifsSec, PaymentsSec, PointsSec, ReferSec, ReviewsSec, RewardsSec, WalletSec, useNotifications } from "./AccountExtras";
 import { fmtPlaced } from "./orderState";
 import AddressForm from "./AddressForm";
 import { addressLines, phoneText } from "@/lib/address";
@@ -35,6 +35,7 @@ const MENU = [
   { key: "notifications", label: "Notifications", icon: "bell" },
   { group: "Payments & rewards" },
   { key: "wallet", label: "369 Wallet", icon: "wallet" },
+  { key: "points", label: "Loyalty points", icon: "coin" },
   { key: "payments", label: "Saved payments", icon: "card" },
   { key: "rewards", label: "Coupons & rewards", icon: "gift" },
   { key: "refer", label: "Refer & earn", icon: "share" },
@@ -433,6 +434,7 @@ export default function AccountPage({
   else if (section === "reviews") body = <ReviewsSec orders={orders} byId={byId} onOpen={openProduct} flash={flash} />;
   else if (section === "notifications") body = <NotifsSec orders={orders} onNav={onNav} goSection={go} />;
   else if (section === "wallet") body = <WalletSec onNav={onNav} />;
+  else if (section === "points") body = <PointsSec onNav={onNav} />;
   else if (section === "payments") body = <PaymentsSec flash={flash} />;
   else if (section === "rewards") body = <RewardsSec onNav={onNav} flash={flash} />;
   else if (section === "refer") body = <ReferSec user={user} flash={flash} />;

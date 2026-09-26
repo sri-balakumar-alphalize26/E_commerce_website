@@ -959,6 +959,66 @@ function Field({ label, value, onChange, suffix, wide, type = "text", placeholde
   );
 }
 
+/* Settings › Loyalty. Five moments an online order can earn at, as a list
+   rather than a dropdown: what each one means for a cancelled or returned
+   order is the thing to read before choosing. */
+function LoyaltySettings({ value: L, set }) {
+  const rule = L.rule;
+  const pts = (n) => (Math.round((Number(n) || 0) * 100) / 100).toLocaleString("en-IN");
+  return (
+    <div className="ad-rows">
+      {!L.shopOn && (
+        <p className="ad-hint ad-gap-note"><Icon n="info" size={14} /><span>Loyalty is switched off for the whole shop in Odoo (369 Mart › Loyalty › Loyalty Settings), so nothing is earned or spent until it is back on.</span></p>
+      )}
+      <div className="ad-row-set" style={{ "--i": 0 }}>
+        <span className="ad-row-ic"><Icon n="coin" size={18} /></span>
+        <span className="ad-row-txt"><b>Points on orders</b><small>App orders and orders made in Odoo Sales earn points on the customer's loyalty card, found by their mobile number.</small></span>
+        <Switch on={!!L.enabled} onChange={set("enabled")} label="Points on online orders" />
+      </div>
+      <div className="ad-row-set" style={{ "--i": 1 }}>
+        <span className="ad-row-ic"><Icon n="cart" size={18} /></span>
+        <span className="ad-row-txt"><b>Spend points at checkout</b><small>Customers can take their points off an app order, within the points rule, once a day.</small></span>
+        <Switch on={!!L.redeem} onChange={set("redeem")} label="Spend points at checkout" />
+      </div>
+      <div className="ad-row-set ad-row-tall" style={{ "--i": 2 }}>
+        <span className="ad-row-ic"><Icon n="clock" size={18} /></span>
+        <span className="ad-row-txt">
+          <b>Points are earned when</b>
+          <small>Whichever you choose, a cancelled order keeps no points and a refund takes back its share. Orders made in Odoo Sales earn when confirmed if you pick "Order placed", otherwise when their delivery is done.</small>
+          <span className="ad-picks" role="radiogroup" aria-label="Points are earned when">
+            {(L.options || []).map((o) => (
+              <button key={o.key} type="button" role="radio" aria-checked={L.earnOn === o.key}
+                className={"ad-pick" + (L.earnOn === o.key ? " ad-on" : "")} onClick={() => set("earnOn")(o.key)}>
+                <i aria-hidden="true" />
+                <span><b>{o.label}</b><small>{o.hint}</small></span>
+              </button>
+            ))}
+          </span>
+          {L.earnOn === "settled" && (
+            <span className="ad-picks-after">
+              <DaysField label="Days after delivery" value={L.settleDays} presets={[3, 7, 10, 14, 30]}
+                onChange={set("settleDays")} prompt="How many days after delivery?" />
+            </span>
+          )}
+        </span>
+      </div>
+      <div className="ad-row-set" style={{ "--i": 3 }}>
+        <span className="ad-row-ic"><Icon n="note" size={18} /></span>
+        <span className="ad-row-txt">
+          <b>The points rule</b>
+          {/* <bdi> around each amount: a right-to-left currency symbol
+              (the rial's) otherwise reorders the whole line around it. */}
+          <small>{rule
+            ? <>Spend <bdi>{money(rule.spend, L.currency)}</bdi> → {pts(rule.earn)} points · {pts(rule.perRupee)} points = <bdi>{money(1, L.currency)}</bdi> off · use from {pts(rule.minRedeem)} points{rule.maxPercent < 100 ? ` · up to ${pts(rule.maxPercent)}% of an order` : ""}</>
+            : "There is no points rule yet."}</small>
+        </span>
+        <span className="ad-dim">In Odoo</span>
+      </div>
+      <p className="ad-hint"><Icon n="info" size={14} />The rule is changed in one place: Odoo, 369 Mart › Loyalty › Points Rules.</p>
+    </div>
+  );
+}
+
 const PAY_ICON = { cod: "cash", wallet: "wallet", gateway: "card" };
 const PAY_STATE = { enabled: ["On", "green"], test: ["Test mode", "orange"], disabled: ["Off", "grey"] };
 
@@ -990,6 +1050,10 @@ export function SettingsSection({ flash }) {
         providers: Object.fromEntries(draft.pay.providers.map((p) => [p.id, p.state !== "disabled"])),
         codLimit: draft.pay.codLimit,
       };
+    } else if (group === "loyalty") {
+      /* The rule and the shop-wide switch are Odoo's, shown read-only. */
+      const { enabled, redeem, earnOn, settleDays } = draft.loyalty;
+      body = { enabled, redeem, earnOn, settleDays };
     }
     try {
       const res = await api(`/admin/settings/${group}`, { method: "POST", body });
@@ -1015,7 +1079,7 @@ export function SettingsSection({ flash }) {
     <div className="ad-stack">
       <section className="ad-card">
         <div className="ad-toolbar">
-          <Tabs value={tab} onChange={(t) => { setTab(t); setErr(""); }} tabs={[["store", "Store"], ...(pay ? [["payments", "Payments"]] : []), ...(draft.customers ? [["customers", "Customers"]] : []), ...(draft.orders ? [["orders", "Orders"]] : []), ...(draft.reviews ? [["reviews", "Reviews"]] : []), ["alerts", "Alerts"]]} />
+          <Tabs value={tab} onChange={(t) => { setTab(t); setErr(""); }} tabs={[["store", "Store"], ...(pay ? [["payments", "Payments"]] : []), ...(draft.customers ? [["customers", "Customers"]] : []), ...(draft.orders ? [["orders", "Orders"]] : []), ...(draft.reviews ? [["reviews", "Reviews"]] : []), ...(draft.loyalty ? [["loyalty", "Loyalty"]] : []), ["alerts", "Alerts"]]} />
           <div className="ad-toolbar-right">
             {dirty && <span className="ad-dim">Unsaved changes</span>}
             <button className="ad-btn" disabled={!dirty || busy} onClick={() => { setDraft(saved); setErr(""); }}>Reset</button>
@@ -1130,6 +1194,10 @@ export function SettingsSection({ flash }) {
             </div>
           </div>
         )}
+
+        {/* Loyalty points on online orders - the store's loyalty card, earned
+            and spent in the app too (mart369_loyalty config.py). */}
+        {tab === "loyalty" && draft.loyalty && <LoyaltySettings value={draft.loyalty} set={(key) => set("loyalty", key)} />}
 
         {tab === "alerts" && (
           <div className="ad-rows">

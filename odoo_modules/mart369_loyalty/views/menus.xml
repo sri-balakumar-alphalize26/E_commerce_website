@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--
+        The loyalty card's screens, under 369 Mart rather than as an app of
+        their own. The shop sells online and from Odoo's Sales, not from a
+        counter, so the place staff already look for money and customers is
+        where these belong.
+
+        New entries pointing at pos_loyalty_card's own actions, rather than
+        moving that module's menus: updating pos_loyalty_card on its own would
+        put its menus back where it keeps them, and these would not move with
+        them. Its own app is switched off below instead.
+    -->
+    <menuitem id="menu_mart369_loyalty"
+              name="Loyalty"
+              parent="mart369.menu_mart369_root"
+              sequence="35"/>
+
+    <menuitem id="menu_mart369_loyalty_cards" name="Loyalty Cards"
+              parent="menu_mart369_loyalty" sequence="10"
+              action="pos_loyalty_card.action_loyalty_card"
+              groups="pos_loyalty_card.group_loyalty_user"/>
+    <menuitem id="menu_mart369_loyalty_customers" name="Customer Details"
+              parent="menu_mart369_loyalty" sequence="15"
+              action="pos_loyalty_card.action_customer_details"
+              groups="pos_loyalty_card.group_loyalty_user"/>
+    <menuitem id="menu_mart369_loyalty_history" name="Points History"
+              parent="menu_mart369_loyalty" sequence="20"
+              action="pos_loyalty_card.action_loyalty_history"
+              groups="pos_loyalty_card.group_loyalty_user"/>
+    <menuitem id="menu_mart369_loyalty_rules" name="Points Rules"
+              parent="menu_mart369_loyalty" sequence="30"
+              action="pos_loyalty_card.action_loyalty_rule"
+              groups="pos_loyalty_card.group_loyalty_manager"/>
+    <menuitem id="menu_mart369_loyalty_settings" name="Loyalty Settings"
+              parent="menu_mart369_loyalty" sequence="40"
+              action="pos_loyalty_card.action_loyalty_card_settings"
+              groups="pos_loyalty_card.group_loyalty_manager"/>
+    <menuitem id="menu_mart369_loyalty_email" name="Email Settings"
+              parent="menu_mart369_loyalty" sequence="50"
+              action="pos_loyalty_card.action_loyalty_email_settings_server"
+              groups="pos_loyalty_card.group_loyalty_manager"/>
+    <menuitem id="menu_mart369_loyalty_images" name="Card Images"
+              parent="menu_mart369_loyalty" sequence="60"
+              action="pos_loyalty_card.action_loyalty_card_image"
+              groups="pos_loyalty_card.group_loyalty_user"/>
+    <menuitem id="menu_mart369_loyalty_images_zip" name="Download Card Images (ZIP)"
+              parent="menu_mart369_loyalty" sequence="65"
+              action="pos_loyalty_card.action_loyalty_card_image_download"
+              groups="pos_loyalty_card.group_loyalty_user"/>
+
+    <!-- One place to look: pos_loyalty_card's own app is hidden while these
+         exist. A menuitem does not write `active` unless told to, so updating
+         pos_loyalty_card leaves this off. -->
+    <record id="pos_loyalty_card.menu_loyalty_root" model="ir.ui.menu">
+        <field name="active" eval="False"/>
+    </record>
+
+</odoo>

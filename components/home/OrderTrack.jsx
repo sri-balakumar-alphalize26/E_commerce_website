@@ -22,6 +22,7 @@ import {
 import { api } from "@/lib/api";
 import { useAction } from "@/lib/useFetch";
 import { addressText } from "@/lib/address";
+import { EARN_WHEN, pointsText } from "./points";
 
 const reduced = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 const lineName = (o, byId, id) => byId[id]?.name || o.snap?.[id]?.name || "Item";
@@ -619,9 +620,17 @@ export default function OrderTrack({ order: o, byId, onChanged, onBack, onReceip
               <div><dt>Items</dt><dd>{m(o.bill?.items ?? itemsTotal)}</dd></div>
               {o.bill?.mrp > o.bill?.items && <div className="ot-green"><dt>You saved</dt><dd>−{m(o.bill.mrp - o.bill.items + (o.bill.couponOff || 0))}</dd></div>}
               {o.bill && <div><dt>Delivery</dt><dd>{o.bill.fees ? m(o.bill.fees) : "FREE"}</dd></div>}
+              {o.bill?.pointsOff > 0 && <div className="ot-green"><dt>Loyalty points ({pointsText(o.points?.spent)})</dt><dd>−{m(o.bill.pointsOff)}</dd></div>}
               {o.walletUsed > 0 && <div className="ot-green"><dt>369 Wallet</dt><dd>−{m(o.walletUsed)}</dd></div>}
               <div className="ot-total"><dt>{o.method === "cod" && s.key !== "delivered" && !cancelled ? "To pay on delivery" : "Paid"}</dt><dd>{m(o.paid || o.total)}</dd></div>
             </dl>
+            {/* What this order earns on the loyalty card, or already has. */}
+            {o.points?.earned > 0 ? (
+              <p className="ot-points"><Icon n="coin" size={15} />You earned {pointsText(o.points.earned)} loyalty points on this order</p>
+            ) : o.points?.willEarn > 0 && !cancelled ? (
+              <p className="ot-points"><Icon n="coin" size={15} />You'll earn {pointsText(o.points.willEarn)} loyalty points {EARN_WHEN[o.points.earnOn] || EARN_WHEN.delivered}</p>
+            ) : null}
+            {cancelled && o.points?.returned > 0 && <p className="ot-points"><Icon n="coin" size={15} />{pointsText(o.points.returned)} points are back on your loyalty card</p>}
           </section>
 
           <section className="ot-card ot-info">

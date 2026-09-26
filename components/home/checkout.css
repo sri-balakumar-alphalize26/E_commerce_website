@@ -165,6 +165,14 @@
 .co-switch::after { content: ""; position: absolute; left: 3px; top: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25); transition: transform 320ms var(--hm-spring); }
 .co-wallet input:checked ~ .co-switch { background: var(--co-green, #1a7f3c); }
 .co-wallet input:checked ~ .co-switch::after { transform: translateX(18px); }
+/* loyalty points: the wallet's row, in the counter card's purple */
+.co-points { margin-bottom: 10px; border-color: #e2d6f3; background: linear-gradient(120deg, #f6f0ff, #fff); }
+.co-points.co-on { border-color: #7a4cc2; box-shadow: 0 12px 22px -18px rgba(122, 76, 194, 0.9); }
+.co-points .co-wallet-ic { background: #7a4cc2; }
+.co-points.co-dim { cursor: default; }
+.co-points.co-dim .co-switch { opacity: 0.45; }
+.co-wallet-txt small.co-points-why { color: #8a5a00; margin-top: 2px; }
+.co-earn { display: flex; align-items: center; gap: 6px; margin: 8px 16px 0; padding: 8px 12px; border-radius: 10px; background: #f3edfc; color: #5b3596; font-size: 13px; font-weight: 700; animation: hm-pop 420ms var(--hm-spring) both; }
 .co-covered { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding: 12px 14px; border-radius: 12px; background: #e9f6ee; color: var(--co-green, #1a7f3c); font-size: 14px; font-weight: 700; animation: hm-rise 360ms var(--hm-ease) both; }
 
 /* methods */

@@ -88,6 +88,7 @@ function ReceiptPaper({ order, byId, paperRef, torn }) {
         {b.mrp > b.items && <div><dt>Discount</dt><dd>-{money(b.mrp - b.items, cur)}</dd></div>}
         <div><dt>Delivery</dt><dd>{b.fees ? money(b.fees, cur) : "FREE"}</dd></div>
         {b.couponOff > 0 && <div><dt>Coupon {order.coupon}</dt><dd>-{money(b.couponOff, cur)}</dd></div>}
+        {b.pointsOff > 0 && <div><dt>Loyalty points</dt><dd>-{money(b.pointsOff, cur)}</dd></div>}
         {order.walletUsed > 0 && <div><dt>369 Wallet</dt><dd>-{money(order.walletUsed, cur)}</dd></div>}
       </dl>
       <hr className="rc-solid" />

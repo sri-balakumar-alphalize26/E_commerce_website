@@ -34,6 +34,8 @@ options you want from the Apps list.
         'mart369_order',
         'mart369_account',
         'mart369_support',
+        # Brings the shop counter's Point of Sale and its loyalty card with it.
+        'mart369_loyalty',
     ],
     'data': [],
     'installable': True,

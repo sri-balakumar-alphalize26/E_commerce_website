@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- A 369 Mart Manager runs the loyalty cards the way they run wallets and
+         rewards: the Manager role brings the loyalty card's own rights with it,
+         so nobody has to be given them one by one. An Owner is a Manager, so
+         has them too. -->
+    <record id="mart369_roles.group_manager" model="res.groups">
+        <field name="implied_ids" eval="[(4, ref('pos_loyalty_card.group_loyalty_manager'))]"/>
+    </record>
+
+</odoo>

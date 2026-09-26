@@ -88,6 +88,17 @@
 .ax-txn-amt { flex: none; font-weight: 800; font-size: 15px; color: var(--ax-green); font-variant-numeric: tabular-nums; }
 .ax-k-spend .ax-txn-amt { color: var(--hm-ink); }
 
+/* loyalty points: the wallet card, in the counter card's purple */
+.ax-points { background: linear-gradient(125deg, #2c1457 0%, #5b3596 55%, #7a4cc2 100%); box-shadow: 0 24px 40px -30px rgba(44, 20, 87, 0.9); }
+.ax-points-num { font-size: 12px; letter-spacing: 0.12em; opacity: 0.8; font-variant-numeric: tabular-nums; }
+.ax-points-how { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; padding: 14px 16px; }
+.ax-points-how > span { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--hm-muted); animation: ac-rise 380ms var(--hm-ease) backwards; animation-delay: calc(80ms + var(--i) * 60ms); }
+.ax-points-how b { display: block; color: var(--hm-ink); font-size: 14px; }
+.ax-points-how .hm-ic { flex: none; color: #7a4cc2; }
+.ax-k-earned .ax-txn-ic, .ax-k-redeem_returned .ax-txn-ic { background: #f1eafc; color: #5b3596; }
+.ax-k-redeemed .ax-txn-ic, .ax-k-returned .ax-txn-ic { background: #fff1de; color: #b35c00; }
+.ax-k-redeemed .ax-txn-amt, .ax-k-returned .ax-txn-amt { color: var(--hm-ink); }
+
 /* add money sheet */
 .ax-am-bal { margin: 0 0 10px; font-size: 13.5px; color: var(--hm-muted); }
 .ax-am-bal b { color: var(--hm-ink); }

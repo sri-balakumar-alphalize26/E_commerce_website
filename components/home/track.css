@@ -246,6 +246,7 @@ button.ot-mini { cursor: pointer; }
 .ot-bill .ot-total { margin-top: 4px; font-size: 15.5px; }
 .ot-bill .ot-total dt { color: var(--hm-ink); font-weight: 800; }
 .ot-bill .ot-total dd { font-weight: 800; }
+.ot-points { display: flex; align-items: center; gap: 6px; margin: 10px 0 0; padding: 8px 12px; border-radius: 10px; background: #f3edfc; color: #5b3596; font-size: 13px; font-weight: 700; }
 .ot-info { display: flex; flex-direction: column; gap: 12px; }
 .ot-info > div { display: flex; gap: 10px; font-size: 13px; color: #52616c; line-height: 1.4; }
 .ot-info > div > .hm-ic { flex: none; margin-top: 2px; color: var(--hm-blue); }
