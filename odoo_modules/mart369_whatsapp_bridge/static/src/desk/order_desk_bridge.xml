@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-inherit="mart369_order.OrderDesk" t-inherit-mode="extension">
+        <xpath expr="//Pick[@label=&quot;'Payment'&quot;]" position="after">
+            <Pick label="'Channel'" value="state.channel" options="channelOptions"
+                  onChange="(v) => this.setFilter('channel', v)"/>
+        </xpath>
+        <!-- The row says which door, right where it says Quick/Express. -->
+        <xpath expr="//small[hasclass('od2-row-sub')]" position="inside">
+            <t t-if="row.channel === 'whatsapp'"> ·
+                <Icon n="'chat'" size="12"/> WhatsApp<t t-if="row.wa and row.wa.job"> #<t t-esc="row.wa.job"/></t>
+            </t>
+        </xpath>
+    </t>
+
+    <t t-inherit="mart369_order.OrderDialog" t-inherit-mode="extension">
+        <xpath expr="//p[hasclass('od2-status')]" position="after">
+            <p t-if="state.detail and state.detail.wa" class="od2-sub od2-wa">
+                <Icon n="'chat'" size="13"/>
+                WhatsApp delivery
+                <t t-if="state.detail.wa.job">· job #<t t-esc="state.detail.wa.job"/></t>
+                <t t-if="state.detail.wa.stage">· <t t-esc="state.detail.wa.stage"/></t>
+                <t t-if="state.detail.wa.shop">· <t t-esc="state.detail.wa.shop"/></t>
+                <t t-if="state.detail.wa.rider">· rider <t t-esc="state.detail.wa.rider"/></t>
+                <t t-if="state.detail.wa.group">· group <t t-esc="state.detail.wa.group"/></t>
+            </p>
+        </xpath>
+    </t>
+
+</templates>

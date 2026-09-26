@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-inherit="mart369_payment.SettingsDesk" t-inherit-mode="extension">
+        <xpath expr="//div[@t-if=&quot;state.tab === 'orders' and state.draft.orders&quot;]" position="after">
+
+            <!-- WhatsApp: which number speaks, and what it says. -->
+            <div t-if="state.tab === 'whatsapp' and state.draft.whatsapp" class="st-form">
+                <div class="st-field st-span2">
+                    <span>Send order updates from</span>
+                    <div class="st-wa-session">
+                        <Pick label="'WhatsApp session'"
+                              value="state.draft.whatsapp.sessionId"
+                              options="waSessionOptions"
+                              onChange="(v) => this.setField('whatsapp', 'sessionId', v)"/>
+                        <span t-if="waSession()"
+                              t-attf-class="mart-pill mart-t-{{ waSession().status === 'connected' ? 'green' : 'orange' }}"
+                              t-esc="waSession().status"/>
+                        <button class="mart-btn mart-btn-sm" t-att-disabled="state.busy"
+                                t-on-click="() => this.waCheckNow()">Check now</button>
+                    </div>
+                </div>
+
+                <div t-foreach="WA_STEPS" t-as="step" t-key="step[0]" class="st-field st-span2 st-wa-step">
+                    <Switch on="!!state.draft.whatsapp.on[step[0]]"
+                            label="step[1]"
+                            onChange="(v) => this.setWaOn(step[0], v)"/>
+                    <textarea rows="2" t-if="state.draft.whatsapp.on[step[0]]"
+                              t-att-value="state.draft.whatsapp.texts[step[0]]"
+                              t-on-input="(ev) => this.setWaText(step[0], ev.target.value)"/>
+                </div>
+
+                <div class="st-field st-span2">
+                    <Switch on="!!state.draft.whatsapp.invoice"
+                            label="'Send the invoice PDF when an order is delivered'"
+                            onChange="(v) => this.setField('whatsapp', 'invoice', v)"/>
+                </div>
+
+                <p class="st-hint st-span2">
+                    <span>These updates go to website customers who ticked WhatsApp at
+                    checkout and left it on in their account. Customers ordering in a
+                    WhatsApp group are talked to by the selling flow itself, step by
+                    step, and are never messaged twice. %(ref)s is the order number,
+                    %(eta)s the promise, %(link)s the tracking link.</span>
+                </p>
+            </div>
+
+        </xpath>
+    </t>
+
+</templates>

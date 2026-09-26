@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- The backend board's search learns the channel. The board's domain
+         itself is widened from the post_init hook, and put back on
+         uninstall, so the other module's record is never edited in data. -->
+    <record id="view_mart369_order_search_bridge" model="ir.ui.view">
+        <field name="name">mart369.order.search.bridge</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="mart369_order.view_mart369_order_search"/>
+        <field name="arch" type="xml">
+            <filter name="mode_all" position="after">
+                <separator/>
+                <filter name="channel_website" string="Website"
+                        domain="[('mart369_channel', '=', 'website')]"/>
+                <filter name="channel_whatsapp" string="WhatsApp"
+                        domain="[('mart369_channel', '=', 'whatsapp')]"/>
+            </filter>
+            <filter name="group_mode" position="after">
+                <filter name="group_channel" string="Channel"
+                        context="{'group_by': 'mart369_channel'}"/>
+            </filter>
+        </field>
+    </record>
+
+    <!-- The order form says which door, and which job carries it. -->
+    <record id="view_mart369_order_form_bridge" model="ir.ui.view">
+        <field name="name">mart369.order.form.bridge</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="mart369_order.view_mart369_order_form"/>
+        <field name="arch" type="xml">
+            <field name="mart369_mode" position="after">
+                <field name="mart369_channel" readonly="1"/>
+                <field name="sa_ref_code" readonly="1"
+                       invisible="not sa_ref_code" string="Delivery job"/>
+                <field name="sa_group_id" readonly="1"
+                       invisible="not sa_group_id"/>
+            </field>
+        </field>
+    </record>
+
+</odoo>

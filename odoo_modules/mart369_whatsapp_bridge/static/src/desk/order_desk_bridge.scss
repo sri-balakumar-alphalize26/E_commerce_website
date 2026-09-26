@@ -1,0 +1,21 @@
+// The bridge's few marks on the desk and the settings screen.
+
+.od2-wa {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.st-wa-session {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.st-wa-step textarea {
+    width: 100%;
+    margin-top: 4px;
+    font: inherit;
+}
