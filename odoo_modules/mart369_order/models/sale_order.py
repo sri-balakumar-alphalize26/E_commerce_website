@@ -274,6 +274,8 @@ class SaleOrder(models.Model):
         for tx in transactions:
             if tx.provider_id.mart369_is_cod:
                 tx._mart369_mark_cod_collected()
+        # The goods have left: take them out of stock (order_accounting.py).
+        self._mart369_validate_pickings()
 
     # ----------------------------------------------------------- the doorstep
 

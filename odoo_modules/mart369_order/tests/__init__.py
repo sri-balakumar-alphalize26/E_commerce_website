@@ -16,3 +16,4 @@ from . import test_order_replacement
 from . import test_customer_risk
 from . import test_order_customer
 from . import test_refunds
+from . import test_books

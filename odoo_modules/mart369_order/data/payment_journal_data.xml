@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--
+        A Cash on delivery and a 369 Wallet journal for every company that runs
+        either provider (payment_journal.py). Outside any noupdate block, so an
+        update re-checks - it only ever creates what is missing.
+    -->
+    <function model="payment.provider" name="_mart369_setup_journals"/>
+
+</odoo>

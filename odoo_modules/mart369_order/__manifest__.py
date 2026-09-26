@@ -1,6 +1,6 @@
 {
     'name': '369 Mart Orders',
-    'version': '19.0.1.2.0',
+    'version': '19.0.1.3.0',
     'category': 'Website',
     'summary': 'Real orders behind the app - placed, packed, delivered, returned.',
     'description': """
@@ -52,6 +52,8 @@ not try to do.
     'data': [
         'security/ir.model.access.csv',
         'data/order_data.xml',
+        # Cash on delivery and 369 Wallet journals, per company.
+        'data/payment_journal_data.xml',
         # The invoice document. The record it draws is an ordinary posted
         # account.move; only the paper is ours.
         'report/invoice_report.xml',

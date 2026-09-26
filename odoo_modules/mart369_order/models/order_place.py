@@ -451,4 +451,7 @@ class SaleOrder(models.Model):
                 'mart369: order %s was paid for but could not be invoiced',
                 self.mart369_ref)
             return False
+        # The payment was booked before this invoice existed; match them now
+        # (order_accounting.py).
+        self._mart369_settle_invoice()
         return True

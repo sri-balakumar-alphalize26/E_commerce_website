@@ -94,6 +94,9 @@ class PaymentTransaction(models.Model):
             order._mart369_spend_coupon()
             order._mart369_confirm()
             order._mart369_issue_otp()
+        # Every time, not only the first: cash collected at the door lands here
+        # long after the order was placed, and its payment must meet the bill.
+        order._mart369_settle_invoice()
         return True
 
     def _mart369_on_accepted(self):
@@ -132,6 +135,8 @@ class PaymentTransaction(models.Model):
         """
         self.ensure_one()
         super()._mart369_on_failed()
+        # super() just put the wallet money back; the books follow.
+        self._mart369_unbook_wallet_leg()
         order = self.mart369_order_id
         if not order or order.mart369_state not in ('draft', False):
             # Already placed: a later failed retry must not unplace it.

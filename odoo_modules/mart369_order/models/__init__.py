@@ -18,3 +18,5 @@ from . import config
 from . import customer_profile
 from . import customer_risk
 from . import order_customer
+from . import payment_journal
+from . import order_accounting
