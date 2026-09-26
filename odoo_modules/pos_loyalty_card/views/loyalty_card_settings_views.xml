@@ -55,13 +55,6 @@
                                    invisible="not enable_loyalty"/>
                         </group>
                     </group>
-                    <separator string="Loyalty per Shop (turn on/off for each POS)" invisible="not enable_loyalty"/>
-                    <field name="pos_config_ids" invisible="not enable_loyalty">
-                        <list editable="bottom" create="0" delete="0">
-                            <field name="name" readonly="1"/>
-                            <field name="enable_loyalty_cards" widget="boolean_toggle" string="Loyalty ON"/>
-                        </list>
-                    </field>
                     <group>
                         <group string="Mobile Number (all loyalty)">
                             <field name="country_id" options="{'no_create': True, 'no_open': True}"/>
@@ -224,8 +217,7 @@
                                     string="Send Test Email" class="btn-secondary"
                                     style="margin-left:8px;"/>
                         </div>
-                        <separator string="Welcome message for new customers (WhatsApp + Email)" colspan="2"/>
-                        <field name="whatsapp_send_card_pdf" widget="boolean_toggle"/>
+                        <separator string="Welcome message for new customers (Email)" colspan="2"/>
                         <field name="welcome_mode" widget="radio" colspan="2"/>
                         <field name="welcome_header" colspan="2" invisible="welcome_mode != 'simple'"/>
                         <field name="welcome_show_greeting" widget="boolean_toggle" invisible="welcome_mode != 'simple'"/>

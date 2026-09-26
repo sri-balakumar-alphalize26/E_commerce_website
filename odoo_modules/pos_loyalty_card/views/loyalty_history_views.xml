@@ -19,11 +19,7 @@
                        decoration-warning="type == 'returned'"
                        decoration-info="type == 'redeem_returned'"/>
                 <field name="description"/>
-                <button name="action_open_order" type="object" string="View Order"
-                        icon="fa-external-link" class="btn-link"
-                        invisible="not order_id"/>
                 <field name="amount" string="Order Amount" optional="show"/>
-                <field name="order_id" string="POS Order" optional="show"/>
             </list>
         </field>
     </record>
@@ -34,11 +30,6 @@
         <field name="model">pos.loyalty.history</field>
         <field name="arch" type="xml">
             <form string="Points History" create="false">
-                <header>
-                    <button name="action_open_order" type="object" string="View Order"
-                            class="btn-primary" icon="fa-external-link"
-                            invisible="not order_id"/>
-                </header>
                 <sheet>
                     <group>
                         <group string="Transaction Details">
@@ -49,7 +40,6 @@
                         </group>
                         <group string="Order Information">
                             <field name="amount" readonly="1"/>
-                            <field name="order_id" readonly="1"/>
                             <field name="create_date" readonly="1"/>
                         </group>
                     </group>
@@ -65,14 +55,12 @@
         <field name="arch" type="xml">
             <search string="Search Points History">
                 <field name="customer_name" string="Search" filter_domain="[
-                    '|', '|', '|', '|', '|', '|',
+                    '|', '|', '|', '|',
                     ('card_number', 'ilike', self),
                     ('customer_name', 'ilike', self),
                     ('customer_phone', 'ilike', self),
                     ('description', 'ilike', self),
-                    ('type', 'ilike', self),
-                    ('order_id.name', 'ilike', self),
-                    ('order_id.pos_reference', 'ilike', self)
+                    ('type', 'ilike', self)
                 ]"/>
                 <separator/>
                 <filter name="filter_earned" string="Earned" domain="[('type', '=', 'earned')]"/>

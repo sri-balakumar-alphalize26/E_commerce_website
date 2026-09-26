@@ -14,7 +14,7 @@
             <list string="Deleted Customers" create="false" edit="false" default_order="customer_deleted_date desc">
                 <header>
                     <button name="action_restore_customer" string="Restore Selected" type="object" class="btn-success"/>
-                    <button name="action_permanent_delete_customer" string="Delete Permanently" type="object" class="btn-danger" confirm="Are you sure you want to PERMANENTLY delete the selected customers? This action cannot be undone! Their POS orders will be unlinked (not deleted)."/>
+                    <button name="action_permanent_delete_customer" string="Delete Permanently" type="object" class="btn-danger" confirm="Are you sure you want to PERMANENTLY delete the selected customers? This action cannot be undone! Their loyalty cards are deleted with them."/>
                 </header>
                 <field name="id" string="Customer ID" readonly="1"/>
                 <field name="name" string="Customer Name"/>
@@ -69,19 +69,6 @@
                                            decoration-success="state == 'active'"
                                            decoration-warning="state == 'suspended'"
                                            decoration-info="state == 'draft'"/>
-                                </list>
-                            </field>
-                        </page>
-                        <page string="POS Orders" name="pos_orders">
-                            <field name="pos_order_ids" readonly="1" nolabel="1">
-                                <list string="POS Orders" default_order="date_order desc">
-                                    <field name="name" string="Order Ref"/>
-                                    <field name="date_order" string="Date"/>
-                                    <field name="amount_total" string="Total" widget="monetary"/>
-                                    <field name="state" widget="badge"
-                                           decoration-success="state == 'done' or state == 'paid'"
-                                           decoration-info="state == 'draft'"
-                                           decoration-warning="state == 'invoiced'"/>
                                 </list>
                             </field>
                         </page>
@@ -142,13 +129,7 @@
                     <button name="action_open_delete_wizard" string="Delete Customer" type="object" class="btn-danger"/>
                 </header>
                 <sheet>
-                    <div class="oe_button_box" name="button_box">
-                        <button class="oe_stat_button" type="object"
-                                name="action_view_pos_orders"
-                                icon="fa-shopping-cart">
-                            <field name="pos_order_count" widget="statinfo" string="POS Orders"/>
-                        </button>
-                    </div>
+                    <div class="oe_button_box" name="button_box"/>
                     <div class="oe_title">
                         <h1><field name="name" placeholder="Customer Name"/></h1>
                     </div>
@@ -178,20 +159,6 @@
                                            decoration-success="state == 'active'"
                                            decoration-warning="state == 'suspended'"
                                            decoration-info="state == 'draft'"/>
-                                </list>
-                            </field>
-                        </page>
-                        <page string="POS Orders" name="pos_orders">
-                            <field name="pos_order_ids" readonly="1" nolabel="1">
-                                <list string="POS Orders" default_order="date_order desc">
-                                    <field name="name" string="Order Ref"/>
-                                    <field name="date_order" string="Date"/>
-                                    <field name="amount_total" string="Total" widget="monetary"/>
-                                    <field name="state" widget="badge"
-                                           decoration-success="state == 'done' or state == 'paid'"
-                                           decoration-info="state == 'draft'"
-                                           decoration-warning="state == 'invoiced'"/>
-                                    <field name="session_id" string="Session" optional="hide"/>
                                 </list>
                             </field>
                         </page>
@@ -241,8 +208,7 @@
                 No customers found
             </p>
             <p>
-                Customers are created from the POS when entering their mobile number during checkout.
-                You can also create customers manually here.
+                Customers with a mobile number appear here. You can also create customers manually.
             </p>
         </field>
     </record>

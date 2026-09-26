@@ -170,15 +170,10 @@ class LoyaltyCard(models.Model):
                     
         records = super().create(vals_list)
 
-        # Queue the WhatsApp welcome (text + image + PDF) and email for newly
-        # created active cards. Deferred to the send queue so POS card creation
-        # returns immediately instead of blocking on network sends.
-        for card in records:
-            if card.state == 'active':
-                try:
-                    self.env['whatsapp.send.queue'].sudo()._enqueue('welcome', card, delay_seconds=30)
-                except Exception as e:
-                    _logger.error('LOYALTY WA: Error queueing welcome for card %s: %s', card.card_number, e)
+        # Email the card to a card created active, when card emails are on
+        # (Loyalty Settings). The WhatsApp welcome went with WhatsApp.
+        for card in records.filtered(lambda c: c.state == 'active'):
+            card._maybe_email_card()
 
         return records
 
@@ -307,7 +302,7 @@ class LoyaltyCard(models.Model):
         # Card image (pure Pillow -- works with no WhatsApp connection)
         img_b64 = False
         try:
-            img_b64 = self.env['pos.loyalty.whatsapp.service'].sudo()._generate_loyalty_card_image(self)
+            img_b64 = self.env['pos.loyalty.card.render'].sudo()._generate_loyalty_card_image(self)
         except Exception as e:
             _logger.warning('LOYALTY EMAIL: image generation failed for %s: %s', self.card_number, e)
         if img_b64:
@@ -367,13 +362,9 @@ class LoyaltyCard(models.Model):
         for card in self:
             was_draft = card.state == 'draft'
             card.state = 'active'
-            # Queue WhatsApp welcome + PDF + email when first activated (deferred).
+            # Email the card when first activated, if card emails are on.
             if was_draft:
-                try:
-                    self.env['whatsapp.send.queue'].sudo()._enqueue('welcome', card, delay_seconds=30)
-                except Exception as e:
-                    _logger.error('LOYALTY WA: Error queueing welcome on activate for card %s: %s',
-                                  card.card_number, e)
+                card._maybe_email_card()
 
     def action_suspend(self):
         self.state = 'suspended'
@@ -494,44 +485,6 @@ class LoyaltyCard(models.Model):
         return {
             'type': 'ir.actions.act_url',
             'url': '/loyalty_card/view/%s' % self.id,
-            'target': 'new',
-        }
-
-    # =========================================================================
-    # === WHATSAPP UI (integrated from File 2) ===
-    # =========================================================================
-    def action_send_whatsapp(self):
-        """Send loyalty card details via WhatsApp"""
-        self.ensure_one()
-        if not self.phone:
-            raise ValidationError(_('Phone number is required to send WhatsApp message.'))
-        
-        # Format phone for WhatsApp (needs country code)
-        dial, _length = self._get_loyalty_mobile_cfg()
-        phone = self.phone.replace(' ', '').replace('-', '').replace('+', '')
-        if not phone.startswith(dial):
-            phone = dial + phone
-        
-        # Compose WhatsApp message
-        message = (
-            "Dear %s,\n\n"
-            "Welcome to our Loyalty Program!\n\n"
-            "Your Loyalty Card Details:\n"
-            "Card Number: %s\n"
-            "Current Points: %.2f\n"
-            "Points Value: ₹%.2f\n\n"
-            "Show this card number at checkout to earn and redeem points!\n\n"
-            "Thank you for being a valued customer!"
-        ) % (self.name, self.card_number, self.total_points, self.points_value)
-        
-        # URL encode the message
-        import urllib.parse
-        encoded_message = urllib.parse.quote(message)
-        whatsapp_url = "https://wa.me/%s?text=%s" % (phone, encoded_message)
-        
-        return {
-            'type': 'ir.actions.act_url',
-            'url': whatsapp_url,
             'target': 'new',
         }
 
@@ -1258,29 +1211,16 @@ class LoyaltyCard(models.Model):
         
         discount = points / rule.points_per_currency
         
-        # Try to find the POS order by name for linking
-        pos_order = None
-        if order_name:
-            pos_order = self.env['pos.order'].search([
-                '|',
-                ('name', '=', order_name),
-                ('pos_reference', '=', order_name),
-            ], limit=1)
-        
         # NOW create redemption history with full details
         try:
             history_vals = {
                 'card_id': card.id,
                 'points': points,
                 'type': 'redeemed',
-                'description': 'POS Redemption: %s' % (order_name or 'Order'),
+                'description': 'Redemption: %s' % (order_name or 'Order'),
                 'amount': discount,  # Store the discount amount
             }
-            
-            if pos_order:
-                history_vals['order_id'] = pos_order.id
-                _logger.info('LOYALTY: Linked to POS order ID %s', pos_order.id)
-            
+
             history = self.env['pos.loyalty.history'].create(history_vals)
             _logger.info('LOYALTY: Created redemption history record ID=%s', history.id)
             

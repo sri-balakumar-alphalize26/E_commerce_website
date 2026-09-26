@@ -152,11 +152,6 @@ class LoyaltyCardSettings(models.Model):
     mail_smtp_pass = fields.Char(string='Password / App Password')
     mail_configured = fields.Boolean(
         string='Email Ready', compute='_compute_mail_configured')
-    whatsapp_send_card_pdf = fields.Boolean(
-        string='Send card PDF on new card', default=True,
-        help='When ON, a PDF of the loyalty card is also sent on WhatsApp when a '
-             'new card is created (in addition to the welcome text and card image). '
-             'Turn OFF to skip the PDF.')
     welcome_message = fields.Text(
         string='Welcome Message (advanced template)', default=WELCOME_DEFAULT,
         help='Advanced full template. Placeholders: {name}, {card_number}, {phone}, {points}. '
@@ -175,10 +170,6 @@ class LoyaltyCardSettings(models.Model):
     welcome_intro = fields.Text('Intro line', default=WELCOME_INTRO_DEFAULT)
     welcome_instructions = fields.Text('Instructions line', default=WELCOME_INSTR_DEFAULT)
     welcome_preview = fields.Text('Live Preview', compute='_compute_welcome_preview', readonly=True)
-    pos_config_ids = fields.Many2many(
-        'pos.config', 'loyalty_settings_pos_rel', 'settings_id', 'config_id',
-        string='Shops',
-        default=lambda self: self.env['pos.config'].search([]).ids)
 
     # Mobile number rules (used everywhere in loyalty: POS validation + backend)
     country_id = fields.Many2one(

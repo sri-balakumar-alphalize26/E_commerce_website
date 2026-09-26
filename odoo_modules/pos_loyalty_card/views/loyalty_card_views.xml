@@ -70,9 +70,6 @@
                                            decoration-info="type == 'redeem_returned'"/>
                                     <field name="points" string="Points"/>
                                     <field name="description"/>
-                                    <field name="order_id" column_invisible="1"/>
-                                    <button name="action_open_order" type="object" string="View Order"
-                                            icon="fa-external-link" class="btn-link" invisible="not order_id"/>
                                     <field name="amount" string="Order Amount" optional="show"/>
                                 </list>
                             </field>
@@ -125,14 +122,6 @@
                             type="object"
                             class="btn-secondary"
                             invisible="state == 'draft'"/>
-                    <!-- =========================================================================
-                         WHATSAPP BUTTON (integrated from File 2)
-                         ========================================================================= -->
-                    <button name="action_send_whatsapp" 
-                            string="Send WhatsApp" 
-                            type="object" 
-                            class="btn-success"
-                            invisible="state == 'draft'"/>
                     <button name="action_email_card"
                             string="Email Card"
                             type="object"
@@ -180,9 +169,6 @@
                                            decoration-warning="type == 'returned'"
                                            decoration-info="type == 'redeem_returned'"/>
                                     <field name="description"/>
-                                    <field name="order_id" column_invisible="1"/>
-                                    <button name="action_open_order" type="object" string="View Order"
-                                            icon="fa-external-link" class="btn-link" invisible="not order_id"/>
                                     <field name="amount" string="Order Amount" optional="show"/>
                                 </list>
                             </field>

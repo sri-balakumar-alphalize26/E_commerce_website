@@ -8,14 +8,6 @@ _logger = logging.getLogger(__name__)
 class ResPartner(models.Model):
     _inherit = 'res.partner'
 
-    pos_order_ids = fields.One2many(
-        'pos.order', 'partner_id',
-        string='POS Orders',
-    )
-    pos_order_count = fields.Integer(
-        string='POS Order Count',
-        compute='_compute_pos_order_count',
-    )
     loyalty_card_ids = fields.One2many(
         'pos.loyalty.card', 'partner_id',
         string='Loyalty Cards',
@@ -42,10 +34,6 @@ class ResPartner(models.Model):
                 ALTER TABLE res_partner ALTER COLUMN is_customer_deleted SET NOT NULL;
             END $$;
         """)
-
-    def _compute_pos_order_count(self):
-        for partner in self:
-            partner.pos_order_count = len(partner.pos_order_ids)
 
     @api.model
     def _loyalty_mobile_cfg(self):
@@ -140,18 +128,6 @@ class ResPartner(models.Model):
         created, activated, skipped = partners._generate_loyalty_cards()
         return self._generate_cards_notification(created, activated, skipped)
 
-    def action_view_pos_orders(self):
-        """Open POS orders for this customer"""
-        self.ensure_one()
-        return {
-            'name': _('POS Orders - %s') % self.name,
-            'type': 'ir.actions.act_window',
-            'res_model': 'pos.order',
-            'view_mode': 'list,form',
-            'domain': [('partner_id', '=', self.id)],
-            'context': {'create': False},
-        }
-
     def action_soft_delete_customer(self):
         """Soft-delete customers (move to trash)"""
         for partner in self:
@@ -178,12 +154,6 @@ class ResPartner(models.Model):
         model = self.env['res.partner']
         for partner in self:
             _logger.info('LOYALTY: Permanently deleting customer %s (ID: %s)', partner.name, partner.id)
-
-            # Unlink partner from POS orders (set partner_id = False, don't delete orders)
-            pos_orders = self.env['pos.order'].sudo().search([('partner_id', '=', partner.id)])
-            if pos_orders:
-                _logger.info('LOYALTY: Unlinking %d POS orders from partner %s', len(pos_orders), partner.name)
-                pos_orders.write({'partner_id': False})
 
             # Permanently remove the partner's loyalty cards too (bypass the
             # soft-delete unlink) so no active card keeps the phone alive as an

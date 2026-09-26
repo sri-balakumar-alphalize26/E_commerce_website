@@ -1,7 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Top-level "Loyalty" menu, just before Configuration (seq 100) -->
-    <menuitem id="menu_loyalty_root" name="Loyalty" parent="point_of_sale.menu_point_root" sequence="95"/>
+    <!-- Its own app. It used to sit under Point of Sale, which this module no
+         longer needs (19.0.2.0.0). A module that sells can move these entries
+         into its own menu - 369 Mart's mart369_loyalty does. -->
+    <menuitem id="menu_loyalty_root" name="Loyalty" sequence="46"
+              groups="group_loyalty_user"
+              web_icon="contacts,static/description/icon.png"/>
 
     <!-- Section sub-headings (action-less) -->
     <menuitem id="menu_sec_loyalty" name="Loyalty" parent="menu_loyalty_root" sequence="10"/>
@@ -13,7 +17,4 @@
     <menuitem id="menu_loyalty_cards" name="Loyalty Cards" parent="menu_sec_loyalty" action="action_loyalty_card" sequence="10"/>
     <menuitem id="menu_loyalty_rules" name="Points Rules" parent="menu_sec_loyalty" action="action_loyalty_rule" sequence="20"/>
     <menuitem id="menu_loyalty_history" name="Points History" parent="menu_sec_loyalty" action="action_loyalty_history" sequence="30"/>
-
-    <!-- Points History under Reporting menu -->
-    <menuitem id="menu_loyalty_history_reporting" name="Points History" parent="point_of_sale.menu_point_rep" action="action_loyalty_history" sequence="50"/>
 </odoo>
