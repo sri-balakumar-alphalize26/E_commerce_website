@@ -20,3 +20,4 @@ from . import customer_risk
 from . import order_customer
 from . import payment_journal
 from . import order_accounting
+from . import wallet_books

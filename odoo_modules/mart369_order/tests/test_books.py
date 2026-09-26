@@ -242,3 +242,250 @@ class TestBooks(Mart369OrderCase):
         self.assertEqual(self._journal('mart369_wallet'), wallet)
         self.assertEqual(cod.type, 'cash')
         self.assertNotEqual(cod, wallet)
+
+
+@tagged('post_install', '-at_install')
+class TestWalletBooks(Mart369OrderCase):
+    """Cash at the door and the 369 Wallet as real entries (wallet_books.py).
+
+    'paid', never 'in_payment': a payment with no journal entry leaves its
+    invoice In payment for ever, which is exactly what went unnoticed."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.env['payment.provider']._mart369_setup_journals()
+        cls.company = cls.env.company
+        cls.liability = cls.company.mart369_wallet_account_id
+        cls.rewards = cls.company.mart369_wallet_reward_account_id
+        cls.card = cls.env['loyalty.card'].sudo()._mart369_wallet(cls.partner)
+
+    def _journal(self, kind):
+        return self.env['account.journal']._mart369_journal_for(kind, self.company)
+
+    def _invoice(self, order):
+        return order.invoice_ids.filtered(
+            lambda m: m.move_type == 'out_invoice' and m.state == 'posted')
+
+    def _balance(self, account):
+        """Credit minus debit of the posted lines on `account`."""
+        lines = self.env['account.move.line'].sudo().search([
+            ('account_id', '=', account.id), ('parent_state', '=', 'posted')])
+        return sum(lines.mapped('credit')) - sum(lines.mapped('debit'))
+
+    def _deliver(self, order):
+        code = order.sudo().mart369_otp_code
+        order.mart369_action_advance()
+        order.mart369_action_advance()
+        order.mart369_action_deliver(code)
+
+    def _wallet_only(self, order):
+        provider = self.env.ref('mart369_payment.payment_provider_wallet').sudo()
+        provider.write({'state': 'test'})
+        self.card._mart369_move(order.amount_total, 'add', 'Seed')
+        tx = self.env['payment.transaction'].sudo().create({
+            'provider_id': provider.id,
+            'payment_method_id': provider.payment_method_ids[:1].id,
+            'partner_id': self.partner.id,
+            'amount': order.amount_total,
+            'currency_id': order.currency_id.id,
+            'operation': 'online_direct',
+            'mart369_kind': 'order',
+            'mart369_order_ref': order.mart369_ref,
+            'mart369_wallet_used': order.amount_total,
+        })
+        tx._set_done()
+        tx._post_process()
+        return tx
+
+    # ------------------------------------------------------------- setup
+
+    def test_the_accounts_are_set_once(self):
+        self.assertEqual(self.liability.account_type, 'liability_current')
+        self.assertFalse(self.liability.reconcile)
+        self.assertEqual(self.rewards.account_type, 'expense')
+        for kind in ('cash_on_delivery', 'mart369_wallet'):
+            journal = self._journal(kind)
+            lines = (journal.inbound_payment_method_line_ids
+                     + journal.outbound_payment_method_line_ids)
+            self.assertTrue(all(lines.mapped('payment_account_id')), kind)
+        self.assertEqual(
+            self._journal('mart369_wallet').inbound_payment_method_line_ids.payment_account_id,
+            self.liability)
+        accounts = self.env['account.account'].sudo().search_count([])
+        self.env['payment.provider']._mart369_setup_journals()
+        self.assertEqual(self.env['account.account'].sudo().search_count([]), accounts)
+        self.assertEqual(self.company.mart369_wallet_account_id, self.liability)
+
+    # ------------------------------------------------------------ money in
+
+    def test_cash_at_the_door_is_a_real_entry(self):
+        order = self._place()
+        tx = self._cash(order)
+        self._deliver(order)
+        move = tx.payment_id.move_id
+        self.assertTrue(move, 'the cash is in the books')
+        self.assertEqual(move.state, 'posted')
+        cod_cash = self._journal('cash_on_delivery').default_account_id
+        self.assertTrue(move.line_ids.filtered(
+            lambda l: l.account_id == cod_cash and l.debit))
+        self.assertEqual(self._invoice(order).payment_state, 'paid')
+
+    def test_spending_the_wallet_uses_the_liability(self):
+        order = self._place()
+        before = self._balance(self.liability)
+        tx = self._wallet_only(order)
+        move = tx.payment_id.move_id
+        self.assertTrue(move.line_ids.filtered(
+            lambda l: l.account_id == self.liability and l.debit))
+        self.assertEqual(self._invoice(order).payment_state, 'paid')
+        # The seed 'add' had no transaction, so only the spend moved it.
+        self.assertAlmostEqual(before - self._balance(self.liability),
+                               order.amount_total, places=2)
+
+    def test_a_split_wallet_part_uses_the_liability(self):
+        order = self._place()
+        tx = self._pay(order, amount=order.amount_total - 20.0, wallet_used=20.0)
+        wallet = tx.mart369_wallet_payment_id
+        self.assertTrue(wallet.move_id.line_ids.filtered(
+            lambda l: l.account_id == self.liability and l.debit == 20.0))
+        # The invoice follows the gateway part too (a bank statement settles
+        # that one); the wallet part is settled the moment it posts.
+        self.assertEqual(wallet.state, 'paid')
+
+    # --------------------------------------------------------- money back
+
+    def test_a_refund_to_the_wallet_is_booked_and_matches_the_credit_note(self):
+        order = self._place()
+        self._pay(order)
+        before = self._balance(self.liability)
+        order._mart369_cancel(reason='Store closed')
+        row = self.env['loyalty.history'].sudo().search([
+            ('order_model', '=', 'sale.order'), ('order_id', '=', order.id),
+            ('mart369_kind', '=', 'refund')])
+        self.assertEqual(len(row), 1, 'cancelling keeps the refund row (sale_loyalty deleted it)')
+        self.assertTrue(row.mart369_move_id, 'the refund is an entry')
+        self.assertEqual(row.mart369_move_id.journal_id, self._journal('mart369_wallet'))
+        self.assertAlmostEqual(self._balance(self.liability) - before,
+                               order.amount_total, places=2)
+        note = order.invoice_ids.filtered(
+            lambda m: m.move_type == 'out_refund' and m.state == 'posted')
+        self.assertTrue(note)
+        self.assertTrue(note.currency_id.is_zero(note.amount_residual),
+                        'the credit note is settled by the wallet refund')
+
+    def test_cancelling_keeps_the_wallet_ledger_whole(self):
+        """Odoo's sale_loyalty deletes an order's history rows on cancel;
+        the wallet's own rows are money and must survive it."""
+        order = self._place()
+        self._pay(order, amount=order.amount_total - 10.0, wallet_used=10.0)
+        self.card._mart369_move(10.0, 'add', 'Seed')
+        self.card._mart369_move(10.0, 'spend', 'Order', order=order)
+        order._mart369_cancel(reason='Changed my mind')
+        self.card.invalidate_recordset()
+        self.assertTrue(self.card.mart369_consistent,
+                        'the balance still matches its ledger')
+        kinds = self.env['loyalty.history'].sudo().search([
+            ('order_model', '=', 'sale.order'), ('order_id', '=', order.id)]).mapped('mart369_kind')
+        self.assertIn('spend', kinds)
+        self.assertIn('refund', kinds)
+
+    def test_a_failed_split_leg_given_back_books_nothing(self):
+        self.card._mart369_move(30.0, 'add', 'Seed')
+        self.card._mart369_move(30.0, 'spend', 'Order')
+        row = self.card._mart369_move(30.0, 'refund', 'Payment failed', sub='TX-1')
+        self.assertFalse(row.mart369_move_id)
+
+    def test_a_top_up_is_booked_and_nets_the_receivable(self):
+        tx = self.env['payment.transaction'].sudo().create({
+            'provider_id': self.gateway.id,
+            'payment_method_id': self.method.id,
+            'partner_id': self.partner.id,
+            'amount': 300.0,
+            'currency_id': self.company.currency_id.id,
+            'operation': 'online_direct',
+            'mart369_kind': 'topup',
+            'mart369_wallet_card_id': self.card.id,
+        })
+        before = self._balance(self.liability)
+        tx._set_done()
+        tx._post_process()
+        row = tx.mart369_history_id
+        self.assertTrue(row.mart369_move_id)
+        self.assertAlmostEqual(self._balance(self.liability) - before, 300.0, places=2)
+        if tx.payment_id.move_id:
+            receivable = (tx.payment_id.move_id + row.mart369_move_id).line_ids.filtered(
+                lambda l: l.account_id.account_type == 'asset_receivable')
+            self.assertTrue(all(receivable.mapped('reconciled')),
+                            'the gateway money and the wallet cancel out')
+
+    def test_a_reward_is_an_expense_owed_to_the_customer(self):
+        row = self.card._mart369_move(50.0, 'reward', 'Scratch card prize')
+        move = row.mart369_move_id
+        self.assertEqual(move.state, 'posted')
+        self.assertTrue(move.line_ids.filtered(
+            lambda l: l.account_id == self.rewards and l.debit == 50.0))
+        self.assertTrue(move.line_ids.filtered(
+            lambda l: l.account_id == self.liability and l.credit == 50.0))
+
+    def test_the_liability_follows_the_wallets(self):
+        """Every booked movement moves the account by exactly as much as it
+        moves the wallets."""
+        Card = self.env['loyalty.card'].sudo()
+        program = Card._mart369_program()
+
+        def points():
+            return sum(Card.search([('program_id', '=', program.id)]).mapped('points'))
+
+        start_points, start_books = points(), self._balance(self.liability)
+        self.card._mart369_move(40.0, 'reward', 'Referral')
+        order = self._place()
+        self._pay(order)
+        order._mart369_cancel(reason='Out of stock')
+        spent = self._place()
+        tx = self._pay(spent, amount=spent.amount_total - 15.0, wallet_used=15.0)
+        # The split's own checkout debit (payment_api.py does it in real life).
+        self.card._mart369_move(15.0, 'spend', 'Order', order=spent)
+        self.assertTrue(tx.mart369_wallet_payment_id)
+
+        self.assertAlmostEqual(points() - start_points,
+                               self._balance(self.liability) - start_books, places=2)
+
+    # ------------------------------------------------------------ history
+
+    def test_payments_made_before_the_accounts_are_caught_up(self):
+        order = self._place()
+        journal = self._journal('cash_on_delivery')
+        lines = journal.inbound_payment_method_line_ids
+        account = lines[:1].payment_account_id
+        lines.payment_account_id = False
+        tx = self._cash(order)
+        self._deliver(order)
+        payment = tx.payment_id
+        self.assertFalse(payment.move_id, 'the old behaviour: no entry')
+
+        lines.payment_account_id = account
+        Journal = self.env['account.journal']
+        Journal._mart369_books_catch_up(self.company)
+        self.assertTrue(payment.move_id)
+        self.assertEqual(payment.move_id.state, 'posted')
+        self.assertEqual(self._invoice(order).payment_state, 'paid')
+        self.assertEqual(Journal._mart369_books_catch_up(self.company), 0, 'and only once')
+
+    def test_the_opening_entry_is_a_draft_for_the_accountant(self):
+        self.card._mart369_move(75.0, 'add', 'Old money')
+        self.env['ir.model.data'].sudo().search([
+            ('module', '=', 'mart369_order'),
+            ('name', '=', 'wallet_opening_company_%s' % self.company.id)]).unlink()
+        Journal = self.env['account.journal']
+        move = Journal._mart369_wallet_opening(self.company)
+        self.assertEqual(move.state, 'draft')
+        Card = self.env['loyalty.card'].sudo()
+        program = Card._mart369_program()
+        total = sum(Card.search([
+            ('program_id', '=', program.id), ('points', '>', 0),
+            '|', ('company_id', '=', self.company.id), ('company_id', '=', False),
+        ]).mapped('points'))
+        credit = move.line_ids.filtered(lambda l: l.account_id == self.liability)
+        self.assertAlmostEqual(credit.credit, total, places=2)
+        self.assertFalse(Journal._mart369_wallet_opening(self.company), 'made once')

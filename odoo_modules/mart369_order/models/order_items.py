@@ -125,6 +125,7 @@ class SaleOrder(models.Model):
             with self.env.cr.savepoint():
                 credit = self._create_invoices(final=True)
                 credit.filtered(lambda m: m.state == 'draft').action_post()
+                self._mart369_reconcile_wallet_refunds()
         except Exception:  # noqa: BLE001
             _logger.exception('369 Mart: credit note for a removed item on %s failed', self.mart369_ref)
 

@@ -60,6 +60,17 @@ class PaymentProvider(models.Model):
         ])
         for provider in providers:
             provider._mart369_journal()
+        # And give them the accounts that make their payments real entries
+        # (wallet_books.py).
+        Journal = self.env['account.journal']
+        for company in providers.mapped('company_id'):
+            kinds = {p._mart369_journal_kind() for p in providers
+                     if p.company_id == company}
+            try:
+                with self.env.cr.savepoint():
+                    Journal._mart369_setup_books(company, kinds)
+            except Exception:  # noqa: BLE001 - an update must not fail on the books
+                _logger.exception('mart369: could not set up the books for %s', company.name)
         return True
 
 
@@ -98,6 +109,9 @@ class AccountJournal(models.Model):
             'noupdate': True,
         })
         _logger.info('mart369: created journal %s (%s) for %s', name, code, company.name)
+        # Without accounts on its method lines, Odoo 19 books its payments as
+        # nothing at all (wallet_books.py).
+        journal._mart369_setup_journal_books()
         return journal
 
 

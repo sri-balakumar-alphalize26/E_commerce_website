@@ -22,3 +22,17 @@ class ResCompany(models.Model):
         domain="[('type_tax_use', '=', 'sale'), ('company_id', '=', id)]",
         help="The tax put on 369 Mart order lines. It must be set to "
              "'Included in price'. Leave empty for no tax.")
+
+    # The 369 Wallet in the books (wallet_books.py). Filled in on install with
+    # accounts of its own; an accountant may point them elsewhere.
+    mart369_wallet_account_id = fields.Many2one(
+        'account.account', string='369 Wallet balances account',
+        domain="[('account_type', '=', 'liability_current')]",
+        help="What the shop owes its customers in their 369 Wallets. Every "
+             "wallet top-up, refund and reward is credited here; spending is "
+             "debited.")
+    mart369_wallet_reward_account_id = fields.Many2one(
+        'account.account', string='369 Wallet rewards account',
+        domain="[('account_type', 'in', ('expense', 'expense_direct_cost'))]",
+        help="Where scratch-card prizes, referral rewards and goodwill credits "
+             "paid into wallets are charged.")

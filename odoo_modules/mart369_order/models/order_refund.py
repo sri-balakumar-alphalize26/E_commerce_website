@@ -101,6 +101,8 @@ class SaleOrder(models.Model):
                         })],
                     })
                 note.filtered(lambda m: m.state == 'draft').action_post()
+                # The wallet refund was booked first; match the two now.
+                self._mart369_reconcile_wallet_refunds()
                 return note
         except Exception:  # noqa: BLE001
             _logger.exception('369 Mart: credit note for %s on %s failed', amount, self.mart369_ref)
