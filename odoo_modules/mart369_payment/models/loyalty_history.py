@@ -38,6 +38,18 @@ class LoyaltyHistory(models.Model):
                     values['description'] = description
         return super().create(vals_list)
 
+    def unlink(self):
+        """The wallet ledger is never deleted.
+
+        `sale_loyalty` removes every history row pointing at an order when the
+        order is cancelled - the right thing for points earned on it, and the
+        wrong thing here: cancelling a paid order erased the customer's own
+        "Order cancelled" refund row, so the app's history lost the money
+        coming back and the balance no longer matched its ledger. Rows with a
+        kind are the 369 Wallet's and are kept; everything else is Odoo's.
+        """
+        return super(LoyaltyHistory, self.filtered(lambda h: not h.mart369_kind)).unlink()
+
     def _mart369_serialize(self):
         """Exactly the six keys AccountExtras.jsx renders, and nothing else.
 
