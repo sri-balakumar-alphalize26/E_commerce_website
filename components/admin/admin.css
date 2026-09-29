@@ -185,7 +185,9 @@ html.ad-lock { overflow: hidden; }
 .ad-tag-q { background: #fff1de; color: #96530a; } .ad-tag-e { background: #e6f1f8; color: #08516f; }
 
 /* ---------------- layout + cards ---------------- */
-.ad-body { padding: 22px; animation: ad-page 420ms var(--ad-ease) both; }
+/* A short fade, not a slide: this replays on every section switch (the main
+   is keyed by section), and 420 ms of movement read as the screen loading. */
+.ad-body { padding: 22px; animation: ad-fade 140ms var(--ad-ease) both; }
 /* The home page and product page editors are @dnd-kit sortable trees, and
    dnd-kit positions every band with an inline `transform` it computes from
    measured rectangles. A CSS animation beats an inline style for as long as it
@@ -1318,3 +1320,23 @@ html.ad-lock { overflow: hidden; }
 /* A narrow number box with a word after it ("MB", "sec", a currency) needs
    more room on the right than a one-letter unit. */
 .ad-narrow:has(em) input { padding-right: 46px; }
+
+/* ---------------- entrances: quick, and capped ----------------
+   Each list above staggers its rows by 40-70 ms times the row's index, with
+   no ceiling, so the thirtieth row of a list arrived well over a second after
+   the data had - on every visit, because a section remounts when it is
+   opened. Last in the file so it wins: the first eight rows still cascade,
+   everything after them arrives with the eighth, and each row takes 220 ms.
+   No line here may start with a selector sync_editor_look.js copies
+   (.ad-table, .ad-mini-stats, ...): it copies line by line, and half a rule
+   would break the Odoo bundle. */
+.ad-live li, .ad-table tbody tr, .ad-lowstock li, .ad-row-set, .ad-coupon,
+.ad-reviews li, .ad-tickets li, .ad-prizes li, .ad-places li, .ad-owner,
+.ad-notices li, .ad-answers li, .ad-order, .ad-deals li, .ad-terms > li,
+.ad-cats > li, .ad-pays > li, .ad-wallets > li, .ad-cat-group, .ad-timeline li,
+.ad-rank li, .ad-mini-stats > span {
+  animation-duration: 220ms;
+  animation-delay: calc(min(var(--i, 0), 8) * 25ms);
+}
+.ad-card, .ad-stat { animation-duration: 260ms; animation-delay: calc(min(var(--i, 0), 6) * 30ms); }
+

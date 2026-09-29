@@ -122,14 +122,26 @@ class Mart369ProductField(models.Model):
 
     # ------------------------------------------------------------ resolving
 
+    def _override_for(self, product, overrides=None):
+        """This field's override row on `product`, or an empty recordset.
+
+        A caller that passes `overrides` has already read every row for the
+        product (all of them build it with one search), so a field missing
+        from it simply has none. Searching again for each missing field was
+        what made the Product page builder cost ~300 queries - most fields
+        have no override, and each was looked up up to three times.
+        """
+        self.ensure_one()
+        if overrides is not None:
+            return overrides.get((product.id, self.id)) or self.env['mart369.product.override']
+        return self.env['mart369.product.override'].search([
+            ('product_tmpl_id', '=', product.id), ('field_id', '=', self.id),
+        ], limit=1)
+
     def _state_for(self, product, overrides=None):
         """'follow' / 'show' / 'hide' for this product."""
         self.ensure_one()
-        row = (overrides or {}).get((product.id, self.id))
-        if row is None:
-            row = self.env['mart369.product.override'].search([
-                ('product_tmpl_id', '=', product.id), ('field_id', '=', self.id),
-            ], limit=1)
+        row = self._override_for(product, overrides)
         return row.state if row else 'follow'
 
     def _visible_for(self, product, overrides=None):
@@ -154,11 +166,7 @@ class Mart369ProductField(models.Model):
         the global default (or the Odoo field it points at)."""
         self.ensure_one()
 
-        row = (overrides or {}).get((product.id, self.id))
-        if row is None:
-            row = self.env['mart369.product.override'].search([
-                ('product_tmpl_id', '=', product.id), ('field_id', '=', self.id),
-            ], limit=1)
+        row = self._override_for(product, overrides)
         if row and row.value:
             return row.value
 

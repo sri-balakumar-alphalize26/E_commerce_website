@@ -11,6 +11,7 @@
    ========================================================================== */
 import { useEffect, useMemo, useState } from "react";
 import { useResource } from "@/lib/useFetch";
+import { api } from "@/lib/api";
 import { Avatar, Confirm, Drawer, Empty, Icon, Pill, Search, Select, Switch, Tabs, useToast } from "./AdminUI";
 import { BarChart, DataTable, Legend, LineChart, RankBars, SERIES, Spark } from "./charts";
 import {
@@ -72,6 +73,40 @@ export const SECTIONS = [
      refuses them (the server does too). */
   { key: "staff", label: "Staff & roles", icon: "users", group: "Store", live: true, owner: true },
 ];
+/* What each section asks for when it opens, byte for byte - the GET cache is
+   keyed by the URL, so these must match the section's own request or the
+   prefetch is simply wasted (never wrong). Read quietly once the console is
+   up, and again when the pointer rests on a section, so a click draws from
+   the cache instead of waiting on the shop. Owner-only reads are skipped for
+   everyone else by the `owner` flag on SECTIONS. */
+const PREFETCH = {
+  dashboard: ["/admin/dashboard", "/admin/delivery"],
+  home: ["/admin/home/pages"],
+  /* `/reviews` is the page preview's (ProductDetail); it only starts once
+     the builder has answered, so warming it removes the second wait. */
+  "product-page": ["/admin/product/builder", "/admin/product/catalog", "/reviews"],
+  orders: ["/admin/orders?tab=needs&sort=due&limit=20", "/admin/orders/counts"],
+  returns: ["/admin/returns?tab=needs&sort=old&limit=25"],
+  customers: ["/admin/customers?limit=50"],
+  offers: ["/admin/coupons", "/admin/deals"],
+  reviews: ["/admin/reviews?state=pending"],
+  referrals: ["/admin/referrals"],
+  rewards: ["/admin/rewards?tab=unscratched&limit=30"],
+  addresses: ["/admin/addresses?tab=all&limit=30"],
+  notifications: ["/admin/notices?tab=live&limit=30"],
+  "bot-answers": ["/admin/answers?tab=on&limit=30"],
+  delivery: ["/admin/delivery"],
+  support: ["/admin/support?tab=needs&limit=30"],
+  payments: ["/admin/payments"],
+  wallets: ["/admin/wallets"],
+  catalog: ["/admin/categories"],
+  searches: ["/admin/searches"],
+  products: ["/admin/products?sort=low&limit=50"],
+  settings: ["/admin/settings"],
+  staff: ["/admin/staff"],
+};
+const warm = (key) => { for (const path of PREFETCH[key] || []) api(path).catch(() => {}); };
+
 const TITLES = Object.fromEntries(SECTIONS.map((s) => [s.key, s.label]));
 const LIVE = new Set(SECTIONS.filter((s) => s.live).map((s) => s.key));
 
@@ -118,8 +153,7 @@ function Stat({ label, value, delta, note, series, color, icon, i = 0 }) {
    when one of them does, and this panel is the one that may legitimately
    answer nothing - a shop that has not installed the pricing module still
    has a dashboard. Silent when it cannot read, for the same reason. */
-function DeliveryPanel({ go }) {
-  const { data } = useResource("/admin/delivery", { pollMs: 60000, keepLast: true });
+function DeliveryPanel({ go, data }) {
   if (!data?.rules) return null;
 
   const rules = data.rules || [];
@@ -199,6 +233,9 @@ function DeliveryPanel({ go }) {
 
 function Dashboard({ go }) {
   const { data, loading, error, reload } = useResource("/admin/dashboard", { pollMs: 60000, keepLast: true });
+  /* Asked for here, above the early returns, so it goes out with the
+     dashboard's own read instead of waiting for it to land first. */
+  const delivery = useResource("/admin/delivery", { pollMs: 60000, keepLast: true });
   const o = data?.orders;
   const c = data?.customers;
 
@@ -278,7 +315,7 @@ function Dashboard({ go }) {
         )}
       </div>
 
-      <DeliveryPanel go={go} />
+      <DeliveryPanel go={go} data={delivery.data} />
 
       {o?.returns > 0 && (
         <section className="ad-card">
@@ -336,6 +373,26 @@ export default function AdminApp({ section: initial = "dashboard", onSection, on
   }, []);
 
   const go = (k) => { setSection(k); setMobileNav(false); onSection?.(k); window.scrollTo({ top: 0 }); };
+
+  /* Every other section's first read, once, after this one has had its turn:
+     three at a time, so the shop is never asked for twenty lists at once.
+     `api()` shares one request per URL, so a section opened meanwhile joins
+     the read already on its way rather than starting another. */
+  useEffect(() => {
+    let cancelled = false;
+    const queue = SECTIONS
+      .filter((s) => s.key !== section && (!s.owner || isOwner))
+      .flatMap((s) => PREFETCH[s.key] || []);
+    const next = () => {
+      const path = queue.shift();
+      if (cancelled || !path) return;
+      api(path).catch(() => {}).finally(next);
+    };
+    const start = () => { for (let i = 0; i < 3; i++) next(); };
+    const idle = typeof window !== "undefined" && window.requestIdleCallback;
+    const id = idle ? idle(start, { timeout: 2000 }) : setTimeout(start, 800);
+    return () => { cancelled = true; if (idle) window.cancelIdleCallback?.(id); else clearTimeout(id); };
+  }, [isOwner]); // eslint-disable-line -- once per console, not per section
   useEffect(() => {
     const c = (e) => { if (!e.target.closest(".ad-pop-wrap")) { setAlerts(false); setProfile(false); } };
     window.addEventListener("click", c);
@@ -426,7 +483,7 @@ export default function AdminApp({ section: initial = "dashboard", onSection, on
             <div key={g} className="ad-nav-group">
               <p>{g}</p>
               {SECTIONS.filter((s) => s.group === g && (!s.owner || isOwner)).map((s) => (
-                <button key={s.key} className={section === s.key ? "ad-cur" : ""} onClick={() => go(s.key)} title={s.label} aria-current={section === s.key ? "page" : undefined}>
+                <button key={s.key} className={section === s.key ? "ad-cur" : ""} onClick={() => go(s.key)} onPointerEnter={() => warm(s.key)} title={s.label} aria-current={section === s.key ? "page" : undefined}>
                   <Icon n={s.icon} size={19} />
                   <span>{s.label}</span>
                   {counts[s.key] > 0 && <em className={s.key === "orders" ? "ad-badge ad-badge-live" : "ad-badge"}>{counts[s.key]}</em>}
