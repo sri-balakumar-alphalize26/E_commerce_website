@@ -95,6 +95,51 @@ class TestMoneyBack(Mart369BridgeCase):
         job.sa_action_refund()
         self.assertEqual(len(self._notes(order)), 1, 'pressed twice, credited once')
 
+    # ------------------------------------------------ paid on the pay link
+
+    def _card(self, order, amount=None):
+        """A card payment on the order's pay link that went through - left
+        unmatched, the way it sits until an invoice exists."""
+        tx = self.env['payment.transaction'].sudo().create({
+            'provider_id': self.gateway.id,
+            'payment_method_id': self.method.id,
+            'partner_id': order.partner_id.id,
+            'amount': order.amount_total if amount is None else amount,
+            'currency_id': order.currency_id.id,
+            'operation': 'online_redirect',
+            'sale_order_ids': [(6, 0, order.ids)],
+        })
+        tx.write({'state': 'done'})
+        return tx
+
+    def test_a_card_paid_order_with_no_invoice_is_refunded(self):
+        order = self._wa_order(phone='+917009920007', paid=False)
+        self.assertFalse(order.invoice_ids)
+        self._card(order)
+        self.assertAlmostEqual(order._mart369_refundable(), order.amount_total, places=2,
+                               msg='the pay link counts as paid')
+        self._cancel(order)
+        self.assertEqual(len(self._rows(order)), 1)
+        self.assertAlmostEqual(self._wallet(order).points, order.amount_total, places=2)
+        self.assertFalse(self._notes(order), 'no invoice, so nothing to credit')
+
+    def test_a_card_payment_matched_to_the_invoice_is_not_counted_twice(self):
+        order = self._wa_order(phone='+917009920008')
+        self._card(order)
+        self.assertAlmostEqual(order._mart369_refundable(), order.amount_total, places=2)
+        self._cancel(order)
+        self.assertAlmostEqual(self._wallet(order).points, order.amount_total, places=2)
+
+    def test_the_refund_button_on_a_card_paid_order(self):
+        order = self._wa_order(phone='+917009920009', paid=False)
+        self._card(order)
+        job = order.picking_ids.filtered(lambda p: p.picking_type_code == 'outgoing')[:1]
+        job.sa_action_refund()
+        self.assertEqual(len(self._rows(order)), 1)
+        self.assertAlmostEqual(self._wallet(order).points, order.amount_total, places=2)
+        self.assertTrue(any('refunded to the 369 Wallet' in (m.body or '')
+                            for m in order.message_ids))
+
     def test_a_whatsapp_only_customer_gets_a_wallet_too(self):
         order = self._wa_order(phone='+917009920006')
         self.assertFalse(order.partner_id.user_ids, 'no website account')

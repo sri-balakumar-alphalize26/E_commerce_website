@@ -60,13 +60,20 @@ class Mart369Config(models.Model):
     def _mart369_admin_settings_groups(self):
         groups = super()._mart369_admin_settings_groups()
         config = self._get()
-        sessions = self.env['whatsapp.session'].sudo().search(
-            [('active', '=', True)])
+        Session = self.env['whatsapp.session'].sudo()
+        sessions = Session.search([('active', '=', True)])
+        labels = dict(Session._fields['status']._description_selection(self.env))
         groups['whatsapp'] = {
             'sessions': [{
                 'id': s.id,
                 'name': s.name or '',
                 'status': s.status or 'unknown',
+                'label': labels.get(s.status) or s.status or _('Unknown'),
+                # The one number the panel lets this database pair, and the
+                # one actually paired - they differ after a wrong-phone scan.
+                'authorized': s.authorized_number or '',
+                'phone': s.phone_number or '',
+                'detail': s.error_message or '',
                 'checked': (int(s.state_checked.timestamp() * 1000)
                             if s.state_checked else None),
             } for s in sessions],

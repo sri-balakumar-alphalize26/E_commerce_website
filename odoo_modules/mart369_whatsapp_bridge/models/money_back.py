@@ -21,7 +21,7 @@ A WhatsApp order still never passes `_mart369_set_state`.
 
 import logging
 
-from odoo import _, models
+from odoo import _, fields, models
 
 _logger = logging.getLogger(__name__)
 
@@ -32,21 +32,32 @@ class SaleOrderMoneyBack(models.Model):
     # ------------------------------------------------------------ what was paid
 
     def _mart369_wa_paid(self):
-        """What a WhatsApp customer really paid: through the invoice, not the
-        website's own payment fields (which a WhatsApp order never sets)."""
+        """What a WhatsApp customer really paid: through the invoice, or by
+        card on the order's pay link - not the website's own payment fields
+        (which a WhatsApp order never sets)."""
         self.ensure_one()
         invoices = self.invoice_ids.filtered(
             lambda m: m.move_type == 'out_invoice' and m.state == 'posted')
         # By the invoice's own verdict, as the stack's Refund button reads it:
         # "in payment" is money taken whose bank line is not matched yet, and a
         # bill reversed on cancel was never paid although it owes nothing.
-        total = 0.0
+        billed = 0.0
         for invoice in invoices:
             if invoice.payment_state in ('paid', 'in_payment'):
-                total += invoice.amount_total
+                billed += invoice.amount_total
             elif invoice.payment_state == 'partial':
-                total += invoice.amount_total - invoice.amount_residual
-        return self.currency_id.round(total)
+                billed += invoice.amount_total - invoice.amount_residual
+        # The pay link takes the money on the order itself, often before any
+        # invoice exists, and the stack matches it to the invoice only later -
+        # if it manages to. Once matched the same money is in both figures,
+        # so the larger one is what was paid, never their sum.
+        carded = 0.0
+        date = fields.Date.context_today(self)
+        for tx in self.sudo().transaction_ids.filtered(
+                lambda t: t.state == 'done' and t.operation not in ('validation', 'refund')):
+            carded += tx.currency_id._convert(
+                tx.amount, self.currency_id, self.company_id, date)
+        return self.currency_id.round(max(billed, carded))
 
     def _mart369_paid_amount(self):
         if self.mart369_channel == 'whatsapp':

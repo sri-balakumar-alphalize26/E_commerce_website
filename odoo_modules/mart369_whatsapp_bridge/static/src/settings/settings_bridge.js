@@ -39,7 +39,7 @@ patch(SettingsDesk.prototype, {
         const sessions = this.state.draft?.whatsapp?.sessions || [];
         return [
             ["", _t("Whichever is connected")],
-            ...sessions.map((s) => [String(s.id), `${s.name} (${s.status})`]),
+            ...sessions.map((s) => [String(s.id), `${s.name} (${s.label || s.status})`]),
         ];
     },
 
@@ -55,6 +55,18 @@ patch(SettingsDesk.prototype, {
     waSession() {
         const wa = this.state.draft?.whatsapp;
         return (wa?.sessions || []).find((s) => s.id === wa?.sessionId) || null;
+    },
+
+    /** The session updates actually leave from: the one picked, else the
+     *  first connected - what "Whichever is connected" means - else the first. */
+    waSpeaker() {
+        const sessions = this.state.draft?.whatsapp?.sessions || [];
+        return (
+            this.waSession() ||
+            sessions.find((s) => s.status === "connected") ||
+            sessions[0] ||
+            null
+        );
     },
 
     setWaOn(step, value) {

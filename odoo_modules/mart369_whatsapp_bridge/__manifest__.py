@@ -1,6 +1,6 @@
 {
     'name': '369 Mart: WhatsApp Bridge',
-    'version': '19.0.1.0.0',
+    'version': '19.0.1.1.0',
     'category': 'Website',
     'summary': 'One shop across the website and the WhatsApp selling flow',
     'description': """
@@ -30,7 +30,8 @@ What it does:
         'mart369_address',
         'mart369_auth',
         'mart369_catalog',
-        # The product's own "Sell when Out-of-Stock" (models/stock_rule.py).
+        # The product's own "Sell when Out-of-Stock", which sales_automation
+        # 19.0.173.4.0 reads only when this is installed.
         'website_sale_stock',
         'sales_automation_store',
         'sales_automation_confirm',

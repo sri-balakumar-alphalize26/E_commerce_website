@@ -88,7 +88,10 @@ class TestRiderOutbox(RiderRpcCase):
 
     def test_push_when_a_job_arrives_or_is_taken_away(self):
         rpc = self.rpc()
-        rpc.register_push('ExponentPushToken[abc]', 'android')
+        # Exactly what the app sends, EAS project id included: an extra
+        # field must never break registration.
+        rpc.register_push('ExponentPushToken[abc]', 'android',
+                          project_id='40359567-3ad0-4ff8-896a-8e45c92f0a7b')
         rpc.register_push('ExponentPushToken[abc]', 'android')  # harmless
         self.assertEqual(len(self.rider.rider_rpc_device_ids), 1)
 
@@ -98,6 +101,8 @@ class TestRiderOutbox(RiderRpcCase):
         self._send()
         self.assertEqual(self.expo_sent[0]['to'], 'ExponentPushToken[abc]')
         self.assertEqual(self.expo_sent[0]['data']['delivery_order_id'], job.id)
+        self.assertEqual(self.expo_sent[0]['channelId'], 'jobs',
+                         "The app's Android channel, or no banner shows.")
 
         rpc.accept(job.id)                          # own tap: no push
         self.assertEqual(len(self._outbox(job).filtered(

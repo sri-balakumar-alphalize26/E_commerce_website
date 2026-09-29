@@ -83,6 +83,22 @@ class TestNotify(Mart369BridgeCase):
         self.assertFalse(config.mart369_wa_on_packed)
         self.assertEqual(config._mart369_wa_text('out'), 'On the way! %(link)s')
 
+    def test_settings_show_what_the_panel_decided(self):
+        """The label, not the raw key, and the number the panel allows."""
+        self.session.sudo().write({
+            'status': 'wrong_number',
+            'authorized_number': '96890000009',
+            'phone_number': '96890000010',
+            'error_message': 'Scanned with a phone that is not authorized.',
+        })
+        wa = self.env['mart369.config']._mart369_admin_settings_groups()['whatsapp']
+        row = next(s for s in wa['sessions'] if s['id'] == self.session.id)
+        self.assertEqual(row['status'], 'wrong_number')
+        self.assertEqual(row['label'], 'Wrong Phone Scanned')
+        self.assertEqual(row['authorized'], '96890000009')
+        self.assertEqual(row['phone'], '96890000010')
+        self.assertIn('not authorized', row['detail'])
+
     def test_broken_placeholder_is_refused(self):
         with self.assertRaises(UserError):
             self.env['mart369.config']._mart369_admin_save_group(

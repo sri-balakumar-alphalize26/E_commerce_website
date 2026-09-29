@@ -1,4 +1,8 @@
-"""WhatsApp sells by the product's own "Sell when Out-of-Stock" (stock_rule.py)."""
+"""WhatsApp sells by the product's own "Sell when Out-of-Stock".
+
+The rule is sales_automation's own since 19.0.173.4.0; these check it still
+holds with the bridge on top - the storefront's menu and search included.
+"""
 
 from unittest.mock import patch
 
@@ -42,7 +46,7 @@ class TestStockRule(Mart369BridgeCase):
 
     def _stock(self, product, qty):
         request = self._request(product, 1)
-        company = request._mart369_stock_company()
+        company = request.finder_company_id or request._company_for(request.group_id)
         warehouse = self.env['stock.warehouse'].sudo().search(
             [('company_id', '=', company.id)], limit=1)
         self.env['stock.quant'].sudo()._update_available_quantity(
@@ -99,7 +103,7 @@ class TestStockRule(Mart369BridgeCase):
 
     def test_a_sold_out_product_is_refused_not_sourced(self):
         request = self._request(self.strict, 1)
-        request._on_confirmed()
+        self._accepted(request)
         self.assertEqual(request.state, 'dropped')
         self.assertEqual(request.drop_reason, 'unavailable')
         self.assertTrue(self._said('out of stock'))
@@ -107,9 +111,9 @@ class TestStockRule(Mart369BridgeCase):
     def test_asking_for_more_than_is_left_says_how_many(self):
         self._stock(self.strict, 2)
         request = self._request(self.strict, 5)
-        request._on_confirmed()
+        self._accepted(request)
         self.assertEqual(request.drop_reason, 'unavailable')
-        self.assertTrue(self._said('only have *2*'))
+        self.assertTrue(self._said('only *2*'))
 
     def test_enough_left_is_sold_from_the_shelf(self):
         self._stock(self.strict, 2)
@@ -126,7 +130,12 @@ class TestStockRule(Mart369BridgeCase):
         self.assertFromShelf(request)
         self._stock(self.strict, -2)          # somebody else took them
         orders = self.env['sale.order'].sudo().search_count([])
-        request._place_order()
+        # The core finds the customer's private chat before its fresh stock
+        # check; the fixtures' group has no employee session to open one.
+        Request = type(self.env['sa.group.request'])
+        chat = self.env['wa.conversation'].new({})
+        with patch.object(Request, '_ensure_conversation', lambda this: chat):
+            request._place_order()
         self.assertEqual(self.env['sale.order'].sudo().search_count([]), orders)
         self.assertEqual(request.drop_reason, 'unavailable')
 

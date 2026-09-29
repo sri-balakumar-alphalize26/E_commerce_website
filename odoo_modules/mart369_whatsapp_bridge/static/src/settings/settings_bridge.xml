@@ -13,13 +13,27 @@
                               value="waSessionValue()"
                               options="waSessionOptions"
                               onChange="(v) => this.pickWaSession(v)"/>
-                        <span t-if="waSession()"
-                              t-attf-class="mart-pill mart-t-{{ waSession().status === 'connected' ? 'green' : 'orange' }}"
-                              t-esc="waSession().status"/>
+                        <span t-if="waSpeaker()"
+                              t-attf-class="mart-pill mart-t-{{ waSpeaker().status === 'connected' ? 'green' : 'orange' }}"
+                              t-esc="waSpeaker().label or waSpeaker().status"/>
                         <button class="mart-btn mart-btn-sm" t-att-disabled="state.busy"
                                 t-on-click="() => this.waCheckNow()">Check now</button>
                     </div>
+                    <small t-if="waSpeaker() and (waSpeaker().authorized or waSpeaker().phone)" class="st-wa-number">
+                        <t t-if="waSpeaker().authorized">Authorized number: <b t-esc="waSpeaker().authorized"/></t>
+                        <t t-if="waSpeaker().phone and waSpeaker().phone !== waSpeaker().authorized">
+                            · paired with <t t-esc="waSpeaker().phone"/>
+                        </t>
+                    </small>
+                    <!-- The first line is the sentence; what follows is the gateway's stack. -->
+                    <small t-if="waSpeaker() and waSpeaker().detail" class="st-wa-detail"
+                           t-esc="waSpeaker().detail.split('\n')[0]"/>
                 </div>
+                <p class="st-hint st-span2">
+                    The number is set on the WhatsApp panel, not here. Deactivating
+                    this database on the panel stops these updates too, and the
+                    panel's no-reply footer, when ticked, is added to every one of them.
+                </p>
                 <p class="st-hint st-span2">
                     The WhatsApp NEW ORDER menu follows the website's category
                     navigation. Which vendors are asked for something out of

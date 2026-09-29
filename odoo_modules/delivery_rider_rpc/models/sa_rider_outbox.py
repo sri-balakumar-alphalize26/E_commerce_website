@@ -192,8 +192,11 @@ class SaRiderOutbox(models.Model):
         return session.send_message(self.recipient, self.body)
 
     def _send_push(self):
+        # 'jobs' is the Android channel the app creates at full importance.
+        # Without the channel id the OS may show no heads-up banner at all.
         message = {'to': self.recipient, 'sound': 'default',
-                   'body': self.body, 'priority': 'high'}
+                   'body': self.body, 'priority': 'high',
+                   'channelId': 'jobs'}
         data = json.loads(self.payload or '{}')
         title = data.pop('title', None)
         if title:

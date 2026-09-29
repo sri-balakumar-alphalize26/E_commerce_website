@@ -49,7 +49,7 @@ class SaGroupRequestCatalog(models.Model):
         rows = Public.search(
             [('parent_id', '=', parent.id if parent else False)],
             order='sequence, name')
-        sellable = self._mart369_sellable_domain(self._mart369_stock_company())
+        sellable = self._sa_unsellable_domain()
         return [c for c in rows if Prod.search_count(
             [('public_categ_ids', 'child_of', c.id),
              ('sale_ok', '=', True), ('is_published', '=', True)]
@@ -62,7 +62,7 @@ class SaGroupRequestCatalog(models.Model):
         rows = Prod.search(
             [('public_categ_ids', 'child_of', categ.id),
              ('sale_ok', '=', True), ('is_published', '=', True)]
-            + self._mart369_sellable_domain(self._mart369_stock_company()),
+            + self._sa_unsellable_domain(),
             order='name', offset=page * self.PAGE, limit=self.PAGE + 1)
         return rows[:self.PAGE], len(rows) > self.PAGE
 
@@ -110,7 +110,7 @@ class SaGroupRequestCatalog(models.Model):
                     direct = Prod.search_count(
                         [('public_categ_ids', 'in', categ.id),
                          ('sale_ok', '=', True), ('is_published', '=', True)]
-                        + self._mart369_sellable_domain(self._mart369_stock_company()))
+                        + self._sa_unsellable_domain())
                     if direct:
                         opts.append((self._sa_menu_clean(
                             _("All %s products") % categ.name, used),
@@ -153,13 +153,9 @@ class SaGroupRequestCatalog(models.Model):
 
     @api.model
     def _search_products_loose(self, text):
+        # The core already leaves out what may not be sold short with none free.
         hits = super()._search_products_loose(text)
-        hits = hits.filtered(lambda p: p.is_published or p.sa_created_from_enquiry)
-        # Never offer what the shop will not sell (stock_rule.py); a vendor-
-        # quoted product is sourced by definition and always passes.
-        sellable = hits.filtered_domain(
-            self._mart369_sellable_domain(self._mart369_stock_company()))
-        return hits.filtered(lambda p: p in sellable or p.sa_created_from_enquiry)[:5]
+        return hits.filtered(lambda p: p.is_published or p.sa_created_from_enquiry)[:5]
 
     @api.model
     def _sa_catalog_vocabulary(self):

@@ -7,5 +7,4 @@ from . import config
 from . import partner_link
 from . import res_partner
 from . import catalog_menu
-from . import stock_rule
 from . import money_back
