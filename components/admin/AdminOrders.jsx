@@ -770,6 +770,8 @@ export default function OrdersSection({ openId, setOpenId, query = "", flash, on
   const refresh = async () => {
     api.invalidate("/admin/orders");
     await Promise.all([reload(), counts.reload()]);
+    /* A cancel here may be the last waiting order: the alarm asks again now. */
+    if (typeof window !== "undefined") window.dispatchEvent(new Event("mart369:orders-changed"));
   };
 
   /* Read-after-write. `next`, `late` and the tile numbers are all the

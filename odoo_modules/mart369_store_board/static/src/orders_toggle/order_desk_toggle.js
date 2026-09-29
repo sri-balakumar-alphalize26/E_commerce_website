@@ -20,6 +20,15 @@ patch(OrderDesk.prototype, {
         }
     },
 
+    /** The desk reloads after every action - a cancel among them - so the
+     *  app-wide alarm asks again at once rather than ringing on for an order
+     *  that was just cancelled here until its next poll. */
+    async load(...args) {
+        const result = await super.load(...args);
+        this.env.services.mart369_counter_alarm?.refresh();
+        return result;
+    },
+
     /** Back to the Counter, replacing this screen (no breadcrumb pile-up). */
     showCounter() {
         return this.action.doAction("mart369_store_board.action_mart369_orders_board", {

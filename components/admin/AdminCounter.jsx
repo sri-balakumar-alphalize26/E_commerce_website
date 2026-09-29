@@ -28,6 +28,14 @@ import { Alarm } from "./counterAlarm";
 
 export const COUNTER_PATH = "/admin/counter";
 
+/* Said by any screen that just changed an order (a cancel in All orders, an
+   Accept here), so the console-wide alarm asks again at once instead of
+   ringing on for an order that is no longer waiting. */
+export const ORDERS_CHANGED = "mart369:orders-changed";
+export const ordersChanged = () => {
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(ORDERS_CHANGED));
+};
+
 const waitingOf = (rows) => (rows || []).filter((r) => r.counter === "awaiting_shop" && !r.supplyWaiting).length;
 
 /* The console-wide alarm. Called once, in the shell.
@@ -39,8 +47,13 @@ const waitingOf = (rows) => (rows || []).filter((r) => r.counter === "awaiting_s
    to switch off: it stops when the orders are accepted. */
 export function useCounterAlarm() {
   const [unavailable, setUnavailable] = useState(false);
-  const { data, error } = useResource(COUNTER_PATH, { pollMs: 10000, keepLast: true, enabled: !unavailable });
+  const { data, error, reload } = useResource(COUNTER_PATH, { pollMs: 10000, keepLast: true, enabled: !unavailable });
   useEffect(() => { if (error?.status === 404 || error?.status === 403) setUnavailable(true); }, [error]);
+  useEffect(() => {
+    const again = () => reload();
+    window.addEventListener(ORDERS_CHANGED, again);
+    return () => window.removeEventListener(ORDERS_CHANGED, again);
+  }, [reload]);
 
   /* The Odoo counter's own sound (counterAlarm.js), one instance for the
      console. */
@@ -67,9 +80,17 @@ export function useCounterAlarm() {
     };
   }, []); // eslint-disable-line
 
+  /* The package's rule (the Store's enquiry alarm): three failed asks in a
+     row and it goes silent - a sound about a count nobody can check is a
+     sound about nothing, and it used to ring on for orders already
+     cancelled. One blip keeps the last count; the next good answer brings
+     the sound back if anything is still waiting. */
+  const [failures, setFailures] = useState(0);
+  useEffect(() => { setFailures((n) => (error ? n + 1 : 0)); }, [data, error]);
+
   /* Exactly the Odoo counter's rhythm: ring for `ring` seconds, then quiet
      for `repeat`, again and again while an order waits. */
-  const ringing = waitingOf(data?.rows);
+  const ringing = failures >= 3 ? 0 : waitingOf(data?.rows);
   const ringFor = Math.max(3, data?.ring || 30);
   const pause = Math.max(3, data?.repeat || 10);
   useEffect(() => {
@@ -118,6 +139,7 @@ export default function CounterSection({ flash, onOpenOrder, onUnavailable, alar
     await api(`${COUNTER_PATH}/${row.job}`, { method: "POST", body: { action } });
     api.invalidate("/admin/orders");
     await reload();
+    ordersChanged();
     flash?.(ok);
     return true;
   }).then((r) => { if (r === null) flash?.("That did not go through. Try again.", "bad"); });

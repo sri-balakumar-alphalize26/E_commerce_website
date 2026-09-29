@@ -22,21 +22,30 @@
 import { reactive } from "@odoo/owl";
 import { registry } from "@web/core/registry";
 import { user } from "@web/core/user";
+import { _t } from "@web/core/l10n/translation";
 import { Alarm } from "@sales_automation_store/store_screen";
 
 const POLL_MS = 10000;
-const MAX_FAILURES = 5;
+/* The package's rule (enquiry_alarm_service.js): after this many failed asks
+   in a row, go silent - the server is restarting or the user has lost access,
+   and a sound about a count nobody can check is a sound about nothing. It
+   used to keep ringing on the last count, for orders long since cancelled. */
+const MAX_FAILURES = 3;
+/* Unlike the package it does not stop asking: it slows down, and the moment
+   the server answers again the count - and the sound - are true again. */
+const BACKOFF_MS = [10000, 20000, 30000, 60000];
 
 export const counterAlarmService = {
-    dependencies: ["orm", "bus_service"],
+    dependencies: ["orm", "bus_service", "notification", "action"],
 
-    start(env, { orm, bus_service }) {
+    start(env, { orm, bus_service, notification, action }) {
         const state = reactive({ enabled: false, armed: false, ringing: 0 });
         const alarm = new Alarm();
         let ringFor = 30;
         let pause = 10;
         let timer = null;
         let failures = 0;
+        let closeNotification = null;
 
         function stop() {
             if (timer) {
@@ -63,6 +72,46 @@ export const counterAlarmService = {
             }
         }
 
+        function counterOpen() {
+            return !!document.querySelector(".mart_counter");
+        }
+
+        /** A sticky note, because a sound alone does not say what to do -
+         *  the package's enquiry alarm does the same. Closed the moment
+         *  nothing is waiting; not shown while the Counter itself is open. */
+        function tellThem() {
+            if (!state.ringing) {
+                if (closeNotification) {
+                    closeNotification();
+                    closeNotification = null;
+                }
+                return;
+            }
+            if (closeNotification || counterOpen() || storeScreenOpen()) {
+                return;
+            }
+            closeNotification = notification.add(
+                state.ringing === 1
+                    ? _t("1 order is waiting to be accepted")
+                    : _t("%s orders are waiting to be accepted", state.ringing), {
+                    title: _t("New orders"),
+                    // The package's style (its enquiry notice): the button
+                    // stays readable, where red washed it out.
+                    type: "warning",
+                    sticky: true,
+                    buttons: [{
+                        name: _t("Open the Counter"),
+                        primary: true,
+                        onClick: () => action.doAction(
+                            "mart369_store_board.action_mart369_orders_board",
+                            { clearBreadcrumbs: true }),
+                    }],
+                    onClose: () => {
+                        closeNotification = null;
+                    },
+                });
+        }
+
         async function poll() {
             try {
                 const data = await orm.silent.call("stock.picking", "mart369_counter_ringing", []);
@@ -74,10 +123,15 @@ export const counterAlarmService = {
                     stop();
                 }
                 state.ringing = data.ringing || 0;
-                sync();
             } catch {
                 failures += 1;
+                if (failures < MAX_FAILURES) {
+                    return;             // one blip: keep what we knew
+                }
+                state.ringing = 0;      // cannot check it: stop saying it
             }
+            sync();
+            tellThem();
         }
 
         async function arm() {
@@ -109,14 +163,12 @@ export const counterAlarmService = {
             // the next poll.
             bus_service.addChannel("sa_store_0");
             bus_service.subscribe("sa_store/refresh", () => poll());
-            await poll();
-            const id = setInterval(() => {
-                if (failures >= MAX_FAILURES) {
-                    clearInterval(id);
-                    return;
-                }
-                poll();
-            }, POLL_MS);
+            const loop = async () => {
+                await poll();
+                const wait = failures ? BACKOFF_MS[Math.min(failures, BACKOFF_MS.length - 1)] : POLL_MS;
+                setTimeout(loop, wait);
+            };
+            loop();
         }
         begin();
 
