@@ -20,6 +20,7 @@ import {
 import { clock, dateLong, since } from "./format";
 import { money } from "@/lib/money";
 import OrdersSection from "./AdminOrders";
+import CounterSection, { COUNTER_PATH, useCounterAlarm } from "./AdminCounter";
 import ReturnsSection from "./AdminReturns";
 import { CustomersSection, ProductsSection } from "./AdminCatalog";
 import { OffersSection, ReviewsSection, SettingsSection } from "./AdminMore";
@@ -85,7 +86,7 @@ const PREFETCH = {
   /* `/reviews` is the page preview's (ProductDetail); it only starts once
      the builder has answered, so warming it removes the second wait. */
   "product-page": ["/admin/product/builder", "/admin/product/catalog", "/reviews"],
-  orders: ["/admin/orders?tab=needs&sort=due&limit=20", "/admin/orders/counts"],
+  orders: [COUNTER_PATH, "/admin/orders?tab=needs&sort=due&limit=20", "/admin/orders/counts"],
   returns: ["/admin/returns?tab=needs&sort=old&limit=25"],
   customers: ["/admin/customers?limit=50"],
   offers: ["/admin/coupons", "/admin/deals"],
@@ -328,6 +329,37 @@ function Dashboard({ go }) {
   );
 }
 
+/* Orders: the Counter first, every time the section opens, and All orders one
+   toggle away - the same pair the Odoo menu opens (mart369_store_board).
+   Opening a particular order (a Counter row, an alert, a search from the top
+   bar) goes to All orders, where its drawer lives. Without the board module
+   the Counter answers 404 and only All orders is shown. */
+function OrdersArea({ openId, setOpenId, query, flash, alarm, ...rest }) {
+  const [view, setView] = useState(openId || query ? "all" : "counter");
+  const [hasCounter, setHasCounter] = useState(true);
+  useEffect(() => { if (openId || query) setView("all"); }, [openId, query]);
+  const openOrder = (ref) => { setOpenId(ref); setView("all"); };
+  const showCounter = hasCounter && view === "counter";
+  return (
+    <>
+      {hasCounter && (
+        <div className="ad-seg-row">
+          <div className="ad-seg" role="tablist" aria-label="Orders view">
+            <button type="button" role="tab" aria-selected={showCounter} className={showCounter ? "ad-on" : ""}
+              onClick={() => { setOpenId(null); setView("counter"); }}>Counter</button>
+            <button type="button" role="tab" aria-selected={!showCounter} className={showCounter ? "" : "ad-on"}
+              onClick={() => setView("all")}>All orders</button>
+          </div>
+        </div>
+      )}
+      {showCounter
+        ? <CounterSection flash={flash} onOpenOrder={openOrder} alarm={alarm}
+            onUnavailable={() => { setHasCounter(false); setView("all"); }} />
+        : <OrdersSection openId={openId} setOpenId={setOpenId} query={query} flash={flash} {...rest} />}
+    </>
+  );
+}
+
 /* Said once, across the top of every screen that is still the drop's sample
    data. Blunt on purpose: a small grey note is how somebody ends up ringing a
    customer who does not exist. */
@@ -373,6 +405,10 @@ export default function AdminApp({ section: initial = "dashboard", onSection, on
   }, []);
 
   const go = (k) => { setSection(k); setMobileNav(false); onSection?.(k); window.scrollTo({ top: 0 }); };
+
+  /* The new-order alarm, for the whole console: it rings on every section
+     while an order waits, and has no off switch (AdminCounter.jsx). */
+  const counterAlarm = useCounterAlarm();
 
   /* Every other section's first read, once, after this one has had its turn:
      three at a time, so the shop is never asked for twenty lists at once.
@@ -444,7 +480,7 @@ export default function AdminApp({ section: initial = "dashboard", onSection, on
   if (section === "dashboard") body = <Dashboard go={go} />;
   else if (section === "home") body = <HomeSection flash={flash} />;
   else if (section === "product-page") body = <ProductPageSection flash={flash} />;
-  else if (section === "orders") body = <OrdersSection openId={openId} setOpenId={setOpenId} query={orderQ} flash={flash}
+  else if (section === "orders") body = <OrdersArea openId={openId} setOpenId={setOpenId} query={orderQ} flash={flash} alarm={counterAlarm}
     onOpenCustomer={(id) => { setOpenId(null); go("customers"); history.replaceState(null, "", `/admin/customers?customer=${id}`); }}
     onOpenTicket={(ref) => { setOpenId(ref); go("support"); }} />;
   else if (section === "returns") body = <ReturnsSection flash={flash} />;
@@ -516,6 +552,14 @@ export default function AdminApp({ section: initial = "dashboard", onSection, on
               </div>
             )}
           </div>
+          {counterAlarm.enabled && counterAlarm.ringing > 0 && (
+            <button className="ad-counter-alert" onClick={() => { counterAlarm.arm(); go("orders"); }}
+              title={counterAlarm.armed ? "Open the Counter" : "Click to hear the alarm and open the Counter"}>
+              <Icon n="bell" size={16} />
+              {counterAlarm.ringing} new order{counterAlarm.ringing === 1 ? "" : "s"}
+              {!counterAlarm.armed && <small>· tap to hear</small>}
+            </button>
+          )}
           <div className="ad-pop-wrap">
             <button className={"ad-icon-btn" + (notes.length ? " ad-has-dot" : "")} onClick={() => { setAlerts((v) => !v); setProfile(false); }} aria-label="Alerts"><Icon n="bell" size={19} />{notes.length > 0 && <em>{notes.length}</em>}</button>
             {alerts && (

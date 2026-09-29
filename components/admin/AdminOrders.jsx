@@ -78,7 +78,7 @@ const groupRows = (tab, rows) => {
 };
 /* Payment in plain words: is the money in, or still to collect? */
 const PAID_BY = { upi: "UPI", card: "card", netbanking: "net banking", wallet: "369 Wallet" };
-const payText = (o) => {
+export const payText = (o) => {
   if (o.method === "cod") {
     if (o.state === "delivered") return "Cash collected";
     return o.state === "cancelled" ? "Cash on delivery" : "Cash on delivery — collect at the door";
@@ -86,8 +86,8 @@ const payText = (o) => {
   const how = PAID_BY[o.method] || o.payNote || o.method;
   return how ? `Paid by ${how}` : "Paid";
 };
-const ROW_TONES = ["grey", "red", "orange", "amber", "blue", "violet", "green", "blue", "red", "violet", "green", "orange"];
-const modeLabel = (m) => (m === "quick" ? "Quick" : "Express");
+export const ROW_TONES = ["grey", "red", "orange", "amber", "blue", "violet", "green", "blue", "red", "violet", "green", "orange"];
+export const modeLabel = (m) => (m === "quick" ? "Quick" : "Express");
 
 function Tiles({ counts, cashDue, tab, onPick }) {
   return (
@@ -679,9 +679,9 @@ function DeliverPrompt({ order, busy, onClose, onDeliver }) {
 /* A new order's chime: two short notes made here, so there is no sound file.
    Browsers only play sound after a click on the page - switching "Sound on"
    is that click. */
-const SOUND_KEY = "mart369.orders.sound";
+export const SOUND_KEY = "mart369.orders.sound";
 let audio = null;
-function chime() {
+export function chime() {
   try {
     audio = audio || new (window.AudioContext || window.webkitAudioContext)();
     if (audio.state === "suspended") audio.resume();
@@ -701,7 +701,7 @@ function chime() {
     });
   } catch { /* no sound here - the toast still says it */ }
 }
-const soundWanted = () => { try { return localStorage.getItem(SOUND_KEY) !== "off"; } catch { return true; } };
+export const soundWanted = () => { try { return localStorage.getItem(SOUND_KEY) !== "off"; } catch { return true; } };
 
 export default function OrdersSection({ openId, setOpenId, query = "", flash, onOpenCustomer, onOpenTicket }) {
   const [tab, setTab] = useState("needs");
