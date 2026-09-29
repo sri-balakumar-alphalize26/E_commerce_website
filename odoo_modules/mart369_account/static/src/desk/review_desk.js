@@ -44,6 +44,7 @@ import { Pick } from "@mart369/ui/pick";
 import { Icon } from "@mart369/ui/icon";
 import { Tabs } from "@mart369/ui/tabs";
 import { Dialog } from "@web/core/dialog/dialog";
+import { useFileViewer } from "@web/core/file_viewer/file_viewer_hook";
 
 const MODEL = "rating.rating";
 
@@ -362,6 +363,58 @@ export class ReviewDialog extends Component {
         this.state = useState(this.desk.state);
         const row = this.desk.rowById(this.props.reviewId);
         this.draft = useState({ reply: row?.reply || "" });
+        /* Odoo's own full-screen viewer, the one mail attachments open in:
+           zoom, the video player, and next/previous across the review's set.
+           A 180 px thumbnail is not enough to decide whether to approve. */
+        this.fileViewer = useFileViewer();
+    }
+
+    /** One item in the shape the viewer reads. `mime` and `url` come from
+     *  review_media.py's serializer; the url is the staff one, so a photo
+     *  still waiting for approval opens too. */
+    viewable(m) {
+        const video = m.kind === "video";
+        return {
+            id: m.id,
+            name: video ? _t("Review video") : _t("Review photo"),
+            mimetype: m.mime || (video ? "video/mp4" : "image/jpeg"),
+            isViewable: true,
+            isImage: !video,
+            isVideo: video,
+            isPdf: false,
+            isText: false,
+            isUrlYoutube: false,
+            defaultSource: m.url,
+            downloadUrl: m.url,
+        };
+    }
+
+    /** Open the tapped item, with the review's others a swipe away. The hook
+     *  finds the start by identity, so it is handed an item from the list. */
+    view(m) {
+        const media = this.row?.media || [];
+        const files = media.map((item) => this.viewable(item));
+        const start = media.findIndex((item) => item.id === m.id);
+        if (start >= 0) {
+            this.fileViewer.open(files[start], files);
+            this.focusViewer();
+        }
+    }
+
+    /** Hand the keyboard to the viewer once it has drawn. Its autofocus only
+     *  works inside the UI's active element, which is this dialog, so focus
+     *  stayed on the thumbnail - and Esc then went to the dialog's hotkey
+     *  and closed the review along with the photo. With focus inside the
+     *  viewer its own keydown handler takes Esc and stops it there. */
+    focusViewer(tries = 20) {
+        requestAnimationFrame(() => {
+            const viewer = document.querySelector(".o-FileViewer");
+            if (viewer) {
+                viewer.focus();
+            } else if (tries > 0) {
+                this.focusViewer(tries - 1);
+            }
+        });
     }
 
     /** Read through this dialog's own reactive handle on the desk's state,

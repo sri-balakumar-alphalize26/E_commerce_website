@@ -223,8 +223,17 @@
                 <p t-else="" class="text-muted small">Shoppers see an item only once you approve it. Removing one deletes the file.</p>
                 <div class="rv-media">
                     <div t-foreach="row.media" t-as="m" t-key="m.id" t-attf-class="rv-media-item {{ m.state === 'approved' ? 'rv-media-on' : '' }}">
-                        <img t-if="m.kind === 'photo'" t-att-src="m.url" alt="Review photo"/>
-                        <video t-else="" t-att-src="m.url" controls="controls" preload="metadata"/>
+                        <!-- The thumbnail opens the full-size viewer. The video has no
+                             controls here on purpose: a click on them would play it in
+                             this small box instead of opening it. -->
+                        <button type="button" class="rv-media-open" t-on-click="() => this.view(m)"
+                                t-att-aria-label="m.kind === 'video' ? 'Play video full size' : 'Open photo full size'">
+                            <img t-if="m.kind === 'photo'" t-att-src="m.url" alt="Review photo"/>
+                            <t t-else="">
+                                <video t-att-src="m.url" preload="metadata" muted="muted"/>
+                                <i class="fa fa-play-circle rv-media-play" aria-hidden="true"/>
+                            </t>
+                        </button>
                         <small>
                             <t t-if="m.kind === 'video'"><t t-esc="m.seconds"/> s &#183; </t><t t-esc="size(m.bytes)"/>
                             &#183; <t t-if="m.state === 'approved'">Shown</t><t t-else="">Waiting</t>

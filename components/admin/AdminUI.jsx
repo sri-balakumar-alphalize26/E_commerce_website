@@ -281,6 +281,47 @@ export function Confirm({ title, text, danger, confirmLabel = "Confirm", onCance
   );
 }
 
+/* A photo or a video, full size, over whatever opened it. `items` are
+   { kind: "photo" | "video", src, label? }; ← → move through them.
+
+   Esc is caught in the capture phase and stopped there: the Drawer that
+   usually opens this listens for Esc on window too, and without that the
+   one key press closed the review along with the photo. */
+export function Lightbox({ items, start = 0, onClose }) {
+  const [i, setI] = useState(start);
+  const count = items.length;
+  const go = (d) => setI((n) => (n + d + count) % count);
+  useEffect(() => {
+    const k = (e) => {
+      if (e.key === "Escape") { e.stopPropagation(); onClose(); }
+      else if (e.key === "ArrowRight" && count > 1) { e.stopPropagation(); go(1); }
+      else if (e.key === "ArrowLeft" && count > 1) { e.stopPropagation(); go(-1); }
+    };
+    window.addEventListener("keydown", k, true);
+    return () => window.removeEventListener("keydown", k, true);
+  }); // eslint-disable-line
+  if (typeof document === "undefined" || !count) return null;
+  const item = items[Math.min(i, count - 1)];
+  return createPortal(
+    <div className="ad-lightbox" role="dialog" aria-modal="true" aria-label={item.label || "Customer media"} onClick={onClose}>
+      <button className="ad-lightbox-x" onClick={onClose} aria-label="Close" autoFocus><Icon n="x" size={20} /></button>
+      {count > 1 && <span className="ad-lightbox-count">{i + 1} / {count}</span>}
+      <figure className="ad-lightbox-stage" onClick={(e) => e.stopPropagation()}>
+        {item.kind === "video"
+          ? <video key={item.src} src={item.src} controls autoPlay playsInline />
+          : <img key={item.src} src={item.src} alt={item.label || "Customer photo"} />}
+      </figure>
+      {count > 1 && (
+        <>
+          <button className="ad-lightbox-nav ad-prev" onClick={(e) => { e.stopPropagation(); go(-1); }} aria-label="Previous"><Icon n="left" size={22} /></button>
+          <button className="ad-lightbox-nav ad-next" onClick={(e) => { e.stopPropagation(); go(1); }} aria-label="Next"><Icon n="right" size={22} /></button>
+        </>
+      )}
+    </div>,
+    document.body
+  );
+}
+
 export function useToast() {
   const [toast, setToast] = useState(null);
   const t = useRef(null);

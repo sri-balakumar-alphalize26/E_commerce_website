@@ -7,7 +7,7 @@ import { createPortal } from "react-dom";
 import { api } from "@/lib/api";
 import { money } from "@/lib/money";
 import { useAction, useResource } from "@/lib/useFetch";
-import { Avatar, Confirm, Drawer, Empty, Icon, Search, Select, Switch, Tabs } from "./AdminUI";
+import { Avatar, Confirm, Drawer, Empty, Icon, Lightbox, Search, Select, Switch, Tabs } from "./AdminUI";
 import { since } from "./format";
 
 /* ================================ offers ================================
@@ -642,6 +642,9 @@ function ReviewDrawer({ review: start, hideReasons, onClose, onChanged }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [removing, setRemoving] = useState(null);
+  /* Which photo or video is open full size (an index into r.media), or null.
+     A 150 px tile is not enough to decide whether to approve one. */
+  const [viewing, setViewing] = useState(null);
 
   const call = async (path, body, ok) => {
     setBusy(true); setError("");
@@ -703,11 +706,16 @@ function ReviewDrawer({ review: start, hideReasons, onClose, onChanged }) {
           <section className="ad-dsec">
             <h4>Photos &amp; videos <em>{r.media.length}</em></h4>
             <ul className="ad-rev-media">
-              {r.media.map((m) => (
+              {r.media.map((m, idx) => (
                 <li key={m.id}>
-                  {m.kind === "video"
-                    ? <video src={mediaSrc(m)} controls preload="metadata" />
-                    : <img src={mediaSrc(m)} alt="Customer photo" />}
+                  {/* Opens it full size. The video has no controls in the tile:
+                      a click on them would play it in the tile instead. */}
+                  <button type="button" className="ad-rev-media-open" onClick={() => setViewing(idx)}
+                    aria-label={m.kind === "video" ? "Play video full size" : "Open photo full size"}>
+                    {m.kind === "video"
+                      ? <><video src={mediaSrc(m)} preload="metadata" muted playsInline /><span className="ad-rev-media-play" aria-hidden="true" /></>
+                      : <img src={mediaSrc(m)} alt="Customer photo" />}
+                  </button>
                   <span className={"ad-pill ad-t-" + (m.state === "approved" ? "green" : "amber")}>{m.state === "approved" ? "Shown" : "Waiting"}</span>
                   <span className="ad-rev-media-act">
                     {m.state !== "approved" && (
@@ -736,6 +744,11 @@ function ReviewDrawer({ review: start, hideReasons, onClose, onChanged }) {
           </div>
         </section>
       </Drawer>
+
+      {viewing !== null && !!r.media?.length && (
+        <Lightbox start={Math.min(viewing, r.media.length - 1)} onClose={() => setViewing(null)}
+          items={r.media.map((m) => ({ kind: m.kind, src: mediaSrc(m), label: m.kind === "video" ? "Customer video" : "Customer photo" }))} />
+      )}
 
       {removing && (
         <Confirm danger title="Remove this photo?" confirmLabel="Remove it"

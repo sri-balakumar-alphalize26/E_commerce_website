@@ -358,5 +358,31 @@
         small { color: #6b7a86; }
         &.rv-media-on { border-color: #1f7a4c; }
     }
+    /* The thumbnail is a button into Odoo's full-screen viewer. */
+    .rv-media-open {
+        position: relative;
+        display: block;
+        width: 100%;
+        padding: 0;
+        border: 0;
+        border-radius: 6px;
+        background: none;
+        cursor: zoom-in;
+        transition: transform 160ms ease, box-shadow 160ms ease;
+
+        &:hover, &:focus-visible { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(19, 33, 43, 0.18); }
+        &:focus-visible { outline: 2px solid #0a78ab; outline-offset: 2px; }
+        video { pointer-events: none; }
+    }
+    .rv-media-play {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 42px;
+        color: #fff;
+        text-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+        pointer-events: none;
+    }
     .rv-media-act { display: flex; gap: 6px; }
 }
