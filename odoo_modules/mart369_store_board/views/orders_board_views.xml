@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- 369 Mart › Sales › Orders opens on the Counter: the Store's ringing
+         screen with New / Quick / Express tabs, the website's and WhatsApp's
+         orders in one list. A toggle at the top of both screens switches to
+         All orders (mart369_order's desk) and back. -->
+    <record id="action_mart369_orders_board" model="ir.actions.client">
+        <field name="name">Orders</field>
+        <field name="tag">mart369_store_board.orders_board</field>
+        <field name="path">mart-counter</field>
+    </record>
+
+    <!-- The one Orders entry, where mart369_order's own used to be. That one
+         is switched off rather than repointed (models/ir_ui_menu.py), so
+         uninstalling this module puts it back exactly as it was. -->
+    <menuitem id="menu_mart369_orders_counter"
+              name="Orders"
+              parent="mart369.menu_mart369_sales"
+              action="action_mart369_orders_board"
+              groups="sales_team.group_sale_salesman"
+              sequence="10"/>
+
+    <!-- Every install and update: a <function> runs either way, and the
+         desk's menuitem never writes `active`, so an update of mart369_order
+         does not bring the second entry back. -->
+    <function model="ir.ui.menu" name="_mart369_board_take_orders_menu"/>
+
+</odoo>

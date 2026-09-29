@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!-- The Store's counter screen, redrawn in All orders' own markup
+         (mart369_order.OrderDesk: pe-head, od-toolbar, od-rows, od-row2) so the
+         Counter and All orders read as one screen with a toggle. A primary
+         copy: the Store app's own screen is unchanged. Every button calls the
+         Store's own method (onAccept, act, onCancel, onEnableSound...). -->
+    <t t-name="mart369_store_board.OrdersBoard"
+       t-inherit="sales_automation_store.StoreScreen" t-inherit-mode="primary">
+
+        <xpath expr="//div[hasclass('sa_store')]" position="replace">
+            <Layout display="{ controlPanel: {} }" className="'o_mart369_desk h-100'">
+            <div class="mart-builder pe od mart_counter">
+
+                <header class="pe-head">
+                    <div>
+                        <h1>Orders</h1>
+                        <p>New orders ring until somebody accepts them.</p>
+                    </div>
+                    <div class="mart_orders_toggle" role="tablist" aria-label="Orders view">
+                        <button type="button" role="tab" aria-selected="true"
+                                class="mart_orders_toggle_on">Counter</button>
+                        <button type="button" role="tab" aria-selected="false"
+                                t-on-click="() => this.showAllOrders()">All orders</button>
+                    </div>
+                </header>
+
+                <div class="pe-toolbar od-toolbar">
+                    <Tabs tabs="tabItems" value="board.tab" onChange="(k) => this.pickTab(k)"/>
+                    <div class="mart_counter_tools">
+                        <span t-if="state.ringing" class="mart-pill mart-t-red mart_counter_ringing">
+                            <t t-esc="state.ringing"/> new
+                        </span>
+                        <select class="mart_counter_shop" t-on-change="onShopChange"
+                                t-if="state.shops.length > 1" aria-label="Shop">
+                            <option value="0">All shops</option>
+                            <t t-foreach="state.shops" t-as="shop" t-key="shop.id">
+                                <option t-att-value="shop.id" t-att-selected="shop.id === state.shopId">
+                                    <t t-esc="shop.name"/>
+                                </option>
+                            </t>
+                        </select>
+                        <!-- No off switch: once on, it rings on every screen until
+                             the orders are accepted (alarm/counter_alarm_service). -->
+                        <button t-if="!alarmState.armed" class="mart-btn mart-btn-primary"
+                                t-on-click="() => this.onEnableSound()">
+                            <Icon n="'megaphone'" size="14"/> Turn on the alarm
+                        </button>
+                        <span t-else="" class="mart_counter_on"
+                              title="Rings on every screen while an order waits. It stops when the orders are accepted.">
+                            <Icon n="'megaphone'" size="14"/> Alarm on
+                        </span>
+                    </div>
+                </div>
+
+                <p t-if="!alarmState.armed" class="mart_counter_warn">
+                    No sound yet. This browser will not play anything until you click,
+                    so click anywhere (or Turn on the alarm) - after that it rings on
+                    every screen whenever an order is waiting.
+                </p>
+
+                <div class="od-queue-wrap">
+                    <div class="od-queue">
+                        <p t-if="state.loading and !state.rows.length" class="pe-loading">Loading the counter...</p>
+                        <p t-elif="!tabRows.length and board.tab === 'new'" class="pe-loading">
+                            No new orders. They appear here on their own, with the alarm.
+                        </p>
+                        <p t-elif="!tabRows.length" class="pe-loading">
+                            Nothing open for <t t-esc="activeTab.label"/> delivery right now.
+                        </p>
+                        <t t-else="">
+                            <div class="od-count">
+                                <span><t t-esc="tabRows.length"/> order<t t-if="tabRows.length !== 1">s</t> at the counter</span>
+                            </div>
+                            <ul class="od-rows">
+                                <li t-foreach="tabRows" t-as="row" t-key="row.id"
+                                    t-attf-class="od-row od-row2 {{ row.state === 'awaiting_shop' ? 'od-row-late' : '' }}"
+                                    t-on-click="() => this.openOrder(row)">
+                                    <span class="od2-row-main">
+                                        <span class="od2-row-top">
+                                            <b class="od2-row-name" t-esc="row.order ? row.order.customer.name : row.customer"/>
+                                            <small t-if="row.order and row.order.customer.area" class="od-area">· <t t-esc="row.order.customer.area"/></small>
+                                            <span t-if="row.channel"
+                                                  t-attf-class="mart-pill {{ row.channel === 'whatsapp' ? 'mart-t-green' : 'mart-t-blue' }} od2-row-tag"
+                                                  t-esc="channelLabel(row)"/>
+                                            <t t-if="row.order">
+                                                <span t-foreach="row.order.customer.tags or []" t-as="tag" t-key="tag.id"
+                                                      t-attf-class="mart-pill mart-t-{{ tagTone(tag) }} od2-row-tag" t-esc="tag.name"/>
+                                            </t>
+                                        </span>
+                                        <small class="od2-row-sub">
+                                            #<t t-esc="row.order ? row.order.ref : row.ref"/> ·
+                                            <Icon n="row.kind === 'quick' ? 'bolt' : 'truck'" size="12"/>
+                                            <t t-esc="row.kind === 'quick' ? 'Quick' : 'Express'"/> ·
+                                            <t t-esc="row.lines.length"/> item<t t-if="row.lines.length !== 1">s</t>
+                                            <t t-if="row.order and row.order.at"> · <t t-esc="ago(row.order.at)"/></t>
+                                        </small>
+                                        <span class="mart_counter_items">
+                                            <span t-foreach="row.lines" t-as="line" t-key="line_index">
+                                                <b t-esc="line.qty"/> <t t-esc="line.name"/>
+                                            </span>
+                                        </span>
+                                        <span class="od-line2 od2-row-facts">
+                                            <span t-attf-class="mart-pill mart-t-{{ stageTone(row) }}" t-esc="stageLabel(row)"/>
+                                            <span t-if="row.state === 'awaiting_shop' and row.waiting" class="od-late">
+                                                <Icon n="'clock'" size="13"/> waiting <t t-esc="row.waiting"/> min
+                                            </span>
+                                            <span t-if="row.paid" class="od2-row-pay">
+                                                <Icon n="'check'" size="13"/>
+                                                <t t-esc="row.order and row.order.method ? payText(row.order) : 'Paid'"/>
+                                            </span>
+                                            <span t-else="" class="od2-row-pay od2-row-cash">
+                                                <Icon n="'money'" size="13"/>
+                                                Collect <t t-esc="money(row.collect, row.order and row.order.currency)"/>
+                                            </span>
+                                            <span t-if="row.rider" class="od-pay od-rider-name">
+                                                <Icon n="'scooter'" size="13"/> <t t-esc="row.rider"/>
+                                            </span>
+                                            <span t-if="row.supply_waiting" class="od-waiting">
+                                                <Icon n="'clock'" size="13"/> Waiting for supplier stock
+                                            </span>
+                                            <span t-if="row.pickup_code" class="mart_counter_code">
+                                                Pickup code <b t-esc="row.pickup_code"/>
+                                            </span>
+                                        </span>
+                                    </span>
+                                    <span class="od2-row-side" t-on-click.stop="() => {}">
+                                        <b t-if="row.order" class="od-total" t-esc="money(row.order.total, row.order.currency)"/>
+                                        <button t-if="row.state === 'awaiting_shop'"
+                                                class="mart-btn mart-btn-sm mart-btn-primary od-next"
+                                                t-att-disabled="state.busy === row.id"
+                                                t-on-click="() => this.onAccept(row)">
+                                            Accept <Icon n="'right'" size="12"/>
+                                        </button>
+                                        <button t-if="row.supply_waiting"
+                                                class="mart-btn mart-btn-sm od-next"
+                                                t-att-disabled="state.busy === row.id"
+                                                t-on-click="() => this.act(row, 'supply_arrived')">
+                                            Goods arrived
+                                        </button>
+                                        <t t-if="row.state === 'preparing' and !row.supply_waiting">
+                                            <button class="mart-btn mart-btn-sm mart-btn-primary od-next"
+                                                    t-att-disabled="state.busy === row.id"
+                                                    t-on-click="() => this.act(row, 'ready')">
+                                                Packed - call the rider <Icon n="'right'" size="12"/>
+                                            </button>
+                                            <button class="mart-link" t-on-click="() => this.act(row, 'unaccept')">Put back</button>
+                                        </t>
+                                        <!-- Cancelling is in the order itself (a row click opens it
+                                             in All orders), the same as the console's Counter. -->
+                                    </span>
+                                </li>
+                            </ul>
+                        </t>
+                    </div>
+                </div>
+
+            </div>
+            </Layout>
+        </xpath>
+
+    </t>
+</templates>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!-- The desk's header gets the toggle, beside its title. -->
+    <t t-inherit="mart369_order.OrderDesk" t-inherit-mode="extension">
+        <xpath expr="//header[hasclass('pe-head')]/div" position="after">
+            <div class="mart_orders_toggle" role="tablist" aria-label="Orders view">
+                <button type="button" role="tab" aria-selected="false"
+                        t-on-click="() => this.showCounter()">Counter</button>
+                <button type="button" role="tab" aria-selected="true"
+                        class="mart_orders_toggle_on">All orders</button>
+            </div>
+        </xpath>
+    </t>
+
+</templates>

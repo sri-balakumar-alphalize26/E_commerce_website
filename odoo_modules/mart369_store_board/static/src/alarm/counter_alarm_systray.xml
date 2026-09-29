@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="mart369_store_board.CounterAlarmSystray">
+        <!-- Not an o_nav_entry: that stretches an item to the bar's full
+             height. A small pill centred in the bar, like the console's. -->
+        <div t-if="state.enabled and state.ringing" class="mart_counter_systray">
+            <button type="button" class="mart_counter_systray_btn" t-on-click="() => this.open()"
+                    t-att-title="state.armed ? 'Open the Counter' : 'Click to hear the alarm and open the Counter'">
+                <i class="fa fa-bell" aria-hidden="true"/>
+                <span><t t-esc="state.ringing"/> new order<t t-if="state.ringing !== 1">s</t></span>
+                <small t-if="!state.armed">· tap to hear</small>
+            </button>
+        </div>
+    </t>
+
+</templates>
