@@ -127,10 +127,15 @@
     <t t-name="mart369_catalog.CategoryRow">
 
         <!-- The colours, shown as what they are: the
-             pale background and the ink on top of it. -->
-        <span class="cd-swatch" t-att-style="swatch(row)"
+             pale background and the ink on top of it - with the
+             category's logo drawn in them when it has one. -->
+        <span t-attf-class="cd-swatch {{ hasLogo(row) ? 'cd-has-logo' : '' }} {{ row.parentId ? '' : 'cd-main' }}"
+              t-att-style="swatch(row)"
               t-attf-title="Background {{ row.tone }}, heading {{ row.accent }}">
-            Aa
+            <img t-if="row.image" t-att-src="row.image" alt="" loading="lazy"/>
+            <img t-elif="row.parentId and row.art" class="cd-logo-art" t-att-src="artUrl(row.art)" alt=""/>
+            <Icon t-elif="!row.parentId and row.icon" n="row.icon" size="20"/>
+            <t t-else="">Aa</t>
         </span>
 
         <div class="cd-body">
@@ -215,6 +220,15 @@
                                 <li><b>Sub-category:</b> type the name, then choose the main category it goes under (e.g. Computers). Only main categories are listed - the app shows two levels.</li>
                             </ul>
                         </t>
+                        <!-- Keyed on the level, so choosing Under switches the
+                             picker, the size hint and the crop size together. -->
+                        <div class="cd-dialog-field cd-span2">
+                            <span>Logo <em t-if="isSub">Fills its tile on the home page and its circle on the category page</em><em t-else="">The small mark on its pill in the top bar</em></span>
+                            <LogoField t-key="isSub ? 'sub' : 'main'" level="isSub ? 'sub' : 'main'"
+                                       value="logoValue" name="previewName"
+                                       tone="state.draft.mart_tone" accent="state.draft.mart_accent"
+                                       onChange="setLogo"/>
+                        </div>
                         <label class="cd-dialog-field cd-span2"><span>One line under the title</span>
                             <input type="text" t-att-value="state.draft.mart_blurb"
                                    placeholder="Farm-fresh produce, picked daily"
@@ -280,9 +294,13 @@
                                 <b t-esc="previewName"/>
                                 <small t-att-style="'color: ' + lineColour" t-esc="state.draft.mart_blurb or 'No line under the title'"/>
                             </div>
+                            <!-- Its pill in the top bar, logo and all. -->
                             <div class="cd-prev-art" aria-hidden="true">
-                                <span><Icon n="'box'" size="18"/></span>
-                                <span><Icon n="'box'" size="22"/></span>
+                                <span class="cd-prev-pill">
+                                    <img t-if="state.draft.logoImage" t-att-src="state.draft.logoImage" alt=""/>
+                                    <Icon t-else="" n="state.draft.mart_icon or 'grid'" size="18"/>
+                                    <t t-esc="previewName"/>
+                                </span>
                             </div>
                         </div>
                         <p class="cd-prev-key">
@@ -291,7 +309,11 @@
                         </p>
                     </div>
                     <div t-else="" class="cd-prev-cat cd-prev-is-sub" t-att-style="previewStyle">
-                        <i class="cd-prev-circle"><Icon n="'box'" size="30"/></i>
+                        <i t-attf-class="cd-prev-circle {{ state.draft.logoImage ? 'cd-prev-fill' : '' }}">
+                            <img t-if="state.draft.logoImage" t-att-src="state.draft.logoImage" alt=""/>
+                            <img t-elif="state.draft.mart_art" class="cd-prev-art-img" t-att-src="artUrl(state.draft.mart_art)" alt=""/>
+                            <Icon t-else="" n="'box'" size="30"/>
+                        </i>
                         <b class="cd-prev-subname" t-esc="previewName"/>
                         <small class="cd-prev-subline">
                             Under <t t-esc="main ? main.name : ''"/> &#183;

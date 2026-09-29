@@ -46,7 +46,7 @@ class Mart369HomeTile(models.Model):
     # ── Picture ──
     image_source = fields.Selection([
         ('upload', 'A picture uploaded here'),
-        ('category', 'The category picture'),
+        ('category', "The category's logo"),
         ('url', 'A picture elsewhere on the web'),
         ('art', 'A drawing (no picture)'),
     ], string='Picture', required=True, default='upload',

@@ -75,6 +75,11 @@ you want from the Apps list.
             'mart369/static/src/ui/empty.xml',
             'mart369/static/src/ui/confirm.js',
             'mart369/static/src/ui/confirm.xml',
+            # A category's logo: the built-in picker, the upload and the
+            # cropper. The drawings it offers are static/img/art/*.svg.
+            'mart369/static/src/ui/logo.scss',
+            'mart369/static/src/ui/logo.js',
+            'mart369/static/src/ui/logo.xml',
             # The builder chrome - the phone frame, the panel, the buttons.
             # Both builder screens (home and product) draw with these.
             'mart369/static/src/builder/builder.scss',

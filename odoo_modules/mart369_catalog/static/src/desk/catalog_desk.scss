@@ -677,3 +677,43 @@
     font-size: 12.5px;
     color: #4a5a66;
 }
+
+// ------------------------------------------------------------------ the logo
+// A row's swatch draws the category's logo in its colours when it has one;
+// the field itself is the kit's (mart369/static/src/ui/logo.scss).
+.cd-swatch.cd-has-logo {
+    overflow: hidden;
+
+    > img { width: 100%; height: 100%; object-fit: cover; }
+    > img.cd-logo-art { object-fit: contain; padding: 8%; }
+    &.cd-main > img { object-fit: contain; padding: 22%; }
+}
+
+// The dialog's preview: the main category's pill, and the sub-category's
+// circle, logo and all.
+.cd-dialog .cd-prev-cat .cd-prev-art span.cd-prev-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    width: auto;
+    height: auto;
+    max-width: 170px;
+    margin: 0;
+    padding: 7px 14px;
+    border-radius: 999px;
+    background: #fff;
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    img { width: 18px; height: 18px; object-fit: contain; flex: none; }
+}
+.cd-dialog .cd-prev-is-sub .cd-prev-circle {
+    overflow: hidden;
+
+    &.cd-prev-fill img { width: 100%; height: 100%; object-fit: cover; }
+    .cd-prev-art-img { width: 64%; height: 64%; object-fit: contain; }
+}

@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!-- A category's logo: Built-in | Upload your own. The console's twin is
+         LogoField in components/admin/LogoField.jsx. -->
+    <t t-name="mart369.LogoField">
+        <div class="mart-logo">
+            <div class="mart-logo-seg" role="tablist">
+                <button type="button" role="tab" t-att-aria-selected="state.pane === 'builtin' ? 'true' : 'false'"
+                        t-att-class="{ 'mart-on': state.pane === 'builtin' }"
+                        t-on-click="() => this.state.pane = 'builtin'">Built-in</button>
+                <button type="button" role="tab" t-att-aria-selected="state.pane === 'upload' ? 'true' : 'false'"
+                        t-att-class="{ 'mart-on': state.pane === 'upload' }"
+                        t-on-click="() => this.state.pane = 'upload'">Upload your own</button>
+            </div>
+
+            <t t-if="state.pane === 'builtin'">
+                <p t-if="props.value.image" class="mart-logo-note">
+                    <Icon n="'info'" size="13"/> An uploaded picture is in use. Picking one here replaces it.
+                </p>
+                <div t-attf-class="mart-logo-grid mart-logo-grid-{{ props.level }}" role="listbox"
+                     t-attf-style="--tone: {{ props.tone or '#f4f6f8' }}; --accent: {{ props.accent or '#0b4a6e' }};">
+                    <button t-foreach="choices" t-as="c" t-key="c[0]" type="button" role="option"
+                            t-att-title="c[1]" t-att-aria-selected="isOn(c[0]) ? 'true' : 'false'"
+                            t-att-class="{ 'mart-on': isOn(c[0]) }" t-on-click="() => this.pick(c[0])">
+                        <Icon t-if="props.level === 'main'" n="c[0]" size="20"/>
+                        <span t-else="" class="mart-logo-art"><img t-att-src="artUrl(c[0])" alt="" loading="lazy"/></span>
+                        <small t-esc="c[1]"/>
+                    </button>
+                </div>
+            </t>
+            <div t-else="" class="mart-logo-upload">
+                <span t-attf-class="mart-logo-prev mart-logo-prev-{{ props.level }}"
+                      t-attf-style="--tone: {{ props.tone or '#f4f6f8' }};">
+                    <img t-if="props.value.image" t-att-src="props.value.image" alt="The uploaded logo"/>
+                    <Icon t-else="" n="'camera'" size="22"/>
+                </span>
+                <div class="mart-logo-up-body">
+                    <p class="mart-logo-size"><b t-esc="size.title"/><t t-esc="size.hint"/></p>
+                    <div class="mart-logo-btns">
+                        <button type="button" class="mart-btn mart-btn-sm" t-on-click="choose">
+                            <Icon n="'up'" size="13"/> <t t-esc="props.value.image ? 'Replace' : 'Choose a picture'"/>
+                        </button>
+                        <button t-if="props.value.image" type="button" class="mart-btn mart-btn-sm" t-on-click="remove">Remove</button>
+                    </div>
+                    <small t-if="state.error" class="mart-logo-error" t-esc="state.error"/>
+                </div>
+                <input t-ref="file" type="file" class="d-none"
+                       accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" t-on-change="onFile"/>
+            </div>
+        </div>
+    </t>
+
+    <!-- The cropper: a 280 px square to drag and zoom in, and the picture
+         beside it at the sizes the app draws it. -->
+    <t t-name="mart369.LogoCropDialog">
+        <Dialog size="'lg'" title="'Crop the logo'" contentClass="'o_mart369_dialog mart-crop'">
+            <div class="mart-crop-body">
+                <div class="mart-crop-left">
+                    <div t-ref="stage" t-attf-class="mart-crop-stage mart-crop-stage-{{ props.level }}" tabindex="0"
+                         aria-label="Drag to move the picture. Arrow keys move it, plus and minus zoom."
+                         t-attf-style="--tone: {{ props.tone or '#f4f6f8' }};"
+                         t-on-pointerdown="onPointerDown" t-on-pointermove="onPointerMove"
+                         t-on-pointerup="onPointerUp" t-on-pointercancel="onPointerUp"
+                         t-on-wheel="onWheel" t-on-keydown="onKeyDown">
+                        <img t-if="state.ready" t-att-src="props.src" alt="" draggable="false" t-att-style="shot(280)"/>
+                        <i class="mart-crop-guide" aria-hidden="true"/>
+                    </div>
+                    <label class="mart-crop-zoom">
+                        <span aria-hidden="true">−</span>
+                        <input type="range" min="0" max="100" t-att-value="zoomPct" aria-label="Zoom" t-on-input="onZoom"/>
+                        <span aria-hidden="true">+</span>
+                    </label>
+                    <div class="mart-crop-quick">
+                        <button type="button" class="mart-link" t-on-click="() => this.frame('fit')">Show it all</button>
+                        <button type="button" class="mart-link" t-on-click="() => this.frame('fill')">Fill the square</button>
+                    </div>
+                </div>
+
+                <div class="mart-crop-right">
+                    <p class="mart-logo-size"><b t-esc="size.title"/><t t-esc="size.hint"/></p>
+                    <p t-if="state.ready" t-attf-class="mart-crop-src {{ small ? 'mart-warn' : '' }}">
+                        <Icon n="small ? 'info' : 'check'" size="13"/> <t t-esc="sourceLine"/>
+                    </p>
+                    <p class="mart-crop-cap">As the app will show it</p>
+                    <t t-if="state.ready">
+                        <div t-if="props.level === 'main'" class="mart-crop-prev-main">
+                            <span class="mart-crop-pill mart-on">
+                                <span class="mart-crop-shot" style="width:18px;height:18px"><img t-att-src="props.src" alt="" t-att-style="shot(18)"/></span>
+                                <t t-esc="props.name or 'Category'"/>
+                            </span>
+                            <span class="mart-crop-pill"><Icon n="'bag'" size="17"/> My Home</span>
+                            <span class="mart-crop-shot mart-crop-shot-big" style="width:64px;height:64px"><img t-att-src="props.src" alt="" t-att-style="shot(64)"/></span>
+                        </div>
+                        <div t-else="" class="mart-crop-prev-sub" t-attf-style="--tone: {{ props.tone or '#f4f6f8' }};">
+                            <figure>
+                                <span class="mart-crop-shot mart-crop-shot-tile" style="width:104px;height:104px"><img t-att-src="props.src" alt="" t-att-style="shot(104)"/></span>
+                                <figcaption><t t-esc="props.name or 'Sub-category'"/><small>Home page</small></figcaption>
+                            </figure>
+                            <figure>
+                                <span class="mart-crop-shot mart-crop-shot-circle" style="width:88px;height:88px"><img t-att-src="props.src" alt="" t-att-style="shot(88)"/></span>
+                                <figcaption><t t-esc="props.name or 'Sub-category'"/><small>Category page</small></figcaption>
+                            </figure>
+                        </div>
+                    </t>
+                    <p t-if="state.error" class="mart-logo-error" role="alert" t-esc="state.error"/>
+                </div>
+            </div>
+            <t t-set-slot="footer">
+                <button class="mart-btn" t-on-click="() => props.close()">Cancel</button>
+                <button class="mart-btn mart-btn-primary" t-att-disabled="!state.ready" t-on-click="save">Use this logo</button>
+            </t>
+        </Dialog>
+    </t>
+
+</templates>

@@ -20,6 +20,17 @@
                         <field name="mart_blurb" placeholder="Farm-fresh produce, picked daily"/>
                         <field name="mart_blurb_color" widget="color" placeholder="#4a5a66"/>
                     </group>
+                    <!-- The logo. An uploaded one wins; the built-in ones are
+                         the app's own drawings, used until there is one. A
+                         main category shows the small mark, a sub-category
+                         the drawing. The photo at the top of this form is the
+                         website shop's, not the app's. Crop an upload in the
+                         Catalogue desk, which shows it at its real size. -->
+                    <group>
+                        <field name="mart_icon" invisible="parent_id"/>
+                        <field name="mart_art" invisible="not parent_id"/>
+                        <field name="mart_logo" widget="image" options="{'size': [64, 64]}"/>
+                    </group>
                 </group>
             </sheet>
         </field>

@@ -479,7 +479,8 @@ export class HomeBuilder extends Component {
     clearImage(model, rec) {
         const vals = { image_1920: false };
         if (model === M.tile) {
-            vals.image_source = "art";
+            // Back to the category logo when the tile has a category.
+            vals.image_source = rec.public_categ_id ? "category" : "art";
         }
         return this.run(() => this.orm.write(model, [rec.id], vals));
     }

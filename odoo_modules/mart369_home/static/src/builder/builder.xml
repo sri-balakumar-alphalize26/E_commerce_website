@@ -66,7 +66,7 @@
                                     <button t-foreach="activeTabs" t-as="tab" t-key="tab.id"
                                             t-att-aria-selected="tab_first ? 'true' : 'false'"
                                             t-attf-style="--i:{{ tab_index }}">
-                                        <Icon n="tab.icon" size="17"/><t t-esc="tab.name"/>
+                                        <img t-if="tab.logo_image" class="hm-tab-logo" t-att-src="tab.logo_image" alt=""/><Icon t-else="" n="tab.logo_icon or tab.icon" size="17"/><t t-esc="tab.name"/>
                                     </button>
                                     <span t-if="!activeTabs.length" class="text-muted small p-2">No tabs yet</span>
                                 </div></div></div>
@@ -105,10 +105,10 @@
                                 <div class="mart-band-body">
                                     <section class="hm-cats hm-in">
                                         <a t-foreach="activeTiles" t-as="tile" t-key="tile.id" class="hm-cat" t-attf-style="--i:{{ tile_index }}">
-                                            <span class="hm-cat-img" t-att-style="tileStyle(tile)">
+                                            <span t-attf-class="hm-cat-img {{ tile.logo_from and tile.image_path ? 'hm-cat-fill' : '' }}" t-att-style="tileStyle(tile)">
                                                 <img t-if="tile.image_path" t-att-src="tile.image_path" alt=""/>
                                                 <span t-else="" class="mart-art" t-att-style="(tile.paint_color or tile.color) ? 'color:' + (tile.paint_color or tile.color) : ''">
-                                                    <t t-esc="tile.badge || tile.art"/>
+                                                    <t t-esc="tile.badge || tile.paint_art || tile.art"/>
                                                 </span>
                                             </span>
                                             <span t-esc="tile.name"/>
@@ -627,7 +627,10 @@
                             <div class="mart-upload">
                                 <span class="mart-upload-prev" t-att-style="tl.image_path ? 'background-image:url(' + tl.image_path + ')' : tileStyle(tl)"/>
                                 <label class="mart-btn mart-btn-sm">Upload<input type="file" accept="image/*" t-on-change="(ev) => this.onUpload('mart369.home.tile', tl, ev)"/></label>
-                                <button t-if="tl.has_image" class="mart-btn mart-btn-sm" t-on-click="() => this.clearImage('mart369.home.tile', tl)">Use drawing instead</button>
+                                <button t-if="tl.has_image" class="mart-btn mart-btn-sm" t-on-click="() => this.clearImage('mart369.home.tile', tl)"><t t-esc="tl.public_categ_id ? 'Use the category logo' : 'Use drawing instead'"/></button>
+                            </div>
+                            <div t-if="tl.logo_from" class="mart-hint">
+                                Wears <b t-esc="tl.logo_from"/>'s logo. Change it in Catalogue → Categories, or upload a picture here for this tile only.
                             </div>
                         </div>
                         <div class="mart-row">
@@ -663,7 +666,7 @@
                 <t t-foreach="d.tabs" t-as="tb" t-key="tb.id">
                     <div t-attf-class="mart-item {{ state.editItem === tb.id ? 'mart-selected' : '' }} {{ tb.active ? '' : 'mart-hidden' }}" t-att-data-id="tb.id">
                         <span class="mart-item-handle">⣿</span>
-                        <span class="mart-item-swatch" style="display:grid;place-items:center;background:#f4f6f8;"><Icon n="tb.icon" size="18"/></span>
+                        <span class="mart-item-swatch" style="display:grid;place-items:center;background:#f4f6f8;"><img t-if="tb.logo_image" t-att-src="tb.logo_image" alt="" style="width:18px;height:18px;object-fit:contain"/><Icon t-else="" n="tb.logo_icon or tb.icon" size="18"/></span>
                         <div class="mart-item-txt" t-on-click="() => this.toggleEditItem(tb.id)">
                             <b t-esc="tb.name"/>
                             <small><t t-esc="labelOf(ROUTE_VIEWS, tb.route_view)"/><t t-if="tb.route_param"> · <t t-esc="tb.route_param"/></t></small>
@@ -679,7 +682,10 @@
                             <div class="mart-field"><label>Label</label><input type="text" t-att-value="tb.name" t-on-input="(ev) => this.onField('mart369.home.tab', tb, 'name', ev)"/></div>
                             <div class="mart-field">
                                 <label>Icon</label>
-                                <Pick label="'Icon'" value="tb.icon || ''" options="d.vocab.icons"
+                                <div t-if="tb.logo_from" class="mart-hint">
+                                    <b t-esc="tb.logo_from"/>'s logo. Change it in Catalogue → Categories.
+                                </div>
+                                <Pick t-else="" label="'Icon'" value="tb.icon || ''" options="d.vocab.icons"
                                       onChange="(v) => this.edit('mart369.home.tab', tb, 'icon', v)"/>
                             </div>
                         </div>

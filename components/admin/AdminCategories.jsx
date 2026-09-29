@@ -21,6 +21,7 @@ import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import { useAction, useResource } from "@/lib/useFetch";
 import { Drawer, Empty, Icon, Search, Select, Tabs } from "./AdminUI";
+import { LogoField, LogoMark } from "./LogoField";
 
 export function CategoriesSection({ flash }) {
   const [tab, setTab] = useState("all");
@@ -126,10 +127,16 @@ export function CategoriesSection({ flash }) {
   const catRow = (r) => (
     <>
       {/* The two colours shown as what they are: ink on its own
-          background, rather than two hex codes in a table. */}
-      <span className="ad-cat-swatch"
+          background, rather than two hex codes in a table - with the
+          category's logo drawn in them when it has one. */}
+      <span className={"ad-cat-swatch" + (r.image || r.icon || r.art ? " lf-has-logo" : "") + (r.parentId ? "" : " lf-main")}
         style={{ background: r.tone || "#f4f6f8", color: r.accent || "#0b4a6e" }}
-        title={`Background ${r.tone}, heading ${r.accent}`}>Aa</span>
+        title={`Background ${r.tone}, heading ${r.accent}`}>
+        {r.image ? <img src={r.image} alt="" loading="lazy" />
+          : r.parentId && r.art ? <LogoMark level="sub" art={r.art} color={r.accent} size={36} />
+          : !r.parentId && r.icon ? <LogoMark level="main" icon={r.icon} size={20} />
+          : "Aa"}
+      </span>
 
       <div className="ad-cat-body">
         <div className="ad-cat-top">
@@ -274,7 +281,18 @@ function CategoryDialog({ row, mode, parents, error, busy, onCancel, onSave }) {
     mart_tone: row?.tone || "#f4f6f8",
     mart_accent: row?.accent || "#0b4a6e",
     mart_blurb_color: row?.blurbColor || "",
+    mart_icon: row?.icon || "",
+    mart_art: row?.art || "",
+    /* The picture on screen (its address, or the cropper's data: URL), and
+       what to send: undefined leaves it alone, a data: URL replaces it,
+       false removes it. */
+    logoImage: row?.image || "",
+    mart_logo: undefined,
   });
+  const setLogo = (vals) => setDraft((d) => ({
+    ...d, ...vals,
+    logoImage: "mart_logo" in vals ? vals.mart_logo || "" : d.logoImage,
+  }));
   const [nameBad, setNameBad] = useState(false);
   const [picked, setPicked] = useState(isEdit);
   const set = (k) => (e) => {
@@ -302,7 +320,10 @@ function CategoryDialog({ row, mode, parents, error, busy, onCancel, onSave }) {
   const line = draft.mart_blurb || "No line under the title";
 
   const submit = () => {
-    const { name, parent_id, ...look } = draft;
+    const { name, parent_id, logoImage, mart_logo, ...rest } = draft;
+    /* The picture only when it changed: re-sending the stored one would
+       rewrite it on every save. */
+    const look = mart_logo === undefined ? rest : { ...rest, mart_logo };
     if (!askPlace) return onSave(look);
     if (!name.trim()) { setNameBad(true); return; }
     if (isEdit) return onSave({ ...look, name: name.trim(), ...(placeLocked ? {} : { parent_id: parent_id ? Number(parent_id) : false }) });
@@ -358,6 +379,12 @@ function CategoryDialog({ row, mode, parents, error, busy, onCancel, onSave }) {
               <li><b>Sub-category:</b> type the name, then choose the main category it goes under (e.g. Computers). Only main categories are listed - the app shows two levels.</li>
             </ul>
           </>}
+          {/* Keyed on the level, so choosing Under switches the picker, the
+              size hint and the crop size together. */}
+          <LogoField key={isSub ? "sub" : "main"} level={isSub ? "sub" : "main"} name={shownName}
+            tone={draft.mart_tone} accent={draft.mart_accent}
+            value={{ icon: draft.mart_icon, art: draft.mart_art, image: draft.logoImage }}
+            onChange={setLogo} />
           <label className="ad-field ad-span2"><span>One line under the title</span>
             <input value={draft.mart_blurb} onChange={set("mart_blurb")}
               placeholder="Switches, sockets and wiring accessories" />
@@ -412,16 +439,22 @@ function CategoryDialog({ row, mode, parents, error, busy, onCancel, onSave }) {
                   <b>{shownName}</b>
                   <small style={{ color: lineColour }}>{line}</small>
                 </div>
+                {/* Its pill in the top bar, logo and all. */}
                 <div className="ad-prev-art" aria-hidden="true">
-                  <span><Icon n="box" size={18} /></span>
-                  <span><Icon n="box" size={22} /></span>
+                  <span className="lf-pv-pill">
+                    <LogoMark level="main" icon={draft.mart_icon} image={draft.logoImage} size={18} />{shownName}
+                  </span>
                 </div>
               </div>
               <p className="ad-prev-key"><i />Heading colour - the All tile, and where new sub-categories start</p>
             </div>
           ) : (
             <div className="ad-prev-sub" style={{ "--tone": draft.mart_tone, "--accent": draft.mart_accent }}>
-              <i><Icon n="box" size={30} /></i>
+              <i className={draft.logoImage ? "lf-prev-fill" : ""}>
+                {draft.logoImage ? <img src={draft.logoImage} alt="" />
+                  : draft.mart_art ? <LogoMark level="sub" art={draft.mart_art} color={draft.mart_accent} size={66} />
+                  : <Icon n="box" size={30} />}
+              </i>
               <b>{shownName}</b>
               <small>Under {main?.name || ""} · <span style={{ color: lineColour }}>{line}</span></small>
             </div>

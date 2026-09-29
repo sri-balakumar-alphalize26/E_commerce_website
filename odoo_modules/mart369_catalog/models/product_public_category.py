@@ -14,12 +14,21 @@ A category with no children is still a category: the app shows "Launching soon"
 for Fashion and Books, which have no products yet.
 """
 
+import base64
+import binascii
 import re
 
 from odoo import api, fields, models
 from odoo.exceptions import UserError, ValidationError
+from odoo.tools.mimetypes import guess_mimetype
 
-from odoo.addons.mart369.models.serializers import slugify
+from odoo.addons.mart369.models.serializers import (
+    ART_CHOICES, ICON_CHOICES, slugify)
+
+# A cropped logo is 512px at most, a few hundred KB. Anything far past that is
+# a photo sent uncropped, and it would ride every catalogue response.
+LOGO_MAX_BYTES = 5 * 1024 * 1024
+LOGO_TYPES = ('image/png', 'image/jpeg', 'image/webp', 'image/gif')
 
 class ProductPublicCategory(models.Model):
     _inherit = 'product.public.category'
@@ -46,6 +55,29 @@ class ProductPublicCategory(models.Model):
         string='Line colour',
         help="The colour of the one line under the title, e.g. #4a5a66. Empty: "
              "the app's grey - or, for a sub-category, its main category's.")
+
+    # The logo. A main category's is the small mark on its pill in the top
+    # bar; a sub-category's fills its tile. Either is one the app draws itself
+    # (below) or an uploaded picture (`mart_logo`), and an upload wins. Both
+    # built-in fields are kept because Under can change: a sub-category moved
+    # to the top keeps the drawing it had.
+    #
+    # The upload is its own field, not the category's image_1920: that one is
+    # the website shop's category photo (Odoo's demo fills several with stock
+    # photos), which at 18px on a pill would be noise - and the website still
+    # wants it.
+    mart_logo = fields.Image(
+        string='Uploaded logo', max_width=512, max_height=512,
+        help="Cropped square in the 369 Mart consoles. Used instead of the "
+             "built-in logo; remove it to go back to the built-in one.")
+    mart_icon = fields.Selection(
+        ICON_CHOICES, string='Built-in logo (category)',
+        help="The small mark beside a main category's name in the app's top "
+             "bar. An uploaded picture is used instead when there is one.")
+    mart_art = fields.Selection(
+        ART_CHOICES, string='Built-in logo (sub-category)',
+        help="The drawing that fills a sub-category's tile. An uploaded "
+             "picture is used instead when there is one.")
 
     mart_product_count = fields.Integer(
         string='Products in the app', compute='_compute_mart_product_count',
@@ -135,11 +167,32 @@ class ProductPublicCategory(models.Model):
             'accent': self.mart_accent or '',
             'blurb': self.mart_blurb or '',
             'blurbColor': self.mart_blurb_color or '',
+            **self._mart369_logo(),
         }
         if with_subs:
             node['subs'] = [child._mart369_serialize(with_subs=False)
                             for child in self._mart369_children()]
         return node
+
+    def _mart369_logo(self):
+        """{icon, art, image}: the two built-in marks, and the uploaded
+        picture's address or ''. The app draws the picture when there is one.
+
+        `unique` changes with every save, so a new upload is not hidden behind
+        the browser's copy of the old one.
+        """
+        self.ensure_one()
+        image = ''
+        if self.mart_logo:
+            image = '%s?unique=%s' % (
+                self.env['mart369.serializable']._image_url(
+                    'mart_logo', '512x512', record=self),
+                int(self.write_date.timestamp()) if self.write_date else 0)
+        return {
+            'icon': self.mart_icon or '',
+            'art': self.mart_art or '',
+            'image': image,
+        }
 
     # ------------------------------------------------------- the staff screen
 
@@ -151,7 +204,7 @@ class ProductPublicCategory(models.Model):
     # reports all lean on. Both belong in the Odoo form, which is still one
     # click away under "Catalog (all views)".
     ADMIN_FIELDS = ('mart_in_app', 'mart_blurb', 'mart_tone', 'mart_accent',
-                    'mart_blurb_color')
+                    'mart_blurb_color', 'mart_icon', 'mart_art', 'mart_logo')
 
     @api.model
     def mart369_admin_list(self, tab='all', mode='', q='', limit=300):
@@ -220,6 +273,8 @@ class ProductPublicCategory(models.Model):
             'products': self.mart_product_count,
             'children': len(self.child_id),
             'inApp': self.mart_in_app,
+            **self._mart369_logo(),
+            'hasImage': bool(self.mart_logo),
         }
 
     def mart369_admin_write(self, values):
@@ -318,7 +373,39 @@ class ProductPublicCategory(models.Model):
                 clean[key] = self._mart369_check_colour(clean[key])
         if 'mart_in_app' in clean:
             clean['mart_in_app'] = bool(clean['mart_in_app'])
+        for key, choices in (('mart_icon', ICON_CHOICES), ('mart_art', ART_CHOICES)):
+            if key in clean:
+                clean[key] = clean[key] or False
+                if clean[key] and clean[key] not in dict(choices):
+                    raise UserError(self.env._(
+                        "'%s' is not one of the app's built-in logos.", clean[key]))
+        if 'mart_logo' in clean:
+            clean['mart_logo'] = self._mart369_check_logo(clean['mart_logo'])
         return clean
+
+    @api.model
+    def _mart369_check_logo(self, value):
+        """An uploaded logo as Odoo stores it (base64), or False to remove it.
+
+        A data: URL is accepted too - it is what a browser's canvas hands over.
+        """
+        if not value:
+            return False
+        if not isinstance(value, str):
+            raise UserError(self.env._("That is not a picture."))
+        if value.startswith('data:'):
+            value = value.partition(',')[2]
+        try:
+            raw = base64.b64decode(value, validate=True)
+        except (binascii.Error, ValueError):
+            raise UserError(self.env._("That is not a picture."))
+        if len(raw) > LOGO_MAX_BYTES:
+            raise UserError(self.env._(
+                "That picture is too big. Crop it, or use one under 5 MB."))
+        if guess_mimetype(raw) not in LOGO_TYPES:
+            raise UserError(self.env._(
+                "A logo has to be a PNG, JPEG, WebP or GIF picture."))
+        return value
 
     @api.model
     def _mart369_check_colour(self, value):

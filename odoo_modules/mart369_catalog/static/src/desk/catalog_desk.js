@@ -28,6 +28,7 @@ import { Search } from "@mart369/ui/search";
 import { Pick } from "@mart369/ui/pick";
 import { Icon } from "@mart369/ui/icon";
 import { Tabs } from "@mart369/ui/tabs";
+import { LogoField, artUrl } from "@mart369/ui/logo";
 
 const MODEL = "product.public.category";
 
@@ -85,7 +86,7 @@ function message(err) {
  */
 export class CategoryDialog extends Component {
     static template = "mart369_catalog.CategoryDialog";
-    static components = { Dialog, Pick, Icon };
+    static components = { Dialog, Pick, Icon, LogoField };
     static props = {
         close: { type: Function },
         // null for a new category.
@@ -112,11 +113,21 @@ export class CategoryDialog extends Component {
                 mart_accent: row.accent || "#0b4a6e",
                 // Empty until chosen: the app's grey, or the main category's.
                 mart_blurb_color: row.blurbColor || "",
+                // The logo: the two built-in ones, and the picture on screen
+                // (its address, or the cropper's data: URL).
+                mart_icon: row.icon || "",
+                mart_art: row.art || "",
+                logoImage: row.image || "",
             },
+            // What to send for the picture: undefined leaves it alone, a
+            // data: URL replaces it, false removes it.
+            upload: undefined,
             busy: false,
             error: "",
         });
         this.PALETTE = PALETTE;
+        this.artUrl = artUrl;
+        this.setLogo = (vals) => this.onLogo(vals);
         // Whether Background or Heading has been picked in this dialog. Until
         // then a new sub-category takes its main category's colours; after,
         // the picked ones stay whatever Under is set to.
@@ -194,6 +205,27 @@ export class CategoryDialog extends Component {
         }
     }
 
+    /** From the logo field: { mart_icon } / { mart_art } / { mart_logo }. */
+    onLogo(vals) {
+        const d = this.state.draft;
+        if ("mart_icon" in vals) {
+            d.mart_icon = vals.mart_icon;
+        }
+        if ("mart_art" in vals) {
+            d.mart_art = vals.mart_art;
+        }
+        if ("mart_logo" in vals) {
+            this.state.upload = vals.mart_logo;
+            d.logoImage = vals.mart_logo || "";
+        }
+        this.state.error = "";
+    }
+
+    get logoValue() {
+        const d = this.state.draft;
+        return { icon: d.mart_icon, art: d.mart_art, image: d.logoImage };
+    }
+
     get preview() {
         return {
             background: this.state.draft.mart_tone || "#f4f6f8",
@@ -238,7 +270,12 @@ export class CategoryDialog extends Component {
         if (this.state.busy) {
             return;
         }
-        const values = { ...this.state.draft };
+        const { logoImage, ...values } = this.state.draft;
+        // The picture only when it changed: re-sending the stored one would
+        // rewrite it on every save.
+        if (this.state.upload !== undefined) {
+            values.mart_logo = this.state.upload;
+        }
         if (this.askPlace) {
             if (!values.name.trim()) {
                 this.state.error = _t("A category needs a name.");
@@ -280,6 +317,7 @@ export class CatalogDesk extends Component {
         this.dialog = useService("dialog");
 
         this.TILES = TILES;
+        this.artUrl = artUrl;
         this.TABS = TABS;
 
         this.state = useState({
@@ -504,6 +542,11 @@ export class CatalogDesk extends Component {
 
     groupStyle(group, index) {
         return `--i: ${index}; --tone: ${group.main.tone || "#f4f6f8"}; --accent: ${group.main.accent || "#0b4a6e"};`;
+    }
+
+    /** Whether the row's swatch draws a logo rather than "Aa". */
+    hasLogo(row) {
+        return !!(row.image || (row.parentId ? row.art : row.icon));
     }
 
     swatch(row) {

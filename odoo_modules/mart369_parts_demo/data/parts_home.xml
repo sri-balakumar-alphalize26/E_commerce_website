@@ -123,7 +123,7 @@ Cable</field>
         <field name="name">Keyboards</field>
         <field name="public_categ_id" ref="categ_keyboards"/>
         <field name="route">peripherals/keyboards</field>
-        <field name="image_source">art</field>
+        <field name="image_source">category</field>
         <field name="art">Keyboard</field>
         <field name="color">#26323a</field>
         <field name="badge">KEYS</field>
@@ -136,7 +136,7 @@ Cable</field>
         <field name="name">Mice</field>
         <field name="public_categ_id" ref="categ_mice"/>
         <field name="route">peripherals/mice</field>
-        <field name="image_source">art</field>
+        <field name="image_source">category</field>
         <field name="art">Mouse</field>
         <field name="color">#2b3a42</field>
         <field name="bg">#f0f3f6</field>
@@ -148,7 +148,7 @@ Cable</field>
         <field name="name">Headsets</field>
         <field name="public_categ_id" ref="categ_headsets"/>
         <field name="route">peripherals/headsets</field>
-        <field name="image_source">art</field>
+        <field name="image_source">category</field>
         <field name="art">Headphones</field>
         <field name="color">#1b3a55</field>
         <field name="bg">#eaf1f7</field>
@@ -160,7 +160,7 @@ Cable</field>
         <field name="name">Webcams</field>
         <field name="public_categ_id" ref="categ_webcams"/>
         <field name="route">peripherals/webcams</field>
-        <field name="image_source">art</field>
+        <field name="image_source">category</field>
         <field name="art">Webcam</field>
         <field name="color">#1f2a31</field>
         <field name="badge">HD</field>
@@ -173,7 +173,7 @@ Cable</field>
         <field name="name">Cables</field>
         <field name="public_categ_id" ref="categ_cables"/>
         <field name="route">accessories/cables</field>
-        <field name="image_source">art</field>
+        <field name="image_source">category</field>
         <field name="art">Cable</field>
         <field name="color">#2b3a42</field>
         <field name="bg">#f1f4f6</field>
@@ -185,7 +185,7 @@ Cable</field>
         <field name="name">Chargers</field>
         <field name="public_categ_id" ref="categ_chargers"/>
         <field name="route">accessories/chargers</field>
-        <field name="image_source">art</field>
+        <field name="image_source">category</field>
         <field name="art">Charger</field>
         <field name="color">#1a7f9a</field>
         <field name="badge">65W</field>
@@ -198,7 +198,7 @@ Cable</field>
         <field name="name">Wi-Fi routers</field>
         <field name="public_categ_id" ref="categ_routers"/>
         <field name="route">networking/routers</field>
-        <field name="image_source">art</field>
+        <field name="image_source">category</field>
         <field name="art">Router</field>
         <field name="color">#1f3b4d</field>
         <field name="bg">#eaf2f6</field>
@@ -210,7 +210,7 @@ Cable</field>
         <field name="name">UPS &amp; power</field>
         <field name="public_categ_id" ref="categ_ups_surge"/>
         <field name="route">accessories/ups-surge</field>
-        <field name="image_source">art</field>
+        <field name="image_source">category</field>
         <field name="art">Psu</field>
         <field name="color">#4a4a5a</field>
         <field name="bg">#f0eff5</field>
@@ -396,7 +396,7 @@ Cabinet</field>
         <field name="name">Processors</field>
         <field name="public_categ_id" ref="categ_cpus"/>
         <field name="route">components/cpus</field>
-        <field name="image_source">art</field>
+        <field name="image_source">category</field>
         <field name="art">Cpu</field>
         <field name="color">#1f6f8b</field>
         <field name="badge">CPU</field>
@@ -409,7 +409,7 @@ Cabinet</field>
         <field name="name">Graphics cards</field>
         <field name="public_categ_id" ref="categ_graphics_cards"/>
         <field name="route">components/graphics-cards</field>
-        <field name="image_source">art</field>
+        <field name="image_source">category</field>
         <field name="art">Gpu</field>
         <field name="color">#1c2b3a</field>
         <field name="badge">GPU</field>
@@ -422,7 +422,7 @@ Cabinet</field>
         <field name="name">Motherboards</field>
         <field name="public_categ_id" ref="categ_motherboards"/>
         <field name="route">components/motherboards</field>
-        <field name="image_source">art</field>
+        <field name="image_source">category</field>
         <field name="art">Motherboard</field>
         <field name="color">#14532d</field>
         <field name="bg">#eaf4ee</field>
@@ -434,7 +434,7 @@ Cabinet</field>
         <field name="name">Memory</field>
         <field name="public_categ_id" ref="categ_memory"/>
         <field name="route">components/memory</field>
-        <field name="image_source">art</field>
+        <field name="image_source">category</field>
         <field name="art">Ram</field>
         <field name="color">#0f5f4a</field>
         <field name="badge">DDR5</field>
@@ -447,7 +447,7 @@ Cabinet</field>
         <field name="name">Storage</field>
         <field name="public_categ_id" ref="categ_storage"/>
         <field name="route">components/storage</field>
-        <field name="image_source">art</field>
+        <field name="image_source">category</field>
         <field name="art">Ssd</field>
         <field name="color">#155c86</field>
         <field name="badge">NVMe</field>
@@ -460,7 +460,7 @@ Cabinet</field>
         <field name="name">Monitors</field>
         <field name="public_categ_id" ref="categ_monitors"/>
         <field name="route">displays/monitors</field>
-        <field name="image_source">art</field>
+        <field name="image_source">category</field>
         <field name="art">Monitor</field>
         <field name="color">#1b2a35</field>
         <field name="bg">#edeff3</field>
@@ -472,7 +472,7 @@ Cabinet</field>
         <field name="name">Laptops</field>
         <field name="public_categ_id" ref="categ_laptops"/>
         <field name="route">computers/laptops</field>
-        <field name="image_source">art</field>
+        <field name="image_source">category</field>
         <field name="art">Laptop</field>
         <field name="color">#37424a</field>
         <field name="bg">#f0f1f4</field>
@@ -484,7 +484,7 @@ Cabinet</field>
         <field name="name">Cabinets</field>
         <field name="public_categ_id" ref="categ_cabinets"/>
         <field name="route">components/cabinets</field>
-        <field name="image_source">art</field>
+        <field name="image_source">category</field>
         <field name="art">Cabinet</field>
         <field name="color">#222b33</field>
         <field name="bg">#eef0f2</field>

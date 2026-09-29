@@ -1,6 +1,6 @@
 {
     'name': '369 Mart Catalog',
-    'version': '19.0.1.3.0',
+    'version': '19.0.1.4.0',
     'category': 'Website',
     'summary': 'Categories, browsing and search for the 369 Mart app.',
     'description': """
@@ -57,6 +57,10 @@ The app reads it from ``/369mart/catalog``, ``/369mart/browse/<category>`` and
         # The searches desk: the demand list, with what found nothing marked.
         'static/description/search_desk.png',
         'static/description/searches.png',
+        # A category's logo: picked or uploaded in the desk, cropped to the
+        # size the app draws it.
+        'static/description/category_logo_desk.png',
+        'static/description/category_logo_desk_crop.png',
     ],
     'post_init_hook': 'post_init_hook',
     'installable': True,

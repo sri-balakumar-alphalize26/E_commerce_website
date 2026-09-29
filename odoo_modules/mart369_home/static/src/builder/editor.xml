@@ -224,7 +224,8 @@
 
     <t t-name="mart369_home.PeTab">
         <button class="hm-tab" type="button" tabindex="-1">
-            <Icon n="row.icon || 'grid'" size="15"/> <t t-esc="row.label"/>
+            <img t-if="row.image" class="hm-tab-logo" t-att-src="row.image" alt=""/>
+            <Icon t-else="" n="row.icon || 'grid'" size="15"/> <t t-esc="row.label"/>
         </button>
     </t>
 
@@ -242,7 +243,7 @@
 
     <t t-name="mart369_home.PeTile">
         <div class="hm-cat">
-            <span class="hm-cat-img" t-attf-style="background:{{ row.bg || '#f1f4f6' }}">
+            <span t-attf-class="hm-cat-img {{ row.fill ? 'hm-cat-fill' : '' }}" t-attf-style="background:{{ row.bg || '#f1f4f6' }}">
                 <img t-if="row.image" t-att-src="row.image" alt="" loading="lazy"/>
                 <!-- The app draws an SVG placeholder here. The builder names
                      it instead, the way the phone builder does - a label is
@@ -362,6 +363,9 @@
                            t-att-placeholder="f[2]"
                            t-on-input="(ev) => this.onField(selected.kind, selected.record.id, f[0], ev)"/>
                     <em t-if="f[2] and !f[3]" class="pe-hint" t-esc="f[2]"/>
+                    <em t-if="f[0] === 'icon' and selected.record.logo_from" class="pe-hint">
+                        The app shows <t t-esc="selected.record.logo_from"/>'s logo instead. Change it in Catalogue → Categories.
+                    </em>
                 </label>
             </t>
         </div>

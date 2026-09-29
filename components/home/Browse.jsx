@@ -395,14 +395,22 @@ export function CategoryPage({ slug, subSlug, cart, setQty }) {
                    them falls through to the category's, set on .cg-page. */
                 <button key={s.slug} className={"cg-sub" + (sub === s.slug ? " cg-on" : "")}
                   style={{ "--k": k + 1, "--tone": s.tone || undefined, "--accent": s.accent || undefined }} onClick={() => pick(s.slug)}>
-                  {/* Only the subcategory being viewed has its products loaded, so
+                  {/* Its logo when it has one - an uploaded picture fills the
+                      circle, a built-in drawing sits in it. Without one: only
+                      the subcategory being viewed has its products loaded, so
                       the others show the same placeholder the "All" tile uses
                       rather than borrowing somebody else's picture. */}
-                  <span className={"cg-sub-img" + (sub === s.slug ? "" : " cg-all")}>
-                    {sub === s.slug
-                      ? items.slice(0, 2).map((p, n) => <span key={p.id} className={"cg-sub-pic cg-p" + n}><Thumb p={p} /></span>)
-                      : <Icon n="box" size={24} />}
-                  </span>
+                  {s.image ? (
+                    <span className="cg-sub-img cg-sub-fill"><img src={s.image} alt="" loading="lazy" /></span>
+                  ) : s.art ? (
+                    <span className="cg-sub-img"><span className="cg-sub-logo"><ProductArt art={s.art} color={s.accent || c.accent} /></span></span>
+                  ) : (
+                    <span className={"cg-sub-img" + (sub === s.slug ? "" : " cg-all")}>
+                      {sub === s.slug
+                        ? items.slice(0, 2).map((p, n) => <span key={p.id} className={"cg-sub-pic cg-p" + n}><Thumb p={p} /></span>)
+                        : <Icon n="box" size={24} />}
+                    </span>
+                  )}
                   <span>{s.name}</span>
                 </button>
               ))}

@@ -8,6 +8,11 @@ Keep these lists in step with the storefront:
   ART_CHOICES   <- the ART map at the bottom of components/home/art.jsx
   ICON_CHOICES  <- the P map at the top of components/home/shared.jsx
   TONE_CHOICES  <- the .hm-tone-* rules in components/home/home.css
+
+The two built-in logo lists are also copied, with labels, into LOGO_ICONS and
+LOGO_ART in components/admin/LogoField.jsx. Odoo's screens cannot draw
+art.jsx, so each drawing is also a file in static/img/art/; after changing a
+drawing, run `node scripts/export-art.mjs`.
 """
 
 import logging

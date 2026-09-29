@@ -138,7 +138,9 @@ export function Tabs({ tabs, active, onChange }) {
           {tabs.map((t, i) => (
             <button key={t.key} data-k={t.key} role="tab" aria-selected={active === t.key} style={{ "--i": i }}
               onClick={() => onChange(t.key)}>
-              <Icon n={t.icon} size={17} />{t.label}
+              {/* A pill that opens a category wears the category's logo:
+                  its uploaded picture, else its built-in mark. */}
+              {t.image ? <img className="hm-tab-logo" src={t.image} alt="" /> : <Icon n={t.icon} size={17} />}{t.label}
             </button>
           ))}
         </div>
@@ -194,7 +196,9 @@ export function CategoryStrip({ cats, onPick }) {
     <section className={"hm-cats" + (inView ? " hm-in" : "")} ref={ref} aria-label="Shop by category">
       {cats.map((c, i) => (
         <a key={c.key} href={c.route || TILE_TO_ROUTE[c.key] ? "/category/" + (c.route || TILE_TO_ROUTE[c.key]) : "#"} onClick={(e) => { e.preventDefault(); onPick?.(c); }} className="hm-cat" style={{ "--i": i }}>
-          <span className="hm-cat-img" style={{ background: c.bg }}>{c.image ? <img src={c.image} alt="" loading="lazy" /> : <ProductArt art={c.art} color={c.color} label={c.t} />}</span>
+          {/* `fill`: a sub-category's uploaded logo, cropped square to fill
+              the whole tile rather than sit inside it like a drawing. */}
+          <span className={"hm-cat-img" + (c.fill && c.image ? " hm-cat-fill" : "")} style={{ background: c.bg }}>{c.image ? <img src={c.image} alt="" loading="lazy" /> : <ProductArt art={c.art} color={c.color} label={c.t} />}</span>
           <span>{c.label}</span>
         </a>
       ))}

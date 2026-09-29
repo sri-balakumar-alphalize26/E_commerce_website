@@ -1,0 +1,140 @@
+// 369 Mart - a category's logo (logo.js): the picker, the upload, the cropper.
+//
+// The twin of components/admin/logo.css. Listed after kit.scss in the
+// manifest for the $mart-* tokens - never @import anything here.
+
+.mart-logo { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+
+.mart-logo-seg {
+    display: inline-flex; gap: 2px; padding: 3px; width: max-content; max-width: 100%;
+    border-radius: 12px; background: $mart-soft; box-shadow: inset 0 0 0 1px $mart-line;
+
+    button {
+        border: 0; background: none; padding: 6px 13px; border-radius: 9px;
+        font: inherit; font-size: 13px; font-weight: 600; color: $mart-muted; cursor: pointer;
+        transition: background 160ms, color 160ms, box-shadow 160ms;
+        &:hover { color: $mart-ink; }
+        &.mart-on { background: #fff; color: $mart-blue-deep; box-shadow: 0 1px 3px rgba(16, 39, 54, 0.14); }
+    }
+}
+
+.mart-logo-note { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 12.5px; color: $mart-amber; }
+
+.mart-logo-grid {
+    display: grid; gap: 6px; max-height: 236px; overflow: auto; padding: 2px;
+
+    &.mart-logo-grid-main { grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); }
+    &.mart-logo-grid-sub { grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); }
+
+    button {
+        display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 9px 4px 7px;
+        border: 1px solid $mart-line; border-radius: 12px; background: #fff; color: $mart-ink;
+        font: inherit; cursor: pointer;
+        transition: border-color 160ms, box-shadow 160ms, transform 200ms;
+        &:hover { border-color: #c9d6de; transform: translateY(-1px); }
+        &.mart-on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); color: var(--accent); }
+        small { font-size: 11px; line-height: 1.2; color: $mart-muted; text-align: center; overflow-wrap: anywhere; }
+    }
+}
+
+.mart-logo-art {
+    display: grid; place-items: center; width: 48px; height: 48px; padding: 5px;
+    border-radius: 12px; background: var(--tone);
+    img { width: 100%; height: 100%; object-fit: contain; }
+}
+
+.mart-logo-upload { display: flex; align-items: flex-start; gap: 14px; }
+.mart-logo-prev {
+    flex: none; display: grid; place-items: center; overflow: hidden;
+    background: var(--tone); color: $mart-muted; box-shadow: inset 0 0 0 1px $mart-line;
+    img { width: 100%; height: 100%; object-fit: cover; }
+    &.mart-logo-prev-main { width: 56px; height: 56px; border-radius: 14px; img { object-fit: contain; padding: 10px; } }
+    &.mart-logo-prev-sub { width: 88px; height: 88px; border-radius: 18px; }
+}
+.mart-logo-up-body { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.mart-logo-btns { display: flex; flex-wrap: wrap; gap: 6px; }
+.mart-logo-error { color: $mart-red; font-size: 12.5px; }
+
+.mart-logo-size {
+    margin: 0; font-size: 12.5px; line-height: 1.45; color: $mart-muted;
+    b { display: block; margin-bottom: 2px; font-size: 13px; color: $mart-ink; }
+}
+
+// ------------------------------------------------------------- the cropper
+.o_mart369_dialog.mart-crop {
+    border-radius: 18px;
+    box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.5);
+    .modal-header { padding: 18px 22px 12px; }
+    .modal-title { font-size: 17px; font-weight: 800; color: $mart-ink; }
+    .modal-footer { gap: 8px; padding: 12px 22px 16px; }
+}
+
+.mart-crop-body { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 22px; }
+
+// 280 px exactly: the crop maths is in these pixels.
+.mart-crop-stage {
+    position: relative; width: 280px; height: 280px; overflow: hidden; border-radius: 14px;
+    cursor: grab; touch-action: none; user-select: none; outline: none;
+    // A checkerboard, so a transparent background shows as one.
+    background: #fff conic-gradient(#eef2f5 25%, #fff 0 50%, #eef2f5 0 75%, #fff 0) 0 0 / 20px 20px;
+    &.mart-crop-stage-sub { background: var(--tone); }
+    &:active { cursor: grabbing; }
+    &:focus-visible { box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.45); }
+    img { position: absolute; max-width: none; pointer-events: none; }
+}
+
+.mart-crop-guide {
+    position: absolute; inset: 0; pointer-events: none;
+    background:
+        linear-gradient(90deg, transparent calc(33.33% - 0.5px), rgba(255, 255, 255, 0.7) calc(33.33% - 0.5px) calc(33.33% + 0.5px), transparent calc(33.33% + 0.5px) calc(66.66% - 0.5px), rgba(255, 255, 255, 0.7) calc(66.66% - 0.5px) calc(66.66% + 0.5px), transparent calc(66.66% + 0.5px)),
+        linear-gradient(transparent calc(33.33% - 0.5px), rgba(255, 255, 255, 0.7) calc(33.33% - 0.5px) calc(33.33% + 0.5px), transparent calc(33.33% + 0.5px) calc(66.66% - 0.5px), rgba(255, 255, 255, 0.7) calc(66.66% - 0.5px) calc(66.66% + 0.5px), transparent calc(66.66% + 0.5px));
+    box-shadow: inset 0 0 0 1px rgba(19, 33, 43, 0.18);
+    // The tile's rounded corners (20 of 104 px), with what they clip dimmed.
+    .mart-crop-stage-sub & { border-radius: 19%; box-shadow: 0 0 0 200px rgba(9, 32, 46, 0.32), inset 0 0 0 1.5px rgba(255, 255, 255, 0.85); }
+}
+
+.mart-crop-zoom {
+    display: flex; align-items: center; gap: 10px; margin: 12px 0 0; color: $mart-muted;
+    font-weight: 700; font-size: 16px;
+    input { flex: 1; accent-color: $mart-blue; }
+}
+.mart-crop-quick { display: flex; justify-content: center; gap: 16px; margin-top: 6px; font-size: 12.5px; }
+
+.mart-crop-src {
+    display: flex; align-items: flex-start; gap: 6px; margin: 8px 0 0; font-size: 12.5px; color: $mart-green;
+    &.mart-warn { color: $mart-amber; }
+    svg { flex: none; margin-top: 2px; }
+}
+.mart-crop-cap { margin: 18px 0 8px; font-size: 11.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: $mart-muted; }
+
+.mart-crop-shot {
+    position: relative; display: inline-block; flex: none; overflow: hidden;
+    img { position: absolute; max-width: none; }
+    &.mart-crop-shot-big { border-radius: 12px; box-shadow: inset 0 0 0 1px $mart-line; background: #fff conic-gradient(#eef2f5 25%, #fff 0 50%, #eef2f5 0 75%, #fff 0) 0 0 / 12px 12px; }
+    &.mart-crop-shot-tile { border-radius: 20px; background: var(--tone); }
+    &.mart-crop-shot-circle { border-radius: 24px; background: var(--tone); }
+}
+
+.mart-crop-prev-main {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 12px;
+    border-radius: 14px; background: #fff; box-shadow: inset 0 0 0 1px $mart-line;
+    .mart-crop-shot-big { margin-left: auto; }
+}
+.mart-crop-pill {
+    display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 999px;
+    font-size: 15px; font-weight: 500; color: #3a4750; white-space: nowrap;
+    &.mart-on { background: #fff3e3; color: #a34f00; font-weight: 600; box-shadow: inset 0 0 0 1px #fbd9ad; }
+}
+.mart-crop-prev-sub {
+    display: flex; flex-wrap: wrap; align-items: flex-end; gap: 22px; padding: 14px;
+    border-radius: 14px; background: #fff; box-shadow: inset 0 0 0 1px $mart-line;
+    figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+    figcaption { display: flex; flex-direction: column; align-items: center; font-size: 14px; font-weight: 500; color: #212121; text-align: center; }
+    figcaption small { font-size: 11.5px; color: $mart-muted; font-weight: 400; }
+}
+
+@media (max-width: 767px) {
+    .mart-crop-body { grid-template-columns: 1fr; justify-items: center; }
+    .mart-crop-right { width: 100%; }
+    .mart-logo-upload { flex-direction: column; }
+}

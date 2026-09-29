@@ -345,6 +345,10 @@ function Panel({ selected, vals, vocab, onField, onToggle, onRemove, busy,
                 onChange={(e) => onField(selected.kind, selected.id, field, e.target.value)} />
             )}
             {hint && !vocabKey && <em className="pe-hint">{hint}</em>}
+            {/* A tab or tile that wears its category's logo: the icon or
+                drawing picked here is only its fallback. */}
+            {(field === "icon" || field === "art") && vals.logo_from &&
+              <em className="pe-hint">The app shows {vals.logo_from}&apos;s logo instead. Change it in Catalog → Categories.</em>}
           </label>
         ))}
       </div>
