@@ -7,3 +7,4 @@ from . import test_partner
 from . import test_catalog
 from . import test_stock
 from . import test_money_back
+from . import test_store_channel

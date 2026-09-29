@@ -20,7 +20,7 @@ against the number the customer is actually looking at.
 
 import logging
 
-from odoo import models
+from odoo import api, models
 
 _logger = logging.getLogger(__name__)
 
@@ -91,6 +91,27 @@ class StockPicking(models.Model):
             if user and user in order._mart369_riders():
                 if order.mart369_rider_id != user:
                     order.sudo().mart369_rider_id = user
+
+    # ------------------------------------------------------------- the counter
+
+    @api.model
+    def sa_store_queue(self, shop_id=None):
+        """The counter's queue, each card saying which door it came in by.
+
+        369 Mart › Sales › New Orders (mart369_store_board) shows both doors
+        in one list; the Store's own screen ignores the extra key. One
+        read for every row, sudo'd like the queue itself - counter staff have
+        no rights on sale.order.
+        """
+        data = super().sa_store_queue(shop_id)
+        ids = {row['order_id'] for row in data.get('rows', []) if row.get('order_id')}
+        channels = {
+            order.id: order.mart369_channel
+            for order in self.env['sale.order'].sudo().browse(list(ids))
+        }
+        for row in data.get('rows', []):
+            row['channel'] = channels.get(row.get('order_id')) or 'website'
+        return data
 
     # ------------------------------------------------------------ one voice
 

@@ -15,7 +15,9 @@
     </t>
 
     <t t-inherit="mart369_order.OrderDialog" t-inherit-mode="extension">
-        <xpath expr="//p[hasclass('od2-status')]" position="after">
+        <!-- The class comes from t-attf-class, which hasclass() cannot see:
+             matched on that attribute, or the whole dialog fails to draw. -->
+        <xpath expr="//p[contains(@t-attf-class, 'od2-status')]" position="after">
             <p t-if="state.detail and state.detail.wa" class="od2-sub od2-wa">
                 <Icon n="'chat'" size="13"/>
                 WhatsApp delivery
