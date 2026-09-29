@@ -169,7 +169,7 @@ function AddressStep({ addresses, onSaveAddress, formMeta, me, selected, onSelec
 }
 
 /* ---------------- 2 slot ---------------- */
-function SlotStep({ bill, slots, slot, setSlot, onContinue }) {
+function SlotStep({ bill, slots, slot, setSlot, onContinue, busy = false }) {
   return (
     <>
       {["quick", "all"].map((g) => bill.groups[g].length > 0 && (
@@ -203,7 +203,9 @@ function SlotStep({ bill, slots, slot, setSlot, onContinue }) {
           </div>
         </div>
       ))}
-      <div className="co-row-end"><button className="co-primary co-hide-m" onClick={onContinue}>Continue to payment</button></div>
+      {/* Disabled while the order is being written: every extra tap was a second
+          POST with the same order number, racing the first in Odoo. */}
+      <div className="co-row-end"><button className="co-primary co-hide-m" disabled={busy || bill.blocked || !bill.priced} onClick={onContinue}>{busy ? <i className="co-spin co-spin-w" /> : "Continue to payment"}</button></div>
     </>
   );
 }
@@ -575,7 +577,10 @@ export default function CheckoutPage({
   /* Which ways of paying the shop can take for this amount, from the shop.
      A ceiling is part of it - cash on delivery drops off a large basket by
      itself rather than by a constant kept here. */
-  const offered = useMemo(() => options?.methods || [], [options]);
+  /* "wallet" is the switch above the list, not a way to pay the rest. Left in,
+     it became the default pick whenever it was the only answer - so the Pay
+     button handed a 6,250 remainder to the wallet and waited on it forever. */
+  const offered = useMemo(() => (options?.methods || []).filter((m) => m !== "wallet"), [options]);
   useEffect(() => {
     if (!offered.length) return;
     setPay((p) => (offered.includes(p.method) ? p : { ...p, method: draft.how === "cod" && offered.includes("cod") ? "cod" : offered[0] }));
@@ -591,6 +596,9 @@ export default function CheckoutPage({
      would have been, and says which of the two reasons it is. This line would
      only repeat it, less usefully - it used to tell somebody whose basket was
      simply over the cash ceiling to contact the shop. */
+  /* Nothing can take this basket and the wallet does not cover it: PaymentStep
+     says why, and a live "Pay …" button beside that only wobbled. */
+  const cannotPay = step === 3 && !!options && !offered.length && !wallet.covers;
   const hint = !methodReady && offered.length
     ? (pay.method === "netbanking" ? "Choose your bank" : "Choose how you'd like to pay")
     : "";
@@ -610,13 +618,20 @@ export default function CheckoutPage({
     whatsapp: !!draft.whatsapp,
   });
 
+  /* One write at a time. `place.busy` only disables the buttons after the next
+     render, so two quick taps still got two POSTs with the same order number:
+     the second hit Odoo's unique constraint, or raced the first one's
+     rewrite of the lines. A tap while one is in flight joins it instead. */
+  const drafting = useRef(null);
   const draftOrder = () => {
+    if (drafting.current) return drafting.current;
     if (!ref.current) ref.current = newOrderId(bill.groups.quick.length ? "quick" : "all");
-    return place.run(async () => {
+    drafting.current = place.run(async () => {
       await api("/orders", { method: "POST", body: orderBody(usePoints) });
       setOrdered(ref.current);
       return ref.current;
-    });
+    }).finally(() => { drafting.current = null; });
+    return drafting.current;
   };
 
   /* Points are spent by the order, not by the payment: the shop holds them
@@ -645,12 +660,17 @@ export default function CheckoutPage({
      used to write the order and then debit, which made a crash between the
      two lines a free order, and let the browser claim a balance it did not
      have to drag the remainder under the cash-on-delivery ceiling. */
+  const paying = useRef(false);
   const startPay = () => {
     if (!methodReady) { setNudge((n) => n + 1); return; }
+    /* Same reason as draftOrder: a double tap here was a second /payment/pay,
+       and each one debits the wallet. */
+    if (paying.current) return;
     const method = wallet.covers ? "wallet" : pay.method;
     const saved = cards.find((c) => c.id === pay.cardId);
     const token = method === "card" ? saved : method === "upi" && pay.useVpa ? upis.find((u) => u.vpa === pay.vpa) : null;
 
+    paying.current = true;
     place.run(async () => {
       const started = await api("/payment/pay", {
         method: "POST",
@@ -668,7 +688,7 @@ export default function CheckoutPage({
       });
       setAttempt((n) => n + 1);
       return true;
-    });
+    }).finally(() => { paying.current = false; });
   };
 
   /* The receipt is the order the shop wrote, read back. Building one here
@@ -722,7 +742,7 @@ export default function CheckoutPage({
               selected={address} onSelect={onSelectAddress} onContinue={() => setStep(2)} busy={addrBusy} />
           </Step>
           <Step n={2} icon="clock" title="Delivery slot" open={step === 2} done={step > 2} summary={step > 2 ? slotLabel : ""} onEdit={() => setStep(2)}>
-            <SlotStep bill={bill} slots={slots} slot={slot} setSlot={setSlot} onContinue={async () => { if (await draftOrder()) setStep(3); }} />
+            <SlotStep bill={bill} slots={slots} slot={slot} setSlot={setSlot} busy={place.busy} onContinue={async () => { if (await draftOrder()) setStep(3); }} />
           </Step>
           <Step n={3} icon="card" title="Payment" open={step === 3} done={false}>
             <div key={nudge} className={nudge ? "co-nudge" : ""}>
@@ -756,7 +776,7 @@ export default function CheckoutPage({
             </dl>
             {bill.points?.earn > 0 && <p className="co-earn" key={bill.points.earn}><Icon n="coin" size={15} />You'll earn {pointsText(bill.points.earn)} points {EARN_WHEN[bill.points.earnOn] || EARN_WHEN.delivered}</p>}
             {bill.saved > 0 && <p className="co-saving" key={bill.saved}><Icon n="gift" size={15} />You're saving {money(bill.saved)} on this order</p>}
-            <button className={"co-primary co-paybtn" + (step === 3 && !methodReady ? " co-soft" : "")} disabled={step === 1 && (!address || addrBusy) || bill.blocked || !bill.priced || !!job || place.busy} onClick={cta.go}>
+            <button className={"co-primary co-paybtn" + (step === 3 && !methodReady ? " co-soft" : "")} disabled={step === 1 && (!address || addrBusy) || bill.blocked || !bill.priced || !!job || place.busy || cannotPay} onClick={cta.go}>
               {job ? <i className="co-spin co-spin-w" /> : <>{step === 3 && <Icon n="lock" size={15} />}{cta.label}</>}
             </button>
             {step === 3 && hint && <p className="co-hintline" key={hint}>{hint}</p>}
@@ -768,7 +788,7 @@ export default function CheckoutPage({
 
       <div className="co-mbar">
         <div><small>{step === 3 ? "To pay" : "Total"}</small><Amount value={step === 3 ? payable : gross} /></div>
-        <button className="co-primary" disabled={(step === 1 && (!address || addrBusy)) || bill.blocked || !bill.priced || !!job || place.busy} onClick={cta.go}>{job || place.busy ? <i className="co-spin co-spin-w" /> : cta.label}</button>
+        <button className="co-primary" disabled={(step === 1 && (!address || addrBusy)) || bill.blocked || !bill.priced || !!job || place.busy || cannotPay} onClick={cta.go}>{job || place.busy ? <i className="co-spin co-spin-w" /> : cta.label}</button>
       </div>
 
       {job && (

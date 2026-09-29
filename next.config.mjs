@@ -4,6 +4,12 @@ const ODOO_URL = (process.env.ODOO_URL || "http://localhost:8097").replace(/\/$/
 const nextConfig = {
   reactStrictMode: true,
 
+  /* A production build can live beside the dev server's `.next` without
+     touching it: NEXT_DIST_DIR=.next-demo for both `next build` and
+     `next start`. Sharing `.next` with a running `next dev` overwrites its
+     chunks and silently stops the page hydrating. */
+  distDir: process.env.NEXT_DIST_DIR || ".next",
+
   /* Product pictures come back from Odoo as short, relative addresses like
      /web/image/product.template/13/image_512/512x512 — which the browser then
      asks this app for, not Odoo. Passing them through is what makes that work,

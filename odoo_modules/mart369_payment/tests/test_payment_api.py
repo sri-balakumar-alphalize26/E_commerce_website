@@ -91,12 +91,26 @@ class TestMart369PaymentApi(Mart369PaymentHttpCase):
 
     def test_a_wallet_leg_bigger_than_the_balance_is_refused(self):
         self._login()
-        self._card()._mart369_move(50, 'add', 'Money added')
+        card = self._card()
+        card._mart369_move(50, 'add', 'Money added')
         body = self._req('POST', '/369mart/payment/pay', {
             'method': 'wallet', 'amount': 500, 'wallet_use': True}).json()
-        # Only what is there is ever used; the rest must go to a gateway.
-        self.assertTrue(body.get('ok') is False or body.get('payable', 0) > 0,
-                        'the wallet cannot pay more than it holds')
+        # "Pay with wallet" is a whole payment or nothing. Accepting it used to
+        # leave the other 450 pending on the wallet provider, which nothing
+        # ever confirms - the checkout spun forever with the 50 already taken.
+        self.assertIs(body.get('ok'), False, 'the wallet cannot pay more than it holds')
+        self.assertEqual(body.get('field'), 'method')
+        card.invalidate_recordset()
+        self.assertEqual(card.points, 50, 'and nothing was taken from it')
+
+    def test_the_wallet_is_offered_only_for_what_it_covers(self):
+        self._login()
+        self._card()._mart369_move(50, 'add', 'Money added')
+        more = self._req('GET', '/369mart/payment/options?amount=500').json()
+        self.assertNotIn('wallet', more['methods'],
+                         'the rest of a basket is not something the wallet can pay')
+        less = self._req('GET', '/369mart/payment/options?amount=40').json()
+        self.assertIn('wallet', less['methods'])
 
     def test_a_failed_payment_gives_the_wallet_leg_back(self):
         self._login()

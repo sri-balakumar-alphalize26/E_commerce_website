@@ -24,6 +24,8 @@ after.
 
 import hashlib
 import hmac
+import logging
+import re
 import secrets
 from datetime import timedelta
 
@@ -54,6 +56,13 @@ LIVE_STATES = ('placed', 'packed', 'shipped', 'out')
 # Where the delivery code's key lives. The code is never stored in the clear, so
 # a backup, a log or a careless read cannot hand someone a doorstep.
 OTP_PARAM = 'mart369_order.otp_key'
+# Demos only. Six digits here and every delivery code issued from then on is
+# that number - which makes the doorstep check decoration, so it is a system
+# parameter that exists nowhere by default, logged every time it is used, and
+# deleted after the demo.
+DEMO_OTP_PARAM = 'mart369_order.demo_delivery_code'
+
+_logger = logging.getLogger(__name__)
 
 
 class SaleOrder(models.Model):
@@ -303,7 +312,13 @@ class SaleOrder(models.Model):
         without ever seeing the order.
         """
         self.ensure_one()
-        code = '%06d' % secrets.randbelow(1000000)
+        fixed = (self.env['ir.config_parameter'].sudo().get_param(DEMO_OTP_PARAM) or '').strip()
+        if re.fullmatch(r'\d{6}', fixed):
+            _logger.warning('mart369: order %s given the fixed demo delivery code (%s is set)',
+                            self.mart369_ref, DEMO_OTP_PARAM)
+            code = fixed
+        else:
+            code = '%06d' % secrets.randbelow(1000000)
         self.sudo().write({
             'mart369_otp_hash': self._mart369_digest(code),
             'mart369_otp_code': code,

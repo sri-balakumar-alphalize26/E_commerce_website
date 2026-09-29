@@ -96,6 +96,26 @@ class ProductTemplate(models.Model):
             hidden = off - shown
             rec.mart_page_hidden = ',%s,' % ','.join(sorted(hidden)) if hidden else ''
 
+    @api.onchange('public_categ_ids')
+    def _onchange_mart_publish_with_category(self):
+        """A new product filed under a shop category is meant to be in the shop.
+
+        `is_published` starts False on Odoo's form, and the app lists published
+        products only - so a product created in Inventory > Products, put in a
+        category and saved, never appeared there and nothing said why. The
+        Products desk already publishes what it creates (mart369_desk_save);
+        this is the same intent on Odoo's own form.
+
+        New records only, and only while unpublished: an existing product that
+        somebody took out of the shop stays out when its categories change.
+        An onchange rather than `create`, so imports and data files keep
+        Odoo's default.
+        """
+        for product in self:
+            if (not product._origin.id and product.public_categ_ids
+                    and product.sale_ok and not product.is_published):
+                product.is_published = True
+
     def action_mart_reset_page(self):
         """Put every field on this product back to following the defaults."""
         self.mart_page_override_ids.unlink()

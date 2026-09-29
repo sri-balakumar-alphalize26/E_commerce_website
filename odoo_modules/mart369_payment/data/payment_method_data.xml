@@ -9,18 +9,24 @@
         rule that refuses cash unless the carrier allows it. We only tag them.
 
         Only the wallet is ours, because no gateway has a concept of it.
+
+        noupdate, like the provider it belongs to: enabling the 369 Wallet
+        provider activates this method, and without the flag every upgrade wrote
+        active=False back and switched the wallet off at checkout again.
     -->
 
-    <record id="payment_method_wallet" model="payment.method">
-        <field name="name">369 Wallet</field>
-        <field name="code">wallet</field>
-        <field name="sequence">4010</field>
-        <field name="active" eval="False"/>
-        <field name="support_tokenization" eval="False"/>
-        <field name="support_express_checkout" eval="False"/>
-        <field name="support_refund">full_only</field>
-        <field name="mart369_app_code">wallet</field>
-    </record>
+    <data noupdate="1">
+        <record id="payment_method_wallet" model="payment.method">
+            <field name="name">369 Wallet</field>
+            <field name="code">wallet</field>
+            <field name="sequence">4010</field>
+            <field name="active" eval="False"/>
+            <field name="support_tokenization" eval="False"/>
+            <field name="support_express_checkout" eval="False"/>
+            <field name="support_refund">full_only</field>
+            <field name="mart369_app_code">wallet</field>
+        </record>
+    </data>
 
     <!--
         The four Odoo already has are tagged in Python, not here: `payment` and

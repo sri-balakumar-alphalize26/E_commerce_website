@@ -149,6 +149,13 @@ class Mart369PaymentApi(http.Controller):
         Provider = request.env['payment.provider']
         available = []
         for code in ('upi', 'card', 'netbanking', 'cod', 'wallet'):
+            if code == 'wallet' and currency.compare_amounts(
+                    self._wallet()._mart369_balance(), amount) < 0:
+                # The wallet provider has no ceiling of its own, so Odoo calls
+                # it compatible with any amount. It can only settle what the
+                # balance covers; offering it for more left a basket "paid" by
+                # a wallet payment that could never complete.
+                continue
             if Provider._mart369_provider_for(
                     code, self._me(), amount, currency, order=order or None):
                 available.append(code)
@@ -409,6 +416,13 @@ class Mart369PaymentApi(http.Controller):
             wallet_used = currency.round(wallet_used)
 
         payable = currency.round(gross - wallet_used)
+        if method == 'wallet' and not currency.is_zero(payable):
+            # "Pay with wallet" is only a whole payment. Otherwise the rest was
+            # handed to the wallet provider as a pending payment nothing would
+            # ever confirm, with the balance already taken.
+            return self._fail(_(
+                "Your 369 Wallet doesn't cover this order. Choose another way "
+                "to pay the remaining %s.", currency.format(payable)), 'method')
 
         token = None
         if body.get('token_id'):

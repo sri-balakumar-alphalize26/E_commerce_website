@@ -185,8 +185,21 @@ class TestMart369Flow(Mart369OrderCase):
     def test_the_delivery_code_cannot_be_worked_out_from_the_order(self):
         """It used to be hash(order.id + "otp"), so anyone holding an order
         number could compute the code for that doorstep."""
+        # Off for this test even on a database that is set up for a demo.
+        self.env['ir.config_parameter'].sudo().set_param('mart369_order.demo_delivery_code', False)
         one, two = self._place(), self._place(ref='369M-TEST2')
         self.assertNotEqual(one._mart369_issue_otp(), two._mart369_issue_otp())
+
+    def test_the_demo_delivery_code_is_used_only_when_switched_on(self):
+        params = self.env['ir.config_parameter'].sudo()
+        order = self._place()
+        params.set_param('mart369_order.demo_delivery_code', '111111')
+        self.assertEqual(order._mart369_issue_otp(), '111111')
+        self.assertTrue(order._mart369_check_otp('111111'))
+        params.set_param('mart369_order.demo_delivery_code', 'abc')
+        self.assertNotEqual(order._mart369_issue_otp(), 'abc', 'only six digits count')
+        params.set_param('mart369_order.demo_delivery_code', False)
+        self.assertRegex(order._mart369_issue_otp(), r'^\d{6}$')
 
     # ------------------------------------------------------------ cancelling
 
