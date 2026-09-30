@@ -31,8 +31,13 @@ class Mart369ProductPage(models.AbstractModel):
     # --------------------------------------------------------- the whole page
 
     @api.model
-    def payload(self, product):
-        """Exactly what components/home/ProductDetail.jsx consumes."""
+    def payload(self, product, variant=None):
+        """Exactly what components/home/ProductDetail.jsx consumes.
+
+        For a product with a choice (Brand, RAM, Colour...) `p` is one
+        variant's card - the one asked for, else the default - `variants` is
+        every variant's card and `attrs` the questions, in attribute order.
+        Otherwise both are empty and `p` is the product's card, as before."""
         helper = self.env['mart369.serializable'].sudo()
         Field = self.env['mart369.product.field'].sudo()
 
@@ -50,14 +55,51 @@ class Mart369ProductPage(models.AbstractModel):
         def card(tmpl):
             return helper._serialize_product(tmpl, None, price_ctx, mode_key)
 
+        own = card(product)
+        variants, attrs, main = [], [], own
+        if helper._mart369_has_variants(product):
+            siblings = product.sudo().product_variant_ids
+            variants = helper._serialize_variants(siblings, mode_key, price_ctx=price_ctx)
+            attrs = helper._mart369_attrs(product)
+            chosen = (variant if variant and variant in siblings
+                      else self._default_variant(siblings))
+            main = next(c for c in variants
+                        if c['id'] == helper._mart369_variant_key(chosen))
+        elif product.product_variant_id:
+            # No choice to make: the product's one variant still carries the
+            # setup's facts - its photos, its specs table - and the page
+            # shows them, with the Sales Description, as for any variant.
+            single = product.sudo().product_variant_id
+            main = dict(own, images=helper._mart369_variant_images(single) or own['images'])
+            specs = helper._mart369_variant_specs(single)
+            if specs:
+                main['specs'] = specs
+            if product.description_sale:
+                main['description'] = product.description_sale
+
         return {
-            'p': card(product),
+            'p': main,
+            # The product's own card too: a basket or wishlist holding the
+            # product's id (not a variant's) must still resolve from here.
+            'card': own,
             'd': self.details(product, shown, keys),
-            'variants': [],
+            'variants': variants,
+            'attrs': attrs,
             'bundle': [card(b) for b in bundle],
             'similar': [card(s) for s in similar],
             'related': [card(r) for r in related],
         }
+
+    @api.model
+    def _default_variant(self, variants):
+        """The variant a bare product link opens on: the first one in stock."""
+        storable = variants[:1].product_tmpl_id
+        if 'free_qty' in variants._fields and (
+                'is_storable' not in storable._fields or storable.is_storable):
+            in_stock = variants.filtered(lambda v: v.free_qty > 0)
+            if in_stock:
+                return in_stock[0]
+        return variants[0]
 
     # ------------------------------------------------------------- the d block
 

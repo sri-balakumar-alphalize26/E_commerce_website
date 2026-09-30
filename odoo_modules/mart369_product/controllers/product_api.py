@@ -24,8 +24,20 @@ class Mart369ProductApi(http.Controller):
         if not product or not product.is_published:
             return request.make_json_response(
                 {'error': 'not_found', 'id': product_id}, status=404)
+        return self._page(product)
 
-        payload = env['mart369.product.page'].sudo().payload(product)
+    @http.route('/369mart/product/v<int:variant_id>', **_PUBLIC_JSON)
+    def variant(self, variant_id, **kwargs):
+        """One variant's page: its product's page, opened on that variant."""
+        variant = request.env['product.product'].sudo().browse(variant_id).exists()
+        if not variant or not variant.product_tmpl_id.is_published:
+            return request.make_json_response(
+                {'error': 'not_found', 'id': 'v%d' % variant_id}, status=404)
+        return self._page(variant.product_tmpl_id, variant)
+
+    def _page(self, product, variant=None):
+        env = request.env
+        payload = env['mart369.product.page'].sudo().payload(product, variant)
         config = env['mart369.config'].sudo()._get()
         return request.make_json_response(payload, headers=[
             ('Cache-Control',

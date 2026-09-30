@@ -32,7 +32,7 @@ class TestProductApi(HttpCase):
     def test_shape(self):
         payload = self._get().json()
         self.assertEqual(set(payload),
-                         {'p', 'd', 'variants', 'bundle', 'similar', 'related'})
+                         {'p', 'card', 'd', 'variants', 'attrs', 'bundle', 'similar', 'related'})
         # `p` is the same card the home page sends - id, name, price at minimum.
         self.assertLessEqual({'id', 'name', 'price', 'images', 'art', 'unit'},
                              set(payload['p']))

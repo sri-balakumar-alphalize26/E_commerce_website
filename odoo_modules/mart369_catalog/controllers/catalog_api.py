@@ -206,14 +206,21 @@ class Mart369CatalogApi(http.Controller):
         nothing else, so a product that has gone away leaves a gap rather than
         a stale card.
         """
-        wanted = [i for i in (ids or '').split(',') if i.strip().isdigit()][:BROWSE_LIMIT]
-        if not wanted:
+        mixin = request.env['mart369.serializable'].sudo()
+        parsed = [mixin._mart369_parse_key(i) for i in (ids or '').split(',')]
+        parsed = [p for p in parsed if p][:BROWSE_LIMIT]
+        if not parsed:
             return self._cached({'ok': True, 'items': []})
+        # Plain numbers are products, 'v123' a chosen variant (a basket line
+        # or a shared link to one colour).
         templates = request.env['product.template'].sudo().search([
-            ('id', 'in', [int(i) for i in wanted]),
+            ('id', 'in', [i for kind, i in parsed if kind == 'template']),
             ('is_published', '=', True),
         ])
-        return self._cached({'ok': True, 'items': self._cards(templates)})
+        variants = mixin._mart369_published_variants(
+            [i for kind, i in parsed if kind == 'variant'])
+        return self._cached({'ok': True, 'items': self._cards(templates)
+                             + mixin._serialize_variants(variants)})
 
     @http.route('/369mart/offers', **_PUBLIC_JSON)
     def offers(self, **kwargs):
