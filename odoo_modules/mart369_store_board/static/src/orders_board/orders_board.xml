@@ -147,8 +147,11 @@
                                             </button>
                                             <button class="mart-link" t-on-click="() => this.act(row, 'unaccept')">Put back</button>
                                         </t>
-                                        <!-- Cancelling is in the order itself (a row click opens it
-                                             in All orders), the same as the console's Counter. -->
+                                        <!-- The Store's own Cancel, as its counter has it: asks
+                                             first, then cancels here without leaving the Counter. -->
+                                        <button t-if="row.can_cancel" class="mart-link mart_counter_cancel"
+                                                t-att-disabled="state.busy === row.id"
+                                                t-on-click="() => this.onCancel(row)">Cancel order</button>
                                     </span>
                                 </li>
                             </ul>

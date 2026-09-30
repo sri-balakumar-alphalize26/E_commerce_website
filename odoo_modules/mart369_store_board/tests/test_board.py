@@ -29,3 +29,21 @@ class TestBoardMenu(TransactionCase):
         from odoo.addons.mart369_store_board.hooks import uninstall_hook
         uninstall_hook(self.env)
         self.assertTrue(self.env.ref('mart369_order.menu_mart369_orders').active)
+
+
+@tagged('post_install', '-at_install')
+class TestConsoleCounter(TransactionCase):
+    """The console's Counter cancels like the Odoo Counter does."""
+
+    def test_the_console_may_cancel(self):
+        from odoo.addons.mart369_store_board.controllers.counter_api import ACTIONS
+        self.assertIn('cancel', ACTIONS)
+
+    def test_each_row_says_whether_it_can_be_cancelled(self):
+        from odoo.addons.mart369_store_board.controllers.counter_api import Mart369CounterApi
+        rows = Mart369CounterApi()._rows({'rows': [
+            {'id': 1, 'state': 'awaiting_shop', 'can_cancel': True, 'invoice_paid': True},
+            {'id': 2, 'state': 'delivered'},
+        ]})
+        self.assertEqual([r['canCancel'] for r in rows], [True, False])
+        self.assertEqual([r['invoicePaid'] for r in rows], [True, False])

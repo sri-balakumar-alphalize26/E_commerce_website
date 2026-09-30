@@ -264,7 +264,7 @@ export function Drawer({ title, sub, lead, onClose, children, foot, wide }) {
   );
 }
 
-export function Confirm({ title, text, danger, confirmLabel = "Confirm", onCancel, onConfirm }) {
+export function Confirm({ title, text, danger, confirmLabel = "Confirm", cancelLabel = "Cancel", onCancel, onConfirm }) {
   if (typeof document === "undefined") return null;
   return createPortal(
     <div className="ad-modal-wrap" onClick={onCancel}>
@@ -272,7 +272,7 @@ export function Confirm({ title, text, danger, confirmLabel = "Confirm", onCance
         <span className={"ad-modal-ic" + (danger ? " ad-danger-ic" : "")}><Icon n={danger ? "trash" : "check"} size={22} /></span>
         <h3>{title}</h3><p>{text}</p>
         <div>
-          <button className="ad-btn" onClick={onCancel} autoFocus>Cancel</button>
+          <button className="ad-btn" onClick={onCancel} autoFocus>{cancelLabel}</button>
           <button className={"ad-btn " + (danger ? "ad-danger" : "ad-primary")} onClick={onConfirm}>{confirmLabel}</button>
         </div>
       </div>

@@ -23,9 +23,10 @@ _logger = logging.getLogger(__name__)
 _GET = {'type': 'http', 'auth': 'user', 'methods': ['GET'], 'csrf': False, 'sitemap': False}
 _POST = {'type': 'http', 'auth': 'user', 'methods': ['POST'], 'csrf': False, 'sitemap': False}
 
-# What the console's buttons may do. Cancelling stays in the order drawer,
-# where the reasons and the refund rules already live.
-ACTIONS = ('accept', 'ready', 'unaccept')
+# What the console's buttons may do - the Odoo Counter's own, Cancel included.
+# A cancel is the Store's (`sa_action_cancel`); the bridge then runs the website
+# order's own cancel or return, refund and all, as it does from the Odoo Counter.
+ACTIONS = ('accept', 'ready', 'unaccept', 'cancel')
 
 
 class Mart369CounterApi(http.Controller):
@@ -66,6 +67,8 @@ class Mart369CounterApi(http.Controller):
                 'pickupCode': r.get('pickup_code') or '',
                 'waiting': r.get('waiting') or 0,
                 'supplyWaiting': bool(r.get('supply_waiting')),
+                'canCancel': bool(r.get('can_cancel')),
+                'invoicePaid': bool(r.get('invoice_paid')),
                 'customer': r.get('customer') or '',
                 'address': r.get('address') or '',
                 'order': r.get('order'),

@@ -21,7 +21,7 @@ import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { money } from "@/lib/money";
 import { useAction, useResource } from "@/lib/useFetch";
-import { Empty, Icon, Tabs } from "./AdminUI";
+import { Confirm, Empty, Icon, Tabs } from "./AdminUI";
 import { since } from "./format";
 import { modeLabel, payText, ROW_TONES } from "./AdminOrders";
 import { Alarm } from "./counterAlarm";
@@ -121,6 +121,7 @@ const STAGE = {
 
 export default function CounterSection({ flash, onOpenOrder, onUnavailable, alarm }) {
   const [tab, setTab] = useState("new");
+  const [cancelling, setCancelling] = useState(null);
   const { data, loading, error, reload } = useResource(COUNTER_PATH, { pollMs: 5000, keepLast: true });
   const act = useAction();
 
@@ -243,6 +244,13 @@ export default function CounterSection({ flash, onOpenOrder, onUnavailable, alar
                           onClick={() => run(row, "unaccept", `#${ref(row)} put back`)}>Put back</button>
                       </>
                     )}
+                    {/* The Odoo Counter's own Cancel: asks first, then cancels
+                        here - the customer and rider are told, and a website
+                        order's refund runs through the bridge. */}
+                    {row.canCancel && (
+                      <button className="ad-link" disabled={act.busy}
+                        onClick={() => setCancelling(row)}>Cancel order</button>
+                    )}
                   </div>
                 </li>
               );
@@ -258,6 +266,22 @@ export default function CounterSection({ flash, onOpenOrder, onUnavailable, alar
               : `Nothing open for ${tab === "quick" ? "Quick" : "Express"} delivery right now.`} />
         )}
       </section>
+
+      {cancelling && (
+        <Confirm danger
+          title={`Cancel order #${ref(cancelling)}?`}
+          text={"The customer and the rider are told straight away. "
+            + (cancelling.invoicePaid
+              ? "The invoice is already paid - refund it from the Delivery form afterwards."
+              : "Nothing has been paid on this order.")}
+          confirmLabel="Cancel the order" cancelLabel="Keep it"
+          onCancel={() => setCancelling(null)}
+          onConfirm={() => {
+            const row = cancelling;
+            setCancelling(null);
+            run(row, "cancel", `#${ref(row)} cancelled`);
+          }} />
+      )}
     </div>
   );
 }
