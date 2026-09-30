@@ -23,6 +23,9 @@ const nextConfig = {
     return [
       { source: "/web/image/:path*", destination: `${ODOO_URL}/web/image/:path*` },
       { source: "/web/assets/:path*", destination: `${ODOO_URL}/web/assets/:path*` },
+      /* A product variant's extra photos (its Variant images tab), which
+         /web/image cannot serve to a shopper. Same short-address reasoning. */
+      { source: "/369mart/variant/photo/:id", destination: `${ODOO_URL}/369mart/variant/photo/:id` },
     ];
   },
 };

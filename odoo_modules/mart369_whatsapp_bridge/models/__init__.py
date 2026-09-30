@@ -8,3 +8,5 @@ from . import partner_link
 from . import res_partner
 from . import catalog_menu
 from . import money_back
+from . import variant_media
+from . import variant_desk
