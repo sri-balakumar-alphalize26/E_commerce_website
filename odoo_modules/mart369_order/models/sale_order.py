@@ -437,9 +437,9 @@ class SaleOrder(models.Model):
             'placed': self._mart369_placed_text(placed),
             'status': self.mart369_state or 'placed',
             'eta': self.mart369_eta or '',
-            'items': [[str(tmpl_id), qty] for tmpl_id, qty, __ in lines],
+            'items': [[key, qty] for key, qty, __ in lines],
             'snap': {
-                str(tmpl_id): snap for tmpl_id, __, snap in lines
+                key: snap for key, __, snap in lines
             },
             'total': currency.round(self.amount_total),
             # What this order was charged in. A later pricelist change must
@@ -484,13 +484,18 @@ class SaleOrder(models.Model):
         }
 
     def _mart369_app_lines(self):
-        """[(template id, qty, {name, price})] for the basket lines only.
+        """[(card id, qty, {name, price})] for the basket lines only.
+
+        The card id is what the app put in the basket: the template id, or
+        'v123' for a variant picked on a product with a choice - so reorder
+        and buy-again add the same laptop, not its first variant.
 
         Delivery, the priority fee and the coupon are lines on the order but
         were never basket items in the app, so they stay out of `items` and
         `snap` and appear in the bill instead.
         """
         self.ensure_one()
+        Mixin = self.env['mart369.serializable']
         out = []
         for line in self.order_line:
             if line.display_type or line.is_delivery or line.mart369_kind:
@@ -499,8 +504,7 @@ class SaleOrder(models.Model):
             # under `removed`, not as an item of quantity 0.
             if line.product_uom_qty <= 0 and line.mart369_removed_qty:
                 continue
-            tmpl = line.product_id.product_tmpl_id
-            out.append((tmpl.id, int(line.product_uom_qty), {
+            out.append((Mixin._mart369_card_key(line.product_id), int(line.product_uom_qty), {
                 'name': line.name or line.product_id.display_name,
                 'price': self.currency_id.round(line.price_unit),
             }))

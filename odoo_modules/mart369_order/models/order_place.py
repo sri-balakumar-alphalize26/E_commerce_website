@@ -159,26 +159,27 @@ class SaleOrder(models.Model):
         self.ensure_one()
         Cart = self.env['mart369.cart'].sudo()
         lines = Cart._mart369_resolve(items)
-        templates = self.env['product.template'].sudo().browse([t.id for t, __ in lines])
-        prices = self.env['mart369.serializable'].sudo()._price_context_for(templates)
+        prices = Cart._mart369_line_prices(lines)
         tax = self._mart369_tax()
 
         values = []
-        for tmpl, qty in lines:
-            variant = tmpl.product_variant_id
+        for line in lines:
+            tmpl, variant, qty = line['tmpl'], line['variant'], line['qty']
             if not variant:
                 # A template with no variant cannot be sold; the bill counted
                 # it, so refuse rather than silently charge for nothing.
                 raise UserError(self.env._(
                     '%s cannot be ordered right now.', tmpl.display_name))
-            entry = prices.get(tmpl.id) or {}
+            entry = prices.get(line['key']) or {}
             price = entry.get('price')
             if price is None:
                 price = tmpl.list_price
             values.append({
                 'order_id': self.id,
                 'product_id': variant.id,
-                'name': tmpl.display_name,
+                # The picked variant by its full name - "Business Laptop
+                # (Lenovo, Core i5, 16GB)" - so the counter packs the right one.
+                'name': variant.display_name if line['chosen'] else tmpl.display_name,
                 'product_uom_qty': qty,
                 'price_unit': price,
                 'mart369_mrp': entry.get('mrp') or price,
