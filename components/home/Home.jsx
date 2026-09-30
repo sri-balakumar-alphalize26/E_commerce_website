@@ -408,6 +408,8 @@ export default function Home({
      is news that arrives from the warehouse, not from a timer in a page. */
   const { data: ordersData, reload: reloadOrders } = useResource("/orders", { enabled: !!me, pollMs: view === "track" || view === "account" ? 20000 : 0 });
   const orders = useMemo(() => ordersData?.orders || [], [ordersData]);
+  const orderVariantIds = useMemo(() => [...new Set(orders.flatMap((o) => (o.items || [])
+    .map(([id]) => String(id)).filter((id) => id.startsWith("v"))))], [orders]);
 
   const wish = useMemo(() => ({
     ids: wishIds,
@@ -498,7 +500,20 @@ export default function Home({
   };
   const order = useRef(Object.keys(initialCart));
 
+  /* A product with a choice (Brand, RAM, Colour) is a question, not a line:
+     "Add" on its card opens its page to pick one, from every place that adds
+     (cards, search, the wishlist). Read through refs so setQty stays stable. */
+  const choose = useRef({ byId, cart, open: null });
+  choose.current.byId = byId;
+  choose.current.cart = cart;
+
   const setQty = useCallback((id, n) => {
+    const c = choose.current, p = c.byId[id];
+    if (n > 0 && p?.hasVariants && !c.cart[id]) {
+      /* Already on its page (options still loading): nothing to open. */
+      if (c.open && c.viewing !== String(id)) c.open(p);
+      return;
+    }
     setCart((c) => {
       const next = { ...c };
       if (n <= 0) { delete next[id]; order.current = order.current.filter((x) => x !== id); }
@@ -557,23 +572,67 @@ export default function Home({
     if (syncUrl) history.pushState(null, "", routeToPath("product", p.id));
     setRoute({ view: "product", param: p.id });
   }, [syncUrl]);
+  choose.current.open = openProduct;
 
   /* ---- product page data ---- */
   const product = view === "product" ? byId[route.param] : null;
+  choose.current.viewing = view === "product" ? String(route.param) : null;
+
+  /* A product's variants and its questions, asked for once per product when
+     its page opens. A bare product link then moves to the variant the shop
+     opens on (the first in stock), so the page always shows one real thing
+     with its own price, stock, photos and specs. A failed ask is remembered
+     as failed, so the page can offer to try again instead of waiting forever. */
+  const [groups, setGroups] = useState({});
+  /* Every product page asks once: a product without a choice gets its one
+     variant's photos, specs and Sales Description here, and every product
+     its real reviews. */
+  const group = product ? String(product.variantGroup || product.id) : null;
+  const loaded = group ? groups[group] : null;
   useEffect(() => {
-    if (!product) return;
+    if (!group || loaded) return;
+    let live = true;
+    api(`/product/${encodeURIComponent(product.id)}`).then((res) => {
+      if (!live) return;
+      absorb([...(res?.variants || []), ...(res?.card ? [res.card] : []),
+        ...(res?.p && !res?.variants?.length ? [res.p] : [])]);
+      const d = res?.d || {};
+      setGroups((g) => ({ ...g, [group]: {
+        attrs: res?.attrs || [],
+        ids: (res?.variants || []).map((v) => String(v.id)),
+        first: res?.p?.id != null ? String(res.p.id) : null,
+        reviews: { rating: d.rating, ratingCount: d.ratingCount, dist: d.dist, list: d.reviews },
+      } }));
+    }).catch(() => { if (live) setGroups((g) => ({ ...g, [group]: { error: true } })); });
+    return () => { live = false; };
+  }, [group, loaded]); // eslint-disable-line
+  const retryOptions = useCallback(() => {
+    if (group) setGroups((g) => { const next = { ...g }; delete next[group]; return next; });
+  }, [group]);
+  useEffect(() => {
+    const g = group && groups[group];
+    if (product?.hasVariants && g?.first && g.first.startsWith("v") && g.first !== String(product.id)) {
+      nav("product", g.first, { replace: true, keepScroll: true });
+    }
+  }, [product?.id, group, groups]); // eslint-disable-line
+  /* Recently viewed keeps the product, not each colour tried on its page. */
+  const seenId = product ? String(product.variantGroup || product.id) : null;
+  useEffect(() => {
+    if (!seenId) return;
     setRecentIds((r) => {
-      const next = [product.id, ...r.filter((x) => x !== product.id)].slice(0, 12);
+      const next = [seenId, ...r.filter((x) => x !== seenId)].slice(0, 12);
       try { localStorage.setItem(RECENT_KEY, JSON.stringify(next)); } catch (e) {}
       return next;
     });
-  }, [product?.id]); // eslint-disable-line
+  }, [seenId]);
   const pd = useMemo(() => {
     if (!product) return null;
-    /* Pack sizes come from the shop with the product page. They used to be
-       read out of a hand-written table of grocery sizes. */
-    const variants = [];
-    const self = new Set([product.id, ...variants.map((v) => v.id)]);
+    /* The product's variants (Brand, RAM, Colour...), from its product page.
+       They used to be read out of a hand-written table of grocery sizes. */
+    const variants = ((product.variantGroup && groups[product.variantGroup]?.ids) || [])
+      .map((id) => byId[id]).filter(Boolean);
+    /* The product itself - its listing card and every variant - is never "similar". */
+    const self = new Set([product.id, product.variantGroup, ...variants.map((v) => v.id)].filter(Boolean));
     const pool = products.filter((x) => !self.has(x.id));
     const similar = pool.filter((x) => product.sub && x.cat === product.cat && x.sub === product.sub);
     const sameCat = pool.filter((x) => product.cat && x.cat === product.cat && x.sub !== product.sub);
@@ -584,7 +643,7 @@ export default function Home({
     const bundle = [...perSub, ...byPop(sameMode)].slice(0, 2);
     const also = [...sameCat, ...sameMode].filter((x) => !bundle.includes(x)).slice(0, 10);
     return { variants, similar, bundle, also };
-  }, [product, byId, products]);
+  }, [product, byId, products, groups]);
   /* The ids the browser kept - recently viewed, the basket, the wishlist - are
      just strings, and nothing seeds them any more. Fetch the ones we have not
      been told about; whatever the shop no longer has quietly stays unresolved
@@ -593,8 +652,11 @@ export default function Home({
     ensure([
       ...(view === "product" && route.param ? [route.param] : []), /* a shared link lands here knowing nothing */
       ...recentIds, ...Object.keys(cart), ...wishIds,
+      /* Variants bought before: reorder, buy again and reviews draw them, and
+         a variant's card is never in any listing to arrive by. */
+      ...orderVariantIds,
     ]);
-  }, [view, route.param, recentIds, cart, wishIds]);
+  }, [view, route.param, recentIds, cart, wishIds, orderVariantIds]);
   const recent = recentIds.map((id) => byId[id]).filter(Boolean);
 
   /* ---- tabs follow the route ---- */
@@ -638,11 +700,15 @@ export default function Home({
         <ProductDetail onEditReview={() => nav("account", "reviews")} p={product} cart={cart} setQty={setQty} address={address}
           fromRect={fromRect.current}
           variants={pd.variants}
+          attrs={(product.variantGroup && groups[product.variantGroup]?.attrs) || []}
           onVariant={(v) => nav("product", v.id, { replace: true, keepScroll: true })}
           bundle={pd.bundle}
           similar={pd.similar}
           related={pd.also}
-          recent={recent.filter((x) => x.id !== product.id)}
+          recent={recent.filter((x) => (x.variantGroup || x.id) !== (product.variantGroup || product.id))}
+          reviewInfo={loaded?.reviews}
+          optionsFailed={!!loaded?.error}
+          onRetryOptions={retryOptions}
           onViewSimilar={product.sub ? () => nav("category", `${product.cat}/${product.sub}`) : undefined}
           onBack={() => { if (syncUrl && history.length > 1) history.back(); else nav("home"); }}
           onChangeAddress={() => setLocOpen(true)}

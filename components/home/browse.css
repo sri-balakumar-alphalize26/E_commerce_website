@@ -402,6 +402,24 @@ html.ls-lock { overflow: hidden; }
 .pd-size-oos b, .pd-size-oos .pd-size-price { color: var(--hm-muted); }
 .pd-size-in { position: absolute; top: -7px; right: -7px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 999px; background: var(--hm-orange); color: #fff; font-style: normal; font-size: 11px; font-weight: 800; display: grid; place-items: center; border: 2px solid #fff; z-index: 2; animation: hm-pop 360ms var(--hm-spring) both; }
 .pd-price .pd-roll { display: inline-block; animation: pd-roll 420ms var(--hm-ease) both; }
+
+/* ---------------- product page: variant picker (Brand, RAM, Colour) ---------------- */
+.pd-vars { margin: 10px 0 4px; }
+.pd-var { margin: 10px 0 0; }
+.pd-var-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.pd-var-opt {
+  position: relative; display: inline-flex; align-items: center; gap: 7px; min-height: 38px; padding: 7px 13px; border-radius: 11px;
+  border: 1px solid var(--pd-line, #e3eaef); background: #fff; font: inherit; font-size: 14px; font-weight: 600; color: var(--hm-ink); cursor: pointer;
+  transition: border-color 200ms, box-shadow 200ms, transform 200ms var(--hm-spring);
+}
+.pd-var-opt:hover { border-color: #b9cad6; }
+.pd-var-opt:active { transform: scale(0.96); }
+.pd-var-opt:focus-visible { outline: 2px solid var(--hm-blue); outline-offset: 2px; }
+.pd-var-opt.pd-on { border: 2px solid var(--hm-blue); padding: 6px 12px; background: rgba(10, 120, 171, 0.05); }
+.pd-var-opt > i:not(.pd-size-in) { width: 16px; height: 16px; border-radius: 999px; border: 1px solid rgba(19, 33, 43, 0.18); flex: none; }
+.pd-var-none { color: var(--hm-muted); border-style: dashed; }
+.pd-var-opt.pd-size-oos span { color: var(--hm-muted); text-decoration: line-through; text-decoration-thickness: 1px; }
+.pd-var-wait { margin: 12px 0 0; font-size: 13.5px; color: var(--hm-muted); }
 .pd-name { animation: hm-fade 320ms ease both; }
 
 /* ---------------- product page: frequently bought together ---------------- */

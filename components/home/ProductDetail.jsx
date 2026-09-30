@@ -23,7 +23,6 @@
 import { Fragment, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import ProductArt from "./art";
 import { Icon, OpenContext, Rail, Thumb, WishContext, flyTo, flyToCart, money } from "./shared";
-import { getDetails } from "./productDetails";
 import { Crumbs } from "./Browse";
 import { STAR_WORDS, fmtDate, useRemote } from "./accountStore";
 import { addressText } from "@/lib/address";
@@ -53,6 +52,13 @@ function DetailGallery({ p, fromRect }) {
       { duration: 520, easing: "cubic-bezier(.2,.8,.2,1)" }
     );
   }, []); // eslint-disable-line
+
+  /* Another variant picked (a different colour): start again at its first photo. */
+  const firstSrc = imgs[0];
+  useEffect(() => {
+    setIdx(0);
+    track.current?.scrollTo?.({ left: 0 });
+  }, [firstSrc]);
 
   const goTo = (n) => {
     const el = track.current;
@@ -257,6 +263,59 @@ function PackSizes({ p, variants, cart, onVariant }) {
     </div>
   );
 }
+/* ---------------- variant picker ----------------
+   One row per question the product asks (Brand, Processor, RAM, Colour), in
+   the shop's attribute order, as the WhatsApp chat asks them. Picking a value
+   keeps the other answers when that combination exists, else moves to the
+   nearest variant that has the value. A value no variant has with the current
+   answers is still pickable but drawn faded, so nothing is a dead end. */
+function VariantPicker({ p, variants, attrs, cart, onVariant }) {
+  const combo = p.combo || {};
+  const pick = (attrId, valueId) => {
+    if (combo[attrId] === valueId) return;
+    const want = { ...combo, [attrId]: valueId };
+    const same = (v) => Object.entries(want).every(([a, val]) => v.combo?.[a] === val);
+    const score = (v) => Object.entries(want).filter(([a, val]) => v.combo?.[a] === val).length;
+    const next = variants.find(same)
+      || variants.filter((v) => v.combo?.[attrId] === valueId).sort((a, b) => score(b) - score(a))[0];
+    if (next && next.id !== p.id) onVariant?.(next);
+  };
+  const exists = (attrId, valueId) => variants.some((v) => v.combo?.[attrId] === valueId
+    && Object.entries(combo).every(([a, val]) => a === attrId || v.combo?.[a] === val));
+  const stockOf = (attrId, valueId) => variants.find((v) => v.combo?.[attrId] === valueId
+    && Object.entries(combo).every(([a, val]) => a === attrId || v.combo?.[a] === val));
+  return (
+    <div className="pd-vars">
+      {attrs.map((a) => {
+        const current = a.values.find((v) => v.id === combo[a.id]);
+        return (
+          <div className="pd-sizes pd-var" key={a.id}>
+            <span className="pd-sizes-label">{a.name}: <b key={current?.id}>{current?.name || "Choose"}</b></span>
+            <div className="pd-var-row" role="radiogroup" aria-label={a.name}>
+              {a.values.map((v) => {
+                const on = v.id === combo[a.id];
+                const there = exists(a.id, v.id);
+                const match = stockOf(a.id, v.id);
+                const oos = there && match?.stock === 0;
+                return (
+                  <button key={v.id} role="radio" aria-checked={on}
+                    className={"pd-var-opt" + (on ? " pd-on" : "") + (!there ? " pd-var-none" : "") + (oos ? " pd-size-oos" : "") + (a.display === "color" && v.color ? " pd-var-swatch" : "")}
+                    title={!there ? `${v.name}: not with these choices` : oos ? `${v.name}: out of stock` : v.name}
+                    onClick={() => pick(a.id, v.id)}>
+                    {a.display === "color" && v.color ? <i style={{ background: v.color }} aria-hidden="true" /> : null}
+                    <span>{v.name}</span>
+                    {on && cart[p.id] ? <i className="pd-size-in" aria-label={`${cart[p.id]} in cart`}>{cart[p.id]}</i> : null}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 /* ₹ per kg / L when the size says so — helps compare packs */
 function unitPrice(v) {
   const m = String(v.size || "").match(/^([\d.]+)\s*(kg|g|L|ml)$/i);
@@ -269,14 +328,42 @@ function unitPrice(v) {
 /* ---------------- page ---------------- */
 export default function ProductDetail({
   p, cart, setQty, address, onBack, onChangeAddress, onExplore, fromRect,
-  related = [], variants = [], onVariant, bundle = [], similar = [], recent = [], onViewSimilar, onEditReview,
+  related = [], variants = [], attrs = [], onVariant, bundle = [], similar = [], recent = [], onViewSimilar, onEditReview,
+  optionsFailed = false, onRetryOptions, reviewInfo,
 }) {
-  const d = useMemo(() => getDetails(p), [p]);
+  /* Every product shows what its setup holds, as the WhatsApp confirmation
+     page does: its photos, the Variant specs table and the Sales Description
+     (PRODUCT_SETUP_FLOW.md) - plus the website's own real reviews. Nothing is
+     made up: an empty table or description is simply not drawn. (getDetails()
+     used to fill every gap with sample text - features, a manufacturer
+     address, thousands of invented ratings.) */
+  const senior = true;
+  const d = useMemo(() => {
+    const rv = reviewInfo || {};
+    const count = rv.ratingCount ?? p.ratingCount ?? 0;
+    return {
+      brand: p.brand || p.specs?.Brand || "",
+      category: p.subName || p.catName || "",
+      /* enrich() invents a rating for sorting; only real reviews count here. */
+      rating: count ? (rv.rating ?? p.rating ?? null) : null,
+      ratingCount: count,
+      dist: rv.dist || [0, 0, 0, 0, 0],
+      features: [],
+      info: [],
+      specs: p.specs || {},
+      description: p.description || "",
+      disclaimer: "",
+      returnText: "",
+      reviews: rv.list || [],
+    };
+  }, [p, reviewInfo]);
   const { data: reviewData } = useRemote("/reviews");
   const myReviews = reviewData?.reviews || {};
-  const mine = myReviews[p.id];
+  /* Reviews and the wishlist belong to the product, not to one colour of it. */
+  const ownId = p.variantGroup || p.id;
+  const mine = myReviews[ownId];
   const wish = useContext(WishContext);
-  const liked = wish?.has(p.id);
+  const liked = wish?.has(ownId);
   const [showAll, setShowAll] = useState(true);
   const [open, setOpen] = useState({ features: true, info: true, specs: true, desc: true, returns: true, reviews: false });
   const [fullDesc, setFullDesc] = useState(false);
@@ -319,24 +406,31 @@ export default function ProductDetail({
                 <Icon n={quick ? "bolt" : "truck"} size={12} className={quick ? "hm-fill" : ""} />{quick ? "Quick · 10–20 mins" : `Express · ${p.delivery}`}
               </span>
               <span className="pd-actions">
-                <button className={"pd-round" + (liked ? " pd-liked" : "")} onClick={() => wish?.toggle(p.id)} aria-pressed={!!liked} aria-label={liked ? "Remove from My List" : "Save to My List"}>
+                <button className={"pd-round" + (liked ? " pd-liked" : "")} onClick={() => wish?.toggle(ownId)} aria-pressed={!!liked} aria-label={liked ? "Remove from My List" : "Save to My List"}>
                   <Icon n={liked ? "heartFill" : "heart"} size={18} />
                 </button>
                 <button className="pd-round" onClick={share} aria-label="Share"><Icon n="share" size={17} /></button>
               </span>
             </div>
-            <a className="pd-brand" href="#" onClick={(e) => { e.preventDefault(); onExplore?.(); }}>{d.brand}</a>
+            {d.brand ? <a className="pd-brand" href="#" onClick={(e) => { e.preventDefault(); onExplore?.(); }}>{d.brand}</a> : null}
             <h1 className="pd-name" key={"n" + p.id}>{p.name}</h1>
-            <button className="pd-rating" onClick={() => { setOpen((o) => ({ ...o, reviews: true })); document.getElementById("pd-reviews")?.scrollIntoView({ behavior: "smooth", block: "start" }); }}>
-              <b>{d.rating.toFixed(1)}</b><Stars value={d.rating} /><span>({d.ratingCount.toLocaleString("en-IN")} ratings)</span>
-            </button>
+            {d.rating != null && (
+              <button className="pd-rating" onClick={() => { setOpen((o) => ({ ...o, reviews: true })); document.getElementById("pd-reviews")?.scrollIntoView({ behavior: "smooth", block: "start" }); }}>
+                <b>{d.rating.toFixed(1)}</b><Stars value={d.rating} /><span>({d.ratingCount.toLocaleString("en-IN")} ratings)</span>
+              </button>
+            )}
 
             <div className="pd-price">
               <b key={"p" + p.id} className={variants.length > 1 ? "pd-roll" : undefined}>{money(p.price)}</b>
               {p.mrp ? <><s>MRP {money(p.mrp)}</s><em key={"o" + p.id}>{off}% OFF</em></> : <small>MRP incl. of all taxes</small>}
             </div>
             {p.low ? <p className="pd-low">Only {p.low} left — order soon</p> : null}
-            {variants.length > 1 && <PackSizes p={p} variants={variants} cart={cart} onVariant={onVariant} />}
+            {attrs.length > 0 && variants.length > 1
+              ? <VariantPicker p={p} variants={variants} attrs={attrs} cart={cart} onVariant={onVariant} />
+              : variants.length > 1 && <PackSizes p={p} variants={variants} cart={cart} onVariant={onVariant} />}
+            {p.hasVariants && !variants.length && (optionsFailed
+              ? <p className="pd-var-wait">Couldn't load the options. <button className="pd-link" onClick={onRetryOptions}>Try again</button></p>
+              : <p className="pd-var-wait">Loading the options…</p>)}
 
             <div className="pd-cta">
               {oos ? (
@@ -359,10 +453,10 @@ export default function ProductDetail({
             <div className={"pd-collapse pd-all" + (showAll ? " pd-show" : "")}>
               <div>
                 <div className="pd-secs">
-                  <Section i={0} sec="features" title="Key features" open={open.features} onToggle={() => toggle("features")}>
+                  {d.features.length > 0 && <Section i={0} sec="features" title="Key features" open={open.features} onToggle={() => toggle("features")}>
                     <ul className="pd-features">{d.features.map((f, k) => <li key={k} style={{ "--k": k }}><Icon n="check" size={14} />{f}</li>)}</ul>
-                  </Section>
-                  <Section i={1} sec="info" title="Product information" open={open.info} onToggle={() => toggle("info")}>
+                  </Section>}
+                  {d.info.length > 0 && <Section i={1} sec="info" title="Product information" open={open.info} onToggle={() => toggle("info")}>
                     <dl className="pd-table">
                       {d.info.map(([k, v], n) => (
                         <div key={k} style={{ "--k": n }}>
@@ -371,44 +465,43 @@ export default function ProductDetail({
                         </div>
                       ))}
                     </dl>
-                  </Section>
-                  <Section i={2} sec="specs" title="Item specifications" open={open.specs} onToggle={() => toggle("specs")}>
+                  </Section>}
+                  {Object.keys(d.specs).length > 0 && <Section i={2} sec="specs" title="Item specifications" open={open.specs} onToggle={() => toggle("specs")}>
                     <dl className="pd-grid">
                       {Object.entries(d.specs).map(([k, v], n) => <div key={k} style={{ "--k": n }}><dt>{k}</dt><dd>{v}</dd></div>)}
                     </dl>
-                  </Section>
-                  <Section i={3} sec="description" title="Product description" open={open.desc} onToggle={() => toggle("desc")}>
-                    <div className={"pd-desc" + (fullDesc ? " pd-full" : "")}>
+                  </Section>}
+                  {d.description && <Section i={3} sec="description" title="Product description" open={open.desc} onToggle={() => toggle("desc")}>
+                    <div className={"pd-desc" + (fullDesc || senior ? " pd-full" : "")}>
                       <p>{d.description}</p>
-                      <h4>Disclaimer</h4>
-                      <p>{d.disclaimer}</p>
+                      {d.disclaimer && <><h4>Disclaimer</h4><p>{d.disclaimer}</p></>}
                     </div>
-                    <button className="pd-more" onClick={() => setFullDesc((v) => !v)}>{fullDesc ? "Show less" : "View full description"}<Icon n="chev" size={14} className="pd-chev" /></button>
-                  </Section>
-                  <Section i={4} sec="returns" title="Return policy" open={open.returns} onToggle={() => toggle("returns")}>
+                    {!senior && <button className="pd-more" onClick={() => setFullDesc((v) => !v)}>{fullDesc ? "Show less" : "View full description"}<Icon n="chev" size={14} className="pd-chev" /></button>}
+                  </Section>}
+                  {d.returnText && <Section i={4} sec="returns" title="Return policy" open={open.returns} onToggle={() => toggle("returns")}>
                     <p className="pd-return"><Icon n={d.returnable ? "check" : "info"} size={16} />{d.returnText}</p>
                     <a className="pd-link" href="/cancellation-policy">View policy</a>
-                  </Section>
+                  </Section>}
                 </div>
               </div>
             </div>
           </div>
 
-          <section className="pd-card pd-reviews" id="pd-reviews">
+          {(d.rating != null || mine) && <section className="pd-card pd-reviews" id="pd-reviews">
             <button className="pd-sec-head" onClick={() => toggle("reviews")} aria-expanded={open.reviews}>
-              Ratings &amp; reviews<span className="pd-mini"><b>{d.rating.toFixed(1)}</b><Icon n="star" size={13} /></span><Icon n="chev" size={18} className="pd-chev" />
+              Ratings &amp; reviews{d.rating != null && <span className="pd-mini"><b>{d.rating.toFixed(1)}</b><Icon n="star" size={13} /></span>}<Icon n="chev" size={18} className="pd-chev" />
             </button>
             <div className={"pd-collapse" + (open.reviews ? " pd-show" : "")}>
               <div>
                 <div className="pd-rev-body">
-                  <div className="pd-rev-summary">
+                  {d.rating != null && <div className="pd-rev-summary">
                     <div className="pd-rev-score"><b>{d.rating.toFixed(1)}</b><Stars value={d.rating} size={16} /><small>{d.ratingCount.toLocaleString("en-IN")} ratings</small></div>
                     <div className="pd-bars">
                       {d.dist.map((pct, k) => (
                         <div key={k} className="pd-bar" style={{ "--p": pct / 100, "--k": k }}><span>{5 - k}★</span><i><em /></i><small>{pct}%</small></div>
                       ))}
                     </div>
-                  </div>
+                  </div>}
                   <ul className="pd-rev-list">
                     {mine && (
                       <li className="pd-mine" style={{ "--k": 0 }}>
@@ -428,7 +521,7 @@ export default function ProductDetail({
                 </div>
               </div>
             </div>
-          </section>
+          </section>}
 
           <section className="pd-deliver">
             <h3>Delivery address</h3>
@@ -443,7 +536,7 @@ export default function ProductDetail({
             </button>
             <button className="pd-card pd-explore" onClick={onExplore}>
               <span className="pd-addr-ic pd-alt"><Icon n="grid" size={17} /></span>
-              <span>Explore more in {d.category}</span>
+              <span>Explore more{d.category ? ` in ${d.category}` : ""}</span>
               <Icon n="right" size={18} />
             </button>
           </section>
