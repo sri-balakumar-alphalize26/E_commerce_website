@@ -31,10 +31,13 @@ export const PREVIEW = {
   name: { where: "card", sample: "USB-C Fast Charger" },
   mart_brand: { where: "note", note: "The brand line on the product page, above the name. Empty falls back to the shop's brand." },
   default_code: { where: "note", note: "Not shown to shoppers. It is your own code for the product, used in search and on your records." },
-  public_categ_ids: { where: "note", note: "Decides which aisles the product is listed under in the app, and which page settings apply to it." },
+  public_categ_ids: { where: "note", note: "The aisles on the website, and the categories of the WhatsApp NEW ORDER menu - the same tree." },
+  categ_id: { where: "note", note: "Not shown to shoppers. When this is out of stock, the vendors on this category are asked for a price." },
+  sale_ok: { where: "note", note: "Off and the product is offered nowhere - not on the website, not on WhatsApp." },
+  description_sale: { where: "page", sample: "Full HD display, backlit keyboard, two USB-C ports." },
   list_price: { where: "card", sample: "12.5" },
   compare_list_price: { where: "card", sample: "15" },
-  standard_price: { where: "note", note: "Not shown to shoppers. What the product costs you - Odoo uses it for margins and stock value." },
+  standard_price: { where: "note", note: "Not shown to shoppers. What one costs you - WhatsApp bargaining can go below the sales price only down to this plus the minimum margin." },
   mart_unit_text: { where: "card", sample: "250 g" },
   mart_per_unit: { where: "card", sample: "17.25 per 250 g" },
   mart_note: { where: "card", sample: "Approx 250-400 g" },
@@ -129,6 +132,14 @@ function formFrom(data) {
     values: { ...data.values }, categories: data.categories || [],
     photo: data.photo || "", photos: data.photos || [],
     add: [], remove: [], promoted: null, demote: false, demotedUrl: "",
+    vx: data.variants ? {
+      attributes: data.variants.attributes || [],
+      lines: (data.variants.lines || []).map((l) => ({ ...l, new_values: [], extras: { ...(l.extras || {}) } })),
+      rows: data.variants.rows || [],
+      media: !!data.variants.media,
+      per: {},
+      linesDirty: false,
+    } : null,
   };
 }
 
@@ -182,6 +193,271 @@ export function PhotoViewer({ list, index, onIndex, onClose, onUseOnCard, onRemo
     </div>,
     document.body
   );
+}
+
+/* -------------------------------------------------------- the variants
+   The product set up as the WhatsApp selling flow's guide sets it up
+   (PRODUCT_SETUP_FLOW.md 2.1, 2.4, 2.5): the choices customers make - Brand,
+   Processor, RAM, Colour - with the values this product offers and what each
+   adds to the price, then every variant's own image, photos, specs and stock.
+   The same records Odoo's Attributes & Variants tab and Product Variants form
+   edit, so the website and the WhatsApp page show what is saved here.
+
+   `vx` is form.vx: {attributes, lines, rows, media, per, linesDirty}. Changes
+   to a variant sit in `per[id]` until Save; changed lines are sent whole. */
+const vkey = (id) => String(id);
+
+function VariantsBlock({ vx, setVx, currency, flash }) {
+  const [open, setOpen] = useState(null);      /* the variant row unfolded */
+  const [adding, setAdding] = useState("");    /* the attribute being added */
+  const [typed, setTyped] = useState({});      /* new value boxes, per attribute */
+  const byAttr = useMemo(() => Object.fromEntries(vx.attributes.map((a) => [a.id, a])), [vx.attributes]);
+  const used = new Set(vx.lines.map((l) => l.attribute_id));
+
+  const setLines = (fn) => setVx((x) => { const lines = x.lines.map((l) => ({ ...l, value_ids: [...l.value_ids], new_values: [...(l.new_values || [])], extras: { ...l.extras } })); fn(lines); return { ...x, lines, linesDirty: true }; });
+  const toggleValue = (li, id) => setLines((lines) => {
+    const l = lines[li];
+    l.value_ids = l.value_ids.includes(id) ? l.value_ids.filter((v) => v !== id) : [...l.value_ids, id];
+  });
+  const addTyped = (li) => {
+    const aid = vx.lines[li].attribute_id;
+    const name = (typed[aid] || "").trim().replace(/\s+/g, " ");
+    if (!name) return;
+    const known = byAttr[aid]?.values.find((v) => v.name.toLowerCase() === name.toLowerCase());
+    setLines((lines) => {
+      const l = lines[li];
+      if (known) { if (!l.value_ids.includes(known.id)) l.value_ids.push(known.id); }
+      else if (!l.new_values.some((n) => n.toLowerCase() === name.toLowerCase())) l.new_values.push(name);
+    });
+    setTyped((t) => ({ ...t, [aid]: "" }));
+  };
+  const setExtra = (li, key, raw) => setLines((lines) => { lines[li].extras[key] = plainNumber(raw); });
+  const dropLine = (li) => setLines((lines) => { lines.splice(li, 1); });
+  const addLine = (aid) => {
+    if (!aid) return;
+    setLines((lines) => { lines.push({ attribute_id: Number(aid), value_ids: [], new_values: [], extras: {} }); });
+    setAdding("");
+  };
+
+  /* One variant's pending changes. */
+  const change = (id, fn) => setVx((x) => {
+    const row = x.rows.find((r) => r.id === id);
+    const cur = x.per[vkey(id)] || {};
+    const next = {
+      ...cur,
+      pictures: cur.pictures || { add: [], remove: [], order: (row.pictures || []).map((p) => p.id) },
+      specs: cur.specs || (row.specs || []).map((s) => ({ ...s })),
+    };
+    fn(next, row);
+    return { ...x, per: { ...x.per, [vkey(id)]: next } };
+  });
+  const view = (row) => {
+    const p = vx.per[vkey(row.id)] || {};
+    const order = p.pictures?.order || (row.pictures || []).map((x) => x.id);
+    const saved = order.map((pid) => (row.pictures || []).find((x) => x.id === pid)).filter(Boolean);
+    return {
+      image: p.image === undefined ? row.image : (p.image ? p.imageUrl : ""),
+      onHand: p.onHand === undefined ? (row.onHand ?? "") : p.onHand,
+      pictures: [...saved.map((x) => ({ ...x, kind: "saved" })), ...(p.pictures?.add || []).map((x, i) => ({ ...x, kind: "new", i }))],
+      specs: p.specs || row.specs || [],
+      fill: !!p.fill,
+    };
+  };
+  const pickImage = async (id, files) => {
+    const file = [...(files || [])].find((f) => f.type.startsWith("image/"));
+    if (!file) return;
+    const url = await readFile(file);
+    change(id, (n) => { n.image = url.split(",")[1]; n.imageUrl = url; });
+  };
+  const addPictures = async (id, files) => {
+    const read = [];
+    for (const file of [...(files || [])].filter((f) => f.type.startsWith("image/"))) {
+      const url = await readFile(file);
+      read.push({ name: file.name, data: url.split(",")[1], url });
+    }
+    if (!read.length) { if (files?.length) flash?.("Only pictures can be added.", "bad"); return; }
+    change(id, (n) => { n.pictures = { ...n.pictures, add: [...n.pictures.add, ...read] }; });
+  };
+  const dropPicture = (id, pic) => change(id, (n) => {
+    n.pictures = pic.kind === "new"
+      ? { ...n.pictures, add: n.pictures.add.filter((_, i) => i !== pic.i) }
+      : { ...n.pictures, remove: [...n.pictures.remove, pic.id], order: n.pictures.order.filter((x) => x !== pic.id) };
+  });
+  const movePicture = (id, pid, by) => change(id, (n) => {
+    const order = [...n.pictures.order];
+    const i = order.indexOf(pid), j = i + by;
+    if (i < 0 || j < 0 || j >= order.length) return;
+    [order[i], order[j]] = [order[j], order[i]];
+    n.pictures = { ...n.pictures, order };
+  });
+  const setSpec = (id, i, key, value) => change(id, (n) => { n.specs = n.specs.map((s, k) => (k === i ? { ...s, [key]: value } : s)); });
+  const moveSpec = (id, i, by) => change(id, (n) => {
+    const list = [...n.specs], j = i + by;
+    if (j < 0 || j >= list.length) return;
+    [list[i], list[j]] = [list[j], list[i]];
+    n.specs = list;
+  });
+
+  return (
+    <>
+      <section className="ad-card pdk-sec">
+        <header className="pdk-sec-head"><h3>Attributes &amp; Variants</h3><small>What the customer chooses</small></header>
+        <div className="pdk-vx">
+          {vx.lines.length === 0 && <p className="pdk-hint">No choices: the product is sold as one thing. Add Brand, RAM, Colour… when customers pick one.</p>}
+          {vx.lines.map((l, li) => {
+            const a = byAttr[l.attribute_id];
+            if (!a) return null;
+            const chosen = [...a.values.filter((v) => l.value_ids.includes(v.id)), ...l.new_values.map((n) => ({ id: n, name: n, isNew: true }))];
+            return (
+              <div key={l.attribute_id} className="pdk-vx-line">
+                <div className="pdk-vx-line-head">
+                  <b>{a.name}</b>
+                  <button type="button" className="ad-link pdk-danger-link" onClick={() => dropLine(li)}>Remove</button>
+                </div>
+                <div className="pdk-vx-values">
+                  {a.values.map((v) => (
+                    <button key={v.id} type="button" className={"pdk-chip" + (l.value_ids.includes(v.id) ? " pdk-on" : "")} aria-pressed={l.value_ids.includes(v.id)} onClick={() => toggleValue(li, v.id)}>
+                      {v.color && <i className="pdk-vx-dot" style={{ background: v.color }} aria-hidden="true" />}{v.name}
+                    </button>
+                  ))}
+                  {l.new_values.map((n) => <span key={n} className="pdk-chip pdk-on pdk-vx-new" title="New value, added when you save">{n}</span>)}
+                  <span className="pdk-vx-type">
+                    <input type="text" placeholder="+ value" value={typed[l.attribute_id] || ""} aria-label={`New ${a.name} value`}
+                      onChange={(e) => setTyped((t) => ({ ...t, [l.attribute_id]: e.target.value }))}
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTyped(li); } }} />
+                  </span>
+                </div>
+                {chosen.length > 0 && (
+                  <div className="pdk-vx-extras">
+                    {chosen.map((v) => {
+                      const key = v.isNew ? v.name : String(v.id);
+                      return (
+                        <label key={key} className="pdk-vx-extra">
+                          <span>{v.name}</span>
+                          <span className="pdk-affix"><em>+</em><input type="text" inputMode="decimal" placeholder="0" value={l.extras[key] ?? ""} onChange={(e) => setExtra(li, key, e.target.value)} aria-label={`Price extra for ${v.name}`} /></span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          <div className="pdk-vx-add">
+            <Select value={adding} label="Add an attribute" onChange={(val) => addLine(val)}
+              options={[["", "+ Add an attribute (Brand, RAM, Colour…)"], ...vx.attributes.filter((a) => !used.has(a.id)).map((a) => [String(a.id), a.name])]} />
+          </div>
+          {vx.linesDirty && <p className="pdk-hint pdk-vx-warn">Variants are made or removed when you save.</p>}
+        </div>
+      </section>
+
+      {vx.rows.length > 0 && (
+        <section className="ad-card pdk-sec">
+          <header className="pdk-sec-head"><h3>Variants</h3><small>{vx.rows.length} · image, {vx.media ? "photos, specs, " : ""}stock</small></header>
+          <ul className="pdk-vx-rows">
+            {vx.rows.map((row) => {
+              const s = view(row);
+              const isOpen = open === row.id;
+              return (
+                <li key={row.id} className={"pdk-vx-row" + (isOpen ? " pdk-on" : "")}>
+                  <button type="button" className="pdk-vx-row-head" onClick={() => setOpen(isOpen ? null : row.id)} aria-expanded={isOpen}>
+                    <span className="pdk-vx-thumb">{s.image ? <img src={s.image} alt="" /> : <Icon n="layers" size={16} />}</span>
+                    <b>{row.label}</b>
+                    <span className="pdk-vx-price">{money(row.price, currency)}</span>
+                    {row.counted && <span className="pdk-vx-stock">{s.onHand === "" ? "–" : s.onHand} on hand</span>}
+                    <Icon n="chev" size={14} />
+                  </button>
+                  {isOpen && (
+                    <div className="pdk-vx-body">
+                      <div className="pdk-field">
+                        <span className="pdk-label">Image</span>
+                        <div className="pdk-vx-image">
+                          {s.image ? <img src={s.image} alt="" /> : <span className="pdk-hint">None: the product's picture is used.</span>}
+                          <label className="ad-btn ad-sm">{s.image ? "Replace" : "Add"}<input type="file" accept="image/*" hidden onChange={(e) => { pickImage(row.id, e.target.files); e.target.value = ""; }} /></label>
+                          {s.image && <button type="button" className="ad-btn ad-sm pdk-danger-ghost" onClick={() => change(row.id, (n) => { n.image = ""; n.imageUrl = ""; })}>Remove</button>}
+                        </div>
+                      </div>
+
+                      {vx.media && (
+                        <div className="pdk-field">
+                          <span className="pdk-label">Variant images</span>
+                          <div className="pdk-vx-pics">
+                            {s.pictures.map((pic, k) => (
+                              <div key={pic.kind + (pic.id || pic.i)} className="pdk-vx-pic">
+                                <img src={pic.url} alt="" />
+                                <span>
+                                  {pic.kind === "saved" && <button type="button" className="ad-icon-btn" onClick={() => movePicture(row.id, pic.id, -1)} disabled={k === 0} aria-label="Earlier"><Icon n="left" size={12} /></button>}
+                                  {pic.kind === "saved" && <button type="button" className="ad-icon-btn" onClick={() => movePicture(row.id, pic.id, 1)} aria-label="Later"><Icon n="right" size={12} /></button>}
+                                  <button type="button" className="ad-icon-btn" onClick={() => dropPicture(row.id, pic)} aria-label="Remove"><Icon n="x" size={12} /></button>
+                                </span>
+                                {pic.kind === "new" && <small>Not saved</small>}
+                              </div>
+                            ))}
+                            <label className="pdk-vx-pic pdk-photo-add"><Icon n="plus" size={18} /><span>Add</span><input type="file" accept="image/*" multiple hidden onChange={(e) => { addPictures(row.id, e.target.files); e.target.value = ""; }} /></label>
+                          </div>
+                          <small>Front, back, ports… The first is the main picture when the variant has no image of its own.</small>
+                        </div>
+                      )}
+
+                      {vx.media && (
+                        <div className="pdk-field">
+                          <span className="pdk-label">Variant specs</span>
+                          <table className="pdk-vx-specs"><tbody>
+                            {s.specs.map((sp, i) => (
+                              <tr key={sp.id || "n" + i}>
+                                <td><input type="text" value={sp.name} placeholder="Warranty" aria-label="Specification" onChange={(e) => setSpec(row.id, i, "name", e.target.value)} /></td>
+                                <td><input type="text" value={sp.value} placeholder="1 year" aria-label="Value" onChange={(e) => setSpec(row.id, i, "value", e.target.value)} /></td>
+                                <td className="pdk-vx-spec-act">
+                                  <button type="button" className="ad-icon-btn" onClick={() => moveSpec(row.id, i, -1)} disabled={i === 0} aria-label="Up"><Icon n="up" size={12} /></button>
+                                  <button type="button" className="ad-icon-btn" onClick={() => moveSpec(row.id, i, 1)} disabled={i === s.specs.length - 1} aria-label="Down"><Icon n="down" size={12} /></button>
+                                  <button type="button" className="ad-icon-btn" onClick={() => change(row.id, (n) => { n.specs = n.specs.filter((_, k) => k !== i); })} aria-label="Remove"><Icon n="x" size={12} /></button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody></table>
+                          <div className="pdk-vx-spec-foot">
+                            <button type="button" className="ad-link" onClick={() => change(row.id, (n) => { n.specs = [...n.specs, { name: "", value: "" }]; })}>+ Add a line</button>
+                            <button type="button" className="ad-link" onClick={() => change(row.id, (n) => { n.fill = true; })} disabled={s.fill}>{s.fill ? "Filled on save" : "Fill from attributes"}</button>
+                          </div>
+                        </div>
+                      )}
+
+                      {row.counted && (
+                        <label className="pdk-field pdk-vx-onhand">
+                          <span className="pdk-label">On hand</span>
+                          <input type="text" inputMode="decimal" value={s.onHand} onChange={(e) => change(row.id, (n) => { n.onHand = plainNumber(e.target.value); })} />
+                          <small>How many of this variant you have now. Booked as an inventory adjustment on save.</small>
+                        </label>
+                      )}
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+    </>
+  );
+}
+
+/* What the Variants block sends: every changed variant, and the lines only
+   when they were touched (writing them can make or retire variants). */
+function variantsBody(vx) {
+  if (!vx) return undefined;
+  const per = {};
+  for (const [id, p] of Object.entries(vx.per)) {
+    const out = {};
+    if (p.image !== undefined) out.image = p.image;
+    if (p.onHand !== undefined && p.onHand !== "") out.onHand = p.onHand;
+    if (p.pictures && (p.pictures.add.length || p.pictures.remove.length || p.pictures.order.length)) {
+      out.pictures = { add: p.pictures.add.map(({ name, data }) => ({ name, data })), remove: p.pictures.remove, order: p.pictures.order };
+    }
+    if (p.specs) out.specs = p.specs.filter((s) => (s.name || "").trim()).map(({ id, name, value }) => ({ id, name, value }));
+    if (p.fill) out.fill = true;
+    per[id] = out;
+  }
+  return { per, ...(vx.linesDirty ? { lines: vx.lines } : {}) };
 }
 
 /* ---------------------------------------------------------- the editor */
@@ -248,22 +524,17 @@ export default function ProductEditor({ productId, currency, onClose, onSaved, f
     return list;
   }, [form]);
 
+  /* One picture for the product (PRODUCT_SETUP_FLOW.md 2.4: "the general
+     product photo"); more photos belong to each variant, under Variants. A
+     new picture replaces the one there. */
   const addFiles = async (files) => {
-    const images = [...files].filter((f) => f.type.startsWith("image/"));
-    if (!images.length) { if (files.length) flash?.("Only pictures can be added.", "bad"); return; }
-    const read = [];
-    for (const file of images) {
-      const url = await readFile(file);
-      read.push({ name: file.name, data: url.split(",")[1], url });
-    }
-    edit((f) => {
-      f.add = [...f.add];
-      for (const ph of read) {
-        if (!f.photo) { f.values.image_1920 = ph.data; f.photo = ph.url; }
-        else f.add.push(ph);
-      }
-    });
+    const image = [...files].find((f) => f.type.startsWith("image/"));
+    if (!image) { if (files.length) flash?.("Only pictures can be added.", "bad"); return; }
+    const url = await readFile(image);
+    edit((f) => { f.values.image_1920 = url.split(",")[1]; f.photo = url; f.promoted = null; f.demote = false; });
   };
+  const setVx = (fn) => edit((f) => { f.vx = fn(f.vx); });
+  const [unfolded, setUnfolded] = useState({});
 
   /* Ticked photographs, by kind and address, for "Remove selected". */
   const [picked, setPicked] = useState(() => new Set());
@@ -384,6 +655,7 @@ export default function ProductEditor({ productId, currency, onClose, onSaved, f
         promote: form.promoted ? form.promoted.id : null,
         demote: form.demote,
       },
+      ...(form.vx ? { variants: variantsBody(form.vx) } : {}),
     };
     const res = await save.run(() => (form.id
       ? api(`/admin/products/${form.id}`, { method: "PATCH", body })
@@ -653,7 +925,7 @@ export default function ProductEditor({ productId, currency, onClose, onSaved, f
             onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
             onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragging(false); }}
             onDrop={(e) => { e.preventDefault(); setDragging(false); addFiles(e.dataTransfer.files); }}>
-            <header className="pdk-sec-head"><h3>Photographs</h3><small>{photoList.length ? `${photoList.length} in all` : "None yet"}</small></header>
+            <header className="pdk-sec-head"><h3>Picture</h3><small>{form.photo ? "The general product photo" : "None yet"}</small></header>
             {picked.size > 0 && (
               <div className="pdk-photo-bar">
                 <b>{picked.size} selected</b>
@@ -682,21 +954,33 @@ export default function ProductEditor({ productId, currency, onClose, onSaved, f
                   </div>
                 );
               })}
-              <label className="pdk-photo pdk-photo-add" aria-label="Add photographs">
+              <label className="pdk-photo pdk-photo-add" aria-label={form.photo ? "Replace the picture" : "Add the picture"}>
                 <Icon n="plus" size={22} />
-                <span>Add</span>
-                <input type="file" accept="image/*" multiple hidden onChange={(e) => { addFiles(e.target.files || []); e.target.value = ""; }} />
+                <span>{form.photo ? "Replace" : "Add"}</span>
+                <input type="file" accept="image/*" hidden onChange={(e) => { addFiles(e.target.files || []); e.target.value = ""; }} />
               </label>
             </div>
-            <p className="pdk-hint">Tap Add, or drop pictures here. The first is the picture on the card; the rest become the gallery shoppers swipe. Tap a picture to see it large, put it on the card, or remove it.</p>
+            <p className="pdk-hint">The general product photo, used when a variant has no picture of its own. More photos - front, back, each colour - go on each variant under Variants.</p>
           </section>
 
-          {form.groups.map((g) => (
-            <section key={g.title} className="ad-card pdk-sec">
-              <header className="pdk-sec-head"><h3>{g.title}</h3></header>
-              <div className="pdk-fields">{g.boxes.map(box)}</div>
-            </section>
-          ))}
+          {/* The product first, then its choices and variants, and what only
+              the website adds last - folded. */}
+          {[...form.groups.filter((g) => !g.folded), "variants", ...form.groups.filter((g) => g.folded)].map((g) => {
+            if (g === "variants") return form.vx ? <VariantsBlock key="vx" vx={form.vx} setVx={setVx} currency={currency} flash={flash} /> : null;
+            const folded = g.folded && !unfolded[g.title];
+            return (
+              <section key={g.title} className={"ad-card pdk-sec" + (g.folded ? " pdk-folding" : "")}>
+                <header className="pdk-sec-head">
+                  {g.folded
+                    ? <button type="button" className="pdk-fold" aria-expanded={!folded} onClick={() => setUnfolded((u) => ({ ...u, [g.title]: !u[g.title] }))}>
+                        <h3>{g.title}</h3><small>Not used on WhatsApp</small><Icon n="chev" size={14} />
+                      </button>
+                    : <h3>{g.title}</h3>}
+                </header>
+                {!folded && <div className="pdk-fields">{g.boxes.map(box)}</div>}
+              </section>
+            );
+          })}
         </div>
 
         <aside className="pdk-preview" aria-label="How it looks in the app">
@@ -721,22 +1005,14 @@ export default function ProductEditor({ productId, currency, onClose, onSaved, f
             </div>
 
             <div className="pdk-mock-page">
-              <div className={"pdk-mock-block" + lit("mart_features")}>
-                <h4>Key features</h4>
-                <ul>{pv("mart_features").text.split("\n").filter(Boolean).map((f, i) => <li key={i} className={pv("mart_features").sample ? "pdk-sample" : ""}><Icon n="check" size={12} /> {f}</li>)}</ul>
-              </div>
               <div className="pdk-mock-block">
-                <h4>Product information</h4>
-                <table><tbody>
-                  {[["mart_in_the_box", "In the box"], ["mart_material", "Material"], ["mart_item_height", "Item height"], ["mart_item_length", "Item length"], ["mart_item_width", "Item width"], ["weight", "Net weight"]]
-                    .filter(([k]) => form.boxes[k] && show(k))
-                    .map(([k, label]) => <tr key={k} className={lit(k)}><th>{label}</th><td className={pv(k).sample ? "pdk-sample" : ""}>{pv(k).text}{k === "weight" ? " kg" : ""}</td></tr>)}
-                </tbody></table>
+                <h4>Item specifications</h4>
+                <p className="pdk-sample">Each variant's specs, from Variants.</p>
               </div>
-              {show("description_ecommerce") && (
-                <div className={"pdk-mock-block" + lit("description_ecommerce")}>
-                  <h4>Description</h4>
-                  <p className={pv("description_ecommerce").sample ? "pdk-sample" : ""}>{pv("description_ecommerce").text}</p>
+              {show("description_sale") && (
+                <div className={"pdk-mock-block" + lit("description_sale")}>
+                  <h4>Product description</h4>
+                  <p className={pv("description_sale").sample ? "pdk-sample" : ""}>{pv("description_sale").text}</p>
                 </div>
               )}
             </div>
