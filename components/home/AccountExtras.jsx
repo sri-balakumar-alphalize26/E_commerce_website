@@ -629,11 +629,17 @@ export function ReviewsSec({ orders, byId, onOpen, flash }) {
   const [posted, setPosted] = useState(null);
   const pending = [];
   const seen = new Set();
-  orders.filter((o) => o.status === "delivered").forEach((o) => o.items.forEach(([id]) => {
-    if (seen.has(id) || reviews[id] || !byId[id]) return;
-    seen.add(id); pending.push({ id, order: o });
+  /* A review is for the product, not the colour: a variant bought ("v123")
+     is reviewed under its product's id, and drawn with its own card. */
+  orders.filter((o) => o.status === "delivered").forEach((o) => o.items.forEach(([pid]) => {
+    const id = byId[pid]?.variantGroup || pid;
+    if (seen.has(id) || reviews[id] || !byId[pid]) return;
+    seen.add(id); pending.push({ id, pid, order: o });
   }));
-  const mine = Object.entries(reviews).filter(([id]) => byId[id]).sort((a, b) => b[1].at - a[1].at);
+  /* A review is kept under the product's id; the card to draw it with is the
+     product's, or - when only a variant bought has been loaded - that one. */
+  const cardFor = (id) => byId[id] || Object.values(byId).find((p) => p.variantGroup === String(id));
+  const mine = Object.entries(reviews).map(([id, r]) => [id, r, cardFor(id)]).filter(([, , p]) => p).sort((a, b) => b[1].at - a[1].at);
 
   const save = async (id, r) => {
     const sent = await send(`/reviews/${id}`, { method: "POST", body: { stars: r.stars, title: r.title, text: r.text, tags: r.tags } });
@@ -654,12 +660,12 @@ export function ReviewsSec({ orders, byId, onOpen, flash }) {
         <div className="ac-card-head"><div><h3>Waiting for your review</h3><p>From your delivered orders. It takes 10 seconds.</p></div><span className="ax-count">{pending.length}</span></div>
         {pending.length ? (
           <div className="ax-pending">
-            {pending.map(({ id, order }, i) => (
+            {pending.map(({ id, pid, order }, i) => (
               <article key={id} className="ax-pend" style={{ "--i": i }}>
-                <button className="ax-pend-img" onClick={(e) => onOpen?.(byId[id], e.currentTarget.getBoundingClientRect())} aria-label={`Open ${byId[id].name}`}><Thumb p={byId[id]} /></button>
-                <b>{byId[id].name}</b>
+                <button className="ax-pend-img" onClick={(e) => onOpen?.(byId[pid], e.currentTarget.getBoundingClientRect())} aria-label={`Open ${byId[pid].name}`}><Thumb p={byId[pid]} /></button>
+                <b>{byId[pid].name}</b>
                 <small>Order #{order.id}</small>
-                <StarPick value={0} size={22} label={false} onPick={(k) => setEdit({ id, initial: { stars: k } })} />
+                <StarPick value={0} size={22} label={false} onPick={(k) => setEdit({ id, pid, initial: { stars: k } })} />
               </article>
             ))}
           </div>
@@ -672,18 +678,18 @@ export function ReviewsSec({ orders, byId, onOpen, flash }) {
         <div className="ac-card-head"><div><h3>Your reviews</h3><p>Shown on the product page with a Verified purchase tag.</p></div><span className="ax-count">{mine.length}</span></div>
         {!mine.length && <p className="ac-muted ax-none">Reviews you write will appear here.</p>}
         <div className="ax-myrevs">
-          {mine.map(([id, r], i) => (
+          {mine.map(([id, r, card], i) => (
             <article key={id + (r.edited ? r.at : "")} className={"ax-myrev" + (leaving === id ? " ax-leaving" : "") + (posted === id ? " ax-posted" : "")} style={{ "--i": i }}>
-              <span className="ac-thumb ax-myrev-img"><Thumb p={byId[id]} /></span>
+              <span className="ac-thumb ax-myrev-img"><Thumb p={card} /></span>
               <div className="ax-myrev-body">
                 <div className="ax-myrev-top"><Chip stars={r.stars} /><b>{r.title || STAR_WORDS[r.stars]}</b></div>
-                <small className="ax-myrev-name">{byId[id].name} · {fmtDate(r.at)}{r.edited ? " · Edited" : ""}</small>
+                <small className="ax-myrev-name">{card.name} · {fmtDate(r.at)}{r.edited ? " · Edited" : ""}</small>
                 {r.text && <p>{r.text}</p>}
                 {!!r.tags?.length && <div className="ax-tagline">{r.tags.map((t) => <span key={t}>{t}</span>)}</div>}
                 <div className="ax-myrev-foot">
                   <span className="ac-muted"><Icon n="trend" size={13} /> {r.helpful || 0} found this helpful</span>
                   <span>
-                    <button className="ac-link" onClick={() => setEdit({ id, initial: r })}>Edit</button>
+                    <button className="ac-link" onClick={() => setEdit({ id, pid: card.id, initial: r })}>Edit</button>
                     {confirm === id
                       ? <><button className="ac-link ac-danger" onClick={() => del(id)}>Delete</button><button className="ac-link" onClick={() => setConfirm(null)}>Keep</button></>
                       : <button className="ac-link ac-danger" onClick={() => setConfirm(id)}>Delete</button>}
@@ -695,7 +701,7 @@ export function ReviewsSec({ orders, byId, onOpen, flash }) {
         </div>
       </section>
 
-      {edit && <ReviewEditor p={byId[edit.id]} initial={edit.initial} onClose={() => setEdit(null)} onSave={(r) => save(edit.id, r)} />}
+      {edit && <ReviewEditor p={byId[edit.pid || edit.id]} initial={edit.initial} onClose={() => setEdit(null)} onSave={(r) => save(edit.id, r)} />}
     </div>
   );
 }
