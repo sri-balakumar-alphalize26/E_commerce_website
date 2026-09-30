@@ -90,8 +90,11 @@ class Mart369Branch(models.Model):
         found.sort(key=lambda pair: pair[1])
         return found
 
-    def _mart369_has_stock(self, product, qty):
+    def _mart369_has_stock(self, product, qty, variant=None):
         """Can this branch hand over `qty` of this template right now?
+
+        With `variant` (the colour or size the customer picked) only that
+        variant's stock counts, not its siblings'.
 
         An untracked product has nothing to run out of, so any branch has it -
         the same answer the storefront gives (`_mart369_free_qty` -> None).
@@ -99,7 +102,7 @@ class Mart369Branch(models.Model):
         self.ensure_one()
         if 'is_storable' in product._fields and not product.is_storable:
             return True
-        variants = product.sudo().product_variant_ids.with_company(
+        variants = (variant or product.product_variant_ids).sudo().with_company(
             self.company_id).with_context(warehouse_id=self.id)
         return sum(variants.mapped('free_qty')) >= qty
 

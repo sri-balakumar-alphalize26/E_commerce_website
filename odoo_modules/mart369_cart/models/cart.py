@@ -51,28 +51,61 @@ class Mart369Cart(models.AbstractModel):
 
     @api.model
     def _mart369_resolve(self, items):
-        """{'41': 2, 'f3': 1} -> [(template, qty)], unknown ids dropped.
+        """{'41': 2, 'v123': 1, 'f3': 1} -> [line], unknown ids dropped.
+
+        Each line is {'key', 'tmpl', 'variant', 'qty'}. A plain number is a
+        product and sells its first variant, as it always has; 'v123' is the
+        variant the customer picked on the product page (Brand, RAM, Colour).
 
         Ids arrive as strings because that is what the card carries and what
         the app compares with ===. Anything that is not a published product is
         dropped rather than refused: a basket that has sat in a browser for a
         week should still check out with what is left in it.
         """
+        Mixin = self.env['mart369.serializable']
         wanted = {}
         for key, qty in (items or {}).items():
+            parsed = Mixin._mart369_parse_key(key)
             try:
-                pid, count = int(key), int(qty)
+                count = int(qty)
             except (TypeError, ValueError):
                 continue
-            if count > 0:
-                wanted[pid] = wanted.get(pid, 0) + count
+            if parsed and count > 0:
+                wanted[parsed] = wanted.get(parsed, 0) + count
         if not wanted:
             return []
 
         templates = self.env['product.template'].sudo().search([
-            ('id', 'in', list(wanted)), ('is_published', '=', True),
+            ('id', 'in', [i for kind, i in wanted if kind == 'template']),
+            ('is_published', '=', True),
         ])
-        return [(tmpl, wanted[tmpl.id]) for tmpl in templates]
+        variants = Mixin._mart369_published_variants(
+            [i for kind, i in wanted if kind == 'variant'])
+        lines = [{'key': str(tmpl.id), 'tmpl': tmpl, 'variant': tmpl.product_variant_id,
+                  'chosen': False, 'qty': wanted[('template', tmpl.id)]}
+                 for tmpl in templates]
+        lines += [{'key': Mixin._mart369_variant_key(v), 'tmpl': v.product_tmpl_id,
+                   'variant': v, 'chosen': True, 'qty': wanted[('variant', v.id)]}
+                  for v in variants]
+        return lines
+
+    @api.model
+    def _mart369_line_prices(self, lines):
+        """{key: {'price', 'mrp'}} for resolved lines, in one pricing pass:
+        a picked variant pays its own extras, a plain product its card price."""
+        Mixin = self.env['mart369.serializable'].sudo()
+        tmpl_ctx = Mixin._price_context_for(
+            self.env['product.template'].sudo().union(*[l['tmpl'] for l in lines]))
+        chosen = self.env['product.product'].sudo().union(
+            *[l['variant'] for l in lines if l['chosen']])
+        variant_ctx = Mixin._price_context_for_variants(chosen) if chosen else {}
+        out = {}
+        for line in lines:
+            if line['chosen']:
+                out[line['key']] = variant_ctx.get(line['variant'].id) or {}
+            else:
+                out[line['key']] = tmpl_ctx.get(line['tmpl'].id) or {}
+        return out
 
     @api.model
     def _mart369_where(self, address):
@@ -102,16 +135,17 @@ class Mart369Cart(models.AbstractModel):
         return where
 
     @api.model
-    def _mart369_mode_of(self, product, qty=1, where=None):
+    def _mart369_mode_of(self, product, qty=1, where=None, variant=None):
         """(mode, branch) for one line. `branch` is the one that would hand it
-        over, when Quick came from a branch; otherwise an empty recordset."""
+        over, when Quick came from a branch; otherwise an empty recordset.
+        `variant`, when the customer picked one, is the stock that counts."""
         none = self.env['stock.warehouse'].browse()
         if product.mart_delivery_text:
             return EXPRESS, none
         where = where or {}
         if where.get('branches') is not None:
             for branch, __ in where['branches']:
-                if branch._mart369_has_stock(product, qty):
+                if branch._mart369_has_stock(product, qty, variant=variant):
                     return QUICK, branch
             return EXPRESS, none
         if where.get('area_quick') is not None:
@@ -129,9 +163,7 @@ class Mart369Cart(models.AbstractModel):
         Rule = self.env['mart369.delivery.rule']
         rules = Rule._mart369_rules()
         lines = self._mart369_resolve(items)
-
-        price_ctx = self.env['mart369.serializable'].sudo()._price_context_for(
-            self.env['product.template'].sudo().browse([t.id for t, __ in lines]))
+        price_ctx = self._mart369_line_prices(lines)
 
         mrp = gross = 0.0
         sub = {QUICK: 0.0, EXPRESS: 0.0}
@@ -142,15 +174,18 @@ class Mart369Cart(models.AbstractModel):
         branches = self.env['stock.warehouse'].browse()
         moved = 0
 
-        for tmpl, qty in lines:
-            entry = price_ctx.get(tmpl.id) or {}
+        for line in lines:
+            tmpl, qty = line['tmpl'], line['qty']
+            entry = price_ctx.get(line['key']) or {}
             price = entry.get('price')
             if price is None:
                 price = tmpl.list_price
             was = entry.get('mrp') or price
 
-            mode, branch = self._mart369_mode_of(tmpl, qty, where)
-            modes[str(tmpl.id)] = mode
+            # The variant the order will sell - picked, or the product's first
+            # - is the stock that counts, never its siblings' together.
+            mode, branch = self._mart369_mode_of(tmpl, qty, where, variant=line['variant'])
+            modes[line['key']] = mode
             branches |= branch
             if mode == EXPRESS and not tmpl.mart_delivery_text:
                 moved += 1
@@ -227,5 +262,5 @@ class Mart369Cart(models.AbstractModel):
         Sent so the app can tell the customer which line vanished, rather than
         quietly charging a smaller total than the basket showed.
         """
-        found = {str(tmpl.id) for tmpl, __ in lines}
-        return [str(key) for key in (items or {}) if str(key) not in found]
+        found = {line['key'] for line in lines}
+        return [str(key) for key in (items or {}) if str(key).strip() not in found]
