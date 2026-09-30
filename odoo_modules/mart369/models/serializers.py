@@ -18,7 +18,7 @@ drawing, run `node scripts/export-art.mjs`.
 import logging
 import re
 
-from odoo import api, models
+from odoo import api, fields, models
 
 _logger = logging.getLogger(__name__)
 
@@ -273,7 +273,283 @@ class Mart369Serializable(models.AbstractModel):
             elif product.mart_low_stock_at and qty <= product.mart_low_stock_at:
                 vals['low'] = int(qty)
 
+        # A product with a choice to make (Brand, RAM, Colour...). This card
+        # stands for the whole model line in a listing; the product page swaps
+        # in the chosen variant's own card (_serialize_variant), and the app
+        # opens the page rather than adding a variant nobody picked.
+        if self._mart369_has_variants(product):
+            vals['variantGroup'] = str(product.id)
+            vals['hasVariants'] = True
+
         return vals
+
+    # ------------------------------------------------------- the variants
+
+    @api.model
+    def _mart369_has_variants(self, template):
+        """True when the customer has something to choose on this product."""
+        return template.product_variant_count > 1
+
+    @api.model
+    def _mart369_variant_key(self, variant):
+        """The id the app holds for one variant: 'v' + its product.product id.
+
+        Plain numbers stay template ids, so every basket, list and link made
+        before variants existed still means what it meant."""
+        return 'v%d' % variant.id
+
+    @api.model
+    def _mart369_card_key(self, variant):
+        """The id of the card a sold variant belongs to: its own key when its
+        product has a choice, else the template id the app has always used."""
+        tmpl = variant.product_tmpl_id
+        if self._mart369_has_variants(tmpl):
+            return self._mart369_variant_key(variant)
+        return str(tmpl.id)
+
+    @api.model
+    def _mart369_parse_key(self, key):
+        """'41' -> ('template', 41), 'v123' -> ('variant', 123), else None."""
+        key = str(key or '').strip()
+        if key[:1] == 'v' and key[1:].isdigit():
+            return 'variant', int(key[1:])
+        if key.isdigit():
+            return 'template', int(key)
+        return None
+
+    @api.model
+    def _mart369_published_variants(self, ids):
+        """The variants behind these ids whose product is on the website."""
+        return self.env['product.product'].sudo().search([
+            ('id', 'in', list(ids)),
+            ('product_tmpl_id.is_published', '=', True),
+        ])
+
+    @api.model
+    def _mart369_combo(self, variant):
+        """{attribute id: template value id} for the attributes that are asked
+        - a line with a single value (Brand: Apple) is not a question."""
+        combo = {}
+        for ptav in variant.product_template_attribute_value_ids:
+            if len(ptav.attribute_line_id.value_ids) > 1:
+                combo[str(ptav.attribute_id.id)] = ptav.id
+        return combo
+
+    @api.model
+    def _mart369_attrs(self, template):
+        """The questions the product page asks, in the attributes' order:
+        [{id, name, display, values: [{id, name, color}]}].
+
+        Only attributes that make variants and have a real choice: one value
+        (Brand: Apple) is not a question, and a 'never create variants' one
+        (Gift wrap) has no variant that could answer it."""
+        out = []
+        lines = template.attribute_line_ids.sorted(
+            lambda l: (l.attribute_id.sequence, l.attribute_id.id))
+        for line in lines:
+            if len(line.value_ids) < 2 or line.attribute_id.create_variant == 'no_variant':
+                continue
+            values = line.product_template_value_ids.filtered('ptav_active')
+            out.append({
+                'id': str(line.attribute_id.id),
+                'name': line.attribute_id.name,
+                'display': line.attribute_id.display_type or 'radio',
+                'values': [{
+                    'id': v.id,
+                    'name': v.name,
+                    **({'color': v.html_color} if v.html_color else {}),
+                } for v in values.sorted(lambda v: (v.product_attribute_value_id.sequence, v.id))],
+            })
+        return out
+
+    @api.model
+    def _mart369_variant_extra_images(self, variant):
+        """More photos of this one variant, after its own image. None here;
+        mart369_whatsapp_bridge adds the Variant images tab."""
+        return []
+
+    @api.model
+    def _mart369_variant_images(self, variant):
+        """The pictures in the WhatsApp page's order: the variant's own image,
+        its extra photos, then the product's picture and gallery."""
+        tmpl = variant.product_tmpl_id
+        images = []
+        if variant.image_variant_1920:
+            images.append(self._image_url('image_512', '512x512', record=variant))
+        images += self._mart369_variant_extra_images(variant)
+        if tmpl.image_512:
+            images.append(self._image_url('image_512', '512x512', record=tmpl))
+        for extra in tmpl.product_template_image_ids[:MAX_EXTRA_IMAGES]:
+            if extra.image_512:
+                images.append(self._image_url('image_512', '512x512', record=extra))
+        return images
+
+    @api.model
+    def _mart369_variant_spec_rows(self, variant):
+        """[(label, value)] for the specs table, in order: here the attribute
+        values the variant differs from its siblings by. mart369_whatsapp_bridge
+        swaps in the Variant specs tab, the rows the WhatsApp page lists."""
+        ptavs = variant.product_template_variant_value_ids.sorted(
+            lambda x: (x.attribute_id.sequence, x.attribute_id.id))
+        return [(x.attribute_id.name, x.name) for x in ptavs]
+
+    @api.model
+    def _mart369_variant_specs(self, variant):
+        """{label: value} for the specs table, in order, empty rows left out."""
+        return {label: value for label, value in self._mart369_variant_spec_rows(variant)
+                if label and value}
+
+    @api.model
+    def _mart369_website_variant_prices(self, variants, website):
+        """{variant id: {'price', 'mrp'?}} priced as website_sale prices a
+        template (`_get_sales_prices`), but for each variant: the pricelist
+        rule runs on the variant's own price, extras included, so 10% off a
+        600 laptop with +200 for 16GB is 720 - what Odoo, the chat and the
+        order all charge - and a rule aimed at one variant applies to it.
+
+        Raises outside a website request, like the template version."""
+        from odoo.http import request
+        pricelist = request.pricelist
+        currency = website.currency_id
+        fiscal_position = request.fiscal_position
+        date = fields.Date.context_today(self)
+        rule_prices = pricelist._compute_price_rule(variants, 1.0)
+        Template = self.env['product.template']
+        Item = self.env['product.pricelist.item']
+        out = {}
+        for variant in variants:
+            price, rule_id = rule_prices[variant.id]
+            product_taxes = variant.sudo().taxes_id._filter_taxes_by_company(self.env.company)
+            taxes = fiscal_position.map_tax(product_taxes)
+            entry = {'price': Template._apply_taxes_to_price(
+                price, currency, product_taxes, taxes, variant, website=website)}
+            item = Item.browse(rule_id)
+            if item._show_discount_on_shop():
+                before = item._compute_price_before_discount(
+                    product=variant, quantity=1.0, date=date,
+                    uom=variant.uom_id, currency=currency)
+                if currency.compare_amounts(before, price) == 1:
+                    entry['mrp'] = Template._apply_taxes_to_price(
+                        before, currency, product_taxes, taxes, variant, website=website)
+            out[variant.id] = entry
+        return out
+
+    @api.model
+    def _price_context_for_variants(self, variants):
+        """{variant id: {'price', 'mrp'}} for these variants in one pass - the
+        same rules `_price_context_for` applies to a template, applied to each
+        variant's own price (its extras included): the website pricelist,
+        then any live deal on its product, then what to strike through."""
+        variants = variants.sudo()
+        if not variants:
+            return {}
+        prices = {}
+        if 'website' in self.env:
+            website = self.env['website'].get_current_website()
+            try:
+                prices = self._mart369_website_variant_prices(variants, website)
+            except Exception:  # noqa: BLE001 - not a website request
+                _logger.debug(
+                    'mart369: no pricelist price for %s variants, using the '
+                    'list price', len(variants), exc_info=True)
+                prices = {}
+
+        deals = (self.env['mart369.deal'].sudo()._mart369_live_deals()
+                 if 'mart369.deal' in self.env else [])
+        out = {}
+        for variant in variants:
+            tmpl = variant.product_tmpl_id
+            listed = variant.lst_price  # list price + this variant's extras
+            entry = prices.get(variant.id) or {}
+            price = entry.get('price')
+            if price is None:
+                price = listed
+
+            # A deal names the product, so it covers every variant of it,
+            # each from its own list price - as the template's card is priced.
+            offers = [deal._mart369_apply(listed) for deal in deals
+                      if tmpl in deal.product_ids]
+            if offers and min(offers) < price:
+                price = min(offers)
+
+            mrp = (entry.get('mrp')
+                   or (tmpl.compare_list_price + (variant.price_extra or 0.0)
+                       if tmpl.compare_list_price else 0.0)
+                   or listed
+                   or 0.0)
+            out[variant.id] = {
+                'price': price,
+                'mrp': mrp if mrp and mrp > price else None,
+            }
+        return out
+
+    @api.model
+    def _serialize_variant(self, variant, price_ctx, variant_ctx, mode_key=None, base=None):
+        """One variant's card: the product's card, with this variant's id,
+        price, stock, pictures and specs. `price_ctx` is keyed by template
+        (as for _serialize_product), `variant_ctx` by variant. `base` is the
+        product's card already built, so siblings share one."""
+        tmpl = variant.product_tmpl_id
+        vals = dict(base) if base is not None else self._serialize_product(
+            tmpl, None, price_ctx, mode_key)
+        entry = variant_ctx.get(variant.id) or {}
+
+        size = ' · '.join(variant.product_template_attribute_value_ids.sorted(
+            lambda x: (x.attribute_id.sequence, x.attribute_id.id)).mapped('name'))
+        vals.update({
+            'id': self._mart369_variant_key(variant),
+            'variantGroup': str(tmpl.id),
+            # Reached from the product page, never listed on its own: the
+            # listing shows the product once, not once per colour.
+            'hidden': True,
+            'combo': self._mart369_combo(variant),
+            'images': self._mart369_variant_images(variant),
+            'price': round(entry.get('price', vals['price']) or 0.0, 2),
+        })
+        vals.pop('hasVariants', None)
+        vals.pop('mrp', None)
+        if entry.get('mrp'):
+            vals['mrp'] = round(entry['mrp'], 2)
+        if size:
+            vals['size'] = size
+            vals['unit'] = size
+        specs = self._mart369_variant_specs(variant)
+        if specs:
+            vals['specs'] = specs
+        # The Sales Description, which the WhatsApp confirmation page shows
+        # under the picture (PRODUCT_SETUP_FLOW.md 2.4).
+        if tmpl.description_sale:
+            vals['description'] = tmpl.description_sale
+
+        vals.pop('stock', None)
+        vals.pop('low', None)
+        if 'free_qty' in variant._fields and (
+                'is_storable' not in tmpl._fields or tmpl.is_storable):
+            qty = variant.free_qty
+            if qty <= 0:
+                vals['stock'] = 0
+            elif tmpl.mart_low_stock_at and qty <= tmpl.mart_low_stock_at:
+                vals['low'] = int(qty)
+        return vals
+
+    @api.model
+    def _serialize_variants(self, variants, mode_key=None, price_ctx=None):
+        """Cards for these variants, priced in one pass, each product's card
+        built once and shared by its variants."""
+        variants = variants.sudo()
+        if price_ctx is None:
+            price_ctx = self._price_context_for(variants.product_tmpl_id)
+        variant_ctx = self._price_context_for_variants(variants)
+        bases = {}
+        out = []
+        for v in variants:
+            tmpl = v.product_tmpl_id
+            key = ('all' if tmpl.mart_delivery_text else 'quick') if mode_key == 'own' else mode_key
+            if (tmpl.id, key) not in bases:
+                bases[(tmpl.id, key)] = self._serialize_product(tmpl, None, price_ctx, key)
+            out.append(self._serialize_variant(
+                v, price_ctx, variant_ctx, key, base=bases[(tmpl.id, key)]))
+        return out
 
     # ------------------------------------------------------ the prices
 
