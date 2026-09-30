@@ -236,20 +236,45 @@ class ProductTemplate(models.Model):
             return False
         if len(product.product_variant_ids) != 1:
             return False
-        if abs((product.qty_available or 0.0) - qty) < 1e-9:
+        return self._mart369_desk_count(product.product_variant_id, qty)
+
+    @api.model
+    def _mart369_desk_variant_stock(self, variant):
+        """(on hand, counted) for one variant in the desk's Variants block."""
+        if not self._mart369_admin_tracks_stock():
+            return None, False
+        tmpl = variant.product_tmpl_id
+        counted = 'is_storable' not in tmpl._fields or bool(tmpl.is_storable)
+        return round(variant.qty_available or 0.0, 2), counted
+
+    def _mart369_desk_set_variant_on_hand(self, variant, qty):
+        """Book one variant's counted stock - per variant, which is how a
+        product with sizes or colours is counted."""
+        if not self._mart369_admin_tracks_stock() or 'stock.quant' not in self.env:
+            return False
+        tmpl = variant.product_tmpl_id
+        if 'is_storable' in tmpl._fields and not tmpl.is_storable:
+            return False
+        return self._mart369_desk_count(variant, qty)
+
+    def _mart369_desk_count(self, variant, qty):
+        """`qty` as the counted stock of one variant, the way Odoo's own
+        "Update quantity" does it: an inventory-mode quant, applied - only
+        when the count really changed."""
+        if abs((variant.qty_available or 0.0) - qty) < 1e-9:
             return False
         location = self.env['stock.warehouse'].search(
             [('company_id', '=', self.env.company.id)], limit=1).lot_stock_id
         if not location:
             return False
         Quant = self.env['stock.quant'].with_context(inventory_mode=True)
-        quant = Quant.search([('product_id', '=', product.product_variant_id.id),
+        quant = Quant.search([('product_id', '=', variant.id),
                               ('location_id', '=', location.id)], limit=1)
         if quant:
             quant.inventory_quantity = qty
         else:
             quant = Quant.create({
-                'product_id': product.product_variant_id.id,
+                'product_id': variant.id,
                 'location_id': location.id,
                 'inventory_quantity': qty,
             })

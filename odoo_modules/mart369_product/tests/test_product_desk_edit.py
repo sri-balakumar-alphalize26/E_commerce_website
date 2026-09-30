@@ -32,26 +32,26 @@ class TestProductDeskEditing(TransactionCase):
 
     # ------------------------------------------------------- what it offers
 
-    def test_a_new_product_is_offered_everything(self):
-        """Nothing to resolve against yet, so nothing is taken away."""
+    def test_a_new_product_is_offered_the_senior_setup(self):
+        """PRODUCT_SETUP_FLOW.md 2.4, and the website's own extras - nothing
+        that repeats a fact the setup already holds."""
         form = self.Product.mart369_desk_form()
         self.assertIsNone(form['id'])
         boxes = self._boxes(form)
-        for column in ('name', 'list_price', 'public_categ_ids',
-                       'mart_material', 'mart_item_width'):
+        for column in ('name', 'type', 'is_storable', 'list_price', 'standard_price',
+                       'sale_ok', 'public_categ_ids', 'categ_id', 'description_sale'):
             self.assertIn(column, boxes)
+        for column in ('mart_material', 'mart_item_width', 'mart_features',
+                       'description_ecommerce', 'mart_brand', 'default_code',
+                       'barcode', 'taxes_id', 'weight'):
+            self.assertNotIn(column, boxes, '%s repeats the setup or is not asked' % column)
 
-    def test_a_hidden_field_is_not_asked_for(self):
-        """The same answer the Odoo form and the shopper's page get."""
-        field = self.Field.search(
-            [('odoo_field', '=', 'mart_material')], limit=1)
-        self.Field.set_product_state(field.id, self.product.id, 'hide')
-        self.product.invalidate_recordset()
-
-        form = self.Product.mart369_desk_form(product_id=self.product.id)
-        self.assertNotIn('mart_material', self._boxes(form))
-        self.assertIn('mart_item_width', self._boxes(form),
-                      'only the hidden one should go')
+    def test_website_extras_are_one_folded_group(self):
+        form = self.Product.mart369_desk_form()
+        group = next(g for g in form['groups'] if g['title'] == 'Website only')
+        self.assertTrue(group['folded'])
+        self.assertFalse(group['deskOnly'], "Odoo's product form shows it too")
+        self.assertIn('compare_list_price', {b['name'] for b in group['boxes']})
 
     def test_the_structural_boxes_are_always_asked_for(self):
         """A product with no name, price or category is not a product.
@@ -76,21 +76,19 @@ class TestProductDeskEditing(TransactionCase):
         form = self.Product.mart369_desk_form()
         labels = {b['name']: b['label']
                   for g in form['groups'] for b in g['boxes']}
-        self.assertEqual(labels['mart_material'],
-                         self.Product._fields['mart_material'].string)
+        self.assertEqual(labels['mart_note'],
+                         self.Product._fields['mart_note'].string)
 
-    def test_the_shop_words_are_used_where_odoo_differs(self):
-        """A shopkeeper meets "Article ID" on the page, so they meet it here.
-
-        The Odoo product form makes the same relabels. Three screens saying
-        "Article ID", "Internal Reference" and "Article ID" for one column is
-        how somebody concludes there are two of them.
-        """
+    def test_the_setup_guides_words_are_used(self):
+        """The words PRODUCT_SETUP_FLOW.md uses, so the guide and the screen
+        read the same."""
         form = self.Product.mart369_desk_form()
         labels = {b['name']: b['label']
                   for g in form['groups'] for b in g['boxes']}
-        self.assertEqual(labels['default_code'], 'Article ID')
-        self.assertEqual(labels['list_price'], 'Price')
+        self.assertEqual(labels['list_price'], 'Sales Price')
+        self.assertEqual(labels['standard_price'], 'Cost')
+        self.assertEqual(labels['categ_id'], 'Category')
+        self.assertEqual(labels['description_sale'], 'Sales Description')
         self.assertEqual(labels['public_categ_ids'], 'Categories')
 
     # ------------------------------------------------------------- writing
@@ -126,16 +124,15 @@ class TestProductDeskEditing(TransactionCase):
     def test_a_column_the_desk_does_not_show_cannot_be_written(self):
         """The allowlist, which is the reason this method is safe to expose.
 
-        `sale_ok` - whether the product can be sold at all - is not on this
-        screen, and sending it must not work - otherwise the screen's honesty
-        about what it edits is only skin deep. (Cost used to be the example;
-        it is a box on the screen now.)
+        `default_code` is not on this screen any more, and sending it must not
+        work - otherwise the screen's honesty about what it edits is only skin
+        deep.
         """
-        self.assertTrue(self.product.sale_ok)
+        self.product.default_code = 'KEEP-1'
         self.Product.mart369_desk_save(
-            {'name': 'Still Fine', 'sale_ok': False},
+            {'name': 'Still Fine', 'default_code': 'SNEAKED'},
             product_id=self.product.id)
-        self.assertTrue(self.product.sale_ok)
+        self.assertEqual(self.product.default_code, 'KEEP-1')
 
     def test_the_page_configuration_is_not_touched(self):
         """The builder's half of the split stays the builder's."""
@@ -220,11 +217,7 @@ class TestProductDeskBoxKinds(TransactionCase):
         self.assertEqual(self._box('mart_unit_text')['kind'], 'measure')
         self.assertIn('g', self._box('mart_unit_text')['units'])
         self.assertEqual(self._box('mart_per_unit')['kind'], 'per_unit')
-        self.assertIn('cm', self._box('mart_item_height')['units'])
         self.assertIn('New', self._box('mart_home_tag')['options'])
-        self.assertEqual(self._box('mart_material')['kind'], 'choice')
-        self.assertEqual(self._box('mart_features')['kind'], 'points')
-        self.assertEqual(self._box('mart_in_the_box')['sep'], ', ')
         delivery = self._box('mart_delivery_text')
         self.assertTrue(delivery['range'])
         self.assertEqual(delivery['units'], ['days', 'weeks', 'months'])
@@ -234,26 +227,19 @@ class TestProductDeskBoxKinds(TransactionCase):
         self.assertNotIn('kind', self._box('name'))
 
     def test_joined_values_are_stored_as_the_app_reads_them(self):
-        features = 'Fast charging\nFoldable plug\nTwo ports'
         pid = self.Product.mart369_desk_save({
             'name': 'Kinds Test',
             'mart_unit_text': '250 g',
             'mart_per_unit': '17.25 per 250 g',
             'mart_home_tag': 'New',
-            'mart_features': features,
-            'mart_in_the_box': 'Product, cable, user manual',
-            'mart_item_height': '12 cm',
             'mart_delivery_text': '3-5 days',
         })
         product = self.Product.browse(pid)
         self.assertEqual(product.mart_unit_text, '250 g')
         self.assertEqual(product.mart_per_unit, '17.25 per 250 g')
-        self.assertEqual(product.mart_features, features)
-        self.assertEqual(product.mart_in_the_box, 'Product, cable, user manual')
         self.assertEqual(product.mart_delivery_text, '3-5 days')
 
         values = self.Product.mart369_desk_form(product_id=pid)['values']
-        self.assertEqual(values['mart_item_height'], '12 cm')
         self.assertEqual(values['mart_home_tag'], 'New')
 
     def test_an_old_value_that_does_not_fit_comes_back_untouched(self):
@@ -261,11 +247,6 @@ class TestProductDeskBoxKinds(TransactionCase):
             'name': 'Old Wording', 'mart_unit_text': 'Approx 1 kilo'})
         values = self.Product.mart369_desk_form(product_id=product.id)['values']
         self.assertEqual(values['mart_unit_text'], 'Approx 1 kilo')
-
-    def test_weight_is_a_number_box_in_kg(self):
-        box = self._box('weight')
-        self.assertTrue(box['numeric'])
-        self.assertEqual(box['units'][0], 'kg', 'the unit Odoo stores it in comes first')
 
     def test_an_empty_price_box_is_empty_not_zero(self):
         product = self.Product.create({'name': 'No MRP'})
@@ -354,42 +335,36 @@ class TestProductDeskOdooFields(TransactionCase):
     def _box(self, form, name):
         return next((b for g in form['groups'] for b in g['boxes'] if b['name'] == name), None)
 
-    def test_the_section_is_desk_only(self):
+    def test_the_product_section_is_desk_only(self):
         form = self.Product.mart369_desk_form()
-        group = self._group(form, 'Stock, tax and company')
+        group = self._group(form, 'Product')
         self.assertTrue(group['deskOnly'], "Odoo's form already shows these")
 
     def test_each_box_says_how_it_is_drawn(self):
         form = self.Product.mart369_desk_form()
         self.assertEqual(self._box(form, 'type')['kind'], 'select')
         self.assertEqual(self._box(form, 'categ_id')['kind'], 'select')
-        self.assertEqual(self._box(form, 'taxes_id')['kind'], 'tags')
-        self.assertEqual(self._box(form, 'company_id')['options'][0], ['', 'All companies'])
+        self.assertEqual(self._box(form, 'sale_ok')['kind'], 'bool')
         self.assertNotIn('kind', self._box(form, 'public_categ_ids'),
                          'the app categories keep their own chip list')
 
     def test_a_new_product_starts_from_odoos_defaults(self):
-        """The company's taxes and default category, as Odoo's own form."""
         values = self.Product.mart369_desk_form()['values']
-        defaults = self.Product.default_get(['type', 'taxes_id'])
+        defaults = self.Product.default_get(['type'])
         if 'type' in defaults:
             self.assertEqual(values.get('type'), defaults['type'])
-        if defaults.get('taxes_id'):
-            self.assertTrue(values.get('taxes_id'), "the company's sale tax is filled in")
 
     def test_odoo_fields_are_saved(self):
-        tax = self.env['account.tax'].search([('type_tax_use', '=', 'sale')], limit=1)
         categ = self.env['product.category'].search([], limit=1)
         pid = self.Product.mart369_desk_save({
-            'name': 'Zz Odoo Fields', 'type': 'service', 'barcode': '0036900100017',
-            'categ_id': str(categ.id), 'taxes_id': tax.ids, 'company_id': '',
+            'name': 'Zz Odoo Fields', 'type': 'service', 'categ_id': str(categ.id),
+            'sale_ok': False, 'description_sale': 'Two USB-C ports',
         })
         product = self.Product.browse(pid)
         self.assertEqual(product.type, 'service')
-        self.assertEqual(product.barcode, '0036900100017', 'leading zeros kept')
         self.assertEqual(product.categ_id, categ)
-        self.assertEqual(product.taxes_id, tax)
-        self.assertFalse(product.company_id)
+        self.assertFalse(product.sale_ok)
+        self.assertEqual(product.description_sale, 'Two USB-C ports')
 
 
 @tagged('post_install', '-at_install')
@@ -413,45 +388,91 @@ class TestProductDeskNumbers(TransactionCase):
             self.env['product.template'].mart369_desk_save({'name': 'Zz N', 'mart_on_hand': '1e'})
 
 
-@tagged('post_install', '-at_install')
-class TestProductDeskTaxes(TransactionCase):
-    """One "5%", not one per company."""
-
-    def _box(self, form, name):
-        return next(b for g in form['groups'] for b in g['boxes'] if b['name'] == name)
-
-    def test_a_new_product_is_offered_this_companys_taxes(self):
-        form = self.env['product.template'].mart369_desk_form()
-        offered = self.env['account.tax'].browse([o[0] for o in self._box(form, 'taxes_id')['options']])
-        self.assertEqual(offered.company_id, self.env.company)
-        self.assertTrue(set(form['values'].get('taxes_id', [])) <= set(offered.ids),
-                        'the default taxes are ones the box can show')
-
-    def test_a_tax_the_product_already_has_stays_offered(self):
-        other = self.env['account.tax'].search([
-            ('type_tax_use', '=', 'sale'), ('company_id', '!=', self.env.company.id)], limit=1)
-        if not other:
-            self.skipTest('only one company')
-        product = self.env['product.template'].create({'name': 'Zz Tax', 'taxes_id': [(6, 0, other.ids)]})
-        form = self.env['product.template'].mart369_desk_form(product_id=product.id)
-        self.assertIn(other.id, [o[0] for o in self._box(form, 'taxes_id')['options']])
 
 
 @tagged('post_install', '-at_install')
-class TestProductDeskBarcode(TransactionCase):
-    """Barcodes are digits. An old one with letters is left alone."""
+class TestProductDeskVariants(TransactionCase):
+    """The Variants block: attributes, price extras, and each variant's own
+    image, photos, specs and stock - PRODUCT_SETUP_FLOW.md 2.1, 2.4, 2.5."""
 
-    def test_letters_are_refused(self):
-        with self.assertRaisesRegex(UserError, 'digits only'):
-            self.env['product.template'].mart369_desk_save({'name': 'Zz B', 'barcode': 'ABC123'})
+    GIF = 'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
 
-    def test_an_old_letter_barcode_left_alone_still_saves(self):
-        product = self.env['product.template'].create({'name': 'Zz Old', 'barcode': 'OLD-369-X'})
-        self.env['product.template'].mart369_desk_save(
-            {'name': 'Zz Old', 'barcode': 'OLD-369-X', 'list_price': '5'}, product_id=product.id)
-        self.assertEqual(product.list_price, 5)
+    def setUp(self):
+        super().setUp()
+        self.Product = self.env['product.template']
+        self.ram = self.env['product.attribute'].create({
+            'name': 'Zz Desk RAM', 'create_variant': 'always',
+            'value_ids': [(0, 0, {'name': '8GB'}), (0, 0, {'name': '16GB'})],
+        })
+        self.eight, self.sixteen = self.ram.value_ids
+        self.pid = self.Product.mart369_desk_save({'name': 'Zz Desk Laptop', 'list_price': 600})
+        self.product = self.Product.browse(self.pid)
 
-    def test_the_box_is_digits(self):
-        form = self.env['product.template'].mart369_desk_form()
-        box = next(b for g in form['groups'] for b in g['boxes'] if b['name'] == 'barcode')
-        self.assertEqual((box['kind'], box['max']), ('digits', 14))
+    def _lines(self, **extras):
+        return [{'attribute_id': self.ram.id,
+                 'value_ids': [self.eight.id, self.sixteen.id],
+                 'extras': extras}]
+
+    def test_the_form_offers_the_attributes_and_the_rows(self):
+        block = self.Product.mart369_desk_form(product_id=self.pid)['variants']
+        self.assertIn(self.ram.id, [a['id'] for a in block['attributes']])
+        self.assertEqual(block['lines'], [])
+        self.assertEqual(len(block['rows']), 1, 'a product with no choice is one variant')
+
+    def test_saving_lines_makes_the_variants_with_their_extras(self):
+        self.Product.mart369_desk_save({}, product_id=self.pid, variants={
+            'lines': self._lines(**{str(self.sixteen.id): '200'})})
+        self.assertEqual(len(self.product.product_variant_ids), 2)
+        prices = sorted(self.product.product_variant_ids.mapped('lst_price'))
+        self.assertEqual(prices, [600.0, 800.0])
+        line = self.Product.mart369_desk_form(product_id=self.pid)['variants']['lines'][0]
+        self.assertEqual(line['extras'], {str(self.sixteen.id): 200.0})
+
+    def test_a_typed_value_is_added_to_the_attribute(self):
+        self.Product.mart369_desk_save({}, product_id=self.pid, variants={'lines': [{
+            'attribute_id': self.ram.id, 'value_ids': [self.eight.id],
+            'new_values': ['32GB'], 'extras': {'32GB': '500'}}]})
+        self.assertIn('32GB', self.ram.value_ids.mapped('name'))
+        self.assertEqual(sorted(self.product.product_variant_ids.mapped('lst_price')), [600.0, 1100.0])
+
+    def test_removing_the_line_leaves_one_variant(self):
+        self.Product.mart369_desk_save({}, product_id=self.pid, variants={'lines': self._lines()})
+        self.Product.mart369_desk_save({}, product_id=self.pid, variants={'lines': []})
+        self.assertEqual(len(self.product.product_variant_ids), 1)
+
+    def test_a_variant_gets_its_own_image(self):
+        variant = self.product.product_variant_id
+        self.Product.mart369_desk_save({}, product_id=self.pid, variants={
+            'per': {str(variant.id): {'image': self.GIF}}})
+        self.assertTrue(variant.image_variant_1920)
+
+    def test_another_products_variant_is_left_alone(self):
+        other = self.Product.create({'name': 'Zz Someone Else'}).product_variant_id
+        self.Product.mart369_desk_save({}, product_id=self.pid, variants={
+            'per': {str(other.id): {'image': self.GIF}}})
+        self.assertFalse(other.image_variant_1920)
+
+    def test_variant_photos_and_specs_when_the_tabs_exist(self):
+        """The Variant images / Variant specs tabs come from the WhatsApp
+        package, through mart369_whatsapp_bridge; skipped without it."""
+        if not self.Product._mart369_desk_media_ok():
+            self.skipTest('no module gives variants photos and specs')
+        variant = self.product.product_variant_id
+        self.Product.mart369_desk_save({}, product_id=self.pid, variants={'per': {str(variant.id): {
+            'pictures': {'add': [{'name': 'back', 'data': self.GIF}], 'remove': [], 'order': []},
+            'specs': [{'name': 'Warranty', 'value': '1 year'}, {'name': 'Ports', 'value': '2x USB-C'}],
+        }}})
+        row = self.Product.mart369_desk_form(product_id=self.pid)['variants']['rows'][0]
+        self.assertEqual([p['name'] for p in row['pictures']], ['back'])
+        self.assertEqual([(s['name'], s['value']) for s in row['specs']],
+                         [('Warranty', '1 year'), ('Ports', '2x USB-C')])
+
+        # The whole table is sent back in its new order; a missing row goes.
+        first, second = row['specs']
+        self.Product.mart369_desk_save({}, product_id=self.pid, variants={'per': {str(variant.id): {
+            'specs': [{'id': second['id'], 'name': 'Ports', 'value': '2x USB-C'}],
+            'pictures': {'add': [], 'remove': [row['pictures'][0]['id']], 'order': []},
+        }}})
+        row = self.Product.mart369_desk_form(product_id=self.pid)['variants']['rows'][0]
+        self.assertEqual([s['name'] for s in row['specs']], ['Ports'])
+        self.assertEqual(row['pictures'], [])

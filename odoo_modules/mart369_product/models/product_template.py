@@ -131,28 +131,29 @@ class ProductTemplate(models.Model):
     #
     # Labels are not repeated here. They come from the field definitions, so
     # renaming a field renames its box and the two cannot drift.
+    #
+    # 'Product' is the setup the WhatsApp selling flow's own guide asks for
+    # (PRODUCT_SETUP_FLOW.md 2.4) and nothing else: one record serves the
+    # website, the chat and the counter, so a product fact has one box. The
+    # model line's choices, and each variant's photos, specs and stock, are
+    # the Variants block (mart369_desk_variants) - not boxes here.
+    #
+    # 'Website only' is what the website adds on top and the chat never
+    # shows; drawn folded, so the product itself comes first.
     MART_DESK_GROUPS = [
-        # `mart_brand` is mart369_catalog's; skipped when it is not installed.
-        ('Basics', ['name', 'mart_brand', 'default_code', 'public_categ_ids',
-                    'list_price', 'compare_list_price', 'standard_price']),
-        ('Wording on the card', ['mart_unit_text', 'mart_per_unit',
-                                 'mart_note', 'mart_home_tag']),
-        ('What the page shows', ['mart_features', 'mart_in_the_box',
-                                 'mart_material', 'mart_item_height',
-                                 'mart_item_length', 'mart_item_width',
-                                 'weight', 'description_ecommerce']),
-        ('Stock and delivery', ['mart_low_stock_at', 'mart_delivery_text']),
-        # Odoo's own product fields, so a product can be set up completely from
-        # the desk. `mart_on_hand` is not a column: stock is counted, not
-        # stored, and mart369_catalog books it (see _mart369_desk_on_hand_box).
-        ('Stock, tax and company', ['type', 'is_storable', 'mart_on_hand',
-                                    'barcode', 'categ_id', 'taxes_id',
-                                    'supplier_taxes_id', 'company_id']),
+        ('Product', ['name', 'type', 'is_storable', 'list_price', 'standard_price',
+                     'sale_ok', 'public_categ_ids', 'categ_id', 'description_sale']),
+        ('Website only', ['compare_list_price', 'mart_home_tag',
+                          'mart_delivery_text', 'mart_low_stock_at',
+                          'mart_unit_text', 'mart_per_unit', 'mart_note']),
     ]
 
     # Groups drawn on the desk only. Inside Odoo's own product form these
     # fields are already on the page, just above the editor.
-    MART_DESK_DESK_ONLY = ('Stock, tax and company',)
+    MART_DESK_DESK_ONLY = ('Product',)
+
+    # Groups drawn folded until opened.
+    MART_DESK_FOLDED = ('Website only',)
 
     # Asked for on every product, whatever the product page is told to print.
     # A product with no name or no price is not a product, and
@@ -170,10 +171,12 @@ class ProductTemplate(models.Model):
     # meeting "Internal Reference" on one of the three.
     MART_DESK_LABELS = {
         'default_code': 'Article ID',
-        'list_price': 'Price',
+        'list_price': 'Sales Price',
         'compare_list_price': 'MRP',
         'standard_price': 'Cost',
         'public_categ_ids': 'Categories',
+        'categ_id': 'Category',
+        'description_sale': 'Sales Description',
         'weight': 'Net weight',
         'description_ecommerce': 'Description',
     }
@@ -213,14 +216,30 @@ class ProductTemplate(models.Model):
 
     # Help in the shop's words where Odoo's own help is about its website.
     MART_DESK_HELP = {
-        'compare_list_price': 'The old price, shown struck through beside the '
-                              'price. Leave empty when there is no discount.',
-        'standard_price': 'What one costs you. Not shown to shoppers - Odoo '
-                          'uses it for margins and the value of your stock.',
+        'list_price': 'The price customers pay, on the website and on '
+                      'WhatsApp. A choice can add to it (16GB +200) under '
+                      'Variants.',
+        'compare_list_price': 'Website only. The old price, shown struck '
+                              'through beside the price. Leave empty when '
+                              'there is no discount.',
+        'standard_price': 'What one costs you. Needed for bargaining on '
+                          'WhatsApp to go below the sales price; never shown '
+                          'to customers.',
         'is_storable': 'Count this product in stock. Off for services and '
                        'things you never run out of.',
-        'categ_id': "Odoo's own accounting and stock category - not the aisles "
-                    "the app shows, which are Categories above.",
+        'sale_ok': 'Off and the product is offered nowhere - not on the '
+                   'website, not on WhatsApp.',
+        'public_categ_ids': 'The aisles on the website - and the categories '
+                            'of the WhatsApp NEW ORDER menu, which walks the '
+                            'same tree.',
+        'categ_id': "The category whose vendors are asked for a price when "
+                    "this is out of stock (its Vendors tab).",
+        'description_sale': 'Shown under the picture on the WhatsApp '
+                            'confirmation page and on the website product page.',
+        'mart_delivery_text': 'Website only. Filled in = an Express product '
+                              'with this delivery time; empty = Quick.',
+        'mart_low_stock_at': 'Website only. The card says "Only N left" once '
+                             'stock is at or below this.',
         'company_id': 'Which company sells it. Empty means every company.',
     }
 
@@ -416,16 +435,11 @@ class ProductTemplate(models.Model):
                     'title': title,
                     'boxes': boxes,
                     'deskOnly': title in self.MART_DESK_DESK_ONLY,
+                    'folded': title in self.MART_DESK_FOLDED,
                 })
 
-        photos = []
-        if product and 'product_template_image_ids' in self._fields:
-            photos = [{
-                'id': image.id,
-                'name': image.name or '',
-                'url': '/web/image/product.image/%s/image_256' % image.id,
-            } for image in product.product_template_image_ids]
-
+        # One picture for the product; more photos are per variant (the
+        # Variants block). A product's older gallery is left where it is.
         return {
             'id': product.id or None,
             'groups': groups,
@@ -433,7 +447,8 @@ class ProductTemplate(models.Model):
             'photo': ('/web/image/product.template/%s/image_256?unique=%s'
                       % (product.id, product.write_date)
                       if product and product.image_1920 else ''),
-            'photos': photos,
+            'photos': [],
+            'variants': self._mart369_desk_variants(product),
             'categories': [
                 # The model's own order (sequence, then name). There is no
                 # `complete_name` on this model in 19, though `display_name`
@@ -444,8 +459,11 @@ class ProductTemplate(models.Model):
         }
 
     @api.model
-    def mart369_desk_save(self, values, product_id=None, photos=None):
-        """Create or update a product from the desk. Returns its id."""
+    def mart369_desk_save(self, values, product_id=None, photos=None, variants=None):
+        """Create or update a product from the desk. Returns its id.
+
+        `variants` is the Variants block: {'per': {variant id: {...}},
+        'lines': [...]} - see _mart369_desk_save_variants."""
         self._mart369_desk_check()
 
         allowed = {n for _title, names in self.MART_DESK_GROUPS for n in names}
@@ -521,7 +539,159 @@ class ProductTemplate(models.Model):
         if on_hand not in (None, ''):
             self._mart369_desk_set_on_hand(
                 product, self._mart369_desk_number(None, on_hand, label='On hand'))
+        if isinstance(variants, dict):
+            self._mart369_desk_save_variants(product, variants)
         return product.id
+
+    # ------------------------------------------------------------ variants
+    #
+    # The model line's choices and each variant's own things, as the WhatsApp
+    # flow's guide sets a product up (PRODUCT_SETUP_FLOW.md 2.1, 2.4, 2.5):
+    # attributes with their values and price extras, then per variant its
+    # image and stock. The variant's photo tab and specs table belong to the
+    # sales_automation package and are read and written by
+    # mart369_whatsapp_bridge through the two `extras` hooks below, so this
+    # module never touches that package itself.
+
+    @api.model
+    def _mart369_desk_variant_stock(self, variant):
+        """(on hand, counted) for one variant; stock-aware modules override."""
+        return None, False
+
+    def _mart369_desk_set_variant_on_hand(self, variant, qty):
+        return False
+
+    @api.model
+    def _mart369_desk_media_ok(self):
+        """True when a module provides the Variant images / Variant specs tabs."""
+        return False
+
+    @api.model
+    def _mart369_desk_variant_extras(self, variant):
+        """{'pictures': [...], 'specs': [...]} for one variant, or {}."""
+        return {}
+
+    def _mart369_desk_save_variant_extras(self, variant, data):
+        """Write one variant's pictures / specs; see the bridge."""
+        return False
+
+    @api.model
+    def _mart369_desk_variants(self, product):
+        """The Variants block of the desk: every attribute there is to pick
+        from, this product's lines with their price extras, and one row per
+        variant."""
+        Attribute = self.env['product.attribute']
+        attributes = [{
+            'id': a.id,
+            'name': a.name,
+            'display': a.display_type or 'radio',
+            'values': [{'id': v.id, 'name': v.name,
+                        **({'color': v.html_color} if v.html_color else {})}
+                       for v in a.value_ids],
+        } for a in Attribute.search([('create_variant', '!=', 'no_variant')],
+                                    order='sequence, id', limit=200)]
+        out = {'attributes': attributes, 'lines': [], 'rows': [],
+               'media': self._mart369_desk_media_ok()}
+        if not product:
+            return out
+        for line in product.attribute_line_ids.sorted(
+                lambda l: (l.attribute_id.sequence, l.attribute_id.id)):
+            out['lines'].append({
+                'attribute_id': line.attribute_id.id,
+                'value_ids': line.value_ids.ids,
+                'extras': {str(p.product_attribute_value_id.id): p.price_extra
+                           for p in line.product_template_value_ids if p.price_extra},
+            })
+        for variant in product.product_variant_ids:
+            on_hand, counted = self._mart369_desk_variant_stock(variant)
+            label = ' · '.join(variant.product_template_attribute_value_ids.sorted(
+                lambda x: (x.attribute_id.sequence, x.attribute_id.id)).mapped('name'))
+            out['rows'].append({
+                'id': variant.id,
+                'label': label or product.name,
+                'image': ('/web/image/product.product/%s/image_variant_256?unique=%s'
+                          % (variant.id, variant.write_date)
+                          if variant.image_variant_1920 else ''),
+                'onHand': on_hand,
+                'counted': counted,
+                'price': round(variant.lst_price, 2),
+                **self._mart369_desk_variant_extras(variant),
+            })
+        return out
+
+    def _mart369_desk_save_variants(self, product, data):
+        """Apply the Variants block: each variant's own changes first (they
+        name variants that exist now), then the attribute lines, which may
+        make new variants or retire old ones."""
+        mine = product.product_variant_ids
+        for key, change in (data.get('per') or {}).items():
+            try:
+                variant = mine.filtered(lambda v: v.id == int(key))
+            except (TypeError, ValueError):
+                continue
+            if not variant or not isinstance(change, dict):
+                continue  # not one of this product's variants
+            if 'image' in change:
+                variant.image_variant_1920 = change['image'] or False
+            if change.get('onHand') not in (None, ''):
+                self._mart369_desk_set_variant_on_hand(
+                    variant, self._mart369_desk_number(None, change['onHand'], label='On hand'))
+            self._mart369_desk_save_variant_extras(variant, change)
+        if isinstance(data.get('lines'), list):
+            self._mart369_desk_save_lines(product, data['lines'])
+
+    def _mart369_desk_save_lines(self, product, lines):
+        """[{attribute_id, value_ids, new_values: [name], extras: {value id or
+        new name: price}}] -> the product's attribute lines, as the product
+        form's Attributes & Variants tab would set them. A value typed that
+        the attribute does not have yet is added to the attribute, for every
+        product to use (Sales > Configuration > Attributes)."""
+        Attribute = self.env['product.attribute']
+        Value = self.env['product.attribute.value']
+        wanted, extras = {}, {}
+        for line in lines:
+            if not isinstance(line, dict):
+                continue
+            attribute = Attribute.browse(int(line.get('attribute_id') or 0)).exists()
+            if not attribute:
+                continue
+            ids = [int(v) for v in (line.get('value_ids') or [])
+                   if int(v) in attribute.value_ids.ids]
+            for name in (line.get('new_values') or []):
+                name = ' '.join(str(name or '').split())
+                if not name:
+                    continue
+                found = attribute.value_ids.filtered(lambda v: v.name.lower() == name.lower())[:1]
+                if not found:
+                    found = Value.create({'attribute_id': attribute.id, 'name': name})
+                ids.append(found.id)
+                price = (line.get('extras') or {}).get(name)
+                if price not in (None, ''):
+                    extras[found.id] = price
+            for key, price in (line.get('extras') or {}).items():
+                if str(key).isdigit():
+                    extras[int(key)] = price
+            if ids:
+                wanted[attribute.id] = list(dict.fromkeys(ids))
+
+        commands = []
+        for line in product.attribute_line_ids:
+            if line.attribute_id.id in wanted:
+                if set(line.value_ids.ids) != set(wanted[line.attribute_id.id]):
+                    commands.append((1, line.id, {'value_ids': [(6, 0, wanted[line.attribute_id.id])]}))
+                wanted.pop(line.attribute_id.id)
+            else:
+                commands.append((2, line.id))
+        for attribute_id, ids in wanted.items():
+            commands.append((0, 0, {'attribute_id': attribute_id, 'value_ids': [(6, 0, ids)]}))
+        if commands:
+            product.write({'attribute_line_ids': commands})
+
+        for ptav in product.attribute_line_ids.product_template_value_ids:
+            value_id = ptav.product_attribute_value_id.id
+            if value_id in extras:
+                ptav.price_extra = self._mart369_desk_number(
+                    None, extras[value_id], label='Price extra')
 
     def _mart369_desk_number(self, field, value, whole=False, label=None):
         """A number box's value, refused in words when it is not a number.

@@ -152,15 +152,18 @@ class Mart369SearchAdminApi(http.Controller):
         body = self._body()
         values = body.get('values')
         photos = body.get('photos') or {}
+        variants = body.get('variants')
         if not isinstance(values, dict) or not isinstance(photos, dict):
             return self._fail('Send the product as values and photos.')
+        if variants is not None and not isinstance(variants, dict):
+            return self._fail('Send the variants as an object.')
         try:
             # A savepoint, because the failure is caught and answered: without
             # one, a photograph that fails after the values were written would
             # still commit those values, and half a save is worse than none.
             with request.env.cr.savepoint():
                 new_id = request.env['product.template'].mart369_desk_save(
-                    values, product_id=product_id, photos=photos)
+                    values, product_id=product_id, photos=photos, variants=variants)
         except AccessError as exc:
             return self._fail(str(exc), status=403)
         except (UserError, ValidationError) as exc:

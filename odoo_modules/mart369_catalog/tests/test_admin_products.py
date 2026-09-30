@@ -218,7 +218,10 @@ class TestAdminProductEditRoutes(HttpCase):
 
         form = self.url_open('/369mart/admin/products/form?id=%s' % new_id).json()
         self.assertEqual(form['values']['name'], 'Zz Route Made')
-        self.assertEqual(len(form['photos']), 1)
+        # One picture per product; more photos are per variant. An older
+        # gallery is kept, just no longer offered for editing here.
+        self.assertEqual(form['photos'], [])
+        self.assertIn('rows', form['variants'])
         self.assertTrue(form['photo'])
 
         gallery = product.product_template_image_ids
@@ -314,9 +317,18 @@ class TestDeskOnHand(TransactionCase):
         product.invalidate_recordset()
         self.assertEqual(product.qty_available, 20)
 
-    def test_the_box_only_shows_once_the_product_is_counted(self):
-        box = self._box(self.Tmpl.mart369_desk_form(), 'mart_on_hand')
-        self.assertEqual(box['showIf'], 'is_storable')
+    def test_each_variant_is_counted_on_its_own(self):
+        """Stock is per variant now (the Variants block), as a laptop in
+        two colours is counted: 5 black, 2 silver."""
+        pid = self.Tmpl.mart369_desk_save({
+            'name': 'Zz Variant Count', 'type': 'consu', 'is_storable': True})
+        variant = self.Tmpl.browse(pid).product_variant_id
+        row = self.Tmpl.mart369_desk_form(product_id=pid)['variants']['rows'][0]
+        self.assertTrue(row['counted'])
+        self.Tmpl.mart369_desk_save({}, product_id=pid, variants={
+            'per': {str(variant.id): {'onHand': '7'}}})
+        variant.invalidate_recordset()
+        self.assertEqual(variant.qty_available, 7)
 
     def test_a_service_is_not_counted(self):
         pid = self.Tmpl.mart369_desk_save({
