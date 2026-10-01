@@ -14,87 +14,36 @@ from xml.sax.saxutils import escape
 HERE = pathlib.Path(__file__).resolve().parent.parent
 OUT = HERE / 'data' / 'fields.xml'
 
-DISCLAIMER = ("While we work to ensure product information is correct, "
-              "specifications and packaging may be changed by the "
-              "manufacturer. Always check the details on the product itself.")
-RETURN_TEXT = ("7-day replacement for damaged or wrong items. Keep the "
-               "original packaging.")
-
 # key, label, section, source, odoo_field, default, kind, per_product, note
+#
+# Only what the product page draws now - the product's own setup, as the
+# WhatsApp confirmation page shows it (photos, price, the Variant specs, the
+# Sales Description), real reviews and the rails - and each switch here really
+# leaves its part out (mart369.product.page). The grocery-template rows (key
+# features, product information, returns...) are deleted in
+# data/removed_fields.xml.
 FIELDS = [
     # -- photos --
-    ('images', 'Photos', 'gallery', 'computed', '', '', 'text', 1,
-     'Every picture on the product.'),
-    ('unit_tag', 'Size tag on the photo', 'gallery', 'odoo', 'mart_unit_text', '', 'text', 1,
-     'e.g. 1 kg, shown over the image.'),
+    ('images', 'Photos', 'gallery', 'computed', '', '', 'text', 0,
+     'Every picture of the product and its variant. Always shown.'),
 
     # -- buy box --
-    ('brand', 'Brand', 'buy', 'text', '', '369 Mart Select', 'text', 1,
-     'The link above the product name.'),
     ('name', 'Product name', 'buy', 'odoo', 'name', '', 'text', 0,
      'Always shown - a page without a name would be useless.'),
-    ('rating_summary', 'Star rating', 'buy', 'computed', '', '', 'text', 1,
-     'The 4.3 and the stars under the name.'),
     ('price', 'Price', 'buy', 'odoo', 'list_price', '', 'text', 0,
      'Always shown.'),
     ('mrp', 'MRP and discount', 'buy', 'odoo', 'compare_list_price', '', 'text', 1,
      'The struck-through price and the per-cent-off pill.'),
-    ('per_unit', 'Price per unit', 'buy', 'computed', '', '', 'text', 1,
-     'e.g. 17.25 per 250 g.'),
     ('low_stock', 'Only-N-left warning', 'buy', 'computed', '', '', 'text', 1,
      'Nudges the customer when stock runs low.'),
-    ('pack_sizes', 'Pack sizes', 'buy', 'computed', '', '', 'text', 1,
-     'The 1 kg / 5 kg / 10 kg chooser.'),
-    ('delivery_mode', 'Delivery speed badge', 'buy', 'computed', '', '', 'text', 1,
-     'Quick in 10-20 mins, or Express with the number of days.'),
-    ('wishlist', 'Save-to-list button', 'buy', 'computed', '', '', 'bool', 0,
-     'The heart button.'),
-    ('share', 'Share button', 'buy', 'computed', '', '', 'bool', 0, ''),
-
-    # -- key features --
-    ('features', 'Key features', 'features', 'odoo', 'mart_features', '', 'lines', 1,
-     'One per line. Falls back to the category default.'),
-
-    # -- product information --
-    ('info_brand', 'Brand', 'info', 'text', '', '369 Mart Select', 'text', 1, ''),
-    ('sold_by', 'Sold by', 'info', 'text', '', '369 Mart Retail', 'text', 1,
-     'Who the customer is buying from.'),
-    ('country_of_origin', 'Country of origin', 'info', 'text', '', 'India', 'text', 1,
-     'Required on most marketplaces.'),
-    ('manufacturer_name', 'Manufacturer name', 'info', 'text', '', '', 'text', 1,
-     'Legally required for packaged goods in India.'),
-    ('manufacturer_address', 'Manufacturer address', 'info', 'text', '', '', 'text', 1,
-     'Legally required for packaged goods in India.'),
-    ('article_id', 'Article ID', 'info', 'odoo', 'default_code', '', 'text', 1,
-     'The internal reference.'),
-    ('item_height', 'Item height', 'info', 'odoo', 'mart_item_height', '', 'text', 1, ''),
-    ('item_length', 'Item length', 'info', 'odoo', 'mart_item_length', '', 'text', 1, ''),
-    ('item_width', 'Item width', 'info', 'odoo', 'mart_item_width', '', 'text', 1, ''),
-    ('net_weight', 'Net weight', 'info', 'odoo', 'weight', '', 'text', 1,
-     'Taken from the weight on the product.'),
 
     # -- specifications --
-    ('spec_brand', 'Brand', 'specs', 'text', '', '369 Mart Select', 'text', 1, ''),
-    ('warranty', 'Warranty', 'specs', 'text', '', '', 'text', 1,
-     'e.g. 1 year manufacturer warranty. Usually set per category.'),
-    ('in_the_box', 'In the box', 'specs', 'odoo', 'mart_in_the_box', '', 'text', 1, ''),
-    ('material', 'Material', 'specs', 'odoo', 'mart_material', '', 'text', 1, ''),
-    ('product_type', 'Product type', 'specs', 'computed', '', '', 'text', 1,
-     'The category the product sits in.'),
+    ('variant_specs', 'Variant specs', 'specs', 'computed', '', '', 'text', 1,
+     "The variant's specs table, as the WhatsApp page lists it (Edit product > Variants)."),
 
     # -- description --
-    ('description', 'Description', 'description', 'odoo', 'description_ecommerce', '',
-     'html', 1, 'The long text. Falls back to the sales description.'),
-    ('disclaimer', 'Disclaimer', 'description', 'text', '', DISCLAIMER, 'text', 1,
-     'Shown under the description.'),
-
-    # -- returns --
-    ('returnable', 'Returnable', 'returns', 'text', '', 'yes', 'bool', 1,
-     'Whether this can be returned at all.'),
-    ('return_text', 'Return policy wording', 'returns', 'text', '', RETURN_TEXT, 'text', 1,
-     'Usually set per category.'),
-    ('policy_link', 'View-policy link', 'returns', 'text', '', '/cancellation-policy',
-     'text', 1, 'Where the link goes. That page must exist on the storefront.'),
+    ('sales_description', 'Sales Description', 'description', 'odoo', 'description_sale', '',
+     'text', 1, 'Shown under the picture on the WhatsApp page and here.'),
 
     # -- reviews --
     ('rating', 'Average rating', 'reviews', 'computed', '', '', 'text', 1,
@@ -108,18 +57,12 @@ FIELDS = [
      'Be the first to review this product', 'text', 1,
      'Shown instead of the block when there are no reviews yet.'),
 
-    # -- delivery --
-    ('address', 'Delivery address', 'delivery', 'computed', '', '', 'text', 0,
-     "The customer's own address."),
-    ('explore_category', 'Explore-more link', 'delivery', 'computed', '', '', 'text', 1, ''),
-
     # -- bundle and similar --
     ('bundle_items', 'Frequently bought together', 'bundle', 'computed', '', '', 'text', 1,
      'Uses the accessories set on the product, or picks them automatically.'),
     ('similar_items', 'Similar products', 'similar', 'computed', '', '', 'text', 1,
      'Uses the alternative products set on the product, or the same category.'),
     ('related_items', 'Others you may also like', 'similar', 'computed', '', '', 'text', 1, ''),
-    ('recently_viewed', 'Recently viewed', 'similar', 'computed', '', '', 'text', 1, ''),
 ]
 
 

@@ -17,6 +17,7 @@
 .ad-t-orange { background: #ffeeda; color: #96530a; }
 .ad-t-orange i, .ad-t-amber i { animation: ad-blink 1.6s ease-in-out infinite; }
 .ad-t-green { background: #e3f4e9; color: #14602d; }
+.ad-pills { display: inline-flex; flex-wrap: wrap; gap: 4px; }
 .ad-t-red { background: #fbe9e7; color: #9c2f28; }
 .ad-t-grey { background: #eceff2; color: #5b6b76; }
 .ad-tag { font-size: 11.5px; font-weight: 700; padding: 3px 8px; border-radius: 7px; }
@@ -52,7 +53,9 @@
 .ad-more { padding: 14px; text-align: center; }
 .ad-thumb { flex: none; width: 38px; height: 38px; border-radius: 10px; background: #f4f7f9; display: grid; place-items: center; padding: 4px; overflow: hidden; }
 .ad-thumb img, .ad-thumb svg { width: 100%; height: 100%; object-fit: contain; }
+.ad-table tr.ad-row-open td { background: #eef7fc; }
 .ad-hint { display: flex; align-items: flex-start; gap: 7px; margin: 4px 0 0; font-size: 12.5px; color: var(--ad-muted); line-height: 1.5; }
+.ad-hint-warn { margin: 12px 18px 0; color: var(--ad-amber); font-weight: 600; }
 .ad-hint .hm-ic { flex: none; margin-top: 1px; }
 @keyframes ad-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 @keyframes ad-row { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
@@ -334,6 +337,64 @@ tr.pdk-beat { animation: pdk-beat-row 900ms ease-out; }
 .pdk-clear:hover b { background: #fff; color: #c62828; }
 .pdk-clear:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(198, 40, 40, 0.2); }
 
+/* ---- folded group (Website only) ---- */
+.pdk-fold { display: flex; align-items: baseline; gap: 10px; width: 100%; padding: 0; border: 0; background: none; font: inherit; color: inherit; cursor: pointer; text-align: left; }
+.pdk-fold h3 { margin: 0; }
+.pdk-fold small { flex: 1; }
+.pdk-fold .hm-ic { align-self: center; transition: transform 200ms; }
+.pdk-fold[aria-expanded="true"] .hm-ic { transform: rotate(180deg); }
+.pdk-folding:not(:has(.pdk-fields)) .pdk-sec-head { padding-bottom: 14px; }
+
+/* ---- Attributes & Variants ---- */
+.pdk-vx { display: flex; flex-direction: column; gap: 14px; padding: 0 18px 16px; }
+.pdk-vx-line { border: 1px solid var(--ad-line); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.pdk-vx-line-head { display: flex; justify-content: space-between; align-items: baseline; }
+.pdk-vx-line-head b { font-size: 14px; }
+.pdk-danger-link { color: var(--ad-red); }
+.pdk-vx-values { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.pdk-vx-values .pdk-chip { display: inline-flex; align-items: center; gap: 6px; }
+.pdk-vx-new { border-style: dashed; }
+.pdk-vx-dot { width: 12px; height: 12px; border-radius: 999px; border: 1px solid rgba(19, 33, 43, 0.2); }
+.pdk-vx-type input { height: 30px; width: 110px; padding: 0 10px; border-radius: 999px; border: 1px dashed var(--ad-line); font: inherit; font-size: 12.5px; outline: 0; }
+.pdk-vx-type input:focus { border-color: var(--ad-blue); border-style: solid; }
+.pdk-vx-extras { display: flex; flex-wrap: wrap; gap: 8px 14px; }
+.pdk-vx-extra { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ad-muted); }
+.pdk-vx-extra .pdk-affix input { width: 84px; }
+.pdk-vx-warn { color: var(--ad-orange, #b86a00); margin: 0; }
+.pdk-vx-add { max-width: 360px; }
+
+.pdk-vx-rows { list-style: none; margin: 0; padding: 0 18px 16px; display: flex; flex-direction: column; gap: 8px; }
+.pdk-vx-row { border: 1px solid var(--ad-line); border-radius: 12px; overflow: hidden; }
+.pdk-vx-row.pdk-on { border-color: var(--ad-blue); }
+.pdk-vx-row-head { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 12px; border: 0; background: #fff; font: inherit; color: var(--ad-ink); cursor: pointer; text-align: left; }
+.pdk-vx-row-head b { flex: 1; min-width: 0; font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pdk-vx-row-head .hm-ic:last-child { transition: transform 200ms; }
+.pdk-vx-row.pdk-on .pdk-vx-row-head .hm-ic:last-child { transform: rotate(180deg); }
+.pdk-vx-thumb { flex: none; width: 36px; height: 36px; border-radius: 8px; background: var(--ad-ground); display: grid; place-items: center; overflow: hidden; color: var(--ad-muted); }
+.pdk-vx-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.pdk-vx-price { font-weight: 700; font-size: 13px; font-variant-numeric: tabular-nums; }
+.pdk-vx-stock { font-size: 12px; color: var(--ad-muted); white-space: nowrap; }
+.pdk-vx-body { display: flex; flex-direction: column; gap: 14px; padding: 12px; border-top: 1px solid var(--ad-line); background: var(--ad-ground); }
+.pdk-vx-image { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.pdk-vx-image img { width: 72px; height: 72px; border-radius: 10px; object-fit: cover; background: #fff; }
+.pdk-vx-pics { display: flex; flex-wrap: wrap; gap: 8px; }
+.pdk-vx-pic { position: relative; width: 88px; height: 88px; border-radius: 10px; overflow: hidden; background: #fff; border: 1px solid var(--ad-line); display: grid; place-items: center; }
+.pdk-vx-pic img { width: 100%; height: 100%; object-fit: cover; }
+.pdk-vx-pic > span { position: absolute; left: 2px; right: 2px; bottom: 2px; display: flex; justify-content: center; gap: 2px; }
+.pdk-vx-pic > span .ad-icon-btn { width: 22px; height: 22px; background: rgba(255, 255, 255, 0.92); }
+.pdk-vx-pic > small { position: absolute; top: 4px; left: 4px; font-size: 10px; font-weight: 700; background: #fff; border-radius: 6px; padding: 1px 5px; }
+.pdk-vx-pic.pdk-photo-add { cursor: pointer; border-style: dashed; color: var(--ad-muted); font-size: 12px; gap: 2px; }
+.pdk-vx-specs { width: 100%; border-collapse: collapse; }
+.pdk-vx-specs td { padding: 3px 4px 3px 0; }
+.pdk-vx-specs input { width: 100%; height: 34px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--ad-line); font: inherit; font-size: 13px; background: #fff; }
+.pdk-vx-spec-act { width: 1%; white-space: nowrap; }
+.pdk-vx-spec-foot { display: flex; gap: 16px; }
+.pdk-vx-onhand input { max-width: 160px; }
+@media (max-width: 640px) {
+  .pdk-vx-row-head { flex-wrap: wrap; }
+  .pdk-vx-row-head b { flex-basis: calc(100% - 60px); white-space: normal; }
+}
+
 
 /* ---- pieces the web admin takes from admin.css, drawn here the same way
    and under the same names, so the copied rules above find them. */
@@ -378,5 +439,8 @@ tr.pdk-beat { animation: pdk-beat-row 900ms ease-out; }
     .pdk-embedded .pdk-cols { grid-template-columns: minmax(0, 1fr); }
     .pdk-embedded .pdk-preview { position: static; }
 }
+/* A variant's spec line: its up / down / remove buttons side by side, not
+   stacked (the icon button is a block), so each line stays one row high. */
+.pdk-vx-spec-act .ad-icon-btn { display: inline-grid; vertical-align: middle; width: 28px; height: 28px; }
 
 }

@@ -106,7 +106,34 @@ class ProductPublicCategory(models.Model):
         for category in self:
             if not category.mart_slug and category.name:
                 category.mart_slug = category._mart369_free_slug(category.name)
+        # A twin renamed or moved here renames or moves its Product Category
+        # (product_category.py), so a name is typed once.
+        if not self.env.context.get('mart369_mirror_sync'):
+            for category in self:
+                source = category._mart369_source()
+                source_vals = source and category._mart369_source_vals(vals)
+                if source_vals:
+                    source.sudo().with_context(mart369_mirror_sync=True).write(source_vals)
         return res
+
+    # ----------------------------------------------- the Product Category twin
+
+    def _mart369_source(self):
+        """The Product Category this is the website twin of, or an empty one."""
+        self.ensure_one()
+        return self.env['product.category'].sudo().search(
+            [('mart_mirror_id', '=', self.id)], limit=1)
+
+    def _mart369_source_vals(self, vals):
+        """The Product Category's share of a write on its twin."""
+        self.ensure_one()
+        out = {}
+        if 'name' in vals:
+            out['name'] = self.name
+        if 'parent_id' in vals:
+            out['parent_id'] = (self.parent_id._mart369_source().id or False
+                                if self.parent_id else False)
+        return out
 
     @api.model
     def _mart369_free_slug(self, name, ignore=None):
@@ -355,14 +382,22 @@ class ProductPublicCategory(models.Model):
         vals = self._mart369_admin_clean(values)
         vals['name'] = name
         parent_id = self._mart369_admin_parent(values.get('parent_id'))
+        parent_rec = self.browse(parent_id)
         if parent_id:
-            parent_rec = self.browse(parent_id)
             vals['parent_id'] = parent_id
             # A sub-category's circle is drawn in its own colours; one sent
             # without them starts in its main category's, not the defaults.
             vals.setdefault('mart_tone', parent_rec.mart_tone)
             vals.setdefault('mart_accent', parent_rec.mart_accent)
-        return self.create(vals)._mart369_admin_row()
+        category = self.create(vals)
+        # Its Product Category, so products can be filed under it and
+        # WhatsApp's NEW ORDER lists it (product_category.py): everything the
+        # two keep in step, read off the new twin.
+        source_vals = category._mart369_source_vals(
+            dict.fromkeys(('name', 'parent_id', 'sequence', 'mart_in_app')))
+        self.env['product.category'].sudo().with_context(mart369_mirror_sync=True).create(
+            dict(source_vals, mart_mirror_id=category.id))
+        return category._mart369_admin_row()
 
     @api.model
     def _mart369_admin_clean(self, values):

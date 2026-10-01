@@ -1,4 +1,4 @@
-"""WhatsApp sells the storefront's shelf - its tree, its price."""
+"""WhatsApp sells the storefront's shelf - one category tree, its price."""
 
 import json
 
@@ -13,21 +13,18 @@ class TestCatalog(Mart369BridgeCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        Public = cls.env['product.public.category'].sudo()
-        # The storefront tree the menu should mirror. Sequence 1 puts it
-        # ahead of whatever the live catalogue carries.
-        cls.web_parent = Public.create({'name': 'Bridge Web Shelf', 'sequence': 1})
-        cls.web_child = Public.create({'name': 'Bridge Web Drives',
-                                       'parent_id': cls.web_parent.id,
-                                       'sequence': 1})
-        cls.quick_product.public_categ_ids = [(6, 0, [cls.web_child.id])]
+        Categ = cls.env['product.category'].sudo()
+        # The package's own Product Category. Menu order 1 puts it ahead of
+        # whatever the live catalogue carries.
+        cls.shelf = Categ.create({'name': 'Bridge Drives', 'sa_menu_sequence': 1})
+        cls.quick_product.categ_id = cls.shelf
         cls.hidden = cls.env['product.template'].sudo().create({
             'name': 'Backroom Widget',
             'list_price': 99.0,
             'sale_ok': True,
             'is_published': False,
             'type': 'consu',
-            'public_categ_ids': [(6, 0, [cls.web_child.id])],
+            'categ_id': cls.shelf.id,
         })
         cls.request = cls.env['sa.group.request'].sudo().create({
             'group_id': cls.wa_group.id,
@@ -40,47 +37,43 @@ class TestCatalog(Mart369BridgeCase):
 
     # ---------------------------------------------------------- the tree
 
-    def test_menu_walks_the_storefront_tree(self):
+    def test_menu_lists_the_product_categories_in_menu_order(self):
         top = self.env['sa.group.request']._sa_menu_categories()
-        self.assertIn(self.web_parent, top)
-        self.assertTrue(all(c._name == 'product.public.category' for c in top))
-        # sequence 1 puts the fixture first - the website's own ordering.
-        self.assertEqual(top[0], self.web_parent)
+        self.assertTrue(all(c._name == 'product.category' for c in top))
+        self.assertEqual(top[0], self.shelf, 'WhatsApp menu order 1 comes first')
+
+    def test_a_hidden_category_is_skipped(self):
+        self.shelf.sa_menu_hide = True
+        self.assertNotIn(self.shelf, self.env['sa.group.request']._sa_menu_categories())
 
     def test_category_without_published_products_is_hidden(self):
-        empty = self.env['product.public.category'].sudo().create(
-            {'name': 'Bridge Backroom Only', 'sequence': 2})
-        self.hidden.public_categ_ids = [(6, 0, [empty.id])]
+        empty = self.env['product.category'].sudo().create(
+            {'name': 'Bridge Backroom Only', 'sa_menu_sequence': 2})
+        self.hidden.categ_id = empty
         top = self.env['sa.group.request']._sa_menu_categories()
         self.assertNotIn(empty, top)
 
     def test_menu_lists_published_only(self):
-        products, __ = self.env['sa.group.request']._sa_menu_products(
-            self.web_child)
+        products, __ = self.env['sa.group.request']._sa_menu_products(self.shelf)
         self.assertIn(self.quick_product, products)
         self.assertNotIn(self.hidden, products)
 
-    def test_menu_levels_walk_parent_to_product(self):
-        self.request._sa_menu_show('categ:%d' % self.web_parent.id)
-        menu = self._menu()
-        self.assertIn('Bridge Web Drives', menu)
-        self.assertEqual(menu['Bridge Web Drives']['level'],
-                         'categ:%d' % self.web_child.id)
-        # The child has no sub-categories, so it falls through to products.
-        self.request._sa_menu_show('categ:%d' % self.web_child.id)
+    def test_menu_levels_walk_category_to_product(self):
+        # No sub-categories, so the category falls through to its products.
+        self.request._sa_menu_show('categ:%d' % self.shelf.id)
         menu = self._menu()
         self.assertIn(self.quick_product.name, menu)
         self.assertEqual(menu[self.quick_product.name]['kind'], 'prodpick')
+        self.assertNotIn(self.hidden.name, menu)
 
     def test_not_listed_survives_on_every_level(self):
-        for level in ('categ', 'categ:%d' % self.web_parent.id,
-                      'prod:%d' % self.web_child.id):
+        for level in ('categ', 'categ:%d' % self.shelf.id, 'prod:%d' % self.shelf.id):
             self.request._sa_menu_show(level)
             self.assertTrue([k for k in self._menu() if 'NOT LISTED' in k],
                             'no NOT LISTED on %s' % level)
 
     def test_tap_opens_an_enquiry_for_the_product(self):
-        self.request._sa_menu_show('prod:%d' % self.web_child.id)
+        self.request._sa_menu_show('prod:%d' % self.shelf.id)
         item = self._menu()[self.quick_product.name]
         self.request._sa_menu_tapped(item)
         enquiry = self.env['sa.group.request'].sudo().search(
@@ -88,12 +81,21 @@ class TestCatalog(Mart369BridgeCase):
              ('group_id', '=', self.wa_group.id)], order='id desc', limit=1)
         self.assertTrue(enquiry)
 
-    def test_vendor_sourcing_still_reads_the_internal_category(self):
-        """The menu walks the website tree; the vendor routing must keep
-        reading `categ_id` - that tree kept exactly one job."""
-        before = self.quick_product.categ_id
-        self.request._sa_menu_show('categ:%d' % self.web_child.id)
-        self.assertEqual(self.quick_product.categ_id, before)
+    # ------------------------------------------- the website lists the same
+
+    def test_the_website_twin_follows_menu_order_and_hide(self):
+        twin = self.shelf.mart_mirror_id
+        self.assertEqual(twin.sequence, 1)
+        self.assertTrue(twin.mart_in_app)
+        self.assertEqual(self.quick_product.public_categ_ids, twin)
+        self.shelf.write({'sa_menu_sequence': 5, 'sa_menu_hide': True})
+        self.assertEqual(twin.sequence, 5)
+        self.assertFalse(twin.mart_in_app)
+
+    def test_hiding_it_on_the_website_hides_it_on_whatsapp(self):
+        self.shelf.mart_mirror_id.write({'mart_in_app': False, 'sequence': 7})
+        self.assertTrue(self.shelf.sa_menu_hide)
+        self.assertEqual(self.shelf.sa_menu_sequence, 7)
 
     # --------------------------------------------------- search and price
 

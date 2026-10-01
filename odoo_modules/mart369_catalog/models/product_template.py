@@ -16,7 +16,10 @@ The fix needs no change in the app: `??` and `||` mean a card that *does* carry
 the value wins, so supplying them here retires the fakes quietly.
 """
 
-from odoo import fields, models
+from odoo import api, fields, models
+
+from odoo.addons.mart369_product.models.product_template import (
+    ProductTemplate as DeskProductTemplate)
 
 # A review only counts once the customer has actually been asked for it, and
 # only while staff are still showing it.
@@ -87,3 +90,55 @@ class ProductTemplate(models.Model):
         """What the Brand filter groups by."""
         self.ensure_one()
         return self.mart_brand or ''
+
+    # ------------------------------------------- the website category follows
+
+    # A product's website category is the twin of its Product Category
+    # (product_category.py), so the Products desk asks for Category only.
+    MART_DESK_HELP = dict(
+        DeskProductTemplate.MART_DESK_HELP,
+        categ_id="Required. Where the product is listed: on the website, and "
+                 "in WhatsApp's NEW ORDER menu. Its vendors are asked for a "
+                 "price when this is out of stock.")
+
+    @api.model
+    def _mart369_desk_groups(self):
+        return [(title, [n for n in names if n != 'public_categ_ids'])
+                for title, names in super()._mart369_desk_groups()]
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            self._mart369_follow_vals(vals)
+        return super().create(vals_list)
+
+    def write(self, vals):
+        self._mart369_follow_vals(vals)
+        return super().write(vals)
+
+    @api.model
+    def _mart369_follow_vals(self, vals):
+        """A Category being set brings its website twin along. A Category
+        with no twin (an internal one) leaves the website category alone."""
+        if vals.get('categ_id'):
+            mirror = self.env['product.category'].browse(vals['categ_id']).sudo().mart_mirror_id
+            if mirror:
+                vals['public_categ_ids'] = [(6, 0, mirror.ids)]
+
+    def _mart369_follow_category(self):
+        """Put these products under their Category's twin."""
+        for categ in self.categ_id:
+            mirror = categ.sudo().mart_mirror_id
+            if mirror:
+                self.filtered(lambda t: t.categ_id == categ).write(
+                    {'public_categ_ids': [(6, 0, mirror.ids)]})
+
+    @api.onchange('categ_id')
+    def _onchange_mart_categ_follow(self):
+        """The same on Odoo's own form, before Save - and a new product put
+        in a shop category is published, as a website category would."""
+        for product in self:
+            mirror = product.categ_id.sudo().mart_mirror_id
+            if mirror:
+                product.public_categ_ids = mirror
+        self._onchange_mart_publish_with_category()

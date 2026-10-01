@@ -132,21 +132,33 @@ class ProductTemplate(models.Model):
     # Labels are not repeated here. They come from the field definitions, so
     # renaming a field renames its box and the two cannot drift.
     #
-    # 'Product' is the setup the WhatsApp selling flow's own guide asks for
-    # (PRODUCT_SETUP_FLOW.md 2.4) and nothing else: one record serves the
-    # website, the chat and the counter, so a product fact has one box. The
-    # model line's choices, and each variant's photos, specs and stock, are
-    # the Variants block (mart369_desk_variants) - not boxes here.
+    # 'Product' is the WhatsApp package's manual, *Adding a Product*, box for
+    # box and in its order: one record serves the website, the chat and the
+    # counter, so a product fact has one box. The model line's choices, and
+    # each variant's photos, specs and stock, are the Variants block
+    # (mart369_desk_variants) - not boxes here. The manual's Retail Price
+    # (WhatsApp) is left out: the bridge opens every published product at the
+    # Sales Price, so that box would change nothing.
     #
     # 'Website only' is what the website adds on top and the chat never
     # shows; drawn folded, so the product itself comes first.
     MART_DESK_GROUPS = [
-        ('Product', ['name', 'type', 'is_storable', 'list_price', 'standard_price',
-                     'sale_ok', 'public_categ_ids', 'categ_id', 'description_sale']),
+        ('Product', ['name', 'sale_ok', 'purchase_ok', 'type', 'is_storable', 'tracking',
+                     'list_price', 'taxes_id', 'standard_price', 'supplier_taxes_id',
+                     'categ_id', 'default_code', 'barcode', 'description_sale',
+                     # The website's aisles. mart369_catalog takes this box
+                     # away: there they follow Category.
+                     'public_categ_ids']),
         ('Website only', ['compare_list_price', 'mart_home_tag',
                           'mart_delivery_text', 'mart_low_stock_at',
                           'mart_unit_text', 'mart_per_unit', 'mart_note']),
     ]
+
+    @api.model
+    def _mart369_desk_groups(self):
+        """[(title, [column])]: MART_DESK_GROUPS, as a method a module can
+        change."""
+        return [(title, list(names)) for title, names in self.MART_DESK_GROUPS]
 
     # Groups drawn on the desk only. Inside Odoo's own product form these
     # fields are already on the page, just above the editor.
@@ -160,7 +172,14 @@ class ProductTemplate(models.Model):
     # `public_categ_ids` decides which of the four layers even apply to it -
     # hiding that box would make the rest of the form behave unpredictably
     # with nothing on screen to explain why.
-    MART_DESK_ALWAYS = ('name', 'list_price', 'public_categ_ids')
+    # The Sales Description too: the WhatsApp page prints it whatever the
+    # website's Edit page says.
+    MART_DESK_ALWAYS = ('name', 'list_price', 'categ_id', 'public_categ_ids', 'description_sale')
+
+    # Refused when empty. Category is the manual's one starred box: WhatsApp's
+    # NEW ORDER menu and vendor sourcing both read it, and a product with
+    # none is a product the chat cannot place.
+    MART_DESK_REQUIRED = ('name', 'categ_id')
 
     # The few places Odoo's own word for a column is not the shop's word for
     # it. Deliberately short: every other label comes from the field itself,
@@ -232,8 +251,15 @@ class ProductTemplate(models.Model):
         'public_categ_ids': 'The aisles on the website - and the categories '
                             'of the WhatsApp NEW ORDER menu, which walks the '
                             'same tree.',
-        'categ_id': "The category whose vendors are asked for a price when "
-                    "this is out of stock (its Vendors tab).",
+        'categ_id': "Required. The Product Category (Sales > Configuration > "
+                    "Categories). Its vendors are asked for a price when this "
+                    "is out of stock (its Vendors tab).",
+        'purchase_ok': 'Off and it is never bought from a vendor.',
+        'tracking': 'By Unique Serial Number asks for the serial of every one '
+                    'sold - for laptops and phones.',
+        'taxes_id': 'Added to the Sales Price on the invoice.',
+        'supplier_taxes_id': 'Charged by the vendor on what you buy.',
+        'barcode': 'The number under the bars, digits only (EAN-13, UPC).',
         'description_sale': 'Shown under the picture on the WhatsApp '
                             'confirmation page and on the website product page.',
         'mart_delivery_text': 'Website only. Filled in = an Express product '
@@ -273,7 +299,9 @@ class ProductTemplate(models.Model):
                 none = 'All companies'
             else:
                 records = Model.search([], limit=200)
-                none = 'None'
+                # Still offered when required: a new product starts empty,
+                # and the save says what is missing.
+                none = 'Choose one' if name in self.MART_DESK_REQUIRED else 'None'
             options = [[str(r.id), r.display_name] for r in records]
             if not field.required:
                 options = [['', none]] + options
@@ -392,12 +420,13 @@ class ProductTemplate(models.Model):
 
         # Odoo's defaults for a new product (taxes, category, type), so the
         # desk starts where Odoo's own form would.
-        all_names = [n for _t, names in self.MART_DESK_GROUPS for n in names
+        desk_groups = self._mart369_desk_groups()
+        all_names = [n for _t, names in desk_groups for n in names
                      if n in self._fields]
         defaults = {} if product else self.default_get(all_names)
 
         groups, values = [], {}
-        for title, names in self.MART_DESK_GROUPS:
+        for title, names in desk_groups:
             boxes = []
             for name in names:
                 if name == 'mart_on_hand':
@@ -417,7 +446,7 @@ class ProductTemplate(models.Model):
                     'label': self.MART_DESK_LABELS.get(name, field.string),
                     'help': self.MART_DESK_HELP.get(name, field.help or ''),
                     'widget': self._mart369_desk_widget(field),
-                    'required': name == 'name',
+                    'required': name in self.MART_DESK_REQUIRED,
                     **self._mart369_desk_kind_for(name, field, product),
                     **self.MART_DESK_KINDS.get(name, {}),
                 })
@@ -466,11 +495,11 @@ class ProductTemplate(models.Model):
         'lines': [...]} - see _mart369_desk_save_variants."""
         self._mart369_desk_check()
 
-        allowed = {n for _title, names in self.MART_DESK_GROUPS for n in names}
+        allowed = {n for _title, names in self._mart369_desk_groups() for n in names}
         vals = {}
         for name, value in (values or {}).items():
             if name not in allowed or name not in self._fields:
-                continue  # silently dropped: see MART_DESK_GROUPS
+                continue  # silently dropped: see _mart369_desk_groups
             field = self._fields[name]
             if field.type == 'many2many':
                 vals[name] = [(6, 0, [int(v) for v in (value or [])])]
@@ -497,6 +526,11 @@ class ProductTemplate(models.Model):
 
         if not product_id and not (vals.get('name') or '').strip():
             raise UserError(_("A product needs a name."))
+        # The screen sends every box, so an older product with no category
+        # gets one on its next save. A save that leaves the box out (another
+        # caller) does not touch it.
+        if ('categ_id' in vals or not product_id) and not vals.get('categ_id'):
+            raise UserError(_("Choose a Category: every product needs one."))
 
         if 'image_1920' in (values or {}):
             # '' means "take the photograph away", which is not the same as
@@ -579,19 +613,28 @@ class ProductTemplate(models.Model):
     def _mart369_desk_variants(self, product):
         """The Variants block of the desk: every attribute there is to pick
         from, this product's lines with their price extras, and one row per
-        variant."""
+        variant.
+
+        Every attribute, as the manual's Attributes & Variants tab offers
+        them: one set to Never (`no_variant`, e.g. Depth) is information on
+        the product and makes no variants. `extra` is a value's Default Extra
+        Price, which Odoo gives it when it is newly picked."""
         Attribute = self.env['product.attribute']
         attributes = [{
             'id': a.id,
             'name': a.name,
             'display': a.display_type or 'radio',
+            'variants': a.create_variant,
             'values': [{'id': v.id, 'name': v.name,
-                        **({'color': v.html_color} if v.html_color else {})}
+                        **({'color': v.html_color} if v.html_color else {}),
+                        **({'extra': v.default_extra_price} if v.default_extra_price else {})}
                        for v in a.value_ids],
-        } for a in Attribute.search([('create_variant', '!=', 'no_variant')],
-                                    order='sequence, id', limit=200)]
+        } for a in Attribute.search([], order='sequence, id', limit=200)]
         out = {'attributes': attributes, 'lines': [], 'rows': [],
-               'media': self._mart369_desk_media_ok()}
+               'media': self._mart369_desk_media_ok(),
+               # The manual's own warning, shown beside the attributes.
+               'warning': _("Adding or deleting attributes deletes and makes "
+                            "the variants again.")}
         if not product:
             return out
         for line in product.attribute_line_ids.sorted(
@@ -655,12 +698,14 @@ class ProductTemplate(models.Model):
             attribute = Attribute.browse(int(line.get('attribute_id') or 0)).exists()
             if not attribute:
                 continue
-            ids = [int(v) for v in (line.get('value_ids') or [])
-                   if int(v) in attribute.value_ids.ids]
+            existing = set(attribute.value_ids.ids)
+            ids = [int(v) for v in (line.get('value_ids') or []) if int(v) in existing]
+            typed = set()
             for name in (line.get('new_values') or []):
                 name = ' '.join(str(name or '').split())
                 if not name:
                     continue
+                typed.add(name)
                 found = attribute.value_ids.filtered(lambda v: v.name.lower() == name.lower())[:1]
                 if not found:
                     found = Value.create({'attribute_id': attribute.id, 'name': name})
@@ -669,7 +714,9 @@ class ProductTemplate(models.Model):
                 if price not in (None, ''):
                     extras[found.id] = price
             for key, price in (line.get('extras') or {}).items():
-                if str(key).isdigit():
+                # A value typed as "16" is keyed by its name, not value id 16;
+                # and an id counts only as one of this attribute's own values.
+                if str(key).isdigit() and str(key) not in typed and int(key) in existing:
                     extras[int(key)] = price
             if ids:
                 wanted[attribute.id] = list(dict.fromkeys(ids))
@@ -690,15 +737,16 @@ class ProductTemplate(models.Model):
         for ptav in product.attribute_line_ids.product_template_value_ids:
             value_id = ptav.product_attribute_value_id.id
             if value_id in extras:
+                # Below zero is allowed, as on Odoo's own form: "4GB -500".
                 ptav.price_extra = self._mart369_desk_number(
-                    None, extras[value_id], label='Price extra')
+                    None, extras[value_id], label='Price extra', signed=True)
 
-    def _mart369_desk_number(self, field, value, whole=False, label=None):
+    def _mart369_desk_number(self, field, value, whole=False, label=None, signed=False):
         """A number box's value, refused in words when it is not a number.
 
         The screen only lets digits through, but this method is reachable on
         its own, and "abc" deserves "Price must be a number" rather than a
-        ValueError from float()."""
+        ValueError from float(). `signed` lets a value go below zero."""
         if value in (None, '', False):
             return 0.0
         try:
@@ -708,7 +756,7 @@ class ProductTemplate(models.Model):
         name = label or (self.MART_DESK_LABELS.get(field.name, field.string) if field else 'This box')
         if number is None or number != number or number in (float('inf'), float('-inf')):
             raise UserError(_("%s must be a number.", name))
-        if number < 0:
+        if number < 0 and not signed:
             raise UserError(_("%s cannot be below zero.", name))
         if whole and number != int(number):
             raise UserError(_("%s must be a whole number.", name))

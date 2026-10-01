@@ -64,94 +64,67 @@
                 <img t-if="img" t-att-src="img" alt="" style="max-width:70%; max-height:70%; object-fit:contain;"/>
                 <span t-else="" class="mart-pdp-auto">no photo yet</span>
             </div>
-            <span class="pd-unit-tag" t-if="rowVisible('gallery', 'unit_tag') and d.card"
-                  t-esc="d.card.unit"/>
         </div>
     </t>
 
     <t t-name="mart369_product.MockBuy">
         <div class="pd-card pd-buy">
             <t t-set="card" t-value="d.card || {}"/>
-            <a class="pd-brand" t-attf-class="{{ rowVisible('buy','brand') ? '' : 'mart-pdp-off' }}"
-               t-esc="rowValue('buy', 'brand') || 'Brand'"/>
+            <!-- The product's own brand: its Brand attribute or spec. -->
+            <a class="pd-brand" t-if="card.brand or (card.specs and card.specs.Brand)"
+               t-esc="card.brand || card.specs.Brand"/>
             <h1 class="pd-name" t-esc="card.name || 'Product name'"/>
-            <button class="pd-rating" t-if="rowVisible('buy', 'rating_summary')">
+            <!-- Stars from real reviews only, under the Average rating switch. -->
+            <button t-attf-class="pd-rating {{ rowVisible('reviews', 'rating') ? '' : 'mart-pdp-off' }}">
                 <b t-esc="ratingText"/>
                 <span class="pd-stars"><Icon n="'grid'" size="13"/></span>
                 <span t-esc="ratingCountText"/>
             </button>
             <div class="pd-price">
                 <b t-esc="'&#8377;' + (card.price || 0)"/>
-                <t t-if="card.mrp and rowVisible('buy', 'mrp')">
-                    <s t-esc="'MRP &#8377;' + card.mrp"/>
-                    <em t-esc="offPct + '% OFF'"/>
+                <t t-if="card.mrp">
+                    <s t-attf-class="{{ rowVisible('buy', 'mrp') ? '' : 'mart-pdp-off' }}"
+                       t-esc="'MRP &#8377;' + card.mrp"/>
+                    <em t-if="rowVisible('buy', 'mrp')" t-esc="offPct + '% OFF'"/>
                 </t>
                 <small t-else="">MRP incl. of all taxes</small>
             </div>
+            <p t-if="card.low" t-attf-class="pd-low {{ rowVisible('buy', 'low_stock') ? '' : 'mart-pdp-off' }}">
+                Only <t t-esc="card.low"/> left - order soon
+            </p>
             <div class="pd-cta"><button class="pd-add">Add to cart</button></div>
         </div>
     </t>
 
-    <!-- Key features, product information, specifications, description,
-         returns - each drawn the way the app draws it. -->
+    <!-- Item specifications (the Variant specs) and the product description
+         (the Sales Description) - each drawn the way the app draws it, greyed
+         when switched off. -->
     <t t-name="mart369_product.MockSection">
         <section class="pd-sec pd-open">
             <button class="pd-sec-head" t-esc="section.name"/>
             <div class="pd-collapse"><div><div class="pd-sec-body">
 
-                <ul class="pd-features" t-if="section.key === 'features'">
-                    <t t-set="rows" t-value="visibleRows(section)"/>
-                    <li t-foreach="rows" t-as="row" t-key="row.id"
-                        t-attf-class="{{ shown(row) ? '' : 'mart-pdp-off' }}">
-                        <Icon n="'grid'" size="14"/>
-                        <t t-esc="row.value || row.name"/>
-                    </li>
-                    <li t-if="!rows.length" class="mart-pdp-auto">Nothing set yet</li>
-                </ul>
-
-                <dl class="pd-table" t-elif="section.key === 'info'">
-                    <div t-foreach="rowsOf(section)" t-as="row" t-key="row.id"
-                         t-attf-class="{{ shown(row) ? '' : 'mart-pdp-off' }}">
-                        <dt t-esc="row.name"/>
-                        <dd>
-                            <t t-if="!shown(row)">hidden</t>
-                            <t t-elif="row.value" t-esc="row.value"/>
-                            <span t-else="" class="mart-pdp-auto">from the product</span>
-                        </dd>
-                    </div>
-                </dl>
-
-                <dl class="pd-grid" t-elif="section.key === 'specs'">
-                    <div t-foreach="rowsOf(section)" t-as="row" t-key="row.id"
-                         t-attf-class="{{ shown(row) ? '' : 'mart-pdp-off' }}">
-                        <dt t-esc="row.name"/>
-                        <dd>
-                            <t t-if="!shown(row)">hidden</t>
-                            <t t-elif="row.value" t-esc="row.value"/>
-                            <span t-else="" class="mart-pdp-auto">from the product</span>
-                        </dd>
-                    </div>
-                </dl>
-
-                <div class="pd-desc pd-full" t-elif="section.key === 'description'">
-                    <t t-foreach="rowsOf(section)" t-as="row" t-key="row.id">
-                        <h4 t-if="row.key === 'disclaimer'">Disclaimer</h4>
-                        <p t-attf-class="{{ shown(row) ? '' : 'mart-pdp-off' }}">
-                            <t t-if="!shown(row)">&#8212; <t t-esc="row.name"/> hidden &#8212;</t>
-                            <t t-elif="row.value" t-esc="row.value"/>
-                            <span t-else="" class="mart-pdp-auto">from the product</span>
-                        </p>
-                    </t>
-                </div>
-
-                <t t-elif="section.key === 'returns'">
-                    <p class="pd-return" t-foreach="rowsOf(section)" t-as="row" t-key="row.id"
-                       t-attf-class="{{ shown(row) ? 'pd-return' : 'pd-return mart-pdp-off' }}">
-                        <Icon n="'grid'" size="16"/>
-                        <t t-if="!shown(row)">&#8212; <t t-esc="row.name"/> hidden &#8212;</t>
-                        <t t-else="" t-esc="row.value || row.name"/>
+                <t t-if="section.key === 'specs'">
+                    <dl t-if="cardSpecs.length"
+                        t-attf-class="pd-grid {{ rowVisible('specs', 'variant_specs') ? '' : 'mart-pdp-off' }}">
+                        <div t-foreach="cardSpecs" t-as="spec" t-key="spec[0]">
+                            <dt t-esc="spec[0]"/>
+                            <dd t-esc="spec[1]"/>
+                        </div>
+                    </dl>
+                    <p t-else="" class="mart-pdp-auto">
+                        No Variant specs yet - add them under Edit product, Variants.
                     </p>
                 </t>
+
+                <div class="pd-desc pd-full" t-elif="section.key === 'description'">
+                    <p t-if="d.card and d.card.description"
+                       t-attf-class="{{ rowVisible('description', 'sales_description') ? '' : 'mart-pdp-off' }}"
+                       t-esc="d.card.description"/>
+                    <p t-else="" class="mart-pdp-auto">
+                        No Sales Description yet - add it under Edit product.
+                    </p>
+                </div>
 
                 <dl class="pd-table" t-else="">
                     <div t-foreach="rowsOf(section)" t-as="row" t-key="row.id"
@@ -266,7 +239,7 @@
         </section>
     </t>
 
-    <!-- Similar products, others you may also like, recently viewed. -->
+    <!-- Similar products and others you may also like. -->
     <t t-name="mart369_product.MockRails">
         <t t-call="mart369_product.MockRail">
             <t t-set="title" t-value="'Similar products'"/>
@@ -278,19 +251,6 @@
             <t t-set="items" t-value="rail('related')"/>
             <t t-set="on" t-value="railOn('similar', 'related_items')"/>
         </t>
-        <!-- Recently viewed is the shopper's own history, which lives in their
-             browser. There is nothing for the shop to preview, so the band
-             says so rather than drawing an empty rail. -->
-        <div t-if="row('similar', 'recently_viewed')" class="pd-related">
-            <section
-                     t-attf-class="hm-rail {{ railOn('similar', 'recently_viewed') ? '' : 'mart-pdp-off' }}">
-                <div class="hm-rail-head"><div><h2>Recently viewed</h2></div></div>
-                <p class="mart-pdp-auto">
-                    Drawn from each shopper's own history, so there is nothing
-                    to show here.
-                </p>
-            </section>
-        </div>
     </t>
 
     <t t-name="mart369_product.MockRail">

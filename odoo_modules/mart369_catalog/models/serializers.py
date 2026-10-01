@@ -54,4 +54,29 @@ class Mart369Serializable(models.AbstractModel):
         # Popularity is always sent, including zero: a product nobody has
         # bought should sort last, not be handed a random rank by the hash.
         vals['popularity'] = int(entry.get('popularity') or 0)
+
+        facets = self._mart369_facets(product)
+        if facets:
+            vals['facets'] = facets
         return vals
+
+    def _mart369_facets(self, product):
+        """[{name, value, image?, color?}]: every attribute value the product
+        is offered in - Type (the old sub-category), Brand, RAM... - for the
+        category page's filter chips, built in the browser like the brand
+        and price filters (catalog_api.py). A Color value brings its colour
+        for a dot, a value with an image (Type) its picture."""
+        out = []
+        lines = product.attribute_line_ids.sorted(
+            lambda l: (l.attribute_id.sequence, l.attribute_id.id))
+        for line in lines:
+            attribute = line.attribute_id
+            # bin_size: only whether there is a picture, not its bytes.
+            for value in line.value_ids.with_context(bin_size=True):
+                facet = {'name': attribute.name, 'value': value.name}
+                if attribute.display_type == 'color' and value.html_color:
+                    facet['color'] = value.html_color
+                if value.image:
+                    facet['image'] = self._image_url('image', '128x128', record=value)
+                out.append(facet)
+        return out

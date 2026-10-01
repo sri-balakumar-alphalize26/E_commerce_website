@@ -6,7 +6,9 @@
  */
 import { registry } from "@web/core/registry";
 
-const INFO_BAND = '.mart-phone .mart-band:contains("Product information")';
+// The reviews band: its Average rating switch greys the stars under the name,
+// which every product draws, rated or not.
+const INFO_BAND = '.mart-phone .mart-band:contains("Ratings")';
 
 registry.category("web_tour.tours").add("mart369_product_builder", {
     url: "/odoo/mart-product-advanced",
@@ -16,7 +18,7 @@ registry.category("web_tour.tours").add("mart369_product_builder", {
             trigger: ".mart-phone .pd-page .pd-name",
         },
         {
-            content: "the Product information band is there",
+            content: "the Ratings and reviews band is there",
             trigger: INFO_BAND,
         },
         {
@@ -26,11 +28,11 @@ registry.category("web_tour.tours").add("mart369_product_builder", {
         },
         {
             content: "its fields are listed in the panel",
-            trigger: '.mart-panel .mart-fieldrow:contains("Manufacturer address")',
+            trigger: '.mart-panel .mart-fieldrow:contains("Average rating")',
         },
         {
-            content: "switch Manufacturer address off for the whole shop",
-            trigger: '.mart-panel .mart-fieldrow:contains("Manufacturer address") input[type="checkbox"]',
+            content: "switch Average rating off for the whole shop",
+            trigger: '.mart-panel .mart-fieldrow:contains("Average rating") input[type="checkbox"]',
             run: "click",
         },
         {
@@ -38,8 +40,8 @@ registry.category("web_tour.tours").add("mart369_product_builder", {
             trigger: '.mart-status[data-state="saved"]',
         },
         {
-            content: "and the phone now greys that row out",
-            trigger: `${INFO_BAND} .mart-pdp-off:contains("Manufacturer address")`,
+            content: "and the phone now greys the stars out",
+            trigger: '.mart-phone .pd-rating.mart-pdp-off',
         },
         {
             content: "switch to editing one product",
@@ -52,7 +54,7 @@ registry.category("web_tour.tours").add("mart369_product_builder", {
         },
         {
             content: "set this one product to always show it",
-            trigger: '.mart-panel .mart-fieldrow:contains("Manufacturer address") .mart-radios label:contains("Always show") input',
+            trigger: '.mart-panel .mart-fieldrow:contains("Average rating") .mart-radios label:contains("Always show") input',
             run: "click",
         },
         {
@@ -61,16 +63,16 @@ registry.category("web_tour.tours").add("mart369_product_builder", {
         },
         {
             content: "the row is back for this product, and marked as differing",
-            trigger: '.mart-panel .mart-fieldrow:contains("Manufacturer address") .mart-differs',
+            trigger: '.mart-panel .mart-fieldrow:contains("Average rating") .mart-differs',
         },
         {
             content: "put it back to following the shop",
-            trigger: '.mart-panel .mart-fieldrow:contains("Manufacturer address") .mart-radios label:contains("Follow the default") input',
+            trigger: '.mart-panel .mart-fieldrow:contains("Average rating") .mart-radios label:contains("Follow the default") input',
             run: "click",
         },
         {
             content: "no longer differing",
-            trigger: '.mart-panel .mart-fieldrow:contains("Manufacturer address"):not(:has(.mart-differs))',
+            trigger: '.mart-panel .mart-fieldrow:contains("Average rating"):not(:has(.mart-differs))',
         },
     ],
 });

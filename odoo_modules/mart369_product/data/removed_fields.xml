@@ -1,26 +1,55 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Fields the shop no longer has any use for.
+    <!-- Fields and sections the product page no longer draws.
 
-         369 Mart sells electrical and electronic goods. The catalogue was
-         started from a grocery template, so a Wi-Fi adapter's form asked
-         whether it was vegetarian, how long it kept, and what its net
-         quantity was. All three are gone from the generator table and so
-         from fields.xml.
+         369 Mart sells electrical and electronic goods, and the product page
+         now shows the product's own setup - photos, price, the Variant specs
+         and the Sales Description, as the WhatsApp confirmation page does -
+         plus real reviews and the rails. The rest came from a grocery
+         template (veg, net quantity, shelf life, then key features, a product
+         information table, warranty / material, a disclaimer, a return
+         policy, pack sizes...). The page stopped printing them, so their
+         switches did nothing; they are gone from the generator table, and so
+         from fields.xml and sections.xml.
 
          Dropping a record from a data file is normally enough - Odoo removes
-         what a module no longer declares. Not here: fields.xml is
-         noupdate="1", so a shopkeeper's switches survive an upgrade, and the
-         same flag makes Odoo skip the record over the obsolete-data sweep.
-         The three rows stayed in the database, still on the Product Page
-         screen, still hiding boxes on the product form. Hence saying it
-         outright.
+         what a module no longer declares. Not here: fields.xml and
+         sections.xml are noupdate="1", so a shopkeeper's switches survive an
+         upgrade, and the same flag makes Odoo skip the records over the
+         obsolete-data sweep. Hence saying it outright.
 
-         Deleting the field takes its category values and its per-product
-         overrides with it - both are ondelete='cascade'.
+         Deleting a field takes its category values and its per-product
+         overrides with it - both are ondelete='cascade'. The products' own
+         columns (Key features text, sizes...) are not touched.
 
          Not noupdate, so it runs on every upgrade and a row that somehow
          returns is removed again. -->
     <delete model="mart369.product.field"
-            search="[('key', 'in', ['veg', 'net_quantity', 'shelf_life'])]"/>
+            search="[('key', 'in', ['veg', 'net_quantity', 'shelf_life',
+                     'unit_tag', 'brand', 'rating_summary', 'per_unit', 'pack_sizes',
+                     'delivery_mode', 'wishlist', 'share', 'features', 'info_brand',
+                     'sold_by', 'country_of_origin', 'manufacturer_name',
+                     'manufacturer_address', 'article_id', 'item_height', 'item_length',
+                     'item_width', 'net_weight', 'spec_brand', 'warranty', 'in_the_box',
+                     'material', 'product_type', 'description', 'disclaimer', 'returnable',
+                     'return_text', 'policy_link', 'address', 'explore_category',
+                     'recently_viewed'])]"/>
+    <delete model="mart369.product.section"
+            search="[('key', 'in', ['features', 'info', 'returns', 'delivery'])]"/>
+
+    <!-- The sections that stay, in the page's words now. Written on every
+         upgrade: sections.xml is noupdate, so its new texts would only reach
+         a new database. -->
+    <function model="mart369.product.section" name="write">
+        <value model="mart369.product.section" search="[('key', '=', 'buy')]"/>
+        <value eval="{'note': 'Name, price, the choices and the Add to cart button.'}"/>
+    </function>
+    <function model="mart369.product.section" name="write">
+        <value model="mart369.product.section" search="[('key', '=', 'specs')]"/>
+        <value eval="{'note': &quot;The variant's specs table, as the WhatsApp page lists it.&quot;}"/>
+    </function>
+    <function model="mart369.product.section" name="write">
+        <value model="mart369.product.section" search="[('key', '=', 'description')]"/>
+        <value eval="{'name': 'Product description', 'note': 'The Sales Description.'}"/>
+    </function>
 </odoo>

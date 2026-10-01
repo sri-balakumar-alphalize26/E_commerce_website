@@ -1,20 +1,16 @@
-"""The products desk's read.
+"""The products desk's read view: what this product's page shows.
 
-`mart369_product_page` answers a different question from `_resolve_sections`,
-and the difference is the whole reason it exists. That one answers "what does
-the shopper get", so it returns visible fields and nothing else. This one
-answers "what will this product show, and what did it decide not to" - so a
-switched-off section has to come back *marked* switched off rather than simply
-be absent. Missing and deliberately-hidden look identical to somebody reading
-the screen, and only one of them is a decision anybody made.
-
-What is not re-tested here is the ladder itself. `test_resolver.py` already
-pins the nine-way visibility truth table and the exact merge order; these
-assert that the desk reads that ladder rather than a second copy of it.
+`mart369_product_page` is read off the shopper's own payload, so the desk (and
+the console, over the admin route) describe the page that is served: the
+product's own setup - photos, brand, name, price, the choices, the Variant
+specs, the Sales Description - plus real reviews and the rails below. None of
+the page builder's rows the page no longer prints.
 """
 
 from odoo.tests import tagged
 from odoo.tests.common import TransactionCase
+
+SECTIONS = ['top', 'choices', 'specs', 'description', 'reviews', 'rails']
 
 
 @tagged('post_install', '-at_install')
@@ -22,127 +18,91 @@ class TestProductDesk(TransactionCase):
 
     def setUp(self):
         super().setUp()
-        self.category = self.env['product.public.category'].create({
-            'name': 'Desk Test Category'})
         self.product = self.env['product.template'].create({
             'name': 'Desk Test Product',
             'is_published': True,
             'list_price': 10,
-            'public_categ_ids': [(6, 0, [self.category.id])],
+            'description_sale': 'Two USB-C ports.',
         })
 
     def _page(self, product=None):
         return self.env['mart369.product.field'].mart369_product_page(
             (product or self.product).id)
 
-    def _section_named(self, page, key):
-        for section in page['sections']:
-            if section['key'] == key:
-                return section
-        return None
+    def _section(self, page, key):
+        return next((s for s in page['sections'] if s['key'] == key), None)
 
-    def _row_named(self, section, key):
-        for row in section['fields']:
-            if row['key'] == key:
-                return row
-        return None
+    def _rows(self, page, key):
+        section = self._section(page, key)
+        return section['fields'] if section else []
+
+    def _row(self, page, section, key):
+        return next((r for r in self._rows(page, section) if r['key'] == key), None)
 
     # ---------------------------------------------------------------- shape
 
     def test_it_answers_for_a_real_product(self):
         page = self._page()
         self.assertEqual(page['product']['id'], self.product.id)
-        self.assertTrue(page['sections'], 'the shop has sections')
+        self.assertTrue(page['sections'])
 
     def test_a_product_that_is_not_there_is_empty_not_a_crash(self):
         self.assertEqual(
             self.env['mart369.product.field'].mart369_product_page(999999), {})
 
-    def test_every_field_is_listed_not_only_the_overridden_ones(self):
-        """The product form already had a list of overrides. It shows the
-        exceptions, which is why it tells you nothing about a product nobody
-        has touched - this has to show the whole page."""
+    def test_only_what_the_page_draws_in_page_order(self):
+        keys = [s['key'] for s in self._page()['sections']]
+        self.assertEqual(keys, [k for k in SECTIONS if k in keys])
+        self.assertNotIn('choices', keys, 'a product with no choice asks nothing')
+
+    def test_none_of_the_old_builder_rows(self):
+        names = {r['name'] for s in self._page()['sections'] for r in s['fields']}
+        for old in ('Key features', 'Country of origin', 'Manufacturer name',
+                    'Return policy wording', 'Disclaimer', 'Material'):
+            self.assertNotIn(old, names)
+
+    # ------------------------------------------------ agreeing with the shopper
+
+    def test_it_reads_what_the_shopper_is_served(self):
+        served = self.env['mart369.product.page'].sudo().payload(self.product)['p']
         page = self._page()
-        listed = sum(len(s['fields']) for s in page['sections'])
-        self.assertEqual(listed, self.env['mart369.product.field'].search_count([]))
+        self.assertEqual(self._row(page, 'top', 'name')['value'], served['name'])
+        self.assertEqual(float(self._row(page, 'top', 'price')['value']), served['price'])
+        self.assertEqual(self._row(page, 'description', 'description')['value'],
+                         'Two USB-C ports.')
 
-    # ----------------------------------------------------- hidden, not gone
+    def test_the_specs_are_the_variant_specs_the_page_lists(self):
+        served = self.env['mart369.product.page'].sudo().payload(self.product)['p']
+        rows = self._rows(self._page(), 'specs')
+        if served.get('specs'):
+            self.assertEqual([(r['name'], r['value']) for r in rows],
+                             list(served['specs'].items()))
+        else:
+            self.assertEqual(len(rows), 1)
+            self.assertFalse(rows[0]['visible'], 'an empty table is listed as not shown')
 
-    def test_a_hidden_field_is_marked_rather_than_dropped(self):
-        field = self.env['mart369.product.field'].search([], limit=1)
-        self.env['mart369.product.field'].set_product_state(
-            field.id, self.product.id, 'hide')
+    def test_an_empty_description_is_listed_as_not_shown(self):
+        self.product.description_sale = False
+        row = self._row(self._page(), 'description', 'description')
+        self.assertEqual(row['value'], '')
+        self.assertFalse(row['visible'])
 
-        section = self._section_named(self._page(), field.section_id.key)
-        row = self._row_named(section, field.key)
-        self.assertIsNotNone(row, 'still listed')
-        self.assertFalse(row['visible'], 'and marked as off')
+    def test_a_product_with_a_choice_lists_it(self):
+        ram = self.env['product.attribute'].create({
+            'name': 'Zz Desk View RAM', 'create_variant': 'always',
+            'value_ids': [(0, 0, {'name': '8GB'}), (0, 0, {'name': '16GB'})]})
+        self.product.attribute_line_ids = [(0, 0, {
+            'attribute_id': ram.id, 'value_ids': [(6, 0, ram.value_ids.ids)]})]
+        page = self._page()
+        row = next(r for r in self._rows(page, 'choices') if r['name'] == 'Zz Desk View RAM')
+        self.assertEqual(row['value'], '8GB, 16GB')
+        self.assertEqual(self._row(page, 'choices', 'variants')['value'], '2')
 
-    def test_a_switched_off_section_still_comes_back(self):
-        section = self.env['mart369.product.section'].search([], limit=1)
-        section.show = False
-
-        got = self._section_named(self._page(), section.key)
-        self.assertIsNotNone(got, 'the band is reported, not omitted')
-        self.assertFalse(got['show'])
-        self.assertEqual(got['shown'], 0, 'nothing inside it shows')
-        self.assertTrue(got['total'], 'though it still has fields')
+    def test_every_row_says_it_is_the_product_record(self):
+        sources = {r['source'] for s in self._page()['sections'] for r in s['fields']}
+        self.assertEqual(sources, {'odoo'})
 
     def test_the_counts_are_what_the_screen_prints(self):
-        section = self.env['mart369.product.section'].search(
-            [('field_ids', '!=', False)], limit=1)
-        field = section.field_ids[0]
-        self.env['mart369.product.field'].set_product_state(
-            field.id, self.product.id, 'hide')
-
-        got = self._section_named(self._page(), section.key)
-        self.assertEqual(got['total'], len(section.field_ids))
-        self.assertEqual(got['shown'], got['total'] - 1)
-
-    # ------------------------------------------------------- where it came from
-
-    def test_a_value_set_on_the_product_says_so(self):
-        field = self.env['mart369.product.field'].search(
-            [('per_product', '=', True)], limit=1)
-        self.env['mart369.product.field'].set_product_value(
-            field.id, self.product.id, 'Only for this one')
-
-        row = self._row_named(
-            self._section_named(self._page(), field.section_id.key), field.key)
-        self.assertEqual(row['value'], 'Only for this one')
-        self.assertEqual(row['source'], 'product')
-
-    def test_an_inherited_value_says_the_shop(self):
-        """The column that stops the same wording being typed twice: without
-        it an inherited value and one set here read identically."""
-        field = self.env['mart369.product.field'].search(
-            [('source', '=', 'text'), ('per_product', '=', True)], limit=1)
-        field.default_value = 'The shop says this'
-        self.env['mart369.product.field'].reset_product_state(
-            field.id, self.product.id)
-
-        row = self._row_named(
-            self._section_named(self._page(), field.section_id.key), field.key)
-        self.assertEqual(row['value'], 'The shop says this')
-        self.assertEqual(row['source'], 'default')
-
-    # --------------------------------------------- agreeing with the shopper
-
-    def test_it_agrees_with_what_the_shopper_is_served(self):
-        """The point of reading the same ladder. Whatever this screen reports
-        as visible must be exactly what `_resolve_sections` - the thing behind
-        /369mart/product/<id> - hands the app."""
-        Field = self.env['mart369.product.field']
-        field = Field.search([], limit=1)
-        Field.set_product_state(field.id, self.product.id, 'hide')
-
-        shopper = Field._resolve_sections(self.product)
-        shopper_keys = {f.key for rows in shopper.values() for f, __ in rows}
-
-        desk_keys = {
-            row['key']
-            for section in self._page()['sections'] if section['show']
-            for row in section['fields'] if row['visible']
-        }
-        self.assertEqual(desk_keys, shopper_keys)
-
+        for section in self._page()['sections']:
+            self.assertEqual(section['total'], len(section['fields']))
+            self.assertEqual(section['shown'], sum(1 for r in section['fields'] if r['visible']))

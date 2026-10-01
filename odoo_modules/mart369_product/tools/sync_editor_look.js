@@ -88,6 +88,9 @@ const own = `
     .pdk-embedded .pdk-cols { grid-template-columns: minmax(0, 1fr); }
     .pdk-embedded .pdk-preview { position: static; }
 }
+/* A variant's spec line: its up / down / remove buttons side by side, not
+   stacked (the icon button is a block), so each line stays one row high. */
+.pdk-vx-spec-act .ad-icon-btn { display: inline-grid; vertical-align: middle; width: 28px; height: 28px; }
 `;
 fs.writeFileSync(out, head + rules + own + "\n}\n");
 console.log("wrote", path.relative(root, out));

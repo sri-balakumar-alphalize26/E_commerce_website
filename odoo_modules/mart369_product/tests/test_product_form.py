@@ -78,50 +78,50 @@ class TestProductForm(TransactionCase):
         """The default: follow the shop, and the shop shows these."""
         self.product.invalidate_recordset()
         hidden = self.product.mart_page_hidden or ''
-        for column in ('mart_material', 'mart_item_width'):
+        for column in ('compare_list_price',):
             self.assertNotIn(',%s,' % column, hidden)
 
     def test_hiding_a_field_takes_its_box_away(self):
         field = self.Field.search(
-            [('odoo_field', '=', 'mart_material')], limit=1)
-        self.assertTrue(field, 'the registry should map Material to a column')
+            [('odoo_field', '=', 'compare_list_price')], limit=1)
+        self.assertTrue(field, 'the registry should map MRP to a column')
 
         self.Field.set_product_state(field.id, self.product.id, 'hide')
         self.product.invalidate_recordset()
 
-        self.assertIn(',mart_material,', self.product.mart_page_hidden)
+        self.assertIn(',compare_list_price,', self.product.mart_page_hidden)
         self.assertFalse(field._visible_for(self.product),
                          'and the page agrees, which is the point')
 
     def test_showing_it_again_brings_the_box_back(self):
         field = self.Field.search(
-            [('odoo_field', '=', 'mart_material')], limit=1)
+            [('odoo_field', '=', 'compare_list_price')], limit=1)
         self.Field.set_product_state(field.id, self.product.id, 'hide')
         self.product.invalidate_recordset()
-        self.assertIn(',mart_material,', self.product.mart_page_hidden)
+        self.assertIn(',compare_list_price,', self.product.mart_page_hidden)
 
         self.Field.set_product_state(field.id, self.product.id, 'show')
         self.product.invalidate_recordset()
-        self.assertNotIn(',mart_material,', self.product.mart_page_hidden)
+        self.assertNotIn(',compare_list_price,', self.product.mart_page_hidden)
 
     def test_a_shop_wide_switch_reaches_every_product(self):
         """Whole shop off, and the box goes from products that follow it."""
         field = self.Field.search(
-            [('odoo_field', '=', 'mart_material')], limit=1)
+            [('odoo_field', '=', 'compare_list_price')], limit=1)
         field.show = False
         self.product.invalidate_recordset()
 
-        self.assertIn(',mart_material,', self.product.mart_page_hidden)
+        self.assertIn(',compare_list_price,', self.product.mart_page_hidden)
 
     def test_a_product_can_keep_what_the_shop_switched_off(self):
         """The exception that explains 'why is it still on that one'."""
         field = self.Field.search(
-            [('odoo_field', '=', 'mart_material')], limit=1)
+            [('odoo_field', '=', 'compare_list_price')], limit=1)
         field.show = False
         self.Field.set_product_state(field.id, self.product.id, 'show')
         self.product.invalidate_recordset()
 
-        self.assertNotIn(',mart_material,', self.product.mart_page_hidden)
+        self.assertNotIn(',compare_list_price,', self.product.mart_page_hidden)
 
     def test_a_column_two_rows_share_survives_one_of_them_hiding(self):
         """One column, two rows: the box goes only when both are off.
@@ -136,26 +136,26 @@ class TestProductForm(TransactionCase):
         rule outlives whichever fields happen to share a column.
         """
         first = self.Field.search(
-            [('odoo_field', '=', 'mart_unit_text')], limit=1)
-        self.assertTrue(first, 'the size tag should read this column')
+            [('odoo_field', '=', 'compare_list_price')], limit=1)
+        self.assertTrue(first, 'the MRP row should read this column')
         second = self.Field.create({
             'key': 'test_second_reader',
             'name': 'A second row on the same column',
             'section_id': first.section_id.id,
             'source': 'odoo',
-            'odoo_field': 'mart_unit_text',
+            'odoo_field': 'compare_list_price',
         })
         rows = first + second
 
         self.Field.set_product_state(first.id, self.product.id, 'hide')
         self.product.invalidate_recordset()
-        self.assertNotIn(',mart_unit_text,', self.product.mart_page_hidden,
+        self.assertNotIn(',compare_list_price,', self.product.mart_page_hidden,
                          'the other row still prints it')
 
         for row in rows:
             self.Field.set_product_state(row.id, self.product.id, 'hide')
         self.product.invalidate_recordset()
-        self.assertIn(',mart_unit_text,', self.product.mart_page_hidden)
+        self.assertIn(',compare_list_price,', self.product.mart_page_hidden)
 
     # ----------------------------------------------- what was taken away
 
@@ -177,6 +177,19 @@ class TestProductForm(TransactionCase):
             self.assertFalse(
                 self.Field.search([('key', '=', key)]),
                 'the product page should no longer offer %s' % key)
+
+    def test_the_grocery_page_rows_are_gone(self):
+        """The page draws the product's own setup now (photos, price, the
+        Variant specs, the Sales Description), real reviews and the rails -
+        so Edit page offers nothing else (removed_fields.xml)."""
+        for key in ('features', 'sold_by', 'country_of_origin', 'manufacturer_address',
+                    'warranty', 'material', 'disclaimer', 'return_text', 'unit_tag',
+                    'pack_sizes', 'per_unit', 'address', 'recently_viewed'):
+            self.assertFalse(self.Field.search([('key', '=', key)]), key)
+        Section = self.env['mart369.product.section']
+        for key in ('features', 'info', 'returns', 'delivery'):
+            self.assertFalse(Section.search([('key', '=', key)]), key)
+        self.assertEqual(Section.search([('key', '=', 'description')]).name, 'Product description')
 
     def test_no_column_is_asked_for_twice(self):
         """The mirror of the drift test above.

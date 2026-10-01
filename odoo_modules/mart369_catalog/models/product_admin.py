@@ -19,7 +19,8 @@ filtering the shop.
 
 from datetime import timedelta
 
-from odoo import api, fields, models
+from odoo import _, api, fields, models
+from odoo.exceptions import UserError
 
 MAX_ROWS = 200
 
@@ -260,8 +261,16 @@ class ProductTemplate(models.Model):
     def _mart369_desk_count(self, variant, qty):
         """`qty` as the counted stock of one variant, the way Odoo's own
         "Update quantity" does it: an inventory-mode quant, applied - only
-        when the count really changed."""
-        if abs((variant.qty_available or 0.0) - qty) < 1e-9:
+        when the count really changed.
+
+        The box shows the variant's whole stock, every warehouse and shelf
+        together, so the difference is booked at the main stock location and
+        the whole comes out at `qty`. Writing `qty` into that one location
+        would count 5 in Sohar plus a typed 4 as 9. A drop the main location
+        cannot take (the stock is elsewhere) is refused: which warehouse
+        lost it is Odoo's Physical Inventory's question."""
+        change = qty - (variant.qty_available or 0.0)
+        if abs(change) < 1e-9:
             return False
         location = self.env['stock.warehouse'].search(
             [('company_id', '=', self.env.company.id)], limit=1).lot_stock_id
@@ -270,13 +279,20 @@ class ProductTemplate(models.Model):
         Quant = self.env['stock.quant'].with_context(inventory_mode=True)
         quant = Quant.search([('product_id', '=', variant.id),
                               ('location_id', '=', location.id)], limit=1)
+        here = quant.quantity if quant else 0.0
+        if here + change < -1e-9:
+            raise UserError(_(
+                "%(name)s is kept in more than one place, and %(where)s has "
+                "only %(here)s. Count it in Inventory > Physical Inventory.",
+                name=variant.display_name, where=location.display_name,
+                here=round(here, 2)))
         if quant:
-            quant.inventory_quantity = qty
+            quant.inventory_quantity = here + change
         else:
             quant = Quant.create({
                 'product_id': variant.id,
                 'location_id': location.id,
-                'inventory_quantity': qty,
+                'inventory_quantity': change,
             })
         quant.action_apply_inventory()
         return True

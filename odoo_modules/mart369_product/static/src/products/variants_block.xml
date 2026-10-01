@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!-- Attributes & Variants, drawn as the web console draws them
+         (components/admin/ProductEditor.jsx, VariantsBlock). -->
+    <t t-name="mart369_product.VariantsBlock">
+        <section class="ad-card pdk-sec">
+            <header class="pdk-sec-head"><h3>Attributes &amp; Variants</h3><small>What the customer chooses</small></header>
+            <div class="pdk-vx">
+                <p t-if="!vx.lines.length" class="pdk-hint">No choices: the product is sold as one thing. Add Brand, RAM, Colour… when customers pick one.</p>
+                <t t-foreach="vx.lines" t-as="line" t-key="line.attribute_id">
+                    <t t-set="a" t-value="attribute(line.attribute_id)"/>
+                    <div t-if="a" class="pdk-vx-line">
+                        <div class="pdk-vx-line-head">
+                            <b t-esc="a.name"/>
+                            <small t-if="a.variants === 'no_variant'" class="ad-dim">Information only - makes no variants</small>
+                            <button type="button" class="mart-link pdk-danger-link" t-on-click="() => this.dropLine(line_index)">Remove</button>
+                        </div>
+                        <div class="pdk-vx-values">
+                            <button t-foreach="a.values" t-as="v" t-key="v.id" type="button"
+                                    t-attf-class="pdk-chip {{ line.value_ids.includes(v.id) ? 'pdk-on' : '' }}"
+                                    t-att-aria-pressed="line.value_ids.includes(v.id) ? 'true' : 'false'"
+                                    t-on-click="() => this.toggleValue(line, v.id)">
+                                <i t-if="v.color" class="pdk-vx-dot" t-attf-style="background: {{ v.color }}" aria-hidden="true"/>
+                                <t t-esc="v.name"/>
+                            </button>
+                            <span t-foreach="line.new_values" t-as="n" t-key="n" class="pdk-chip pdk-on pdk-vx-new"
+                                  title="New value, added when you save" t-esc="n"/>
+                            <span class="pdk-vx-type">
+                                <input type="text" placeholder="+ value" t-att-value="ui.typed[line.attribute_id] || ''"
+                                       t-att-aria-label="'New ' + a.name + ' value'"
+                                       t-on-input="(ev) => this.setTyped(line.attribute_id, ev.target.value)"
+                                       t-on-keydown="(ev) => this.onTypedKey(ev, line)"/>
+                            </span>
+                        </div>
+                        <div t-if="chosen(line).length" class="pdk-vx-extras">
+                            <label t-foreach="chosen(line)" t-as="v" t-key="v.key" class="pdk-vx-extra">
+                                <span t-esc="v.name"/>
+                                <span class="pdk-affix">
+                                    <em>+</em>
+                                    <input type="text" inputmode="decimal"
+                                           t-att-placeholder="v.extra ? String(v.extra) : '0'"
+                                           t-att-value="extraOf(line, v.key)"
+                                           t-att-aria-label="'Price extra for ' + v.name"
+                                           t-on-input="(ev) => this.onExtra(ev, line, v.key)"/>
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+                </t>
+                <div class="pdk-vx-add">
+                    <Pick value="ui.adding" options="addOptions" label="'Add an attribute'"
+                          onChange="(v) => this.addLine(v)"/>
+                </div>
+                <p t-if="vx.linesDirty" class="pdk-hint pdk-vx-warn">
+                    <t t-esc="vx.warning or 'Variants are made or removed when you save.'"/>
+                </p>
+            </div>
+        </section>
+
+        <section t-if="vx.rows.length" class="ad-card pdk-sec">
+            <header class="pdk-sec-head">
+                <h3>Variants</h3>
+                <small t-esc="vx.rows.length + ' · image, ' + (vx.media ? 'photos, specs, ' : '') + 'stock'"/>
+            </header>
+            <ul class="pdk-vx-rows">
+                <t t-foreach="vx.rows" t-as="row" t-key="row.id">
+                    <t t-set="s" t-value="view(row)"/>
+                    <li t-attf-class="pdk-vx-row {{ ui.open === row.id ? 'pdk-on' : '' }}">
+                        <button type="button" class="pdk-vx-row-head" t-on-click="() => this.toggleRow(row.id)"
+                                t-att-aria-expanded="ui.open === row.id ? 'true' : 'false'">
+                            <span class="pdk-vx-thumb">
+                                <img t-if="s.image" t-att-src="s.image" alt=""/>
+                                <Icon t-else="" n="'layers'" size="16"/>
+                            </span>
+                            <b t-esc="row.label"/>
+                            <span class="pdk-vx-price" t-esc="props.money(row.price)"/>
+                            <span t-if="row.counted" class="pdk-vx-stock" t-esc="(s.onHand === '' ? '–' : s.onHand) + ' on hand'"/>
+                            <Icon n="'chev'" size="14"/>
+                        </button>
+                        <div t-if="ui.open === row.id" class="pdk-vx-body">
+                            <div class="pdk-field">
+                                <span class="pdk-label">Image</span>
+                                <div class="pdk-vx-image">
+                                    <img t-if="s.image" t-att-src="s.image" alt=""/>
+                                    <span t-else="" class="pdk-hint">None: the product's picture is used.</span>
+                                    <label class="mart-btn ad-sm">
+                                        <t t-esc="s.image ? 'Replace' : 'Add'"/>
+                                        <input type="file" accept="image/*" hidden="" t-on-change="(ev) => this.pickImage(ev, row)"/>
+                                    </label>
+                                    <button t-if="s.image" type="button" class="mart-btn ad-sm pdk-danger-ghost"
+                                            t-on-click="() => this.dropImage(row)">Remove</button>
+                                </div>
+                            </div>
+
+                            <div t-if="vx.media" class="pdk-field">
+                                <span class="pdk-label">Variant images</span>
+                                <div class="pdk-vx-pics">
+                                    <div t-foreach="s.pictures" t-as="pic" t-key="pic.key" class="pdk-vx-pic">
+                                        <img t-att-src="pic.url" alt=""/>
+                                        <span>
+                                            <t t-if="pic.kind === 'saved'">
+                                                <button type="button" class="ad-icon-btn" aria-label="Earlier"
+                                                        t-att-disabled="pic_index === 0 ? 'disabled' : false"
+                                                        t-on-click="() => this.movePicture(row, pic.id, -1)"><Icon n="'left'" size="12"/></button>
+                                                <button type="button" class="ad-icon-btn" aria-label="Later"
+                                                        t-on-click="() => this.movePicture(row, pic.id, 1)"><Icon n="'right'" size="12"/></button>
+                                            </t>
+                                            <button type="button" class="ad-icon-btn" aria-label="Remove"
+                                                    t-on-click="() => this.dropPicture(row, pic)"><Icon n="'x'" size="12"/></button>
+                                        </span>
+                                        <small t-if="pic.kind === 'new'">Not saved</small>
+                                    </div>
+                                    <label class="pdk-vx-pic pdk-photo-add">
+                                        <Icon n="'plus'" size="18"/><span>Add</span>
+                                        <input type="file" accept="image/*" multiple="" hidden="" t-on-change="(ev) => this.addPictures(ev, row)"/>
+                                    </label>
+                                </div>
+                                <small>Front, back, ports… The first is the main picture when the variant has no image of its own.</small>
+                            </div>
+
+                            <div t-if="vx.media" class="pdk-field">
+                                <span class="pdk-label">Variant specs</span>
+                                <table class="pdk-vx-specs"><tbody>
+                                    <tr t-foreach="s.specs" t-as="sp" t-key="sp.id || 'n' + sp_index">
+                                        <td><input type="text" placeholder="Warranty" aria-label="Specification" t-att-value="sp.name"
+                                                   t-on-input="(ev) => this.setSpec(row, sp_index, 'name', ev.target.value)"/></td>
+                                        <td><input type="text" placeholder="1 year" aria-label="Value" t-att-value="sp.value"
+                                                   t-on-input="(ev) => this.setSpec(row, sp_index, 'value', ev.target.value)"/></td>
+                                        <td class="pdk-vx-spec-act">
+                                            <button type="button" class="ad-icon-btn" aria-label="Up"
+                                                    t-att-disabled="sp_index === 0 ? 'disabled' : false"
+                                                    t-on-click="() => this.moveSpec(row, sp_index, -1)"><Icon n="'up'" size="12"/></button>
+                                            <button type="button" class="ad-icon-btn" aria-label="Down"
+                                                    t-att-disabled="sp_index === s.specs.length - 1 ? 'disabled' : false"
+                                                    t-on-click="() => this.moveSpec(row, sp_index, 1)"><Icon n="'down'" size="12"/></button>
+                                            <button type="button" class="ad-icon-btn" aria-label="Remove"
+                                                    t-on-click="() => this.dropSpec(row, sp_index)"><Icon n="'x'" size="12"/></button>
+                                        </td>
+                                    </tr>
+                                </tbody></table>
+                                <div class="pdk-vx-spec-foot">
+                                    <button type="button" class="mart-link" t-on-click="() => this.addSpec(row)">+ Add a line</button>
+                                    <button type="button" class="mart-link" t-att-disabled="s.fill ? 'disabled' : false"
+                                            t-on-click="() => this.fillSpecs(row)" t-esc="s.fill ? 'Filled on save' : 'Fill from attributes'"/>
+                                </div>
+                            </div>
+
+                            <label t-if="row.counted" class="pdk-field pdk-vx-onhand">
+                                <span class="pdk-label">On hand</span>
+                                <input type="text" inputmode="decimal" t-att-value="s.onHand" t-on-input="(ev) => this.onHand(ev, row)"/>
+                                <small>How many of this variant you have now. Booked as an inventory adjustment on save.</small>
+                            </label>
+                        </div>
+                    </li>
+                </t>
+            </ul>
+        </section>
+    </t>
+
+</templates>

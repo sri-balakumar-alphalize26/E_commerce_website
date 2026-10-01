@@ -6,7 +6,6 @@ HTTP request to exist, which is exactly what made this untestable before.
 """
 
 from odoo import api, fields, models
-from odoo.tools import is_html_empty
 
 # Reviews that count: really submitted, publicly visible, actually rated,
 # and not taken down by staff.
@@ -27,6 +26,15 @@ REVIEW_DOMAIN = [
 class Mart369ProductPage(models.AbstractModel):
     _name = 'mart369.product.page'
     _description = '369 Mart Product Page Payload'
+
+    # (builder field key, the card's part it switches): left out of the page's
+    # cards when the field is not shown.
+    SWITCHED_PARTS = (
+        ('variant_specs', 'specs'),
+        ('sales_description', 'description'),
+        ('mrp', 'mrp'),
+        ('low_stock', 'low'),
+    )
 
     # --------------------------------------------------------- the whole page
 
@@ -77,6 +85,19 @@ class Mart369ProductPage(models.AbstractModel):
             if product.description_sale:
                 main['description'] = product.description_sale
 
+        # What the builder switched off (shop-wide, by category or for this
+        # product) leaves the page's cards, so the website does not draw it.
+        # These cards only: the listings, the cart and orders keep theirs.
+        # The desk's read view asks for everything (`mart369_page_all_parts`)
+        # to show a switched-off part as switched off, value and all.
+        main = dict(main)
+        variants = [dict(v) for v in variants]
+        if not self.env.context.get('mart369_page_all_parts'):
+            for card_vals in [main] + variants:
+                for key, part in self.SWITCHED_PARTS:
+                    if key not in keys:
+                        card_vals.pop(part, None)
+
         return {
             'p': main,
             # The product's own card too: a basket or wishlist holding the
@@ -113,52 +134,12 @@ class Mart369ProductPage(models.AbstractModel):
             keys = {f.key for rows in shown.values() for f, _v in rows}
 
         values = {f.key: v for rows in shown.values() for f, v in rows}
-        helper = self.env['mart369.serializable'].sudo()
         d = {}
-
-        if 'brand' in keys and values.get('brand'):
-            d['brand'] = values['brand']
+        # The product's own setup - its specs and Sales Description - rides
+        # on the card (`p`); this block is the category and the real reviews.
         category = product.public_categ_ids[:1]
         if category:
             d['category'] = category.name
-
-        if 'features' in keys:
-            features = helper._lines_to_list(values.get('features'))
-            if features:
-                d['features'] = features
-
-        # The information table keeps its order and its labels.
-        info = []
-        for field, value in shown.get('info', []):
-            text = self._as_text(field, value, product)
-            if text:
-                info.append([field.name, text])
-        if info:
-            d['info'] = info
-
-        specs = {}
-        for field, value in shown.get('specs', []):
-            text = self._as_text(field, value, product)
-            if text:
-                specs[field.name] = text
-        if specs:
-            d['specs'] = specs
-
-        if 'description' in keys:
-            description = values.get('description')
-            if is_html_empty(description):
-                description = product.description_sale or ''
-            if description:
-                d['description'] = description
-        if 'disclaimer' in keys and values.get('disclaimer'):
-            d['disclaimer'] = values['disclaimer']
-
-        if 'returnable' in keys:
-            d['returnable'] = self._as_bool(values.get('returnable'))
-        if 'return_text' in keys and values.get('return_text'):
-            d['returnText'] = values['return_text']
-        if 'policy_link' in keys and values.get('policy_link'):
-            d['policyUrl'] = values['policy_link']
 
         d.update(self.reviews(product, keys, values))
         return d

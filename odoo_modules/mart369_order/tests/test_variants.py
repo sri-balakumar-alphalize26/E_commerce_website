@@ -164,6 +164,25 @@ class TestMart369Variants(Mart369OrderCase):
         self.assertEqual(payload['items'], [[key, 1]])
         self.assertIn(key, payload['snap'])
 
+    def test_a_plain_id_of_a_product_with_variants_sells_its_first_variant_whole(self):
+        """A basket from before the laptop had variants: its first variant,
+        at that variant's price and under its name - not the product's price
+        without the extras."""
+        first = self.laptop.product_variant_id
+        first.product_template_attribute_value_ids.filtered(
+            lambda v: v.attribute_id == self.colour).price_extra = 50.0
+        self.assertNotEqual(first.lst_price, self.laptop.list_price)
+        key = str(self.laptop.id)
+        bill = self.env['mart369.cart']._mart369_bill({key: 1})
+        self.assertEqual(bill['items'], first.lst_price)
+        order = self._place(items={key: 1}, ref='369M-VAR4')
+        line = order.order_line.filtered(lambda l: not l.mart369_kind and not l.is_delivery)
+        self.assertEqual(line.product_id, first)
+        self.assertEqual(line.price_unit, first.lst_price)
+        self.assertEqual(line.name, first.display_name)
+        self.assertEqual(order._mart369_serialize()['items'], [[self._key(first), 1]],
+                         'read back as the variant it sold, so a reorder adds that one')
+
     def test_a_plain_product_id_still_orders_as_before(self):
         """Baskets and orders from before variants keep their template ids."""
         order = self._place(ref='369M-VAR3')

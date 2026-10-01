@@ -41,6 +41,7 @@ import { Empty } from "@mart369/ui/empty";
 import { Tabs } from "@mart369/ui/tabs";
 import { Pick } from "@mart369/ui/pick";
 import { ProductEditor, money } from "./product_editor";
+import { variantsBody } from "./variants_block";
 
 const FIELD = "mart369.product.field";
 const PRODUCT = "product.template";
@@ -511,6 +512,8 @@ export class ProductDesk extends Component {
                     promote: form.promoted ? form.promoted.id : null,
                     demote: form.demote,
                 },
+                // Attributes & Variants: changed variants, and the lines if touched.
+                ...(form.vx ? { variants: variantsBody(form.vx) } : {}),
             });
             this.closeForm();
             // The list's counts and cards are now stale either way - a new

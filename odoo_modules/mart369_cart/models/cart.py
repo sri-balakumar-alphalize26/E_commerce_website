@@ -53,9 +53,13 @@ class Mart369Cart(models.AbstractModel):
     def _mart369_resolve(self, items):
         """{'41': 2, 'v123': 1, 'f3': 1} -> [line], unknown ids dropped.
 
-        Each line is {'key', 'tmpl', 'variant', 'qty'}. A plain number is a
-        product and sells its first variant, as it always has; 'v123' is the
-        variant the customer picked on the product page (Brand, RAM, Colour).
+        Each line is {'key', 'tmpl', 'variant', 'chosen', 'qty'}. A plain
+        number is a product and sells its first variant, as it always has;
+        'v123' is the variant the customer picked on the product page (Brand,
+        RAM, Colour). `chosen` lines are priced and named as their variant:
+        every 'v123', and a plain number whose product has variants by now (a
+        basket from before they were added), so its first variant is not sold
+        at the product's price without its extras.
 
         Ids arrive as strings because that is what the card carries and what
         the app compares with ===. Anything that is not a published product is
@@ -82,7 +86,8 @@ class Mart369Cart(models.AbstractModel):
         variants = Mixin._mart369_published_variants(
             [i for kind, i in wanted if kind == 'variant'])
         lines = [{'key': str(tmpl.id), 'tmpl': tmpl, 'variant': tmpl.product_variant_id,
-                  'chosen': False, 'qty': wanted[('template', tmpl.id)]}
+                  'chosen': len(tmpl.product_variant_ids) > 1,
+                  'qty': wanted[('template', tmpl.id)]}
                  for tmpl in templates]
         lines += [{'key': Mixin._mart369_variant_key(v), 'tmpl': v.product_tmpl_id,
                    'variant': v, 'chosen': True, 'qty': wanted[('variant', v.id)]}

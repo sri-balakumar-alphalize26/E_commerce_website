@@ -13,6 +13,7 @@ agree about when a product is running low, so both read `mart_low_stock_at`.
 
 import unittest
 
+from odoo.exceptions import UserError
 from odoo.tests import HttpCase, TransactionCase, tagged
 
 
@@ -196,13 +197,24 @@ class TestAdminProductEditRoutes(HttpCase):
         names = [b['name'] for g in body['groups'] for b in g['boxes']]
         self.assertIn('name', names)
         self.assertIn('list_price', names)
+        self.assertIn('categ_id', names)
         self.assertIn('categories', body)
+
+    def test_a_product_without_a_category_is_refused_whole(self):
+        before = self.Tmpl.search_count([])
+        res = self._send('POST', '/369mart/admin/products', {
+            'values': {'name': 'Zz No Category', 'list_price': 5, 'categ_id': ''}, 'photos': {}})
+        self.assertEqual(res.status_code, 400)
+        self.assertIn('Category', res.json()['error'])
+        self.assertEqual(self.Tmpl.search_count([]), before)
 
     def test_create_with_photos_then_edit(self):
         categ = self.env['product.public.category'].create({'name': 'Zz Route Categ'})
+        product_categ = self.env['product.category'].create({'name': 'Zz Route Product Categ'})
         res = self._send('POST', '/369mart/admin/products', {
             'values': {'name': 'Zz Route Made', 'list_price': '12.5',
                        'mart_unit_text': '250 g', 'image_1920': _PNG,
+                       'categ_id': str(product_categ.id),
                        'public_categ_ids': [categ.id]},
             'photos': {'add': [{'name': 'side', 'data': _PNG}]},
         })
@@ -211,7 +223,8 @@ class TestAdminProductEditRoutes(HttpCase):
         product = self.Tmpl.browse(new_id)
         self.assertEqual(product.name, 'Zz Route Made')
         self.assertEqual(product.list_price, 12.5)
-        self.assertEqual(product.public_categ_ids, categ)
+        self.assertEqual(product.public_categ_ids, product_categ.mart_mirror_id,
+                         'on the website under its Category, not a box of its own')
         self.assertTrue(product.image_1920)
         self.assertTrue(product.is_published, 'made on the desk means live')
         self.assertEqual(len(product.product_template_image_ids), 1)
@@ -300,18 +313,21 @@ class TestDeskOnHand(TransactionCase):
         if 'free_qty' not in self.env['product.product']._fields:
             raise unittest.SkipTest('Inventory is not installed')
         self.Tmpl = self.env['product.template']
+        self.categ = str(self.env['product.category'].create({'name': 'Zz Counted'}).id)
 
     def _box(self, form, name):
         return next((b for g in form['groups'] for b in g['boxes'] if b['name'] == name), None)
 
     def test_a_new_product_starts_with_its_count(self):
         pid = self.Tmpl.mart369_desk_save({
-            'name': 'Zz Counted', 'type': 'consu', 'is_storable': True, 'mart_on_hand': '24'})
+            'name': 'Zz Counted', 'type': 'consu', 'is_storable': True, 'mart_on_hand': '24',
+            'categ_id': self.categ})
         self.assertEqual(self.Tmpl.browse(pid).qty_available, 24)
 
     def test_recounting_books_the_difference(self):
         pid = self.Tmpl.mart369_desk_save({
-            'name': 'Zz Recount', 'type': 'consu', 'is_storable': True, 'mart_on_hand': '24'})
+            'name': 'Zz Recount', 'type': 'consu', 'is_storable': True, 'mart_on_hand': '24',
+            'categ_id': self.categ})
         self.Tmpl.mart369_desk_save({'mart_on_hand': '20'}, product_id=pid)
         product = self.Tmpl.browse(pid)
         product.invalidate_recordset()
@@ -321,7 +337,8 @@ class TestDeskOnHand(TransactionCase):
         """Stock is per variant now (the Variants block), as a laptop in
         two colours is counted: 5 black, 2 silver."""
         pid = self.Tmpl.mart369_desk_save({
-            'name': 'Zz Variant Count', 'type': 'consu', 'is_storable': True})
+            'name': 'Zz Variant Count', 'type': 'consu', 'is_storable': True,
+            'categ_id': self.categ})
         variant = self.Tmpl.browse(pid).product_variant_id
         row = self.Tmpl.mart369_desk_form(product_id=pid)['variants']['rows'][0]
         self.assertTrue(row['counted'])
@@ -330,7 +347,34 @@ class TestDeskOnHand(TransactionCase):
         variant.invalidate_recordset()
         self.assertEqual(variant.qty_available, 7)
 
+    def test_a_count_is_the_whole_stock_across_warehouses(self):
+        """5 in another warehouse, typed 7: the main location gets 2, not 7."""
+        pid = self.Tmpl.mart369_desk_save({
+            'name': 'Zz Two Places', 'type': 'consu', 'is_storable': True,
+            'categ_id': self.categ})
+        variant = self.Tmpl.browse(pid).product_variant_id
+        other = self.env['stock.warehouse'].create({'name': 'Zz Ruwi', 'code': 'ZZRW'})
+        self.env['stock.quant']._update_available_quantity(variant, other.lot_stock_id, 5)
+        self.Tmpl.mart369_desk_save({}, product_id=pid, variants={
+            'per': {str(variant.id): {'onHand': '7'}}})
+        variant.invalidate_recordset()
+        self.assertEqual(variant.qty_available, 7)
+        self.assertEqual(variant.with_context(location=other.lot_stock_id.id).qty_available, 5,
+                         'the other warehouse is left as it was')
+
+    def test_a_drop_the_main_location_cannot_take_is_refused(self):
+        pid = self.Tmpl.mart369_desk_save({
+            'name': 'Zz Elsewhere', 'type': 'consu', 'is_storable': True,
+            'categ_id': self.categ})
+        variant = self.Tmpl.browse(pid).product_variant_id
+        other = self.env['stock.warehouse'].create({'name': 'Zz Sohar', 'code': 'ZZSH'})
+        self.env['stock.quant']._update_available_quantity(variant, other.lot_stock_id, 5)
+        with self.assertRaisesRegex(UserError, 'more than one place'):
+            self.Tmpl.mart369_desk_save({}, product_id=pid, variants={
+                'per': {str(variant.id): {'onHand': '4'}}})
+
     def test_a_service_is_not_counted(self):
         pid = self.Tmpl.mart369_desk_save({
-            'name': 'Zz Service', 'type': 'service', 'mart_on_hand': '5'})
+            'name': 'Zz Service', 'type': 'service', 'mart_on_hand': '5',
+            'categ_id': self.categ})
         self.assertEqual(self.Tmpl.browse(pid).qty_available, 0)

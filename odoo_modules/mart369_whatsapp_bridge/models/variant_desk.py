@@ -43,8 +43,14 @@ class ProductTemplateVariantDesk(models.Model):
 
     def _mart369_desk_save_variant_extras(self, variant, data):
         """data['pictures'] = {'add': [{name, data}], 'remove': [id], 'order': [id]}
-        data['specs'] = the whole table, in order: [{id?, name, value}]
-        data['fill'] = True to add the attribute lines not in the table yet."""
+        data['specs'] = the rows on screen, in order: [{id?, name, value}]
+        data['specs_removed'] = [id] the rows taken off on screen
+        data['fill'] = True to add the attribute lines not in the table yet.
+
+        With `specs_removed`, only those rows go. A row somebody added from
+        Odoo's Product Variants form after this screen loaded is not on it,
+        and it stays. Without it (an older screen), the table is the whole
+        list and a row not sent goes, as it always did."""
         super()._mart369_desk_save_variant_extras(variant, data)
         variant = variant.sudo()
         Picture = self.env['sa.confirm.picture'].sudo()
@@ -67,24 +73,32 @@ class ProductTemplateVariantDesk(models.Model):
                     {'sequence': (position + 1) * 10})
 
         specs = data.get('specs')
-        if isinstance(specs, list):
+        removed = data.get('specs_removed')
+        if isinstance(specs, list) or isinstance(removed, list):
             own = variant.sa_spec_ids
+            gone = {int(i) for i in (removed or []) if str(i).isdigit()}
             kept = set()
-            for position, row in enumerate(specs):
+            for position, row in enumerate(specs or []):
                 if not isinstance(row, dict):
                     continue
+                line = own.filtered(lambda s: s.id == int(row.get('id') or 0))
                 name = ' '.join(str(row.get('name') or '').split())
                 if not name:
+                    # A row whose name was cleared is a row taken off.
+                    gone |= set(line.ids)
                     continue
                 vals = {'name': name, 'value': (row.get('value') or '').strip(),
                         'sequence': (position + 1) * 10}
-                line = own.filtered(lambda s: s.id == int(row.get('id') or 0))
                 if line:
                     line.write(vals)
                     kept.add(line.id)
                 else:
                     kept.add(Spec.create(dict(vals, product_id=variant.id)).id)
-            own.filtered(lambda s: s.id not in kept).unlink()
+            if isinstance(removed, list):
+                # Only this variant's own rows: an id from another one is ignored.
+                own.filtered(lambda s: s.id in gone and s.id not in kept).unlink()
+            else:
+                own.filtered(lambda s: s.id not in kept).unlink()
 
         if data.get('fill'):
             variant.action_sa_fill_specs()

@@ -335,8 +335,10 @@ class Mart369ProductField(models.Model):
             }
             cat_values = fields_all[:1]._category_values(product) if fields_all else {}
             # The shopper's own payload. The sudo() is the model's, for a
-            # preview read; the admin routes on top of this add none.
-            page = Page.sudo().payload(product)
+            # preview read; the admin routes on top of this add none. Every
+            # part kept (`mart369_page_all_parts`): the canvas greys a part
+            # that is switched off rather than losing it.
+            page = Page.sudo().with_context(mart369_page_all_parts=True).payload(product)
             card = page['p']
 
         by_section = {}
@@ -456,74 +458,99 @@ class Mart369ProductField(models.Model):
 
     @api.model
     def mart369_product_page(self, product_id):
-        """Every section and every field, for one product, as the desk draws it.
+        """What this product's page shows, section by section, for the
+        Products desk's read view (and the console's, over the admin route).
 
-        A sibling of `_resolve_sections` rather than a caller of it, because
-        the two answer different questions. That one answers "what does the
-        shopper get", so it returns the visible fields and nothing else. This
-        one answers "what will this product show, and what did it decide not
-        to" - and a section that is switched off has to appear *as* switched
-        off. Missing and deliberately-hidden look identical otherwise, and
-        only one of them is a decision somebody made.
+        Read off the shopper's own payload (`mart369.product.page.payload`),
+        so this screen cannot describe a page other than the one served. The
+        page now shows the product's own setup - photos, brand, name, price,
+        the choices, the Variant specs and the Sales Description, as the
+        WhatsApp confirmation page does - plus real reviews and the rails
+        below. So that is all this lists: no builder row the page never
+        prints (key features, a manufacturer, a return policy...).
 
-        The ladders are not re-derived: `_visible_for`, `_value_for` and
-        `_value_source_for` are the same three the shopper's own route runs
-        through, so this screen cannot drift from the page it describes.
+        A row the page leaves out - because it is empty (no description, no
+        specs) or switched off under Edit page - is listed as not shown,
+        rather than dropped: "nothing to show" and "switched off" are worth
+        seeing here. A switched-off part keeps its value on this screen.
         """
         product = self.env['product.template'].browse(int(product_id)).exists()
         if not product:
             return {}
 
-        fields_all = self.search([])
-        overrides = {
-            (o.product_tmpl_id.id, o.field_id.id): o
-            for o in self.env['mart369.product.override'].search(
-                [('product_tmpl_id', '=', product.id)])
-        }
-        cat_values = fields_all[:1]._category_values(product) if fields_all else {}
+        Page = self.env['mart369.product.page'].sudo()
+        payload = Page.with_context(mart369_page_all_parts=True).payload(product)
+        card = payload['p']
+        # The builder's switches, as the shopper's page reads them.
+        keys = {f.key for rows in self._resolve_sections(product).values() for f, _v in rows}
 
-        by_section = {}
-        for field in fields_all:
-            by_section.setdefault(field.section_id, self.browse())
-            by_section[field.section_id] |= field
+        def row(section, key, name, value, kind='text', switch=None):
+            value = value if value not in (None, False) else ''
+            return {
+                'id': '%s.%s' % (section, key),
+                'key': key,
+                'name': name,
+                'value': value if isinstance(value, str) else str(value),
+                # The product's own record: its setup, not a shop-wide wording.
+                'source': 'odoo',
+                'visible': value not in ('', 0, '0') and (switch is None or switch in keys),
+                'perProduct': False,
+                'kind': kind,
+            }
 
-        sections = []
-        for section in self.env['mart369.product.section'].search([]):
-            rows = []
-            for field in by_section.get(section, self.browse()):
-                visible = field._visible_for(product, overrides)
-                value = field._value_for(product, overrides, cat_values) or ''
-                if field.key == 'images' and not value:
-                    # Computed where the shopper's page is built, so it has no
-                    # stored value to read - which made this screen say
-                    # "Nothing set" beside a product with a photograph.
-                    value = self._mart369_photo_count(product)
-                rows.append({
-                    'id': field.id,
-                    'key': field.key or '',
-                    'name': field.name or field.key or '',
-                    'value': value,
-                    # Which of the four layers won. Without it an inherited
-                    # value is indistinguishable from one set on this product,
-                    # which is how the same wording gets typed in two places.
-                    'source': field._value_source_for(product, overrides, cat_values),
-                    'visible': visible,
-                    'perProduct': field.per_product,
-                    'kind': field.value_kind or 'text',
-                })
-            if not rows:
-                continue
-            sections.append({
-                'id': section.id,
-                'key': section.key or '',
-                'name': section.name or section.key or '',
-                # The master switch. Off here means the whole band is gone,
-                # whatever each field inside it says.
-                'show': section.show,
-                'fields': rows,
-                'shown': sum(1 for r in rows if r['visible']),
-                'total': len(rows),
-            })
+        def count(n, one, many):
+            return (one if n == 1 else many % n) if n else ''
+
+        specs = card.get('specs') or {}
+        top = [
+            row('top', 'images', _('Photos'),
+                count(len(card.get('images') or []), _('1 photo'), _('%s photos'))),
+            row('top', 'name', _('Name'), card.get('name')),
+            row('top', 'brand', _('Brand'), card.get('brand') or specs.get('Brand')),
+            row('top', 'price', _('Sales Price'), card.get('price')),
+            row('top', 'mrp', _('MRP'), card.get('mrp'), switch='mrp'),
+            row('top', 'low', _('Only-N-left warning'),
+                _('Only %s left', card['low']) if card.get('low') else '', switch='low_stock'),
+            row('top', 'delivery', _('Quick / Express'),
+                _('Express, %s', product.mart_delivery_text) if product.mart_delivery_text
+                else _('Quick')),
+        ]
+        choices = [
+            row('choices', 'attr_%s' % attr['id'], attr['name'],
+                ', '.join(v['name'] for v in attr['values']))
+            for attr in payload.get('attrs') or []
+        ]
+        if choices:
+            choices.append(row('choices', 'variants', _('Variants'),
+                               str(len(payload.get('variants') or []))))
+        reviews = Page.reviews(product, {'rating', 'rating_count'}, {})
+        sections = [
+            ('top', _('Top of the page'), top),
+            ('choices', _('Choices'), choices),
+            ('specs', _('Item specifications'),
+             [row('specs', 'spec_%d' % i, label, value, switch='variant_specs')
+              for i, (label, value) in enumerate(specs.items())]
+             or [row('specs', 'specs', _('Variant specs'), '')]),
+            ('description', _('Product description'),
+             [row('description', 'description', _('Sales Description'), card.get('description'),
+                  switch='sales_description')]),
+            ('reviews', _('Ratings and reviews'), [
+                row('reviews', 'rating', _('Average rating'), reviews.get('rating'), switch='rating'),
+                row('reviews', 'rating_count', _('Number of ratings'), reviews.get('ratingCount'),
+                    switch='rating_count'),
+            ]),
+            ('rails', _('Below the page'), [
+                row('rails', 'bundle', _('Frequently bought together'),
+                    count(len(payload.get('bundle') or []), _('1 product'), _('%s products')),
+                    switch='bundle_items'),
+                row('rails', 'similar', _('Similar products'),
+                    count(len(payload.get('similar') or []), _('1 product'), _('%s products')),
+                    switch='similar_items'),
+                row('rails', 'related', _('Others you may also like'),
+                    count(len(payload.get('related') or []), _('1 product'), _('%s products')),
+                    switch='related_items'),
+            ]),
+        ]
 
         return {
             'product': {
@@ -531,20 +558,19 @@ class Mart369ProductField(models.Model):
                 'name': product.display_name,
                 'categories': [c.display_name
                                for c in product.public_categ_ids],
+                # Parts this product switched on or off under Edit page.
                 'differs': product.mart_page_differs,
             },
-            'sections': sections,
+            'sections': [{
+                'id': key,
+                'key': key,
+                'name': name,
+                'show': True,
+                'fields': rows,
+                'shown': sum(1 for r in rows if r['visible']),
+                'total': len(rows),
+            } for key, name, rows in sections if rows],
         }
-
-    @api.model
-    def _mart369_photo_count(self, product):
-        """'1 photo', '3 photos', or '' - the card picture plus the gallery."""
-        count = 1 if product.image_1920 else 0
-        if 'product_template_image_ids' in product._fields:
-            count += len(product.product_template_image_ids)
-        if not count:
-            return ''
-        return '1 photo' if count == 1 else '%s photos' % count
 
     @api.model
     def _resolve_sections(self, product):

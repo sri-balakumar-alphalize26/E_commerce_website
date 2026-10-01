@@ -25,6 +25,7 @@ import { getDataURLFromFile } from "@web/core/utils/urls";
 import { _t } from "@web/core/l10n/translation";
 import { Icon } from "@mart369/ui/icon";
 import { Pick } from "@mart369/ui/pick";
+import { VariantsBlock, vxFrom } from "./variants_block";
 
 /* Where each box shows up for the shopper, for the eye button's card.
    `card` and `page` draw a mock of that screen with the box outlined; `note`
@@ -187,12 +188,14 @@ function formFrom(data) {
         // Anything touched, so Cancel knows to ask first.
         dirty: false,
         categQ: "",
+        // Attributes & Variants (variants_block.js), on the desk.
+        vx: vxFrom(data.variants),
     };
 }
 
 export class ProductEditor extends Component {
     static template = "mart369_product.DetailsEditor";
-    static components = { Icon, Pick };
+    static components = { Icon, Pick, VariantsBlock };
     static props = {
         // A `mart369_desk_form` answer: groups, values, categories, photos.
         data: Object,
@@ -232,6 +235,8 @@ export class ProductEditor extends Component {
             // The category dropdown - a panel over the form, so the boxes
             // below never jump while choosing.
             categOpen: false,
+            // Folded groups (Website only) the person has opened.
+            unfolded: {},
         });
         this.props.onReady?.(this);
 
@@ -335,6 +340,24 @@ export class ProductEditor extends Component {
     get shownGroups() {
         const groups = this.state.form.groups;
         return this.props.embedded ? groups.filter((g) => !g.deskOnly) : groups;
+    }
+
+    /** The sections in the web console's order: the product first, then its
+     *  choices and variants, and what only the website adds last - folded.
+     *  Attributes & Variants is the desk's: Odoo's product form has its own
+     *  tab for them. */
+    get sections() {
+        const groups = this.shownGroups;
+        const variants = !this.props.embedded && this.state.form.vx ? ["variants"] : [];
+        return [...groups.filter((g) => !g.folded), ...variants, ...groups.filter((g) => g.folded)];
+    }
+
+    isFolded(group) {
+        return !!group.folded && !this.state.unfolded[group.title];
+    }
+
+    toggleFold(title) {
+        this.state.unfolded[title] = !this.state.unfolded[title];
     }
 
     /** A box that only makes sense once another is on - On hand, once the
@@ -678,14 +701,14 @@ export class ProductEditor extends Component {
         if (this.props.photoHost) {
             return this.props.photoHost.add(read);
         }
-        for (const ph of read) {
-            if (!form.photo) {
-                form.values.image_1920 = ph.data;
-                form.photo = ph.url;
-            } else {
-                form.add.push(ph);
-            }
-        }
+        // The desk keeps one picture for the product (the setup guide's
+        // "general product photo"), as the web console does; more photos go
+        // on each variant, under Variants. A new picture replaces the one there.
+        const ph = read[0];
+        form.values.image_1920 = ph.data;
+        form.photo = ph.url;
+        form.promoted = null;
+        form.demote = false;
     }
 
     /** Every photograph in the order the shopper swipes them: the card's

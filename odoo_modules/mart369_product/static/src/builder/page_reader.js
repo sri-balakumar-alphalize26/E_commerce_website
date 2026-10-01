@@ -29,8 +29,8 @@ export const STATES = [
 ];
 
 /** Which bands draw inside the buy card's accordion, and which below it. */
-const ACCORDION = ["features", "info", "specs", "description", "returns"];
-const TAIL = ["delivery", "bundle", "similar"];
+const ACCORDION = ["specs", "description"];
+const TAIL = ["bundle", "similar"];
 
 export class ProductPageReader extends Component {
     get d() {
@@ -141,6 +141,12 @@ export class ProductPageReader extends Component {
 
     get ratingText() {
         return this.rowValue("reviews", "rating") || "No rating yet";
+    }
+
+    /** The product's Variant specs table, [[label, value]], from the card -
+     *  the rows the WhatsApp page lists. */
+    get cardSpecs() {
+        return Object.entries(this.d?.card?.specs || {});
     }
 
     // ------------------------------------------------- the rails below the fold

@@ -44,17 +44,23 @@ class TestProductApi(HttpCase):
         ctx = helper._price_context_for(self.product)
         mode = 'all' if self.product.mart_delivery_text else 'quick'
         expected = helper._serialize_product(self.product, None, ctx, mode)
-        self.assertEqual(self._get().json()['p'], expected)
+        card = self._get().json()['p']
+        # The page adds the product's own setup - its variant's photos, the
+        # Variant specs and the Sales Description, as the WhatsApp
+        # confirmation page does; the rest is the home page's card.
+        self.assertEqual(card.pop('description', ''), self.product.description_sale or '')
+        for setup in ('specs', 'images'):
+            card.pop(setup, None)
+            expected.pop(setup, None)
+        self.assertEqual(card, expected)
 
-    def test_info_is_ordered_pairs_and_specs_is_an_object(self):
-        d = self._get().json()['d']
-        if 'info' in d:
-            self.assertIsInstance(d['info'], list)
-            for row in d['info']:
-                self.assertIsInstance(row, list)
-                self.assertEqual(len(row), 2, 'each row is [label, value]')
-        if 'specs' in d:
-            self.assertIsInstance(d['specs'], dict)
+    def test_specs_ride_on_the_card_as_an_object(self):
+        """The Variant specs are the card's; the old builder tables are gone."""
+        payload = self._get().json()
+        if 'specs' in payload['p']:
+            self.assertIsInstance(payload['p']['specs'], dict)
+        for gone in ('info', 'specs', 'features', 'returnText', 'disclaimer'):
+            self.assertNotIn(gone, payload['d'])
 
     def test_no_nulls_anywhere(self):
         """A field that is switched off is absent, never null."""
@@ -108,17 +114,66 @@ class TestProductApiDetails(TransactionCase):
         keys = {f.key for rows in shown.values() for f, _v in rows}
         return self.Page.details(self.product, shown, keys)
 
-    def test_hidden_field_leaves_the_table(self):
-        field = self.Field.search([('key', '=', 'sold_by')])
-        rows = dict(self._details().get('info', []))
-        self.assertIn(field.name, rows)
+    def _field(self, key):
+        field = self.Field.search([('key', '=', key)])
+        self.assertTrue(field, '%s is a builder row' % key)
+        return field
 
-        field.show = False
-        rows = dict(self._details().get('info', []))
-        self.assertNotIn(field.name, rows, 'switched off means absent')
+    # ---------------------------------------------- Edit page's switches
 
-    def test_returnable_reads_as_a_real_boolean(self):
-        self.assertIsInstance(self._details().get('returnable'), bool)
+    def test_switching_off_the_sales_description_takes_it_off_the_page(self):
+        self.product.description_sale = 'Two USB-C ports.'
+        self.assertEqual(self.Page.payload(self.product)['p'].get('description'), 'Two USB-C ports.')
+        self._field('sales_description').show = False
+        self.assertNotIn('description', self.Page.payload(self.product)['p'])
+
+    def test_one_product_can_hide_it_alone(self):
+        self.product.description_sale = 'Two USB-C ports.'
+        other = self.env['product.template'].create({
+            'name': 'API Other Product', 'is_published': True, 'description_sale': 'Kept.'})
+        self.Field.set_product_state(self._field('sales_description').id, self.product.id, 'hide')
+        self.assertNotIn('description', self.Page.payload(self.product)['p'])
+        self.assertEqual(self.Page.payload(other)['p'].get('description'), 'Kept.')
+
+    def test_switching_off_the_mrp_takes_it_off_the_page(self):
+        self.product.compare_list_price = 150
+        self.assertTrue(self.Page.payload(self.product)['p'].get('mrp'))
+        self._field('mrp').show = False
+        self.assertNotIn('mrp', self.Page.payload(self.product)['p'])
+
+    def test_switching_off_the_variant_specs_takes_them_off_every_variant(self):
+        ram = self.env['product.attribute'].create({
+            'name': 'Zz API RAM', 'create_variant': 'always',
+            'value_ids': [(0, 0, {'name': '8GB'}), (0, 0, {'name': '16GB'})]})
+        self.product.attribute_line_ids = [(0, 0, {
+            'attribute_id': ram.id, 'value_ids': [(6, 0, ram.value_ids.ids)]})]
+        payload = self.Page.payload(self.product)
+        self.assertTrue(all(v.get('specs') for v in payload['variants']))
+        self._field('variant_specs').show = False
+        payload = self.Page.payload(self.product)
+        self.assertNotIn('specs', payload['p'])
+        self.assertFalse([v for v in payload['variants'] if 'specs' in v])
+
+    def test_a_switched_off_section_takes_its_parts_off(self):
+        self.product.description_sale = 'Two USB-C ports.'
+        self.env['mart369.product.section'].search([('key', '=', 'description')]).show = False
+        self.assertNotIn('description', self.Page.payload(self.product)['p'])
+
+    def test_the_listing_card_is_left_alone(self):
+        """Only the page's cards: the home page, search and cart keep theirs."""
+        self.product.compare_list_price = 150
+        self._field('mrp').show = False
+        helper = self.env['mart369.serializable'].sudo()
+        card = helper._serialize_product(self.product, None, helper._price_context_for(self.product))
+        self.assertTrue(card.get('mrp'))
+
+    def test_the_read_view_shows_a_switched_off_part_as_off(self):
+        self.product.description_sale = 'Two USB-C ports.'
+        self._field('sales_description').show = False
+        page = self.Field.mart369_product_page(self.product.id)
+        row = next(r for s in page['sections'] for r in s['fields'] if r['key'] == 'description')
+        self.assertEqual(row['value'], 'Two USB-C ports.', 'its value is still shown here')
+        self.assertFalse(row['visible'])
 
     def test_no_reviews_yet_says_so(self):
         d = self._details()

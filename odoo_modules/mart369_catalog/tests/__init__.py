@@ -4,3 +4,4 @@ from . import test_admin_products
 from . import test_admin_categories
 from . import test_home_tile_colours
 from . import test_category_logo
+from . import test_category_mirror

@@ -3,11 +3,12 @@
 Same shape as mart369_home's endpoints - type='http' answering a bare JSON body,
 public and cached - because the app fetches them the same way.
 
-What these routes deliberately do **not** return is facets. `useProductFilters`
-in components/home/Browse.jsx already builds the brand counts and the price
-range from the list it is given, and runs every filter and all five sorts in the
-browser. Sending facets from here would mean rewriting that hook; sending the
-products means it keeps working untouched.
+What these routes deliberately do **not** return is facet counts.
+`useProductFilters` in components/home/Browse.jsx already builds the brand
+counts and the price range from the list it is given, and runs every filter and
+all five sorts in the browser. So each card carries its own attribute values
+(`facets`: Type, Brand, RAM...) and the attribute chips are counted the same
+way; sending counts from here would mean rewriting that hook.
 """
 
 import logging

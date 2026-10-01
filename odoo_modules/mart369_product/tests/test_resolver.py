@@ -25,7 +25,8 @@ class TestResolver(TransactionCase):
             'list_price': 10,
             'public_categ_ids': [(6, 0, [self.category.id])],
         })
-        self.field = self.Field.search([('key', '=', 'manufacturer_address')])
+        # A wording row with a shop default, worded per category or product.
+        self.field = self.Field.search([('key', '=', 'review_empty')])
         self.section = self.field.section_id
 
     def _state(self, state):
@@ -117,9 +118,9 @@ class TestResolver(TransactionCase):
         self.assertEqual(self.field._value_for(self.product), 'Child')
 
     def test_value_can_come_from_the_product_itself(self):
-        field = self.Field.search([('key', '=', 'net_weight')])
-        self.product.weight = 2.5
-        self.assertEqual(field._value_for(self.product), 2.5)
+        field = self.Field.search([('key', '=', 'mrp')])
+        self.product.compare_list_price = 12.5
+        self.assertEqual(field._value_for(self.product), 12.5)
 
     def test_unknown_odoo_field_is_empty_not_a_crash(self):
         self.field.write({'source': 'odoo', 'odoo_field': 'no_such_field'})
@@ -129,18 +130,19 @@ class TestResolver(TransactionCase):
 
     def test_resolve_leaves_hidden_fields_out(self):
         before = self.Field._resolve(self.product)
-        self.assertIn('manufacturer_address', before)
+        self.assertIn('review_empty', before)
         self.field.show = False
         after = self.Field._resolve(self.product)
-        self.assertNotIn('manufacturer_address', after,
+        self.assertNotIn('review_empty', after,
                          'a hidden field is absent, not empty')
 
     def test_sections_keep_their_order(self):
         rows = self.Field._resolve_sections(self.product)
-        info = [f.key for f, _v in rows.get('info', [])]
-        self.assertEqual(info, sorted(
-            info, key=lambda k: self.Field.search([('key', '=', k)]).sequence),
-            'the information table renders in sequence order')
+        reviews = [f.key for f, _v in rows.get('reviews', [])]
+        self.assertTrue(reviews)
+        self.assertEqual(reviews, sorted(
+            reviews, key=lambda k: self.Field.search([('key', '=', k)]).sequence),
+            'a section renders in sequence order')
 
     def test_builder_load_shape(self):
         """One call gives the builder the page, its rows and the product card."""
@@ -153,9 +155,9 @@ class TestResolver(TransactionCase):
         self.assertEqual(data['product']['id'], self.product.id)
         self.assertEqual(data['card']['name'], self.product.name)
 
-        info = [s for s in data['sections'] if s['key'] == 'info'][0]
-        self.assertTrue(info['rows'], 'a section carries its fields')
-        row = [r for r in info['rows'] if r['key'] == 'manufacturer_address'][0]
+        reviews = [s for s in data['sections'] if s['key'] == 'reviews'][0]
+        self.assertTrue(reviews['rows'], 'a section carries its fields')
+        row = [r for r in reviews['rows'] if r['key'] == 'review_empty'][0]
         # Each row says what it is, what it says, and whether it shows - the
         # mock needs all three to draw a hidden field greyed rather than gone.
         self.assertLessEqual({'key', 'name', 'value', 'visible', 'state', 'show',

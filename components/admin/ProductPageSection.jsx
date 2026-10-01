@@ -14,17 +14,19 @@
 
    Two scopes, one switch at the top. "Whole shop" is the default for every
    product; "This product" is where one product is allowed to differ. Keeping
-   that as a tab rather than a control on every row is what stops forty-eight
-   fields turning into a wall.
+   that as a tab rather than a control on every row is what stops the fields
+   turning into a wall.
 
    The parts come from the shop: one call to /admin/product/builder, which is
    mart369.product.field.builder_load() - the same call Odoo's own builder
    makes. Writes go back one field at a time, debounced, through the queue in
    editorKit.
 
-   What this does NOT do yet: a shopper's page is still assembled by
-   productDetails.js from a local sample, so switching something off changes
-   this screen and the records behind it, and not yet the shop.
+   The parts are what the shopper's page draws: the product's own setup
+   (photos, price, the Variant specs, the Sales Description), real reviews and
+   the rails. Switching one off takes it off the shop's product page
+   (mart369.product.page leaves it out of the page's card); this preview keeps
+   it, marked hidden.
    ========================================================================== */
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
@@ -48,35 +50,26 @@ import "./productEditor.css";
 const SECTION_AT = {
   gallery: ".pd-gallery",
   buy: ".pd-card.pd-buy",
-  features: '[data-sec="features"]',
-  info: '[data-sec="info"]',
   specs: '[data-sec="specs"]',
   description: '[data-sec="description"]',
-  returns: '[data-sec="returns"]',
   reviews: "#pd-reviews",
-  delivery: ".pd-deliver",
   bundle: ".pd-fbt",
   similar: ".pd-related",
 };
 
-/* The handful of fields that own a node of their own. The rest are rows in a
-   table, and are edited from the panel. */
+/* The handful of fields that own a node of their own. The rest are edited
+   from the panel. */
 const FIELD_AT = {
   images: ".pd-stage",
-  unit_tag: ".pd-unit-tag",
-  brand: ".pd-brand",
   name: ".pd-name",
-  rating_summary: ".pd-rating",
   price: ".pd-price > b",
   mrp: ".pd-price s",
   low_stock: ".pd-low",
-  pack_sizes: ".pd-sizes",
-  delivery_mode: ".pd-mode",
-  features: ".pd-features",
+  variant_specs: '[data-sec="specs"] .pd-grid',
+  sales_description: '[data-sec="description"] .pd-desc',
+  rating: ".pd-rating",
   rating_bars: ".pd-bars",
   reviews: ".pd-rev-list",
-  address: ".pd-addr",
-  explore_category: ".pd-explore",
 };
 
 const SOURCE_NOTE = {
@@ -721,7 +714,7 @@ function WholePanel({ sections, isOn, onSelect }) {
       <header className="pe-panel-head">
         <div>
           <h2>The whole page</h2>
-          <p>Eleven parts, top to bottom.</p>
+          <p>{sections.length} parts, top to bottom.</p>
         </div>
       </header>
       <ul className="pp-secs">

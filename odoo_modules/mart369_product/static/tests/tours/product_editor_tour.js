@@ -12,8 +12,8 @@
  */
 import { registry } from "@web/core/registry";
 
-const INFO_BAND = '.mart-canvas .pe-band:contains("Product information")';
-const FIELD_ROW = '.pe-panel .pe-field-row:contains("Manufacturer address")';
+const INFO_BAND = '.mart-canvas .pe-band:contains("Ratings")';
+const FIELD_ROW = '.pe-panel .pe-field-row:contains("Average rating")';
 
 registry.category("web_tour.tours").add("mart369_product_editor", {
     url: "/odoo/mart-product",
@@ -24,7 +24,7 @@ registry.category("web_tour.tours").add("mart369_product_editor", {
         },
         {
             content: "nothing is selected, so the panel lists the whole page",
-            trigger: '.pe-panel .pe-sec-row:contains("Product information")',
+            trigger: '.pe-panel .pe-sec-row:contains("Ratings and reviews")',
         },
         // The band, not its drawing: `.pe-band-in` is pointer-events:none on
         // purpose, so the page inside it cannot answer clicks. Aiming at the
@@ -45,7 +45,7 @@ registry.category("web_tour.tours").add("mart369_product_editor", {
         },
         {
             content: "the field panel opened on the right field",
-            trigger: '.pe-panel .mart-panel-head h2:contains("Manufacturer address")',
+            trigger: '.pe-panel .mart-panel-head h2:contains("Average rating")',
         },
         {
             content: "switch it off for the whole shop",
@@ -66,7 +66,7 @@ registry.category("web_tour.tours").add("mart369_product_editor", {
         },
         {
             content: "it is on the page again, greyed out",
-            trigger: `${INFO_BAND} .mart-pdp-off:contains("Manufacturer address")`,
+            trigger: ".mart-canvas .pd-rating.mart-pdp-off",
         },
         {
             content: "switch to editing one product",
@@ -114,7 +114,7 @@ registry.category("web_tour.tours").add("mart369_product_editor", {
         },
         {
             content: "and it is still the field we drilled into",
-            trigger: '.pe-panel .mart-panel-head h2:contains("Manufacturer address")',
+            trigger: '.pe-panel .mart-panel-head h2:contains("Average rating")',
         },
         {
             content: "let this one product show it anyway",

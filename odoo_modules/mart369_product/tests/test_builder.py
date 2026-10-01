@@ -30,9 +30,11 @@ ROW_KEYS = frozenset({
 # section into the accordion, the tail, or one of the named singles; a section
 # key that is none of these would silently never be drawn.
 DRAWN_KEYS = frozenset({
-    'gallery', 'buy', 'features', 'info', 'specs', 'description', 'returns',
-    'reviews', 'delivery', 'bundle', 'similar',
+    'gallery', 'buy', 'specs', 'description', 'reviews', 'bundle', 'similar',
 })
+
+# The grocery-template bands the page no longer draws (removed_fields.xml).
+GONE_KEYS = frozenset({'features', 'info', 'returns', 'delivery'})
 
 
 @tagged('post_install', '-at_install')
@@ -76,6 +78,17 @@ class TestProductBuilderLoad(TransactionCase):
             'these sections exist but no screen draws them: %s. Add them to '
             'ACCORDION or TAIL in page_reader.js, or to PageBody.' % unknown)
 
+    def test_only_what_the_page_draws_is_offered(self):
+        """The product's own setup, the reviews and the rails - no key
+        features, product information, returns or delivery rows."""
+        data = self.Field.builder_load(self.product.id)
+        self.assertFalse({s['key'] for s in data['sections']} & GONE_KEYS)
+        keys = {r['key'] for s in data['sections'] for r in s['rows']}
+        self.assertTrue({'variant_specs', 'sales_description', 'mrp', 'low_stock'} <= keys)
+        for gone in ('features', 'sold_by', 'manufacturer_address', 'warranty',
+                     'disclaimer', 'return_text', 'unit_tag', 'recently_viewed'):
+            self.assertNotIn(gone, keys)
+
     # ---------------------------------------------------- picking a product
 
     def test_it_loads_the_product_it_was_given(self):
@@ -100,10 +113,10 @@ class TestProductBuilderLoad(TransactionCase):
     def test_value_and_product_value_are_not_the_same_field(self):
         """`value` is for drawing, `product_value` is for writing back. The
         editor's wording box binds to the second on purpose."""
-        row = self._row('info', per_product=True)
-        self.Field.set_product_value(row['id'], self.product.id, 'Chennai')
-        after = self._row('info', field_id=row['id'])
-        self.assertEqual(after['product_value'], 'Chennai')
+        row = self._row('reviews', per_product=True)
+        self.Field.set_product_value(row['id'], self.product.id, 'Tell us what you think')
+        after = self._row('reviews', field_id=row['id'])
+        self.assertEqual(after['product_value'], 'Tell us what you think')
         self.assertEqual(after['value_source'], 'product')
         self.assertTrue(after['has_override'])
 
@@ -111,22 +124,22 @@ class TestProductBuilderLoad(TransactionCase):
         """Why the editor's reset is not optimistic: it clears the state and
         the words, and guessing what the page falls back to is the guess that
         would be wrong."""
-        row = self._row('info', per_product=True)
-        self.Field.set_product_value(row['id'], self.product.id, 'Chennai')
+        row = self._row('reviews', per_product=True)
+        self.Field.set_product_value(row['id'], self.product.id, 'Tell us what you think')
         self.Field.reset_product_state([row['id']], self.product.id)
-        after = self._row('info', field_id=row['id'])
+        after = self._row('reviews', field_id=row['id'])
         self.assertEqual(after['product_value'], '')
         self.assertEqual(after['state'], 'follow')
         self.assertFalse(after['has_override'])
 
     def test_a_bad_state_is_refused(self):
-        row = self._row('info')
+        row = self._row('reviews')
         with self.assertRaises(ValueError):
             self.Field.set_product_state(row['id'], self.product.id, 'maybe')
 
     def test_wording_on_a_shared_field_is_refused(self):
         """The panel hides the box for these; the model refuses anyway."""
-        row = self._row('info', per_product=False)
+        row = self._row('buy', per_product=False)
         if not row:
             self.skipTest('every field on this section is per-product')
         with self.assertRaises(UserError):
@@ -135,6 +148,8 @@ class TestProductBuilderLoad(TransactionCase):
     # ------------------------------------------------------------- helpers
 
     def _row(self, section_key, field_id=None, per_product=None):
+        """A row of the section; with `per_product`, a wording row (text)
+        that may - or may not - be worded per product."""
         data = self.Field.builder_load(self.product.id)
         section = next(s for s in data['sections'] if s['key'] == section_key)
         rows = section['rows']
@@ -142,7 +157,7 @@ class TestProductBuilderLoad(TransactionCase):
             return next(r for r in rows if r['id'] == field_id)
         if per_product is not None:
             rows = [r for r in rows if r['per_product'] == per_product
-                    and r['source'] == 'text']
+                    and (r['source'] == 'text' or not per_product)]
         return rows[0] if rows else None
 
 

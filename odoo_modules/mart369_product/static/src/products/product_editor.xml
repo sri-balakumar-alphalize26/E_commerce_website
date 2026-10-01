@@ -14,9 +14,14 @@
                     <!-- ============================================ photographs -->
                     <section t-attf-class="ad-card pdk-sec pdk-photos-sec {{ state.dragging ? 'pdk-drag' : '' }}"
                              t-on-dragover="onDragOver" t-on-dragleave="onDragLeave" t-on-drop="onDrop">
-                        <header class="pdk-sec-head">
+                        <header t-if="props.embedded" class="pdk-sec-head">
                             <h3>Photographs</h3>
                             <small t-esc="photoList.length ? photoList.length + ' in all' : 'None yet'"/>
+                        </header>
+                        <!-- The desk: one picture for the product, as on the web console. -->
+                        <header t-else="" class="pdk-sec-head">
+                            <h3>Picture</h3>
+                            <small t-esc="state.form.photo ? 'The general product photo' : 'None yet'"/>
                         </header>
                         <div t-if="state.picked.length" class="pdk-photo-bar">
                             <b t-esc="state.picked.length + ' selected'"/>
@@ -48,24 +53,46 @@
                                 <small t-elif="ph.kind === 'new'">Not saved</small>
                                 <small t-elif="ph.kind === 'demoted'">Was on the card</small>
                             </div>
-                            <label class="pdk-photo pdk-add pdk-photo-add" aria-label="Add photographs">
+                            <label t-if="props.embedded" class="pdk-photo pdk-add pdk-photo-add" aria-label="Add photographs">
                                 <Icon n="'plus'" size="22"/>
                                 <span>Add</span>
                                 <input type="file" accept="image/*" multiple="" hidden=""
                                        t-on-change="(ev) => this.onPhotos(ev)"/>
                             </label>
+                            <label t-else="" class="pdk-photo pdk-add pdk-photo-add"
+                                   t-att-aria-label="state.form.photo ? 'Replace the picture' : 'Add the picture'">
+                                <Icon n="'plus'" size="22"/>
+                                <span t-esc="state.form.photo ? 'Replace' : 'Add'"/>
+                                <input type="file" accept="image/*" hidden=""
+                                       t-on-change="(ev) => this.onPhotos(ev)"/>
+                            </label>
                         </div>
-                        <p class="pdk-hint">
+                        <p t-if="props.embedded" class="pdk-hint">
                             Tap Add, or drop pictures here. The first is the picture on the
                             card; the rest become the gallery shoppers swipe. Tap a picture
                             to see it large, put it on the card, or remove it.
                         </p>
+                        <p t-else="" class="pdk-hint">
+                            The general product photo, used when a variant has no picture of its
+                            own. More photos - front, back, each colour - go on each variant under
+                            Variants.
+                        </p>
                     </section>
 
-                    <!-- =============================================== the boxes -->
-                    <section t-foreach="shownGroups" t-as="g" t-key="g.title" class="ad-card pdk-sec">
-                        <header class="pdk-sec-head"><h3 t-esc="g.title"/></header>
-                        <div class="pdk-fields">
+                    <!-- ======== the boxes, Attributes & Variants, then Website only -->
+                    <t t-foreach="sections" t-as="g" t-key="g === 'variants' ? '__variants' : g.title">
+                    <VariantsBlock t-if="g === 'variants'" vx="state.form.vx"
+                                   money.bind="money" onChange.bind="markDirty"/>
+                    <section t-else="" t-attf-class="ad-card pdk-sec {{ g.folded ? 'pdk-folding' : '' }}">
+                        <header class="pdk-sec-head">
+                            <button t-if="g.folded" type="button" class="pdk-fold"
+                                    t-att-aria-expanded="isFolded(g) ? 'false' : 'true'"
+                                    t-on-click="() => this.toggleFold(g.title)">
+                                <h3 t-esc="g.title"/><small>Not used on WhatsApp</small><Icon n="'chev'" size="14"/>
+                            </button>
+                            <h3 t-else="" t-esc="g.title"/>
+                        </header>
+                        <div t-if="!isFolded(g)" class="pdk-fields">
                             <t t-foreach="shownBoxes(g)" t-as="b" t-key="b.name">
                                 <t t-set="pt" t-value="state.form.parts[b.name]"/>
 
@@ -258,6 +285,7 @@
                             </t>
                         </div>
                     </section>
+                    </t>
                 </div>
 
                 <!-- ====================================== how shoppers see it -->
