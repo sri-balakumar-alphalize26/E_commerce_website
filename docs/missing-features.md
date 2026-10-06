@@ -105,6 +105,6 @@ Each item follows the pattern that worked for the category logos:
 
 1. Odoo model fields, plus the admin allowlist, then the serializer, then the storefront, then both consoles (web and Odoo desk).
 2. A test in the owning module, run through PowerShell and checked for more than 0 tests.
-3. `-u` on `sparenix_test`, then a restart of 8069 and the 8097 dev server.
+3. `-u` on `sparenix_test`, then a restart of the 8069 service (`odoo-server-19.0`).
 4. A Playwright + Edge check of the console flow and of the shop page it feeds, then cleanup of the test data.
 5. Screenshots saved in the module's `static/description/`.

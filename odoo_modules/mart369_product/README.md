@@ -154,14 +154,17 @@ prefix, the `--do-not-de-elevate` wrapper for tours, and never running a tour
 in the same command as `-u`).
 
 **One more, learned the hard way:** Windows lets several processes bind the
-same port. Killing "the PID on port 8097" leaves the others answering with
+same port. Killing "the PID on the port" leaves the others answering with
 stale code, and you will chase a bug that was fixed twenty minutes ago. Sweep
-by command line:
+by command line (a test run's `--http-port`, here 8111):
 
 ```
 Get-CimInstance Win32_Process -Filter "Name='python.exe'" |
-  ? { $_.CommandLine -match 'http-port=8097' } | % { Stop-Process -Id $_.ProcessId -Force }
+  ? { $_.CommandLine -match 'http-port=8111' } | % { Stop-Process -Id $_.ProcessId -Force }
 ```
+
+The shop itself talks to the 8069 service (`odoo-server-19.0`); restart that
+service, not a stray process, after a `-u`.
 
 ## The mock's stylesheet
 

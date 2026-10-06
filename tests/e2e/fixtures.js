@@ -7,8 +7,13 @@
  * one missed restore silently changed what shoppers see.
  */
 import { test as base, expect } from "@playwright/test";
+import { loadEnvConfig } from "@next/env";
 
-export const ODOO = process.env.MART_ODOO_URL || "http://localhost:8097";
+/* The same Odoo and database the shop uses: .env.local, unless overridden. */
+loadEnvConfig(process.cwd());
+export const ODOO = (process.env.MART_ODOO_URL || process.env.ODOO_URL || "").replace(/\/$/, "");
+const ODOO_DB = process.env.MART_ODOO_DB || process.env.ODOO_DB || "";
+if (!ODOO) throw new Error("Set ODOO_URL in .env.local (or MART_ODOO_URL) before running the tests.");
 const LOGIN = process.env.MART_LOGIN || "admin";
 const PASSWORD = process.env.MART_PASSWORD || "admin";
 
@@ -42,7 +47,9 @@ export const test = base.extend({
          actually get?". Read straight from Odoo rather than through the
          proxy, so a cached copy can never make a failing test look green. */
       feed: async (mode = "quick") => {
-        const r = await req.get(`${ODOO}/369mart/home/${mode}`);
+        const r = await req.get(`${ODOO}/369mart/home/${mode}`, {
+          headers: ODOO_DB ? { "X-Odoo-Database": ODOO_DB } : {},
+        });
         expect(r.ok()).toBeTruthy();
         return r.json();
       },

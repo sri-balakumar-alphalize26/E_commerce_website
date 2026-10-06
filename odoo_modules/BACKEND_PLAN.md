@@ -69,12 +69,12 @@ Three corollaries that are easy to get wrong:
 
 Copy these; they are what the four existing modules do.
 
-**Where code lives.** Source of truth is `C:\Projects\369Mart\odoo_modules\<module>\`, tracked by
+**Where code lives.** Source of truth is `C:\Projects\Websites\369Mart\odoo_modules\<module>\`, tracked by
 git. Odoo's `addons_path` is only `…\server\odoo\addons`, so each module is **junctioned** in:
 
 ```powershell
 New-Item -ItemType Junction -Path "C:\Program Files\Odoo 19.0.20260119\server\odoo\addons\<module>" `
-         -Target "C:\Projects\369Mart\odoo_modules\<module>"
+         -Target "C:\Projects\Websites\369Mart\odoo_modules\<module>"
 ```
 
 Never `rm -rf` a junction. Remove with `[System.IO.Directory]::Delete($p, $false)`.
@@ -82,7 +82,9 @@ Do not edit `odoo.conf` — its `addons_path` is shared with other projects on t
 
 **Servers.** `8069` is the nssm service (`odoo-server-19.0` + `odoo-gevent-19.0`), serving several
 databases — `369application`, `grocery_shop`, `sales_test`, `tool_managament` — so treat it as shared.
-Dev work runs a separate process on `8097` against `sparenix_test`. Only one `-u` per database at a
+The shop uses this same 8069 service, pointed at `sparenix_test` by `ODOO_URL`/`ODOO_DB` in the
+site's `.env.local` (sent as `X-Odoo-Database`); there is no separate dev process. If the repo moves,
+re-point the junctions above or 8069 answers 404 on every `/369mart/*` route. Only one `-u` per database at a
 time; parallel upgrades give "could not serialize access" and silently report "0 tests".
 
 **Tests.**
@@ -133,7 +135,7 @@ kanban pair with an OWL component above; `customer_dashboard.js` is the template
 ### Verification, per module — not at the end
 
 1. Module tests green **and** every previously passing test.
-2. Live matrix over `curl` on 8097, including the ownership 404s.
+2. Live matrix over `curl` on 8069 with `-H "X-Odoo-Database: sparenix_test"`, including the ownership 404s.
 3. Postgres inspection that what the API claims it stored actually landed. For anything with money,
    assert the Odoo total equals the payload total to the paisa.
 4. **Drive the operator screens in a real browser.** Playwright with installed Edge

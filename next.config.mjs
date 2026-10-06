@@ -1,5 +1,3 @@
-const ODOO_URL = (process.env.ODOO_URL || "http://localhost:8097").replace(/\/$/, "");
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -16,18 +14,11 @@ const nextConfig = {
      and it is what the "Image address" setting in Odoo assumes when it is left
      empty: "the app then gets short addresses and loads them through itself."
 
-     Doing it here rather than sending absolute URLs keeps every request on one
-     origin, so there is no CORS to arrange and Odoo's address never reaches the
-     browser. Fill in that setting only when this passthrough is not possible. */
-  async rewrites() {
-    return [
-      { source: "/web/image/:path*", destination: `${ODOO_URL}/web/image/:path*` },
-      { source: "/web/assets/:path*", destination: `${ODOO_URL}/web/assets/:path*` },
-      /* A product variant's extra photos (its Variant images tab), which
-         /web/image cannot serve to a shopper. Same short-address reasoning. */
-      { source: "/369mart/variant/photo/:id", destination: `${ODOO_URL}/369mart/variant/photo/:id` },
-    ];
-  },
+     They used to be rewrites here. They are route handlers now (app/web/image,
+     app/web/assets, app/369mart/variant/photo, all via odooPassthrough in
+     lib/odoo.js) because a rewrite cannot tell Odoo which database ODOO_DB
+     names. Same idea as before: one origin, no CORS, and Odoo's address never
+     reaches the browser. */
 };
 
 export default nextConfig;

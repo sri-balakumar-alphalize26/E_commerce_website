@@ -14,6 +14,17 @@ npm start            # PORT=8080 npm start to change the port
 ```
 Needs Node 18.18 or newer (Node 20 LTS recommended).
 
+### Which Odoo and database
+Set in `.env.local` (copy `.env.example`), one per machine — it is not committed, so your PC and the
+server each keep their own:
+```bash
+ODOO_URL=http://localhost:8069   # the Odoo with the mart369_* modules
+ODOO_DB=sparenix_test            # any database on it; empty = let Odoo pick
+```
+Restart `npm run dev` / `npm start` after changing it. With no `ODOO_URL` the shop answers
+"Store not connected" instead of guessing an address. Customers signed in to the old database are
+signed out on their next request.
+
 ## Features
 - **Header** — logo, Quick / Express toggle (springing thumb), delivery location, search with
   rolling words, offers, reorder, cart badge, account.
