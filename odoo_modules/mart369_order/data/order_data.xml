@@ -6,10 +6,14 @@
         line needs a product, and these are not things anyone sells - so they
         are kept off the website and out of the catalogue, and exist only to
         give the bill's own rows somewhere to live.
+
+        Filed under Odoo's own Services category, as Odoo's own service
+        products are: some databases make a product category required.
     -->
     <record id="product_delivery_fee" model="product.template">
         <field name="name">Delivery</field>
         <field name="type">service</field>
+        <field name="categ_id" eval="ref('product.product_category_services', raise_if_not_found=False)"/>
         <field name="list_price">0.0</field>
         <field name="sale_ok" eval="False"/>
         <field name="purchase_ok" eval="False"/>
@@ -20,6 +24,7 @@
     <record id="product_coupon" model="product.template">
         <field name="name">Coupon discount</field>
         <field name="type">service</field>
+        <field name="categ_id" eval="ref('product.product_category_services', raise_if_not_found=False)"/>
         <field name="list_price">0.0</field>
         <field name="sale_ok" eval="False"/>
         <field name="purchase_ok" eval="False"/>
