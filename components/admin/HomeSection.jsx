@@ -209,6 +209,14 @@ export default function HomeSection({ flash }) {
       ? `“${name}” created. Edit it, then switch it on when you are ready.`
       : "Copied. Edit it, then switch it on when you are ready.");
 
+  /* A new page laid out from the shop's biggest categories, switched on. The
+     one that was live stays here, so switching back is one tap. */
+  const onRebuild = () => {
+    if (!window.confirm("Make a new home page arranged from your biggest categories, and switch it on? Your current page stays saved, so you can switch back.")) return;
+    run(() => api("/admin/home/pages/starter", { method: "POST" }),
+      "New page arranged from your catalogue and switched on. Rearrange anything you like.");
+  };
+
   const onDelete = (page) =>
     run(() => api(`/admin/home/pages/${page.id}`, { method: "DELETE" }),
       `“${page.name}” moved to the Trash`);
@@ -236,6 +244,10 @@ export default function HomeSection({ flash }) {
             <button className="ad-btn" disabled={act.busy}
               onClick={() => setTrashOpen(true)}>
               <Icon n="trash" size={15} />Trash{trash.length ? <em>{trash.length}</em> : null}
+            </button>
+            <button className="ad-btn" disabled={act.busy} onClick={onRebuild}
+              title="A new page laid out from your biggest categories">
+              <Icon n="grid" size={15} />Arrange from my catalogue
             </button>
             <button className="ad-btn ad-primary" disabled={act.busy || !pages.length}
               onClick={() => setNaming(true)}>

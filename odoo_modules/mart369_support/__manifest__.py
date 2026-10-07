@@ -1,6 +1,6 @@
 {
     'name': '369 Mart Support',
-    'version': '19.0.1.2.0',
+    'version': '19.0.1.3.0',
     'category': 'Website',
     'summary': 'The support bot, real tickets, and order updates on WhatsApp.',
     'description': """
@@ -50,7 +50,6 @@ Operators work these in **369 Mart -> Support**.
         'views/support_desk_views.xml',
         'views/rule_views.xml',
         'views/bot_desk_views.xml',
-        'data/bot_demo.xml',
         'views/menus.xml',
     ],
     'assets': {

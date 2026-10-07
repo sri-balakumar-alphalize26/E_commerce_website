@@ -175,3 +175,55 @@ No change to the API. It uses the same `GET /369mart/orders/<ref>/track` fields 
 `mart369_whatsapp_bridge` is now 19.0.1.3.1:
 - A WhatsApp address is copied into the customer's address book by matching its words and PIN, not the exact text. A PIN typed inside the street is stripped out.
 - A migration (`_mart369_book_tidy`) archives old duplicate WhatsApp addresses. Old orders keep the address they went to.
+
+---
+
+## 3. No "Demo" account, no demo shop: sign in again, a home page from the real catalogue, services not listed (2026-10-07)
+
+### For the customer
+
+- **No more "Demo" account.** If the shop no longer accepts a customer's sign-in (expired, or reset on the server), the account, checkout, order and tracking pages send them to sign-in, with "You were signed out. Please sign in again." Before, the account page quietly showed a made-up person, "Demo" / "abc".
+- **The sign-in link works behind the live server.** A signed-out visitor who opens an account page is sent to `/login` on the same site. Before, they were sent to the server's internal address (`https://localhost:3002/login`), which never opened.
+- **A brief server outage doesn't sign anyone out.** If the shop can't be reached, the sign-in is kept.
+- **The home page comes from the shop's own catalogue.** Tabs, banners, tiles and product rows are its biggest categories (on Dubai: laptop keyboards, toner, laptop batteries, CCTV, laptops). It used to be the grocery example page ("Fruits picked this morning").
+- **No sample content:**
+  - no sample categories (Fresh Fruits, Daily Essentials) in the category list
+  - no sample notices ("Weekend grocery sale is live", "Deliveries are running late today [demo]")
+  - no sample deals
+- **Service items aren't listed.** Gift Card, Top-up eWallet and repair charges no longer appear in product rows, category lists, search or offers. They still work when bought (e.g. a wallet top-up).
+
+### Files touched
+
+**Website**
+- `middleware.js`: relative redirect to `/login?next=…`
+- `app/api/auth/me/route.js`: 503 (not 401) when Odoo is unreachable; the cookie is kept
+- `components/home/Home.jsx`: on 401 or a `369mart:signedout` event, pages that need an account go to `/login?again=1&next=…`
+- `components/home/Account.jsx`: the "Demo" default is removed; "Checking your account…" shows while loading
+- `app/login/page.jsx`, `app/globals.css`: the "signed out" message
+- `components/admin/HomeSection.jsx`: an "Arrange from my catalogue" button
+
+**Odoo**
+- **`mart369`:** `product.template._mart369_listed_domain()` (published, not a service)
+- **`mart369_home`:**
+  - `models/home_starter.py` (the automatic layout)
+  - `__init__.py` `post_init_hook`
+  - `POST /369mart/admin/home/pages/starter`
+  - a "Rebuild from my catalogue" button
+  - migration 19.0.1.5.0 (replaces the untouched grocery page)
+- **`mart369_catalog`:** listing queries use the rule; the 5 sample categories are hidden while empty; invented search counts are removed
+- **Sample-data steps no longer run on install:** `mart369_account` (with a migration that archives sample notices), `mart369_cart` (migration archives the 2 sample deals), `mart369_support` (migration switches off the "[demo]" bot answers), `mart369_address`, `mart369_payment`
+
+### API
+
+- `GET /api/auth/me` (website):
+  - **401** means not signed in; the stale cookie is cleared
+  - **503** means the shop is unreachable; stay signed in and try later
+- `GET /369mart/home/<mode>`: same shape as before; the content is now the catalogue-built page.
+- Every list route (`/369mart/browse`, `/369mart/search`, `/369mart/offers`, home rows) leaves out products whose `type` is `service`. `/369mart/products?ids=` still returns them.
+
+### What the app must copy
+
+1. Never show a placeholder user. Until "who am I" answers, show a loading state.
+2. On **401** from "who am I" (or any signed-in call), drop the saved session and open sign-in with a short "you were signed out" message, then come back to where the customer was.
+3. On **503**, keep the session and show "can't reach the shop".
+4. Don't list service items in any list the app builds itself (`type == 'service'`). The server's lists already leave them out.

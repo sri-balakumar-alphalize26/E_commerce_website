@@ -7,3 +7,4 @@ from . import home_banner
 from . import home_tile
 from . import home_section
 from . import product_template
+from . import home_starter

@@ -36,6 +36,9 @@
                             invisible="is_current"/>
                     <button name="action_mart369_duplicate" type="object"
                             string="Duplicate"/>
+                    <button name="action_mart369_build_starter" type="object"
+                            string="Rebuild from my catalogue"
+                            confirm="Make a new page arranged from your biggest categories, and switch it on? This page stays saved, so you can switch back."/>
                     <field name="state" widget="statusbar"
                            statusbar_visible="live,scheduled,off,ended"/>
                 </header>

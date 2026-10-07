@@ -1,6 +1,6 @@
 {
     'name': '369 Mart Account',
-    'version': '19.0.1.3.0',
+    'version': '19.0.1.4.0',
     'category': 'Website',
     'summary': "The customer's own things - profile, reviews, notifications, "
                "referrals, wishlist and rewards.",
@@ -42,7 +42,6 @@ Operators work these in **369 Mart -> Reviews**, **Referrals** and **Rewards**.
         'data/account_data.xml',
         # Seeds once and guards itself, so it is safe on every upgrade - see
         # the file's own comment.
-        'data/referral_demo.xml',
         'views/review_views.xml',
         'views/review_desk_views.xml',
         'views/referral_views.xml',
@@ -50,7 +49,6 @@ Operators work these in **369 Mart -> Reviews**, **Referrals** and **Rewards**.
         'views/scratch_views.xml',
         'views/reward_desk_views.xml',
         'views/notice_desk_views.xml',
-        'data/notice_demo.xml',
         'views/menus.xml',
     ],
     'assets': {

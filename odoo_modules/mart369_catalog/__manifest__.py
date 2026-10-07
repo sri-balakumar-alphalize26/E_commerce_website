@@ -1,6 +1,6 @@
 {
     'name': '369 Mart Catalog',
-    'version': '19.0.1.4.0',
+    'version': '19.0.1.5.0',
     'category': 'Website',
     'summary': 'Categories, browsing and search for the 369 Mart app.',
     'description': """
@@ -30,7 +30,6 @@ The app reads it from ``/369mart/catalog``, ``/369mart/browse/<category>`` and
         'security/ir.model.access.csv',
         # Seeds once and guards itself, so it is safe on every upgrade - see
         # the file's own comment.
-        'data/search_demo.xml',
         'views/category_views.xml',
         'views/search_views.xml',
         'views/search_desk_views.xml',

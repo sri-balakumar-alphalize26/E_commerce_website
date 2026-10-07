@@ -42,9 +42,13 @@
         <!-- The everyday home page. Every saved page owns its own Quick and
              Express, so a festival page is a copy of this rather than an edit
              of the live one. -->
+        <!-- An example, not the shop's page: post_init_hook (__init__.py)
+             builds the live one from the shop's own catalogue and switches
+             it on, so this grocery layout is only ever something to copy
+             from. -->
         <record id="home_version_everyday" model="mart369.home.version">
-            <field name="name">Everyday</field>
-            <field name="note">The page the app shows when nothing is scheduled.</field>
+            <field name="name">Example - grocery layout (not shown)</field>
+            <field name="note">A sample page to copy ideas from. Customers never see it unless you switch it on.</field>
             <field name="config_id" ref="home_config"/>
             <field name="is_current" eval="True"/>
         </record>

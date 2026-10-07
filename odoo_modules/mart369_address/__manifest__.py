@@ -37,7 +37,6 @@ where a missing pincode, mobile or map fix is called out in red.
         'views/address_desk_views.xml',
         'views/address_wizard_views.xml',
         'views/address_views.xml',
-        'data/address_demo.xml',
     ],
     'images': [
         'static/description/address_desk.png',

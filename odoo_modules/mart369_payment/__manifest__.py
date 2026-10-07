@@ -47,7 +47,6 @@ Staff see every payment and every wallet under **369 Mart -> Payments** and
         'views/settings_desk_views.xml',
         'views/menus.xml',
         # Seeds once and guards itself - see the file's own comment.
-        'data/wallet_demo.xml',
     ],
     'assets': {
         'web.assets_backend': [
