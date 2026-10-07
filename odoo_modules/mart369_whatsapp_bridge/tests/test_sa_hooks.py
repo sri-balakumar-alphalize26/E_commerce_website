@@ -60,6 +60,31 @@ class TestSaHooks(Mart369BridgeCase):
         order._action_cancel()
         self.assertEqual(card._mart369_balance(), 30.0)
 
+    def _post_invoice(self, order):
+        invoice = order._create_invoices()
+        invoice.action_post()
+        return invoice
+
+    def test_the_bill_shows_the_wallet_part_paid(self):
+        order = self._unpaid(phone='+919700770014')
+        self._top_up(order.partner_id, 40.0)
+        order._sa_wallet_apply()
+        self.assertEqual(order._sa_paid_elsewhere(), 40.0, 'before the bill: off the rider\'s cash')
+        invoice = self._post_invoice(order)
+        payment = order.mart369_wa_wallet_payment_id
+        self.assertTrue(payment, 'booked when the bill was posted')
+        self.assertEqual(payment.amount, 40.0)
+        self.assertAlmostEqual(invoice.amount_residual, invoice.amount_total - 40.0, places=2)
+        self.assertEqual(order._sa_paid_elsewhere(), 0.0,
+                         'the bill carries it now - never taken off twice')
+        self.assertFalse(order._mart369_wa_book_wallet(invoice), 'booked once')
+        self.assertEqual(order._mart369_wa_paid(), 40.0, 'counted once, not twice')
+
+    def test_no_wallet_no_booking(self):
+        order = self._unpaid(phone='+919700770015')
+        self._post_invoice(order)
+        self.assertFalse(order.mart369_wa_wallet_payment_id)
+
     def test_website_orders_are_left_to_the_website(self):
         order = self._web_order()
         self.assertEqual(order._sa_wallet_apply(), 0.0)

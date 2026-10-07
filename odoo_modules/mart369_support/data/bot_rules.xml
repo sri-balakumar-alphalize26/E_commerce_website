@@ -32,7 +32,7 @@
 
         <record id="param_track_url" model="ir.config_parameter">
             <field name="key">mart369_support.track_url</field>
-            <field name="value">https://369mart.in/track/%s</field>
+            <field name="value">https://shop.369ai.biz/track/%s</field>
         </record>
 
         <!--

@@ -51,6 +51,12 @@ def _floor2(value):
 class SaleOrderSaHooks(models.Model):
     _inherit = 'sale.order'
 
+    mart369_wa_wallet_payment_id = fields.Many2one(
+        'account.payment', string='Wallet payment (WhatsApp)', readonly=True, copy=False,
+        help="The 369 Wallet part of a WhatsApp order, booked in the 369 Wallet "
+             "journal and matched to the invoice once the invoice is posted - so "
+             "the bill shows it paid. Set once.")
+
     def _mart369_stack(self, name):
         """The senior's method above ours, or None on an older copy of his stack."""
         return getattr(super(SaleOrderSaHooks, self), name, None)
@@ -121,12 +127,55 @@ class SaleOrderSaHooks(models.Model):
             return 0.0
 
     def _sa_paid_elsewhere(self):
-        """The wallet's part, which no Odoo payment shows: off the rider's cash."""
+        """The wallet's part while no Odoo payment shows it: off the rider's
+        cash. Once it is booked on the invoice (`_mart369_wa_book_wallet`),
+        Odoo's own records carry it, so it is 0 here - never taken off twice."""
         self.ensure_one()
         if self.mart369_channel == 'whatsapp' and not self.mart369_ref:
-            return self.sudo().mart369_wallet_used or 0.0
+            order = self.sudo()
+            if order.mart369_wa_wallet_payment_id:
+                return 0.0
+            return order.mart369_wallet_used or 0.0
         stack = self._mart369_stack('_sa_paid_elsewhere')
         return stack() if stack else 0.0
+
+    def _mart369_wa_book_wallet(self, invoices):
+        """Book the wallet's part as a payment and match it to the invoice -
+        the website's booking (`payment.transaction._mart369_book_wallet_leg`),
+        for an order that has no transaction to hang it on."""
+        self.ensure_one()
+        order = self.sudo()
+        invoices = invoices.filtered(
+            lambda m: m.move_type == 'out_invoice' and m.state == 'posted')
+        if (not order.mart369_wallet_used or order.mart369_wa_wallet_payment_id
+                or not invoices):
+            return False
+        company = order.company_id
+        journal = self.env['account.journal'].sudo()._mart369_journal_for(
+            'mart369_wallet', company)
+        if not journal:
+            return False
+        values = {
+            'amount': order.mart369_wallet_used,
+            'payment_type': 'inbound',
+            'partner_type': 'customer',
+            'partner_id': order.partner_id.commercial_partner_id.id,
+            'currency_id': order.currency_id.id,
+            'journal_id': journal.id,
+            'company_id': company.id,
+            'memo': '%s - 369 Wallet' % order.name,
+        }
+        line = journal.inbound_payment_method_line_ids[:1]
+        if line:
+            values['payment_method_line_id'] = line.id
+        term = invoices.line_ids.filtered(lambda l: l.display_type == 'payment_term')[:1]
+        if term:
+            values['destination_account_id'] = term.account_id.id
+        payment = self.env['account.payment'].sudo().with_company(company).create(values)
+        payment.action_post()
+        order.mart369_wa_wallet_payment_id = payment
+        self.env['sale.order']._mart369_reconcile(payment, invoices)
+        return payment
 
     # ------------------------------------------------------------------ points
 
@@ -551,3 +600,24 @@ class SaGroupRequestSaHooks(models.Model):
         if not lines:
             return theirs
         return '\n'.join(([theirs] if theirs else []) + lines)
+
+
+class AccountMoveSaHooks(models.Model):
+    _inherit = 'account.move'
+
+    def _post(self, soft=True):
+        """When a WhatsApp order's bill is posted - after payment, in the
+        senior's flow - the 369 Wallet part is booked against it, so the PDF
+        says paid instead of due."""
+        posted = super()._post(soft=soft)
+        for invoice in posted.filtered(lambda m: m.move_type == 'out_invoice'):
+            orders = invoice.sudo().line_ids.sale_line_ids.order_id.filtered(
+                lambda o: o.mart369_channel == 'whatsapp' and not o.mart369_ref
+                and o.mart369_wallet_used and not o.mart369_wa_wallet_payment_id)
+            for order in orders:
+                try:
+                    with self.env.cr.savepoint():
+                        order._mart369_wa_book_wallet(invoice)
+                except Exception:  # noqa: BLE001 - the bill stands either way
+                    _logger.exception('bridge: wallet booking for %s failed', order.name)
+        return posted

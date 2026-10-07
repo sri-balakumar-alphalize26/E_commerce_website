@@ -100,3 +100,16 @@ class TestMart369AccountOwnership(Mart369AccountHttpCase):
         self.assertEqual(status, 200)
         self.assertTrue(payload['code'].endswith('369'))
         self.assertEqual(payload['code'], self.partner.mart369_referral_code)
+
+    def test_the_invite_link_is_on_the_shops_own_site(self):
+        """Not the old 369mart.in, which never resolved: the site the order
+        links use (mart369_support.track_url)."""
+        params = self.env['ir.config_parameter'].sudo()
+        params.set_param('mart369_support.track_url', 'https://shop.example.test/track/%s')
+        self.authenticate('order.tester@369mart.test', 'order-tester-369')
+        status, payload = self._req('/369mart/referrals')
+        self.assertEqual(status, 200)
+        self.assertEqual(payload['link'], 'https://shop.example.test/r/%s' % payload['code'])
+        params.set_param('mart369_support.track_url', '')
+        status, payload = self._req('/369mart/referrals')
+        self.assertTrue(payload['link'].startswith('https://shop.369ai.biz/r/'))

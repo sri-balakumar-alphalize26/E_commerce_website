@@ -11,12 +11,18 @@ simply not there, and answers 404 rather than confirming it exists.
 """
 
 import logging
+from urllib.parse import urlsplit
 
 from odoo import http
 from odoo.exceptions import UserError
 from odoo.http import request
 
 _logger = logging.getLogger(__name__)
+
+# The shop's public address comes from one setting, the order link's
+# (mart369_support), so an invite and a tracking link never disagree.
+TRACK_PARAM = 'mart369_support.track_url'
+SHOP_SITE = 'https://shop.369ai.biz'
 
 _GET = {'type': 'http', 'auth': 'user', 'methods': ['GET'], 'csrf': False, 'sitemap': False}
 _POST = {'type': 'http', 'auth': 'user', 'methods': ['POST'], 'csrf': False, 'sitemap': False}
@@ -37,6 +43,14 @@ class Mart369AccountApi(http.Controller):
         except Exception:
             data = None
         return data if isinstance(data, dict) else {}
+
+    def _mart369_site(self):
+        """'https://shop.369ai.biz' - the scheme and host of the order link."""
+        link = request.env['ir.config_parameter'].sudo().get_param(TRACK_PARAM) or ''
+        parts = urlsplit(link)
+        if parts.scheme and parts.netloc:
+            return '%s://%s' % (parts.scheme, parts.netloc)
+        return SHOP_SITE
 
     def _fail(self, error, field=None, status=400):
         payload = {'ok': False, 'error': error}
@@ -268,7 +282,7 @@ class Mart369AccountApi(http.Controller):
         payload = {
             'ok': True,
             'code': code,
-            'link': 'https://369mart.in/r/%s' % code,
+            'link': '%s/r/%s' % (self._mart369_site(), code),
             'referrals': [row._mart369_serialize() for row in rows],
         }
         payload.update(me._mart369_referral_stats())

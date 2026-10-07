@@ -32,7 +32,7 @@ MESSAGES = {
 }
 
 LINK_PARAM = 'mart369_support.track_url'
-DEFAULT_LINK = 'https://369mart.in/track/%s'
+DEFAULT_LINK = 'https://shop.369ai.biz/track/%s'
 
 
 class Mart369Whatsapp(models.AbstractModel):

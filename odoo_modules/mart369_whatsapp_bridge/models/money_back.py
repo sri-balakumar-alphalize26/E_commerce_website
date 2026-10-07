@@ -58,8 +58,10 @@ class SaleOrderMoneyBack(models.Model):
             carded += tx.currency_id._convert(
                 tx.amount, self.currency_id, self.company_id, date)
         # And what the 369 Wallet paid on the pay link (sa_hooks.py
-        # `_sa_wallet_apply`): money taken that no Odoo payment shows.
-        return self.currency_id.round(max(billed, carded) + (self.mart369_wallet_used or 0.0))
+        # `_sa_wallet_apply`) - while no Odoo payment shows it. Once it is
+        # booked on the bill, `billed` already holds it.
+        wallet = 0.0 if self.mart369_wa_wallet_payment_id else (self.mart369_wallet_used or 0.0)
+        return self.currency_id.round(max(billed, carded) + wallet)
 
     def _mart369_paid_amount(self):
         if self.mart369_channel == 'whatsapp':
