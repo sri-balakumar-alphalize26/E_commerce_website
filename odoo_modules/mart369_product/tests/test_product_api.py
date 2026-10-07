@@ -127,6 +127,27 @@ class TestProductApiDetails(TransactionCase):
         self._field('sales_description').show = False
         self.assertNotIn('description', self.Page.payload(self.product)['p'])
 
+    def _ecommerce(self, html):
+        if 'description_ecommerce' not in self.product._fields:
+            self.skipTest('website_sale is not installed')
+        self.product.description_ecommerce = html
+
+    def test_the_website_tab_description_shows_when_sales_is_empty(self):
+        self.product.description_sale = False
+        self._ecommerce('<p>RGB LEDs</p>')
+        self.assertEqual(self.Page.payload(self.product)['p'].get('description'), 'RGB LEDs')
+
+    def test_the_sales_description_wins_when_both_are_filled(self):
+        self.product.description_sale = 'Two USB-C ports.'
+        self._ecommerce('<p>RGB LEDs</p>')
+        self.assertEqual(self.Page.payload(self.product)['p'].get('description'), 'Two USB-C ports.')
+
+    def test_switching_off_the_description_hides_the_website_tab_text_too(self):
+        self.product.description_sale = False
+        self._ecommerce('<p>RGB LEDs</p>')
+        self._field('sales_description').show = False
+        self.assertNotIn('description', self.Page.payload(self.product)['p'])
+
     def test_one_product_can_hide_it_alone(self):
         self.product.description_sale = 'Two USB-C ports.'
         other = self.env['product.template'].create({

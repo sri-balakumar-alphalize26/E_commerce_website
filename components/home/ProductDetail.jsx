@@ -385,6 +385,9 @@ export default function ProductDetail({
     } catch (e) { flash("Couldn't share — copy the address bar link instead"); }
   };
   const toggle = (k) => setOpen((o) => ({ ...o, [k]: !o[k] }));
+  /* Nothing typed for this product: no toggle that opens onto an empty panel. */
+  const hasDetails = d.features.length > 0 || d.info.length > 0 || Object.keys(d.specs).length > 0
+    || !!d.description || !!d.returnText;
 
   return (
     <div className="pd-page" key={group}>
@@ -446,6 +449,7 @@ export default function ProductDetail({
               )}
             </div>
 
+            {hasDetails && <>
             <button className={"pd-toggle" + (showAll ? " pd-on" : "")} onClick={() => setShowAll((v) => !v)} aria-expanded={showAll}>
               {showAll ? "Hide product details" : "Show product details"}<Icon n="chev" size={16} className="pd-chev" />
             </button>
@@ -485,6 +489,7 @@ export default function ProductDetail({
                 </div>
               </div>
             </div>
+            </>}
           </div>
 
           {(d.rating != null || mine) && <section className="pd-card pd-reviews" id="pd-reviews">

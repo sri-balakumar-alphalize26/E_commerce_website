@@ -149,7 +149,7 @@
 .pd-desc::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 48px; background: linear-gradient(transparent, #fff); transition: opacity 300ms; }
 .pd-full { max-height: 800px; }
 .pd-full::after { opacity: 0; }
-.pd-desc p { margin: 0 0 10px; font-size: 14px; line-height: 1.65; color: #3e4d58; }
+.pd-desc p { margin: 0 0 10px; font-size: 14px; line-height: 1.65; color: #3e4d58; white-space: pre-line; }
 .pd-desc h4 { margin: 12px 0 4px; font-size: 14px; }
 .pd-more { display: flex; align-items: center; gap: 4px; margin: 8px auto 0; border: 0; background: none; font-size: 13.5px; font-weight: 700; color: var(--hm-blue) !important; }
 .pd-full + .pd-more .pd-chev { transform: rotate(180deg); }

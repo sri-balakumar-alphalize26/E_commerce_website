@@ -82,8 +82,9 @@ class Mart369ProductPage(models.AbstractModel):
             specs = helper._mart369_variant_specs(single)
             if specs:
                 main['specs'] = specs
-            if product.description_sale:
-                main['description'] = product.description_sale
+            description = helper._mart369_description(product)
+            if description:
+                main['description'] = description
 
         # What the builder switched off (shop-wide, by category or for this
         # product) leaves the page's cards, so the website does not draw it.

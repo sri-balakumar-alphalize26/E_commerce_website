@@ -19,6 +19,7 @@ import logging
 import re
 
 from odoo import api, fields, models
+from odoo.tools import html2plaintext
 
 _logger = logging.getLogger(__name__)
 
@@ -385,6 +386,16 @@ class Mart369Serializable(models.AbstractModel):
         return images
 
     @api.model
+    def _mart369_description(self, tmpl):
+        """The product's words for its page: the Sales Description, which the
+        WhatsApp page shows, else the eCommerce description from the Website
+        tab as plain text - so the text shows whichever tab it was typed on."""
+        text = (tmpl.description_sale or '').strip()
+        if not text and 'description_ecommerce' in tmpl._fields:
+            text = html2plaintext(tmpl.description_ecommerce or '').strip()
+        return text
+
+    @api.model
     def _mart369_variant_spec_rows(self, variant):
         """[(label, value)] for the specs table, in order: here the attribute
         values the variant differs from its siblings by. mart369_whatsapp_bridge
@@ -518,8 +529,9 @@ class Mart369Serializable(models.AbstractModel):
             vals['specs'] = specs
         # The Sales Description, which the WhatsApp confirmation page shows
         # under the picture (PRODUCT_SETUP_FLOW.md 2.4).
-        if tmpl.description_sale:
-            vals['description'] = tmpl.description_sale
+        description = self._mart369_description(tmpl)
+        if description:
+            vals['description'] = description
 
         vals.pop('stock', None)
         vals.pop('low', None)
