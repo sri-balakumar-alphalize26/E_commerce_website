@@ -13,3 +13,4 @@ from . import test_web_otp
 from . import test_phone_link
 from . import test_order_track
 from . import test_mirrors
+from . import test_sa_hooks

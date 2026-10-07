@@ -82,7 +82,7 @@ class TestPhoneLink(Mart369BridgeCase):
         shipping = order.partner_shipping_id
         self.assertEqual(shipping.parent_id, self.partner)
         self.assertEqual(shipping.street, '5 Old Road')
-        self.assertEqual(shipping.mart369_label, 'WhatsApp')
+        self.assertEqual(shipping.mart369_label, 'Home', "named the senior's way, not after the channel")
         self.assertLessEqual(len(self._delivery_children(self.partner)), 1)
         self.assertTrue(self.partner.mart369_phone_verified)
 

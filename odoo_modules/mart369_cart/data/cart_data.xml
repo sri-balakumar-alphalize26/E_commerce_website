@@ -26,35 +26,8 @@
             <field name="fee">49</field>
         </record>
 
-        <!-- ======================== coupons ========================= -->
-        <record id="coupon_quick20" model="mart369.coupon">
-            <field name="sequence">10</field>
-            <field name="code">QUICK20</field>
-            <field name="title">20% off on Quick orders</field>
-            <field name="note">Up to ₹60 · Quick items above ₹199</field>
-            <field name="kind">percent</field>
-            <field name="value">20</field>
-            <field name="max_off">60</field>
-            <field name="min_spend">199</field>
-            <field name="group">quick</field>
-        </record>
-        <record id="coupon_welcome50" model="mart369.coupon">
-            <field name="sequence">20</field>
-            <field name="code">WELCOME50</field>
-            <field name="title">Flat ₹50 off</field>
-            <field name="note">On orders above ₹499</field>
-            <field name="kind">flat</field>
-            <field name="value">50</field>
-            <field name="min_spend">499</field>
-        </record>
-        <record id="coupon_freedel" model="mart369.coupon">
-            <field name="sequence">30</field>
-            <field name="code">FREEDEL</field>
-            <field name="title">Free delivery</field>
-            <field name="note">Waives delivery fees on orders above ₹299</field>
-            <field name="kind">free_delivery</field>
-            <field name="min_spend">299</field>
-        </record>
+        <!-- Sample coupons (QUICK20, WELCOME50, FREEDEL) used to be made here.
+             A shop starts with none; 19.0.1.7.0 archives the old samples. -->
 
         <!-- ========================= slots ==========================
              The four Quick windows and two Express options the checkout used

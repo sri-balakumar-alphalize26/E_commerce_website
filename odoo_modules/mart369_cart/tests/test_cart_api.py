@@ -39,6 +39,24 @@ class TestMart369CartApi(HttpCase):
             'name': 'Test Cart Unpublished', 'list_price': 999.0,
             'is_published': False,
         })
+        # The coupons these tests apply are their own: the install-time
+        # samples are archived on a live shop (migrations/19.0.1.7.0).
+        Coupon = cls.env['mart369.coupon'].sudo().with_context(active_test=False)
+        for values in (
+            {'code': 'QUICK20', 'title': '20% off on Quick orders', 'kind': 'percent',
+             'value': 20, 'max_off': 60, 'min_spend': 199, 'group': 'quick'},
+            {'code': 'WELCOME50', 'title': 'Flat ₹50 off', 'kind': 'flat',
+             'value': 50, 'max_off': 0, 'min_spend': 499, 'group': False},
+            {'code': 'FREEDEL', 'title': 'Free delivery', 'kind': 'free_delivery',
+             'value': 0, 'max_off': 0, 'min_spend': 299, 'group': False},
+        ):
+            coupon = Coupon.search([('code', '=ilike', values['code'])], limit=1)
+            values = dict(values, active=True, used_count=0, starts_on=False,
+                          ends_on=False, limit_total=0, limit_per_customer=0)
+            if coupon:
+                coupon.write(values)
+            else:
+                Coupon.create(values)
 
     # ------------------------------------------------------------- plumbing
 

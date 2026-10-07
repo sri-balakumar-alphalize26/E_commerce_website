@@ -215,12 +215,33 @@ class ResPartner(models.Model):
         cleaned = re.sub(r'[\s,;-]*\b%s\b' % re.escape(pin), '', street)
         return cleaned.strip(' ,;-') or street
 
-    def _mart369_book_add_once(self, values, label='WhatsApp', make_default=False):
+    @api.model
+    def _mart369_label_for(self, partner):
+        """What a copied address is called: the senior's naming - the label
+        the customer gave it on WhatsApp, else the shop's, else "Home". Never
+        the channel's name: the customer calls it Home or Work, not WhatsApp.
+        """
+        if partner:
+            try:
+                if hasattr(partner, '_sa_label'):
+                    label = (partner._sa_label() or '').strip()
+                    if label and label != 'WhatsApp':
+                        return label
+            except Exception:  # noqa: BLE001 - a name is never worth a lost address
+                _logger.info('bridge: no WhatsApp label for %s', partner.id)
+            own = (partner.mart369_label or '').strip()
+            if own and own != 'WhatsApp':
+                return own
+        return _('Home')
+
+    def _mart369_book_add_once(self, values, label=None, make_default=False, source=None):
         """An address into this customer's book - unless the book already
         holds the same place (`_mart369_same_place`), which is then the one
-        returned."""
+        returned. Named after `source` (the contact it came from), else this
+        customer, the senior's way (`_mart369_label_for`)."""
         self.ensure_one()
         customer = self.sudo()
+        label = label or self._mart369_label_for(source or customer)
         values = dict(values)
         values['street'] = self._mart369_strip_pin(values.get('street'), values.get('zip'))
         for address in customer._mart369_book():
@@ -307,7 +328,7 @@ class ResPartner(models.Model):
         orders = self.env['sale.order'].sudo().search_count(
             [('partner_id', '=', src.id)])
         # 1. Its doorstep joins the book; its orders keep pointing at it.
-        address = (self._mart369_book_add_once({f: src[f] for f in ADDRESS_FIELDS})
+        address = (self._mart369_book_add_once({f: src[f] for f in ADDRESS_FIELDS}, source=src)
                    if (src.street or src.zip) else self.browse())
         if address:
             # Plain SQL, as the merge itself does: a delivered order is locked
