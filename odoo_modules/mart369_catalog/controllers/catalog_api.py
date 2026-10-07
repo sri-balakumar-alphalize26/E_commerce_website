@@ -145,8 +145,7 @@ class Mart369CatalogApi(http.Controller):
 
     def _search_domain(self, q):
         """Name, brand, pack size or category - what a shopper would type."""
-        return [
-            ('is_published', '=', True),
+        return request.env['product.template'].sudo()._mart369_listed_domain() + [
             '|', '|', '|',
             ('name', 'ilike', q),
             ('mart_brand', 'ilike', q),
@@ -242,8 +241,8 @@ class Mart369CatalogApi(http.Controller):
         """
         Template = request.env['product.template'].sudo()
         # Narrow in SQL first: most of the catalogue has no compare price at all.
-        candidates = Template.search([
-            ('is_published', '=', True),
+        listed = Template._mart369_listed_domain()
+        candidates = Template.search(listed + [
             ('compare_list_price', '>', 0.0),
         ], limit=max(BROWSE_LIMIT * 2, 240))
         hand_priced = candidates.filtered(
@@ -253,8 +252,7 @@ class Mart369CatalogApi(http.Controller):
         if 'mart369.deal' in request.env:
             wanted = request.env['mart369.deal'].sudo()._mart369_product_ids()
             if wanted:
-                on_deal = Template.search(
-                    [('id', 'in', wanted), ('is_published', '=', True)])
+                on_deal = Template.search([('id', 'in', wanted)] + listed)
 
         deals = (hand_priced | on_deal)
         # Ranked on what a shopper actually saves, which for a deal is only

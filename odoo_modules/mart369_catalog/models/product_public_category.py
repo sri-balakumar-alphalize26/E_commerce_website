@@ -165,10 +165,9 @@ class ProductPublicCategory(models.Model):
     # -------------------------------------------------------------- reading
 
     def _mart369_product_domain(self):
-        """Published products in this category or any category beneath it."""
+        """Listed products in this category or any category beneath it."""
         self.ensure_one()
-        return [
-            ('is_published', '=', True),
+        return self.env['product.template']._mart369_listed_domain() + [
             ('public_categ_ids', 'child_of', self.id),
         ]
 
@@ -272,10 +271,10 @@ class ProductPublicCategory(models.Model):
                 # Products a shopper can actually reach, counted once: summing
                 # every category's own count would count a product in three
                 # categories three times.
-                'products': self.env['product.template'].sudo().search_count([
-                    ('is_published', '=', True),
-                    ('public_categ_ids', 'in', live.ids),
-                ]) if live else 0,
+                'products': self.env['product.template'].sudo().search_count(
+                    self.env['product.template']._mart369_listed_domain() + [
+                        ('public_categ_ids', 'in', live.ids),
+                    ]) if live else 0,
             },
         }
 

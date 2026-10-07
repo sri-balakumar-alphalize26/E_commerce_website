@@ -126,10 +126,11 @@ class Mart369HomeSection(models.Model):
     # ------------------------------------------------------- which products
 
     def _base_domain(self):
-        """Products a row may ever show: published, and in stock if asked."""
-        domain = Domain([('is_published', '=', True)])
-        config = self.env['mart369.config'].sudo()._get()
+        """Products a row may ever show: listed (published, not a service),
+        and in stock if asked."""
         Template = self.env['product.template']
+        domain = Domain(Template._mart369_listed_domain())
+        config = self.env['mart369.config'].sudo()._get()
         if config.hide_out_of_stock and 'free_qty' in Template._fields:
             domain &= Domain([('free_qty', '>', 0)])
         return domain
