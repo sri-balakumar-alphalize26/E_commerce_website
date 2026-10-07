@@ -141,9 +141,28 @@ class Mart369ProductPage(models.AbstractModel):
         category = product.public_categ_ids[:1]
         if category:
             d['category'] = category.name
+        info = self.info(product)
+        if info:
+            d['info'] = info
 
         d.update(self.reviews(product, keys, values))
         return d
+
+    @api.model
+    def info(self, product):
+        """[[label, value]] for "Product information": only what the product
+        really has filled in - its category, item code, barcode and weight.
+        A product with none of them gets no table, never a made-up one."""
+        single = product.product_variant_id if product.product_variant_count == 1 else None
+        rows = [
+            ('Category', product.categ_id.name),
+            ('Item code', product.default_code or (single and single.default_code)),
+            ('Barcode', product.barcode or (single and single.barcode)),
+        ]
+        if product.weight and product.weight > 0:
+            weight = ('%.3f' % product.weight).rstrip('0').rstrip('.')
+            rows.append(('Weight', ('%s %s' % (weight, product.weight_uom_name or '')).strip()))
+        return [[label, str(value)] for label, value in rows if value]
 
     @api.model
     def _as_text(self, field, value, product):

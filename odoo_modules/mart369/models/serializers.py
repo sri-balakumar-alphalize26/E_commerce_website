@@ -587,7 +587,9 @@ class Mart369Serializable(models.AbstractModel):
             return None  # Inventory is not installed; nothing tracks stock.
         if 'is_storable' in product._fields and not product.is_storable:
             return None  # Nothing Inventory tracks has nothing to run out of.
-        return sum(product.product_variant_ids.mapped('free_qty'))
+        # sudo: free stock is what the shop shows everyone, but reading it walks
+        # stock.move, which a website designer without stock rights may not.
+        return sum(product.sudo().product_variant_ids.mapped('free_qty'))
 
     def _price_context_for(self, templates):
         """{template_id: {'price': x, 'mrp': y or None}} for these

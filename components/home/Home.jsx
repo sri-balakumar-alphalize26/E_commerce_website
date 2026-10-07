@@ -629,6 +629,8 @@ export default function Home({
         ids: (res?.variants || []).map((v) => String(v.id)),
         first: res?.p?.id != null ? String(res.p.id) : null,
         reviews: { rating: d.rating, ratingCount: d.ratingCount, dist: d.dist, list: d.reviews },
+        /* "Product information": the product's real category, code, barcode, weight. */
+        info: d.info || [],
       } }));
     }).catch(() => { if (live) setGroups((g) => ({ ...g, [group]: { error: true } })); });
     return () => { live = false; };
@@ -733,7 +735,7 @@ export default function Home({
           similar={pd.similar}
           related={pd.also}
           recent={recent.filter((x) => (x.variantGroup || x.id) !== (product.variantGroup || product.id))}
-          reviewInfo={loaded?.reviews}
+          reviewInfo={loaded?.reviews} info={loaded?.info}
           optionsFailed={!!loaded?.error}
           onRetryOptions={retryOptions}
           onViewSimilar={product.sub ? () => nav("category", `${product.cat}/${product.sub}`) : undefined}

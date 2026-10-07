@@ -16,4 +16,5 @@ from . import sale_order_track
 from . import bot_rider
 from . import mirrors
 from . import sa_hooks
+from . import qe_link
 from . import staff_alert

@@ -329,7 +329,7 @@ function unitPrice(v) {
 export default function ProductDetail({
   p, cart, setQty, address, onBack, onChangeAddress, onExplore, fromRect,
   related = [], variants = [], attrs = [], onVariant, bundle = [], similar = [], recent = [], onViewSimilar, onEditReview,
-  optionsFailed = false, onRetryOptions, reviewInfo,
+  optionsFailed = false, onRetryOptions, reviewInfo, info,
 }) {
   /* Every product shows what its setup holds, as the WhatsApp confirmation
      page does: its photos, the Variant specs table and the Sales Description
@@ -342,21 +342,23 @@ export default function ProductDetail({
     const rv = reviewInfo || {};
     const count = rv.ratingCount ?? p.ratingCount ?? 0;
     return {
-      brand: p.brand || p.specs?.Brand || "",
+      /* A real Brand spec only: the listing's p.brand falls back to the unit
+         ("Units"), which is no brand to print above the name. */
+      brand: p.specs?.Brand || "",
       category: p.subName || p.catName || "",
       /* enrich() invents a rating for sorting; only real reviews count here. */
       rating: count ? (rv.rating ?? p.rating ?? null) : null,
       ratingCount: count,
       dist: rv.dist || [0, 0, 0, 0, 0],
       features: [],
-      info: [],
+      info: info || [],
       specs: p.specs || {},
       description: p.description || "",
       disclaimer: "",
       returnText: "",
       reviews: rv.list || [],
     };
-  }, [p, reviewInfo]);
+  }, [p, reviewInfo, info]);
   const { data: reviewData } = useRemote("/reviews");
   const myReviews = reviewData?.reviews || {};
   /* Reviews and the wishlist belong to the product, not to one colour of it. */

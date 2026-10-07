@@ -59,8 +59,12 @@ class TestProductApi(HttpCase):
         payload = self._get().json()
         if 'specs' in payload['p']:
             self.assertIsInstance(payload['p']['specs'], dict)
-        for gone in ('info', 'specs', 'features', 'returnText', 'disclaimer'):
+        for gone in ('specs', 'features', 'returnText', 'disclaimer'):
             self.assertNotIn(gone, payload['d'])
+        # "Product information" is back, from the product's real fields only.
+        for row in payload['d'].get('info', []):
+            self.assertEqual(len(row), 2)
+            self.assertTrue(row[1])
 
     def test_no_nulls_anywhere(self):
         """A field that is switched off is absent, never null."""
@@ -147,6 +151,21 @@ class TestProductApiDetails(TransactionCase):
         self._ecommerce('<p>RGB LEDs</p>')
         self._field('sales_description').show = False
         self.assertNotIn('description', self.Page.payload(self.product)['p'])
+
+    def test_information_lists_only_what_is_filled(self):
+        categ = self.env['product.category'].create({'name': 'Zz Headphones'})
+        self.product.write({'categ_id': categ.id, 'default_code': 'BOAT-480',
+                            'barcode': False, 'weight': 0.25})
+        rows = dict(self.Page.payload(self.product)['d']['info'])
+        self.assertEqual(rows.get('Category'), 'Zz Headphones')
+        self.assertEqual(rows.get('Item code'), 'BOAT-480')
+        self.assertTrue(rows.get('Weight', '').startswith('0.25'))
+        self.assertNotIn('Barcode', rows)
+
+    def test_nothing_filled_means_no_information_table(self):
+        self.product.write({'categ_id': False, 'default_code': False,
+                            'barcode': False, 'weight': 0})
+        self.assertNotIn('info', self.Page.payload(self.product)['d'])
 
     def test_one_product_can_hide_it_alone(self):
         self.product.description_sale = 'Two USB-C ports.'
