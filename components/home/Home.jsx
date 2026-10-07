@@ -345,8 +345,18 @@ export default function Home({
   const [recentIds, setRecentIds] = useState([]);
   const [draft, setDraft] = useState({});
   const [me, setMe] = useState(null); /* the signed-in customer, from /api/auth/me */
+  /* The shop said this browser is not signed in (any more): a sign-in from
+     yesterday that Odoo no longer accepts, or a sign-out elsewhere. The stale
+     cookie is already gone (api/auth/me drops it); a page that needs an
+     account sends the customer to sign in again instead of drawing one. */
+  const [signedOut, setSignedOut] = useState(false);
   useEffect(() => {
-    fetch("/api/auth/me").then((r) => (r.ok ? r.json() : null)).then((d) => {
+    const out = () => { setMe(null); setSignedOut(true); };
+    window.addEventListener("369mart:signedout", out);
+    fetch("/api/auth/me").then((r) => {
+      if (r.status === 401) { out(); return null; }
+      return r.ok ? r.json() : null; /* 503: the store is unreachable, not a sign-out */
+    }).then((d) => {
       if (!d?.ok) return;
       /* The mobile number is the account's identity - it is what brings the
          customer's WhatsApp orders in. An account without a proven one adds
@@ -358,7 +368,13 @@ export default function Home({
       }
       setMe({ name: d.name, email: d.email, phone: d.phone || "" });
     }).catch(() => {});
+    return () => window.removeEventListener("369mart:signedout", out);
   }, []);
+  useEffect(() => {
+    if (!signedOut || !["account", "checkout", "track", "order"].includes(view)) return;
+    const here = window.location.pathname + window.location.search;
+    window.location.replace(`/login?again=1&next=${encodeURIComponent(here)}`);
+  }, [signedOut, view]);
   const [ready, setReady] = useState(!persistCart); /* true once saved cart / orders are loaded */
   const load = (k, fallback) => { try { const v = JSON.parse(localStorage.getItem(k) || "null"); return v ?? fallback; } catch (e) { return fallback; } };
   const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };

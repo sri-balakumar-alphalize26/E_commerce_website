@@ -29,8 +29,12 @@ export default function LoginRoute() {
   const router = useRouter();
   /* ?add=phone: a signed-in account with no proven number lands here first. */
   const [addPhone, setAddPhone] = useState(false);
+  /* ?again=1: the shop no longer accepted this browser's sign-in. */
+  const [again, setAgain] = useState(false);
   useEffect(() => {
-    setAddPhone(new URLSearchParams(window.location.search).get("add") === "phone");
+    const q = new URLSearchParams(window.location.search);
+    setAddPhone(q.get("add") === "phone");
+    setAgain(q.get("again") === "1");
   }, []);
   const after = () => {
     const next = new URLSearchParams(window.location.search).get("next");
@@ -44,6 +48,9 @@ export default function LoginRoute() {
       <header className="lg-hdr">
         <Link href="/" className="lg-logo" aria-label="369 Mart home">369<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18 18 6M9 6h9v9" /></svg>Mart</Link>
       </header>
+      {again && !addPhone && (
+        <p className="lg-again" role="status">You were signed out. Please sign in again to see your account.</p>
+      )}
       <SignInPage
         key={addPhone ? "add" : "in"}
         initialMode={addPhone ? "addphone" : "signin"}

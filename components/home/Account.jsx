@@ -379,7 +379,10 @@ function LegalSec() {
 
 /* ---------- page ---------- */
 export default function AccountPage({
-  user: initialUser = { name: "Demo", email: "abc", phone: "" },
+  /* Nobody until /api/auth/me says who. This used to default to a made-up
+     "Demo" / "abc", which is what a customer whose sign-in had expired saw
+     instead of being asked to sign in again. */
+  user: initialUser = null,
   section: initialSection = "list",
   byId, cart, setQty, addresses, onSaveAddress, addressForm, addrMe, addrPrefill, onPrefillUsed, onRemoveAddress, selectedAddress, onSelectAddress, addrBusy, addrError,
   orders = [], onBrowse, onReorder, onTrack, onSignOut,
@@ -424,6 +427,15 @@ export default function AccountPage({
     const el = nav.current?.querySelector(`[data-k="${k}"]`);
     el?.scrollIntoView?.({ block: "nearest", inline: "center", behavior: "smooth" });
   };
+  /* Still asking who this is (the page sends a signed-out visitor to sign in
+     on its own) - never an invented person in the meantime. */
+  if (!user) {
+    return (
+      <div className="ac-page ac-waiting" aria-busy="true">
+        <p className="ac-wait">Checking your account…</p>
+      </div>
+    );
+  }
   const initial = (user.name || "?").trim()[0]?.toUpperCase();
 
   let body;

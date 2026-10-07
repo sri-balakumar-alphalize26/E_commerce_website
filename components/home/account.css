@@ -9,6 +9,9 @@
 }
 .ac-page > * { min-width: 0; }
 .ac-signing-out { opacity: 0; transform: scale(0.98); filter: blur(2px); }
+/* Before /api/auth/me has said who this is. */
+.ac-waiting { display: block; min-height: 40vh; }
+.ac-wait { margin: 48px auto; text-align: center; color: var(--hm-muted); font-size: 15px; animation: hm-fade 400ms var(--hm-ease) both; }
 
 /* ---------------- sidebar ---------------- */
 .ac-side {
