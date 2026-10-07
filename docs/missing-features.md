@@ -26,7 +26,8 @@ The category logo was a type B gap. It's the first entry under **Done**.
   - `components/admin/ProductPageSection.jsx:25` (says so)
 - [ ] **2. Banners ignore their link and picture.** The banner hardcodes `href="#"`, blocks the click, and never draws `b.image`, although the console edits the link and Odoo stores the picture.
   - `components/home/Home.jsx:151-165`
-- [ ] **3. Order tracking shows a made-up rider.** `riderFor()` hashes the order id into four hardcoded riders ("Arjun K.", …). The rider staff actually assign is never shown.
+- [x] **3. Order tracking shows a made-up rider.** `riderFor()` hashes the order id into four hardcoded riders ("Arjun K.", …). The rider staff actually assign is never shown.
+  - **Done (2026-10-07):** the name is the delivery job's rider record; there is a real live map and a Call button. See `docs/WEB_CHANGES_FOR_APP.md` entry 1. Item 4 still uses the name, but the tip is still not stored.
   - `components/home/orderState.js:69-75`
   - `components/home/OrderTrack.jsx:469,566`
   - Assignment: `components/admin/AdminOrders.jsx:455`

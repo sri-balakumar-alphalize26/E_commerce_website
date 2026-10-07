@@ -3,11 +3,14 @@
    369 Mart — After the order   (/track/<id>)
    Hero      status art that changes per step (bag pulse → box closing →
              scooter riding → tick burst / cancelled), ETA that counts down
-   Map       Quick: store → home route, rider moves along it, travelled part
-             fills, remaining part marches; home pin pulses
+   Live      while the rider is on the way: the real map (LiveTrackCard),
+             polled from /orders/<id>/track every 6 s, with the real rider
+   Map       Quick, before the rider sets off: a drawn store → home route
+             whose travelled part fills with the order's progress
    Journey   Express: truck rolls along hub rail with scan events
    Timeline  steps fill one by one with times; active step pulses
-   Rider     name, rating, vehicle, call / chat, 4-digit delivery OTP
+   Rider     the job's real rider (Odoo), call while on the way, chat,
+             4-digit delivery OTP
    Actions   Cancel (reason sheet → refund to source or wallet) · Rate order
              (stars, tags, per item, tip, comment → thank-you burst) · Return /
              replace (pick items → reason → refund or replace + pickup slot →
@@ -17,10 +20,11 @@ import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } fro
 import { createPortal } from "react-dom";
 import { Icon, OpenContext, Thumb, money } from "./shared";
 import {
-  RETURN_STEPS, cancellable, fmtDay, fmtPlaced, fmtTime, liveStatus, returnStatus, returnable, riderFor,
+  RETURN_STEPS, cancellable, fmtDay, fmtPlaced, fmtTime, liveStatus, returnStatus, returnable, riderFirst, riderName,
 } from "./orderState";
+import LiveTrackCard from "./LiveTrackCard";
 import { api } from "@/lib/api";
-import { useAction } from "@/lib/useFetch";
+import { useAction, useResource } from "@/lib/useFetch";
 import { addressText } from "@/lib/address";
 import { EARN_WHEN, pointsText } from "./points";
 
@@ -83,9 +87,13 @@ function StatusArt({ k }) {
   );
 }
 
-/* ---------------- quick map ---------------- */
+/* ---------------- quick map (drawn) ----------------
+   A picture of the order's progress, for when there is no real position to
+   show - before a rider has the parcel, or with no delivery job at all. It
+   used to put a made-up rider on it, "2.4 km away"; there is no rider dot
+   and no distance on a drawing now. The real one is LiveTrackCard. */
 const ROUTE = "M78 236 C 140 236 150 170 214 164 S 300 176 318 120 S 420 70 470 96 S 520 84 540 64";
-function LiveMap({ s, rider, address }) {
+function LiveMap({ s, name, address }) {
   const path = useRef(null);
   const [len, setLen] = useState(0);
   const [pos, setPos] = useState({ x: 78, y: 236 });
@@ -108,8 +116,7 @@ function LiveMap({ s, rider, address }) {
     raf.current = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf.current);
   }, [target, len]);
-  const km = (2.4 * (1 - target)).toFixed(1);
-  const bubble = s.idx < 2 ? "Packing your order" : s.idx === 2 ? `${rider.name.split(" ")[0]} is ${km} km away` : "Delivered";
+  const bubble = s.idx < 2 ? "Packing your order" : s.idx === 2 ? (name ? `${riderFirst(name)} is on the way` : "On the way to you") : "Delivered";
   return (
     <div className={"ot-map ot-map-" + s.key}>
       <svg viewBox="0 0 600 300" preserveAspectRatio="xMidYMid slice" role="img" aria-label={`Rider route. ${bubble}`}>
@@ -131,11 +138,6 @@ function LiveMap({ s, rider, address }) {
         <g transform="translate(540 64)" className="ot-pin-home">
           <circle r="26" className="ot-pulse" /><circle r="15" />
           <path d="M-6 1 0 -5 6 1 V6 H-6z" />
-        </g>
-        <g transform={`translate(${pos.x} ${pos.y})`} className="ot-rider">
-          <circle r="19" className="ot-rider-halo" />
-          <circle r="14" className="ot-rider-dot" />
-          <g transform="translate(-9 -9) scale(.75)"><path d="M8.5 17h6.5l2-6h-4l-2 4M15 5h3l1 6" /><circle cx="6" cy="17" r="2.5" /><circle cx="18" cy="17" r="2.5" /></g>
         </g>
       </svg>
       <span className="ot-bubble" key={bubble} style={{ left: `${(pos.x / 600) * 100}%`, top: `${(pos.y / 300) * 100}%` }}>{bubble}</span>
@@ -241,7 +243,8 @@ function CancelSheet({ o, onClose, onConfirm }) {
 const MOODS = ["", "Terrible", "Bad", "Okay", "Good", "Loved it!"];
 const GOOD = ["On-time delivery", "Polite rider", "Fresh items", "Well packed", "Great prices"];
 const BAD = ["Late delivery", "Damaged items", "Missing items", "Poor packaging", "Rude rider"];
-function RateCard({ o, byId, rider, onSubmit }) {
+function RateCard({ o, byId, name, onSubmit }) {
+  const first = riderFirst(name);
   const m = moneyOf(o);
   const [stars, setStars] = useState(0);
   const [hover, setHover] = useState(0);
@@ -259,7 +262,7 @@ function RateCard({ o, byId, rider, onSubmit }) {
         <span className="ot-hearts" aria-hidden="true">{Array.from({ length: 8 }, (_, i) => <i key={i} style={{ "--k": i }}><Icon n="star" size={14} /></i>)}</span>
         <div className="ot-rated-stars">{[1, 2, 3, 4, 5].map((n) => <Icon key={n} n="star" size={18} className={n <= r.stars ? "ot-lit" : ""} />)}</div>
         <b>Thanks for rating your order!</b>
-        <small>{r.tip ? `${m(r.tip)} tip sent to ${rider.name.split(" ")[0]} · ` : ""}Your feedback helps {rider.name.split(" ")[0]} and the store.</small>
+        <small>{r.tip ? `${m(r.tip)} tip sent to ${first} · ` : ""}Your feedback helps {first} and the store.</small>
       </section>
     );
   }
@@ -296,7 +299,7 @@ function RateCard({ o, byId, rider, onSubmit }) {
           </div>
           {o.mode !== "all" && (
             <div className="ot-tip">
-              <span><b>Tip {rider.name.split(" ")[0]}</b><small>100% of the tip goes to your rider</small></span>
+              <span><b>Tip {first}</b><small>100% of the tip goes to your rider</small></span>
               <div className="ot-chips">{[10, 20, 30, 50].map((t) => <button key={t} className={tip === t ? "ot-on" : ""} onClick={() => setTip(tip === t ? 0 : t)}>{money(t)}</button>)}</div>
             </div>
           )}
@@ -410,7 +413,8 @@ function ReturnTracker({ ret, cur }) {
 }
 
 /* ---------------- help chat ---------------- */
-function HelpSheet({ o, s, rider, onClose, onCancel }) {
+const RIDER_Q = /rider|driver|delivery ?(boy|guy|man|person|partner)|who.{0,20}deliver/;
+function HelpSheet({ o, s, name, track, onClose, onCancel }) {
   const m = moneyOf(o);
   const [msgs, setMsgs] = useState([{ me: false, t: `Hi! I'm Mitra from 369 Mart. How can I help with order #${o.id}?` }]);
   const [typing, setTyping] = useState(false);
@@ -419,7 +423,15 @@ function HelpSheet({ o, s, rider, onClose, onCancel }) {
   useEffect(() => { list.current?.scrollTo({ top: list.current.scrollHeight, behavior: "smooth" }); }, [msgs, typing]);
   const answer = (q) => {
     const low = q.toLowerCase();
-    if (/where|status|late|when/.test(low)) return s.key === "out" ? `${rider.name} is on the way. ${o.eta || "It should reach you shortly."}${o.otp ? ` Share OTP ${o.otp} at the door.` : ""}` : s.key === "delivered" ? "This order was delivered. If something's wrong you can return or replace items from this page." : s.key === "cancelled" ? "This order was cancelled. Your refund status is shown on the order page." : `Your order is ${{ placed: "confirmed and being prepared", packed: "packed and waiting for a rider", shipped: "shipped and on its way to your city" }[s.key] || "on the way"}. ${o.eta || "We'll notify you when it moves on."}`;
+    /* The rider is the shop's record (riderName): named only once one has
+       really taken the job, and never guessed. */
+    if (RIDER_Q.test(low)) {
+      if (s.key === "delivered") return name ? `${name} delivered this order.` : "This order has been delivered.";
+      if (s.key === "cancelled") return "This order was cancelled, so no rider is coming.";
+      if (name) return `${name} is delivering your order${track?.label ? ` — ${track.label.toLowerCase()}` : ""}.${track?.rider?.phone ? " Tap the phone button on this page to call them." : ""}${track?.live ? " You can follow them on the map." : ""}`;
+      return "A rider hasn't been assigned yet. Their name shows here as soon as one picks up your order.";
+    }
+    if (/where|status|late|when/.test(low)) return s.key === "out" ? `${name || "Your rider"} is on the way. ${o.eta || "It should reach you shortly."}${o.otp ? ` Share OTP ${o.otp} at the door.` : ""}` : s.key === "delivered" ? "This order was delivered. If something's wrong you can return or replace items from this page." : s.key === "cancelled" ? "This order was cancelled. Your refund status is shown on the order page." : `Your order is ${{ placed: "confirmed and being prepared", packed: "packed and waiting for a rider", shipped: "shipped and on its way to your city" }[s.key] || "on the way"}. ${o.eta || "We'll notify you when it moves on."}`;
     if (/missing|damaged|wrong/.test(low)) return "Sorry about that! Tap “Return or replace” on the order page, choose the items and we'll arrange a pickup and a refund or replacement.";
     if (/payment|refund|charged|money/.test(low)) return o.method === "cod" ? "This is a cash on delivery order, so nothing has been charged yet." : `Payment of ${m(o.paid || o.total)} was received via ${o.pay}. Refunds reach the source in 3–5 working days, or instantly to 369 Wallet.`;
     if (/cancel/.test(low)) return cancellable(o, s) ? "You can still cancel — I've opened the cancellation for you." : "This order can't be cancelled any more because it's already been packed. You can return items after delivery.";
@@ -442,7 +454,7 @@ function HelpSheet({ o, s, rider, onClose, onCancel }) {
         {typing && <p className="ot-typing" aria-label="Typing"><i /><i /><i /></p>}
       </div>
       <div className="ot-quick">
-        {["Where is my order?", "Item missing or damaged", "Payment or refund", cancellable(o, s) ? "Cancel my order" : null, "Talk to an agent"].filter(Boolean).map((q) => <button key={q} onClick={() => send(q)}>{q}</button>)}
+        {["Where is my order?", s.key === "out" || track?.live ? "Who is my rider?" : null, "Item missing or damaged", "Payment or refund", cancellable(o, s) ? "Cancel my order" : null, "Talk to an agent"].filter(Boolean).map((q) => <button key={q} onClick={() => send(q)}>{q}</button>)}
       </div>
       <form className="ot-send" onSubmit={(e) => { e.preventDefault(); send(text); }}>
         <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Type a message" aria-label="Message" />
@@ -466,7 +478,22 @@ export default function OrderTrack({ order: o, byId, onChanged, onBack, onReceip
     await onChanged?.();
     return r;
   });
-  const rider = riderFor(o);
+  /* Where the parcel really is, from the delivery job (Odoo's
+     /369mart/orders/<id>/track). Every 6 s while a rider is moving it, every
+     20 s while it is still at the shop, and not at all once it is over. */
+  const following = s.key !== "cancelled" && s.key !== "delivered";
+  const [fast, setFast] = useState(false);
+  const { data: trackData } = useResource(`/orders/${encodeURIComponent(o.id)}/track`, {
+    enabled: following, keepLast: true,
+    pollMs: following ? (fast ? 6000 : 20000) : 0,
+  });
+  const track = following ? trackData?.track || null : null;
+  const live = !!track?.live && !track?.ended;
+  useEffect(() => setFast(live), [live]);
+  /* The job finished while the page was open: re-read the order so the
+     page moves on to "Delivered" without waiting for the order list's poll. */
+  useEffect(() => { if (track?.ended) onChanged?.(); }, [track?.ended]); // eslint-disable-line
+  const name = riderName(o, track);
   const open = useContext(OpenContext);
   const [sheet, setSheet] = useState(null); // cancel | return | help
   const [toast, setToast] = useState("");
@@ -481,7 +508,7 @@ export default function OrderTrack({ order: o, byId, onChanged, onBack, onReceip
     if (lastKey.current === s.key) return;
     lastKey.current = s.key;
     if (s.key === "delivered") flash("Your order has been delivered");
-    if (s.key === "out") flash(`${rider.name} picked up your order`);
+    if (s.key === "out") flash(`${name || "Your rider"} picked up your order`);
   }, [s.key]); // eslint-disable-line
 
   const cancelled = s.key === "cancelled";
@@ -510,7 +537,7 @@ export default function OrderTrack({ order: o, byId, onChanged, onBack, onReceip
             </div>
           </section>
 
-          {!cancelled && s.key === "delivered" && <div ref={rateRef}><RateCard o={o} byId={byId} rider={rider} onSubmit={async (r) => {
+          {!cancelled && s.key === "delivered" && <div ref={rateRef}><RateCard o={o} byId={byId} name={name} onSubmit={async (r) => {
             const sent = await ask("/rate", { stars: r.stars, tags: r.tags, comment: r.comment, tip: r.tip });
             flash(sent ? (r.tip ? `Thanks! ${m(r.tip)} tip sent` : "Thanks for your feedback") : act.error?.message || "We couldn't send that just now");
           }} /></div>}
@@ -559,12 +586,15 @@ export default function OrderTrack({ order: o, byId, onChanged, onBack, onReceip
 
           {!cancelled && (
             <section className="ot-card ot-tracker">
-              {s.mode === "quick" ? <LiveMap s={s} rider={rider} address={o.address} /> : <Journey s={s} o={o} />}
-              {s.mode === "quick" && s.idx >= 2 && s.idx < 3 && (
+              {live ? <LiveTrackCard track={track} address={o.address} />
+                : s.mode === "quick" ? <LiveMap s={s} name={name} address={o.address} /> : <Journey s={s} o={o} />}
+              {(live || (s.mode === "quick" && s.idx === 2)) && (
                 <div className="ot-rider-card">
-                  <span className="ot-avatar">{rider.name.split(" ").map((w) => w[0]).join("")}</span>
-                  <span className="ot-rider-txt"><b>{rider.name}</b><small><Icon n="star" size={11} className="ot-star" />{rider.rating} · {rider.trips} deliveries · {rider.vehicle}</small></span>
-                  <button className="ot-round" onClick={() => flash(`Calling ${rider.name.split(" ")[0]} on a masked number…`)} aria-label="Call rider"><Icon n="phone" size={17} /></button>
+                  <span className="ot-avatar">{name ? name.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase() : <Icon n="scooter" size={20} />}</span>
+                  <span className="ot-rider-txt"><b>{name || "Your rider"}</b><small>{track?.label || (name ? "On the way to you" : "Being assigned")}</small></span>
+                  {live && track?.rider?.phone && (
+                    <a className="ot-round" href={`tel:${track.rider.phone}`} aria-label={`Call ${name || "your rider"}`} title={`Call ${name || "your rider"}`}><Icon n="phone" size={17} /></a>
+                  )}
                   <button className="ot-round" onClick={() => setSheet("help")} aria-label="Chat"><Icon n="chat" size={17} /></button>
                 </div>
               )}
@@ -660,7 +690,7 @@ export default function OrderTrack({ order: o, byId, onChanged, onBack, onReceip
           flash(sent ? (r.resolution === "refund" ? "Return requested · pickup scheduled" : "Replacement requested") : act.error?.message || "We couldn't send that just now");
         }} />
       )}
-      {sheet === "help" && <HelpSheet o={o} s={s} rider={rider} onClose={() => setSheet(null)} onCancel={() => setSheet("cancel")} />}
+      {sheet === "help" && <HelpSheet o={o} s={s} name={name} track={track} onClose={() => setSheet(null)} onCancel={() => setSheet("cancel")} />}
 
       <div className={"ot-toast" + (toast ? " ot-show" : "")} role="status" aria-live="polite">{toast}</div>
     </div>

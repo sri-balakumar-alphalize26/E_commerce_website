@@ -119,6 +119,45 @@ button.ot-mini { cursor: pointer; }
 .ot-bubble::after { content: ""; position: absolute; left: 50%; bottom: -5px; width: 10px; height: 10px; margin-left: -5px; background: inherit; transform: rotate(45deg); border-radius: 2px; }
 .ot-map-addr { position: absolute; left: 12px; top: 12px; display: inline-flex; align-items: center; gap: 5px; padding: 6px 10px; border-radius: 999px; background: rgba(255, 255, 255, 0.92); font-size: 12.5px; font-weight: 700; box-shadow: 0 6px 14px -10px rgba(0, 0, 0, 0.5); }
 
+/* ---------- live map (LiveTrackCard) ----------
+   Leaflet draws the tiles; everything on top is ours, in the page's colours:
+   the shop is the orange "369" pin, home is navy, the rider is the orange
+   scooter with the same pulse the drawn map uses. */
+.ot-live { position: relative; }
+.ot-live-stage { position: relative; }
+.ot-live-map { height: 320px; background: #eef2ee; z-index: 0; }
+.ot-live .leaflet-container { font: inherit; }
+.ot-live .leaflet-control-attribution { font-size: 10.5px; background: rgba(255, 255, 255, 0.8); }
+.ot-live .leaflet-control-zoom a { color: var(--hm-ink); }
+.ot-lm { display: grid; place-items: center; border-radius: 50%; }
+.ot-lm svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.ot-lm-shop { width: 32px !important; height: 32px !important; margin: -16px 0 0 -16px !important; background: var(--hm-orange); border: 3px solid #fff; color: #fff; box-shadow: 0 6px 12px -6px rgba(0, 0, 0, 0.45); }
+.ot-lm-shop b { font-size: 9.5px; font-weight: 800; letter-spacing: -0.02em; }
+.ot-lm-home { width: 34px !important; height: 34px !important; margin: -17px 0 0 -17px !important; background: var(--hm-navy); border: 3px solid #fff; color: #fff; box-shadow: 0 0 0 8px rgba(11, 74, 110, 0.16), 0 6px 12px -6px rgba(0, 0, 0, 0.45); }
+.ot-lm-home svg { width: 16px; height: 16px; }
+.ot-lm-rider { background: #fff; border: 3px solid var(--hm-orange); color: #e8541a; box-shadow: 0 6px 12px -4px rgba(0, 0, 0, 0.35); transition: transform 600ms var(--hm-ease); }
+.ot-lm-rider::before { content: ""; position: absolute; inset: -9px; border-radius: 50%; background: rgba(247, 147, 30, 0.22); z-index: -1; animation: ot-pulse 1.4s ease-out infinite; }
+.ot-lm-rider.ot-lm-stale { border-color: #9aa7b1; color: #6b7a86; filter: grayscale(1); }
+.ot-lm-rider.ot-lm-stale::before { animation: none; opacity: 0; }
+.ot-live-pill, .ot-live-recentre, .ot-live-approx {
+  position: absolute; z-index: 500; display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; background: rgba(255, 255, 255, 0.94);
+  font-size: 12.5px; font-weight: 700; box-shadow: 0 6px 14px -10px rgba(0, 0, 0, 0.5);
+}
+.ot-live-pill { left: 12px; top: 12px; padding: 6px 11px; color: var(--hm-ink); max-width: calc(100% - 24px); }
+.ot-live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--hm-green); box-shadow: 0 0 0 0 rgba(31, 138, 60, 0.5); animation: ot-live-beat 1.6s ease-out infinite; }
+.ot-live-stale .ot-live-pill { background: #fdecea; color: var(--hm-red); }
+.ot-live-recentre { right: 12px; top: 12px; padding: 6px 11px; border: 0; color: var(--hm-blue); cursor: pointer; font-family: inherit; }
+.ot-live-recentre:hover { color: var(--hm-blue-d); }
+.ot-live-approx { left: 12px; bottom: 10px; padding: 4px 9px; font-size: 11px; font-weight: 600; color: var(--hm-muted); }
+.ot-live-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 18px; border-top: 1px solid #eef2f5; }
+.ot-live-bar > span { display: flex; flex-direction: column; min-width: 0; }
+.ot-live-bar b { font-size: 15px; }
+.ot-live-bar small { font-size: 12.5px; color: var(--hm-muted); }
+.ot-live-ago { text-align: right; }
+.ot-live-stale .ot-live-ago { color: var(--hm-red); }
+a.ot-round { text-decoration: none; }
+@keyframes ot-live-beat { 0% { box-shadow: 0 0 0 0 rgba(31, 138, 60, 0.5); } 100% { box-shadow: 0 0 0 9px rgba(31, 138, 60, 0); } }
+
 /* ---------- express journey ---------- */
 .ot-journey { padding: 22px 22px 16px; }
 .ot-rail { position: relative; height: 64px; margin: 0 26px 10px; }
@@ -350,6 +389,9 @@ button.ot-mini { cursor: pointer; }
   .ot-skip { position: static; margin-top: 6px; }
   .ot-hero { flex-wrap: wrap; }
   .ot-map { height: 240px; }
+  .ot-live-map { height: 260px; }
+  .ot-live-bar { flex-wrap: wrap; padding: 12px 14px; }
+  .ot-live-ago { text-align: left; }
   .ot-rail { margin: 0 20px 10px; }
   .ot-hub { font-size: 10px; }
   .ot-card { padding: 14px; }
@@ -383,6 +425,7 @@ button.ot-mini { cursor: pointer; }
 
 @media (prefers-reduced-motion: reduce) {
   .ot-page *, .ot-sheet-wrap * { animation: none !important; transition: none !important; }
+  .ot-lm-rider::before { animation: none !important; }
   .ot-tick circle, .ot-tick path, .ot-cross circle, .ot-cross path { stroke-dashoffset: 0; }
 }
 

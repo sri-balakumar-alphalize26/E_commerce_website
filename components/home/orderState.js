@@ -31,8 +31,6 @@ export const RETURN_STEPS = [
 ];
 export const RETURN_DAYS = 7;
 
-const hash = (s) => [...String(s)].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
-
 const STATUS_INDEX = { placed: 0, packed: 1, shipped: 1, out: 2, delivered: 3 };
 
 /* Where an order is, and when it got there.
@@ -66,13 +64,14 @@ export function returnStatus(ret) {
   return { idx, key: RETURN_STEPS[idx].key };
 }
 
-const RIDERS = [
-  { name: "Arjun K.", vehicle: "KL 07 CX 4821", rating: 4.9, trips: "2.1k" },
-  { name: "Faizal M.", vehicle: "KL 43 B 1190", rating: 4.8, trips: "1.4k" },
-  { name: "Vishnu R.", vehicle: "KL 01 AZ 7302", rating: 4.9, trips: "3.0k" },
-  { name: "Suresh P.", vehicle: "KL 02 H 5518", rating: 4.7, trips: "980" },
-];
-export const riderFor = (o) => RIDERS[hash(o.id) % RIDERS.length];
+/* The rider used to be made up here: the order number hashed into a list of
+   four invented names, so the page named somebody who was not coming. It is
+   the shop's record now - the rider on the order's delivery job, as Odoo
+   sends it (`rider.name` on the order, and on the live track), already
+   cleaned of logins and placeholders. Blank until a rider has really
+   accepted the job; the page then says "Your rider" and never guesses. */
+export const riderName = (o, track) => track?.rider?.name || o?.rider?.name || "";
+export const riderFirst = (name) => (name ? name.split(" ")[0] : "your rider");
 
 /* The delivery code used to be worked out here, from a hash of the order id.
    Anyone holding an order number could work out the code for that doorstep
