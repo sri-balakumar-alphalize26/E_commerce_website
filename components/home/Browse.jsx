@@ -916,16 +916,14 @@ export function BuyAgainPage({ byId, cart, setQty, orders = [] }) {
 /* Which build is running (next.config.mjs fixes these in at build time), so
    after a deploy anyone can tell whether the new code is live. */
 function BuildTag() {
+  /* "1.1.0.071026": the version, then the day it was built (DDMMYY). The
+     commit and the exact build time sit in the tooltip. */
   const version = process.env.NEXT_PUBLIC_APP_VERSION;
-  const build = process.env.NEXT_PUBLIC_APP_BUILD;
+  if (!version) return null;
   const built = process.env.NEXT_PUBLIC_APP_BUILT;
-  if (!version && !build) return null;
-  const day = built ? new Date(built).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "";
-  return (
-    <span className="ft-build" title={process.env.NEXT_PUBLIC_APP_COMMIT ? `Commit ${process.env.NEXT_PUBLIC_APP_COMMIT}` : undefined}>
-      {[version && `Version ${version}`, build, day].filter(Boolean).join(" · ")}
-    </span>
-  );
+  const tip = [process.env.NEXT_PUBLIC_APP_BUILD && `Commit ${process.env.NEXT_PUBLIC_APP_BUILD}`,
+    built && `Built ${new Date(built).toLocaleString("en-GB")}`].filter(Boolean).join(" · ");
+  return <span className="ft-build" title={tip || undefined}>Version {version}</span>;
 }
 
 export function SiteFooter() {

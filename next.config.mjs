@@ -5,6 +5,10 @@ import { readFileSync } from "node:fs";
    shows it, so after a deploy anyone can see whether the new build is live.
    No git on the build machine (a zip deploy) just leaves the commit blank. */
 const pkg = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8"));
+/* The build's date as DDMMYY in India time, tacked onto the version:
+   1.1.0 built on 7 Oct 2026 reads 1.1.0.071026. */
+const stamp = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Kolkata", day: "2-digit", month: "2-digit", year: "2-digit" })
+  .format(new Date()).replace(/\D/g, "");
 const git = (args) => { try { return execSync(`git ${args}`, { stdio: ["ignore", "pipe", "ignore"] }).toString().trim(); } catch { return ""; } };
 
 /** @type {import('next').NextConfig} */
@@ -12,7 +16,7 @@ const nextConfig = {
   reactStrictMode: true,
 
   env: {
-    NEXT_PUBLIC_APP_VERSION: pkg.version || "",
+    NEXT_PUBLIC_APP_VERSION: pkg.version ? `${pkg.version}.${stamp}` : "",
     NEXT_PUBLIC_APP_BUILD: git("rev-parse --short HEAD"),
     NEXT_PUBLIC_APP_COMMIT: git("rev-parse HEAD"),
     NEXT_PUBLIC_APP_BUILT: new Date().toISOString(),
