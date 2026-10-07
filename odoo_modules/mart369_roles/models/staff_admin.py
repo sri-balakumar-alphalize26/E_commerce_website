@@ -69,6 +69,9 @@ class ResUsers(models.Model):
             'id': self.id,
             'name': self.name or '',
             'email': self.login or '',
+            # Signs a staff member in (code on WhatsApp + password), so the
+            # page shows and edits it next to the login.
+            'phone': self.partner_id.phone or '',
             'role': self.mart369_role or 'user',
             'accountant': bool(self.mart369_accountant),
             'rider': bool(self.mart369_rider),
@@ -85,7 +88,8 @@ class ResUsers(models.Model):
         domain = [('share', '=', False)]
         term = (q or '').strip()
         if term:
-            domain += ['|', ('name', 'ilike', term), ('login', 'ilike', term)]
+            domain += ['|', '|', ('name', 'ilike', term), ('login', 'ilike', term),
+                       ('partner_id.phone', 'ilike', term)]
         users = self.search(domain, order='name')
         counts = {key: 0 for key in ROLES}
         for user in users:
@@ -100,9 +104,32 @@ class ResUsers(models.Model):
 
     # -------------------------------------------------------------- writing
 
+    def _mart369_staff_phone(self, phone, country=None):
+        """Set this staff member's mobile: checked for the country, saved as
+        E.164, and never one another staff member already signs in with.
+        `None` leaves it as it is; an empty value clears it."""
+        self.ensure_one()
+        if phone is None:
+            return
+        Partner = self.env['res.partner'].sudo()
+        ok, value = Partner._mart369_check_mobile(phone, partner=self.partner_id.sudo(),
+                                                  required=False, region=country or None)
+        if not ok:
+            raise UserError(value)
+        if value:
+            clash = self.sudo().search([
+                ('share', '=', False), ('id', '!=', self.id),
+                '|', ('partner_id.phone', '=', value),
+                ('partner_id.phone_sanitized', '=', value),
+            ], limit=1)
+            if clash:
+                raise UserError(_("That mobile is already used by %s.", clash.name))
+        self.partner_id.sudo().phone = value or False
+
     @api.model
-    def mart369_staff_set(self, user_id, role, accountant=False, rider=False, company_ids=None):
-        """Change one person's role, ticks and shops. Returns their new row."""
+    def mart369_staff_set(self, user_id, role, accountant=False, rider=False, company_ids=None,
+                          phone=None, country=None):
+        """Change one person's role, ticks, shops and mobile. Returns their new row."""
         self._mart369_check_owner()
         if role not in ROLES:
             raise UserError(_("Pick a role: User, Packer, Manager or Owner."))
@@ -125,11 +152,15 @@ class ResUsers(models.Model):
             if user.company_id.id not in ids:
                 vals['company_id'] = ids[0]
             user.sudo().write(vals)
+        user._mart369_staff_phone(phone, country)
         return user._mart369_staff_row()
 
     @api.model
-    def mart369_staff_invite(self, name, email, role='user', accountant=False, rider=False):
-        """Add a new staff member and send Odoo's invitation email."""
+    def mart369_staff_invite(self, name, email, role='user', accountant=False, rider=False,
+                             phone=None, country=None):
+        """Add a new staff member and send Odoo's invitation email. Their
+        mobile is set before the role, so a new Rider gets their rider
+        record (which needs the number) at once."""
         self._mart369_check_owner()
         name = (name or '').strip()
         email = (email or '').strip().lower()
@@ -146,6 +177,7 @@ class ResUsers(models.Model):
             'name': name, 'login': email, 'email': email,
             'group_ids': [(6, 0, [self.env.ref('base.group_user').id])],
         })
+        user._mart369_staff_phone(phone, country)
         user._mart369_role_groups(role, accountant, rider)
         try:
             user.action_reset_password()   # Odoo's own "set your password" invite

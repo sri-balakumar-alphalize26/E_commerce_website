@@ -7,6 +7,8 @@ customer account carries that name we use its login; if several do, the
 caller tells them to use their email instead.
 """
 
+import logging
+import re
 from datetime import timedelta
 
 import phonenumbers
@@ -14,6 +16,11 @@ from markupsafe import Markup
 
 from odoo import _, api, fields, models
 from odoo.exceptions import AccessDenied, ValidationError
+
+_logger = logging.getLogger(__name__)
+
+# The group every /369mart/admin/* route checks: the console's staff.
+STAFF_GROUP = 'website.group_website_designer'
 
 AMBIGUOUS = object()
 
@@ -407,3 +414,30 @@ class ResUsers(models.Model):
             raise AccessDenied()
         return super()._check_credentials(credential, env)
 
+
+    # --------------------------------------------------- a staff sign-in
+
+    def _mart369_is_staff(self):
+        self.ensure_one()
+        return not self.share and self.has_group(STAFF_GROUP)
+
+    @staticmethod
+    def _mart369_device(agent):
+        """'Chrome on Windows' from a browser's user-agent, or ''."""
+        agent = agent or ''
+        browser = next((name for pattern, name in (
+            (r'Edg/', 'Edge'), (r'OPR/|Opera', 'Opera'), (r'SamsungBrowser', 'Samsung Internet'),
+            (r'Chrome/', 'Chrome'), (r'Firefox/', 'Firefox'), (r'Safari/', 'Safari'),
+        ) if re.search(pattern, agent)), '')
+        system = next((name for pattern, name in (
+            (r'Android', 'Android'), (r'iPhone|iPad', 'iPhone'), (r'Windows', 'Windows'),
+            (r'Mac OS X|Macintosh', 'Mac'), (r'Linux', 'Linux'),
+        ) if re.search(pattern, agent)), '')
+        return ' on '.join(p for p in (browser, system) if p)
+
+    def _mart369_on_staff_sign_in(self, how='password', ip='', agent=''):
+        """A staff member just signed in. Logged here; mart369_whatsapp_bridge
+        tells every Owner on WhatsApp, so a stranger's sign-in is noticed."""
+        self.ensure_one()
+        _logger.info('mart369: staff %s signed in (%s) from %s, %s',
+                     self.login, how, ip or '?', self._mart369_device(agent) or '?')

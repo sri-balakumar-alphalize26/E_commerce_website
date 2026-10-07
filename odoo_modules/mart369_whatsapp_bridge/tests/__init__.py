@@ -14,3 +14,4 @@ from . import test_phone_link
 from . import test_order_track
 from . import test_mirrors
 from . import test_sa_hooks
+from . import test_staff_alert

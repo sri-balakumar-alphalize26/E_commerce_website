@@ -12,6 +12,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useResource } from "@/lib/useFetch";
 import { api } from "@/lib/api";
+import { consolePath } from "@/lib/consolePath";
 import { Avatar, Confirm, Drawer, Empty, Icon, Pill, Search, Select, Switch, Tabs, useToast } from "./AdminUI";
 import { BarChart, DataTable, Legend, LineChart, RankBars, SERIES, Spark } from "./charts";
 import {
@@ -481,7 +482,7 @@ export default function AdminApp({ section: initial = "dashboard", onSection, on
   else if (section === "home") body = <HomeSection flash={flash} />;
   else if (section === "product-page") body = <ProductPageSection flash={flash} />;
   else if (section === "orders") body = <OrdersArea openId={openId} setOpenId={setOpenId} query={orderQ} flash={flash} alarm={counterAlarm}
-    onOpenCustomer={(id) => { setOpenId(null); go("customers"); history.replaceState(null, "", `/admin/customers?customer=${id}`); }}
+    onOpenCustomer={(id) => { setOpenId(null); go("customers"); history.replaceState(null, "", consolePath(`/customers?customer=${id}`)); }}
     onOpenTicket={(ref) => { setOpenId(ref); go("support"); }} />;
   else if (section === "returns") body = <ReturnsSection flash={flash} />;
   else if (section === "products") body = <ProductsSection key={"p" + seedQ.products} initialQ={seedQ.products} flash={flash} go={go} />;

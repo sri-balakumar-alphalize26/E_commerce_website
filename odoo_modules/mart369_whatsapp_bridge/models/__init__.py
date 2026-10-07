@@ -16,3 +16,4 @@ from . import sale_order_track
 from . import bot_rider
 from . import mirrors
 from . import sa_hooks
+from . import staff_alert

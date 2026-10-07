@@ -39,6 +39,7 @@ class Mart369PhoneCode(models.Model):
         ('signin', 'Sign in'),
         ('signup', 'Sign up'),
         ('link', 'Add a number to an account'),
+        ('staff', 'Staff sign in'),
     ], required=True, index=True)
     user_id = fields.Many2one(
         'res.users', ondelete='cascade',

@@ -44,11 +44,14 @@ class Mart369StaffApi(http.Controller):
         body = self._body()
         return self._run(lambda: {'row': request.env['res.users'].mart369_staff_set(
             user_id, body.get('role'), bool(body.get('accountant')),
-            bool(body.get('rider')), body.get('companies'))})
+            bool(body.get('rider')), body.get('companies'),
+            phone=body.get('phone') if 'phone' in body else None,
+            country=body.get('country'))})
 
     @http.route('/369mart/admin/staff/invite', **_POST)
     def invite(self, **kwargs):
         body = self._body()
         return self._run(lambda: {'row': request.env['res.users'].mart369_staff_invite(
             body.get('name'), body.get('email'), body.get('role') or 'user',
-            bool(body.get('accountant')), bool(body.get('rider')))})
+            bool(body.get('accountant')), bool(body.get('rider')),
+            phone=body.get('phone') or None, country=body.get('country'))})

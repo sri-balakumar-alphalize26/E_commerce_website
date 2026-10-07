@@ -139,7 +139,21 @@ class Mart369AuthApi(http.Controller):
             user = self._sign_in(login, password)
         except AccessDenied:
             return self._fail(WRONG, status=401)
+        if user._mart369_is_staff():
+            self._staff_signed_in(user, 'email and password')
         return self._json(user._mart369_profile())
+
+    @staticmethod
+    def _staff_signed_in(user, how):
+        """Tell the shop a staff member signed in (the Owner hears it on
+        WhatsApp through the bridge). Never stops the sign-in itself."""
+        headers = request.httprequest.headers
+        ip = (headers.get('X-Forwarded-For', '').split(',')[0].strip()
+              or request.httprequest.remote_addr or '')
+        try:
+            user.sudo()._mart369_on_staff_sign_in(how, ip, headers.get('X-Mart-Device', ''))
+        except Exception:  # noqa: BLE001
+            _logger.exception('mart369: staff sign-in alert for %s failed', user.login)
 
     @http.route('/369mart/auth/logout', **_POST)
     def logout(self, **kwargs):

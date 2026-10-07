@@ -14,6 +14,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
+import { consolePath } from "@/lib/consolePath";
 import { useAction, useResource } from "@/lib/useFetch";
 import { Confirm, Drawer, Empty, Icon } from "./AdminUI";
 
@@ -278,7 +279,7 @@ export default function HomeSection({ flash }) {
             onSwitch={(page) => setSwitching(page)}
             onSchedule={onSchedule} onDuplicate={onDuplicate}
             onDelete={(page) => setConfirm(page)}
-            onEdit={(page) => router.push(`/admin/home/${page.id}`)} />
+            onEdit={(page) => router.push(consolePath(`/home/${page.id}`))} />
         ))}
       </div>
 

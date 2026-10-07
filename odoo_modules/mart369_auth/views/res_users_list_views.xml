@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+        A mobile number signs people in now (customers with a WhatsApp code;
+        staff with a code and their password), so the Users list shows it next
+        to the login it stands beside.
+    -->
+    <record id="view_users_list_mobile" model="ir.ui.view">
+        <field name="name">res.users.list.mart369.mobile</field>
+        <field name="model">res.users</field>
+        <field name="inherit_id" ref="base.view_users_tree"/>
+        <field name="arch" type="xml">
+            <field name="login" position="after">
+                <field name="phone" string="Mobile" readonly="1" optional="show"/>
+            </field>
+        </field>
+    </record>
+</odoo>

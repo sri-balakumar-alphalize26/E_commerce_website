@@ -285,3 +285,78 @@ class Mart369PhoneApi(http.Controller):
         profile = me._mart369_profile()
         profile['joined'] = joined
         return self._json(profile)
+
+    # ------------------------------------------------------------ staff sign-in
+
+    # The group every /369mart/admin/* route checks: the console's staff.
+    STAFF_GROUP = 'website.group_website_designer'
+
+    def _staff_by_phone(self, phone):
+        """The active staff user whose own number this is, or nothing.
+
+        Only internal users in the console's staff group: a customer's
+        number never opens the console, and the customer sign-in above never
+        looks at staff (`_mart369_phone_owner` reads `share=True` only).
+        """
+        users = request.env['res.users'].sudo().search([
+            ('share', '=', False),
+            '|', ('partner_id.phone', '=', phone),
+            ('partner_id.phone_sanitized', '=', phone),
+        ])
+        return users.filtered(lambda u: u.has_group(self.STAFF_GROUP))[:1]
+
+    @http.route('/369mart/auth/staff/phone/start', **_POST)
+    def staff_start(self, **kwargs):
+        """Body: {phone, country}. A code on WhatsApp for a staff number.
+
+        A number that is no staff member's gets the same answer as one that
+        is, and no code - so the page cannot be used to find out who works
+        here. A real one goes through the customer side's own limits.
+        """
+        body = self._body()
+        phone, failure = self._phone(body)
+        if failure:
+            return failure
+        user = self._staff_by_phone(phone)
+        if not user:
+            return self._json({'ok': True, 'phone': phone, 'delivery': 'sent',
+                               'message': SENT['sent'], 'resendIn': 60})
+        return self._send(phone, 'staff', user=user)
+
+    @http.route('/369mart/auth/staff/phone/verify', **_POST)
+    def staff_verify(self, **kwargs):
+        """Body: {phone, country, code, password}. Two checks: the code proves
+        the phone, the password proves the person - a staff account can change
+        the whole shop. Without a password the code is checked but not spent,
+        and the answer asks for it (needPassword)."""
+        body = self._body()
+        phone, failure = self._phone(body)
+        if failure:
+            return failure
+        user = self._staff_by_phone(phone)
+        Code = request.env['mart369.phone.code'].sudo()
+        record, why = Code._mart369_check(phone, 'staff', body.get('code'),
+                                          user=user or None, spend=False)
+        if why or not user:
+            return self._code_failure(why or 'wrong')
+        password = body.get('password') or ''
+        if not password:
+            return self._fail(_('Enter your password to finish signing in.'),
+                              'password', needPassword=True)
+        try:
+            user.with_user(user).sudo()._check_credentials(
+                {'type': 'password', 'login': user.login, 'password': password},
+                {'interactive': True})
+        except AccessDenied:
+            record.attempts += 1
+            return self._fail(_('That password is not right.'), 'password',
+                              needPassword=True)
+        user = self._sign_in_with(record, user)
+        try:
+            # The Owner hears of it on WhatsApp (mart369_whatsapp_bridge).
+            user.sudo()._mart369_on_staff_sign_in(
+                'mobile code and password', self._ip(),
+                request.httprequest.headers.get('X-Mart-Device', ''))
+        except Exception:  # noqa: BLE001 - never stops the sign-in itself
+            _logger.exception('mart369: staff sign-in alert for %s failed', user.login)
+        return self._json(user._mart369_profile())

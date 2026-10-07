@@ -17,6 +17,7 @@
    ========================================================================== */
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { clearReferral, takeReferral } from "@/lib/referral";
+import CountryPicker from "./CountryPicker";
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const demo = {
@@ -42,9 +43,6 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const RESEND_SECONDS = 30;
 const CODE_RESEND_SECONDS = 60;
 
-/* 🇮🇳 from "IN" - the regional-indicator letters every phone already draws. */
-const flag = (code) => (code && code.length === 2
-  ? String.fromCodePoint(...[...code.toUpperCase()].map((c) => 127397 + c.charCodeAt(0))) : "");
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
 function strength(pw) {
@@ -109,22 +107,15 @@ function PasswordInput({ id, value, onChange, autoComplete, shake, invalid, onCa
   );
 }
 
-/* Country chip + number. The chip is a real <select> laid over it, so the
-   phone's own picker opens with every country's name. */
-function PhoneInput({ id, countries, country, onCountry, value, onChange, shake, invalid, placeholder, autoFocus }) {
-  const current = countries.find((c) => c.code === country) || { code: country, dial: "" };
+/* Country chip + number. The chip opens a searchable list in the shop's own
+   look (CountryPicker): type "india" or "91", Enter picks it. */
+export function PhoneInput({ id, countries, country, onCountry, home, value, onChange, shake, invalid, placeholder, autoFocus }) {
+  const input = useRef(null);
   return (
     <div className={"si-phone si-input" + (shake ? " si-shake" : "")}>
-      <span className="si-cc">
-        <span aria-hidden="true">{flag(current.code)} {current.dial}</span>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
-        <select aria-label="Country code" value={country} onChange={(e) => onCountry(e.target.value)}>
-          {countries.map((c) => (
-            <option key={c.code} value={c.code}>{flag(c.code)} {c.name} ({c.dial})</option>
-          ))}
-        </select>
-      </span>
-      <input id={id} type="tel" inputMode="tel" autoComplete="tel-national" autoFocus={autoFocus}
+      <CountryPicker countries={countries} value={country} onChange={onCountry} home={home}
+        onPicked={() => input.current?.focus()} />
+      <input ref={input} id={id} type="tel" inputMode="tel" autoComplete="tel-national" autoFocus={autoFocus}
         aria-invalid={invalid || undefined} placeholder={placeholder}
         value={value} onChange={(e) => onChange(e.target.value.replace(/[^\d\s+()-]/g, ""))} />
     </div>
@@ -195,6 +186,7 @@ export function SignInCard({
 
   const [countries, setCountries] = useState([]);
   const [country, setCountry] = useState("");
+  const [home, setHome] = useState(""); /* the shop's own country, pinned atop the list */
   const [hint, setHint] = useState(null);
   const [phone, setPhone] = useState("");
   const [purpose, setPurpose] = useState("signin"); /* signin | signup | add */
@@ -228,6 +220,7 @@ export function SignInCard({
       if (!live || !r?.ok) return;
       setCountries(r.countries || []);
       setCountry((c) => c || r.country?.code || "");
+      setHome(r.country?.code || "");
       setHint(r.phone || null);
     }).catch(() => {});
     return () => { live = false; };
@@ -368,7 +361,7 @@ export function SignInCard({
     <Field id="si-phone" label={label} error={errFor("phone")}
       hint={countries.length ? "We'll send a 6-digit code to this number on WhatsApp." : ""}>
       <PhoneInput id="si-phone" key={shakeK("phone")} countries={countries.length ? countries : [{ code: country, dial: "" }]}
-        country={country} onCountry={(c) => { setCountry(c); clear(); }}
+        country={country} home={home} onCountry={(c) => { setCountry(c); clear(); }}
         value={phone} onChange={(v) => { setPhone(v); clear(); setNotice(""); }}
         shake={error.field === "phone"} invalid={!!errFor("phone")} placeholder={phonePlaceholder} autoFocus={autoFocus} />
     </Field>

@@ -1,6 +1,6 @@
 {
     'name': '369 Mart Roles',
-    'version': '19.0.1.1.0',
+    'version': '19.0.1.2.0',
     'category': 'Website',
     'summary': 'Owner, Manager, Packer, Accountant, Rider and Seller roles on the user form.',
     'description': """

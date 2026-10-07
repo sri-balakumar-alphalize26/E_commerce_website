@@ -32,6 +32,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 
 import { api } from "@/lib/api";
+import { consolePath } from "@/lib/consolePath";
 import { useResource } from "@/lib/useFetch";
 import {
   Banner, CategoryStrip, ModeSwitchOverlay, Tabs as StoreTabs, useModeSwitch,
@@ -684,7 +685,7 @@ export default function PageEditor({ pageId }) {
   return (
     <div className="pe">
       <header className="pe-head">
-        <button className="ad-btn" onClick={() => router.push("/admin/home")}>
+        <button className="ad-btn" onClick={() => router.push(consolePath("/home"))}>
           <Icon n="left" size={15} />All pages
         </button>
         <div className="pe-title">

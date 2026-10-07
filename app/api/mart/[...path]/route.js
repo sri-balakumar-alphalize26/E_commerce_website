@@ -12,7 +12,7 @@
 
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { odooFetch, odooRaw, sessionCookie, SESSION_COOKIE } from "@/lib/odoo";
+import { adminCookie, ADMIN_COOKIE, CONSOLE_HEADER, odooFetch, odooRaw, sessionCookie, SESSION_COOKIE } from "@/lib/odoo";
 
 export const dynamic = "force-dynamic";
 
@@ -70,11 +70,28 @@ function remember(url, body) {
   LAST_GOOD.set(url, { body, at: Date.now() });
 }
 
+/* A link or picture on a console page (a packing slip, an invoice, a return's
+   photo) cannot add a header; the page it came from says it is the console. */
+const CONSOLE_SEGMENT = (process.env.ADMIN_PATH || "").trim().replace(/^\/+|\/+$/g, "") || "admin";
+
+function fromConsole(req) {
+  try {
+    const first = new URL(req.headers.get("referer") || "").pathname.split("/")[1] || "";
+    return first === CONSOLE_SEGMENT || first === "admin";
+  } catch (e) {
+    return false;
+  }
+}
+
 async function handle(req, ctx) {
   const { path } = await ctx.params;
   if (badPath(path)) return NextResponse.json({ ok: false, error: "Unknown request." }, { status: 404 });
 
-  const session = (await cookies()).get(SESSION_COOKIE)?.value;
+  /* The staff console marks its requests (lib/api.js), and they ride the
+     console's own sign-in; everything else is the customer's. */
+  const console_ = req.headers.get(CONSOLE_HEADER) === "1" || path[0] === "admin" || fromConsole(req);
+  const cookieName = console_ ? ADMIN_COOKIE : SESSION_COOKIE;
+  const session = (await cookies()).get(cookieName)?.value;
   const target = "/369mart/" + path.join("/") + new URL(req.url).search;
 
   /* A few routes answer bytes rather than JSON: an invoice is a PDF, so are
@@ -138,10 +155,11 @@ async function handle(req, ctx) {
   res.headers.set("Cache-Control", "no-store");
 
   if (out === 401 && session) {
-    /* The cookie is dead. Drop it, or middleware.js keeps waving it through. */
-    res.cookies.set({ name: SESSION_COOKIE, value: "", path: "/", maxAge: 0 });
+    /* The cookie is dead. Drop it, or middleware.js keeps waving it through -
+       only the one this request rode on. */
+    res.cookies.set({ name: cookieName, value: "", path: "/", maxAge: 0 });
   } else if (rotated && rotated !== session) {
-    res.cookies.set(sessionCookie(rotated, { remember: true }));
+    res.cookies.set(console_ ? adminCookie(rotated) : sessionCookie(rotated, { remember: true }));
   }
   return res;
 }

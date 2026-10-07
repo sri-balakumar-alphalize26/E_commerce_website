@@ -166,6 +166,8 @@ input.si-input::placeholder, .si-input input::placeholder { color: #9aabb8; }
   border-color: var(--si-err); box-shadow: 0 0 0 4px rgba(196, 61, 52, 0.12);
 }
 .si-phone, .si-pw { display: flex; align-items: center; padding: 0; overflow: hidden; }
+/* The country panel opens below the field, so the phone box may not clip. */
+.si-phone { position: relative; overflow: visible; }
 .si-phone select {
   height: 100%; border: 0; background: transparent; font: inherit; font-size: 14.5px; font-weight: 600; color: var(--si-ink);
   padding: 0 8px 0 14px; border-right: 1.5px solid var(--si-line); outline: none; cursor: pointer;
@@ -240,6 +242,41 @@ input.si-input::placeholder, .si-input input::placeholder { color: #9aabb8; }
   position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;
   border: 0; padding: 0; font-size: 16px;
 }
+/* The searchable country picker (CountryPicker.jsx) - the chip, and the
+   panel that opens under the field. */
+.cp { position: static; flex: none; height: 100%; display: inline-flex; }
+.cp-chip {
+  height: 100%; display: inline-flex; align-items: center; gap: 4px; padding: 0 10px 0 14px;
+  border: 0; border-right: 1.5px solid var(--si-line); background: none; cursor: pointer;
+  font: inherit; font-size: 14.5px; font-weight: 600; color: var(--si-ink); white-space: nowrap;
+}
+.cp-chip svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; color: var(--si-muted); }
+.cp-chip:focus-visible { outline: 2px solid var(--si-blue); outline-offset: -2px; border-radius: 10px; }
+.cp-panel {
+  position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 30;
+  background: #fff; border: 1.5px solid var(--si-line); border-radius: 14px;
+  box-shadow: 0 18px 40px -18px rgba(15, 34, 51, 0.35); padding: 8px; display: grid; gap: 6px;
+  animation: cp-in 160ms var(--si-ease) both;
+}
+.cp-search {
+  width: 100%; height: 40px; padding: 0 12px; border: 1.5px solid var(--si-line); border-radius: 10px;
+  font: inherit; font-size: 15px; color: var(--si-ink); background: var(--si-field); outline: none;
+}
+.cp-search:focus { border-color: var(--si-blue); }
+.cp-list { list-style: none; margin: 0; padding: 0; max-height: 260px; overflow-y: auto; overscroll-behavior: contain; }
+.cp-list li {
+  display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 9px;
+  cursor: pointer; font-size: 14.5px; color: var(--si-ink);
+}
+.cp-list li.cp-hi { background: #e5f2f8; }
+.cp-list li.cp-on .cp-name { font-weight: 700; }
+.cp-flag { width: 22px; text-align: center; }
+.cp-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cp-dial { color: var(--si-muted); font-variant-numeric: tabular-nums; }
+.cp-none { color: var(--si-muted); cursor: default !important; }
+@keyframes cp-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .cp-panel { animation: none; } }
+
 .si-alt { margin: -2px 0 0; text-align: center; font-size: 13.5px; }
 .si-note {
   margin: 0; padding: 10px 12px; border-radius: 12px; background: #e5f2f8; color: var(--si-navy);
