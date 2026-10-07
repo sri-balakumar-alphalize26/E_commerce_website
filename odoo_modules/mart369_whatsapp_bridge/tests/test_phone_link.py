@@ -2,6 +2,7 @@
 
 import json
 import re
+from unittest.mock import patch
 
 from odoo.tests import tagged
 from odoo.tests.common import HttpCase
@@ -34,9 +35,12 @@ class TestPhoneLink(Mart369BridgeCase):
         self.assertIn('482913', body)
 
     def test_no_session_says_none(self):
-        self.env['whatsapp.session'].sudo().search([]).write({'active': False})
-        self.assertEqual(
-            self.env['res.partner']._mart369_send_login_code(WA, '482913'), 'none')
+        # Faked, not switched off: the running server shares those sessions.
+        Notify = self.env.registry['mart369.whatsapp']
+        with patch.object(Notify, '_mart369_session',
+                          lambda self: self.env['whatsapp.session']):
+            self.assertEqual(
+                self.env['res.partner']._mart369_send_login_code(WA, '482913'), 'none')
 
     # ----------------------------------------------------------- the owner
 
@@ -133,6 +137,59 @@ class TestPhoneLink(Mart369BridgeCase):
         default = book.filtered('mart369_default')
         self.assertEqual(default.street, '77 New Street')
         self.assertEqual(len(book.filtered(lambda a: a.street == '77 New Street')), 1)
+
+    # ------------------------------------------------- one address, once
+
+    def _home(self, street='Beach Road, beach, kollam, Kerala', pin='691001'):
+        self.address.write({'street': street, 'zip': pin, 'mart369_label': 'Home'})
+        return self.address
+
+    def test_spelling_and_commas_are_the_same_address(self):
+        a = self.partner._mart369_book_add_once({'street': 'beach road,kollam,691001', 'zip': '691001'})
+        b = self.partner._mart369_book_add_once({'street': 'Beach road,Kollam, 691001', 'zip': '691001'})
+        self.assertEqual(a, b)
+
+    def test_the_pin_is_said_once(self):
+        a = self.partner._mart369_book_add_once({'street': 'beach road,kollam,691001', 'zip': '691001'})
+        self.assertEqual(a.street, 'beach road,kollam')
+        self.assertEqual(a.zip, '691001')
+
+    def test_a_shorter_whatsapp_address_reuses_home(self):
+        home = self._home()
+        found = self.partner._mart369_book_add_once({'street': 'beach road,kollam,691001', 'zip': '691001'})
+        self.assertEqual(found, home)
+
+    def test_different_door_numbers_stay_apart(self):
+        a = self.partner._mart369_book_add_once({'street': '12 Beach Road, Kollam', 'zip': '691001'})
+        b = self.partner._mart369_book_add_once({'street': '14 Beach Road, Kollam', 'zip': '691001'})
+        self.assertNotEqual(a, b)
+
+    def test_tidy_folds_old_duplicates_and_keeps_home(self):
+        home = self._home()
+        add = self.partner._mart369_add_address
+        one = add({'name': 'x', 'street': 'beach road,kollam,691001', 'zip': '691001',
+                   'mart369_label': 'WhatsApp'})
+        two = add({'name': 'x', 'street': 'Beach road,Kollam, 691001', 'zip': '691001',
+                   'mart369_label': 'WhatsApp'})
+        two._mart369_set_default()
+        order = self._web_order()
+        order.sudo().partner_shipping_id = two
+        folded = self.partner._mart369_book_tidy()
+        self.assertEqual(folded, one | two)
+        book = self.partner._mart369_book()
+        self.assertIn(home, book)
+        self.assertNotIn(one, book)
+        self.assertTrue(home.mart369_default, 'the default moves to the address that stays')
+        # The old order still shows where it went.
+        self.assertEqual(order.partner_shipping_id, two)
+        self.assertIn('Beach road', order.partner_shipping_id.street)
+
+    def test_tidy_leaves_places_the_customer_saved(self):
+        self._home(street='5 Gandhi Nagar', pin='624001')
+        work = self.partner._mart369_add_address({
+            'name': 'x', 'street': '5 Gandhi Nagar', 'zip': '624001', 'mart369_label': 'Work'})
+        self.assertFalse(self.partner._mart369_book_tidy())
+        self.assertTrue(work.active)
 
 
 @tagged('post_install', '-at_install')

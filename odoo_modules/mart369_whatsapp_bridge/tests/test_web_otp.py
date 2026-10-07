@@ -1,5 +1,7 @@
 """A website order hears the WhatsApp journey - and gets its door code there."""
 
+from unittest.mock import patch
+
 from odoo.tests import tagged
 
 from .common import Mart369BridgeCase
@@ -107,8 +109,11 @@ class TestWebOrderWhatsapp(Mart369BridgeCase):
 
     def test_no_session_says_so(self):
         order, job = self._ready_job(ref='369M-TESTNOS')
-        self.env['whatsapp.session'].sudo().search([]).write({'active': False})
-        ok, message, code = job.sa_issue_delivery_otp()
+        # Faked, not switched off: the running server shares those sessions.
+        Picking = self.env.registry['stock.picking']
+        with patch.object(Picking, '_mart369_wa_session',
+                          lambda self: self.env['whatsapp.session']):
+            ok, message, code = job.sa_issue_delivery_otp()
         self.assertFalse(ok)
         self.assertTrue(code)
         self.assertIn('in their app', message)

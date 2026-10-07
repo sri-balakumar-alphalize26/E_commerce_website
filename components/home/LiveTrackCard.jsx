@@ -109,10 +109,15 @@ export default function LiveTrackCard({ track, address }) {
 
   /* The promised time, while it is still ahead; once it has passed, saying
      "Arriving by" a time already gone would be wrong, so it says late. */
+  const moving = !!track.live && !track.ended;
   const due = track.eta ? Date.parse(track.eta) : NaN;
-  const eta = !Number.isNaN(due) ? (due > Date.now() ? `Arriving by ${fmtTime(due)}` : `Running late — was due by ${fmtTime(due)}`) : track.eta_text || "";
-  const note = !track.show_rider
-    ? "Your parcel is on its way. The rider shows here on the last stretch."
+  const eta = track.ended ? ""
+    : !Number.isNaN(due) ? (due > Date.now() ? `Arriving by ${fmtTime(due)}` : `Running late — was due by ${fmtTime(due)}`) : track.eta_text || "";
+  /* The same map before the rider sets off and after the door, the way
+     WhatsApp's tracking link shows it - only the words change. */
+  const note = track.ended ? (track.state === "delivered" ? "Delivered to your door." : "")
+    : !moving ? "Your rider shows here once they set off."
+    : !track.show_rider ? "Your parcel is on its way. The rider shows here on the last stretch."
     : !rider ? "Waiting for the rider's location…" : "";
 
   if (failed || (!home && !rider && !shop)) return null;
@@ -122,12 +127,13 @@ export default function LiveTrackCard({ track, address }) {
       <div className="ot-live-stage">
         <div className="ot-live-map" ref={box} role="region" aria-label={`Live map. ${track.label}${eta ? ". " + eta : ""}`} />
         <span className="ot-live-pill">
-          {stale ? <><Icon n="info" size={13} />Signal lost — showing last known spot</> : <><i className="ot-live-dot" />Live · {track.label}</>}
+          {stale ? <><Icon n="info" size={13} />Signal lost — showing last known spot</>
+            : moving ? <><i className="ot-live-dot" />Live · {track.label}</> : track.label}
         </span>
         {!follow && (rider || home) && (
           <button className="ot-live-recentre" onClick={() => setFollow(true)}><Icon n="pin" size={14} />Re-centre</button>
         )}
-        {!route && (rider || shop) && home && <span className="ot-live-approx">Straight line · approximate</span>}
+        {moving && !route && (rider || shop) && home && <span className="ot-live-approx">Straight line · approximate</span>}
       </div>
       <div className="ot-live-bar">
         <span><b>{track.label}</b>{eta && <small>{eta}</small>}</span>

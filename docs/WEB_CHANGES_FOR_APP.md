@@ -133,3 +133,45 @@ The secret WhatsApp tracking token (`sa_track_token`) and its link (`/wa/track/.
    - "<name> delivered this order." once it has been delivered
    - "A rider hasn't been assigned yet." when there is no name
 8. **Map tiles:** the website uses OpenStreetMap through Leaflet, with "© OpenStreetMap" shown as OSM's terms require. Google Maps is planned once the shop's key exists. When it does, both the website (`components/home/mapProvider.js`) and the app should switch together.
+
+---
+
+## 2. The same real map before the rider sets off and after delivery (2026-10-07)
+
+Made by session 369mart-7e at the user's request: "show the same map as WhatsApp's tracking link". It builds on entry 1.
+
+### For the customer
+
+- The order page shows the **real map** (home, shop, and the rider while moving) whenever there is a real place to put on it, not only while the rider is moving. That matches the map WhatsApp's tracking link opens.
+- **Before the rider sets off:** the map shows home and shop, the status label and the promised time, and the note "Your rider shows here once they set off." There is no "Live" dot.
+- **While moving:** unchanged from entry 1 ("Live · Out for delivery", the rider's dot, "Updated Xs ago", "Signal lost", the approximate-line hint).
+- **After delivery:** the map stays, with home and shop, the label "Delivered" and the note "Delivered to your door." There is no rider dot, no arrival time and no approximate-line hint.
+- The drawn picture map is now only a fallback, for an order with no delivery job or with no coordinates at all.
+
+### Files touched
+
+- `components/home/OrderTrack.jsx`
+  - the track route is read for every order except cancelled ones
+  - a delivered order is read once, with no polling
+  - the card shows when there is a real point: `track.dest`, `order.address.lat/lng`, `track.shop`, or the rider while `show_rider`
+- `components/home/LiveTrackCard.jsx`: "Live ·" only while moving, the before and after notes, no arrival time once ended, and the approximate hint only while moving.
+
+No change to the API. It uses the same `GET /369mart/orders/<ref>/track` fields as entry 1. The server already blanks the rider's position and phone once the delivery isn't live.
+
+### What the app must copy
+
+1. Call the track route for every order that isn't cancelled:
+   - poll it as in entry 1 while the order isn't delivered
+   - read it **once** for a delivered order
+2. Draw the real map whenever any of `dest`, the order's address, `shop`, or (while `show_rider`) the rider has coordinates. Fall back to the app's own illustration only when none do.
+3. **Words by phase:**
+   - before moving (`live` false, `ended` false): the label plus "Your rider shows here once they set off."
+   - moving: as in entry 1
+   - ended and `state` is `delivered`: "Delivered to your door.", with no arrival time
+4. Show "Live ·" and the approximate-line hint only while moving (`live && !ended`).
+
+### Also in this round (Odoo only, nothing for the app to copy)
+
+`mart369_whatsapp_bridge` is now 19.0.1.3.1:
+- A WhatsApp address is copied into the customer's address book by matching its words and PIN, not the exact text. A PIN typed inside the street is stripped out.
+- A migration (`_mart369_book_tidy`) archives old duplicate WhatsApp addresses. Old orders keep the address they went to.

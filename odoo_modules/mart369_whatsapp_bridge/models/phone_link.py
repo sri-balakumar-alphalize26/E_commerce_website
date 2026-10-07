@@ -21,6 +21,7 @@ a rider or a shop, a supplier-only contact, anyone with a login.
 """
 
 import logging
+import re
 
 from odoo import _, api, fields, models
 
@@ -172,16 +173,58 @@ class ResPartner(models.Model):
 
     # ------------------------------------------------------------- the book
 
+    @api.model
+    def _mart369_addr_words(self, values):
+        """The words that place an address, as a set: lower case, no
+        punctuation, without its PIN and without the state, the country or
+        'india' - which every address in the book shares anyway.
+
+        'beach road,kollam,691001' and 'Beach Road, beach, kollam, Kerala
+        691001' give {beach, road, kollam} and {beach, road, kollam}.
+        """
+        def name_of(value):
+            return (value.name or '') if hasattr(value, 'name') else ''
+        pin = (values.get('zip') or '').strip()
+        text = ' '.join(str(values.get(f) or '') for f in ('street', 'street2', 'city'))
+        drop = {'india', pin.lower()}
+        for field in ('state_id', 'country_id'):
+            drop.update(re.findall(r'[a-z0-9]+', name_of(values.get(field)).lower()))
+        return {w for w in re.findall(r'[a-z0-9]+', text.lower()) if w not in drop}
+
+    @api.model
+    def _mart369_same_place(self, new, old):
+        """Is the address in `new` already said by `old`? Same PIN (or one
+        has none), and every word of `new` is in `old` - so 'beach road
+        kollam' is the saved Home, while '12 beach road' and '14 beach road'
+        stay two addresses."""
+        new_pin = (new.get('zip') or '').strip()
+        old_pin = (old.get('zip') or '').strip()
+        if new_pin and old_pin and new_pin != old_pin:
+            return False
+        mine = self._mart369_addr_words(new)
+        return bool(mine) and mine <= self._mart369_addr_words(old)
+
+    @staticmethod
+    def _mart369_strip_pin(street, pin):
+        """'beach road,kollam,691001' with PIN 691001 -> 'beach road,kollam':
+        the PIN typed into the chat is shown once, as the PIN."""
+        street = (street or '').strip()
+        pin = (pin or '').strip()
+        if not pin or not street:
+            return street
+        cleaned = re.sub(r'[\s,;-]*\b%s\b' % re.escape(pin), '', street)
+        return cleaned.strip(' ,;-') or street
+
     def _mart369_book_add_once(self, values, label='WhatsApp', make_default=False):
-        """An address into this customer's book - unless the same street and
-        PIN are already there, which is then the one returned."""
+        """An address into this customer's book - unless the book already
+        holds the same place (`_mart369_same_place`), which is then the one
+        returned."""
         self.ensure_one()
         customer = self.sudo()
-        street = (values.get('street') or '').strip()
-        pin = (values.get('zip') or '').strip()
+        values = dict(values)
+        values['street'] = self._mart369_strip_pin(values.get('street'), values.get('zip'))
         for address in customer._mart369_book():
-            if ((address.street or '').strip().lower() == street.lower()
-                    and (address.zip or '').strip() == pin):
+            if self._mart369_same_place(values, {f: address[f] for f in ADDRESS_FIELDS}):
                 if make_default and not address.mart369_default:
                     address._mart369_set_default()
                 return address
@@ -199,6 +242,52 @@ class ResPartner(models.Model):
         if make_default and not address.mart369_default:
             address._mart369_set_default()
         return address
+
+    def _mart369_book_tidy(self):
+        """Fold addresses in this customer's book that are the same place.
+
+        Only groups the WhatsApp copy made (one of them labelled WhatsApp).
+        Of each group the most detailed one stays (then the default, then the
+        oldest), and becomes the default if any of the group was. The others
+        are archived the way the storefront archives a replaced address, so
+        an old order still shows where it went. A WhatsApp address that also
+        carries its PIN inside the street gets it removed.
+        """
+        self.ensure_one()
+        customer = self.sudo()
+        book = customer._mart369_book()
+        for address in book.filtered(lambda a: a.mart369_label == 'WhatsApp' and a.zip):
+            street = self._mart369_strip_pin(address.street, address.zip)
+            if street != (address.street or ''):
+                # A plain write: when it is the default, the customer's own
+                # lines follow (res_partner.py).
+                address.street = street
+        seen = []
+        folded = self.browse()
+        for address in book:
+            here = {f: address[f] for f in ADDRESS_FIELDS}
+            group = next((g for g in seen if self._mart369_same_place(here, g[0])
+                          or self._mart369_same_place(g[0], here)), None)
+            if group is None:
+                seen.append([here, address])
+            else:
+                group.append(address)
+        for group in seen:
+            members = self.browse([a.id for a in group[1:]])
+            # Only what the WhatsApp copy made: two places a customer saved
+            # on purpose (Home and Work at one door) are theirs to keep.
+            if len(members) < 2 or 'WhatsApp' not in members.mapped('mart369_label'):
+                continue
+            keeper = members.sorted(lambda a: (
+                -len(self._mart369_addr_words({f: a[f] for f in ADDRESS_FIELDS})),
+                not a.mart369_default, a.id))[:1]
+            was_default = any(members.mapped('mart369_default'))
+            rest = members - keeper
+            rest.write({'active': False, 'type': 'other', 'mart369_default': False})
+            folded |= rest
+            if was_default and not keeper.mart369_default:
+                keeper._mart369_set_default()
+        return folded
 
     def _mart369_book_own_address(self):
         """A WhatsApp customer's address lives on their record; the website

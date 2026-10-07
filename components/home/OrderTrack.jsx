@@ -480,19 +480,25 @@ export default function OrderTrack({ order: o, byId, onChanged, onBack, onReceip
   });
   /* Where the parcel really is, from the delivery job (Odoo's
      /369mart/orders/<id>/track). Every 6 s while a rider is moving it, every
-     20 s while it is still at the shop, and not at all once it is over. */
-  const following = s.key !== "cancelled" && s.key !== "delivered";
+     20 s while it is still at the shop, and read once for a delivered order -
+     whose real map, like the one WhatsApp's tracking link opens, stays. */
+  const delivered = s.key === "delivered";
+  const following = s.key !== "cancelled";
   const [fast, setFast] = useState(false);
   const { data: trackData } = useResource(`/orders/${encodeURIComponent(o.id)}/track`, {
     enabled: following, keepLast: true,
-    pollMs: following ? (fast ? 6000 : 20000) : 0,
+    pollMs: following && !delivered ? (fast ? 6000 : 20000) : 0,
   });
   const track = following ? trackData?.track || null : null;
   const live = !!track?.live && !track?.ended;
   useEffect(() => setFast(live), [live]);
+  /* The real map whenever there is something real to put on it: the home,
+     the shop or the rider. The drawing is only for a job with no places. */
+  const at = (p) => !!(p && (p.lat || p.lng));
+  const realMap = !!track && (at(track.dest) || at(o.address) || at(track.shop) || (track.show_rider && at(track)));
   /* The job finished while the page was open: re-read the order so the
      page moves on to "Delivered" without waiting for the order list's poll. */
-  useEffect(() => { if (track?.ended) onChanged?.(); }, [track?.ended]); // eslint-disable-line
+  useEffect(() => { if (track?.ended && !delivered) onChanged?.(); }, [track?.ended]); // eslint-disable-line
   const name = riderName(o, track);
   const open = useContext(OpenContext);
   const [sheet, setSheet] = useState(null); // cancel | return | help
@@ -586,7 +592,7 @@ export default function OrderTrack({ order: o, byId, onChanged, onBack, onReceip
 
           {!cancelled && (
             <section className="ot-card ot-tracker">
-              {live ? <LiveTrackCard track={track} address={o.address} />
+              {realMap ? <LiveTrackCard track={track} address={o.address} />
                 : s.mode === "quick" ? <LiveMap s={s} name={name} address={o.address} /> : <Journey s={s} o={o} />}
               {(live || (s.mode === "quick" && s.idx === 2)) && (
                 <div className="ot-rider-card">
