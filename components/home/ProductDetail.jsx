@@ -129,7 +129,8 @@ function DetailGallery({ p, fromRect }) {
             </div>
           ))}
         </div>
-        {p.unit && <span className="pd-unit-tag">{p.unit}</span>}
+        {/* A real unit ("500 g", "1 L") only: Odoo's default "Units" tells a shopper nothing. */}
+        {p.unit && !/^units?$/i.test(p.unit.trim()) && <span className="pd-unit-tag">{p.unit}</span>}
         {imgs.length > 1 && (
           <>
             <div className="pd-arrows">
