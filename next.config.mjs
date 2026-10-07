@@ -1,6 +1,22 @@
+import { execSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+
+/* Which code is running, fixed into the page when it is built: the footer
+   shows it, so after a deploy anyone can see whether the new build is live.
+   No git on the build machine (a zip deploy) just leaves the commit blank. */
+const pkg = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8"));
+const git = (args) => { try { return execSync(`git ${args}`, { stdio: ["ignore", "pipe", "ignore"] }).toString().trim(); } catch { return ""; } };
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+
+  env: {
+    NEXT_PUBLIC_APP_VERSION: pkg.version || "",
+    NEXT_PUBLIC_APP_BUILD: git("rev-parse --short HEAD"),
+    NEXT_PUBLIC_APP_COMMIT: git("rev-parse HEAD"),
+    NEXT_PUBLIC_APP_BUILT: new Date().toISOString(),
+  },
 
   /* A production build can live beside the dev server's `.next` without
      touching it: NEXT_DIST_DIR=.next-demo for both `next build` and

@@ -361,6 +361,8 @@ html.ls-lock { overflow: hidden; }
 .ft-in .ft-pay em { opacity: 1; transform: none; }
 .ft-bottom { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 0 22px; border-top: 1px solid rgba(255, 255, 255, 0.1); font-size: 13px; color: #8ea2b0; }
 .hm-has-cart .ft-bottom { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 92px); }
+/* Which build is live: quiet, and on its own line when the row is narrow. */
+.ft-build { display: inline-block; margin-left: 10px; color: #6b8293; font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .ft-top-btn { display: inline-flex; align-items: center; gap: 4px; border: 0; background: none; font: inherit; font-size: 13px; font-weight: 600; color: #fff; cursor: pointer; padding: 6px 10px; border-radius: 999px; transition: background-color 180ms; }
 .ft-top-btn .hm-ic { transform: rotate(180deg); transition: transform 240ms var(--hm-ease); }
 .ft-top-btn:hover { background: rgba(255, 255, 255, 0.08); }

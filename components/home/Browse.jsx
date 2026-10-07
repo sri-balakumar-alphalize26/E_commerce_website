@@ -913,6 +913,21 @@ export function BuyAgainPage({ byId, cart, setQty, orders = [] }) {
 }
 
 /* ---------------- footer ---------------- */
+/* Which build is running (next.config.mjs fixes these in at build time), so
+   after a deploy anyone can tell whether the new code is live. */
+function BuildTag() {
+  const version = process.env.NEXT_PUBLIC_APP_VERSION;
+  const build = process.env.NEXT_PUBLIC_APP_BUILD;
+  const built = process.env.NEXT_PUBLIC_APP_BUILT;
+  if (!version && !build) return null;
+  const day = built ? new Date(built).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "";
+  return (
+    <span className="ft-build" title={process.env.NEXT_PUBLIC_APP_COMMIT ? `Commit ${process.env.NEXT_PUBLIC_APP_COMMIT}` : undefined}>
+      {[version && `Version ${version}`, build, day].filter(Boolean).join(" · ")}
+    </span>
+  );
+}
+
 export function SiteFooter() {
   const nav = useContext(NavContext);
   const [ref, setRef] = useState(null);
@@ -959,7 +974,7 @@ export function SiteFooter() {
           {["UPI", "Credit & debit cards", "Net banking", "Cash on delivery", "369 Wallet"].map((x, k) => <em key={x} style={{ "--k": k }}>{x}</em>)}
         </div>
         <div className="ft-bottom">
-          <span>© {new Date().getFullYear()} 369 Mart. All rights reserved.</span>
+          <span>© {new Date().getFullYear()} 369 Mart. All rights reserved.<BuildTag /></span>
           <button className="ft-top-btn" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}><Icon n="chev" size={16} />Back to top</button>
         </div>
       </div>

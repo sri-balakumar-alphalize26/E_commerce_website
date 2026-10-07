@@ -1,6 +1,6 @@
 {
   "name": "369mart-store",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "description": "369 Mart storefront — home (Quick / Shop all), cart and sign-in. Next.js + React.",
   "scripts": {
