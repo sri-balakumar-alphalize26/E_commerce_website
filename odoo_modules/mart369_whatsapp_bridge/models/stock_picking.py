@@ -219,22 +219,30 @@ class StockPicking(models.Model):
                 numbers.append(digits)
         return numbers
 
-    def sa_issue_delivery_otp(self):
+    def sa_issue_delivery_otp(self, send=True):
         """A website job never mints a second code - it sends the website's.
 
         The website issued the code at payment and the customer's app shows
         it; a retry is `_mart369_issue_otp`, which copies the fresh one here.
         The same code goes out on WhatsApp in the stack's words, whatever the
         customer's update preference: it is the key to their parcel.
+
+        `send=False` is the stack's Create OTP wizard with "Do not send": the
+        code comes back for the screen and nothing goes out.
         """
         self.ensure_one()
         order = self._mart369_web_order()
         if not order:
-            return super().sa_issue_delivery_otp()
+            # Passed on only when asked: a stack older than delivery 29.0
+            # takes no `send` at all.
+            return (super().sa_issue_delivery_otp() if send
+                    else super().sa_issue_delivery_otp(send=False))
         code = order.sudo().mart369_otp_code or ''
         self.sudo().sa_last_delivery_code = code or self.sa_last_delivery_code
         if not code:
             return False, _('This order has no delivery code yet.'), code
+        if not send:
+            return True, _('Code made, not sent.'), code
         body = _("\U0001F4E6 Your order is arriving.\n\n"
                  "Give this code to the rider *after* you have the parcel:\n\n"
                  "*%(code)s*\n\n"

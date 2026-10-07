@@ -8,7 +8,6 @@ from odoo.tests import tagged
 from odoo.tests.common import HttpCase
 
 from .common import Mart369BridgeCase, Mart369BridgeFixtures
-from .test_partner import FakeConv
 
 WA = '+919700880011'        # a WhatsApp-only customer
 HEADERS = {'Content-Type': 'application/json'}
@@ -115,19 +114,27 @@ class TestPhoneLink(Mart369BridgeCase):
 
     # ------------------------------------------------------------- the chat
 
+    # Every lookup of a WhatsApp number goes through the stack's
+    # res.partner._sa_phone_matches (tracker 1.3.0); this module's override
+    # is where the "proven numbers only" rule lives.
+
     def test_unproven_account_no_longer_catches_the_chat(self):
         self.partner.phone = WA     # typed at signup, never proven
-        Reply = self.env['wa.auto.reply']
-        first = Reply._get_or_create_partner(FakeConv(WA))
-        self.assertNotEqual(first.commercial_partner_id, self.partner)
-        again = Reply._get_or_create_partner(FakeConv(WA))
-        self.assertEqual(again, first, 'one contact for the chat, not one per message')
+        found = self.env['res.partner']._sa_phone_matches(WA)
+        self.assertNotIn(self.partner, found)
 
     def test_proven_account_catches_the_chat(self):
         self.partner.with_context(mart369_phone_proven=True).write(
             {'phone': WA, 'mart369_phone_verified': True})
-        found = self.env['wa.auto.reply']._get_or_create_partner(FakeConv(WA))
-        self.assertEqual(found, self.partner)
+        found = self.env['res.partner']._sa_phone_matches(WA)
+        self.assertEqual(found[:1], self.partner)
+
+    def test_the_clean_up_cron_is_gone(self):
+        """The stack's lookup keeps the chat off unproven accounts now, so
+        nothing is left for a 15-minute join to fold in."""
+        self.assertFalse(self.env.ref(
+            'mart369_whatsapp_bridge.ir_cron_mart369_join_duplicates',
+            raise_if_not_found=False))
 
     # ------------------------------------------------------------ the book
 

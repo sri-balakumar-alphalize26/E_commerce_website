@@ -100,6 +100,17 @@ class TestWebOrderWhatsapp(Mart369BridgeCase):
         self.assertTrue(ok)
         self.assertTrue([t for t in self._to(CUSTOMER_DIGITS) if code in t])
 
+    def test_create_otp_without_sending_shows_the_code_only(self):
+        """The stack's Create OTP wizard with "Do not send" (send=False):
+        the website's code comes back for the screen; nothing goes out."""
+        order, job = self._ready_job(ref='369M-TESTQUIET')
+        code = order.sudo().mart369_otp_code
+        ok, __, shown = job.sa_issue_delivery_otp(send=False)
+        self.assertTrue(ok)
+        self.assertEqual(shown, code)
+        self.assertEqual(job.sa_last_delivery_code, code)
+        self.assertFalse([b for __, b in self.wa_sent if code in b])
+
     def test_resend_sends_the_same_code_again(self):
         order, job = self._ready_job(ref='369M-TESTRES')
         code = order.sudo().mart369_otp_code

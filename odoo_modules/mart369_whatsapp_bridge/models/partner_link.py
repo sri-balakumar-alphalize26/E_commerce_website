@@ -7,13 +7,17 @@ has a store account, a wallet and an order history. Here the number is read
 properly - E.164, the way the website stores every phone - and the answer is
 always the customer record itself, never one of its address children.
 
-And the doors swing both ways: the chat's CHANGE ADDRESS opens the
-*storefront's* address book - tap a saved address and both the website and
-the next WhatsApp order deliver there; type a new one and it joins the book
-as the default (which keeps its one-delivery-child rule).
+Since the tracker's 1.3.0 every lookup of a WhatsApp number goes through
+`res.partner._sa_phone_matches`, and this module's rule - a store account
+catches the chat only once it has proven the number - lives in its override
+below, rather than in a second copy of the stack's `_get_or_create_partner`.
+
+The chat's CHANGE ADDRESS is the stack's own address book now
+(sales_automation, sa_address_book.py): it lists the storefront's addresses,
+writes their label, landmark and alternate phone, and keeps the one default
+through `_mart369_set_default`. This module no longer draws its own.
 """
 
-import json
 import logging
 
 from odoo import _, api, models
@@ -24,6 +28,56 @@ try:
     import phonenumbers
 except ImportError:  # pragma: no cover - phone_validation depends on it
     phonenumbers = None
+
+
+def _digits(phone):
+    return ''.join(c for c in (phone or '') if c.isdigit())
+
+
+class ResPartner(models.Model):
+    _inherit = 'res.partner'
+
+    @api.model
+    def _sa_phone_matches(self, phone):
+        """The stack's lookup, as customers this shop may hand the chat to.
+
+        The stack answers "every contact whose number is this number, oldest
+        first". Kept, with three things it cannot know:
+
+        * a store account counts only once it has *proven* the number - one
+          typed at signup proves nothing, and would hand the real owner's
+          WhatsApp orders and addresses to whoever typed it;
+        * the answer is the customer, never one of its address children;
+        * a proven account comes before a plain contact with the same number.
+        """
+        stack = getattr(super(), '_sa_phone_matches', None)
+        found = stack(phone) if stack else self._mart369_phone_matches(phone)
+        customers = self.browse()
+        for partner in found:
+            customer = partner.commercial_partner_id
+            if customer not in customers:
+                customers |= customer
+        customers -= customers.filtered(
+            lambda c: c.user_ids and not c.mart369_phone_verified)
+        proven = customers.filtered('user_ids')
+        return proven + (customers - proven)
+
+    @api.model
+    def _mart369_phone_matches(self, phone):
+        """The stack's own matching, for a tracker older than 1.3.0 that has
+        no `_sa_phone_matches` yet: equal digits, or the last ten agree."""
+        digits = _digits(phone)
+        if len(digits) < 5:
+            return self.browse()
+        Partner = self.sudo().with_context(active_test=True)
+        found = (Partner.search([('phone', 'ilike', digits[-5:])], order='id')
+                 | Partner.search([('phone_sanitized', 'ilike', digits[-5:])], order='id'))
+
+        def same(number):
+            d = _digits(number)
+            return bool(d) and (d == digits or (len(d) >= 7 and len(digits) >= 7
+                                                and d[-10:] == digits[-10:]))
+        return found.filtered(lambda p: same(p.phone) or same(p.phone_sanitized)).sorted('id')
 
 
 class WaAutoReply(models.Model):
@@ -37,7 +91,7 @@ class WaAutoReply(models.Model):
         the number fields, preferring a partner with a login, then a plain
         contact, and always answering with the customer, not a child address.
         """
-        digits = ''.join(c for c in (phone or '') if c.isdigit())
+        digits = _digits(phone)
         if len(digits) < 8:
             return self.env['res.partner']
         e164 = '+%s' % digits
@@ -71,40 +125,9 @@ class WaAutoReply(models.Model):
                          found.display_name)
         return found
 
-    def _get_or_create_partner(self, conv):
-        found = self._mart369_bridge_partner(conv.phone)
-        if found:
-            return found
-        partner = super()._get_or_create_partner(conv)
-        customer = partner.commercial_partner_id if partner else partner
-        digits = ''.join(c for c in (conv.phone or '') if c.isdigit())
-        if customer and customer.user_ids and not customer.mart369_phone_verified:
-            # The stack's loose lookup landed on an account that never proved
-            # this number. The chat gets its own contact - stored as E.164,
-            # so the exact match above finds it next time.
-            Partner = self.env['res.partner'].sudo()
-            return (Partner._mart369_wa_customers('+' + digits)[:1]
-                    or Partner.create({
-                        'name': conv.contact_name or _('WhatsApp Customer (%s)', conv.phone),
-                        'phone': '+' + digits,
-                        'customer_rank': 1,
-                        'comment': _('Auto-created from WhatsApp.'),
-                    }))
-        if (partner and not partner.user_ids and len(digits) >= 8
-                and partner.phone and not partner.phone.startswith('+')
-                and ''.join(c for c in partner.phone if c.isdigit()) == digits):
-            # WhatsApp hands over full international digits without the '+';
-            # in an Oman database Odoo would read 9198… as a local number.
-            partner.sudo().phone = '+' + digits
-        return partner
-
 
 class SaGroupRequest(models.Model):
     _inherit = 'sa.group.request'
-
-    # A poll shows this many saved addresses at a time; the rest sit behind
-    # MORE, the way the catalogue menu pages its products.
-    ADDR_PAGE = 6
 
     def _sa_address_partner(self):
         partner = super()._sa_address_partner()
@@ -137,85 +160,6 @@ class SaGroupRequest(models.Model):
         label = address.mart369_label or 'Home'
         return '%s - %s' % (label, text) if text else label
 
-    def _mart369_addr_menu(self, page=0):
-        """The saved addresses as a poll: tap one to deliver there, or type a
-        new one. The stack's typing prompt when the customer has no book."""
-        self.ensure_one()
-        customer, book = self._mart369_book_of()
-        if not book:
-            return super()._sa_ask_new_address()
-        start = page * self.ADDR_PAGE
-        rows = book[start:start + self.ADDR_PAGE]
-        if page and not rows:
-            return self._mart369_addr_menu(0)
-        opts, used = [], set()
-        for a in rows:
-            label = self._mart369_addr_text(a)
-            if a.mart369_default:
-                label = '✅ ' + label
-            opts.append((self._sa_menu_clean(label, used),
-                         {'kind': 'mart369_addr', 'target': a.id}))
-        if len(book) > start + self.ADDR_PAGE:
-            opts.append((_("➡️ MORE"),
-                         {'kind': 'menu',
-                          'level': 'mart369_addr:%d' % (page + 1)}))
-        opts.append((_("✏️ TYPE A NEW ADDRESS"),
-                     {'kind': 'mart369_addr_new'}))
-        back = ('mart369_addr:%d' % (page - 1) if page > 1 else
-                'mart369_addr' if page else 'more')
-        opts.append((self.MENU_BACK, {'kind': 'menu', 'level': back}))
-        opts.append((self.MENU_MAIN, {'kind': 'menu', 'level': 'main'}))
-        level = 'mart369_addr:%d' % page if page else 'mart369_addr'
-        menu = {}
-        for label, item in opts[:10]:
-            item = dict(item)
-            item.setdefault('req', self.id)
-            item['parent'] = level
-            menu[label] = item
-        self.sa_menu_json = json.dumps(menu)
-        self._ask(_("\U0001F4CD *Delivery address* - tap the one to use, "
-                    "or add a new one:"),
-                  [{'id': 'sa_menu_%d' % i, 'title': label}
-                   for i, label in enumerate(menu)])
-        return True
-
-    def _sa_ask_new_address(self):
-        """CHANGE ADDRESS opens the book first."""
-        return self._mart369_addr_menu(0)
-
-    def _sa_menu_show(self, level):
-        if (level or '').startswith('mart369_addr'):
-            bits = level.split(':')
-            page = int(bits[1]) if len(bits) > 1 and bits[1].isdigit() else 0
-            return self._mart369_addr_menu(page)
-        return super()._sa_menu_show(level)
-
-    def _sa_menu_tapped(self, item):
-        self.ensure_one()
-        kind = item.get('kind')
-        if kind == 'mart369_addr_new':
-            # The stack's own prompt; the typed answer is mirrored into the
-            # book by `_sa_address_answer` below.
-            return super()._sa_ask_new_address()
-        if kind != 'mart369_addr':
-            return super()._sa_menu_tapped(item)
-        customer, book = self._mart369_book_of()
-        target = item.get('target') or 0
-        address = book.filtered(lambda a: a.id == target)
-        if not address:
-            self._say(_("That address is no longer available."))
-            return self._sa_nav('more')
-        address._mart369_set_default()
-        order = self.order_id.sudo() if self.order_id else None
-        if order and order.state not in ('done', 'cancel') and not any(
-                p.state == 'done' for p in order.picking_ids):
-            # A plain write: never the storefront's `_mart369_set_state`.
-            order.write({'partner_shipping_id': address.id})
-        self._say(_("✅ Delivery address set:\n%(addr)s\n\n"
-                    "Your next deliveries go there.",
-                    addr=self._mart369_addr_text(address)))
-        return self._sa_nav('more')
-
     def _sa_say_my_details(self):
         """The stack prints one street; a store customer has a book."""
         self.ensure_one()
@@ -241,42 +185,3 @@ class SaGroupRequest(models.Model):
                     addrs='\n'.join(lines),
                     paid=len(paid), open=len(live) - len(paid)))
         return True
-
-    # ------------------------------------------------------ a typed address
-
-    def _sa_address_answer(self, text):
-        """After a confirmed change, the storefront's book gets it too."""
-        self.ensure_one()
-        confirming = self.sa_address_pending == 'confirm'
-        draft = self.sa_address_draft or ''
-        partner = self._sa_address_partner() if confirming else None
-        handled = super()._sa_address_answer(text)
-        if not (handled and confirming and partner and draft):
-            return handled
-        if self.sa_address_pending:
-            return handled          # they said "no, type again"
-        if (partner.street or '') != draft[:250]:
-            return handled          # the save did not go through
-        try:
-            self._mart369_bridge_mirror_address(partner, draft)
-        except Exception:  # noqa: BLE001 - the chat answer already went out
-            _logger.exception('bridge: could not mirror the address of %s',
-                              partner.display_name)
-        return handled
-
-    def _mart369_bridge_mirror_address(self, partner, draft):
-        """Add the typed address to the storefront's book as its default.
-
-        Through the website's own helpers, so the book keeps exactly one
-        `type='delivery'` child - the rule the storefront's checkout depends
-        on. The old addresses stay; the customer can tap back to them.
-        """
-        customer = partner.commercial_partner_id.sudo()
-        values = {'street': draft[:250]}
-        pin = (self._sa_find_pincode(draft, partner)
-               if self._sa_pincode_wanted(partner) else None)
-        if pin:
-            values['zip'] = pin
-        # Once only: the customer record's own write may already have put
-        # this same address in the book (res_partner.py).
-        return customer._mart369_book_add_once(values, make_default=True)
