@@ -955,3 +955,14 @@ class ProductTemplate(models.Model):
         """Merged into the picker's answer. {} here; the desk draws its tiles,
         tabs and storefront filter only when these come back."""
         return {}
+
+
+class ProductProduct(models.Model):
+    _inherit = 'product.product'
+
+    def action_mart_reset_page(self):
+        """The template form's "reset" button also lands on the variant form
+        (the variant form is built on the template's); on a variant it means
+        its product's page. Without it, any view built on the variant form -
+        the WhatsApp stack's sales_automation_confirm - fails to load."""
+        return self.product_tmpl_id.action_mart_reset_page()

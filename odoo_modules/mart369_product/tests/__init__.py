@@ -5,3 +5,4 @@ from . import test_builder
 from . import test_product_desk
 from . import test_product_desk_edit
 from . import test_product_form
+from . import test_variant_reset
