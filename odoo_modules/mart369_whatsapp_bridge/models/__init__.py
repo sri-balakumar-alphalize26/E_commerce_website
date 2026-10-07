@@ -14,3 +14,4 @@ from . import variant_media
 from . import variant_desk
 from . import sale_order_track
 from . import bot_rider
+from . import mirrors
