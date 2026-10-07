@@ -31,6 +31,12 @@ KEEP_UPPER = {'LED', 'USB', 'HDMI', 'RAM', 'CPU', 'GPU', 'AIO', 'UPS', 'SSD',
 # on words in its name, first match wins. Drawings and icons are the app's
 # own (ART_CHOICES / ICON_CHOICES), so there is nothing to upload.
 LOOKS = [
+    # The shop's own top-level groups first, so "Laptop & Desktop Parts"
+    # isn't read as a laptop and "Tools & Accessories" as nothing.
+    (r'\bparts?\b|components?', 'Cpu', 'cpu'),
+    (r'tools?\b|accessor', 'Mouse', 'keyboard'),
+    (r'printers? &|consumables', 'Box', 'pen'),
+    (r'cctv &|security|surveillance', 'Webcam', 'wifi'),
     (r'keyboard', 'Keyboard', 'keyboard'),
     (r'mouse', 'Mouse', 'keyboard'),
     (r'laptop|notebook', 'Laptop', 'laptop'),
@@ -98,6 +104,30 @@ class Mart369HomeVersion(models.Model):
         return ranked[:limit]
 
     @api.model
+    def _mart369_top_groups(self, limit=6):
+        """[(top-level category, listed products under it)], biggest first.
+
+        A shop that sorts its catalogue into a few groups ("Laptops &
+        Desktops", "Printers & Consumables") keeps its products in the
+        categories underneath, so the groups themselves hold none directly -
+        counted over the whole branch here, which is what a customer opening
+        the group sees.
+        """
+        Template = self.env['product.template'].sudo()
+        Category = self.env['product.public.category'].sudo()
+        domain = [('parent_id', '=', False)]
+        if 'mart_in_app' in Category._fields:
+            domain.append(('mart_in_app', '=', True))
+        listed = Template._mart369_listed_domain()
+        ranked = []
+        for group in Category.search(domain):
+            count = Template.search_count(listed + [('public_categ_ids', 'child_of', group.id)])
+            if count:
+                ranked.append((group, count))
+        ranked.sort(key=lambda pair: (-pair[1], pair[0].name or ''))
+        return ranked[:limit]
+
+    @api.model
     def _mart369_category_path(self, categ):
         """The address the storefront opens a category by: its slug, under
         its parents' ("laptops/laptop-keyboard")."""
@@ -120,6 +150,12 @@ class Mart369HomeVersion(models.Model):
         """
         config = self.env['mart369.config'].sudo()._get()
         top = self._mart369_top_categories(limit=10)
+        # A shop sorted into a few main groups gets those as its tabs, banners
+        # and rows; the detailed categories under them become the tiles. Three
+        # is the least that reads as "how this shop is organised" rather than
+        # one stray top-level category.
+        groups = self._mart369_top_groups(limit=6)
+        groups = groups if len(groups) >= 3 else None
         today = fields.Date.context_today(self)
         # The delivery thresholds belong to the shop, not to a page: carried
         # over from the page that was live, so rebuilding moves nothing else.
@@ -142,7 +178,7 @@ class Mart369HomeVersion(models.Model):
                 'sequence': seq * 10,
                 'free_delivery_at': was.free_delivery_at if was else free_at,
             })
-            self._mart369_fill_mode(mode, top)
+            self._mart369_fill_mode(mode, top, groups)
         if make_current:
             # Switched on by writing, not by creating it switched on: create()
             # settles "exactly one everyday page" by keeping the first one it
@@ -151,19 +187,24 @@ class Mart369HomeVersion(models.Model):
         return page
 
     @api.model
-    def _mart369_fill_mode(self, mode, top):
+    def _mart369_fill_mode(self, mode, top, groups=None):
         Tab = self.env['mart369.home.tab'].sudo()
         Banner = self.env['mart369.home.banner'].sudo()
         Tile = self.env['mart369.home.tile'].sudo()
         Section = self.env['mart369.home.section'].sudo()
         express = mode.key == 'all'
-        path = {categ.id: self._mart369_category_path(categ) for categ, __ in top}
+        # Tabs, banners and rows from the main groups when the shop has them;
+        # tiles always from the detailed categories (never a group twice).
+        bands = groups or top
+        group_ids = {g.id for g, __ in groups or []}
+        tiles = [(c, n) for c, n in top if c.id not in group_ids]
+        path = {categ.id: self._mart369_category_path(categ) for categ, __ in bands + tiles}
 
-        # Tabs: home, the five biggest categories, offers.
+        # Tabs: home, the five biggest groups or categories, offers.
         Tab.create({'mode_id': mode.id, 'key': 'home', 'name': self.env._('My Home'),
                     'icon': 'bag' if not express else 'grid', 'route_view': 'home',
                     'sequence': 10})
-        for i, (categ, __) in enumerate(top[:5], start=2):
+        for i, (categ, __) in enumerate(bands[:5], start=2):
             Tab.create({
                 'mode_id': mode.id, 'key': (slugify(categ.name) or 'c%d' % categ.id)[:40],
                 'name': _nice(categ.name), 'icon': _look(categ.name)[1],
@@ -174,7 +215,7 @@ class Mart369HomeVersion(models.Model):
                     'icon': 'ticket', 'route_view': 'offers', 'sequence': 90})
 
         # Banners: one per big category, in turn through the shop's colours.
-        for i, (categ, count) in enumerate(top[:4]):
+        for i, (categ, count) in enumerate(bands[:4]):
             Banner.create({
                 'mode_id': mode.id, 'key': 'b%d' % (i + 1),
                 'kicker': [self.env._('Biggest range'), self.env._('Popular'),
@@ -189,7 +230,7 @@ class Mart369HomeVersion(models.Model):
 
         # Tiles: the eight biggest, wearing the category's own logo if it has
         # one and the app's drawing if not.
-        for i, (categ, __) in enumerate(top[:8]):
+        for i, (categ, __) in enumerate(tiles[:8]):
             has_logo = 'image_128' in categ._fields and bool(categ.image_128)
             Tile.create({
                 'mode_id': mode.id, 'key': (slugify(categ.name) or 'c%d' % categ.id)[:40],
@@ -215,7 +256,7 @@ class Mart369HomeVersion(models.Model):
                 'name': self.env._('Most loved'), 'subtitle': self.env._('What customers buy most'),
                 'source': 'rule', 'rule': 'best', 'limit': 12, 'sequence': 20,
             })
-        rows = top[2:6] if express and len(top) > 5 else top[:4]
+        rows = bands[2:6] if express and len(bands) > 5 else bands[:4]
         for i, (categ, __) in enumerate(rows, start=3):
             Section.create({
                 'mode_id': mode.id, 'kind': 'rail',

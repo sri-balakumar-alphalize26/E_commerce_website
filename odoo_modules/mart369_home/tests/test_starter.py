@@ -40,13 +40,30 @@ class TestMart369HomeStarter(TransactionCase):
     def _top(self):
         return [c for c, __ in self.Version._mart369_top_categories(limit=100000)]
 
-    def _build(self):
+    def _build(self, top=None, groups=()):
         # Only this test's categories, so the page's shape is predictable
         # whatever else the database holds.
-        top = [(self.big, 3), (self.small, 2)]
-        with patch.object(type(self.Version), '_mart369_top_categories',
-                          lambda self, limit=10: top[:limit]):
+        top = [(self.big, 3), (self.small, 2)] if top is None else top
+        Model = type(self.Version)
+        with patch.object(Model, '_mart369_top_categories', lambda self, limit=10: top[:limit]), \
+                patch.object(Model, '_mart369_top_groups', lambda self, limit=6: list(groups)[:limit]):
             return self.Version._mart369_build_starter()
+
+    def _tree(self):
+        """Three main groups, the products in the categories under them."""
+        Categ = self.env['product.public.category']
+        Product = self.env['product.template']
+        groups = []
+        for name, kids in (('Starter Printers & Consumables', ('Starter Toner', 'Starter Ink')),
+                           ('Starter CCTV & Networking', ('Starter Cameras',)),
+                           ('Starter Tools & Accessories', ('Starter Screwdrivers',))):
+            group = Categ.create({'name': name})
+            for kid in kids:
+                child = Categ.create({'name': kid, 'parent_id': group.id})
+                Product.create({'name': '%s item' % kid, 'is_published': True, 'list_price': 3,
+                                'public_categ_ids': [(6, 0, child.ids)]})
+            groups.append(group)
+        return groups
 
     # ------------------------------------------------------------ the inputs
 
@@ -107,9 +124,50 @@ class TestMart369HomeStarter(TransactionCase):
         self.assertTrue(second.is_current)
         self.assertFalse(first.is_current)
 
+    # ------------------------------------------------------ the main groups
+
+    def test_main_groups_count_everything_under_them(self):
+        printers, cctv, tools = self._tree()
+        ranked = dict(self.Version._mart369_top_groups(limit=100000))
+        self.assertEqual(ranked.get(printers), 2, 'toner + ink, counted through the branch')
+        self.assertEqual(ranked.get(cctv), 1)
+        self.assertEqual(ranked.get(tools), 1)
+
+    def test_main_groups_become_tabs_and_categories_tiles(self):
+        printers, cctv, tools = self._tree()
+        toner = self.env['product.public.category'].search([('name', '=', 'Starter Toner')])
+        page = self._build(top=[(toner, 1), (self.big, 3)],
+                           groups=[(printers, 2), (cctv, 1), (tools, 1)])
+        quick = page.mode_ids.filtered(lambda m: m.key == 'quick')
+        self.assertEqual(quick.tab_ids.sorted('sequence').mapped('name'),
+                         ['My Home', 'Starter Printers & Consumables', 'Starter CCTV & Networking',
+                          'Starter Tools & Accessories', 'Offers'])
+        self.assertEqual(quick.banner_ids.mapped('art_lines'), ['Box', 'Webcam', 'Mouse'],
+                         'computer drawings for the groups, not fruit')
+        self.assertEqual(quick.tile_ids.mapped('public_categ_id'), toner | self.big)
+        rows = quick.section_ids.filtered(lambda s: s.source == 'category')
+        self.assertEqual(rows.mapped('public_categ_id'), printers | cctv | tools)
+        self.assertTrue(all(rows.mapped('include_child_categs')))
+        names = [p['name'] for s in quick._serialize()['sections'] for p in s.get('items', [])]
+        self.assertIn('Starter Toner item', names, 'a group row shows what is under it')
+
+    def test_fewer_than_three_groups_keeps_the_categories(self):
+        printers, cctv, __ = self._tree()
+        page = self.Version.browse()
+        Model = type(self.Version)
+        top = [(self.big, 3), (self.small, 2)]
+        with patch.object(Model, '_mart369_top_categories', lambda self, limit=10: top[:limit]), \
+                patch.object(Model, '_mart369_top_groups',
+                             lambda self, limit=6: [(printers, 2), (cctv, 1)]):
+            page = self.Version._mart369_build_starter()
+        tabs = page.mode_ids.filtered(lambda m: m.key == 'quick').tab_ids.mapped('name')
+        self.assertIn('Starter Laptop Keyboard', tabs)
+        self.assertNotIn('Starter Printers & Consumables', tabs)
+
     def test_an_empty_catalogue_still_gets_a_page(self):
-        with patch.object(type(self.Version), '_mart369_top_categories',
-                          lambda self, limit=10: []):
+        Model = type(self.Version)
+        with patch.object(Model, '_mart369_top_categories', lambda self, limit=10: []), \
+                patch.object(Model, '_mart369_top_groups', lambda self, limit=6: []):
             page = self.Version._mart369_build_starter()
         quick = page.mode_ids.filtered(lambda m: m.key == 'quick')
         self.assertEqual(quick.tab_ids.mapped('name'), ['My Home', 'Offers'])
