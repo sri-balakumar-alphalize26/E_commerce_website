@@ -1,1 +1,2 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_mart369_phone_code_system,mart369.phone.code system,model_mart369_phone_code,base.group_system,1,0,0,1

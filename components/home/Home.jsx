@@ -346,7 +346,18 @@ export default function Home({
   const [draft, setDraft] = useState({});
   const [me, setMe] = useState(null); /* the signed-in customer, from /api/auth/me */
   useEffect(() => {
-    fetch("/api/auth/me").then((r) => (r.ok ? r.json() : null)).then((d) => { if (d?.ok) setMe({ name: d.name, email: d.email, phone: d.phone || "" }); }).catch(() => {});
+    fetch("/api/auth/me").then((r) => (r.ok ? r.json() : null)).then((d) => {
+      if (!d?.ok) return;
+      /* The mobile number is the account's identity - it is what brings the
+         customer's WhatsApp orders in. An account without a proven one adds
+         it before anything else. */
+      if (d.needPhone && !d.staff) {
+        const here = window.location.pathname + window.location.search;
+        window.location.replace(`/login?add=phone&next=${encodeURIComponent(here)}`);
+        return;
+      }
+      setMe({ name: d.name, email: d.email, phone: d.phone || "" });
+    }).catch(() => {});
   }, []);
   const [ready, setReady] = useState(!persistCart); /* true once saved cart / orders are loaded */
   const load = (k, fallback) => { try { const v = JSON.parse(localStorage.getItem(k) || "null"); return v ?? fallback; } catch (e) { return fallback; } };

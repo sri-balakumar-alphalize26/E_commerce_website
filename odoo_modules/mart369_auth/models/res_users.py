@@ -13,7 +13,7 @@ import phonenumbers
 from markupsafe import Markup
 
 from odoo import _, api, fields, models
-from odoo.exceptions import ValidationError
+from odoo.exceptions import AccessDenied, ValidationError
 
 AMBIGUOUS = object()
 
@@ -348,6 +348,13 @@ class ResUsers(models.Model):
         if not ident:
             return None
         if '@' in ident:
+            # A phone-first account keeps its number as the login and its
+            # email, added later, only on the account - find it by that too.
+            if not self.sudo().search_count([('login', '=ilike', ident)]):
+                by_email = self._mart369_customers().filtered(
+                    lambda u: (u.email or '').strip().lower() == ident.lower())
+                if len(by_email) == 1:
+                    return by_email.login
             return ident
         matches = self._mart369_customers().filtered(
             lambda u: (u.name or '').strip().lower() == ident.lower())
@@ -361,15 +368,42 @@ class ResUsers(models.Model):
     def _mart369_profile(self):
         self.ensure_one()
         partner = self.partner_id
+        staff = self.has_group('website.group_website_designer')
+        email = self.email or ('@' in (self.login or '') and self.login) or ''
         return {
             'ok': True,
             'name': self.name,
-            'email': self.email or self.login,
+            'email': email,
             'phone': partner.phone or '',
+            'phoneVerified': bool(partner.mart369_phone_verified),
+            # The mobile number is the customer's identity (it is what joins
+            # their WhatsApp orders): an account without a proven one is sent
+            # to "Add your mobile number" before anything else.
+            'needPhone': bool(self.share and not partner.mart369_phone_verified),
             'partner_id': partner.id,
             # Whether the app's admin console should open for this person. The
             # same group every /369mart/admin/* route checks, so the console's
             # gate and its data can never disagree about who is staff.
-            'staff': self.has_group('website.group_website_designer'),
+            'staff': staff,
         }
+
+    # ------------------------------------------------------ the code sign-in
+
+    def _check_credentials(self, credential, env):
+        """A proven mobile number signs in like a password does.
+
+        `/369mart/auth/phone/verify` checks the six-digit code and mints a
+        one-minute, one-use token for this user; this is where Odoo's own
+        `authenticate` spends it. Anything else falls through to the password.
+        """
+        if credential.get('type') == 'mart369_wa':
+            if self.env['mart369.phone.code'].sudo()._mart369_spend_token(
+                    self.env.user, credential.get('token')):
+                return {
+                    'uid': self.env.user.id,
+                    'auth_method': 'mart369_wa',
+                    'mfa': 'default',
+                }
+            raise AccessDenied()
+        return super()._check_credentials(credential, env)
 

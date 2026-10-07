@@ -11,6 +11,17 @@
         <field name="active" eval="True"/>
     </record>
 
+    <!-- Sign-in codes are spent in minutes; keep a day for the rate limits. -->
+    <record id="ir_cron_mart369_phone_code_vacuum" model="ir.cron">
+        <field name="name">369 Mart: clear old sign-in codes</field>
+        <field name="model_id" ref="model_mart369_phone_code"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_mart369_vacuum()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">days</field>
+        <field name="active" eval="True"/>
+    </record>
+
     <!-- Set the status of accounts that existed before this version. -->
     <function model="res.users" name="_cron_mart369_refresh_status"/>
 </odoo>

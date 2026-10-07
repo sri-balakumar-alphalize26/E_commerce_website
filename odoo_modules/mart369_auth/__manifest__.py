@@ -1,6 +1,6 @@
 {
     'name': '369 Mart Sign In',
-    'version': '19.0.1.1.0',
+    'version': '19.0.1.2.0',
     'category': 'Website',
     'summary': 'Customers create their own 369 Mart account and sign in with their name or email.',
     'description': """

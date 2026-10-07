@@ -3,3 +3,4 @@ from . import test_phone
 from . import test_customers
 from . import test_admin_customers
 from . import test_customer_crm
+from . import test_phone_signin
