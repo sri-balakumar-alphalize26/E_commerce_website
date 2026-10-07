@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Some WhatsApp flows still match numbers loosely and can open a second
+         contact for a customer who already proved their number. This folds
+         any such new contact into the account (phone_link.py). -->
+    <record id="ir_cron_mart369_join_duplicates" model="ir.cron">
+        <field name="name">369 Mart: join new WhatsApp contacts into proven accounts</field>
+        <field name="model_id" ref="base.model_res_partner"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_mart369_join_duplicates()</field>
+        <field name="interval_number">15</field>
+        <field name="interval_type">minutes</field>
+        <field name="active" eval="True"/>
+    </record>
+</odoo>

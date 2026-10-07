@@ -138,6 +138,23 @@ class SaleOrder(models.Model):
             }
         return row
 
+    def _mart369_serialize(self):
+        """The customer's own view of an order says which door it came by.
+
+        A WhatsApp order is opened by its Odoo number, shows the stack's door
+        code, and offers no cancel or return buttons: those are the chat's,
+        with the stack's own refunds.
+        """
+        data = super()._mart369_serialize()
+        data['channel'] = self.mart369_channel or 'website'
+        if self.mart369_channel == 'whatsapp':
+            data['id'] = self.name
+            data['canCancel'] = False
+            job = self.sudo()._mart369_bridge_job()
+            if job and job.sa_delivery_state not in ('delivered', 'returned', 'cancelled'):
+                data['otp'] = job.sa_last_delivery_code or ''
+        return data
+
     def _mart369_admin_detail(self):
         row = super()._mart369_admin_detail()
         if self.mart369_channel == 'whatsapp':

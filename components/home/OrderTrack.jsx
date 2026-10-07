@@ -495,7 +495,7 @@ export default function OrderTrack({ order: o, byId, onChanged, onBack, onReceip
     <div className={"ot-page ot-st-" + s.key}>
       <div className="ot-titlebar">
         <button className="ot-back" onClick={onBack} aria-label="Back to orders"><Icon n="left" size={20} /></button>
-        <div><h1>Order #{o.id}</h1><small>{fmtPlaced(o.at)} · {o.items.reduce((n, [, q]) => n + q, 0)} items · {m(o.total)}</small></div>
+        <div><h1>Order #{o.id}{o.channel === "whatsapp" && <em className="ot-wa">via WhatsApp</em>}</h1><small>{fmtPlaced(o.at)} · {o.items.reduce((n, [, q]) => n + q, 0)} items · {m(o.total)}</small></div>
         <button className="ot-helpbtn" onClick={() => setSheet("help")}><Icon n="chat" size={16} />Help</button>
       </div>
 

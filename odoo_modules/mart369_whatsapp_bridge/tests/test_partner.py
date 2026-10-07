@@ -20,6 +20,12 @@ class TestPartner(Mart369BridgeCase):
     # the live database, which is full of +9198… people.
     PHONE = '+917009900011'
 
+    def setUp(self):
+        super().setUp()
+        # A store account catches a chat only once it proved the number.
+        self.partner.with_context(mart369_phone_proven=True).write({
+            'phone': self.PHONE, 'mart369_phone_verified': True})
+
     def test_store_account_is_reused(self):
         self.partner.phone = self.PHONE
         found = self.env['wa.auto.reply']._mart369_bridge_partner(

@@ -5,24 +5,48 @@
 no matter which of the stack's dozen code paths moved the job - the rider
 app, the Store screen, a WhatsApp reply, a cron - the console's order follows.
 
-**One voice.** The stack messages its customers itself at every step. For a
-website order those texts would arrive on top of the website's own updates
-(whatsapp_notify.py), worded differently and twice as often. So for a website
-order the stack's customer messages are silenced here at their one exit,
-`_sa_tell_customer` - the rider's messages are untouched.
+**One voice per step.** A website customer hears the same journey a WhatsApp
+customer does - rider on the way, collected, out for delivery, delivered -
+in the stack's own words, on their own number. Each step has exactly one
+speaker: the stack's `_sa_notify_customer` for the rider's steps, the
+website's updates (whatsapp_notify.py) for placed / packed / cancelled. Every
+other stack message to the customer (the shop's "accepted", the cancel
+notices) stays silent for a website order, because the website says those.
+The console's Settings switches and the customer's opt-in still decide.
 
-**One code.** The stack issues its own six-digit door code when the rider
-sets off. The website already issued one when the order was paid, and the
-customer's app is showing it. For a website job the stack's code paths are
-redirected to the website's code, so whatever the rider types is checked
-against the number the customer is actually looking at.
+**One code, also on WhatsApp.** The stack issues its own six-digit door code
+when the rider sets off. The website already issued one when the order was
+paid, and the customer's app is showing it. For a website job the stack's
+code paths are redirected to the website's code, so whatever the rider types
+is checked against the number the customer is looking at - and that same
+code is sent on WhatsApp to the customer, and to the address's phone when
+someone else is receiving the parcel. Sent even to a customer who turned
+updates off: without the code there is no parcel.
 """
 
 import logging
+import re
 
-from odoo import api, models
+from odoo import _, api, models
+
+from odoo.addons.whatsapp_gateway.models.whatsapp_session import WhatsAppQueued
 
 _logger = logging.getLogger(__name__)
+
+# The rider's steps a website customer hears, and the console switch
+# (mart369.config `mart369_wa_on_<switch>`) that turns each one off.
+STEP_SWITCH = {
+    'accepted': 'shipped',
+    'picked': 'shipped',
+    'dispatched': 'shipped',
+    'out_for_delivery': 'out',
+    'delivered': 'delivered',
+    'returning': 'cancelled',
+}
+
+
+def _digits(number):
+    return re.sub(r'\D', '', number or '')
 
 
 class StockPicking(models.Model):
@@ -113,31 +137,115 @@ class StockPicking(models.Model):
             row['channel'] = channels.get(row.get('order_id')) or 'website'
         return data
 
-    # ------------------------------------------------------------ one voice
+    # ------------------------------------------------------- one voice per step
+
+    def _mart369_web_order(self):
+        order = self.sale_id
+        return order if order and order.mart369_ref else order.browse()
+
+    def _mart369_wa_session(self):
+        """The number the shop speaks from: the one picked on the console's
+        Settings, else the job's own (order, group, any active)."""
+        config = self.env['mart369.config'].sudo()._get()
+        session = config.mart369_wa_session_id
+        if session and session.active:
+            return session
+        return self._sa_session()
+
+    def _mart369_send_to(self, number, body, unique=False):
+        """One text to one number. Queued counts as sent; never raises."""
+        self.ensure_one()
+        digits = _digits(number)
+        session = self._mart369_wa_session()
+        if len(digits) < 8 or not session:
+            return False
+        # The stack's own dedupe, keyed the stack's way - a step said twice
+        # by two code paths within a quarter of an hour is said once.
+        if not unique and not self.env['sa.outbox.guard'].sudo().claim(
+                'track|%s|%s|%s' % (self.id, digits[-9:], body[:40]), 900):
+            return False
+        try:
+            session.send_message(digits, body)
+            return True
+        except WhatsAppQueued:
+            return True
+        except Exception as err:  # noqa: BLE001 - the job matters more
+            _logger.warning('bridge: could not tell %s about job %s: %s',
+                            digits, self.sa_ref_code, err)
+            return False
+
+    def _sa_notify_customer(self, state):
+        """A website customer hears the rider's steps too - if they asked to,
+        and the console has that step switched on."""
+        self.ensure_one()
+        order = self._mart369_web_order()
+        if not order:
+            return super()._sa_notify_customer(state)
+        switch = STEP_SWITCH.get(state)
+        if not switch:
+            return False
+        config = self.env['mart369.config'].sudo()._get()
+        if not config._mart369_wa_on(switch):
+            return False
+        if not self.env['mart369.whatsapp']._mart369_wants(order):
+            return False
+        return super(StockPicking, self.with_context(
+            mart369_step=state))._sa_notify_customer(state)
 
     def _sa_tell_customer(self, body, unique=False):
-        """A website customer hears the website's updates, and only those."""
+        """For a website order: only the steps let through above, and to the
+        customer's own number - never the address's."""
         self.ensure_one()
-        if self.sale_id.mart369_ref:
+        order = self._mart369_web_order()
+        if not order:
+            return super()._sa_tell_customer(body, unique=unique)
+        if not self.env.context.get('mart369_step'):
             return False
-        return super()._sa_tell_customer(body, unique=unique)
+        number = self.env['mart369.whatsapp']._mart369_customer_number(order)
+        return self._mart369_send_to(number, body, unique=unique)
 
     # ------------------------------------------------------------- one code
 
+    def _mart369_code_numbers(self, order):
+        """The customer's own number, then the address's when it is a
+        different phone - compared on the last nine digits, so one number
+        written two ways is one number."""
+        numbers = []
+        for number in (
+                self.env['mart369.whatsapp']._mart369_customer_number(order),
+                self.partner_id.phone):
+            digits = _digits(number)
+            if len(digits) >= 8 and digits[-9:] not in [n[-9:] for n in numbers]:
+                numbers.append(digits)
+        return numbers
+
     def sa_issue_delivery_otp(self):
-        """A website job never mints a second code.
+        """A website job never mints a second code - it sends the website's.
 
         The website issued the code at payment and the customer's app shows
         it; a retry is `_mart369_issue_otp`, which copies the fresh one here.
+        The same code goes out on WhatsApp in the stack's words, whatever the
+        customer's update preference: it is the key to their parcel.
         """
         self.ensure_one()
-        order = self.sale_id
-        if not order.mart369_ref:
+        order = self._mart369_web_order()
+        if not order:
             return super().sa_issue_delivery_otp()
         code = order.sudo().mart369_otp_code or ''
         self.sudo().sa_last_delivery_code = code or self.sa_last_delivery_code
-        return bool(code), (
-            'The customer already has their delivery code in the app.'), code
+        if not code:
+            return False, _('This order has no delivery code yet.'), code
+        body = _("\U0001F4E6 Your order is arriving.\n\n"
+                 "Give this code to the rider *after* you have the parcel:\n\n"
+                 "*%(code)s*\n\n"
+                 "Do not share it before you receive your order.", code=code)
+        sent = [number for number in self._mart369_code_numbers(order)
+                if self._mart369_send_to(number, body, unique=True)]
+        if sent:
+            return True, _("The code has been sent to the customer on "
+                           "WhatsApp. It is also in their app."), code
+        return False, _("Could not send the code on WhatsApp. The customer "
+                        "can see it in their app."), code
 
     def sa_verify_otp(self, kind, code):
         """The rider's typed code is checked against the website's."""

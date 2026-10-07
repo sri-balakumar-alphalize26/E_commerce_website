@@ -49,9 +49,19 @@ class ResPartner(models.Model):
 
     def write(self, vals):
         res = super().write(vals)
-        if (not self.env.context.get('mart369_contact_sync')
+        ctx = self.env.context
+        if (not ctx.get('mart369_contact_sync')
                 and any(f in vals for f in SYNCED_FIELDS)):
             # An edit of the default in place (the storefront's revise path,
             # the desks' edit forms) must reach the customer too.
             self.filtered('mart369_default')._mart369_sync_contact_address()
+            # And the other way: the WhatsApp flows write a new street straight
+            # onto the customer (the profile ladder, the out-of-stock flow).
+            # A customer with a book gets it there, as the default, once.
+            if not ctx.get('mart369_joining') and ('street' in vals or 'zip' in vals):
+                for customer in self.filtered(
+                        lambda p: not p.parent_id and p.type == 'contact'
+                        and p.street and p._mart369_book()):
+                    customer._mart369_book_add_once(
+                        {f: customer[f] for f in SYNCED_FIELDS}, make_default=True)
         return res

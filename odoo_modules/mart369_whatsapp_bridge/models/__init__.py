@@ -6,6 +6,7 @@ from . import whatsapp_notify
 from . import config
 from . import partner_link
 from . import res_partner
+from . import phone_link
 from . import catalog_menu
 from . import category_mirror
 from . import money_back

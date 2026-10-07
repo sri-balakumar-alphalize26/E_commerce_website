@@ -1,0 +1,173 @@
+"""One proven number, one customer: signing in by number, and joining."""
+
+import json
+import re
+
+from odoo.tests import tagged
+from odoo.tests.common import HttpCase
+
+from .common import Mart369BridgeCase, Mart369BridgeFixtures
+from .test_partner import FakeConv
+
+WA = '+919700880011'        # a WhatsApp-only customer
+HEADERS = {'Content-Type': 'application/json'}
+
+
+@tagged('post_install', '-at_install')
+class TestPhoneLink(Mart369BridgeCase):
+
+    def _wa_contact(self, phone=WA, street='5 Old Road', zip_code='624005'):
+        order = self._wa_order(phone=phone)
+        order.partner_id.write({'street': street, 'zip': zip_code})
+        return order
+
+    def _delivery_children(self, partner):
+        return partner.child_ids.filtered(lambda c: c.active and c.type == 'delivery')
+
+    # ------------------------------------------------------------ the postman
+
+    def test_the_code_goes_out_on_whatsapp(self):
+        outcome = self.env['res.partner']._mart369_send_login_code(WA, '482913')
+        self.assertEqual(outcome, 'sent')
+        phone, body = self.wa_sent[-1]
+        self.assertEqual(phone, WA.lstrip('+'))
+        self.assertIn('482913', body)
+
+    def test_no_session_says_none(self):
+        self.env['whatsapp.session'].sudo().search([]).write({'active': False})
+        self.assertEqual(
+            self.env['res.partner']._mart369_send_login_code(WA, '482913'), 'none')
+
+    # ----------------------------------------------------------- the owner
+
+    def test_whatsapp_only_customer_owns_the_number(self):
+        order = self._wa_contact()
+        partner, user = self.env['res.partner']._mart369_phone_owner(WA)
+        self.assertEqual(partner, order.partner_id)
+        self.assertFalse(user)
+
+    def test_number_typed_without_country_code_is_the_same(self):
+        Partner = self.env['res.partner']
+        # The national number alone, as someone typed it, is the same number.
+        self.assertTrue(Partner._mart369_same_number('9123 0099', '+96891230099'))
+        self.assertTrue(Partner._mart369_same_number('09700880011', WA))
+        # The same digits in another country are another person.
+        self.assertFalse(Partner._mart369_same_number('+9689700880011', WA))
+        self.assertFalse(Partner._mart369_same_number('+96891230099', '+9191230099'))
+
+    def test_guards_keep_suppliers_and_logins_out(self):
+        supplier = self.env['res.partner'].sudo().create({
+            'name': 'Parts Supplier', 'phone': WA, 'supplier_rank': 3})
+        self.assertFalse(supplier._mart369_joinable())
+        staffish = self.env['res.users'].sudo().create({
+            'name': 'Someone With Login', 'login': 'login.holder@369mart.test'})
+        staffish.partner_id.phone = WA
+        self.assertFalse(staffish.partner_id._mart369_joinable())
+        self.assertFalse(self.env['res.partner']._mart369_wa_customers(WA))
+
+    # ----------------------------------------------------------------- join
+
+    def test_proving_the_number_joins_the_whatsapp_contact(self):
+        order = self._wa_contact()
+        src = order.partner_id
+        result = self.partner._mart369_prove_phone(WA)
+        self.assertFalse(src.exists(), 'the WhatsApp contact is folded in')
+        self.assertEqual(order.partner_id, self.partner)
+        self.assertGreaterEqual(result['orders'], 1)
+        self.assertEqual(result['merged'], 1)
+        # Its doorstep is in the book, and its order still goes there.
+        shipping = order.partner_shipping_id
+        self.assertEqual(shipping.parent_id, self.partner)
+        self.assertEqual(shipping.street, '5 Old Road')
+        self.assertEqual(shipping.mart369_label, 'WhatsApp')
+        self.assertLessEqual(len(self._delivery_children(self.partner)), 1)
+        self.assertTrue(self.partner.mart369_phone_verified)
+
+    def test_the_same_address_is_not_added_twice(self):
+        self.address.write({'street': '5 Old Road', 'zip': '624005'})
+        before = len(self.partner._mart369_book())
+        self._wa_contact()
+        self.partner._mart369_prove_phone(WA)
+        self.assertEqual(len(self.partner._mart369_book()), before)
+
+    def test_wallets_add_up(self):
+        if 'loyalty.card' not in self.env or not hasattr(
+                self.env['loyalty.card'], '_mart369_wallet'):
+            self.skipTest('no 369 Mart wallet here')
+        order = self._wa_contact()
+        Card = self.env['loyalty.card'].sudo()
+        theirs = Card._mart369_wallet(order.partner_id).with_context(mart369_wallet_move=True)
+        mine = Card._mart369_wallet(self.partner).with_context(mart369_wallet_move=True)
+        theirs.points, mine.points = 40.0, 60.0
+        self.partner._mart369_prove_phone(WA)
+        self.assertEqual(Card._mart369_wallet(self.partner).points, 100.0)
+
+    def test_a_contact_with_a_login_is_never_joined(self):
+        other = self.env['res.users'].sudo().create({
+            'name': 'Other Account', 'login': 'other.acc@369mart.test'})
+        other.partner_id.phone = WA
+        self.partner._mart369_prove_phone(WA)
+        self.assertTrue(other.partner_id.exists())
+
+    # ------------------------------------------------------------- the chat
+
+    def test_unproven_account_no_longer_catches_the_chat(self):
+        self.partner.phone = WA     # typed at signup, never proven
+        Reply = self.env['wa.auto.reply']
+        first = Reply._get_or_create_partner(FakeConv(WA))
+        self.assertNotEqual(first.commercial_partner_id, self.partner)
+        again = Reply._get_or_create_partner(FakeConv(WA))
+        self.assertEqual(again, first, 'one contact for the chat, not one per message')
+
+    def test_proven_account_catches_the_chat(self):
+        self.partner.with_context(mart369_phone_proven=True).write(
+            {'phone': WA, 'mart369_phone_verified': True})
+        found = self.env['wa.auto.reply']._get_or_create_partner(FakeConv(WA))
+        self.assertEqual(found, self.partner)
+
+    # ------------------------------------------------------------ the book
+
+    def test_a_street_written_on_the_customer_joins_the_book(self):
+        self.partner.write({'street': '77 New Street', 'zip': '624007'})
+        book = self.partner._mart369_book()
+        default = book.filtered('mart369_default')
+        self.assertEqual(default.street, '77 New Street')
+        self.assertEqual(len(book.filtered(lambda a: a.street == '77 New Street')), 1)
+
+
+@tagged('post_install', '-at_install')
+class TestPhoneSigninHttp(Mart369BridgeFixtures, HttpCase):
+    """The whole door: a WhatsApp-only customer signs in on the website."""
+
+    def _post(self, path, payload):
+        return self.url_open(path, data=json.dumps(payload), headers=HEADERS)
+
+    def _code(self):
+        for __, body in reversed(self.wa_sent):
+            found = re.search(r'\*(\d{6})\*', body)
+            if found:
+                return found.group(1)
+        return None
+
+    def test_whatsapp_customer_signs_in_and_sees_their_orders(self):
+        order = self._wa_order(phone=WA)
+        order.partner_id.write({'street': '5 Old Road', 'zip': '624005'})
+        r = self._post('/369mart/auth/phone/start', {'phone': WA, 'purpose': 'signin'})
+        self.assertEqual(r.status_code, 200, r.text)
+        r = self._post('/369mart/auth/phone/verify',
+                       {'phone': WA, 'purpose': 'signin', 'code': self._code()})
+        self.assertEqual(r.status_code, 201, r.text)
+        body = r.json()
+        self.assertTrue(body['created'])
+        self.assertEqual(body['partner_id'], order.partner_id.id,
+                         'the login is made on the record that holds the orders')
+        self.assertGreaterEqual(body['joined']['orders'], 1)
+        orders = self.url_open('/369mart/orders').json()['orders']
+        mine = [o for o in orders if o['id'] == order.name]
+        self.assertTrue(mine, 'the WhatsApp order is in My Orders')
+        self.assertEqual(mine[0]['channel'], 'whatsapp')
+        self.assertFalse(mine[0]['canCancel'])
+        one = self.url_open('/369mart/orders/%s' % order.name)
+        self.assertEqual(one.status_code, 200)
+        addresses = self.url_open('/369mart/addresses').json()
+        self.assertIn('5 Old Road', json.dumps(addresses))

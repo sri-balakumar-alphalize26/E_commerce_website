@@ -61,14 +61,42 @@ class WaAutoReply(models.Model):
             return Partner.browse()
         customers = matches.mapped('commercial_partner_id')
         with_login = customers.filtered('user_ids')
-        found = (with_login or customers)[:1]
-        _logger.info('bridge: WhatsApp %s is store customer %s', phone,
-                     found.display_name)
+        # A store account catches the chat only once it has *proven* the
+        # number: one typed at signup proves nothing, and would hand the real
+        # owner's WhatsApp orders and addresses to whoever typed it.
+        proven = with_login.filtered('mart369_phone_verified')
+        found = (proven or (customers - with_login))[:1]
+        if found:
+            _logger.info('bridge: WhatsApp %s is store customer %s', phone,
+                         found.display_name)
         return found
 
     def _get_or_create_partner(self, conv):
         found = self._mart369_bridge_partner(conv.phone)
-        return found or super()._get_or_create_partner(conv)
+        if found:
+            return found
+        partner = super()._get_or_create_partner(conv)
+        customer = partner.commercial_partner_id if partner else partner
+        digits = ''.join(c for c in (conv.phone or '') if c.isdigit())
+        if customer and customer.user_ids and not customer.mart369_phone_verified:
+            # The stack's loose lookup landed on an account that never proved
+            # this number. The chat gets its own contact - stored as E.164,
+            # so the exact match above finds it next time.
+            Partner = self.env['res.partner'].sudo()
+            return (Partner._mart369_wa_customers('+' + digits)[:1]
+                    or Partner.create({
+                        'name': conv.contact_name or _('WhatsApp Customer (%s)', conv.phone),
+                        'phone': '+' + digits,
+                        'customer_rank': 1,
+                        'comment': _('Auto-created from WhatsApp.'),
+                    }))
+        if (partner and not partner.user_ids and len(digits) >= 8
+                and partner.phone and not partner.phone.startswith('+')
+                and ''.join(c for c in partner.phone if c.isdigit()) == digits):
+            # WhatsApp hands over full international digits without the '+';
+            # in an Oman database Odoo would read 9198… as a local number.
+            partner.sudo().phone = '+' + digits
+        return partner
 
 
 class SaGroupRequest(models.Model):
@@ -249,12 +277,6 @@ class SaGroupRequest(models.Model):
                if self._sa_pincode_wanted(partner) else None)
         if pin:
             values['zip'] = pin
-        address = customer._mart369_add_address(dict(
-            values,
-            name=customer.name,
-            phone=customer.phone or self.requester_phone or '',
-            mart369_label='WhatsApp',
-        ))
-        if not address.mart369_default:
-            address._mart369_set_default()
-        return address
+        # Once only: the customer record's own write may already have put
+        # this same address in the book (res_partner.py).
+        return customer._mart369_book_add_once(values, make_default=True)

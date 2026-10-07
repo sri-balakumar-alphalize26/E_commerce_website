@@ -7,10 +7,17 @@ only the mouth: the message goes out through a real `whatsapp.session`, the
 wording and the per-state switches live on the console's Settings, and a
 delivered order can carry its invoice as a PDF.
 
-Two silences, on purpose:
+To the customer's **own** number - the account's, not the delivery address's,
+which may be a neighbour taking the parcel in. The address phone hears only
+the door code (stock_picking.py).
+
+Three silences, on purpose:
 
 * a **WhatsApp-channel order** gets nothing from here - the selling flow
   already talks to that customer in their own chat, step by step;
+* an order with a **rider job** gets its shipped / out / delivered words from
+  the job (stock_picking.py, in the same words a WhatsApp customer reads),
+  so not from here as well - the invoice still follows delivery;
 * a session that is offline **queues** rather than fails: the gateway stores
   the message as pending and its outbox cron sends it when the number comes
   back, so "queued" counts as told.
@@ -24,6 +31,9 @@ from odoo.addons.mart369_support.models.whatsapp import MESSAGES, LINK_PARAM, DE
 from odoo.addons.whatsapp_gateway.models.whatsapp_session import WhatsAppQueued
 
 _logger = logging.getLogger(__name__)
+
+# The website states a rider job announces itself.
+JOB_STATES = ('shipped', 'out', 'delivered')
 
 
 class Mart369Whatsapp(models.AbstractModel):
@@ -48,11 +58,29 @@ class Mart369Whatsapp(models.AbstractModel):
                 or Session.search([('active', '=', True)], limit=1))
 
     @api.model
+    def _mart369_customer_number(self, order):
+        """The customer's own phone - the account's - else, for an account
+        with no number yet, the delivery address's."""
+        customer = order.partner_id.commercial_partner_id
+        return customer.phone or super()._mart369_number(order)
+
+    @api.model
+    def _mart369_number(self, order):
+        return self._mart369_customer_number(order)
+
+    @api.model
     def _mart369_notify(self, order, state):
         """Send one update, if everything lines up. Never raises."""
         if order.mart369_channel == 'whatsapp':
             return False
         config = self.env['mart369.config'].sudo()._get()
+        if state in JOB_STATES and order._mart369_bridge_job():
+            if (state == 'delivered' and config.mart369_wa_send_invoice
+                    and config._mart369_wa_on(state)
+                    and self._mart369_wants(order)
+                    and self._mart369_available()):
+                return self._mart369_send_invoice(order)
+            return False
         if not config._mart369_wa_on(state):
             return False
         template = config._mart369_wa_text(state)
