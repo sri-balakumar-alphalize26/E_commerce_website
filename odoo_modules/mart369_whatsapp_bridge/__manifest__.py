@@ -41,6 +41,7 @@ What it does:
     'data': [
         'views/sale_order_views.xml',
         'data/ir_cron.xml',
+        'data/bot_rules_rider.xml',
     ],
     'assets': {
         'web.assets_backend': [

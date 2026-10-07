@@ -11,3 +11,4 @@ from . import test_store_channel
 from . import test_variant_desk
 from . import test_web_otp
 from . import test_phone_link
+from . import test_order_track

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+        "Who is my rider?" - sequence 35: after an order number (30), which
+        is more specific, and before "asking for a person" (40), whose
+        `person` would otherwise send "delivery person" to an agent.
+        noupdate, like mart369_support's own answers: an operator who reworded
+        it on the console keeps their wording through an upgrade.
+    -->
+    <data noupdate="1">
+        <record id="rule_rider" model="mart369.bot.rule">
+            <field name="sequence">35</field>
+            <field name="title">Who is delivering their order</field>
+            <field name="pattern">\b(rider|driver|delivery ?(boy|guy|man|person|partner|executive|agent)|who.{0,20}deliver)</field>
+            <field name="kind">rider</field>
+            <field name="reply_alt">You have no orders on the way right now.</field>
+        </record>
+    </data>
+</odoo>
