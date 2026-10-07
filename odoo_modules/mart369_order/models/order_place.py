@@ -112,7 +112,7 @@ class SaleOrder(models.Model):
             'mart369_ref': ref,
             'mart369_state': 'draft',
             'mart369_mode': mode,
-            'mart369_slot_key': self._mart369_slot_key(slot),
+            'mart369_slot_key': slot.key if slot else False,
             'mart369_slot_day': self._mart369_slot_day(slot),
             'mart369_slot_label': body.get('slot') or self._mart369_slot_label(slot),
             'mart369_eta': body.get('eta') or '',
@@ -186,13 +186,6 @@ class SaleOrder(models.Model):
                 'tax_ids': [(6, 0, tax.ids)],
             })
 
-        Line = self.env['sale.order.line'].sudo()
-        Line.create(values)
-        # The goods are on the order before anything is charged on top of
-        # them - a module that prices delivery from the goods reads them here.
-        self._mart369_after_item_lines(bill)
-
-        values = []
         for label, amount in self._mart369_fee_lines(bill):
             values.append(self._mart369_charge_line(label, amount, 'fee', tax))
 
@@ -200,13 +193,7 @@ class SaleOrder(models.Model):
             values.append(self._mart369_charge_line(
                 coupon.code, -bill['couponOff'], 'coupon', tax))
 
-        if values:
-            Line.create(values)
-
-    def _mart369_after_item_lines(self, bill):
-        """Called once the basket's lines exist and before the fees and the
-        coupon are written. Nothing to do here."""
-        return True
+        self.env['sale.order.line'].sudo().create(values)
 
     def _mart369_fee_lines(self, bill):
         """The fees as the app shows them: delivery, then anything the slot added."""
@@ -332,11 +319,6 @@ class SaleOrder(models.Model):
             raise UserError(self.env._(
                 'That delivery window has just filled up. Please pick another.'))
         return slot, slot.fee or 0.0
-
-    @api.model
-    def _mart369_slot_key(self, slot):
-        """What the order stores to say which slot it booked."""
-        return slot.key if slot else False
 
     @api.model
     def _mart369_slot_label(self, slot):

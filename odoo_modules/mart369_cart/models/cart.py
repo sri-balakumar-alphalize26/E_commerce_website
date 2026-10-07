@@ -145,7 +145,7 @@ class Mart369Cart(models.AbstractModel):
         over, when Quick came from a branch; otherwise an empty recordset.
         `variant`, when the customer picked one, is the stock that counts."""
         none = self.env['stock.warehouse'].browse()
-        if self._mart369_express_only(product):
+        if product.mart_delivery_text:
             return EXPRESS, none
         where = where or {}
         if where.get('branches') is not None:
@@ -156,33 +156,6 @@ class Mart369Cart(models.AbstractModel):
         if where.get('area_quick') is not None:
             return (QUICK if where['area_quick'] else EXPRESS), none
         return QUICK, none
-
-    @api.model
-    def _mart369_express_only(self, product):
-        """A product with its own delivery promise never goes Quick."""
-        return bool(product.mart_delivery_text)
-
-    @api.model
-    def _mart369_fees(self, rules, present, sub, gross, slot_fee):
-        """The delivery fee for this basket.
-
-        One fee per storefront, waived once that storefront's own subtotal
-        clears its free-delivery line - two can stack, which is what the app
-        does when a basket mixes Quick and Express - plus the slot's.
-        """
-        fees = 0.0
-        for mode in (QUICK, EXPRESS):
-            rule = rules.get(mode)
-            if rule and present[mode] and sub[mode] < (rule.free_above or 0.0):
-                fees += rule.fee or 0.0
-        return fees + max(0.0, slot_fee or 0.0)
-
-    @api.model
-    def _mart369_blocked(self, rules, present, sub, gross):
-        """A Quick basket under the Quick minimum cannot be ordered."""
-        quick_rule = rules.get(QUICK)
-        return bool(present[QUICK] and quick_rule
-                    and sub[QUICK] < (quick_rule.min_order or 0.0))
 
     # ---------------------------------------------------------- the totals
 
@@ -203,7 +176,7 @@ class Mart369Cart(models.AbstractModel):
         count = 0
         where = self._mart369_where(address)
         modes = {}
-        branches = []           # who would hand each Quick line over, by name
+        branches = self.env['stock.warehouse'].browse()
         moved = 0
 
         for line in lines:
@@ -218,9 +191,8 @@ class Mart369Cart(models.AbstractModel):
             # - is the stock that counts, never its siblings' together.
             mode, branch = self._mart369_mode_of(tmpl, qty, where, variant=line['variant'])
             modes[line['key']] = mode
-            if branch and branch.name not in branches:
-                branches.append(branch.name)
-            if mode == EXPRESS and not self._mart369_express_only(tmpl):
+            branches |= branch
+            if mode == EXPRESS and not tmpl.mart_delivery_text:
                 moved += 1
             present[mode] = True
             sub[mode] += price * qty
@@ -228,7 +200,15 @@ class Mart369Cart(models.AbstractModel):
             mrp += was * qty
             count += qty
 
-        fees = self._mart369_fees(rules, present, sub, gross, slot_fee)
+        # One delivery fee per storefront, waived once that storefront's own
+        # subtotal clears its free-delivery line. Two can stack, which is what
+        # the app does when a basket mixes Quick and Express.
+        fees = 0.0
+        for mode in (QUICK, EXPRESS):
+            rule = rules.get(mode)
+            if rule and present[mode] and sub[mode] < (rule.free_above or 0.0):
+                fees += rule.fee or 0.0
+        fees += max(0.0, slot_fee or 0.0)
 
         sums = {'items': gross, QUICK: sub[QUICK], EXPRESS: sub[EXPRESS], 'fees': fees}
 
@@ -251,7 +231,9 @@ class Mart369Cart(models.AbstractModel):
         coupon_off = coupon_record._mart369_discount(sums) if coupon_record else 0.0
         coupon_valid = bool(coupon_record) and coupon_off > 0
 
-        blocked = self._mart369_blocked(rules, present, sub, gross)
+        quick_rule = rules.get(QUICK)
+        blocked = bool(present[QUICK] and quick_rule
+                       and sub[QUICK] < (quick_rule.min_order or 0.0))
 
         total = max(0.0, gross + fees - coupon_off)
         return {
@@ -275,7 +257,7 @@ class Mart369Cart(models.AbstractModel):
             # does, but not with this item), 'area' (the pincode is Express).
             'movedToExpress': moved,
             'movedWhy': (where['reason'] or 'stock') if moved else '',
-            'branch': branches[0] if branches else '',
+            'branch': branches[:1].name or '',
         }
 
     @api.model
