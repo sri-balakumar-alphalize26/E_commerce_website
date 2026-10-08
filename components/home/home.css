@@ -355,7 +355,10 @@
   .hm-hide-sm { display: none !important; }
 }
 @media (max-width: 860px) {
-  .hm-mode { display: none; }
+  /* Its own row between the logo line and search: the only way to change
+     between Quick and Express, so a phone must have it too. */
+  .hm-mode { order: 4; flex-basis: 100%; }
+  .hm-mode button { flex: 1; justify-content: center; padding-block: 7px; }
   .hm-hdr-row { flex-wrap: wrap; height: auto; padding-block: 10px; gap: 8px 12px; }
   .hm-search { order: 5; flex-basis: 100%; max-width: none; margin-left: 0; }
   .hm-icons { margin-left: auto; }

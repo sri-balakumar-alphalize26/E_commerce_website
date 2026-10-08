@@ -405,6 +405,11 @@ input.si-input::placeholder, .si-input input::placeholder { color: #9aabb8; }
 .ss-main .si-card { border-radius: 20px; padding: 30px 28px 22px; box-shadow: 0 24px 60px -32px rgba(15, 34, 51, 0.35); }
 .ss-main .lg-again { margin: 0; }
 .si-card .ss-tabs { margin-top: -4px; }
+/* Both sit in grid columns that otherwise never get narrower than the phone
+   field's natural width, so a 375px phone got a 406px card and the page slid
+   sideways. The frame's padding also outranked the phone padding above. */
+.ss-main > .si-page, .ss-main .si-card { min-width: 0; }
+@media (max-width: 480px) { .ss-main .si-card { padding: 22px 18px 16px; } }
 
 /* The country list opens over the rest of the card. The stage clips its
    content (for the height animation) and every row of a step animates in on
