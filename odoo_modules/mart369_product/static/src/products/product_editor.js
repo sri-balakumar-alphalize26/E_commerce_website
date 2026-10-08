@@ -26,6 +26,7 @@ import { _t } from "@web/core/l10n/translation";
 import { Icon } from "@mart369/ui/icon";
 import { Pick } from "@mart369/ui/pick";
 import { VariantsBlock, vxFrom } from "./variants_block";
+import { RichBox } from "./rich_box";
 
 /* Where each box shows up for the shopper, for the eye button's card.
    `card` and `page` draw a mock of that screen with the box outlined; `note`
@@ -195,7 +196,7 @@ function formFrom(data) {
 
 export class ProductEditor extends Component {
     static template = "mart369_product.DetailsEditor";
-    static components = { Icon, Pick, VariantsBlock };
+    static components = { Icon, Pick, VariantsBlock, RichBox };
     static props = {
         // A `mart369_desk_form` answer: groups, values, categories, photos.
         data: Object,

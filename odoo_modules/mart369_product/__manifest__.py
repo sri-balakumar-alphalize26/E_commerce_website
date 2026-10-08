@@ -1,6 +1,6 @@
 {
     'name': '369 Mart Product Page',
-    'version': '19.0.1.5.8',
+    'version': '19.0.1.6.0',
     'category': 'Website',
     'summary': 'Decide what the 369 Mart app shows on a product page - for '
                'every product at once, or one product at a time.',
@@ -33,7 +33,7 @@ frame with every field listed. The app reads the result from
     # lives in mart369's builder.scss, next to the home page's, so this is the
     # only cross-module dependency left to keep in mind.
     'depends': [
-        'mart369', 'mart369_home', 'website_sale', 'rating', 'portal_rating'],
+        'mart369', 'mart369_home', 'website_sale', 'rating', 'portal_rating', 'html_editor'],
     'data': [
         'security/ir.model.access.csv',
         'views/registry_views.xml',

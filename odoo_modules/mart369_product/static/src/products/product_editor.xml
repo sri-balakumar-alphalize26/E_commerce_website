@@ -244,8 +244,17 @@
                                     <small t-esc="chosenCount ? chosenCount + ' chosen' : 'Not in any category yet - shoppers will only find it by searching.'"/>
                                 </div>
 
+                                <!-- Formatted text, typed like a Word page (Odoo's editor). -->
+                                <div t-elif="b.widget === 'html'" class="pdk-field pdk-wide">
+                                    <t t-call="mart369_product.BoxLabel"/>
+                                    <RichBox value="state.form.values[b.name]"
+                                             onChange="(v) => this.setField(b.name, v)"
+                                             onFocus="() => this.setFocus(b.name)"/>
+                                    <small t-if="b.help" t-esc="b.help"/>
+                                </div>
+
                                 <!-- A paragraph. -->
-                                <div t-elif="b.widget === 'text' or b.widget === 'html'" class="pdk-field pdk-wide">
+                                <div t-elif="b.widget === 'text'" class="pdk-field pdk-wide">
                                     <t t-call="mart369_product.BoxLabel"/>
                                     <textarea rows="4" t-att-value="state.form.values[b.name]"
                                               t-on-focus="() => this.setFocus(b.name)"

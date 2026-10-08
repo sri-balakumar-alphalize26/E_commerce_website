@@ -17,6 +17,11 @@ class ProductTemplate(models.Model):
              'product page. Start with a short phrase, then " — " and the '
              'rest: the phrase is printed in bold. e.g. Immersive display — '
              'A 6.3-inch Super Retina XDR display, brighter outdoors.')
+    mart_about_html = fields.Html(
+        string='About this item',
+        help='Type it like a Word page: bullets, numbers, bold, links. Select '
+             'words to get the toolbar. Shown as "About this item" on the '
+             'product page; tip - start each point with a short bold phrase.')
     mart_details = fields.Text(
         string='Product details',
         help='One per line: a label, a colon, the value - e.g. Brand: Apple, '
@@ -159,7 +164,9 @@ class ProductTemplate(models.Model):
                      'public_categ_ids']),
         # What the product page prints under the options, like Amazon's
         # "About this item" and the short details table above it.
-        ('About this item', ['mart_features', 'mart_details']),
+        # The Word-style box; the older one-point-a-line mart_features stays
+        # the page's fallback for a product whose box is empty.
+        ('About this item', ['mart_about_html', 'mart_details']),
         ('Website only', ['compare_list_price', 'mart_home_tag',
                           'mart_delivery_text', 'mart_low_stock_at',
                           'mart_unit_text', 'mart_per_unit', 'mart_note']),

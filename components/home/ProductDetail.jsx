@@ -432,9 +432,34 @@ function KeyDetails({ rows }) {
   );
 }
 
-/* "About this item": the bold lead, then the rest. Five, then Show more. */
-function AboutItem({ points }) {
+/* "About this item" as typed in the Word-style box: lists, bold, links -
+   cleaned twice (Odoo, then toSafeHtml). A long one is cut to a few lines
+   with Show more. */
+function AboutRich({ html }) {
+  const [safe, setSafe] = useState(null);
   const [all, setAll] = useState(false);
+  const [long, setLong] = useState(false);
+  const box = useRef(null);
+  useEffect(() => setSafe(toSafeHtml(html)), [html]);
+  useLayoutEffect(() => { if (box.current) setLong(box.current.scrollHeight > 300); }, [safe]);
+  if (!safe) return null;
+  return (
+    <section className="pd-about" aria-labelledby="pd-about-h">
+      <h2 id="pd-about-h">About this item</h2>
+      <div ref={box} className={"pd-rich pd-about-rich" + (long && !all ? " pd-about-cut" : "")} dangerouslySetInnerHTML={{ __html: safe }} />
+      {long && (
+        <button className="pd-link pd-about-more" onClick={() => setAll((v) => !v)} aria-expanded={all}>
+          {all ? "Show less" : "Show more"}<Icon n="chev" size={14} className={all ? "pd-chev pd-up" : "pd-chev"} />
+        </button>
+      )}
+    </section>
+  );
+}
+
+/* "About this item": the bold lead, then the rest. Five, then Show more. */
+function AboutItem({ points, html }) {
+  const [all, setAll] = useState(false);
+  if (html) return <AboutRich html={html} />;
   if (!points.length) return null;
   const shown = all ? points : points.slice(0, 5);
   return (
@@ -463,7 +488,7 @@ function unitPrice(v) {
 export default function ProductDetail({
   p, cart, setQty, address, onBack, onChangeAddress, onExplore, fromRect,
   related = [], variants = [], attrs = [], onVariant, bundle = [], similar = [], recent = [], onViewSimilar, onEditReview,
-  optionsFailed = false, onRetryOptions, reviewInfo, info, about = [], details = [],
+  optionsFailed = false, onRetryOptions, reviewInfo, info, about = [], aboutHtml = "", details = [],
 }) {
   /* Every product shows what its setup holds, as the WhatsApp confirmation
      page does: its photos, the Variant specs table and the Sales Description
@@ -593,7 +618,7 @@ export default function ProductDetail({
             </div>
 
             <KeyDetails rows={keyDetails(details, p.specs)} />
-            <AboutItem points={about || []} />
+            <AboutItem points={about || []} html={aboutHtml} />
 
             {hasDetails && <>
             <button className={"pd-toggle" + (showAll ? " pd-on" : "")} onClick={() => setShowAll((v) => !v)} aria-expanded={showAll}>

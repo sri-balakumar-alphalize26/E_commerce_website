@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="mart369_product.RichBox">
+        <div class="pdk-rich" t-on-focusin="() => props.onFocus and props.onFocus()">
+            <Wysiwyg config="config" onLoad.bind="onLoad"
+                     class="'pdk-rich-box'" contentClass="'pdk-rich-content odoo-editor-editable'"/>
+        </div>
+    </t>
+
+</templates>

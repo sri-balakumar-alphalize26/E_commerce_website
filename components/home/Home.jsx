@@ -662,6 +662,7 @@ export default function Home({
         info: d.info || [],
         /* "About this item" and the short details table (369 Mart section). */
         about: d.about || [],
+        aboutHtml: d.aboutHtml || "",
         details: d.details || [],
       } }));
     }).catch(() => { if (live) setGroups((g) => ({ ...g, [group]: { error: true } })); });
@@ -768,7 +769,7 @@ export default function Home({
           related={pd.also}
           recent={recent.filter((x) => (x.variantGroup || x.id) !== (product.variantGroup || product.id))}
           reviewInfo={loaded?.reviews} info={loaded?.info}
-          about={loaded?.about} details={loaded?.details}
+          about={loaded?.about} aboutHtml={loaded?.aboutHtml} details={loaded?.details}
           optionsFailed={!!loaded?.error}
           onRetryOptions={retryOptions}
           onViewSimilar={product.sub ? () => nav("category", `${product.cat}/${product.sub}`) : undefined}

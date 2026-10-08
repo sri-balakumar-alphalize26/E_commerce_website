@@ -142,6 +142,33 @@ class TestProductApiDetails(TransactionCase):
         self.assertEqual(self._details()['details'],
                          [['Brand', 'Apple'], ['Model Name', 'iPhone 18 Pro']])
 
+    def test_the_word_box_is_sent_clean(self):
+        self.product.mart_about_html = (
+            '<ul><li><b>Display</b> — 6.3-inch</li></ul><script>alert(1)</script>'
+            '<p style="color:red" class="x">Plain <a href="https://example.com">link</a></p>')
+        html = self._details()['aboutHtml']
+        self.assertIn('<b>Display</b>', html)
+        self.assertIn('href="https://example.com"', html)
+        self.assertNotIn('script', html)
+        self.assertNotIn('style=', html)
+        self.assertNotIn('class=', html)
+
+    def test_lines_become_the_word_box_on_upgrade(self):
+        """19.0.1.6.0 turns the typed lines into a bulleted list, bold leads kept."""
+        import importlib.util
+        import os
+        path = os.path.join(os.path.dirname(os.path.dirname(__file__)),
+                            'migrations', '19.0.1.6.0', 'post-migrate.py')
+        spec = importlib.util.spec_from_file_location('mart369_product_1600', path)
+        migration = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(migration)
+        self.product.mart_features = 'Display — 6.3-inch <bright>\nLong battery'
+        migration.migrate(self.env.cr, '19.0.1.5.8')
+        self.product.invalidate_recordset()
+        html = str(self.product.mart_about_html)
+        self.assertIn('<li><b>Display</b> — 6.3-inch &lt;bright&gt;</li>', html)
+        self.assertIn('<li>Long battery</li>', html)
+
     def test_no_about_or_details_without_them(self):
         d = self._details()
         self.assertNotIn('about', d)
@@ -150,7 +177,7 @@ class TestProductApiDetails(TransactionCase):
     def test_the_desk_offers_both_boxes(self):
         groups = {g['title']: [b['name'] for b in g['boxes']]
                   for g in self.env['product.template'].mart369_desk_form()['groups']}
-        self.assertEqual(groups.get('About this item'), ['mart_features', 'mart_details'])
+        self.assertEqual(groups.get('About this item'), ['mart_about_html', 'mart_details'])
 
     # ---------------------------------------------- Edit page's switches
 

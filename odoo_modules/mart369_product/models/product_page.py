@@ -6,6 +6,7 @@ HTTP request to exist, which is exactly what made this untestable before.
 """
 
 from odoo import api, fields, models
+from odoo.tools import html2plaintext, html_sanitize
 
 # Reviews that count: really submitted, publicly visible, actually rated,
 # and not taken down by staff.
@@ -151,6 +152,9 @@ class Mart369ProductPage(models.AbstractModel):
         info = self.info(product)
         if info:
             d['info'] = info
+        about_html = self.about_html(product)
+        if about_html:
+            d['aboutHtml'] = about_html
         about = self.about(product)
         if about:
             d['about'] = about
@@ -160,6 +164,16 @@ class Mart369ProductPage(models.AbstractModel):
 
         d.update(self.reviews(product, keys, values))
         return d
+
+    @api.model
+    def about_html(self, product):
+        """The Word-style About this item, cleaned the way the Description is
+        (no scripts, styles or classes), or None when it is empty."""
+        html = product.mart_about_html or ''
+        if not html2plaintext(html).strip():
+            return None
+        cleaned = html_sanitize(html, strip_style=True, strip_classes=True)
+        return str(cleaned) if cleaned and html2plaintext(cleaned).strip() else None
 
     @api.model
     def about(self, product):

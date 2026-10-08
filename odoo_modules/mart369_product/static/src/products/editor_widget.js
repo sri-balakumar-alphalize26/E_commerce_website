@@ -15,7 +15,7 @@
  * Every field it writes is on the view (invisibly, in the tab) - the record
  * only saves fields the view knows about.
  */
-import { Component, useState } from "@odoo/owl";
+import { Component, markup, useState } from "@odoo/owl";
 import { useRecordObserver } from "@web/model/relational_model/utils";
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
@@ -183,6 +183,9 @@ export class ProductEditorWidget extends Component {
             v = Number(value) || 0;
         } else if (field.type === "integer") {
             v = parseInt(value, 10) || 0;
+        } else if (field.type === "html") {
+            // An HTML field holds markup, as Odoo's own editor writes it.
+            v = value ? markup(value) : false;
         } else if (v === "") {
             v = false;
         }
