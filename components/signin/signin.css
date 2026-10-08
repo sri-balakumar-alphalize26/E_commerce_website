@@ -405,3 +405,10 @@ input.si-input::placeholder, .si-input input::placeholder { color: #9aabb8; }
 .ss-main .si-card { border-radius: 20px; padding: 30px 28px 22px; box-shadow: 0 24px 60px -32px rgba(15, 34, 51, 0.35); }
 .ss-main .lg-again { margin: 0; }
 .si-card .ss-tabs { margin-top: -4px; }
+
+/* The country list opens over the rest of the card. The stage clips its
+   content (for the height animation) and every row of a step animates in on
+   its own layer, so without these the rows below painted over the open list
+   and its bottom was cut off. */
+.si-step > form { position: relative; z-index: 2; }
+.si-stage:has(.cp-panel) { overflow: visible; }
