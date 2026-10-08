@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_mart369_info_page_list" model="ir.ui.view">
+        <field name="name">mart369.info.page.list</field>
+        <field name="model">mart369.info.page</field>
+        <field name="arch" type="xml">
+            <list string="Info pages">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="column"/>
+                <field name="kind"/>
+                <field name="slug" string="Address (/page/...)"/>
+                <field name="active" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- What you edit on the left, the real shop page on the right - the
+         same layout as the 369 Mart product editor. -->
+    <record id="view_mart369_info_page_form" model="ir.ui.view">
+        <field name="name">mart369.info.page.form</field>
+        <field name="model">mart369.info.page</field>
+        <field name="arch" type="xml">
+            <form string="Info page">
+                <sheet>
+                    <div class="row o_mart369_page_cols">
+                        <div class="col-lg-6">
+                            <div class="oe_title">
+                                <label for="name"/>
+                                <h1><field name="name" placeholder="e.g. Terms of use"/></h1>
+                            </div>
+                            <group>
+                                <field name="summary"/>
+                                <field name="column"/>
+                                <field name="kind"/>
+                                <field name="slug"/>
+                                <field name="active" widget="boolean_toggle"/>
+                                <field name="write_date" invisible="1"/>
+                                <field name="preview_url" invisible="1"/>
+                            </group>
+                            <separator string="Text"/>
+                            <div class="text-muted small mb-2">
+                                Write it like a Word page. Select words to get the toolbar: bold,
+                                italic, links, bullets, numbers. Paste from anywhere.
+                            </div>
+                            <field name="body" widget="html" nolabel="1"
+                                   options="{'resizable': true}"
+                                   placeholder="The page's text..."/>
+                            <div invisible="kind != 'faqs'">
+                                <separator string="Questions and answers"/>
+                                <field name="faq_ids" nolabel="1">
+                                    <list editable="bottom">
+                                        <field name="sequence" widget="handle"/>
+                                        <field name="question"/>
+                                        <field name="answer" widget="html"/>
+                                    </list>
+                                </field>
+                            </div>
+                            <div invisible="kind != 'contact'" class="text-muted small mt-2">
+                                The shop's phone, email and address come from Settings &gt; Companies
+                                and are shown under the text.
+                            </div>
+                            <div invisible="kind != 'areas'" class="text-muted small mt-2">
+                                The pincodes the shop delivers to are listed under the text, from the
+                                delivery settings.
+                            </div>
+                        </div>
+                        <div class="col-lg-6">
+                            <widget name="mart369_page_preview"/>
+                        </div>
+                    </div>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_mart369_info_pages" model="ir.actions.act_window">
+        <field name="name">Info pages</field>
+        <field name="res_model">mart369.info.page</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{'active_test': False}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Add the pages the shop's footer links to</p>
+            <p>Terms of use, Privacy, About, FAQs, Contact... each one is drawn on the shop at /page/&lt;address&gt;.</p>
+        </field>
+    </record>
+
+    <menuitem id="menu_mart369_info_pages"
+              name="Info pages"
+              parent="mart369.menu_mart369_pages"
+              action="action_mart369_info_pages"
+              sequence="40"/>
+
+</odoo>

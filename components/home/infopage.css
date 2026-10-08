@@ -1,0 +1,40 @@
+/* The footer's pages (InfoPage.jsx), in the shop's own colours. */
+.ip-page { padding: 8px 0 32px; }
+.ip-grid { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 24px; align-items: start; }
+.ip-main { background: #fff; border: 1px solid #e3eaef; border-radius: 16px; padding: 24px 28px; min-width: 0; }
+.ip-main h1 { margin: 0 0 4px; font-size: 26px; letter-spacing: -0.02em; }
+.ip-sum { margin: 0 0 16px; color: #5f7385; font-size: 15px; }
+.ip-rich { font-size: 15px; line-height: 1.65; color: #13212b; overflow-wrap: anywhere; }
+.ip-rich h2 { font-size: 18px; margin: 20px 0 6px; }
+.ip-rich h3, .ip-rich h4 { font-size: 16px; margin: 16px 0 4px; }
+.ip-rich ul, .ip-rich ol { padding-left: 22px; display: grid; gap: 4px; }
+.ip-rich a { color: #0a78ab; }
+.ip-updated { margin: 20px 0 0; color: #8a9aa6; font-size: 13px; }
+.ip-side { position: sticky; top: 90px; display: grid; gap: 2px; background: #fff; border: 1px solid #e3eaef; border-radius: 16px; padding: 8px; }
+.ip-side button { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 12px; border: 0; border-radius: 10px; background: none; font: inherit; font-size: 14px; color: #13212b; text-align: left; cursor: pointer; }
+.ip-side button:hover { background: #f2f6f9; }
+.ip-side button.ip-on { background: #e8f3f9; color: #0a78ab; font-weight: 700; }
+.ip-search { display: flex; align-items: center; gap: 8px; margin: 18px 0 10px; padding: 0 12px; height: 44px; border: 1px solid #d6e1e9; border-radius: 12px; color: #5f7385; }
+.ip-search input { flex: 1; border: 0; outline: none; font: inherit; font-size: 15px; background: none; min-width: 0; }
+.ip-faq { border-bottom: 1px solid #edf1f4; }
+.ip-faq > button { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 2px; border: 0; background: none; font: inherit; font-size: 15px; font-weight: 600; text-align: left; cursor: pointer; color: #13212b; }
+.ip-faq.ip-open > button svg { transform: rotate(180deg); }
+.ip-answer { padding: 0 2px 14px; color: #33475b; }
+.ip-none { color: #5f7385; }
+.ip-link { border: 0; background: none; color: #0a78ab; font: inherit; font-weight: 600; cursor: pointer; padding: 0; }
+.ip-contact { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
+.ip-card { display: grid; grid-template-columns: 40px minmax(0, 1fr); column-gap: 12px; align-items: center; padding: 14px; border: 1px solid #e3eaef; border-radius: 14px; background: #fbfdfe; text-decoration: none; color: #13212b; text-align: left; font: inherit; cursor: pointer; }
+.ip-card > span { grid-row: span 2; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: #e8f3f9; color: #0a78ab; }
+.ip-card b { font-size: 15px; overflow-wrap: anywhere; }
+.ip-card small { color: #5f7385; font-size: 13px; }
+.ip-chat { border-color: #0a78ab; }
+.ip-addr { cursor: default; }
+.ip-areas table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.ip-areas th, .ip-areas td { text-align: left; padding: 9px 8px; border-bottom: 1px solid #edf1f4; }
+.ip-areas th { color: #5f7385; font-weight: 600; }
+@media (max-width: 860px) {
+  .ip-grid { grid-template-columns: minmax(0, 1fr); }
+  .ip-side { position: static; }
+  .ip-main { padding: 18px 16px; }
+  .ip-contact { grid-template-columns: minmax(0, 1fr); }
+}

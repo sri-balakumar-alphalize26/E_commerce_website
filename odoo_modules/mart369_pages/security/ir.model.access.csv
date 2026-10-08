@@ -1,0 +1,7 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_mart369_info_page_user,mart369.info.page user,model_mart369_info_page,base.group_user,1,0,0,0
+access_mart369_info_page_designer,mart369.info.page designer,model_mart369_info_page,website.group_website_designer,1,1,1,1
+access_mart369_info_page_manager,mart369.info.page manager,model_mart369_info_page,base.group_system,1,1,1,1
+access_mart369_info_faq_user,mart369.info.faq user,model_mart369_info_faq,base.group_user,1,0,0,0
+access_mart369_info_faq_designer,mart369.info.faq designer,model_mart369_info_faq,website.group_website_designer,1,1,1,1
+access_mart369_info_faq_manager,mart369.info.faq manager,model_mart369_info_faq,base.group_system,1,1,1,1

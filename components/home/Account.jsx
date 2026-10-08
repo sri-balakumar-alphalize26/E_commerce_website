@@ -364,17 +364,17 @@ function AboutSec() {
   );
 }
 const LEGAL = [
-  ["Terms of use", "The terms that apply when you browse, order and pay on 369 Mart."],
-  ["Privacy policy", "What we collect, why, how long we keep it and how to ask us to delete it."],
-  ["Cancellation & refund policy", "When orders can be cancelled and how refunds are processed."],
-  ["Shipping policy", "Delivery areas, timelines and charges for Quick and Express."],
-  ["Grievance officer", "How to raise a complaint and our response timelines."],
+  ["Terms of use", "The terms that apply when you browse, order and pay on 369 Mart.", "terms"],
+  ["Privacy policy", "What we collect, why, how long we keep it and how to ask us to delete it.", "privacy"],
+  ["Cancellation & refund policy", "When orders can be cancelled and how refunds are processed.", "cancellation-policy"],
+  ["Shipping policy", "Delivery areas, timelines and charges for Quick and Express.", "shipping-policy"],
+  ["Grievance officer", "How to raise a complaint and our response timelines.", "grievance"],
 ];
 function LegalSec() {
   return (
     <div className="ac-card ac-legal">
-      {LEGAL.map(([t, d], i) => (
-        <a key={t} href="#" onClick={(e) => e.preventDefault()} style={{ "--i": i }}>
+      {LEGAL.map(([t, d, slug], i) => (
+        <a key={t} href={"/page/" + slug} style={{ "--i": i }}>
           <span className="ac-legal-ic"><Icon n="legal" size={17} /></span>
           <span><b>{t}</b><small>{d}</small></span>
           <Icon n="right" size={16} className="ac-go" />

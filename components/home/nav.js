@@ -12,6 +12,12 @@ import { createContext } from "react";
 
 export const NavContext = createContext(() => {});
 
+/* Short addresses for the footer's pages (Odoo, 369 Mart > Info pages). */
+const PAGE_ALIASES = {
+  terms: "terms", privacy: "privacy", "cancellation-policy": "cancellation-policy",
+  "shipping-policy": "shipping-policy", faqs: "faqs", contact: "contact", about: "about",
+};
+
 export function routeToPath(view, param) {
   switch (view) {
     case "home": return "/";
@@ -26,6 +32,7 @@ export function routeToPath(view, param) {
     case "checkout": return "/checkout";
     case "order": return "/order/" + encodeURIComponent(param || "");
     case "track": return "/track/" + encodeURIComponent(param || "");
+    case "page": return "/page/" + encodeURIComponent(param || "");
     default: return "/";
   }
 }
@@ -45,5 +52,8 @@ export function pathToRoute(pathname, search = "") {
   if (head === "checkout") return { view: "checkout", param: null };
   if (head === "order") return { view: "order", param: rest[0] || "" };
   if (head === "track") return { view: "track", param: rest[0] || "" };
+  if (head === "page") return { view: "page", param: rest[0] || "" };
+  /* Addresses the sign-in page, the cart and the product page link to. */
+  if (PAGE_ALIASES[head]) return { view: "page", param: PAGE_ALIASES[head] };
   return { view: "notfound", param: null };
 }

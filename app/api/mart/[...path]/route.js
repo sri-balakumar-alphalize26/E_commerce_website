@@ -52,7 +52,7 @@ function outward(status, location = "") {
    stored and never served from here. */
 const KEEPABLE = new Set([
   "home", "catalog", "browse", "product", "search",
-  "cart", "slots", "serviceability", "products", "offers",
+  "cart", "slots", "serviceability", "products", "offers", "pages", "footer",
 ]);
 const LAST_GOOD = new Map(); /* url -> { body, at } */
 const KEEP_MAX = 200;

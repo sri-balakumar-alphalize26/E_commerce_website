@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Starter pages, written plainly so the shop has something true to show on
+     day one. Each is the shop's to rewrite in 369 Mart > Page building > Info
+     pages; noupdate, so an upgrade never puts this text back over theirs. -->
+<odoo noupdate="1">
+
+    <!-- ============================================================ Help -->
+    <record id="page_faqs" model="mart369.info.page">
+        <field name="name">FAQs</field>
+        <field name="slug">faqs</field>
+        <field name="column">help</field>
+        <field name="sequence">10</field>
+        <field name="kind">faqs</field>
+        <field name="summary">Quick answers to the questions shoppers ask most</field>
+        <field name="body" type="html"><p>Can't find your answer? Tap the chat button at the bottom right and ask us.</p></field>
+    </record>
+    <record id="faq_quick" model="mart369.info.faq">
+        <field name="page_id" ref="page_faqs"/>
+        <field name="sequence">10</field>
+        <field name="question">How fast is Quick delivery?</field>
+        <field name="answer" type="html"><p>Quick orders are packed at a store near you and usually arrive in minutes. The live timer on your order shows the exact estimate.</p></field>
+    </record>
+    <record id="faq_express" model="mart369.info.faq">
+        <field name="page_id" ref="page_faqs"/>
+        <field name="sequence">20</field>
+        <field name="question">What is Express?</field>
+        <field name="answer" type="html"><p>Express covers products shipped from our warehouse. Delivery takes a few days depending on your pincode; the product page shows the time for yours.</p></field>
+    </record>
+    <record id="faq_cancel" model="mart369.info.faq">
+        <field name="page_id" ref="page_faqs"/>
+        <field name="sequence">30</field>
+        <field name="question">How do I cancel an order?</field>
+        <field name="answer" type="html"><p>Open Orders, choose the order and tap Cancel. Quick orders can be cancelled until they are packed; Express orders until they are shipped.</p></field>
+    </record>
+    <record id="faq_refund" model="mart369.info.faq">
+        <field name="page_id" ref="page_faqs"/>
+        <field name="sequence">40</field>
+        <field name="question">When will I get my refund?</field>
+        <field name="answer" type="html"><p>Once a cancellation or return is approved, the refund goes back to where you paid from, or to your 369 Wallet if you chose that. The order page shows where it is.</p></field>
+    </record>
+    <record id="faq_missing" model="mart369.info.faq">
+        <field name="page_id" ref="page_faqs"/>
+        <field name="sequence">50</field>
+        <field name="question">An item was missing or damaged</field>
+        <field name="answer" type="html"><p>Open the order soon after delivery, tap Return or replace and choose the item. We'll arrange a replacement or a refund.</p></field>
+    </record>
+
+    <record id="page_returns" model="mart369.info.page">
+        <field name="name">Cancellations &amp; returns</field>
+        <field name="slug">cancellation-policy</field>
+        <field name="column">help</field>
+        <field name="sequence">20</field>
+        <field name="summary">When you can cancel or return, and how refunds work</field>
+        <field name="body" type="html"><h2>Cancelling</h2><ul><li><b>Quick orders</b> — can be cancelled until they are packed.</li><li><b>Express orders</b> — can be cancelled until they are shipped.</li></ul><h2>Returns and replacements</h2><p>If something arrives damaged, missing or wrong, open the order and tap <b>Return or replace</b> within the return window shown there. We'll arrange a replacement or a refund.</p><h2>Refunds</h2><p>Refunds go back to where you paid from, or to your 369 Wallet if you choose it. The order page shows the refund as it moves.</p></field>
+    </record>
+
+    <record id="page_areas" model="mart369.info.page">
+        <field name="name">Delivery areas</field>
+        <field name="slug">delivery-areas</field>
+        <field name="column">help</field>
+        <field name="sequence">30</field>
+        <field name="kind">areas</field>
+        <field name="summary">Where we deliver, and how fast</field>
+        <field name="body" type="html"><p>Type your pincode at the top of any page to see whether we deliver to you, and how fast. These are the areas we serve today.</p></field>
+    </record>
+
+    <record id="page_contact" model="mart369.info.page">
+        <field name="name">Contact us</field>
+        <field name="slug">contact</field>
+        <field name="column">help</field>
+        <field name="sequence">40</field>
+        <field name="kind">contact</field>
+        <field name="summary">Chat, call or write to us</field>
+        <field name="body" type="html"><p>The quickest way to reach us is the chat - tap the button at the bottom right. You can also call or email us.</p></field>
+    </record>
+
+    <!-- ========================================================= Company -->
+    <record id="page_about" model="mart369.info.page">
+        <field name="name">About 369 Mart</field>
+        <field name="slug">about</field>
+        <field name="column">company</field>
+        <field name="sequence">10</field>
+        <field name="summary">Computer parts and gear, in minutes or in days</field>
+        <field name="body" type="html"><p>369 Mart brings computer parts, accessories and gear to your door - Quick delivery in minutes from a store near you, and Express delivery in days from our warehouse.</p><p>Order on the website, the app or WhatsApp: one account, one set of orders, one wallet.</p></field>
+    </record>
+    <record id="page_careers" model="mart369.info.page">
+        <field name="name">Careers</field>
+        <field name="slug">careers</field>
+        <field name="column">company</field>
+        <field name="sequence">20</field>
+        <field name="summary">Work with us</field>
+        <field name="body" type="html"><p>We're always glad to hear from people who love technology and good service - in our stores, on delivery, and behind the scenes.</p><p>Write to us through the Contact page with a few lines about yourself.</p></field>
+    </record>
+    <record id="page_sell" model="mart369.info.page">
+        <field name="name">Sell on 369 Mart</field>
+        <field name="slug">sell</field>
+        <field name="column">company</field>
+        <field name="sequence">30</field>
+        <field name="summary">Brands and distributors</field>
+        <field name="body" type="html"><p>Are you a brand or distributor of computer parts and accessories? We'd like to hear from you.</p><p>Write to us through the Contact page with what you sell and where.</p></field>
+    </record>
+    <record id="page_press" model="mart369.info.page">
+        <field name="name">Press</field>
+        <field name="slug">press</field>
+        <field name="column">company</field>
+        <field name="sequence">40</field>
+        <field name="summary">For journalists</field>
+        <field name="body" type="html"><p>For press questions, write to us through the Contact page and we'll get back to you.</p></field>
+    </record>
+
+    <!-- ======================================================== Policies -->
+    <record id="page_terms" model="mart369.info.page">
+        <field name="name">Terms of use</field>
+        <field name="slug">terms</field>
+        <field name="column">policies</field>
+        <field name="sequence">10</field>
+        <field name="summary">The rules for using 369 Mart</field>
+        <field name="body" type="html"><p><b>Edit this page in Odoo before going live: 369 Mart &gt; Page building &gt; Info pages.</b></p><h2>Using 369 Mart</h2><p>By using the website, the app or WhatsApp ordering, you agree to these terms. Prices, offers and stock can change; the price you see at checkout is the price you pay.</p><h2>Your account</h2><p>Keep your sign-in to yourself. You are responsible for orders placed from your account.</p><h2>Orders</h2><p>An order is accepted when we confirm it. We may cancel an order we cannot fulfil, and refund anything you paid.</p></field>
+    </record>
+    <record id="page_privacy" model="mart369.info.page">
+        <field name="name">Privacy policy</field>
+        <field name="slug">privacy</field>
+        <field name="column">policies</field>
+        <field name="sequence">20</field>
+        <field name="summary">How we look after your data</field>
+        <field name="body" type="html"><p><b>Edit this page in Odoo before going live: 369 Mart &gt; Page building &gt; Info pages.</b></p><h2>What we keep</h2><p>Your name, mobile number, addresses and orders - what we need to deliver to you and to help when something goes wrong.</p><h2>What we never do</h2><p>We never sell your data. We share it only with the people who deliver your order and the payment provider who takes your payment.</p><h2>Your choices</h2><p>You can change your notification settings any time in Account &gt; Notifications, and ask us to delete your account through the Contact page.</p></field>
+    </record>
+    <record id="page_shipping" model="mart369.info.page">
+        <field name="name">Shipping policy</field>
+        <field name="slug">shipping-policy</field>
+        <field name="column">policies</field>
+        <field name="sequence">30</field>
+        <field name="summary">Delivery times and charges</field>
+        <field name="body" type="html"><ul><li><b>Quick</b> — from a store near you, in minutes, where Quick is available.</li><li><b>Express</b> — from our warehouse, in days.</li></ul><p>The delivery charge, if any, and the expected time are shown in your cart before you pay. See Delivery areas for where we deliver.</p></field>
+    </record>
+    <record id="page_grievance" model="mart369.info.page">
+        <field name="name">Grievance redressal</field>
+        <field name="slug">grievance</field>
+        <field name="column">policies</field>
+        <field name="sequence">40</field>
+        <field name="kind">contact</field>
+        <field name="summary">If something went wrong and isn't fixed</field>
+        <field name="body" type="html"><p>If a problem with an order hasn't been solved through the chat, write to our grievance officer at the email below with your order number. We'll acknowledge it within 48 hours and work to resolve it.</p></field>
+    </record>
+
+</odoo>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="mart369_pages.PagePreview">
+        <div class="o_mart369_desk o_mart369_page_preview">
+            <ShopFrame t-if="url" t-key="key" url="url"/>
+            <p t-else="" class="text-muted mt-3">Save the page to see it here as shoppers do.</p>
+        </div>
+    </t>
+
+</templates>

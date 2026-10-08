@@ -37,6 +37,7 @@ import { addressText } from "@/lib/address";
 import Logo from "@/components/Logo";
 import Bell from "./Bell";
 import { AllCategoriesPage, BuyAgainPage, CategoryPage, NotFoundView, OffersPage, SearchResults, SiteFooter } from "./Browse";
+import InfoPage from "./InfoPage";
 
 /* ---------- header ---------- */
 function ModeToggle({ mode, onMode, copy }) {
@@ -886,6 +887,8 @@ export default function Home({
     body = <main className="hm-wrap hm-view-browse" key="offers"><OffersPage {...common} /></main>;
   } else if (view === "buyagain") {
     body = <main className="hm-wrap hm-view-browse" key="buyagain"><BuyAgainPage {...common} orders={orders} /></main>;
+  } else if (view === "page") {
+    body = <main className="hm-wrap hm-view-browse" key={"page-" + route.param}><InfoPage slug={route.param} /></main>;
   } else if (view === "notfound") {
     body = <main className="hm-wrap hm-view-browse" key="nf"><NotFoundView /></main>;
   } else {

@@ -1,0 +1,3 @@
+// The page form uses the whole width, so the shop page on the right has room.
+.o_form_sheet_bg:has(.o_mart369_page_preview) .o_form_sheet { max-width: none; }
+.o_mart369_page_preview { position: sticky; top: 12px; }

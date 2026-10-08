@@ -1,6 +1,6 @@
 {
     'name': '369 Mart Suite',
-    'version': '19.0.1.0.0',
+    'version': '19.0.1.0.1',
     'category': 'Website',
     'summary': 'Installs every 369 Mart module in one go.',
     'description': """
@@ -34,6 +34,8 @@ options you want from the Apps list.
         'mart369_order',
         'mart369_account',
         'mart369_support',
+        # The footer's pages (Terms, Privacy, About, FAQs, Contact...).
+        'mart369_pages',
         # Brings the shop counter's Point of Sale and its loyalty card with it.
         'mart369_loyalty',
     ],
