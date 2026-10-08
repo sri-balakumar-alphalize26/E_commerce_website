@@ -78,7 +78,7 @@ class Mart369HomeAdminApi(http.Controller):
         'banner': ('kicker', 'name', 'note', 'tone', 'href', 'active',
                    'image_1920', 'text_on_image'),
         'tab': ('name', 'icon', 'active'),
-        'tile': ('name', 'route', 'active'),
+        'tile': ('name', 'route', 'active', 'image_1920'),
         'section': ('name', 'subtitle', 'view_all_route', 'active'),
     }
     BAND_MODEL = {
@@ -112,6 +112,9 @@ class Mart369HomeAdminApi(http.Controller):
                 continue
             value = band[field]
             out[field] = value if value else ''
+        if kind in ('tile', 'tab'):
+            # "Shows <category>'s logo" in the panel (mart369_catalog).
+            out['logo_from'] = band._builder_vals().get('logo_from', '')
         return out
 
     # ---------------------------------------------------------------- routes
@@ -507,9 +510,14 @@ class Mart369HomeAdminApi(http.Controller):
                 if field in ('active', 'text_on_image'):
                     values[field] = bool(value)
                 elif field == 'image_1920':
-                    # A banner's uploaded picture: checked, then stored as Odoo
-                    # stores any picture; false takes it off.
+                    # An uploaded picture: checked, then stored as Odoo stores
+                    # any picture; false takes it off.
                     values[field] = band._mart369_check_picture(value)
+                    if kind == 'tile':
+                        # Its own picture now; taken off, a tile linked to a
+                        # category wears that category's logo again.
+                        values['image_source'] = ('upload' if values[field]
+                                                  or not band.public_categ_id else 'category')
                 else:
                     values[field] = (value or '').strip()
         except UserError as exc:

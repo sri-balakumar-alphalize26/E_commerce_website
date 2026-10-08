@@ -156,6 +156,19 @@ class Mart369HomeTile(models.Model):
 
     # ------------------------------------------------------------- serialise
 
+    def _mart369_check_picture(self, value):
+        """An upload from the console, checked the way a banner's is."""
+        return self.env['mart369.home.banner']._mart369_check_picture(value)
+
+    def _mart369_picture_url(self):
+        """This tile's own uploaded picture (not a category's logo), with its
+        save time on the end so a replaced one is not served from cache."""
+        self.ensure_one()
+        if self.image_source != 'upload' or not self.image_1920:
+            return ''
+        stamp = int(self.write_date.timestamp()) if self.write_date else 0
+        return '%s?unique=%d' % (self._image_url('image_512', '512x512'), stamp)
+
     def _serialize(self):
         self.ensure_one()
         bg, ink = self._mart369_colours()
@@ -173,6 +186,9 @@ class Mart369HomeTile(models.Model):
             vals['t'] = self.badge
         if self.route:
             vals['route'] = self.route
+        if self.image_source == 'upload' and self.image_1920:
+            # An uploaded picture fills the tile edge to edge, like a logo.
+            vals['fill'] = True
         return vals
 
     def _can_return_content(self, field_name=None, access_token=None):

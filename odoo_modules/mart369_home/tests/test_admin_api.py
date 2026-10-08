@@ -253,6 +253,36 @@ class TestAdminRoutes(HttpCase):
         banner.invalidate_recordset()
         self.assertEqual(banner.key, before)
 
+    def test_a_tile_takes_its_own_picture_and_gives_it_back(self):
+        """Uploaded from the console like a banner's; it fills the tile on the
+        shop, and taking it off goes back to what the tile showed before."""
+        import base64
+        self.authenticate('admin', 'admin')
+        tile = self.mode.tile_ids[:1]
+        # A 1 x 1 PNG.
+        png = base64.b64encode(base64.b64decode(
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
+        )).decode()
+
+        def patch(body):
+            return self.url_open(
+                '/369mart/admin/home/bands/tile/%s' % tile.id, data=json.dumps(body),
+                headers={'Content-Type': 'application/json'}, method='PATCH')
+
+        response = patch({'image_1920': 'data:image/png;base64,' + png})
+        self.assertEqual(response.status_code, 200, response.text)
+        tile.invalidate_recordset()
+        self.assertEqual(tile.image_source, 'upload')
+        self.assertTrue(response.json()['band']['image_url'])
+        self.assertTrue(tile._serialize().get('fill'))
+
+        self.assertEqual(patch({'image_1920': 'not a picture'}).status_code, 400)
+
+        self.assertEqual(patch({'image_1920': False}).status_code, 200)
+        tile.invalidate_recordset()
+        self.assertFalse(tile.image_1920)
+        self.assertEqual(tile.image_source, 'category' if tile.public_categ_id else 'upload')
+
     # ------------------------------------------------------------ adding
 
     def test_a_new_band_lands_on_the_page_it_was_asked_for(self):

@@ -1,9 +1,10 @@
 "use client";
-/* A banner's own picture, for the home page editor's side panel.
+/* A banner's or a category tile's own picture, for the home page editor's
+   side panel.
 
-   Upload, Replace, Remove. A home banner is 5:2 (1600 x 640): a picture
-   already that shape goes straight in, shrunk to 1600 wide; any other shape
-   opens "Position your picture" - drag to move it, the slider to zoom, and
+   Upload, Replace, Remove. A home banner is 5:2 (1600 x 640), a tile square
+   (512 x 512): a picture already that shape goes straight in, shrunk to size;
+   any other shape opens "Position your picture" - drag to move it, the slider to zoom, and
    what is inside the frame is what the shop shows. It is saved as a JPEG, so
    a phone photo of several MB arrives as a few hundred KB.
 
@@ -12,7 +13,6 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Icon } from "./AdminUI";
 
-const OUT_W = 1600, OUT_H = 640, RATIO = OUT_W / OUT_H;
 const TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_FILE = 15 * 1024 * 1024;
 
@@ -26,24 +26,27 @@ function loadImage(file) {
   });
 }
 
-/* Draw the picture into the 1600 x 640 banner and hand back a JPEG data URL.
-   `place` is where the picture sits in a frame `frameW` wide. */
-function render(img, place, frameW) {
-  const k = OUT_W / frameW;
+/* Draw the picture into an `out` sized frame ({w, h}: 1600 x 640 for a
+   banner) and hand back a JPEG data URL. `place` is where the picture sits in
+   a frame `frameW` wide. */
+function render(img, place, frameW, out) {
+  const k = out.w / frameW;
   const canvas = document.createElement("canvas");
-  canvas.width = OUT_W;
-  canvas.height = OUT_H;
+  canvas.width = out.w;
+  canvas.height = out.h;
   const ctx = canvas.getContext("2d");
   ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, OUT_W, OUT_H);
+  ctx.fillRect(0, 0, out.w, out.h);
   ctx.imageSmoothingQuality = "high";
   ctx.drawImage(img, place.x * k, place.y * k, place.w * k, place.h * k);
   return canvas.toDataURL("image/jpeg", 0.88);
 }
 
-function Cropper({ img, onCancel, onDone }) {
+function Cropper({ img, out, onCancel, onDone }) {
   const frame = useRef(null);
-  const [frameW, setFrameW] = useState(720);
+  const RATIO = out.w / out.h;
+  /* A square frame as wide as a banner's would not fit the screen. */
+  const [frameW, setFrameW] = useState(RATIO < 1.5 ? 420 : 720);
   const frameH = frameW / RATIO;
   const iw = img.naturalWidth, ih = img.naturalHeight;
   /* Zoom 1 = the picture covers the frame; below 1 shows all of it (white
@@ -83,7 +86,7 @@ function Cropper({ img, onCancel, onDone }) {
           <div><h3>Position your picture</h3><p>Drag it to move, use the slider to zoom. What is inside the frame is what shoppers see.</p></div>
           <button className="bp-x" onClick={onCancel} aria-label="Cancel"><Icon n="x" size={18} /></button>
         </header>
-        <div className="bp-frame" ref={frame}
+        <div className={"bp-frame" + (RATIO < 1.5 ? " bp-frame-sq" : "")} ref={frame}
           onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); drag.current = { x: e.clientX - at.x, y: e.clientY - at.y }; }}
           onPointerMove={(e) => drag.current && setPos(clamp(e.clientX - drag.current.x, e.clientY - drag.current.y))}
           onPointerUp={() => { drag.current = null; }} onPointerCancel={() => { drag.current = null; }}
@@ -97,10 +100,10 @@ function Cropper({ img, onCancel, onDone }) {
           </label>
           <button className="ad-btn" onClick={() => zoomTo(1)} disabled={Math.abs(zoom - 1) < 0.001}>Fill the frame</button>
         </div>
-        {iw < 1000 && <p className="bp-warn"><Icon n="info" size={14} />This picture is small ({iw} × {ih}). It may look blurry on big screens; 1600 × 640 looks sharpest.</p>}
+        {iw < out.w * 0.6 && <p className="bp-warn"><Icon n="info" size={14} />This picture is small ({iw} × {ih}). It may look blurry on big screens; {out.w} × {out.h} looks sharpest.</p>}
         <footer className="bp-foot">
           <button className="ad-btn" onClick={onCancel}>Cancel</button>
-          <button className="ad-btn ad-primary" onClick={() => onDone(render(img, { x: at.x, y: at.y, w, h }, frameW))}>Use this picture</button>
+          <button className="ad-btn ad-primary" onClick={() => onDone(render(img, { x: at.x, y: at.y, w, h }, frameW, out))}>Use this picture</button>
         </footer>
       </div>
     </div>,
@@ -108,8 +111,12 @@ function Cropper({ img, onCancel, onDone }) {
   );
 }
 
-export default function BannerPicture({ url, tone = "green", onPick, onRemove }) {
+/* `out` is the saved size: a banner's 1600 x 640 unless told otherwise (a
+   tile passes 512 x 512). `note` replaces the line under an empty preview. */
+export default function BannerPicture({ url, tone = "green", onPick, onRemove,
+  out = { w: 1600, h: 640 }, note = "No picture yet - the banner shows its colour and drawings.", square = false }) {
   const input = useRef(null);
+  const RATIO = out.w / out.h;
   const [crop, setCrop] = useState(null); /* {img, url} */
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -125,7 +132,7 @@ export default function BannerPicture({ url, tone = "green", onPick, onRemove })
       const ratio = loaded.img.naturalWidth / loaded.img.naturalHeight;
       if (Math.abs(ratio - RATIO) / RATIO < 0.02) {
         /* Already the banner's shape: straight in. */
-        onPick(render(loaded.img, { x: 0, y: 0, w: 720, h: 288 }, 720));
+        onPick(render(loaded.img, { x: 0, y: 0, w: 720, h: 720 / RATIO }, 720, out));
         URL.revokeObjectURL(loaded.url);
       } else {
         setCrop(loaded);
@@ -140,8 +147,8 @@ export default function BannerPicture({ url, tone = "green", onPick, onRemove })
 
   return (
     <div className="bp">
-      <div className={"bp-preview hm-tone-" + tone}>
-        {url ? <img src={url} alt="This banner's picture" /> : <span>No picture yet - the banner shows its colour and drawings.</span>}
+      <div className={"bp-preview hm-tone-" + tone + (square ? " bp-square" : "")}>
+        {url ? <img src={url} alt="The picture" /> : <span>{note}</span>}
       </div>
       <div className="bp-actions">
         <button type="button" className="ad-btn" disabled={busy} onClick={() => input.current?.click()}>
@@ -150,9 +157,9 @@ export default function BannerPicture({ url, tone = "green", onPick, onRemove })
         {url && <button type="button" className="ad-btn" onClick={onRemove}>Remove picture</button>}
         <input ref={input} type="file" accept={TYPES.join(",")} hidden onChange={(e) => { pick(e.target.files?.[0]); e.target.value = ""; }} />
       </div>
-      <em className="pe-hint">Best size 1600 × 640. Any picture works - you can position it after picking.</em>
+      <em className="pe-hint">Best size {out.w} × {out.h}. Any picture works - you can position it after picking.</em>
       {error && <em className="pe-hint bp-error" role="alert">{error}</em>}
-      {crop && <Cropper img={crop.img} onCancel={close} onDone={(dataUrl) => { close(); onPick(dataUrl); }} />}
+      {crop && <Cropper img={crop.img} out={out} onCancel={close} onDone={(dataUrl) => { close(); onPick(dataUrl); }} />}
     </div>
   );
 }

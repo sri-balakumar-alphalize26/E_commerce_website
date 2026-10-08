@@ -573,7 +573,7 @@
                             <div class="mart-field"><label>Opens</label><input type="text" t-att-value="b.href" placeholder="e.g. /category/fruits-vegetables" t-on-input="(ev) => this.onField('mart369.home.banner', b, 'href', ev)"/></div>
                         </div>
                         <div class="mart-field">
-                            <label>Picture (1200 × 480 works best)</label>
+                            <label>Picture (1600 × 640, 5 : 2, works best)</label>
                             <div class="mart-upload">
                                 <span class="mart-upload-prev" t-att-style="b.image_url ? bannerStyle(b) : toneStyle(b.tone)"/>
                                 <label class="mart-btn mart-btn-sm">Upload<input type="file" accept="image/*" t-on-change="(ev) => this.onUpload('mart369.home.banner', b, ev)"/></label>

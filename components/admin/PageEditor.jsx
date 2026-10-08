@@ -53,6 +53,8 @@ const KINDS = {
      "switch" an on/off. */
   banner: {
     group: "banners", src: "banners", title: "Banner", short: "Banner",
+    /* The picture's size, shown at the top of the panel. */
+    picture: { w: 1600, h: 640, shape: "5 : 2, wide" },
     fields: [
       ["image_1920", "Picture", "", null, "picture"],
       ["text_on_image", "Show text on the picture", "Off: just your picture - for a design that already has its own words. On: the lines below and Shop now are drawn over it.", null, "switch"],
@@ -65,7 +67,9 @@ const KINDS = {
   },
   tile: {
     group: "categories", src: "tiles", title: "Category tile", short: "Tile",
+    picture: { w: 512, h: 512, shape: "square" },
     fields: [
+      ["image_1920", "Picture", "", null, "picture"],
       ["name", "Label", ""],
       ["route", "Link", "The category it opens", "routes"],
     ],
@@ -338,6 +342,14 @@ function Panel({ selected, vals, vocab, onField, onToggle, onRemove, busy,
         </label>
       </header>
 
+      {spec.picture ? (
+        <p className="pe-size"><Icon n="camera" size={14} />
+          <span>Picture: <b>{spec.picture.w} × {spec.picture.h} px</b> · {spec.picture.shape}</span>
+        </p>
+      ) : (
+        <p className="pe-size pe-size-none"><Icon n="info" size={14} /><span>No picture here - words only.</span></p>
+      )}
+
       <div className="ad-form pe-form">
         {spec.fields.map(([field, label, hint, vocabKey, type]) => {
           const set = (value) => onField(selected.kind, selected.id, field, value);
@@ -347,7 +359,12 @@ function Panel({ selected, vals, vocab, onField, onToggle, onRemove, busy,
             return (
               <div key={field} className="ad-field ad-span2">
                 <span>{label}</span>
-                <BannerPicture url={picture} tone={vals.tone} onPick={set} onRemove={() => set(false)} />
+                {selected.kind === "tile" ? (
+                  <BannerPicture url={picture} out={spec.picture} square onPick={set} onRemove={() => set(false)}
+                    note={vals.logo_from ? `Shows ${vals.logo_from}'s logo. Upload one to use your own here.` : "No picture yet - the tile shows its drawing."} />
+                ) : (
+                  <BannerPicture url={picture} out={spec.picture} tone={vals.tone} onPick={set} onRemove={() => set(false)} />
+                )}
               </div>
             );
           }
@@ -549,7 +566,7 @@ export default function PageEditor({ pageId }) {
   const PREVIEW_FIELD = {
     banner: { name: "title", kicker: "kicker", note: "note", tone: "tone", href: "href",
       image_1920: "image", text_on_image: "textOnImage" },
-    tile: { name: "label", route: "route" },
+    tile: { name: "label", route: "route", image_1920: "image" },
     tab: { name: "label", icon: "icon" },
     section: { name: "title", subtitle: "subtitle", view_all_route: "route" },
   };
@@ -564,7 +581,9 @@ export default function PageEditor({ pageId }) {
   const onField = (kind, id, field, value) => {
     setVals((v) => ({ ...v, [uid(kind, id)]: { ...v[uid(kind, id)], [field]: value } }));
     const mapped = PREVIEW_FIELD[kind]?.[field];
-    if (mapped) patchPreview(kind, id, { [mapped]: value || (field === "image_1920" ? "" : value) });
+    if (mapped) patchPreview(kind, id, { [mapped]: value || (field === "image_1920" ? "" : value),
+      /* An uploaded tile picture fills the tile edge to edge, as on the shop. */
+      ...(kind === "tile" && field === "image_1920" && value ? { fill: true } : {}) });
     /* A picture is saved at once, not after the typing pause: it is one
        deliberate act, and a big one to lose. */
     save.queue(uid(kind, id), `/admin/home/bands/${kind}/${id}`, { [field]: value },

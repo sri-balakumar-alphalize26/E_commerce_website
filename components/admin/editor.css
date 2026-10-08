@@ -322,3 +322,11 @@
 .pe-trash-tile { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .pe-trash-tab .hm-tabs-bar, .pe-trash-tab .hm-wrap { display: contents; }
 .pe-trash-gone { margin: 0; padding: 10px 2px; font-size: 12.5px; color: var(--ad-muted); }
+
+/* A category tile's picture is square: a smaller preview, a square frame. */
+.bp-preview.bp-square { aspect-ratio: 1; max-width: 168px; background: #f1f4f6; color: var(--ad-muted); }
+.bp-frame-sq { width: min(420px, 100%); margin-inline: auto; }
+/* The size a picture should be, at the top of every panel. */
+.pe-size { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; padding: 8px 12px; border-radius: 10px; background: #eef6fa; color: #0b4a6e; font-size: 13px; }
+.pe-size b { font-variant-numeric: tabular-nums; }
+.pe-size.pe-size-none { background: #f3f5f7; color: var(--ad-muted); }
