@@ -360,10 +360,14 @@ function VariantPicker({ p, variants, attrs, cart, onVariant }) {
     <div className="pd-vars">
       {attrs.map((a) => {
         const current = a.values.find((v) => v.id === combo[a.id]);
+        /* A colour (display "color", or an attribute called Colour) draws
+           cards when its colours have pictures of their own. */
+        const cards = (a.display === "color" || /^colou?r$/i.test(a.name || ""))
+          && variants.some((x) => x.images?.length);
         return (
           <div className="pd-sizes pd-var" key={a.id}>
             <span className="pd-sizes-label">{a.name}: <b key={current?.id}>{current?.name || "Choose"}</b></span>
-            <div className="pd-var-row" role="radiogroup" aria-label={a.name}>
+            <div className={cards ? "pd-var-row pd-var-cards" : "pd-var-row"} role="radiogroup" aria-label={a.name}>
               {a.values.map((v) => {
                 const on = v.id === combo[a.id];
                 const there = exists(a.id, v.id);
@@ -374,6 +378,24 @@ function VariantPicker({ p, variants, attrs, cart, onVariant }) {
                    one without a colour stays a named button. */
                 const swatch = a.display === "color" && v.color;
                 const tip = !there ? `${v.name}: not with these choices` : oos ? `${v.name}: out of stock` : v.name;
+                if (cards) {
+                  /* Amazon's colour cards: that colour's own picture and price. */
+                  const shown = match || variants.find((x) => x.combo?.[a.id] === v.id);
+                  const pic = shown?.images?.[0];
+                  return (
+                    <button key={v.id} role="radio" aria-checked={on} title={tip}
+                      className={"pd-var-card" + (on ? " pd-on" : "") + (!there ? " pd-var-none" : "") + (oos ? " pd-size-oos" : "")}
+                      onClick={() => pick(a.id, v.id)}>
+                      <span className="pd-var-card-img">
+                        {pic ? <img src={pic} alt="" loading="lazy" />
+                          : <i className="pd-swatch-dot" style={{ background: v.color || "#e8edf1" }} aria-hidden="true" />}
+                      </span>
+                      <span className="pd-var-card-name">{v.name}</span>
+                      {shown?.price != null && <b className="pd-var-card-price">{money(shown.price)}</b>}
+                      {on && cart[p.id] ? <i className="pd-size-in" aria-label={`${cart[p.id]} in cart`}>{cart[p.id]}</i> : null}
+                    </button>
+                  );
+                }
                 return (
                   <button key={v.id} role="radio" aria-checked={on} aria-label={swatch ? tip : undefined}
                     className={"pd-var-opt" + (on ? " pd-on" : "") + (!there ? " pd-var-none" : "") + (oos ? " pd-size-oos" : "") + (swatch ? " pd-var-swatch" + (isLight(v.color) ? " pd-swatch-light" : "") : "")}
@@ -392,6 +414,42 @@ function VariantPicker({ p, variants, attrs, cart, onVariant }) {
   );
 }
 
+/* The short table under the options: the product's own Product details,
+   then the chosen variant's specs - a variant row with the same label wins,
+   so "Colour" follows the colour picked. */
+function keyDetails(rows, specs) {
+  const out = new Map((rows || []).map(([k, v]) => [k, v]));
+  Object.entries(specs || {}).forEach(([k, v]) => { if (v) out.set(k, v); });
+  return [...out.entries()];
+}
+
+function KeyDetails({ rows }) {
+  if (!rows.length) return null;
+  return (
+    <table className="pd-keys">
+      <tbody>{rows.slice(0, 6).map(([k, v]) => <tr key={k}><th scope="row">{k}</th><td>{v}</td></tr>)}</tbody>
+    </table>
+  );
+}
+
+/* "About this item": the bold lead, then the rest. Five, then Show more. */
+function AboutItem({ points }) {
+  const [all, setAll] = useState(false);
+  if (!points.length) return null;
+  const shown = all ? points : points.slice(0, 5);
+  return (
+    <section className="pd-about" aria-labelledby="pd-about-h">
+      <h2 id="pd-about-h">About this item</h2>
+      <ul>{shown.map((pt, k) => <li key={k}>{pt.lead ? <><b>{pt.lead}</b> — </> : null}{pt.text}</li>)}</ul>
+      {points.length > 5 && (
+        <button className="pd-link pd-about-more" onClick={() => setAll((v) => !v)} aria-expanded={all}>
+          {all ? "Show less" : `Show more (${points.length - 5})`}<Icon n="chev" size={14} className={all ? "pd-chev pd-up" : "pd-chev"} />
+        </button>
+      )}
+    </section>
+  );
+}
+
 /* ₹ per kg / L when the size says so — helps compare packs */
 function unitPrice(v) {
   const m = String(v.size || "").match(/^([\d.]+)\s*(kg|g|L|ml)$/i);
@@ -405,7 +463,7 @@ function unitPrice(v) {
 export default function ProductDetail({
   p, cart, setQty, address, onBack, onChangeAddress, onExplore, fromRect,
   related = [], variants = [], attrs = [], onVariant, bundle = [], similar = [], recent = [], onViewSimilar, onEditReview,
-  optionsFailed = false, onRetryOptions, reviewInfo, info,
+  optionsFailed = false, onRetryOptions, reviewInfo, info, about = [], details = [],
 }) {
   /* Every product shows what its setup holds, as the WhatsApp confirmation
      page does: its photos, the Variant specs table and the Sales Description
@@ -533,6 +591,9 @@ export default function ProductDetail({
                 </div>
               )}
             </div>
+
+            <KeyDetails rows={keyDetails(details, p.specs)} />
+            <AboutItem points={about || []} />
 
             {hasDetails && <>
             <button className={"pd-toggle" + (showAll ? " pd-on" : "")} onClick={() => setShowAll((v) => !v)} aria-expanded={showAll}>
