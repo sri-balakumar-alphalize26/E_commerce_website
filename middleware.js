@@ -78,4 +78,4 @@ function toSignIn(req, page) {
 
 /* Every page path (the console's address can be any word), but never the
    app's own files, images or API routes. */
-export const config = { matcher: ["/((?!_next/|api/|web/|369mart/|brand/|fonts/|images/|favicon|icon|robots).*)"] };
+export const config = { matcher: ["/((?!_next/|api/|web/|369mart/|brand/|fonts/|images/|sw\\.js|favicon|icon|robots).*)"] };

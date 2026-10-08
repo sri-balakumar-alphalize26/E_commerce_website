@@ -10,3 +10,4 @@ from . import test_rewards_admin
 from . import test_notices_admin
 from . import test_review_features
 from . import test_review_console_routes
+from . import test_push

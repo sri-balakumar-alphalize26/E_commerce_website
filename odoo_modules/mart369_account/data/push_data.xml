@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- The shop's pop-up signing key (models/push.py), made once on install.
+         Safe on every upgrade: an existing key is kept, because a new one
+         would cut off every browser already signed up. -->
+    <function model="mart369.push" name="_mart369_vapid"/>
+</odoo>

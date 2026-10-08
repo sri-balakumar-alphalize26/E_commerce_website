@@ -19,8 +19,8 @@ import { useAction, useResource } from "@/lib/useFetch";
 
    `send` posts to whichever route does the writing, then re-reads this one:
    the reply is the record, and nothing is patched locally to look like it. */
-export function useRemote(path, { enabled = true } = {}) {
-  const { data, loading, error, reload } = useResource(path, { enabled });
+export function useRemote(path, { enabled = true, pollMs = 0 } = {}) {
+  const { data, loading, error, reload } = useResource(path, { enabled, pollMs, keepLast: pollMs > 0 });
   const act = useAction();
   const send = useCallback(
     (to, options) =>

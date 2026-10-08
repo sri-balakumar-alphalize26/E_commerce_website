@@ -27,6 +27,7 @@ import { EARN_WHEN, pointsText } from "./points";
 import {
   REFER_GOAL, STAR_WORDS, ago, fmtDate, fmtDateTime, useRemote,
 } from "./accountStore";
+import { testPush, usePush } from "@/lib/push";
 
 const reduced = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -714,15 +715,16 @@ const NOTE_IC = { order: "box", offer: "pct", wallet: "wallet" };
    row per order made up here from the order's status - so a "your order is on
    the way" that the warehouse had never sent, and a read mark no other device
    would ever see. `orders` is kept as an argument because the feed is worth
-   re-reading when they change. */
-export function useNotifications(orders) {
-  const { data, send, reload } = useRemote("/notifications");
+   re-reading when they change. `pollMs` keeps the header's bell current while
+   the page is open (paused while the tab is hidden). */
+export function useNotifications(orders, { enabled = true, pollMs = 0 } = {}) {
+  const { data, send, reload } = useRemote("/notifications", { enabled, pollMs });
   const all = useMemo(() => data?.notifications || [], [data]);
   const read = useMemo(() => all.filter((n) => n.read).map((n) => n.id), [all]);
   const unread = all.filter((n) => !n.read).length;
   const count = orders?.length ?? 0;
-  useEffect(() => { reload(); }, [count]); // eslint-disable-line
-  return { all, st: { read, dismissed: [] }, send, prefs: data?.prefs || null, unread };
+  useEffect(() => { if (enabled) reload(); }, [count]); // eslint-disable-line
+  return { all, st: { read, dismissed: [] }, send, reload, prefs: data?.prefs || null, unread };
 }
 
 function NoteRow({ n, unread, now, i, onOpen, onDismiss }) {
@@ -772,6 +774,47 @@ const PREFS = [
   ["sms", "SMS", "Delivery OTP and critical alerts", "phone"],
 ];
 
+/* Pop-ups in this browser (lib/push.js). Unlike the rows below it is not a
+   setting on the account - it is this device saying yes or no, so it lives in
+   the browser and the switch reads the browser. */
+function PushPref() {
+  const push = usePush(true);
+  const [test, setTest] = useState(null);
+  if (push.state === null || push.state === "unsupported") {
+    return push.state === "unsupported" ? (
+      <div className="ax-pref">
+        <span className="ax-pref-ic"><Icon n="bell" size={17} /></span>
+        <span className="ax-pref-txt"><b>Pop-ups on this device</b><small>This browser can&apos;t show them. On iPhone, add 369 Mart to your Home Screen first.</small></span>
+      </div>
+    ) : null;
+  }
+  const sendTest = async () => {
+    setTest("sending");
+    try { const r = await testPush(); setTest(r?.sent ? "sent" : "failed"); } catch (e) { setTest("failed"); }
+  };
+  return (
+    <div className="ax-pref">
+      <span className="ax-pref-ic"><Icon n="bell" size={17} /></span>
+      <span className="ax-pref-txt">
+        <b>Pop-ups on this device</b>
+        <small>
+          {push.state === "denied" ? "Blocked in this browser's settings - allow notifications for this site to turn them on."
+            : push.state === "on" ? "Order updates pop up here, even when the site is closed."
+            : "Get order updates as pop-ups, even when the site is closed."}
+        </small>
+        {push.error && <small className="ax-err">{push.error}</small>}
+        {push.state === "on" && (
+          <button className="ac-link ax-pushtest" disabled={test === "sending"} onClick={sendTest}>
+            {test === "sending" ? "Sending…" : test === "sent" ? "Sent - check your pop-ups" : test === "failed" ? "Didn't arrive - try again" : "Send a test"}
+          </button>
+        )}
+      </span>
+      <Switch on={push.state === "on"} disabled={push.busy || push.state === "denied"} label="Pop-ups on this device"
+        onChange={(v) => (v ? push.turnOn() : push.turnOff())} />
+    </div>
+  );
+}
+
 export function NotifsSec({ orders, onNav, goSection }) {
   const { all, st, send, prefs, unread } = useNotifications(orders);
   const [tab, setTab] = useState("all");
@@ -814,6 +857,7 @@ export function NotifsSec({ orders, onNav, goSection }) {
       <section className="ac-card ax-block" style={{ "--i": 1 }}>
         <div className="ac-card-head"><div><h3>Notification preferences</h3><p>Choose what we send and where.</p></div>{saved > 0 && <span className="ac-saved-tag" key={saved}><Icon n="check" size={14} />Saved</span>}</div>
         <div className="ax-prefs">
+          <PushPref />
           {PREFS.map(([k, t, d, ic, locked], i) => (
             <div key={k} className="ax-pref" style={{ "--i": i }}>
               <span className="ax-pref-ic"><Icon n={ic} size={17} /></span>

@@ -272,6 +272,46 @@ class Mart369AccountApi(http.Controller):
     def prefs(self, **kwargs):
         return self._json({'ok': True, 'prefs': self._me()._mart369_write_prefs(self._body())})
 
+    # ---------------------------------------------------------------- pop-ups
+    # The browser side is public/sw.js and lib/push.js in the storefront.
+
+    @http.route('/369mart/push/key', **_GET)
+    def push_key(self, **kwargs):
+        """The shop's public key, which a browser needs to sign up."""
+        return self._json({'ok': True, 'key': request.env['mart369.push']._mart369_public_key()})
+
+    @http.route('/369mart/push/subscribe', **_POST)
+    def push_subscribe(self, **kwargs):
+        """This browser, for this customer: {endpoint, keys: {p256dh, auth}}."""
+        row = request.env['mart369.push']._mart369_subscribe(
+            self._me(), self._body(), device=request.httprequest.headers.get('User-Agent'))
+        if not row:
+            return self._fail('That is not a browser pop-up address.', 'endpoint')
+        return self._json({'ok': True}, status=201)
+
+    @http.route('/369mart/push/unsubscribe', **_POST)
+    def push_unsubscribe(self, **kwargs):
+        request.env['mart369.push']._mart369_unsubscribe(
+            self._me(), self._body().get('endpoint'))
+        return self._json({'ok': True})
+
+    @http.route('/369mart/push/test', **_POST)
+    def push_test(self, **kwargs):
+        """A pop-up to every browser this customer turned them on in, now -
+        "did it work?" answered on the spot rather than at the next order."""
+        push = request.env['mart369.push']
+        jobs = push._mart369_jobs(self._me(), {
+            'id': 'n-push-test',
+            'title': '369 Mart pop-ups are on',
+            'body': "You'll see your order updates here, even with the shop closed.",
+            'url': '/account/notifications',
+        })
+        if not jobs:
+            return self._fail('Pop-ups are not turned on in any browser yet.', status=404)
+        results = push._mart369_deliver(jobs)
+        sent = sum(1 for r in results.values() if r == 'sent')
+        return self._json({'ok': bool(sent), 'sent': sent, 'devices': len(jobs)})
+
     # -------------------------------------------------------------- referrals
 
     @http.route('/369mart/referrals', **_GET)

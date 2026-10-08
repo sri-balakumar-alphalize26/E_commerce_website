@@ -35,6 +35,7 @@ import { setCurrency, useCurrency } from "@/lib/money";
 import { ApiError, api } from "@/lib/api";
 import { addressText } from "@/lib/address";
 import Logo from "@/components/Logo";
+import Bell from "./Bell";
 import { AllCategoriesPage, BuyAgainPage, CategoryPage, NotFoundView, OffersPage, SearchResults, SiteFooter } from "./Browse";
 
 /* ---------- header ---------- */
@@ -67,7 +68,7 @@ function ModeToggle({ mode, onMode, copy }) {
   );
 }
 
-function StoreHeader({ unread = 0, count, mode, onMode, modeText, onCart, onAccount, address, onLoc, locOpen, onSearch, onHome, onOffers, onBuyAgain, route, query }) {
+function StoreHeader({ unread = 0, notes, onNav, count, mode, onMode, modeText, onCart, onAccount, address, onLoc, locOpen, onSearch, onHome, onOffers, onBuyAgain, route, query }) {
   const [scrolled, setScrolled] = useState(false);
   const [w, setW] = useState(0);
   useEffect(() => {
@@ -105,11 +106,13 @@ function StoreHeader({ unread = 0, count, mode, onMode, modeText, onCart, onAcco
         <nav className="hm-icons" aria-label="Account">
           <button className={"hm-iconbtn hm-hide-sm" + (route === "offers" ? " hm-iconbtn-on" : "")} aria-label="Offers" title="Offers & coupons" onClick={onOffers}><Icon n="pct" /></button>
           <button className={"hm-iconbtn hm-hide-sm" + (route === "buyagain" ? " hm-iconbtn-on" : "")} aria-label="Buy again" title="Buy again" onClick={onBuyAgain}><Icon n="reorder" /></button>
+          {notes && <Bell notes={notes} onGo={([v, p]) => v && onNav(v, p ?? null)} onSeeAll={() => onNav("account", "notifications")} />}
           <button className="hm-iconbtn" id="hm-cart-icon" onClick={onCart} aria-label={`Cart, ${count} items`}>
             <Icon n="cart" />
             {count > 0 && <span key={count} className="hm-badge">{count}</span>}
           </button>
-          <button className="hm-avatar" aria-label={unread ? `Account, ${unread} unread notifications` : "Account"} onClick={onAccount}><Icon n="user" size={18} />{unread > 0 && <i className="ax-avatar-dot" key={unread} />}</button>
+          {/* The bell carries the count when it is there; the dot is for when it is not. */}
+          <button className="hm-avatar" aria-label={unread ? `Account, ${unread} unread notifications` : "Account"} onClick={onAccount}><Icon n="user" size={18} />{unread > 0 && !notes && <i className="ax-avatar-dot" key={unread} />}</button>
         </nav>
       </div>
     </header>
@@ -582,7 +585,9 @@ export default function Home({
   /* A refund is the shop crediting the wallet, so there is nothing to add up
      here - only the ledger to read again once it has. */
   const walletMove = () => reloadWallet();
-  const { unread } = useNotifications(orders);
+  /* The bell's feed: only for someone signed in, re-read each minute. */
+  const notes = useNotifications(orders, { enabled: !!me, pollMs: 60000 });
+  const { unread } = notes;
   /* The order is the shop's now; there is nothing to keep here but the
      knowledge that the basket it came from is spent. */
   const orderPlaced = (o) => {
@@ -856,7 +861,7 @@ export default function Home({
     <WishContext.Provider value={wish}>
     <OpenContext.Provider value={openProduct}>
     <div className={"hm-page" + (count > 0 && browsing ? " hm-has-cart" : "") + (view !== "home" ? " hm-in-cart" : "") + " hm-at-" + view} data-mode={mode}>
-      <StoreHeader unread={unread} count={count} mode={mode} onMode={switchMode} modeText={modeText} onCart={() => nav("cart")} onAccount={onAccount || (() => nav("account"))}
+      <StoreHeader unread={unread} notes={me ? notes : null} onNav={nav} count={count} mode={mode} onMode={switchMode} modeText={modeText} onCart={() => nav("cart")} onAccount={onAccount || (() => nav("account"))}
         onHome={() => nav("home")} onOffers={() => nav("offers")} onBuyAgain={() => nav("buyagain")} route={view} query={view === "search" ? route.param || "" : ""}
         onSearch={() => { onSearch?.(); setSearchOpen(true); }} address={address} locOpen={locOpen} onLoc={() => setLocOpen(true)} />
       {withTabs && <Tabs key={"t" + mode} tabs={tabs} active={activeTab} onChange={pickTab} />}

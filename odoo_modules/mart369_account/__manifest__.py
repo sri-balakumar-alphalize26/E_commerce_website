@@ -1,6 +1,6 @@
 {
     'name': '369 Mart Account',
-    'version': '19.0.1.4.0',
+    'version': '19.0.1.5.0',
     'category': 'Website',
     'summary': "The customer's own things - profile, reviews, notifications, "
                "referrals, wishlist and rewards.",
@@ -20,7 +20,8 @@ This module gives each of them a record:
 * **Reviews** - real `rating.rating` on the product, with a verified-purchase
   check against what the customer actually bought;
 * **Notifications** - built from the customer's real orders, with what they have
-  read remembered;
+  read remembered, and a pop-up on their phone or computer at every step of an
+  order once they turn pop-ups on (browser Web Push);
 * **Referrals** - a code that is unique and stays the same, and invites that
   really move from invited to joined to ordered;
 * **Wishlist** - Odoo's own `product.wishlist`;
@@ -40,6 +41,7 @@ Operators work these in **369 Mart -> Reviews**, **Referrals** and **Rewards**.
     'data': [
         'security/ir.model.access.csv',
         'data/account_data.xml',
+        'data/push_data.xml',
         # Seeds once and guards itself, so it is safe on every upgrade - see
         # the file's own comment.
         'views/review_views.xml',

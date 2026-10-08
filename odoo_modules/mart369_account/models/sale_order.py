@@ -10,6 +10,9 @@ same step.
   their first order, the inviter is paid.
 * **delivered** - a scratch card is minted. The app never minted one, which is
   why every customer's rewards screen showed the same four cards forever.
+
+And every step sends a pop-up to the browsers the customer turned them on in
+(push.py).
 """
 
 import logging
@@ -37,4 +40,10 @@ class SaleOrder(models.Model):
             # is the thing that must not be lost.
             _logger.exception(
                 'mart369: rewarding %s on %s failed', self.mart369_ref, state)
+        try:
+            # A pop-up on the customer's phone or computer (push.py).
+            self.env['mart369.push']._mart369_on_order_step(self, state)
+        except Exception:  # noqa: BLE001
+            _logger.exception(
+                'mart369: pop-up for %s on %s failed', self.mart369_ref, state)
         return moved

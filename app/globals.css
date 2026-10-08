@@ -11,6 +11,7 @@
 @import "../components/home/track.css";
 @import "../components/home/acx.css";
 @import "../components/home/bot.css";
+@import "../components/home/bell.css";
 @import "../components/signin/signin.css";
 
 *, *::before, *::after { box-sizing: border-box; }
