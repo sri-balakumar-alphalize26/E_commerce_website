@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_mart369_footer_form" model="ir.ui.view">
+        <field name="name">mart369.config.footer</field>
+        <field name="model">mart369.config</field>
+        <field name="priority">90</field>
+        <field name="arch" type="xml">
+            <form string="Footer">
+                <sheet>
+                    <div class="oe_title"><h1>Footer</h1></div>
+                    <div class="text-muted mb-3">
+                        The strip at the foot of every shop page. Its Help, Company and Policies
+                        links are the Info pages (369 Mart &gt; Page building &gt; Info pages).
+                    </div>
+                    <group string="Brand">
+                        <field name="footer_tagline"/>
+                        <field name="footer_android_url" placeholder="https://play.google.com/store/apps/..."/>
+                        <field name="footer_ios_url" placeholder="https://apps.apple.com/..."/>
+                    </group>
+                    <group string="Shop column">
+                        <field name="footer_category_count"/>
+                        <div colspan="2" class="text-muted small">
+                            To choose the categories yourself, tick "In footer" in
+                            369 Mart &gt; Catalogue &gt; Categories and drag them into order.
+                        </div>
+                    </group>
+                    <group string="We accept">
+                        <field name="footer_payments" nolabel="1" colspan="2"
+                               placeholder="UPI&#10;Credit &amp; debit cards&#10;Cash on delivery"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_mart369_footer" model="ir.actions.server">
+        <field name="name">Footer</field>
+        <field name="model_id" ref="mart369.model_mart369_config"/>
+        <field name="state">code</field>
+        <field name="code">action = model.mart369_action_footer()</field>
+    </record>
+
+    <menuitem id="menu_mart369_footer"
+              name="Footer"
+              parent="mart369.menu_mart369_pages"
+              action="action_mart369_footer"
+              sequence="45"/>
+
+    <!-- The catalogue's category list: tick the ones the footer lists. -->
+    <record id="mart369_category_view_list_footer" model="ir.ui.view">
+        <field name="name">mart369.category.list.footer</field>
+        <field name="model">product.public.category</field>
+        <field name="inherit_id" ref="mart369_catalog.mart369_category_view_list"/>
+        <field name="arch" type="xml">
+            <field name="mart_in_app" position="after">
+                <field name="mart_in_footer" widget="boolean_toggle"/>
+            </field>
+        </field>
+    </record>
+
+</odoo>

@@ -995,29 +995,44 @@ export function SiteFooter() {
      them - rename a section in Odoo and this follows. If it cannot be reached
      the column is simply shorter; it never guesses. */
   const { data: catalog } = useResource("/catalog");
-  /* The first five, in the order the shop arranged them; the rest are one tap
-     away on the All categories page, so the column stays short however many
-     categories the shop grows. */
+  /* Everything else is set in Odoo (369 Mart > Page building > Footer and
+     Info pages): the categories it lists, its pages, the tagline, the app
+     links, the "We accept" chips. Until that answers - or if it can't - the
+     footer below is the one the shop always had, with every page linked. */
+  const { data: ft } = useResource("/footer");
+  const set = ft && ft.ok !== false ? ft : null;
   const all = catalog?.categories || [];
-  const shop = all.slice(0, FOOTER_CATS).map((c) => [c.name, () => nav("category", c.slug)]);
-  if (all.length > FOOTER_CATS) shop.push(["All categories", () => nav("categories")]);
-  const cols = [
-    ["Shop", shop.concat([["Offers", () => nav("offers")]])],
-    ["Help", [["Track your order", () => nav("account")], ["Cancellations & returns", null], ["Delivery areas", null], ["FAQs", () => nav("account")], ["Contact us", null]]],
-    ["Company", [["About 369 Mart", null], ["Careers", null], ["Sell on 369 Mart", null], ["Press", null]]],
-    ["Policies", [["Terms of use", null], ["Privacy policy", null], ["Shipping policy", null], ["Grievance redressal", null]]],
-  ];
+  const shop = set
+    ? set.shop.map((c) => [c.name, () => nav("category", c.slug)])
+    : all.slice(0, FOOTER_CATS).map((c) => [c.name, () => nav("category", c.slug)]);
+  if (set ? set.more : all.length > FOOTER_CATS) shop.push(["All categories", () => nav("categories")]);
+  const page = (slug) => () => nav("page", slug);
+  const track = ["Track your order", () => nav("account", "orders")];
+  const pageCols = set?.columns?.length
+    ? set.columns.map((c) => [c.title, (c.key === "help" ? [track] : []).concat(c.links.map((l) => [l.label, page(l.slug)]))])
+    : [
+      ["Help", [track, ["Cancellations & returns", page("cancellation-policy")], ["Delivery areas", page("delivery-areas")], ["FAQs", page("faqs")], ["Contact us", page("contact")]]],
+      ["Company", [["About 369 Mart", page("about")], ["Careers", page("careers")], ["Sell on 369 Mart", page("sell")], ["Press", page("press")]]],
+      ["Policies", [["Terms of use", page("terms")], ["Privacy policy", page("privacy")], ["Shipping policy", page("shipping-policy")], ["Grievance redressal", page("grievance")]]],
+    ];
+  const cols = [["Shop", shop.concat([["Offers", () => nav("offers")]])], ...pageCols];
+  const tagline = set ? set.tagline : "Computer parts and gear. In minutes, or in days.";
+  const apps = set ? set.apps : null;
+  const payments = set ? set.payments : ["UPI", "Credit & debit cards", "Net banking", "Cash on delivery", "369 Wallet"];
   return (
     <footer className={"ft" + (inView ? " ft-in" : "")} ref={setRef}>
       <div className="hm-wrap">
         <div className="ft-top">
           <div className="ft-brand">
             <a className="ft-logo brand-chip" href="/" aria-label="369 Mart home" onClick={(e) => { e.preventDefault(); nav("home"); }}><Logo /></a>
-            <p>Computer parts and gear. In minutes, or in days.</p>
-            <div className="ft-apps">
-              <a href="#" onClick={(e) => e.preventDefault()}><Icon n="phone" size={16} /><span><small>Get it for</small>Android</span></a>
-              <a href="#" onClick={(e) => e.preventDefault()}><Icon n="phone" size={16} /><span><small>Get it for</small>iPhone</span></a>
-            </div>
+            {tagline && <p>{tagline}</p>}
+            {/* Only the apps the shop has a link for. */}
+            {(apps?.android || apps?.ios) && (
+              <div className="ft-apps">
+                {apps.android && <a href={apps.android} target="_blank" rel="noopener noreferrer"><Icon n="phone" size={16} /><span><small>Get it for</small>Android</span></a>}
+                {apps.ios && <a href={apps.ios} target="_blank" rel="noopener noreferrer"><Icon n="phone" size={16} /><span><small>Get it for</small>iPhone</span></a>}
+              </div>
+            )}
           </div>
           {cols.map(([title, links], k) => (
             <nav key={title} className="ft-col" style={{ "--k": k }} aria-label={title}>
@@ -1026,10 +1041,12 @@ export function SiteFooter() {
             </nav>
           ))}
         </div>
-        <div className="ft-pay">
-          <span>We accept</span>
-          {["UPI", "Credit & debit cards", "Net banking", "Cash on delivery", "369 Wallet"].map((x, k) => <em key={x} style={{ "--k": k }}>{x}</em>)}
-        </div>
+        {payments.length > 0 && (
+          <div className="ft-pay">
+            <span>We accept</span>
+            {payments.map((x, k) => <em key={x} style={{ "--k": k }}>{x}</em>)}
+          </div>
+        )}
         <div className="ft-bottom">
           <span>© {new Date().getFullYear()} 369 Mart. All rights reserved.<BuildTag /></span>
           <button className="ft-top-btn" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}><Icon n="chev" size={16} />Back to top</button>

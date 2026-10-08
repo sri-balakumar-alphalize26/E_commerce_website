@@ -1,6 +1,6 @@
 {
     'name': '369 Mart Pages',
-    'version': '19.0.1.0.0',
+    'version': '19.0.1.1.0',
     'summary': 'The shop footer\'s pages - Terms, Privacy, About, Help, Contact - edited in Odoo',
     'description': """
 Every page the shop's footer links to, kept in Odoo and drawn by the shop in
@@ -17,10 +17,11 @@ the pincodes the shop serves.
     'author': 'Alphalize',
     'license': 'LGPL-3',
     'category': 'Website',
-    'depends': ['mart369', 'mart369_product', 'html_editor'],
+    'depends': ['mart369', 'mart369_product', 'mart369_catalog', 'html_editor'],
     'data': [
         'security/ir.model.access.csv',
         'views/info_page_views.xml',
+        'views/footer_views.xml',
         'data/info_pages.xml',
     ],
     'assets': {

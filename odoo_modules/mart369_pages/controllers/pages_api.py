@@ -18,6 +18,12 @@ class Mart369PagesApi(http.Controller):
         """The footer's columns of page links."""
         return self._json({'ok': True, 'columns': request.env['mart369.info.page']._mart369_footer_columns()})
 
+    @http.route('/369mart/footer', **_GET)
+    def footer(self, **kwargs):
+        """The footer: tagline, app links, payment chips, the Shop column's
+        categories and the page columns - all set in Odoo."""
+        return self._json(dict(request.env['mart369.config']._mart369_footer(), ok=True))
+
     @http.route('/369mart/pages/<string:slug>', **_GET)
     def page(self, slug, **kwargs):
         page = request.env['mart369.info.page'].sudo().search([('slug', '=', slug)], limit=1)
