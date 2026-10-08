@@ -12,8 +12,8 @@
                     <div class="oe_title"><h1>Order pop-ups</h1></div>
                     <div class="text-muted mb-3">
                         The pop-up a customer gets on their phone or computer as their order moves.
-                        Switch a step off, or write its words yourself - %(ref)s is the order number,
-                        %(eta)s the delivery time. Empty words keep the shop's own.
+                        Switch a step off, or write its words yourself - %%(ref)s is the order number,
+                        %%(eta)s the delivery time. Empty words keep the shop's own.
                     </div>
                     <group>
                         <group string="Send a pop-up when an order is">
@@ -25,12 +25,12 @@
                             <field name="push_on_cancelled"/>
                         </group>
                         <group string="Its words">
-                            <field name="push_text_placed" placeholder="%(ref)s is confirmed. %(eta)s" readonly="not push_on_placed"/>
-                            <field name="push_text_packed" placeholder="%(ref)s is packed and waiting for the rider." readonly="not push_on_packed"/>
-                            <field name="push_text_shipped" placeholder="%(ref)s has been handed to our delivery partner." readonly="not push_on_shipped"/>
-                            <field name="push_text_out" placeholder="%(ref)s is out for delivery. %(eta)s" readonly="not push_on_out"/>
-                            <field name="push_text_delivered" placeholder="How was %(ref)s? Tell us in a moment." readonly="not push_on_delivered"/>
-                            <field name="push_text_cancelled" placeholder="%(ref)s was cancelled. Any refund is on its way." readonly="not push_on_cancelled"/>
+                            <field name="push_text_placed" placeholder="%%(ref)s is confirmed. %%(eta)s" readonly="not push_on_placed"/>
+                            <field name="push_text_packed" placeholder="%%(ref)s is packed and waiting for the rider." readonly="not push_on_packed"/>
+                            <field name="push_text_shipped" placeholder="%%(ref)s has been handed to our delivery partner." readonly="not push_on_shipped"/>
+                            <field name="push_text_out" placeholder="%%(ref)s is out for delivery. %%(eta)s" readonly="not push_on_out"/>
+                            <field name="push_text_delivered" placeholder="How was %%(ref)s? Tell us in a moment." readonly="not push_on_delivered"/>
+                            <field name="push_text_cancelled" placeholder="%%(ref)s was cancelled. Any refund is on its way." readonly="not push_on_cancelled"/>
                         </group>
                     </group>
                 </sheet>
