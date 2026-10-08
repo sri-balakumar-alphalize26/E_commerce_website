@@ -55,7 +55,7 @@ export function BotFace({ className = "" }) {
   );
 }
 
-function Msg({ m, onChip, onAction, last }) {
+function Msg({ m, onChip, onAction, chips }) {
   if (m.from === "sys") {
     return (
       <div className={"sb-sys" + (m.queue ? " sb-queue" : "")}>
@@ -79,9 +79,9 @@ function Msg({ m, onChip, onAction, last }) {
           </div>
         )}
         <time>{clock(m.at)}</time>
-        {last && !!m.chips?.length && (
+        {!!chips?.length && (
           <div className="sb-chips">
-            {m.chips.map((c, k) => <button key={c} style={{ "--k": k }} onClick={() => onChip(c)}>{c}</button>)}
+            {chips.map((c, k) => <button key={c} style={{ "--k": k }} onClick={() => onChip(c)}>{c}</button>)}
           </div>
         )}
       </div>
@@ -95,6 +95,8 @@ export default function SupportBot({ onNav, hidden = false, lift = 0 }) {
   const [typing, setTyping] = useState(false);
   const [agent, setAgent] = useState(false);
   const [text, setText] = useState("");
+  /* The greeting's topic buttons, offered again under any answer without its own. */
+  const [start, setStart] = useState([]);
   const [hint, setHint] = useState(false);
   const [unread, setUnread] = useState(false);
   const [wave, setWave] = useState(false);
@@ -111,14 +113,14 @@ export default function SupportBot({ onNav, hidden = false, lift = 0 }) {
   /* restore this visit's chat; greet hint once per visit */
   useEffect(() => {
     const saved = ss.get(CHAT_KEY, null);
-    if (saved?.msgs?.length) { setMsgs(saved.msgs); setAgent(!!saved.agent); }
+    if (saved?.msgs?.length) { setMsgs(saved.msgs); setAgent(!!saved.agent); setStart(saved.start || []); }
     if (!ss.get(HINT_KEY, false)) {
       const t1 = setTimeout(() => { setHint(true); setUnread(true); setWave(true); setTimeout(() => setWave(false), 1600); }, 3500);
       const t2 = setTimeout(() => setHint(false), 11000);
       return () => { clearTimeout(t1); clearTimeout(t2); };
     }
   }, []);
-  useEffect(() => { if (msgs.length) ss.set(CHAT_KEY, { msgs: msgs.slice(-60), agent }); }, [msgs, agent]);
+  useEffect(() => { if (msgs.length) ss.set(CHAT_KEY, { msgs: msgs.slice(-60), agent, start }); }, [msgs, agent, start]);
   useEffect(() => { list.current?.scrollTo({ top: list.current.scrollHeight, behavior: reduced() ? "auto" : "smooth" }); }, [msgs, typing, phase]);
 
   const push = (m) => setMsgs((l) => [...l, { at: Date.now(), ...m }]);
@@ -149,6 +151,7 @@ export default function SupportBot({ onNav, hidden = false, lift = 0 }) {
           setMsgs(said.length ? said : [{ at: Date.now(), from: "bot", text: g.text }]);
           return;
         }
+        setStart(g.chips || []);
         push({ from: "bot", text: g.text, chips: g.chips });
         if (say) later(() => send(say), 300);
       })
@@ -248,7 +251,7 @@ export default function SupportBot({ onNav, hidden = false, lift = 0 }) {
     setAgent(false); setTyping(false); ss.set(CHAT_KEY, null);
     setMsgs([]); setTyping(true);
     greeting()
-      .then((g) => { setTyping(false); setMsgs([{ at: Date.now(), from: "bot", text: g.text, chips: g.chips }]); })
+      .then((g) => { setTyping(false); setStart(g.chips || []); setMsgs([{ at: Date.now(), from: "bot", text: g.text, chips: g.chips }]); })
       .catch((e) => { setTyping(false); setMsgs([]); offline(e); });
   };
 
@@ -256,6 +259,11 @@ export default function SupportBot({ onNav, hidden = false, lift = 0 }) {
   /* Who is talking: the last person from the team who wrote, if any. */
   const person = [...msgs].reverse().find((m) => m.from === "agent")?.name;
   const lastBot = [...msgs].reverse().find((m) => m.from !== "me" && m.from !== "sys");
+  /* Something to tap next, always: the answer's own topics, or else the
+     greeting's again. Not while a person from the team is on it. A chat
+     saved before `start` was kept finds them on the greeting. */
+  const starters = start.length ? start : msgs.find((m) => m.from === "bot" && m.chips?.length)?.chips || [];
+  const nextChips = agent || typing ? null : lastBot?.chips?.length ? lastBot.chips : starters;
 
   return (
     <div className={"sb" + (hidden && !forced ? " sb-hidden" : "")}>
@@ -288,7 +296,7 @@ export default function SupportBot({ onNav, hidden = false, lift = 0 }) {
             </header>
             <div className="sb-list" ref={list} aria-live="polite">
               <p className="sb-day">Today</p>
-              {msgs.map((m, i) => <Msg key={`${i}-${m.at}`} m={m} last={m === lastBot && !typing} onChip={send} onAction={onAction} />)}
+              {msgs.map((m, i) => <Msg key={`${i}-${m.at}`} m={m} chips={m === lastBot ? nextChips : null} onChip={send} onAction={onAction} />)}
               {typing && (
                 <div className="sb-msg sb-bot sb-typing-row">
                   <span className="sb-ava"><BotFace /></span>
