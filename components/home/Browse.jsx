@@ -20,6 +20,7 @@ import { fmtPlaced } from "./orderState";
 import { NavContext, routeToPath } from "./nav";
 import { useResource } from "@/lib/useFetch";
 import { absorb, cards } from "@/lib/products";
+import Logo from "@/components/Logo";
 
 const PAGE = 12;
 const SORTS = [
@@ -1011,7 +1012,7 @@ export function SiteFooter() {
       <div className="hm-wrap">
         <div className="ft-top">
           <div className="ft-brand">
-            <a className="ft-logo" href="/" onClick={(e) => { e.preventDefault(); nav("home"); }}>369<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18 18 6M9 6h9v9" /></svg>Mart</a>
+            <a className="ft-logo brand-chip" href="/" aria-label="369 Mart home" onClick={(e) => { e.preventDefault(); nav("home"); }}><Logo /></a>
             <p>Computer parts and gear. In minutes, or in days.</p>
             <div className="ft-apps">
               <a href="#" onClick={(e) => e.preventDefault()}><Icon n="phone" size={16} /><span><small>Get it for</small>Android</span></a>

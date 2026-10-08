@@ -12,6 +12,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useResource } from "@/lib/useFetch";
 import { api } from "@/lib/api";
+import Logo from "@/components/Logo";
 import { consolePath } from "@/lib/consolePath";
 import { Avatar, Confirm, Drawer, Empty, Icon, Pill, Search, Select, Switch, Tabs, useToast } from "./AdminUI";
 import { BarChart, DataTable, Legend, LineChart, RankBars, SERIES, Spark } from "./charts";
@@ -511,7 +512,7 @@ export default function AdminApp({ section: initial = "dashboard", onSection, on
     <div className={"ad-app" + (collapsed ? " ad-collapsed" : "") + (mobileNav ? " ad-nav-open" : "")}>
       <aside className="ad-side">
         <div className="ad-brand">
-          <span className="ad-logo">369<svg viewBox="0 0 24 24"><path d="M6 18 18 6M9 6h9v9" /></svg></span>
+          <span className="ad-logo brand-chip"><Logo /></span>
           <span className="ad-brand-txt"><b>369 Mart</b><small>Admin console</small></span>
           <button className="ad-collapse" onClick={() => setCollapsed((v) => !v)} aria-label={collapsed ? "Expand menu" : "Collapse menu"}><Icon n={collapsed ? "right" : "left"} size={16} /></button>
         </div>

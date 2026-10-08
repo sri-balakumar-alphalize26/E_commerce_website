@@ -11,6 +11,7 @@
    ========================================================================== */
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Icon, money } from "./shared";
+import Logo from "@/components/Logo";
 import { audioRunning, onAudioState, playPrint, playRewind, playRip, playTug, unlockAudio } from "./sound";
 import { addressText } from "@/lib/address";
 
@@ -62,7 +63,7 @@ function ReceiptPaper({ order, byId, paperRef, torn }) {
     <div className="rc-paper" ref={paperRef} style={{ clipPath: edges(torn) }}>
       <div className="rc-top">
         <div>
-          <span className="rc-brand">369<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18 18 6M9 6h9v9" /></svg>MART</span>
+          <span className="rc-brand"><Logo /></span>
           <small>{order.mode === "all" ? "EXPRESS ORDER RECEIPT" : "QUICK ORDER RECEIPT"}</small>
         </div>
         <span className="rc-seal" aria-hidden="true"><Icon n={cod ? "cash" : "check"} size={18} /></span>

@@ -406,8 +406,8 @@
 .rc-torn .rc-paper { transform: translateY(20px) rotate(-1.2deg); }
 .rc-paper::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(180deg, rgba(0, 0, 0, 0.012) 0 2px, transparent 2px 4px); }
 .rc-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-.rc-brand { display: inline-flex; align-items: center; font-size: 15px; font-weight: 800; letter-spacing: 0.1em; color: #0b4a6e; }
-.rc-brand svg { width: 14px; height: 14px; fill: none; stroke: #f7931e; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; margin: 0 2px; }
+.rc-brand { display: inline-flex; }
+.rc-brand .brand-logo { height: 40px; }
 .rc-top small { display: block; margin-top: 2px; font-size: 10px; letter-spacing: 0.14em; color: #8b9298; }
 .rc-seal { flex: none; width: 40px; height: 40px; border-radius: 10px; background: #fff; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08), inset 0 0 0 1px #ecece6; display: grid; place-items: center; color: #0b4a6e; }
 .rc-seal .hm-ic { stroke-width: 3; }

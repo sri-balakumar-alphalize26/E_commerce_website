@@ -60,8 +60,8 @@
 }
 .hm-hdr.hm-scrolled { box-shadow: 0 6px 18px -12px rgba(19, 33, 43, 0.35); }
 .hm-hdr-row { display: flex; align-items: center; gap: 16px; height: 64px; }
-.hm-logo { display: flex; align-items: center; text-decoration: none; font-size: 24px; font-weight: 800; letter-spacing: -0.045em; color: var(--hm-navy) !important; }
-.hm-logo-arrow { width: 19px; height: 19px; fill: none; stroke: var(--hm-orange); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; margin: 0 1px; animation: hm-arrow 3.6s var(--hm-ease) 1s infinite; }
+.hm-logo { flex: none; display: flex; align-items: center; text-decoration: none; }
+.hm-logo .brand-logo { height: 54px; }
 .hm-mode { position: relative; display: flex; background: var(--hm-soft); border-radius: 999px; padding: 3px; }
 .hm-mode-thumb {
   position: absolute; top: 3px; bottom: 3px; left: 0; border-radius: 999px;
@@ -358,7 +358,7 @@
 @media (max-width: 560px) {
   .hm-page { --hm-card-w: 146px; }
   .hm-wrap { padding-inline: 16px; }
-  .hm-logo { font-size: 20px; }
+  .hm-logo .brand-logo { height: 42px; }
   .hm-hdr-row { gap: 8px; }
   .hm-loc { flex: 1 1 0; max-width: none; padding: 4px; }
   .hm-loc-bolt { display: none; }

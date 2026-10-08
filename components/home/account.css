@@ -224,8 +224,8 @@
 .ac-about { overflow: hidden; }
 .ac-about-hero { position: relative; padding: 26px 22px; color: #fff; background: linear-gradient(120deg, #083b59, #0a78ab); overflow: hidden; }
 .ac-about-hero::after { content: ""; position: absolute; width: 260px; aspect-ratio: 1; right: -60px; top: -120px; border-radius: 50%; background: radial-gradient(circle, rgba(247, 147, 30, 0.35), transparent 65%); animation: hm-float 6s ease-in-out infinite; }
-.ac-about-logo { display: inline-flex; align-items: center; font-size: 30px; font-weight: 800; letter-spacing: -0.045em; animation: ac-rise 460ms var(--hm-ease) 120ms both; }
-.ac-about-logo svg { width: 24px; height: 24px; fill: none; stroke: var(--hm-orange); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; margin: 0 1px; animation: hm-arrow 3.6s var(--hm-ease) 1s infinite; }
+.ac-about-logo { display: inline-flex; animation: ac-rise 460ms var(--hm-ease) 120ms both; }
+.ac-about-logo .brand-logo { height: 72px; }
 .ac-about-hero p { margin: 4px 0 0; opacity: 0.85; font-size: 15px; animation: ac-rise 460ms var(--hm-ease) 200ms both; }
 .ac-about-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-bottom: 1px solid var(--ac-line); }
 .ac-about-stats span { display: flex; flex-direction: column; gap: 2px; padding: 16px 20px; font-size: 13px; color: var(--hm-muted); animation: ac-rise 420ms var(--hm-ease) backwards; animation-delay: calc(260ms + var(--i) * 70ms); }

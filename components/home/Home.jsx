@@ -34,6 +34,7 @@ import { absorb, ensure, useProducts } from "@/lib/products";
 import { setCurrency, useCurrency } from "@/lib/money";
 import { ApiError, api } from "@/lib/api";
 import { addressText } from "@/lib/address";
+import Logo from "@/components/Logo";
 import { AllCategoriesPage, BuyAgainPage, CategoryPage, NotFoundView, OffersPage, SearchResults, SiteFooter } from "./Browse";
 
 /* ---------- header ---------- */
@@ -80,9 +81,7 @@ function StoreHeader({ unread = 0, count, mode, onMode, modeText, onCart, onAcco
     <header className={"hm-hdr" + (scrolled ? " hm-scrolled" : "")}>
       <div className="hm-wrap hm-hdr-row">
         <a className="hm-logo" href="/" aria-label="369 Mart home" onClick={(e) => { if (onHome) { e.preventDefault(); onHome(); } }}>
-          <span className="hm-logo-mark">369</span>
-          <svg viewBox="0 0 24 24" className="hm-logo-arrow" aria-hidden="true"><path d="M6 18 18 6M9 6h9v9" /></svg>
-          <span>Mart</span>
+          <Logo />
         </a>
         <ModeToggle mode={mode} onMode={onMode} copy={modeText} />
         <button className={"hm-loc" + (locOpen ? " hm-loc-open" : "")} onClick={onLoc} aria-haspopup="dialog" aria-expanded={!!locOpen}>

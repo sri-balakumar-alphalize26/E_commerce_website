@@ -363,8 +363,8 @@ html.ls-lock { overflow: hidden; }
 .hm-in-cart .ft { margin-top: 0; }
 .ft-top { display: grid; grid-template-columns: 1.5fr repeat(4, minmax(0, 1fr)); gap: 28px; padding: 40px 0 28px; }
 .ft-brand p { margin: 8px 0 16px; max-width: 260px; line-height: 1.5; }
-.ft-logo { display: inline-flex; align-items: center; font-size: 26px; font-weight: 800; letter-spacing: -0.045em; color: #fff !important; text-decoration: none; }
-.ft-logo svg { width: 20px; height: 20px; fill: none; stroke: var(--hm-orange); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; margin: 0 1px; }
+.ft-logo { text-decoration: none; }
+.ft-logo .brand-logo { height: 54px; }
 .ft-apps { display: flex; flex-wrap: wrap; gap: 8px; }
 .ft-apps a { display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 14px 0 12px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.18); color: #fff !important; text-decoration: none; transition: background-color 200ms, transform 200ms var(--hm-ease); }
 .ft-apps a:hover { background: rgba(255, 255, 255, 0.08); transform: translateY(-2px); }

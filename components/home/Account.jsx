@@ -19,6 +19,7 @@
    ========================================================================== */
 import { useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Icon, OpenContext, QtyControl, Thumb, WishContext, money } from "./shared";
+import Logo from "@/components/Logo";
 import { NotifsSec, PaymentsSec, PointsSec, ReferSec, ReviewsSec, RewardsSec, WalletSec, useNotifications } from "./AccountExtras";
 import { fmtPlaced } from "./orderState";
 import AddressForm from "./AddressForm";
@@ -345,7 +346,7 @@ function AboutSec() {
   return (
     <div className="ac-stack">
       <div className="ac-card ac-about">
-        <div className="ac-about-hero"><span className="ac-about-logo">369<svg viewBox="0 0 24 24"><path d="M6 18 18 6M9 6h9v9" /></svg>Mart</span><p>Computer parts and gear. In minutes, or in days.</p></div>
+        <div className="ac-about-hero"><span className="ac-about-logo"><Logo /></span><p>Computer parts and gear. In minutes, or in days.</p></div>
         <div className="ac-about-stats">
           {[["10–20", "min Quick delivery"], ["2–5", "day Express delivery"], ["7 days", "support"]].map(([n, l], i) => (
             <span key={l} style={{ "--i": i }}><b>{n}</b>{l}</span>

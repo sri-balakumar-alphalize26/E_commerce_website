@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import SignInPage from "@/components/signin/SignIn";
+import Logo from "@/components/Logo";
 
 /* Every call goes to our own /api/auth/* routes, which talk to Odoo server-side.
    The answers already have the shape the sign-in card expects. */
@@ -46,7 +47,7 @@ export default function LoginRoute() {
   return (
     <div style={{ minHeight: "100vh", background: "#f2f6f9" }}>
       <header className="lg-hdr">
-        <Link href="/" className="lg-logo" aria-label="369 Mart home">369<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18 18 6M9 6h9v9" /></svg>Mart</Link>
+        <Link href="/" className="lg-logo" aria-label="369 Mart home"><Logo /></Link>
       </header>
       {again && !addPhone && (
         <p className="lg-again" role="status">You were signed out. Please sign in again to see your account.</p>
