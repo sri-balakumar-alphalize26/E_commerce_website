@@ -34,7 +34,7 @@ import { absorb, ensure, useProducts } from "@/lib/products";
 import { setCurrency, useCurrency } from "@/lib/money";
 import { ApiError, api } from "@/lib/api";
 import { addressText } from "@/lib/address";
-import { BuyAgainPage, CategoryPage, NotFoundView, OffersPage, SearchResults, SiteFooter } from "./Browse";
+import { AllCategoriesPage, BuyAgainPage, CategoryPage, NotFoundView, OffersPage, SearchResults, SiteFooter } from "./Browse";
 
 /* ---------- header ---------- */
 function ModeToggle({ mode, onMode, copy }) {
@@ -311,7 +311,7 @@ export default function Home({
   onViewCart,
   onCheckout,
   onSearch,
-  initialView = "home",  /* home | product | category | search | offers | buyagain | cart | account | notfound */
+  initialView = "home",  /* home | product | category | categories | search | offers | buyagain | cart | account | notfound */
   initialParam = null,   /* product id · "slug/sub" · search term */
   initialProduct = null, /* kept for older callers: same as initialParam for the product view */
   onAccount,
@@ -718,7 +718,7 @@ export default function Home({
   const alsoLike = useMemo(() => pick("all").slice(0, 8), [view]); // eslint-disable-line
 
   const withTabs = view === "home" || view === "category" || view === "offers";
-  const browsing = ["home", "product", "category", "search", "offers", "buyagain", "track"].includes(view);
+  const browsing = ["home", "product", "category", "categories", "search", "offers", "buyagain", "track"].includes(view);
   const viewAll = (s) => (s.route || SECTION_TO_ROUTE[s.key]) && nav("category", s.route || SECTION_TO_ROUTE[s.key]);
   const common = { byId, cart, setQty };
 
@@ -805,6 +805,8 @@ export default function Home({
   } else if (view === "category") {
     const [slug, sub] = String(route.param || "").split("/");
     body = <main className="hm-wrap hm-view-browse" key={"cat-" + slug}><CategoryPage slug={slug} subSlug={sub} {...common} /></main>;
+  } else if (view === "categories") {
+    body = <main className="hm-wrap hm-view-browse" key="categories"><AllCategoriesPage /></main>;
   } else if (view === "search") {
     body = <main className="hm-wrap hm-view-browse" key="search"><SearchResults q={route.param || ""} mode={mode} {...common} /></main>;
   } else if (view === "offers") {

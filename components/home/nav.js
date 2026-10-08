@@ -3,6 +3,7 @@
    nav(view, param?, { replace?, keepScroll? })
      nav("home")                              → /
      nav("category", "staples/oils-ghee")     → /category/staples/oils-ghee
+     nav("categories")                        → /categories
      nav("search", "atta")                    → /search?q=atta
      nav("offers") · nav("buyagain")          → /offers · /buy-again
      nav("product", "d2") · nav("cart") · nav("account")
@@ -15,6 +16,7 @@ export function routeToPath(view, param) {
   switch (view) {
     case "home": return "/";
     case "category": return "/category/" + String(param || "").split("/").map(encodeURIComponent).join("/");
+    case "categories": return "/categories";
     case "search": return "/search?q=" + encodeURIComponent(param || "");
     case "offers": return "/offers";
     case "buyagain": return "/buy-again";
@@ -33,6 +35,7 @@ export function pathToRoute(pathname, search = "") {
   const [head, ...rest] = parts;
   if (!head) return { view: "home", param: null };
   if (head === "category") return { view: "category", param: rest.join("/") };
+  if (head === "categories") return { view: "categories", param: null };
   if (head === "search") return { view: "search", param: new URLSearchParams(search).get("q") || "" };
   if (head === "offers") return { view: "offers", param: null };
   if (head === "buy-again") return { view: "buyagain", param: null };

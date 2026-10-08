@@ -15,8 +15,11 @@
    demo default so the page works before the server is connected (demo code:
    123456).
    ========================================================================== */
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { clearReferral, takeReferral } from "@/lib/referral";
+import { money, setCurrency, useCurrency } from "@/lib/money";
+import { useResource } from "@/lib/useFetch";
+import { Thumb, firstImage } from "@/components/home/shared";
 import CountryPicker from "./CountryPicker";
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -590,36 +593,51 @@ export function SignInCard({
   );
 }
 
-const TILES = [
-  { i: "AC", name: "Arabica Coffee Beans", price: "₹649", col: "#1f7a4c" },
-  { i: "BS", name: "Bluetooth Speaker 20W", price: "₹1,899", col: "#1b6ea3" },
-  { i: "SSD", name: "Samsung 990 PRO 1TB NVMe", price: "₹9,800", col: "#155c86" },
-];
+/* Three of the shop's own products, from the feed the home page loads - the
+   panel used to show three made-up ones (coffee beans in a computer shop).
+   Ones with a photo first; a shop that cannot be reached, or has nothing on
+   sale, shows no tiles rather than invented ones. */
+function useShowcase() {
+  const { data: feed } = useResource("/home");
+  useEffect(() => { if (feed?.currency) setCurrency(feed.currency); }, [feed]);
+  useCurrency();
+  return useMemo(() => {
+    const { currency, ...modes } = feed || {};
+    const seen = new Set();
+    const items = Object.values(modes)
+      .flatMap((m) => (m?.sections || []).flatMap((s) => s.items || []))
+      .filter((p) => p?.id != null && Number(p.price) > 0 && p.stock !== 0 && !seen.has(p.id) && seen.add(p.id));
+    return [...items.filter(firstImage), ...items.filter((p) => !firstImage(p))].slice(0, 3);
+  }, [feed]);
+}
 
 export function SignInAside() {
+  const tiles = useShowcase();
   return (
     <aside className="si-aside" aria-label="Why sign in">
       <div className="si-aside-copy">
         <p className="si-eyebrow">369 Mart account</p>
-        <h2>Your cart, addresses and offers — on every device.</h2>
+        <h2>One number for the website and WhatsApp.</h2>
         <ul className="si-perks">
           <li><span><svg viewBox="0 0 24 24"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7" /><circle cx="7" cy="17.5" r="1.8" /><circle cx="17" cy="17.5" r="1.8" /></svg></span>Track every order live, from packing to your door</li>
-          <li><span><svg viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z" /><circle cx="12" cy="9.5" r="2.5" /></svg></span>Saved addresses for one-tap checkout</li>
-          <li><span><svg viewBox="0 0 24 24"><path d="M3 12V4h8l10 10-8 8z" /><circle cx="7.5" cy="8.5" r="1.4" /></svg></span>Member prices on everyday electricals</li>
-          <li><span><svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.4-5.7" /><path d="M4 4v4.5h4.5" /></svg></span>Reorder your usual basket in one tap</li>
+          <li><span><svg viewBox="0 0 24 24"><path d="M5 4h14v16l-3-2-2 2-2-2-2 2-2-2-3 2z" /><path d="M9 9h6M9 13h4" /></svg></span>Orders placed on WhatsApp show up in My Orders</li>
+          <li><span><svg viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z" /><circle cx="12" cy="9.5" r="2.5" /></svg></span>Home, Work and other addresses saved for checkout</li>
+          <li><span><svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.4-5.7" /><path d="M4 4v4.5h4.5" /></svg></span>Buy again from past orders in one tap</li>
         </ul>
       </div>
-      <div className="si-tiles" aria-hidden="true">
-        {TILES.map((t, n) => (
-          <div className="si-tile" key={t.i} style={{ "--n": n, "--c": t.col }}>
-            <div className="si-tile-img"><b>{t.i}</b></div>
-            <div className="si-tile-txt"><span>{t.name}</span><strong>{t.price}</strong></div>
-          </div>
-        ))}
-      </div>
+      {tiles.length > 0 && (
+        <div className="si-tiles" aria-hidden="true">
+          {tiles.map((p, n) => (
+            <div className="si-tile" key={p.id} style={{ "--n": n }}>
+              <div className="si-tile-img"><Thumb p={p} /></div>
+              <div className="si-tile-txt"><span>{p.name}</span><strong>{money(p.price)}</strong></div>
+            </div>
+          ))}
+        </div>
+      )}
       <p className="si-trust">
         <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="10" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></svg>
-        Encrypted sign-in. We never share or sell your email.
+        Sign in with a code sent to your WhatsApp. We never share or sell your number.
       </p>
     </aside>
   );

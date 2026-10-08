@@ -192,13 +192,6 @@ export const CUSTOMERS = (() => {
   }).sort((a, b) => b.spent - a.spent);
 })();
 
-export const COUPONS = [
-  { code: "QUICK20", title: "20% off on Quick orders", note: "Up to ₹60 · Quick items above ₹199", used: 342, cap: 500, active: true, ends: "30 Sep 2026" },
-  { code: "WELCOME50", title: "Flat ₹50 off", note: "First order above ₹499", used: 189, cap: 1000, active: true, ends: "31 Dec 2026" },
-  { code: "FREEDEL", title: "Free delivery", note: "Orders above ₹299", used: 764, cap: 800, active: true, ends: "22 Sep 2026" },
-  { code: "ONAM25", title: "25% off cables", note: "Chargers, cables and adaptors · max ₹150", used: 1200, cap: 1200, active: false, ends: "Ended 14 Sep 2026" },
-];
-
 export const REVIEWS = (() => {
   const r = rng(99);
   const texts = [

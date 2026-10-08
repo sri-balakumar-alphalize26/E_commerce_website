@@ -17,7 +17,7 @@ import { Icon, ProductCard, Thumb, flyTo, money } from "./shared";
 import { listable } from "./catalog";
 import { useRules } from "./Cart";
 import { fmtPlaced } from "./orderState";
-import { NavContext } from "./nav";
+import { NavContext, routeToPath } from "./nav";
 import { useResource } from "@/lib/useFetch";
 import { absorb, cards } from "@/lib/products";
 
@@ -421,6 +421,57 @@ export function CategoryPage({ slug, subSlug, cart, setQty }) {
             heading={sub === "all" ? `All ${c.name}` : subName} />
         </>
       )}
+    </div>
+  );
+}
+
+/* ---------------- every category ---------------- */
+/* Where the footer's "All categories" goes: each of the shop's categories with
+   its logo and its sub-categories, in the order the shop arranged them. */
+export function AllCategoriesPage() {
+  const nav = useContext(NavContext);
+  const { data: catalog, loading, error } = useResource("/catalog");
+  const cats = catalog?.categories || [];
+
+  if (error && !cats.length) {
+    return (
+      <div className="ls-empty" role="alert">
+        <div className="ls-empty-art"><ProductArt art="Router" color="#1f3b4d" /></div>
+        <h3>We can&apos;t reach the store</h3>
+        <p>{error.message}</p>
+        <button className="ls-primary" onClick={() => nav("categories", null, { replace: true })}>Try again</button>
+      </div>
+    );
+  }
+  if (!cats.length && loading) return <div className="co-skel" aria-label="Loading"><span /><span /><span /></div>;
+
+  return (
+    <div className="allc-page">
+      <Crumbs items={[["Home", ["home"]], ["All categories"]]} />
+      <h1 className="allc-title">All categories</h1>
+      <div className="allc-grid">
+        {cats.map((c, k) => (
+          <section key={c.slug} className="allc-card" style={{ "--tone": c.tone || undefined, "--accent": c.accent || undefined, "--k": k }}>
+            <a className="allc-head" href={routeToPath("category", c.slug)} onClick={(e) => { e.preventDefault(); nav("category", c.slug); }}>
+              <span className={"cg-sub-img" + (c.image ? " cg-sub-fill" : "")}>
+                {c.image ? <img src={c.image} alt="" loading="lazy" />
+                  : c.art ? <span className="cg-sub-logo"><ProductArt art={c.art} color={c.accent} /></span>
+                  : <Icon n="box" size={24} />}
+              </span>
+              <span className="allc-name">{c.name}<Icon n="right" size={16} /></span>
+            </a>
+            {(c.subs || []).length > 0 && (
+              <ul className="allc-subs">
+                {c.subs.map((s) => (
+                  <li key={s.slug}>
+                    <a href={routeToPath("category", `${c.slug}/${s.slug}`)} onClick={(e) => { e.preventDefault(); nav("category", `${c.slug}/${s.slug}`); }}>{s.name}</a>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        ))}
+      </div>
     </div>
   );
 }
@@ -926,6 +977,8 @@ function BuildTag() {
   return <span className="ft-build" title={tip || undefined}>Version {version}</span>;
 }
 
+const FOOTER_CATS = 5;
+
 export function SiteFooter() {
   const nav = useContext(NavContext);
   const [ref, setRef] = useState(null);
@@ -941,7 +994,12 @@ export function SiteFooter() {
      them - rename a section in Odoo and this follows. If it cannot be reached
      the column is simply shorter; it never guesses. */
   const { data: catalog } = useResource("/catalog");
-  const shop = (catalog?.categories || []).map((c) => [c.name, () => nav("category", c.slug)]);
+  /* The first five, in the order the shop arranged them; the rest are one tap
+     away on the All categories page, so the column stays short however many
+     categories the shop grows. */
+  const all = catalog?.categories || [];
+  const shop = all.slice(0, FOOTER_CATS).map((c) => [c.name, () => nav("category", c.slug)]);
+  if (all.length > FOOTER_CATS) shop.push(["All categories", () => nav("categories")]);
   const cols = [
     ["Shop", shop.concat([["Offers", () => nav("offers")]])],
     ["Help", [["Track your order", () => nav("account")], ["Cancellations & returns", null], ["Delivery areas", null], ["FAQs", () => nav("account")], ["Contact us", null]]],
