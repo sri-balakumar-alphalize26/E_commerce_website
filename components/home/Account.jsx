@@ -18,6 +18,7 @@
    - sign out: confirm dialog pops, then the page fades out
    ========================================================================== */
 import { useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { openChat } from "./support";
 import { Icon, OpenContext, QtyControl, Thumb, WishContext, money } from "./shared";
 import Logo from "@/components/Logo";
 import { NotifsSec, PaymentsSec, PointsSec, ReferSec, ReviewsSec, RewardsSec, WalletSec, useNotifications } from "./AccountExtras";
@@ -334,8 +335,13 @@ function HelpSec() {
     <div className="ac-stack">
       <div className="ac-card ac-help-search"><Icon n="search" size={18} /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search help topics" aria-label="Search help topics" /></div>
       <div className="ac-help-quick">
-        {[["box", "Track an order"], ["cash", "Refund status"], ["chat", "Chat with us"], ["phone", "Call support"]].map(([ic, l], i) => (
-          <button key={l} className="ac-card ac-tile" style={{ "--i": i }}><span><Icon n={ic} size={20} /></span>{l}</button>
+        {/* Each one does what it says: the chat answers the first three, and
+            Call support opens the Contact page with the shop's number. */}
+        {[["box", "Track an order", () => openChat("Track my order")],
+          ["cash", "Refund status", () => openChat("Refund status")],
+          ["chat", "Chat with us", () => openChat()],
+          ["phone", "Call support", () => { window.location.href = "/page/contact"; }]].map(([ic, l, go], i) => (
+          <button key={l} className="ac-card ac-tile" style={{ "--i": i }} onClick={go}><span><Icon n={ic} size={20} /></span>{l}</button>
         ))}
       </div>
       {hits.length ? <Accordion key={q} items={hits} /> : <div className="ac-card"><Empty icon="help" title="No matching topics" text="Try a different word, or chat with us." /></div>}

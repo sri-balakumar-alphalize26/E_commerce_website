@@ -9,7 +9,10 @@ Three endpoints, and the shapes are not negotiable:
   pushes it straight into the transcript without unwrapping.
 * `/greeting` is called inside a 650 ms timer, so it has to be quick.
 
-Everything is scoped to the signed-in customer. The bot only ever reads that
+The greeting and the bot answer anyone, signed in or not: a guest gets the
+shop's own facts (delivery, coupons, payments) and is asked to sign in for
+anything about their orders, wallet or a person. Everything else is scoped to
+the signed-in customer. The bot only ever reads that
 customer's own orders and wallet, and a ticket is found within their own
 tickets - so there is no id here anyone could guess their way into.
 """
@@ -22,9 +25,16 @@ from odoo.http import request
 _logger = logging.getLogger(__name__)
 
 _GET = {'type': 'http', 'auth': 'user', 'methods': ['GET'], 'csrf': False, 'sitemap': False}
+_PUBLIC_GET = dict(_GET, auth='public')
+_PUBLIC_POST = {'type': 'http', 'auth': 'public', 'methods': ['POST'], 'csrf': False, 'sitemap': False}
 _POST = {'type': 'http', 'auth': 'user', 'methods': ['POST'], 'csrf': False, 'sitemap': False}
 
 MAX_INPUT = 500
+# How much of the bot conversation goes onto the ticket at the hand-over.
+MAX_HISTORY = 20
+# The bot says "you're in the queue" at most this often while nobody has
+# answered - not after every line the customer types.
+QUIET_MINUTES = 10
 
 
 class Mart369SupportApi(http.Controller):
@@ -50,6 +60,9 @@ class Mart369SupportApi(http.Controller):
     def _me(self):
         return request.env.user.partner_id
 
+    def _guest(self):
+        return request.env.user._is_public()
+
     def _said(self):
         return (self._body().get('text') or '').strip()[:MAX_INPUT]
 
@@ -62,12 +75,14 @@ class Mart369SupportApi(http.Controller):
 
     # ---------------------------------------------------------------- routes
 
-    @http.route('/369mart/support/greeting', **_GET)
+    @http.route('/369mart/support/greeting', **_PUBLIC_GET)
     def greeting(self, **kwargs):
-        """What the panel opens with. Called inside a short timer, so it stays
-        cheap - no order lookups here."""
+        """What the panel opens with - cheap, no order lookups here."""
         payload = request.env['mart369.bot']._mart369_greeting(self._me())
         payload['ok'] = True
+        if self._guest():
+            payload['guest'] = True
+            return self._json(payload)
         ticket = self._ticket()
         if ticket:
             # They already asked for a person, so pick the conversation up
@@ -76,7 +91,7 @@ class Mart369SupportApi(http.Controller):
             payload['ticket'] = ticket._mart369_serialize()
         return self._json(payload)
 
-    @http.route('/369mart/support/chat', **_POST)
+    @http.route('/369mart/support/chat', **_PUBLIC_POST)
     def chat(self, **kwargs):
         """One question, one answer.
 
@@ -86,7 +101,8 @@ class Mart369SupportApi(http.Controller):
         said = self._said()
         if not said:
             return self._fail('Say something and I will help.')
-        reply = request.env['mart369.bot']._mart369_reply(self._me(), said)
+        reply = request.env['mart369.bot'].sudo()._mart369_reply(
+            self._me(), said, guest=self._guest())
         reply['ok'] = True
         return self._json(reply)
 
@@ -98,14 +114,29 @@ class Mart369SupportApi(http.Controller):
         nothing. Now there is something to note it against.
         """
         said = self._said() or 'Asked for a support agent'
-        ticket = request.env['mart369.ticket']._mart369_open(self._me(), said)
+        Ticket = request.env['mart369.ticket']
+        fresh = not self._ticket()
+        ticket = Ticket._mart369_open(self._me(), said)
+        if fresh:
+            # What was said to the bot first, so whoever picks this up does
+            # not ask the customer to type it all again.
+            history = self._body().get('history')
+            for line in (history if isinstance(history, list) else [])[-MAX_HISTORY:]:
+                if not isinstance(line, dict):
+                    continue
+                text = str(line.get('text') or '').strip()[:MAX_INPUT]
+                if line.get('from') == 'me':
+                    ticket._mart369_say(text, from_customer=True)
+                elif line.get('from') == 'bot':
+                    ticket._mart369_say(text, from_customer=False, from_bot=True)
         ticket._mart369_say(said, from_customer=True)
+        # Honest: nobody has answered yet. Said by the bot, not in a person's name.
+        reply = "You're in the queue - our team will reply right here. You can keep typing."
+        ticket._mart369_say(reply, from_customer=False, from_bot=True)
         return self._json({
             'ok': True,
             'ticket': ticket._mart369_serialize(),
-            # The greeting a person gives, as a bare string.
-            'reply': "Hi, I'm Anjali from 369 Mart support. I can see your recent "
-                     'orders - tell me what went wrong.',
+            'reply': reply,
         }, status=201)
 
     @http.route('/369mart/support/agent/say', **_POST)
@@ -121,13 +152,23 @@ class Mart369SupportApi(http.Controller):
             return self._fail('Say something and I will pass it on.')
         ticket = self._ticket()
         if not ticket:
-            ticket = request.env['mart369.ticket']._mart369_open(self._me(), said)
+            # Closed by the team while the panel was still open: say so,
+            # rather than quietly starting a new ticket nobody asked for.
+            return self._json({'ok': True, 'closed': True, 'reply': ''})
         ticket._mart369_say(said, from_customer=True)
-        return self._json({
-            'ok': True,
-            'reply': request.env['mart369.bot']._mart369_agent_reply(
-                self._me(), ticket, said),
-        })
+        reply = ''
+        if not ticket.answered_at and self._bot_quiet(ticket):
+            reply = request.env['mart369.bot']._mart369_agent_reply(self._me(), ticket, said)
+            ticket._mart369_say(reply, from_customer=False, from_bot=True)
+        return self._json({'ok': True, 'reply': reply, 'ticket': ticket._mart369_serialize()})
+
+    def _bot_quiet(self, ticket):
+        """True when the bot has said nothing on this ticket for a while."""
+        from datetime import timedelta
+        from odoo import fields
+        bot = request.env.ref('base.partner_root')
+        last = ticket.sudo().message_ids.filtered(lambda m: m.author_id == bot)[:1]
+        return not last or last.date < fields.Datetime.now() - timedelta(minutes=QUIET_MINUTES)
 
     @http.route('/369mart/support/ticket', **_GET)
     def ticket(self, **kwargs):

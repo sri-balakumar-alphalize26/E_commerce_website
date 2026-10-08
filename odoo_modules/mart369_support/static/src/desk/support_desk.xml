@@ -163,7 +163,7 @@
                             t-attf-class="{{ msg.from === 'me' ? 'sp-them' : 'sp-us' }}">
                             <p t-esc="msg.text"/>
                             <small>
-                                <t t-esc="msg.from === 'me' ? state.detail.customer : 'Us'"/>
+                                <t t-esc="msg.from === 'me' ? state.detail.customer : (msg.from === 'bot' ? 'Bot' : (msg.name || 'Us'))"/>
                                 · <t t-esc="ago(msg.at)"/>
                             </small>
                         </li>

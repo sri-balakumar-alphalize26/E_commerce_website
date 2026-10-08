@@ -51,6 +51,16 @@ AGENT_NAME = 'Anjali'
 
 ORDER_ID = re.compile(r'369[me]-?\d{3,}', re.I)
 
+# Answers that read the shopper's own orders, wallet or tickets: a guest is
+# asked to sign in for these. Delivery, coupons, payments and addresses are
+# the shop's own facts, answered to anyone.
+LOGIN_KINDS = {'order', 'track', 'refund', 'cancel', 'return', 'wallet', 'agent'}
+
+# Words a kind also answers to, on top of its rule's own pattern - the
+# "Payment issue" start chip matched no rule (the payment rule's pattern lists
+# debited, upi, card declined... but not "payment").
+KIND_ALSO = {'payment': re.compile(r'\bpayment', re.I)}
+
 
 class Mart369Bot(models.AbstractModel):
     _name = 'mart369.bot'
@@ -66,16 +76,20 @@ class Mart369Bot(models.AbstractModel):
         }
 
     @api.model
-    def _mart369_reply(self, partner, text):
-        """The answer to one thing a customer typed."""
+    def _mart369_reply(self, partner, text, guest=False):
+        """The answer to one thing a customer typed. A guest (not signed in)
+        gets the shop's own facts; anything about their orders, wallet or a
+        person asks them to sign in first."""
         typed = (text or '').strip().lower()
         if not typed:
             return self._mart369_greeting(partner)
 
-        ctx = self._mart369_context(partner, typed)
+        ctx = self._mart369_guest_context() if guest else self._mart369_context(partner, typed)
         for rule in self.env['mart369.bot.rule']._mart369_rules():
             if not self._mart369_matches(rule, typed):
                 continue
+            if guest and rule.kind in LOGIN_KINDS:
+                return self._mart369_sign_in()
             try:
                 return self._mart369_answer(rule, ctx)
             except Exception:  # noqa: BLE001
@@ -85,7 +99,31 @@ class Mart369Bot(models.AbstractModel):
         return self._mart369_fallback()
 
     @api.model
+    def _mart369_sign_in(self):
+        """For a guest asking about their own orders, wallet or a person."""
+        return {
+            'text': 'Sign in and I can look that up for you - your orders, '
+                    'refunds and wallet are kept with your account.',
+            'actions': [{'label': 'Sign in', 'go': ['login']}],
+        }
+
+    @api.model
+    def _mart369_guest_context(self):
+        """No orders and no wallet: a guest has none the bot may read."""
+        empty = self.env['sale.order'].browse()
+        return {
+            'partner': self.env['res.partner'].browse(),
+            'orders': empty, 'named': empty, 'live': empty,
+            'delivered': empty, 'cancelled': empty,
+            'wallet': 0.0,
+            'currency': self.env.company.currency_id,
+        }
+
+    @api.model
     def _mart369_matches(self, rule, typed):
+        also = KIND_ALSO.get(rule.kind)
+        if also and also.search(typed):
+            return True
         try:
             return bool(re.search(rule.pattern, typed, re.I))
         except re.error:
@@ -307,7 +345,7 @@ class Mart369Bot(models.AbstractModel):
         """
         typed = (text or '').strip().lower()
         if re.match(r'^(hi|hello|hey|hai|namaste)\b', typed):
-            return 'Hi, how can I help?'
+            return "Hi! You're in the queue - our team will reply here."
         if ticket and ticket.order_id:
             return ("Thanks for the details. I've noted this against order #%s "
                     'and someone will reply here shortly.' % (

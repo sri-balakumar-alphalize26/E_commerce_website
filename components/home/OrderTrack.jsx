@@ -24,6 +24,7 @@ import {
 } from "./orderState";
 import LiveTrackCard from "./LiveTrackCard";
 import { api } from "@/lib/api";
+import { openChat } from "./support";
 import { useAction, useResource } from "@/lib/useFetch";
 import { addressText } from "@/lib/address";
 import { EARN_WHEN, pointsText } from "./points";
@@ -412,58 +413,9 @@ function ReturnTracker({ ret, cur }) {
   );
 }
 
-/* ---------------- help chat ---------------- */
-const RIDER_Q = /rider|driver|delivery ?(boy|guy|man|person|partner)|who.{0,20}deliver/;
-function HelpSheet({ o, s, name, track, onClose, onCancel }) {
-  const m = moneyOf(o);
-  const [msgs, setMsgs] = useState([{ me: false, t: `Hi! I'm Mitra from 369 Mart. How can I help with order #${o.id}?` }]);
-  const [typing, setTyping] = useState(false);
-  const [text, setText] = useState("");
-  const list = useRef(null);
-  useEffect(() => { list.current?.scrollTo({ top: list.current.scrollHeight, behavior: "smooth" }); }, [msgs, typing]);
-  const answer = (q) => {
-    const low = q.toLowerCase();
-    /* The rider is the shop's record (riderName): named only once one has
-       really taken the job, and never guessed. */
-    if (RIDER_Q.test(low)) {
-      if (s.key === "delivered") return name ? `${name} delivered this order.` : "This order has been delivered.";
-      if (s.key === "cancelled") return "This order was cancelled, so no rider is coming.";
-      if (name) return `${name} is delivering your order${track?.label ? ` — ${track.label.toLowerCase()}` : ""}.${track?.rider?.phone ? " Tap the phone button on this page to call them." : ""}${track?.live ? " You can follow them on the map." : ""}`;
-      return "A rider hasn't been assigned yet. Their name shows here as soon as one picks up your order.";
-    }
-    if (/where|status|late|when/.test(low)) return s.key === "out" ? `${name || "Your rider"} is on the way. ${o.eta || "It should reach you shortly."}${o.otp ? ` Share OTP ${o.otp} at the door.` : ""}` : s.key === "delivered" ? "This order was delivered. If something's wrong you can return or replace items from this page." : s.key === "cancelled" ? "This order was cancelled. Your refund status is shown on the order page." : `Your order is ${{ placed: "confirmed and being prepared", packed: "packed and waiting for a rider", shipped: "shipped and on its way to your city" }[s.key] || "on the way"}. ${o.eta || "We'll notify you when it moves on."}`;
-    if (/missing|damaged|wrong/.test(low)) return "Sorry about that! Tap “Return or replace” on the order page, choose the items and we'll arrange a pickup and a refund or replacement.";
-    if (/payment|refund|charged|money/.test(low)) return o.method === "cod" ? "This is a cash on delivery order, so nothing has been charged yet." : `Payment of ${m(o.paid || o.total)} was received via ${o.pay}. Refunds reach the source in 3–5 working days, or instantly to 369 Wallet.`;
-    if (/cancel/.test(low)) return cancellable(o, s) ? "You can still cancel — I've opened the cancellation for you." : "This order can't be cancelled any more because it's already been packed. You can return items after delivery.";
-    if (/agent|human|call/.test(low)) return "Connecting you to a support agent… Typical wait is under 2 minutes. You can keep browsing; we'll notify you.";
-    return "Got it. A support agent will look into this and reply here shortly.";
-  };
-  const send = (q) => {
-    if (!q.trim()) return;
-    setMsgs((m) => [...m, { me: true, t: q.trim() }]); setText(""); setTyping(true);
-    setTimeout(() => {
-      setTyping(false);
-      setMsgs((m) => [...m, { me: false, t: answer(q) }]);
-      if (/cancel/i.test(q) && cancellable(o, s)) setTimeout(onCancel, 700);
-    }, reduced() ? 50 : 1000);
-  };
-  return (
-    <Sheet title="Help with this order" onClose={onClose}>
-      <div className="ot-chat" ref={list}>
-        {msgs.map((m, i) => <p key={i} className={m.me ? "ot-me" : ""}>{m.t}</p>)}
-        {typing && <p className="ot-typing" aria-label="Typing"><i /><i /><i /></p>}
-      </div>
-      <div className="ot-quick">
-        {["Where is my order?", s.key === "out" || track?.live ? "Who is my rider?" : null, "Item missing or damaged", "Payment or refund", cancellable(o, s) ? "Cancel my order" : null, "Talk to an agent"].filter(Boolean).map((q) => <button key={q} onClick={() => send(q)}>{q}</button>)}
-      </div>
-      <form className="ot-send" onSubmit={(e) => { e.preventDefault(); send(text); }}>
-        <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Type a message" aria-label="Message" />
-        <button type="submit" disabled={!text.trim()} aria-label="Send"><Icon n="right" size={18} /></button>
-      </form>
-    </Sheet>
-  );
-}
-
+/* ---------------- help ----------------
+   Help opens the shop's own chat (SupportBot), about this order - the same
+   answers, the same tickets and the same team as everywhere else. */
 /* ---------------- page ---------------- */
 export default function OrderTrack({ order: o, byId, onChanged, onBack, onReceipt, onReorder, onRefundWallet, onShop }) {
   const m = moneyOf(o);
@@ -529,7 +481,7 @@ export default function OrderTrack({ order: o, byId, onChanged, onBack, onReceip
       <div className="ot-titlebar">
         <button className="ot-back" onClick={onBack} aria-label="Back to orders"><Icon n="left" size={20} /></button>
         <div><h1>Order #{o.id}{o.channel === "whatsapp" && <em className="ot-wa">via WhatsApp</em>}</h1><small>{fmtPlaced(o.at)} · {o.items.reduce((n, [, q]) => n + q, 0)} items · {m(o.total)}</small></div>
-        <button className="ot-helpbtn" onClick={() => setSheet("help")}><Icon n="chat" size={16} />Help</button>
+        <button className="ot-helpbtn" onClick={() => openChat(`Help with order #${o.id}`)}><Icon n="chat" size={16} />Help</button>
       </div>
 
       <div className="ot-grid">
@@ -601,7 +553,7 @@ export default function OrderTrack({ order: o, byId, onChanged, onBack, onReceip
                   {live && track?.rider?.phone && (
                     <a className="ot-round" href={`tel:${track.rider.phone}`} aria-label={`Call ${name || "your rider"}`} title={`Call ${name || "your rider"}`}><Icon n="phone" size={17} /></a>
                   )}
-                  <button className="ot-round" onClick={() => setSheet("help")} aria-label="Chat"><Icon n="chat" size={17} /></button>
+                  <button className="ot-round" onClick={() => openChat(`Help with order #${o.id}`)} aria-label="Chat"><Icon n="chat" size={17} /></button>
                 </div>
               )}
               {/* Only when the shop has actually sent one. A spent code comes
@@ -630,7 +582,7 @@ export default function OrderTrack({ order: o, byId, onChanged, onBack, onReceip
             {returnable(o, s) && <button className="ot-act" onClick={() => setSheet("return")}><Icon n="reorder" size={17} />Return or replace<small>Within 7 days</small></button>}
             {s.key === "delivered" && !o.rating && <button className="ot-act" onClick={() => rateRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })}><Icon n="star" size={17} />Rate order<small>Takes 10 seconds</small></button>}
             {o.bill && <button className="ot-act" onClick={onReceipt}><Icon n="printer" size={17} />View receipt<small>Print or download</small></button>}
-            <button className="ot-act" onClick={() => setSheet("help")}><Icon n="chat" size={17} />Need help?<small>Chat with us</small></button>
+            <button className="ot-act" onClick={() => openChat(`Help with order #${o.id}`)}><Icon n="chat" size={17} />Need help?<small>Chat with us</small></button>
             <button className="ot-act ot-act-blue" onClick={(e) => onReorder(o, e.currentTarget)}><Icon n="cart" size={17} />Reorder<small>Add all to cart</small></button>
           </section>
 
@@ -696,7 +648,6 @@ export default function OrderTrack({ order: o, byId, onChanged, onBack, onReceip
           flash(sent ? (r.resolution === "refund" ? "Return requested · pickup scheduled" : "Replacement requested") : act.error?.message || "We couldn't send that just now");
         }} />
       )}
-      {sheet === "help" && <HelpSheet o={o} s={s} name={name} track={track} onClose={() => setSheet(null)} onCancel={() => setSheet("cancel")} />}
 
       <div className={"ot-toast" + (toast ? " ot-show" : "")} role="status" aria-live="polite">{toast}</div>
     </div>

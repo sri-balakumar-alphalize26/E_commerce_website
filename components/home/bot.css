@@ -151,3 +151,6 @@
   .sb *, .sb *::before, .sb *::after { animation: none !important; transition: none !important; }
 }
 .sb-send input:focus-visible, .sb-hint-main:focus-visible { outline: none; }
+
+/* The team member's name above their message. */
+.sb-who { display: block; font-size: 11px; font-weight: 700; color: #0a78ab; margin-bottom: 2px; }

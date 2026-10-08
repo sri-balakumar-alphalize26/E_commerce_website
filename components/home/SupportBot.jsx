@@ -16,7 +16,12 @@
    ========================================================================== */
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Icon } from "./shared";
-import { AGENT_NAME, BOT_NAME, ask, callAgent, greeting, tellAgent } from "./support";
+import { BOT_NAME, ask, callAgent, greeting, tellAgent, ticketNow } from "./support";
+
+/* How often an open conversation with the team checks for their replies. */
+const POLL_MS = 8000;
+/* Sign-in from the chat comes back to the page it was asked on. */
+const signIn = () => { window.location.href = "/login?next=" + encodeURIComponent(window.location.pathname + window.location.search); };
 
 const reduced = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 const CHAT_KEY = "369mart.chat";
@@ -62,8 +67,9 @@ function Msg({ m, onChip, onAction, last }) {
   const mine = m.from === "me";
   return (
     <div className={"sb-msg " + (mine ? "sb-mine" : m.from === "agent" ? "sb-agent" : "sb-bot")}>
-      {!mine && <span className="sb-ava">{m.from === "agent" ? AGENT_NAME[0] : <BotFace />}</span>}
+      {!mine && <span className="sb-ava">{m.from === "agent" ? (m.name || "S")[0] : <BotFace />}</span>}
       <div className="sb-bubble-col">
+        {m.from === "agent" && m.name && <b className="sb-who">{m.name}</b>}
         <p>{m.text}</p>
         {!!m.actions?.length && (
           <div className="sb-actions">
@@ -92,6 +98,8 @@ export default function SupportBot({ onNav, hidden = false, lift = 0 }) {
   const [hint, setHint] = useState(false);
   const [unread, setUnread] = useState(false);
   const [wave, setWave] = useState(false);
+  /* Opened by a Help button on a page that normally hides the chat. */
+  const [forced, setForced] = useState(false);
   const panel = useRef(null);
   const fab = useRef(null);
   const list = useRef(null);
@@ -115,19 +123,21 @@ export default function SupportBot({ onNav, hidden = false, lift = 0 }) {
 
   const push = (m) => setMsgs((l) => [...l, { at: Date.now(), ...m }]);
 
-  /* The shop cannot answer someone it does not know - every support route
-     needs an account - so a guest is told that rather than being left with a
-     panel that says nothing. */
+  /* A guest asking for a person, or a lost session: say so, with the way in. */
   const offline = (e) =>
-    push({ from: "sys", text: e?.status === 401
-      ? "Sign in and I can help with your orders, refunds and payments."
-      : "I couldn't reach support just now. Try again in a moment." });
+    e?.status === 401
+      ? push({ from: "bot", text: "Sign in and I can help with your orders, refunds and payments.",
+        actions: [{ label: "Sign in", go: ["login"] }] })
+      : push({ from: "sys", text: "I couldn't reach support just now. Try again in a moment." });
 
-  const open = () => {
-    if (phase !== "closed") return;
+  /* The server's transcript is the conversation once a person is involved. */
+  const fromTicket = (t) => (t?.messages || []).map((m) => ({ ...m, at: m.at || Date.now() }));
+
+  const open = (say = "") => {
+    if (phase !== "closed") { if (say) send(say); return; }
     setHint(false); setUnread(false); ss.set(HINT_KEY, true);
     setPhase("open");
-    if (msgs.length) return;
+    if (msgs.length) { if (say) later(() => send(say), 300); return; }
     setTyping(true);
     greeting()
       .then((g) => {
@@ -135,14 +145,41 @@ export default function SupportBot({ onNav, hidden = false, lift = 0 }) {
         /* They asked for a person earlier; the ticket is the transcript. */
         if (g.agent && g.ticket) {
           setAgent(true);
-          const said = (g.ticket.messages || []).map((m) => ({ ...m, at: m.at || Date.now() }));
-          setMsgs(said.length ? said : [{ at: Date.now(), from: "agent", text: g.text }]);
+          const said = fromTicket(g.ticket);
+          setMsgs(said.length ? said : [{ at: Date.now(), from: "bot", text: g.text }]);
           return;
         }
         push({ from: "bot", text: g.text, chips: g.chips });
+        if (say) later(() => send(say), 300);
       })
       .catch((e) => { setTyping(false); offline(e); });
   };
+
+  /* A Help button anywhere opens this chat, even where it is normally hidden. */
+  useEffect(() => {
+    const go = (e) => { setForced(true); open(e.detail?.text || ""); };
+    window.addEventListener("369mart:chat", go);
+    return () => window.removeEventListener("369mart:chat", go);
+  }); // eslint-disable-line
+
+  /* With the team on it: their replies, as they come. */
+  const ended = () => {
+    setAgent(false);
+    push({ from: "sys", text: "This chat was closed by our team. Ask me anything to start a new one." });
+  };
+  useEffect(() => {
+    if (!agent || phase !== "open") return;
+    const t = setInterval(() => {
+      ticketNow()
+        .then((r) => {
+          if (!r?.ticket || r.ticket.closed) { ended(); return; }
+          const said = fromTicket(r.ticket);
+          setMsgs((now) => (said.length > now.filter((m) => m.from !== "sys").length ? said : now));
+        })
+        .catch(() => {});
+    }, POLL_MS);
+    return () => clearInterval(t);
+  }, [agent, phase]); // eslint-disable-line
   useLayoutEffect(() => {
     if (phase !== "open" || !panel.current) return;
     const el = panel.current;
@@ -155,7 +192,7 @@ export default function SupportBot({ onNav, hidden = false, lift = 0 }) {
     if (phase !== "open") return;
     panel.current?.classList.remove("sb-in");
     setPhase("closing");
-    setTimeout(() => { setPhase("closed"); fab.current?.focus({ preventScroll: true }); after?.(); }, reduced() ? 0 : 240);
+    setTimeout(() => { setPhase("closed"); setForced(false); fab.current?.focus({ preventScroll: true }); after?.(); }, reduced() ? 0 : 240);
   };
   useEffect(() => {
     if (phase !== "open") return;
@@ -163,18 +200,19 @@ export default function SupportBot({ onNav, hidden = false, lift = 0 }) {
     window.addEventListener("keydown", k);
     return () => window.removeEventListener("keydown", k);
   }); // eslint-disable-line
-  useEffect(() => { if (hidden && phase !== "closed") setPhase("closed"); }, [hidden]); // eslint-disable-line
+  useEffect(() => { if (hidden && !forced && phase !== "closed") setPhase("closed"); }, [hidden]); // eslint-disable-line
 
-  /* This is where a ticket is really opened. The queue bar stays, because
-     there is now something to wait for. */
+  /* This is where a ticket is really opened - with the conversation so far,
+     so the team sees it. Nobody "joins" until a person actually replies. */
   const connectAgent = (about) => {
-    push({ from: "sys", text: "Finding an available agent…", queue: true });
-    callAgent(about)
+    const history = msgs.filter((m) => m.from === "me" || m.from === "bot").slice(-20)
+      .map((m) => ({ from: m.from, text: m.text }));
+    callAgent(about, history)
       .then((r) => {
         setAgent(true);
-        push({ from: "sys", text: `${AGENT_NAME} joined the chat` });
-        setTyping(true);
-        later(() => { setTyping(false); push({ from: "agent", text: r.reply }); }, 900);
+        const said = fromTicket(r.ticket);
+        if (said.length) setMsgs(said); else push({ from: "bot", text: r.reply });
+        push({ from: "sys", text: "Waiting for our team", queue: true });
       })
       .catch((e) => offline(e));
   };
@@ -189,14 +227,23 @@ export default function SupportBot({ onNav, hidden = false, lift = 0 }) {
     answer
       .then((r) => {
         setTyping(false);
-        if (agent) { push({ from: "agent", text: r.reply }); return; }
+        if (agent) {
+          if (r.closed) { ended(); return; }
+          if (r.reply) push({ from: "bot", text: r.reply });
+          return;
+        }
         push({ from: "bot", text: r.text, actions: r.actions, chips: r.chips });
         if (r.agent) later(() => connectAgent(q), 400);
       })
       .catch((e) => { setTyping(false); offline(e); });
   };
-  const onAction = (a) => close(() => onNav?.(a.go[0], a.go[1] ?? null));
+  const onAction = (a) => (a.go[0] === "login" ? signIn() : close(() => onNav?.(a.go[0], a.go[1] ?? null)));
   const restart = () => {
+    /* An open ticket stays open: "new chat" brings the conversation back up. */
+    if (agent) {
+      ticketNow().then((r) => { if (r?.ticket && !r.ticket.closed) setMsgs(fromTicket(r.ticket)); else ended(); }).catch(() => {});
+      return;
+    }
     timers.current.forEach(clearTimeout); timers.current = [];
     setAgent(false); setTyping(false); ss.set(CHAT_KEY, null);
     setMsgs([]); setTyping(true);
@@ -206,10 +253,12 @@ export default function SupportBot({ onNav, hidden = false, lift = 0 }) {
   };
 
   const isOpen = phase !== "closed";
+  /* Who is talking: the last person from the team who wrote, if any. */
+  const person = [...msgs].reverse().find((m) => m.from === "agent")?.name;
   const lastBot = [...msgs].reverse().find((m) => m.from !== "me" && m.from !== "sys");
 
   return (
-    <div className={"sb" + (hidden ? " sb-hidden" : "")}>
+    <div className={"sb" + (hidden && !forced ? " sb-hidden" : "")}>
       <div className={"sb-dock sb-lift" + lift + (isOpen ? " sb-under" : "")}>
         {hint && !isOpen && (
           <div className="sb-hint">
@@ -229,10 +278,10 @@ export default function SupportBot({ onNav, hidden = false, lift = 0 }) {
           <div className="sb-back" onClick={() => close()} />
           <section ref={panel} className="sb-panel" role="dialog" aria-modal="false" aria-label="369 Mart support chat">
             <header className="sb-head">
-              <span className={"sb-head-ava" + (agent ? " sb-is-agent" : "")}>{agent ? AGENT_NAME[0] : <BotFace />}<i /></span>
+              <span className={"sb-head-ava" + (agent && person ? " sb-is-agent" : "")}>{agent && person ? person[0] : <BotFace />}<i /></span>
               <span className="sb-head-txt">
                 <b>369 Mart Support</b>
-                <small key={agent ? "a" : "b"}>{agent ? `${AGENT_NAME} · Support agent` : `${BOT_NAME} · replies instantly`}</small>
+                <small key={agent ? "a" : "b"}>{agent ? (person ? `${person} · 369 Mart team` : "Waiting for our team") : `${BOT_NAME} · replies instantly`}</small>
               </span>
               <button className="sb-hbtn" onClick={restart} aria-label="Start a new chat" title="New chat"><Icon n="reorder" size={17} /></button>
               <button className="sb-hbtn" onClick={() => close()} aria-label="Close chat"><Icon n="chev" size={20} /></button>
@@ -242,13 +291,13 @@ export default function SupportBot({ onNav, hidden = false, lift = 0 }) {
               {msgs.map((m, i) => <Msg key={`${i}-${m.at}`} m={m} last={m === lastBot && !typing} onChip={send} onAction={onAction} />)}
               {typing && (
                 <div className="sb-msg sb-bot sb-typing-row">
-                  <span className="sb-ava">{agent ? AGENT_NAME[0] : <BotFace />}</span>
+                  <span className="sb-ava"><BotFace /></span>
                   <p className="sb-typing" aria-label="Typing"><i /><i /><i /></p>
                 </div>
               )}
             </div>
             <form className="sb-send" onSubmit={(e) => { e.preventDefault(); send(); }}>
-              <input ref={input} value={text} onChange={(e) => setText(e.target.value)} placeholder={agent ? `Message ${AGENT_NAME}` : "Type your question"} aria-label="Message" maxLength={300} />
+              <input ref={input} value={text} onChange={(e) => setText(e.target.value)} placeholder={agent ? (person ? `Message ${person}` : "Message our team") : "Type your question"} aria-label="Message" maxLength={300} />
               <button type="submit" className={text.trim() ? "sb-ready" : ""} disabled={!text.trim() || typing} aria-label="Send"><Icon n="right" size={18} /></button>
             </form>
             <p className="sb-foot"><Icon n="lock" size={11} />{agent ? "Kept with your support ticket" : "Chats are saved for this visit only"}</p>

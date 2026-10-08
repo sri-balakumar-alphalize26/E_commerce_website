@@ -66,6 +66,12 @@ function TicketDrawer({ ref_, staff, onClose, onChanged, flash }) {
   const [text, setText] = useState("");
   const t = data?.ticket;
 
+  /* The customer may still be typing: their new lines appear without a reload. */
+  useEffect(() => {
+    const id = setInterval(() => { api.invalidate(`/admin/support/${encodeURIComponent(ref_)}`); reload(); }, 15000);
+    return () => clearInterval(id);
+  }, [ref_]); // eslint-disable-line
+
   /* Re-read after every write. Replying is also what claims the ticket and
      stamps it answered, and the panel must not have to work that out. */
   const run = async (fn, ok) => {
@@ -154,7 +160,7 @@ function TicketDrawer({ ref_, staff, onClose, onChanged, flash }) {
               {(t.messages || []).map((m, i) => (
                 <li key={i} className={m.from === "me" ? "ad-them" : "ad-us"}>
                   <p>{m.text}</p>
-                  <small>{m.from === "me" ? t.customer : "Us"} · {since(m.at)}</small>
+                  <small>{m.from === "me" ? t.customer : m.from === "bot" ? "Bot" : (m.name || "Us")} · {since(m.at)}</small>
                 </li>
               ))}
             </ul>

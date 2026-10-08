@@ -122,7 +122,7 @@ class Mart369Ticket(models.Model):
             'order_id': order.id if order else False,
         })
 
-    def _mart369_say(self, text, from_customer=True):
+    def _mart369_say(self, text, from_customer=True, from_bot=False):
         """Put one line of the conversation on the ticket.
 
         The transcript was `sessionStorage` and gone when the tab closed, which
@@ -132,12 +132,17 @@ class Mart369Ticket(models.Model):
         if not (text or '').strip():
             return False
         body = (text or '').strip()
-        self.sudo().message_post(
-            body=body,
-            author_id=self.partner_id.id if from_customer else self.env.user.partner_id.id,
-            message_type='comment',
-        )
-        if not from_customer and not self.answered_at:
+        # The bot's own lines (the conversation before the hand-over, and its
+        # "you're in the queue") are signed by OdooBot, so the panel can tell
+        # them from a person's and the ticket shows who really said what.
+        if from_bot:
+            author = self.env.ref('base.partner_root')
+        elif from_customer:
+            author = self.partner_id
+        else:
+            author = self.env.user.partner_id
+        self.sudo().message_post(body=body, author_id=author.id, message_type='comment')
+        if not from_customer and not from_bot and not self.answered_at:
             self.sudo().write({'answered_at': fields.Datetime.now(),
                                'state': 'open',
                                'user_id': self.env.user.id})
@@ -171,19 +176,25 @@ class Mart369Ticket(models.Model):
         back on screen with its paragraph tags showing.
         """
         self.ensure_one()
+        # Never a Log note: those are staff writing to each other.
         messages = self.sudo().message_ids.filtered(
-            lambda m: m.message_type == 'comment' and m.body)
+            lambda m: m.message_type == 'comment' and m.body
+            and not (m.subtype_id and m.subtype_id.internal))
+        bot = self.env.ref('base.partner_root')
         rows = []
         for message in reversed(messages[:limit]):
-            mine = message.author_id == self.partner_id
             said = html2plaintext(message.body).strip()
             if not said:
                 continue
-            rows.append({
-                'from': 'me' if mine else 'agent',
-                'text': said,
-                'at': int(message.date.timestamp() * 1000) if message.date else None,
-            })
+            if message.author_id == self.partner_id:
+                row = {'from': 'me'}
+            elif message.author_id == bot:
+                row = {'from': 'bot'}
+            else:
+                # The person who really answered, by first name.
+                row = {'from': 'agent', 'name': (message.author_id.name or 'Support').split()[0]}
+            row.update(text=said, at=int(message.date.timestamp() * 1000) if message.date else None)
+            rows.append(row)
         return rows
 
     def _mart369_serialize(self):
@@ -193,5 +204,6 @@ class Mart369Ticket(models.Model):
             'ref': self.name,
             'state': self.state,
             'order': self.order_id.mart369_ref or None,
+            'closed': self.state not in OPEN_STATES,
             'messages': self._mart369_transcript(),
         }
