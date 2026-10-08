@@ -183,6 +183,37 @@ class TestMart369HomeApi(HttpCase):
             [item['name'] for item in payload['items']],
             ['ZZZ Charlie', 'AAA Alpha', 'MMM Bravo'])
 
+    def test_an_archived_product_leaves_a_hand_picked_row(self):
+        """Archived in Odoo, gone from the home page - and back when restored."""
+        Product = self.env['product.template']
+        kept = Product.create({'name': 'Zz Kept', 'is_published': True, 'list_price': 10})
+        gone = Product.create({'name': 'Zz Archived', 'is_published': True, 'list_price': 20})
+        section = self.env['mart369.home.section'].create({
+            'mode_id': self.mode.id, 'kind': 'rail', 'name': 'Archive check',
+            'key': 'archive-check', 'source': 'manual', 'sequence': 999,
+            'picked_product_ids': [
+                (0, 0, {'product_tmpl_id': kept.id, 'sequence': 10}),
+                (0, 0, {'product_tmpl_id': gone.id, 'sequence': 20}),
+            ],
+        })
+        gone.active = False
+        self.assertEqual(section._resolve_products().ids, [kept.id])
+        gone.active = True
+        self.assertEqual(section._resolve_products().ids, [kept.id, gone.id])
+
+    def test_cards_leave_out_the_default_units(self):
+        """Odoo's "Units" is not printed under a card; a real unit is."""
+        Product = self.env['product.template']
+        plain = Product.create({'name': 'Zz Plain', 'is_published': True, 'list_price': 10})
+        typed = Product.create({'name': 'Zz Typed', 'is_published': True, 'list_price': 10,
+                                'mart_unit_text': '500 g'})
+        Serial = self.env['mart369.serializable']
+        self.assertEqual(Serial._mart369_real_unit(plain), '')
+        cards = {c['name']: c for c in (
+            Serial._serialize_product(p, None, {}, 'quick') for p in (plain, typed))}
+        self.assertEqual(cards['Zz Plain']['unit'], '')
+        self.assertEqual(cards['Zz Typed']['unit'], '500 g')
+
     def test_empty_row_is_left_out(self):
         """A row with nothing in it would render as a bare heading."""
         section = self.env['mart369.home.section'].create({

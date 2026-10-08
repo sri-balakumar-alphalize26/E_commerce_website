@@ -237,8 +237,7 @@ class Mart369Serializable(models.AbstractModel):
             'id': str(product.id),
             'images': images,
             'name': pick('name_override', product.name),
-            'unit': pick('unit_override',
-                         product.mart_unit_text or product.uom_name or ''),
+            'unit': pick('unit_override', product.mart_unit_text or self._mart369_real_unit(product)),
             'price': round(price or 0.0, 2),
             'art': pick('art_override', product.mart_art or 'Pack'),
         }
@@ -362,6 +361,14 @@ class Mart369Serializable(models.AbstractModel):
                 } for v in values.sorted(lambda v: (v.product_attribute_value_id.sequence, v.id))],
             })
         return out
+
+    @api.model
+    def _mart369_real_unit(self, product):
+        """The product's unit of measure when it says something ("500 g",
+        "1 L"); nothing for Odoo's default "Units", which tells a shopper
+        nothing and printed under every card."""
+        name = (product.uom_name or '').strip()
+        return '' if name.lower() in ('unit', 'units') else name
 
     @api.model
     def _mart369_gallery_item(self, image):

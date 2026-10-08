@@ -28,6 +28,17 @@ class TestMart369Listed(TransactionCase):
         self.assertIn(self.goods, found)
         self.assertNotIn(self.service, found)
 
+    def test_an_archived_product_leaves_even_a_list_that_reads_archived(self):
+        """filtered_domain and active_test=False lists ask the rule too."""
+        old = self.env['product.template'].create({
+            'name': 'Listed test old cable', 'is_published': True, 'list_price': 5,
+            'public_categ_ids': [(6, 0, self.categ.ids)], 'active': False})
+        found = self.env['product.template'].with_context(active_test=False).search(
+            self.categ._mart369_product_domain())
+        self.assertIn(self.goods, found)
+        self.assertNotIn(old, found)
+        self.assertFalse((self.goods | old).filtered_domain(self.categ._mart369_product_domain()) - self.goods)
+
     def test_a_service_is_still_found_by_id(self):
         self.assertTrue(self.service.exists())
         self.assertIn(self.service, self.env['product.template'].search(
