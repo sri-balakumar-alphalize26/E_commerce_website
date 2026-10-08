@@ -5,7 +5,7 @@
  * item, Description), on the desk and inside Odoo's product form alike: every
  * change is handed up as HTML, and the host writes it where it belongs.
  */
-import { Component } from "@odoo/owl";
+import { Component, markup } from "@odoo/owl";
 import { Wysiwyg } from "@html_editor/wysiwyg";
 import { MAIN_PLUGINS } from "@html_editor/plugin_sets";
 
@@ -23,7 +23,9 @@ export class RichBox extends Component {
         // Built once: the editor owns the text from here on, so a value coming
         // back down from the host must not reset the caret.
         this.config = {
-            content: String(this.props.value || ""),
+            // Markup, not a string: Odoo's editor shows a plain string as
+            // characters, which put the saved formatting on screen as code.
+            content: markup(String(this.props.value || "")),
             Plugins: MAIN_PLUGINS,
             placeholder: this.props.placeholder || "",
             onChange: () => this.changed(),
