@@ -12,9 +12,17 @@ class ProductTemplate(models.Model):
     _inherit = 'product.template'
 
     mart_features = fields.Text(
-        string='Key features',
-        help='One per line. Shown as the ticked bullet list on the product '
-             'page. Leave empty to use the category or shop default.')
+        string='About this item',
+        help='One point per line, shown as the "About this item" list on the '
+             'product page. Start with a short phrase, then " — " and the '
+             'rest: the phrase is printed in bold. e.g. Immersive display — '
+             'A 6.3-inch Super Retina XDR display, brighter outdoors.')
+    mart_details = fields.Text(
+        string='Product details',
+        help='One per line: a label, a colon, the value - e.g. Brand: Apple, '
+             'Operating System: iOS, Model Name: iPhone 18 Pro. Shown as the '
+             'short table under the options on the product page; each '
+             "variant's own specs (Colour, Size) are added to it.")
     mart_in_the_box = fields.Char(
         string='In the box',
         help="e.g. Product, cable, user manual.")
@@ -149,6 +157,9 @@ class ProductTemplate(models.Model):
                      # The website's aisles. mart369_catalog takes this box
                      # away: there they follow Category.
                      'public_categ_ids']),
+        # What the product page prints under the options, like Amazon's
+        # "About this item" and the short details table above it.
+        ('About this item', ['mart_features', 'mart_details']),
         ('Website only', ['compare_list_price', 'mart_home_tag',
                           'mart_delivery_text', 'mart_low_stock_at',
                           'mart_unit_text', 'mart_per_unit', 'mart_note']),
@@ -213,6 +224,7 @@ class ProductTemplate(models.Model):
             'New', 'Bestseller', 'Sale', 'Limited', 'Old stock', 'Organic',
             'Imported']},
         'mart_features': {'kind': 'points'},
+        'mart_details': {'kind': 'points'},
         # The same one-box-per-item entry, kept as the comma list the page
         # has always printed: "Product, cable, user manual".
         'mart_in_the_box': {'kind': 'points', 'sep': ', '},

@@ -47,6 +47,7 @@
                 <field name="description_ecommerce" invisible="1"/>
                 <field name="mart_low_stock_at" invisible="1"/>
                 <field name="mart_delivery_text" invisible="1"/>
+                <field name="mart_details" invisible="1"/>
 
                 <widget name="mart369_product_editor"/>
 

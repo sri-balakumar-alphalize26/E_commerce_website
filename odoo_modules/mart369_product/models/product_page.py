@@ -151,9 +151,46 @@ class Mart369ProductPage(models.AbstractModel):
         info = self.info(product)
         if info:
             d['info'] = info
+        about = self.about(product)
+        if about:
+            d['about'] = about
+        rows = self.product_details(product)
+        if rows:
+            d['details'] = rows
 
         d.update(self.reviews(product, keys, values))
         return d
+
+    @api.model
+    def about(self, product):
+        """[{lead, text}] for "About this item", one per line of the product's
+        About this item box. A line written "Bold phrase — the rest" is split
+        so the page prints the phrase in bold; a line without one is all text."""
+        out = []
+        for line in (product.mart_features or '').splitlines():
+            line = line.strip().lstrip('-•*').strip()
+            if not line:
+                continue
+            lead, text = '', line
+            for mark in (' — ', ' – ', ' - ', ': '):
+                head, sep, tail = line.partition(mark)
+                # A lead is a short phrase, not half a sentence.
+                if sep and head.strip() and tail.strip() and len(head) <= 60:
+                    lead, text = head.strip(), tail.strip()
+                    break
+            out.append({'lead': lead, 'text': text})
+        return out
+
+    @api.model
+    def product_details(self, product):
+        """[[label, value]] from the product's Product details box ("Brand:
+        Apple" a line). The page adds the chosen variant's own specs to it."""
+        rows = []
+        for line in (product.mart_details or '').splitlines():
+            label, sep, value = line.partition(':')
+            if sep and label.strip() and value.strip():
+                rows.append([label.strip(), value.strip()])
+        return rows
 
     @api.model
     def info(self, product):

@@ -124,6 +124,34 @@ class TestProductApiDetails(TransactionCase):
         self.assertTrue(field, '%s is a builder row' % key)
         return field
 
+    # ---------------------------------------------- About this item, details
+
+    def test_about_this_item_prints_the_lead_in_bold(self):
+        self.product.mart_features = (
+            'Immersive display — A 6.3-inch Super Retina XDR display.\n\n'
+            '- Long battery: up to 23 hours of video.\n'
+            'Works with every charger you already own, from the old to the new ones')
+        self.assertEqual(self._details()['about'], [
+            {'lead': 'Immersive display', 'text': 'A 6.3-inch Super Retina XDR display.'},
+            {'lead': 'Long battery', 'text': 'up to 23 hours of video.'},
+            {'lead': '', 'text': 'Works with every charger you already own, from the old to the new ones'},
+        ])
+
+    def test_product_details_are_label_and_value_rows(self):
+        self.product.mart_details = 'Brand: Apple\nnot a row\nModel Name:  iPhone 18 Pro \nEmpty:'
+        self.assertEqual(self._details()['details'],
+                         [['Brand', 'Apple'], ['Model Name', 'iPhone 18 Pro']])
+
+    def test_no_about_or_details_without_them(self):
+        d = self._details()
+        self.assertNotIn('about', d)
+        self.assertNotIn('details', d)
+
+    def test_the_desk_offers_both_boxes(self):
+        groups = {g['title']: [b['name'] for b in g['boxes']]
+                  for g in self.env['product.template'].mart369_desk_form()['groups']}
+        self.assertEqual(groups.get('About this item'), ['mart_features', 'mart_details'])
+
     # ---------------------------------------------- Edit page's switches
 
     def test_switching_off_the_sales_description_takes_it_off_the_page(self):

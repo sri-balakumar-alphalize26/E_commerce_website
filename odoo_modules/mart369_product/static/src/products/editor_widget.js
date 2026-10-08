@@ -26,15 +26,22 @@ const IMAGE = "image_1920";
 
 /** Where the Photographs box keeps the extra pictures. The product's gallery
  *  is shared by every variant, so on a variant's own form (Product Variants)
- *  they go to that variant's Variant images tab (sales_automation_confirm)
- *  when the form has it - the photos WhatsApp and the website show for that
- *  colour only. Without the tab, the product's gallery, as before. */
+ *  they go to that variant's own media: Odoo's Extra Variant Media
+ *  (website_sale), which the website reads for that colour only
+ *  (mart369 `_mart369_variant_media`). The senior's Variant images tab
+ *  (sales_automation_confirm) is the fallback on a form without it, and the
+ *  product's gallery when there is neither, as before. */
 const TEMPLATE_GALLERY = { field: "product_template_image_ids", model: "product.image", image: "image_1920", thumb: "image_256" };
+const VARIANT_MEDIA = { field: "product_variant_image_ids", model: "product.image", image: "image_1920", thumb: "image_256" };
 const VARIANT_GALLERY = { field: "sa_variant_picture_ids", model: "sa.confirm.picture", image: "image", thumb: "image/256x256" };
 
 function galleryOf(record) {
-    if (record.resModel === "product.product" && record.data[VARIANT_GALLERY.field]) {
-        return VARIANT_GALLERY;
+    if (record.resModel === "product.product") {
+        for (const gallery of [VARIANT_MEDIA, VARIANT_GALLERY]) {
+            if (record.data[gallery.field]) {
+                return gallery;
+            }
+        }
     }
     return TEMPLATE_GALLERY;
 }

@@ -49,7 +49,7 @@ class TestProductDeskEditing(TransactionCase):
         for column in ['name'] + self.MANUAL:
             if column in self.Product._fields:
                 self.assertIn(column, boxes)
-        for column in ('mart_material', 'mart_item_width', 'mart_features',
+        for column in ('mart_material', 'mart_item_width',
                        'description_ecommerce', 'mart_brand', 'weight', 'wa_retail_price'):
             self.assertNotIn(column, boxes, '%s repeats the setup or is not asked' % column)
 
