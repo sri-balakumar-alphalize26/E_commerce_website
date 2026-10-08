@@ -18,7 +18,7 @@
                 <iframe t-att-src="src" title="The product page on the shop" loading="lazy"
                         t-attf-style="width: {{ width }}px; height: {{ state.height }}px; transform: scale({{ state.scale }});"/>
             </div>
-            <p class="pdk-preview-note">The real shop page, as saved. Press Save and it shows your changes. A product that is not published yet is not on the shop.</p>
+            <p class="pdk-preview-note">The real shop page, as saved. Tap a part of it to jump to the box that fills it. Press Save and it shows your changes. A product that is not published yet is not on the shop.</p>
         </div>
     </t>
 

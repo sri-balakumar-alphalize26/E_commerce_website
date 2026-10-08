@@ -12,7 +12,7 @@
                 <div class="pdk-form">
 
                     <!-- ============================================ photographs -->
-                    <section t-attf-class="ad-card pdk-sec pdk-photos-sec {{ state.dragging ? 'pdk-drag' : '' }}"
+                    <section data-field="__photos" t-attf-class="ad-card pdk-sec pdk-photos-sec {{ state.dragging ? 'pdk-drag' : '' }}"
                              t-on-dragover="onDragOver" t-on-dragleave="onDragLeave" t-on-drop="onDrop">
                         <header t-if="props.embedded" class="pdk-sec-head">
                             <h3>Photographs</h3>
@@ -386,6 +386,7 @@
                 <!-- ====================================== how shoppers see it -->
                 <aside class="pdk-preview" aria-label="How it looks in the app">
                     <!-- A saved product: the real shop page. A new one: the drawing below. -->
+                    <p t-if="state.pickNote" class="pdk-pick-note" role="status" t-esc="state.pickNote"/>
                     <ShopFrame t-if="shopUrl" url="shopUrl"/>
                     <div t-else="" class="ad-card pdk-sec">
                         <header class="pdk-sec-head">
@@ -503,7 +504,7 @@
     <!-- A box's name, a red * when required, and the ⓘ that lights its spot
          on the panel - on hover, as on the web admin. -->
     <t t-name="mart369_product.BoxLabel">
-        <span class="pdk-label">
+        <span class="pdk-label" t-att-data-field="b.name">
             <t t-esc="b.label"/>
             <i t-if="b.required" class="pdk-req" aria-hidden="true">*</i>
             <button t-if="hasPreview(b.name)" type="button"

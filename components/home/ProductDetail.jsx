@@ -29,6 +29,7 @@ import Lightbox, { ReviewMedia } from "./Lightbox";
 import { addressText } from "@/lib/address";
 import { api } from "@/lib/api";
 import { toSafeHtml } from "@/lib/safeHtml";
+import { startPreviewBridge } from "./previewBridge";
 
 const ZOOM = 2.6;
 
@@ -664,6 +665,8 @@ export default function ProductDetail({
 
   const group = p.variantGroup || p.id;
   useEffect(() => { window.scrollTo({ top: 0 }); }, [group]);
+  /* Inside Odoo's editor preview only: tap a section, the editor goes to its box. */
+  useEffect(() => startPreviewBridge(), []);
   const flash = (m) => { setToast(m); clearTimeout(flash.t); flash.t = setTimeout(() => setToast(""), 2200); };
   const share = async () => {
     const url = typeof location !== "undefined" ? location.origin + "/product/" + p.id : "";

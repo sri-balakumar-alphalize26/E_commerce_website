@@ -425,3 +425,9 @@ button.pd-about-more { border: 0; background: none; padding: 0; cursor: pointer;
 .pd-compare-add:hover { background: var(--hm-blue); color: #fff !important; }
 .pd-compare-in { color: #1a7f3c; font-weight: 700; }
 .pd-compare td small { color: var(--hm-muted); }
+
+/* Inside Odoo's editor preview only (previewBridge.js): the section under the
+   pointer is outlined, and a tap flashes it as the editor jumps to its box. */
+.pv-editing .pv-pick-on { outline: 2px dashed #0a78ab; outline-offset: 4px; border-radius: 8px; cursor: pointer; }
+@keyframes pv-pick-tap { 0% { box-shadow: 0 0 0 0 rgba(247, 147, 30, 0.7); } 100% { box-shadow: 0 0 0 14px rgba(247, 147, 30, 0); } }
+.pv-editing .pv-pick-tap { animation: pv-pick-tap 700ms ease-out; }

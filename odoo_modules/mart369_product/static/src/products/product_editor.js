@@ -255,6 +255,8 @@ export class ProductEditor extends Component {
             photoOver: null,
             // "3 added, 2 left out" when more were picked than the shop shows.
             photoNote: "",
+            // Said for a preview section that is not filled here (badges, reviews).
+            pickNote: "",
             // Save was pressed with no name.
             nameBad: false,
             // Ticked photographs, for "Remove selected".
@@ -316,6 +318,20 @@ export class ProductEditor extends Component {
             }
         });
 
+        // A section tapped in "How shoppers see it" (the shop page in the
+        // frame, components/home/previewBridge.js): go to the box behind it.
+        // Only a message from this editor's own frame counts.
+        useExternalListener(window, "message", (ev) => {
+            if (ev.data?.type !== "mart369:preview-pick") {
+                return;
+            }
+            const frame = this.root.querySelector?.(".pdk-shop-box iframe");
+            if (!frame || ev.source !== frame.contentWindow) {
+                return;
+            }
+            this.onPreviewPick(String(ev.data.target || ""));
+        });
+
         onPatched(() => {
             if (this.pendingFocus) {
                 const { name, i } = this.pendingFocus;
@@ -329,6 +345,61 @@ export class ProductEditor extends Component {
 
     get root() {
         return this.rootRef.el || document;
+    }
+
+    // ------------------------------------- from the preview to the box
+
+    /** A tapped section of the shop page: scroll to the box that fills it and
+     *  make it pulse. A box in a folded group opens it first. A section filled
+     *  somewhere else says where. */
+    async onPreviewPick(target) {
+        const PICK = {
+            photos: ["__photos"], name: ["name"], price: ["list_price", "compare_list_price"],
+            details: ["mart_details"], about: ["mart_about_html"], showcase: ["mart_showcase_json"],
+            description: ["description_sale"], info: ["categ_id", "default_code"],
+            unit: ["mart_unit_text"], lowstock: ["mart_low_stock_at"], variants: ["__variants"],
+        };
+        const ELSEWHERE = {
+            variants: _t("Options and variants are on the Attributes & Variants tab above."),
+            trust: _t("The badges' words are set in the Product page settings - for the whole shop or this product."),
+            reviews: _t("Reviews are written by customers; answer them under Reviews."),
+        };
+        const names = PICK[target] || [];
+        const find = () => {
+            for (const name of names) {
+                const el = this.root.querySelector?.(`[data-field="${name}"]`);
+                if (el) {
+                    return { el, name };
+                }
+            }
+            return null;
+        };
+        let hit = find();
+        if (!hit) {
+            // In a folded group ("Website only"): open it, then look again.
+            const group = this.state.form.groups.find((g) => g.folded && g.boxes.some((b) => names.includes(b.name)));
+            if (group && this.isFolded(group)) {
+                this.toggleFold(group.title);
+                await new Promise((done) => setTimeout(done, 80));
+                hit = find();
+            }
+        }
+        if (!hit) {
+            if (ELSEWHERE[target]) {
+                this.state.pickNote = ELSEWHERE[target];
+                clearTimeout(this.pickNoteTimer);
+                this.pickNoteTimer = setTimeout(() => { this.state.pickNote = ""; }, 5000);
+            }
+            return;
+        }
+        const box = hit.el.closest(".pdk-field") || hit.el;
+        box.scrollIntoView({ behavior: "smooth", block: "center" });
+        box.classList.remove("pdk-pick-beat");
+        void box.offsetWidth; // restart the pulse on a second tap
+        box.classList.add("pdk-pick-beat");
+        clearTimeout(box._pickTimer);
+        box._pickTimer = setTimeout(() => box.classList.remove("pdk-pick-beat"), 2000);
+        this.setFocus(hit.name);
     }
 
     // ------------------------------------------------------------- values

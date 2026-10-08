@@ -4,7 +4,7 @@
     <!-- Attributes & Variants, drawn as the web console draws them
          (components/admin/ProductEditor.jsx, VariantsBlock). -->
     <t t-name="mart369_product.VariantsBlock">
-        <section class="ad-card pdk-sec">
+        <section class="ad-card pdk-sec" data-field="__variants">
             <header class="pdk-sec-head"><h3>Attributes &amp; Variants</h3><small>What the customer chooses</small></header>
             <div class="pdk-vx">
                 <p t-if="!vx.lines.length" class="pdk-hint">No choices: the product is sold as one thing. Add Brand, RAM, Colour… when customers pick one.</p>

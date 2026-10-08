@@ -460,3 +460,15 @@ tr.pdk-beat { animation: pdk-beat-row 900ms ease-out; }
 .pdk-photo-count-full { color: #8a5a00; font-weight: 700; }
 .pdk-photo-add.pdk-photo-add-off { opacity: 0.45; cursor: not-allowed; border-style: dashed; }
 .pdk-photo-full { display: flex; align-items: center; gap: 6px; margin: 10px 18px 0; padding: 8px 12px; border-radius: 10px; background: #fff4c2; border: 1px solid #f2d36b; color: #7a5200; font-size: 13px; font-weight: 600; }
+
+/* A section tapped in "How shoppers see it": its box pulses like a heartbeat. */
+@keyframes pdk-pick-beat {
+    0% { box-shadow: 0 0 0 0 rgba(247, 147, 30, 0.75); background-color: rgba(247, 147, 30, 0.12); }
+    20% { box-shadow: 0 0 0 8px rgba(247, 147, 30, 0); }
+    35% { box-shadow: 0 0 0 0 rgba(247, 147, 30, 0.75); }
+    55% { box-shadow: 0 0 0 10px rgba(247, 147, 30, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(247, 147, 30, 0); background-color: transparent; }
+}
+.pdk-pick-beat { border-radius: 12px; outline: 2px solid #f7931e; outline-offset: 4px; animation: pdk-pick-beat 1.6s ease-out; }
+.pdk-pick-note { margin: 0 0 10px; padding: 8px 12px; border-radius: 10px; background: #fff4c2; border: 1px solid #f2d36b; color: #7a5200; font-size: 13px; font-weight: 600; }
+@media (prefers-reduced-motion: reduce) { .pdk-pick-beat { animation: none; } }
