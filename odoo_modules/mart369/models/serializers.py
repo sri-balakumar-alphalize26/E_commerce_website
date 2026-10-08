@@ -19,7 +19,7 @@ import logging
 import re
 
 from odoo import api, fields, models
-from odoo.tools import html2plaintext
+from odoo.tools import html2plaintext, html_sanitize
 
 _logger = logging.getLogger(__name__)
 
@@ -364,36 +364,93 @@ class Mart369Serializable(models.AbstractModel):
         return out
 
     @api.model
-    def _mart369_variant_extra_images(self, variant):
-        """More photos of this one variant, after its own image. None here;
-        mart369_whatsapp_bridge adds the Variant images tab."""
-        return []
+    def _mart369_gallery_item(self, image):
+        """One `product.image` (Odoo's Extra Product / Variant Media) as a
+        gallery entry: a photo, or a video with its picture as the poster.
+        None for a row with neither."""
+        poster = (self._image_url('image_512', '512x512', record=image)
+                  if image.image_512 else None)
+        if image.video_url:
+            embed = None
+            try:
+                from odoo.addons.html_editor.tools import get_video_url_data
+                embed = (get_video_url_data(image.video_url) or {}).get('embed_url')
+            except Exception:  # noqa: BLE001 - a bad link is just not shown
+                embed = None
+            if embed:
+                src = 'https:' + embed if embed.startswith('//') else embed
+                return dict({'type': 'video', 'src': src}, **({'poster': poster} if poster else {}))
+        if poster:
+            return {'type': 'photo', 'src': poster}
+        return None
+
+    @api.model
+    def _mart369_variant_media(self, variant):
+        """The gallery for one variant, in order: [{type, src, poster?}].
+
+        Its own first - the variant's image, then its Extra Variant Media
+        (website_sale `product_variant_image_ids`). The product's picture and
+        Extra Product Media only when the variant has nothing of its own, so a
+        red phone never shows the white one's photo. Never the attribute
+        value's image: that is the option button's icon, shared by every
+        product."""
+        tmpl = variant.product_tmpl_id
+        own = []
+        if variant.image_variant_1920:
+            own.append({'type': 'photo',
+                        'src': self._image_url('image_512', '512x512', record=variant)})
+        if 'product_variant_image_ids' in variant._fields:
+            for image in variant.product_variant_image_ids.sorted(
+                    lambda i: (i.sequence, i.id))[:MAX_EXTRA_IMAGES]:
+                item = self._mart369_gallery_item(image)
+                if item:
+                    own.append(item)
+        if own:
+            return own
+        shared = []
+        if tmpl.image_512:
+            shared.append({'type': 'photo',
+                           'src': self._image_url('image_512', '512x512', record=tmpl)})
+        for image in tmpl.product_template_image_ids.sorted(
+                lambda i: (i.sequence, i.id))[:MAX_EXTRA_IMAGES]:
+            item = self._mart369_gallery_item(image)
+            if item:
+                shared.append(item)
+        return shared
 
     @api.model
     def _mart369_variant_images(self, variant):
-        """The pictures in the WhatsApp page's order: the variant's own image,
-        its extra photos, then the product's picture and gallery."""
-        tmpl = variant.product_tmpl_id
-        images = []
-        if variant.image_variant_1920:
-            images.append(self._image_url('image_512', '512x512', record=variant))
-        images += self._mart369_variant_extra_images(variant)
-        if tmpl.image_512:
-            images.append(self._image_url('image_512', '512x512', record=tmpl))
-        for extra in tmpl.product_template_image_ids[:MAX_EXTRA_IMAGES]:
-            if extra.image_512:
-                images.append(self._image_url('image_512', '512x512', record=extra))
-        return images
+        """The photos of that gallery, as plain URLs - what cards and the
+        basket draw. A video counts by its poster picture."""
+        return [item.get('poster') if item['type'] == 'video' else item['src']
+                for item in self._mart369_variant_media(variant)
+                if item['type'] == 'photo' or item.get('poster')]
 
     @api.model
     def _mart369_description(self, tmpl):
-        """The product's words for its page: the Sales Description, which the
-        WhatsApp page shows, else the eCommerce description from the Website
-        tab as plain text - so the text shows whichever tab it was typed on."""
-        text = (tmpl.description_sale or '').strip()
-        if not text and 'description_ecommerce' in tmpl._fields:
+        """The product's words as plain text: the eCommerce Description from
+        the Website tab when it has any, else the Sales Description. Plain for
+        the readers that cannot draw formatting (the WhatsApp page, search);
+        the product page draws `_mart369_description_html`."""
+        if 'description_ecommerce' in tmpl._fields:
             text = html2plaintext(tmpl.description_ecommerce or '').strip()
-        return text
+            if text:
+                return text
+        return (tmpl.description_sale or '').strip()
+
+    @api.model
+    def _mart369_description_html(self, tmpl):
+        """The eCommerce Description with its formatting kept - bold, lists,
+        headings, paragraphs - cleaned of scripts, styles and classes. None
+        when it is empty: the Sales Description is plain text and goes as
+        `description`."""
+        if 'description_ecommerce' not in tmpl._fields:
+            return None
+        html = tmpl.description_ecommerce or ''
+        if not html2plaintext(html).strip():
+            return None
+        cleaned = html_sanitize(html, strip_style=True, strip_classes=True)
+        return str(cleaned) if cleaned and html2plaintext(cleaned).strip() else None
 
     @api.model
     def _mart369_variant_spec_rows(self, variant):
@@ -515,6 +572,7 @@ class Mart369Serializable(models.AbstractModel):
             'hidden': True,
             'combo': self._mart369_combo(variant),
             'images': self._mart369_variant_images(variant),
+            'media': self._mart369_variant_media(variant),
             'price': round(entry.get('price', vals['price']) or 0.0, 2),
         })
         vals.pop('hasVariants', None)
@@ -527,11 +585,14 @@ class Mart369Serializable(models.AbstractModel):
         specs = self._mart369_variant_specs(variant)
         if specs:
             vals['specs'] = specs
-        # The Sales Description, which the WhatsApp confirmation page shows
-        # under the picture (PRODUCT_SETUP_FLOW.md 2.4).
+        # The product's words: plain text for every reader, and the eCommerce
+        # Description's own formatting for the product page.
         description = self._mart369_description(tmpl)
         if description:
             vals['description'] = description
+        description_html = self._mart369_description_html(tmpl)
+        if description_html:
+            vals['descriptionHtml'] = description_html
 
         vals.pop('stock', None)
         vals.pop('low', None)

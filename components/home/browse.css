@@ -444,6 +444,15 @@ html.ls-lock { overflow: hidden; }
 .pd-var-none { color: var(--hm-muted); border-style: dashed; }
 .pd-var-opt.pd-size-oos span { color: var(--hm-muted); text-decoration: line-through; text-decoration-thickness: 1px; }
 .pd-var-wait { margin: 12px 0 0; font-size: 13.5px; color: var(--hm-muted); }
+/* Colour swatches: a round button filled with the colour, a ring when picked. */
+.pd-var-opt.pd-var-swatch { width: 40px; height: 40px; min-height: 0; padding: 3px; border-radius: 50%; justify-content: center; border: 2px solid transparent; }
+.pd-var-opt.pd-var-swatch:hover { border-color: #b9cad6; }
+.pd-var-opt.pd-var-swatch.pd-on { padding: 3px; border-color: var(--hm-blue); background: #fff; box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.14); }
+.pd-var-opt.pd-var-swatch > i.pd-swatch-dot { width: 100%; height: 100%; border-radius: 50%; border: 1px solid rgba(19, 33, 43, 0.14); }
+.pd-var-opt.pd-swatch-light > i.pd-swatch-dot { border-color: rgba(19, 33, 43, 0.38); }
+.pd-var-opt.pd-var-swatch.pd-var-none { border-style: dashed; border-color: #c9d4dc; opacity: 0.55; }
+.pd-var-opt.pd-var-swatch.pd-size-oos > i.pd-swatch-dot { background-image: linear-gradient(135deg, transparent 46%, rgba(19, 33, 43, 0.55) 46%, rgba(19, 33, 43, 0.55) 54%, transparent 54%) !important; }
+.pd-var-opt.pd-var-swatch .pd-size-in { position: absolute; top: -6px; right: -6px; }
 .pd-name { animation: hm-fade 320ms ease both; }
 
 /* ---------------- product page: frequently bought together ---------------- */

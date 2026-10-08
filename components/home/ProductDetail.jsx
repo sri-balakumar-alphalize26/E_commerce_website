@@ -25,13 +25,27 @@ import ProductArt from "./art";
 import { Icon, OpenContext, Rail, Thumb, WishContext, flyTo, flyToCart, money } from "./shared";
 import { Crumbs } from "./Browse";
 import { STAR_WORDS, fmtDate, useRemote } from "./accountStore";
+import Lightbox, { ReviewMedia } from "./Lightbox";
 import { addressText } from "@/lib/address";
+import { api } from "@/lib/api";
+import { toSafeHtml } from "@/lib/safeHtml";
 
 const ZOOM = 2.6;
 
 /* ---------------- gallery with thumbnails, scrolling, hover zoom ---------------- */
+/* `p.media` is the variant's own gallery from the shop - photos and videos, its
+   own before the product's (mart369 `_mart369_variant_media`); a card without
+   it is drawn from its photo list as before. A video is its poster until it is
+   the slide on show, then the player. */
+const posterOf = (it) => (it ? (it.type === "video" ? it.poster || null : it.src) : null);
+
 function DetailGallery({ p, fromRect }) {
-  const imgs = p.images?.length ? p.images : p.image ? [p.image] : [null];
+  const items = useMemo(() => {
+    if (p.media?.length) return p.media;
+    const photos = p.images?.length ? p.images : p.image ? [p.image] : [null];
+    return photos.map((src) => ({ type: "photo", src }));
+  }, [p.media, p.images, p.image]);
+  const imgs = items; /* kept for the counts and dots below */
   const [idx, setIdx] = useState(0);
   const [zoom, setZoom] = useState(null); // {x, y} in 0..1
   const track = useRef(null);
@@ -54,7 +68,7 @@ function DetailGallery({ p, fromRect }) {
   }, []); // eslint-disable-line
 
   /* Another variant picked (a different colour): start again at its first photo. */
-  const firstSrc = imgs[0];
+  const firstSrc = items[0]?.src;
   useEffect(() => {
     setIdx(0);
     track.current?.scrollTo?.({ left: 0 });
@@ -94,24 +108,25 @@ function DetailGallery({ p, fromRect }) {
   /* hover zoom (fine pointers only) */
   const canZoom = typeof window !== "undefined" && window.matchMedia?.("(hover: hover) and (pointer: fine)").matches;
   const onMove = (e) => {
-    if (!canZoom) return;
+    if (!canZoom || items[idx]?.type === "video") return;
     const r = e.currentTarget.getBoundingClientRect();
     setZoom({ x: Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)), y: Math.min(1, Math.max(0, (e.clientY - r.top) / r.height)) });
   };
   const lens = 1 / ZOOM; // lens size as a fraction of the image box
   const lx = zoom ? Math.min(1 - lens, Math.max(0, zoom.x - lens / 2)) : 0;
   const ly = zoom ? Math.min(1 - lens, Math.max(0, zoom.y - lens / 2)) : 0;
-  const cur = imgs[idx];
+  const cur = items[idx]?.type === "video" ? undefined : posterOf(items[idx]);
 
   return (
     <div className="pd-gallery">
       <div className="pd-thumbs-wrap">
         <button className="pd-tbtn pd-tup" onClick={() => scrollThumbs(-1)} disabled={thumbEdge.top} aria-label="Scroll thumbnails up"><Icon n="chev" size={16} /></button>
         <div className="pd-thumbs" ref={thumbs} onScroll={onThumbScroll} role="tablist" aria-label="Product images">
-          {imgs.map((src, k) => (
-            <button key={k} role="tab" aria-selected={k === idx} className={"pd-thumb" + (k === idx ? " pd-on" : "")}
-              style={{ "--k": k }} onClick={() => goTo(k)} onMouseEnter={() => canZoom && goTo(k)} aria-label={`Image ${k + 1}`}>
-              {src ? <img src={src} alt="" /> : <ProductArt art={p.art} color={p.color} label={p.label} />}
+          {items.map((it, k) => (
+            <button key={k} role="tab" aria-selected={k === idx} className={"pd-thumb" + (k === idx ? " pd-on" : "") + (it?.type === "video" ? " pd-thumb-video" : "")}
+              style={{ "--k": k }} onClick={() => goTo(k)} onMouseEnter={() => canZoom && goTo(k)} aria-label={it?.type === "video" ? `Video ${k + 1}` : `Image ${k + 1}`}>
+              {posterOf(it) ? <img src={posterOf(it)} alt="" /> : <ProductArt art={p.art} color={p.color} label={p.label} />}
+              {it?.type === "video" && <span className="pd-play" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg></span>}
             </button>
           ))}
         </div>
@@ -121,10 +136,18 @@ function DetailGallery({ p, fromRect }) {
       <div className="pd-stage" ref={stage}>
         <div className="pd-track" ref={track} onScroll={onScroll} tabIndex={0} aria-roledescription="carousel"
           onKeyDown={(e) => { if (e.key === "ArrowRight") goTo(idx + 1); if (e.key === "ArrowLeft") goTo(idx - 1); }}>
-          {imgs.map((src, k) => (
-            <div key={k} className={"pd-slide" + (k === idx ? " pd-cur" : "")} aria-label={`${k + 1} of ${imgs.length}`}
+          {items.map((it, k) => (
+            <div key={k} className={"pd-slide" + (k === idx ? " pd-cur" : "") + (it?.type === "video" ? " pd-slide-video" : "")} aria-label={`${k + 1} of ${items.length}`}
               onMouseMove={onMove} onMouseLeave={() => setZoom(null)}>
-              {src ? <img src={src} alt={k === 0 ? p.name : ""} draggable="false" /> : <ProductArt art={p.art} color={p.color} label={p.label} />}
+              {it?.type === "video" && k === idx ? (
+                <iframe className="pd-video" src={it.src} title={`${p.name} video`} loading="lazy"
+                  allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+              ) : posterOf(it) ? (
+                <>
+                  <img src={posterOf(it)} alt={k === 0 ? p.name : ""} draggable="false" />
+                  {it.type === "video" && <span className="pd-play pd-play-big" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg></span>}
+                </>
+              ) : <ProductArt art={p.art} color={p.color} label={p.label} />}
               {zoom && k === idx && <span className="pd-lens" style={{ left: `${lx * 100}%`, top: `${ly * 100}%`, width: `${lens * 100}%`, height: `${lens * 100}%` }} />}
             </div>
           ))}
@@ -270,6 +293,54 @@ function PackSizes({ p, variants, cart, onVariant }) {
    keeps the other answers when that combination exists, else moves to the
    nearest variant that has the value. A value no variant has with the current
    answers is still pickable but drawn faded, so nothing is a dead end. */
+/* ---------------- reviews: Helpful ---------------- */
+/* Helpful, saved: one vote per customer (the shop says whether it counted).
+   The public page cannot say who voted, so this browser remembers which
+   reviews it has voted on. */
+const VOTED_KEY = "369mart.helpful";
+function useHelpful() {
+  const [voted, setVoted] = useState(() => new Set());
+  const [counts, setCounts] = useState({});
+  const [msg, setMsg] = useState({});
+  const [busy, setBusy] = useState(null);
+  useEffect(() => {
+    try { setVoted(new Set(JSON.parse(localStorage.getItem(VOTED_KEY) || "[]"))); } catch (e) {}
+  }, []);
+  const remember = (id) => setVoted((s) => {
+    const next = new Set(s).add(id);
+    try { localStorage.setItem(VOTED_KEY, JSON.stringify([...next].slice(-500))); } catch (e) {}
+    return next;
+  });
+  const vote = async (id) => {
+    setBusy(id);
+    setMsg((m) => ({ ...m, [id]: "" }));
+    try {
+      const res = await api(`/reviews/${id}/vote`, { method: "POST", body: { kind: "helpful" } });
+      setCounts((c) => ({ ...c, [id]: res.helpful }));
+      remember(id);
+      if (!res.counted) setMsg((m) => ({ ...m, [id]: "You already found this helpful." }));
+    } catch (e) {
+      setMsg((m) => ({ ...m, [id]: e?.status === 401 ? "Sign in to vote." : e?.message || "Couldn't save that - try again." }));
+    } finally {
+      setBusy(null);
+    }
+  };
+  return {
+    vote, msg, busy,
+    voted: (id) => voted.has(id),
+    count: (id, shown) => counts[id] ?? shown ?? 0,
+  };
+}
+
+/* White, cream, light grey: a swatch that would vanish on a white page. */
+function isLight(hex) {
+  const m = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(String(hex || "").trim());
+  if (!m) return false;
+  const h = m[1].length === 3 ? m[1].replace(/./g, "$&$&") : m[1];
+  const [r, g, b] = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16));
+  return 0.299 * r + 0.587 * g + 0.114 * b > 215;
+}
+
 function VariantPicker({ p, variants, attrs, cart, onVariant }) {
   const combo = p.combo || {};
   const pick = (attrId, valueId) => {
@@ -298,13 +369,17 @@ function VariantPicker({ p, variants, attrs, cart, onVariant }) {
                 const there = exists(a.id, v.id);
                 const match = stockOf(a.id, v.id);
                 const oos = there && match?.stock === 0;
+                /* A colour attribute (display "color") with a colour set is a
+                   round swatch, its name in the row's label and the tooltip;
+                   one without a colour stays a named button. */
+                const swatch = a.display === "color" && v.color;
+                const tip = !there ? `${v.name}: not with these choices` : oos ? `${v.name}: out of stock` : v.name;
                 return (
-                  <button key={v.id} role="radio" aria-checked={on}
-                    className={"pd-var-opt" + (on ? " pd-on" : "") + (!there ? " pd-var-none" : "") + (oos ? " pd-size-oos" : "") + (a.display === "color" && v.color ? " pd-var-swatch" : "")}
-                    title={!there ? `${v.name}: not with these choices` : oos ? `${v.name}: out of stock` : v.name}
+                  <button key={v.id} role="radio" aria-checked={on} aria-label={swatch ? tip : undefined}
+                    className={"pd-var-opt" + (on ? " pd-on" : "") + (!there ? " pd-var-none" : "") + (oos ? " pd-size-oos" : "") + (swatch ? " pd-var-swatch" + (isLight(v.color) ? " pd-swatch-light" : "") : "")}
+                    title={tip}
                     onClick={() => pick(a.id, v.id)}>
-                    {a.display === "color" && v.color ? <i style={{ background: v.color }} aria-hidden="true" /> : null}
-                    <span>{v.name}</span>
+                    {swatch ? <i className="pd-swatch-dot" style={{ background: v.color }} aria-hidden="true" /> : <span>{v.name}</span>}
                     {on && cart[p.id] ? <i className="pd-size-in" aria-label={`${cart[p.id]} in cart`}>{cart[p.id]}</i> : null}
                   </button>
                 );
@@ -355,6 +430,7 @@ export default function ProductDetail({
       info: info || [],
       specs: p.specs || {},
       description: p.description || "",
+      descriptionHtml: p.descriptionHtml || "",
       disclaimer: "",
       returnText: "",
       reviews: rv.list || [],
@@ -370,6 +446,12 @@ export default function ProductDetail({
   const [showAll, setShowAll] = useState(true);
   const [open, setOpen] = useState({ features: true, info: true, specs: true, desc: true, returns: true, reviews: false });
   const [fullDesc, setFullDesc] = useState(false);
+  /* The eCommerce Description's own formatting, made safe in the browser
+     (lib/safeHtml.js); until then - and on the server - its plain text. */
+  const [richDesc, setRichDesc] = useState(null);
+  useEffect(() => setRichDesc(toSafeHtml(d.descriptionHtml)), [d.descriptionHtml]);
+  const [viewer, setViewer] = useState(null); /* {items, start} for the review photo viewer */
+  const helpful = useHelpful();
   const [toast, setToast] = useState("");
   const addBtn = useRef(null);
   const qty = cart[p.id] || 0;
@@ -478,9 +560,9 @@ export default function ProductDetail({
                       {Object.entries(d.specs).map(([k, v], n) => <div key={k} style={{ "--k": n }}><dt>{k}</dt><dd>{v}</dd></div>)}
                     </dl>
                   </Section>}
-                  {d.description && <Section i={3} sec="description" title="Product description" open={open.desc} onToggle={() => toggle("desc")}>
+                  {(d.description || d.descriptionHtml) && <Section i={3} sec="description" title="Product description" open={open.desc} onToggle={() => toggle("desc")}>
                     <div className={"pd-desc" + (fullDesc || senior ? " pd-full" : "")}>
-                      <p>{d.description}</p>
+                      {richDesc ? <div className="pd-rich" dangerouslySetInnerHTML={{ __html: richDesc }} /> : <p>{d.description}</p>}
                       {d.disclaimer && <><h4>Disclaimer</h4><p>{d.disclaimer}</p></>}
                     </div>
                     {!senior && <button className="pd-more" onClick={() => setFullDesc((v) => !v)}>{fullDesc ? "Show less" : "View full description"}<Icon n="chev" size={14} className="pd-chev" /></button>}
@@ -513,22 +595,35 @@ export default function ProductDetail({
                   <ul className="pd-rev-list">
                     {mine && (
                       <li className="pd-mine" style={{ "--k": 0 }}>
-                        <div className="pd-rev-top"><span className={"pd-chip s" + mine.stars}>{mine.stars}★</span><b>{mine.title || STAR_WORDS[mine.stars]}</b><em>Your review</em><small>· {fmtDate(mine.at)} · Verified purchase</small></div>
+                        <div className="pd-rev-top"><span className={"pd-chip s" + mine.stars}>{mine.stars}★</span><b className="pd-rev-title">{mine.title || STAR_WORDS[mine.stars]}</b><em>Your review</em></div>
+                        <small className="pd-rev-meta">{fmtDate(mine.at)}{mine.verified && <> · <span className="pd-verified">Verified purchase</span></>}</small>
                         {mine.text && <p>{mine.text}</p>}
+                        <ReviewMedia media={mine.media} own onOpen={setViewer} />
+                        {mine.reply && <p className="pd-reply"><b>Reply from 369 Mart</b>{mine.reply}</p>}
                         {onEditReview && <button className="pd-helpful" onClick={onEditReview}>Edit in My reviews</button>}
                       </li>
                     )}
                     {d.reviews.map((r, k) => (
-                      <li key={k} style={{ "--k": k }}>
-                        <div className="pd-rev-top"><span className={"pd-chip s" + r.stars}>{r.stars}★</span><b>{r.name}</b><small>· {r.when} · Verified purchase</small></div>
-                        <p>{r.text}</p>
-                        <button className="pd-helpful" onClick={(e) => { e.currentTarget.classList.add("pd-voted"); e.currentTarget.disabled = true; }}>Helpful ({r.helpful})</button>
+                      <li key={r.id ?? k} style={{ "--k": k }}>
+                        <div className="pd-rev-top"><span className={"pd-chip s" + r.stars}>{r.stars}★</span><b className="pd-rev-title">{r.title || STAR_WORDS[r.stars]}</b></div>
+                        <small className="pd-rev-meta">{r.name} · {r.when}{r.verified && <> · <span className="pd-verified">Verified purchase</span></>}</small>
+                        {r.text && <p>{r.text}</p>}
+                        <ReviewMedia media={r.media} onOpen={setViewer} />
+                        {r.reply && <p className="pd-reply"><b>Reply from 369 Mart</b>{r.reply}</p>}
+                        {r.id != null && (
+                          <>
+                            <button className={"pd-helpful" + (helpful.voted(r.id) ? " pd-voted" : "")} disabled={helpful.voted(r.id) || helpful.busy === r.id}
+                              onClick={() => helpful.vote(r.id)}>Helpful ({helpful.count(r.id, r.helpful)})</button>
+                            {helpful.msg[r.id] && <span className="pd-vote-msg" role="status">{helpful.msg[r.id]}</span>}
+                          </>
+                        )}
                       </li>
                     ))}
                   </ul>
                 </div>
               </div>
             </div>
+            {viewer && <Lightbox items={viewer.items} start={viewer.start} onClose={() => setViewer(null)} />}
           </section>}
 
           <section className="pd-deliver">

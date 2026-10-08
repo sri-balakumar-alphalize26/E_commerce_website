@@ -32,6 +32,7 @@ class Mart369ProductPage(models.AbstractModel):
     SWITCHED_PARTS = (
         ('variant_specs', 'specs'),
         ('sales_description', 'description'),
+        ('sales_description', 'descriptionHtml'),
         ('mrp', 'mrp'),
         ('low_stock', 'low'),
     )
@@ -79,12 +80,18 @@ class Mart369ProductPage(models.AbstractModel):
             # shows them, with the Sales Description, as for any variant.
             single = product.sudo().product_variant_id
             main = dict(own, images=helper._mart369_variant_images(single) or own['images'])
+            media = helper._mart369_variant_media(single)
+            if media:
+                main['media'] = media
             specs = helper._mart369_variant_specs(single)
             if specs:
                 main['specs'] = specs
             description = helper._mart369_description(product)
             if description:
                 main['description'] = description
+            description_html = helper._mart369_description_html(product)
+            if description_html:
+                main['descriptionHtml'] = description_html
 
         # What the builder switched off (shop-wide, by category or for this
         # product) leaves the page's cards, so the website does not draw it.
@@ -200,7 +207,10 @@ class Mart369ProductPage(models.AbstractModel):
         ratings = self.env['rating.rating'].sudo().search(
             REVIEW_DOMAIN + [('res_model', '=', 'product.template'),
                              ('res_id', '=', product.id)],
-            order='create_date desc')
+            # id breaks a tie: mart369_account pairs these rows with its own
+            # search in the same order, and two reviews saved in one second
+            # must not swap their photos and replies.
+            order='create_date desc, id desc')
 
         out = {}
         if not ratings:

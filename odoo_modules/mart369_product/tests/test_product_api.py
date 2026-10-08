@@ -45,11 +45,12 @@ class TestProductApi(HttpCase):
         mode = 'all' if self.product.mart_delivery_text else 'quick'
         expected = helper._serialize_product(self.product, None, ctx, mode)
         card = self._get().json()['p']
-        # The page adds the product's own setup - its variant's photos, the
-        # Variant specs and the Sales Description, as the WhatsApp
-        # confirmation page does; the rest is the home page's card.
-        self.assertEqual(card.pop('description', ''), self.product.description_sale or '')
-        for setup in ('specs', 'images'):
+        # The page adds the product's own setup - its variant's photos and
+        # video, the Variant specs and the description; the rest is the home
+        # page's card.
+        self.assertEqual(card.pop('description', ''), helper._mart369_description(self.product))
+        card.pop('descriptionHtml', None)
+        for setup in ('specs', 'images', 'media'):
             card.pop(setup, None)
             expected.pop(setup, None)
         self.assertEqual(card, expected)
@@ -141,16 +142,41 @@ class TestProductApiDetails(TransactionCase):
         self._ecommerce('<p>RGB LEDs</p>')
         self.assertEqual(self.Page.payload(self.product)['p'].get('description'), 'RGB LEDs')
 
-    def test_the_sales_description_wins_when_both_are_filled(self):
+    def test_the_website_tab_wins_when_both_are_filled(self):
+        """The eCommerce Description is the one written for the shop; the
+        Sales Description is the stand-in when it is empty."""
         self.product.description_sale = 'Two USB-C ports.'
         self._ecommerce('<p>RGB LEDs</p>')
-        self.assertEqual(self.Page.payload(self.product)['p'].get('description'), 'Two USB-C ports.')
+        p = self.Page.payload(self.product)['p']
+        self.assertEqual(p.get('description'), 'RGB LEDs')
+        self.assertIn('RGB LEDs', p.get('descriptionHtml', ''))
+
+    def test_the_website_tab_keeps_its_formatting_and_loses_its_scripts(self):
+        self.product.description_sale = False
+        self._ecommerce('<h2>Specs</h2><p>Has <strong>two</strong> ports '
+                        '<span style="color:red" class="x">here</span></p>'
+                        '<ul><li>USB-C</li><li>HDMI</li></ul>'
+                        '<script>alert(1)</script><img src=x onerror="alert(2)">')
+        html = self.Page.payload(self.product)['p']['descriptionHtml']
+        for kept in ('<h2>', '<strong>two</strong>', '<ul>', '<li>USB-C</li>'):
+            self.assertIn(kept, html)
+        for gone in ('<script', 'alert(1)', 'onerror', 'style=', 'class='):
+            self.assertNotIn(gone, html)
+
+    def test_a_sales_description_alone_is_plain_text(self):
+        self.product.description_sale = 'Two USB-C ports.'
+        self._ecommerce(False)
+        p = self.Page.payload(self.product)['p']
+        self.assertEqual(p.get('description'), 'Two USB-C ports.')
+        self.assertNotIn('descriptionHtml', p)
 
     def test_switching_off_the_description_hides_the_website_tab_text_too(self):
         self.product.description_sale = False
         self._ecommerce('<p>RGB LEDs</p>')
         self._field('sales_description').show = False
-        self.assertNotIn('description', self.Page.payload(self.product)['p'])
+        p = self.Page.payload(self.product)['p']
+        self.assertNotIn('description', p)
+        self.assertNotIn('descriptionHtml', p)
 
     def test_information_lists_only_what_is_filled(self):
         categ = self.env['product.category'].create({'name': 'Zz Headphones'})

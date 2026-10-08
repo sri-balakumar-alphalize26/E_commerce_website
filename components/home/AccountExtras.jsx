@@ -28,6 +28,8 @@ import {
   REFER_GOAL, STAR_WORDS, ago, fmtDate, fmtDateTime, useRemote,
 } from "./accountStore";
 import { testPush, usePush } from "@/lib/push";
+import { api } from "@/lib/api";
+import Lightbox, { ReviewMedia, reviewMediaSrc } from "./Lightbox";
 
 const reduced = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -582,15 +584,77 @@ export function RewardsSec({ onNav, flash }) {
 const TAGS_UP = ["Fresh", "Well packed", "Good value", "As described", "Fast delivery"];
 const TAGS_DOWN = ["Not fresh", "Damaged", "Wrong item", "Poor quality", "Late delivery"];
 
+/* Photos and a video from the customer's phone or computer. Each is uploaded
+   after the review is saved (POST /reviews/<product>/media, the file as base64
+   JSON) and waits for staff before the product page shows it. The shop's own
+   limits - how many, how big, how long - answer per file. */
+const REVIEW_TYPES = "image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime";
+const MAX_SIDE = 1600; /* the shop re-encodes photos to this anyway */
+
+const readAsDataUrl = (blob) => new Promise((ok, bad) => {
+  const r = new FileReader();
+  r.onload = () => ok(r.result);
+  r.onerror = () => bad(r.error);
+  r.readAsDataURL(blob);
+});
+
+/* A photo shrunk in the browser before it is sent: a 12 MB phone picture
+   becomes a few hundred KB, and the shop would cut it to 1600 px regardless. */
+async function shrinkPhoto(file) {
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, MAX_SIDE / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    canvas.getContext("2d").drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise((ok) => canvas.toBlob(ok, "image/jpeg", 0.86));
+    if (blob) return { mime: "image/jpeg", data: await readAsDataUrl(blob), name: file.name.replace(/\.\w+$/, "") + ".jpg" };
+  } catch (e) { /* an image the browser cannot draw: send it as it is */ }
+  return { mime: file.type, data: await readAsDataUrl(file), name: file.name };
+}
+
+export async function uploadReviewMedia(productId, files, removeIds = []) {
+  const errors = [];
+  for (const id of removeIds) {
+    try { await api(`/reviews/media/${id}`, { method: "DELETE" }); } catch (e) { errors.push(e?.message || "A file could not be removed."); }
+  }
+  let sent = 0;
+  for (const f of files) {
+    try {
+      const body = f.kind === "photo" ? await shrinkPhoto(f.file) : { mime: f.file.type, data: await readAsDataUrl(f.file), name: f.file.name };
+      await api(`/reviews/${productId}/media`, { method: "POST", body });
+      sent += 1;
+    } catch (e) {
+      errors.push(`${f.file.name}: ${e?.message || "could not be added"}`);
+    }
+  }
+  api.invalidate("/reviews");
+  return { sent, errors };
+}
+
 function ReviewEditor({ p, initial, onClose, onSave }) {
-  const [r, setR] = useState({ stars: 0, title: "", text: "", tags: [], photos: 0, ...initial });
+  const [r, setR] = useState({ stars: 0, title: "", text: "", tags: [], ...initial });
   const [posting, setPosting] = useState(false);
+  /* New files picked here, and the review's saved ones (minus any removed). */
+  const [files, setFiles] = useState([]);
+  const [removed, setRemoved] = useState([]);
+  const kept = (initial?.media || []).filter((m) => !removed.includes(m.id));
+  useEffect(() => () => files.forEach((f) => URL.revokeObjectURL(f.preview)), []); // eslint-disable-line
+  const pickFiles = (list) => {
+    const added = [...list].filter((f) => REVIEW_TYPES.split(",").includes(f.type)).map((file) => ({
+      key: `${file.name}-${file.size}-${file.lastModified}`,
+      file, kind: file.type.startsWith("video/") ? "video" : "photo", preview: URL.createObjectURL(file),
+    }));
+    setFiles((cur) => [...cur, ...added.filter((a) => !cur.some((c) => c.key === a.key))]);
+  };
+  const drop = (key) => setFiles((cur) => cur.filter((f) => { if (f.key === key) URL.revokeObjectURL(f.preview); return f.key !== key; }));
   const tags = r.stars && r.stars <= 3 ? TAGS_DOWN : TAGS_UP;
   const toggle = (t) => setR((x) => ({ ...x, tags: x.tags.includes(t) ? x.tags.filter((y) => y !== t) : [...x.tags, t] }));
   return (
     <Sheet title={initial?.at ? "Edit your review" : "Rate this product"} onClose={onClose} className="ax-review"
       foot={(close) => (
-        <button className="ot-primary ax-wide" disabled={!r.stars || posting} onClick={async () => { setPosting(true); await wait(reduced() ? 100 : 700); onSave({ ...r, tags: r.tags.filter((t) => tags.includes(t)), at: initial?.at || Date.now(), edited: !!initial?.at, helpful: initial?.helpful || 0 }); close(); }}>
+        <button className="ot-primary ax-wide" disabled={!r.stars || posting} onClick={async () => { setPosting(true); await wait(reduced() ? 100 : 700); onSave({ ...r, tags: r.tags.filter((t) => tags.includes(t)), at: initial?.at || Date.now(), edited: !!initial?.at, helpful: initial?.helpful || 0, files, removed }); close(); }}>
           {posting ? <><i className="co-spin co-spin-w" />Posting…</> : initial?.at ? "Update review" : "Post review"}
         </button>
       )}>
@@ -607,12 +671,27 @@ function ReviewEditor({ p, initial, onClose, onSave }) {
             <textarea value={r.text} maxLength={500} rows={4} placeholder="Tell others about build quality, performance, size or value" onChange={(e) => setR({ ...r, text: e.target.value })} />
             <small className={r.text.length > 450 ? "ax-warn" : ""}>{r.text.length}/500</small>
           </label>
+          <p className="ax-label">Photos or a video <small className="ac-muted">(optional)</small></p>
           <div className="ax-photos">
-            {Array.from({ length: r.photos }, (_, i) => (
-              <span key={i} className="ax-photo" style={{ "--h": 190 + i * 40 }}><Thumb p={p} /><button type="button" onClick={() => setR((x) => ({ ...x, photos: x.photos - 1 }))} aria-label="Remove photo"><Icon n="x" size={12} /></button></span>
+            {kept.map((m) => (
+              <span key={"m" + m.id} className="ax-photo ax-photo-real">
+                {m.state === "pending" ? <em>Waiting for check</em> : m.kind === "video"
+                  ? <video src={reviewMediaSrc(m.url)} muted playsInline preload="metadata" /> : <img src={reviewMediaSrc(m.url)} alt="" />}
+                <button type="button" onClick={() => setRemoved((x) => [...x, m.id])} aria-label="Remove"><Icon n="x" size={12} /></button>
+              </span>
             ))}
-            {r.photos < 3 && <button type="button" className="ax-photo-add" onClick={() => setR((x) => ({ ...x, photos: x.photos + 1 }))}><Icon n="plus" size={18} /><small>Photo</small></button>}
+            {files.map((f) => (
+              <span key={f.key} className="ax-photo ax-photo-real">
+                {f.kind === "video" ? <video src={f.preview} muted playsInline preload="metadata" /> : <img src={f.preview} alt="" />}
+                <button type="button" onClick={() => drop(f.key)} aria-label={`Remove ${f.file.name}`}><Icon n="x" size={12} /></button>
+              </span>
+            ))}
+            <label className="ax-photo-add">
+              <input type="file" accept={REVIEW_TYPES} multiple hidden onChange={(e) => { pickFiles(e.target.files); e.target.value = ""; }} />
+              <Icon n="plus" size={18} /><small>Add</small>
+            </label>
           </div>
+          <p className="ax-fine">Photos and videos show on the product page once the shop has checked them.</p>
         </div>
       </div>
     </Sheet>
@@ -622,8 +701,9 @@ function ReviewEditor({ p, initial, onClose, onSave }) {
 export function ReviewsSec({ orders, byId, onOpen, flash }) {
   /* One review per product, as the shop keeps them - the page reads
      `reviews[p.id]`, which is why there can only ever be one. */
-  const { data, send } = useRemote("/reviews");
+  const { data, send, reload } = useRemote("/reviews");
   const reviews = useMemo(() => data?.reviews || {}, [data]);
+  const [viewer, setViewer] = useState(null);
   const [edit, setEdit] = useState(null);
   const [leaving, setLeaving] = useState(null);
   const [confirm, setConfirm] = useState(null);
@@ -646,7 +726,17 @@ export function ReviewsSec({ orders, byId, onOpen, flash }) {
     const sent = await send(`/reviews/${id}`, { method: "POST", body: { stars: r.stars, title: r.title, text: r.text, tags: r.tags } });
     if (!sent) return flash?.("We couldn't post that just now");
     setPosted(id);
-    flash?.(r.edited ? "Review updated" : "Thanks! Your review is live");
+    /* Held by the shop's filter (a phone number, a rude word): it is saved,
+       but not on the product page yet - say so rather than "live". */
+    const held = sent?.review?.state === "pending";
+    const hasFiles = r.files?.length || r.removed?.length;
+    flash?.(held ? "Thanks! Your review will show once the shop has checked it"
+      : r.edited ? "Review updated" : "Thanks! Your review is live");
+    if (!hasFiles) return;
+    const { sent: up, errors } = await uploadReviewMedia(id, r.files || [], r.removed || []);
+    await reload();
+    if (errors.length) flash?.(`${errors.length === 1 ? "A file" : `${errors.length} files`} couldn't be added - ${errors[0]}`);
+    else if (up) flash?.(`${up === 1 ? "Your file is" : `${up} files are`} waiting for the shop to check`);
   };
   const del = async (id) => {
     setConfirm(null); setLeaving(id);
@@ -676,7 +766,7 @@ export function ReviewsSec({ orders, byId, onOpen, flash }) {
       </section>
 
       <section className="ac-card ax-block" style={{ "--i": 1 }}>
-        <div className="ac-card-head"><div><h3>Your reviews</h3><p>Shown on the product page with a Verified purchase tag.</p></div><span className="ax-count">{mine.length}</span></div>
+        <div className="ac-card-head"><div><h3>Your reviews</h3><p>Shown on the product page - with a Verified purchase tag when you bought it here.</p></div><span className="ax-count">{mine.length}</span></div>
         {!mine.length && <p className="ac-muted ax-none">Reviews you write will appear here.</p>}
         <div className="ax-myrevs">
           {mine.map(([id, r, card], i) => (
@@ -687,6 +777,9 @@ export function ReviewsSec({ orders, byId, onOpen, flash }) {
                 <small className="ax-myrev-name">{card.name} · {fmtDate(r.at)}{r.edited ? " · Edited" : ""}</small>
                 {r.text && <p>{r.text}</p>}
                 {!!r.tags?.length && <div className="ax-tagline">{r.tags.map((t) => <span key={t}>{t}</span>)}</div>}
+                <ReviewMedia media={r.media} own onOpen={setViewer} />
+                {r.state === "pending" && <p className="ax-fine">Waiting for the shop to check it before it shows on the product page.</p>}
+                {r.reply && <p className="pd-reply"><b>Reply from 369 Mart</b>{r.reply}</p>}
                 <div className="ax-myrev-foot">
                   <span className="ac-muted"><Icon n="trend" size={13} /> {r.helpful || 0} found this helpful</span>
                   <span>
@@ -703,6 +796,7 @@ export function ReviewsSec({ orders, byId, onOpen, flash }) {
       </section>
 
       {edit && <ReviewEditor p={byId[edit.pid || edit.id]} initial={edit.initial} onClose={() => setEdit(null)} onSave={(r) => save(edit.id, r)} />}
+      {viewer && <Lightbox items={viewer.items} start={viewer.start} onClose={() => setViewer(null)} />}
     </div>
   );
 }

@@ -30,6 +30,15 @@
 .pd-slide { position: relative; flex: 0 0 100%; height: 100%; scroll-snap-align: center; padding: 8%; display: grid; place-items: center; cursor: crosshair; }
 .pd-slide img, .pd-slide .hm-art { width: 100%; height: 100%; object-fit: contain; user-select: none; -webkit-user-drag: none; transition: transform 500ms var(--hm-ease), opacity 360ms; }
 .pd-slide:not(.pd-cur) img, .pd-slide:not(.pd-cur) .hm-art { opacity: 0.5; transform: scale(0.92); }
+/* A video in the gallery: its poster with a play badge, the player once it is on show. */
+.pd-thumb { position: relative; }
+.pd-play { position: absolute; left: 50%; top: 50%; width: 26px; height: 26px; margin: -13px 0 0 -13px; border-radius: 50%; display: grid; place-items: center; background: rgba(13, 25, 34, 0.72); color: #fff; pointer-events: none; }
+.pd-play svg { width: 13px; height: 13px; fill: currentColor; margin-left: 2px; }
+.pd-play-big { width: 64px; height: 64px; margin: -32px 0 0 -32px; }
+.pd-play-big svg { width: 28px; height: 28px; margin-left: 4px; }
+.pd-slide-video { cursor: default; }
+.pd-slide-video.pd-cur { padding: 0; place-items: stretch; }
+.pd-video { width: 100%; height: 100%; border: 0; border-radius: inherit; background: #000; }
 .pd-lens {
   position: absolute; pointer-events: none; border-radius: 8px;
   background: rgba(10, 120, 171, 0.12); border: 1.5px solid rgba(10, 120, 171, 0.55);
@@ -147,10 +156,25 @@
 
 .pd-desc { position: relative; max-height: 118px; overflow: hidden; transition: max-height 520ms var(--hm-ease); }
 .pd-desc::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 48px; background: linear-gradient(transparent, #fff); transition: opacity 300ms; }
-.pd-full { max-height: 800px; }
+.pd-full { max-height: none; }
 .pd-full::after { opacity: 0; }
 .pd-desc p { margin: 0 0 10px; font-size: 14px; line-height: 1.65; color: #3e4d58; white-space: pre-line; }
 .pd-desc h4 { margin: 12px 0 4px; font-size: 14px; }
+/* The eCommerce Description, with the formatting staff gave it. */
+.pd-rich { font-size: 14px; line-height: 1.65; color: #3e4d58; overflow-wrap: anywhere; }
+.pd-rich p { white-space: normal; }
+.pd-rich h2, .pd-rich h3, .pd-rich h4 { margin: 14px 0 6px; line-height: 1.3; color: var(--hm-ink); }
+.pd-rich h2 { font-size: 17px; } .pd-rich h3 { font-size: 15.5px; } .pd-rich h4 { font-size: 14.5px; }
+.pd-rich > :first-child { margin-top: 0; }
+.pd-rich ul, .pd-rich ol { margin: 0 0 10px; padding-left: 22px; }
+.pd-rich li { margin: 3px 0; }
+.pd-rich li::marker { color: var(--hm-blue); }
+.pd-rich strong, .pd-rich b { color: var(--hm-ink); font-weight: 700; }
+.pd-rich a { color: var(--hm-blue) !important; }
+.pd-rich table { width: 100%; border-collapse: collapse; margin: 0 0 12px; font-size: 13.5px; }
+.pd-rich th, .pd-rich td { border: 1px solid var(--pd-line); padding: 6px 10px; text-align: left; vertical-align: top; }
+.pd-rich th { background: #f6f9fb; }
+.pd-rich img { max-width: 100%; height: auto; border-radius: 8px; }
 .pd-more { display: flex; align-items: center; gap: 4px; margin: 8px auto 0; border: 0; background: none; font-size: 13.5px; font-weight: 700; color: var(--hm-blue) !important; }
 .pd-full + .pd-more .pd-chev { transform: rotate(180deg); }
 .pd-return { display: flex; gap: 8px; margin: 0 0 8px; font-size: 14px; line-height: 1.5; }
@@ -184,6 +208,35 @@
 .pd-helpful { border: 1px solid var(--pd-line); background: #fff; border-radius: 999px; padding: 4px 12px; font-size: 12.5px; font-weight: 600; color: var(--hm-muted) !important; transition: all 200ms; }
 .pd-helpful:hover { border-color: #b9cad6; }
 .pd-voted { border-color: var(--hm-blue); color: var(--hm-blue) !important; background: #eef7fc; animation: hm-bump 320ms var(--hm-spring); }
+.pd-helpful:disabled { cursor: default; }
+.pd-rev-title { font-weight: 800; }
+.pd-rev-meta { display: block; margin-top: 3px; font-size: 12.5px; color: var(--hm-muted); }
+.pd-verified { color: #1a7f3c; font-weight: 700; }
+.pd-rev-media { display: flex; flex-wrap: wrap; gap: 8px; margin: 2px 0 10px; }
+.pd-rev-media button { position: relative; width: 72px; height: 72px; padding: 0; border: 1px solid var(--pd-line); border-radius: 10px; overflow: hidden; background: #0d1922; cursor: zoom-in; }
+.pd-rev-media button:disabled { background: #fff1de; cursor: default; }
+.pd-rev-media button:disabled em { position: static; display: grid; place-items: center; height: 100%; background: none; text-align: center; line-height: 1.2; }
+.pd-rev-media img, .pd-rev-media video { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
+.pd-rev-media em { position: absolute; left: 4px; bottom: 4px; padding: 1px 6px; border-radius: 6px; background: rgba(255, 255, 255, 0.92); color: #8a4b05; font-style: normal; font-size: 10.5px; font-weight: 700; }
+.pd-reply { margin: 0 0 10px; padding: 10px 12px; border-left: 3px solid var(--hm-blue); border-radius: 0 10px 10px 0; background: #f3f8fb; font-size: 13.5px; line-height: 1.5; color: #3e4d58; }
+.pd-reply b { display: block; margin-bottom: 2px; font-size: 12.5px; color: var(--hm-blue); }
+.pd-vote-msg { margin-left: 10px; font-size: 12.5px; color: var(--hm-muted); }
+
+/* review photo viewer (Lightbox.jsx) */
+.lb { position: fixed; inset: 0; z-index: 120; display: grid; place-items: center; padding: 56px 72px; background: rgba(6, 18, 27, 0.92); animation: hm-fade 160ms ease both; }
+.lb-stage { margin: 0; max-width: 100%; max-height: 100%; display: grid; place-items: center; }
+.lb-stage img, .lb-stage video { display: block; max-width: min(1200px, calc(100vw - 144px)); max-height: calc(100vh - 112px); object-fit: contain; border-radius: 10px; background: #000; }
+.lb-x, .lb-nav { position: absolute; display: grid; place-items: center; border: 0; border-radius: 50%; background: rgba(255, 255, 255, 0.14); color: #fff !important; cursor: pointer; }
+.lb-x:hover, .lb-nav:hover { background: rgba(255, 255, 255, 0.26); }
+.lb-x { top: 14px; right: 14px; width: 42px; height: 42px; }
+.lb-nav { top: 50%; width: 48px; height: 48px; margin-top: -24px; }
+.lb-prev { left: 14px; } .lb-next { right: 14px; }
+.lb-count { position: absolute; top: 24px; left: 50%; transform: translateX(-50%); color: rgba(255, 255, 255, 0.8); font-size: 13px; font-weight: 700; }
+@media (max-width: 640px) {
+  .lb { padding: 56px 8px; }
+  .lb-stage img, .lb-stage video { max-width: calc(100vw - 16px); }
+  .lb-nav { top: auto; bottom: 14px; margin-top: 0; }
+}
 
 /* delivery */
 .pd-deliver { display: flex; flex-direction: column; gap: 10px; animation: pd-rise 460ms var(--hm-ease) 260ms backwards; }

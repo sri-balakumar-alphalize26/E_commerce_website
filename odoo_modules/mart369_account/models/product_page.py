@@ -22,7 +22,7 @@ class Mart369ProductPage(models.AbstractModel):
             return out
         ratings = self.env['rating.rating'].sudo().search(
             REVIEW_DOMAIN + [('res_model', '=', 'product.template'), ('res_id', '=', product.id)],
-            order='create_date desc', limit=len(rows))
+            order='create_date desc, id desc', limit=len(rows))
         for row, rating in zip(rows, ratings):
             row.update({
                 'id': rating.id,

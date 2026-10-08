@@ -1,6 +1,6 @@
 {
     'name': '369 Mart Account',
-    'version': '19.0.1.5.0',
+    'version': '19.0.1.5.1',
     'category': 'Website',
     'summary': "The customer's own things - profile, reviews, notifications, "
                "referrals, wishlist and rewards.",
