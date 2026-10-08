@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Inventory > Configuration > Product Categories: the labels the 369
+         Mart editor's "Add the usual details" offers for this category. -->
+    <record id="mart369_product_category_details_form" model="ir.ui.view">
+        <field name="name">product.category.form.mart369.details</field>
+        <field name="model">product.category</field>
+        <field name="inherit_id" ref="product.product_category_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//group[@name='first']" position="after">
+                <group name="mart369_details" string="369 Mart">
+                    <field name="mart_detail_labels" placeholder="Processor&#10;RAM&#10;Storage"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

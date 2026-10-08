@@ -121,6 +121,7 @@
                                                     t-on-click="() => this.moveShowcase(b, blk_index, 1)">↓</button>
                                             <button type="button" class="pdk-show-btn" title="Remove" aria-label="Remove"
                                                     t-on-click="() => this.dropShowcase(b, blk_index)">✕</button>
+                                            <small t-if="showcaseWarning(blk)" class="pdk-warn pdk-show-warn" t-esc="showcaseWarning(blk)"/>
                                         </li>
                                     </ul>
                                     <label class="pdk-show-add">
@@ -242,6 +243,42 @@
                                     <button type="button" class="mart-link pdk-add-point" t-on-click="() => this.addPoint(b.name)">
                                         <Icon n="'plus'" size="13"/><t t-esc="b.sep ? 'Add an item' : 'Add a point'"/>
                                     </button>
+                                    <t t-if="b.name === 'mart_details'">
+                                        <button type="button" class="mart-link pdk-add-point" t-on-click="() => this.addUsualDetails(b)">
+                                            <Icon n="'plus'" size="13"/>Add the usual details for this category
+                                        </button>
+                                        <small t-if="detailWarning(b)" class="pdk-warn" t-esc="detailWarning(b)"/>
+                                    </t>
+                                </div>
+
+                                <!-- Product details: a Label and a Value per line, the
+                                     table under the options on the product page. -->
+                                <div t-elif="b.kind === 'pairs'" class="pdk-field pdk-wide">
+                                    <t t-call="mart369_product.BoxLabel"/>
+                                    <ol class="pdk-points pdk-pairs" t-att-data-name="b.name">
+                                        <li t-foreach="pt.list" t-as="line" t-key="line_index">
+                                            <t t-set="pair" t-value="pairOf(line)"/>
+                                            <input type="text" class="pdk-pair-label" t-att-value="pair.label"
+                                                   placeholder="Label, e.g. Brand"
+                                                   t-att-aria-label="b.label + ' ' + (line_index + 1) + ', label'"
+                                                   t-on-focus="() => this.setFocus(b.name)"
+                                                   t-on-input="(ev) => this.setPair(b.name, line_index, 'label', ev.target.value)"/>
+                                            <input type="text" t-att-data-i="line_index" t-att-value="pair.value"
+                                                   placeholder="Value, e.g. Apple"
+                                                   t-att-aria-label="b.label + ' ' + (line_index + 1) + ', value'"
+                                                   t-on-focus="() => this.setFocus(b.name)"
+                                                   t-on-input="(ev) => this.setPair(b.name, line_index, 'value', ev.target.value)"
+                                                   t-on-keydown="(ev) => this.onPairKey(ev, b.name, line_index)"/>
+                                            <button type="button" class="ad-icon-btn" aria-label="Remove this detail"
+                                                    t-on-click="() => this.removePoint(b.name, line_index)">
+                                                <Icon n="'x'" size="13"/>
+                                            </button>
+                                            <small t-if="pair.value.trim() and !pair.label.trim()" class="pdk-pair-warn">Add a label - without one this line is not shown.</small>
+                                        </li>
+                                    </ol>
+                                    <button type="button" class="mart-link pdk-add-point" t-on-click="() => this.addPoint(b.name)">
+                                        <Icon n="'plus'" size="13"/>Add a detail
+                                    </button>
                                 </div>
 
                                 <!-- Categories: a dropdown over the form, so nothing below jumps. -->
@@ -283,7 +320,8 @@
                                     <t t-call="mart369_product.BoxLabel"/>
                                     <RichBox value="state.form.values[b.name]"
                                              onChange="(v) => this.setField(b.name, v)"
-                                             onFocus="() => this.setFocus(b.name)"/>
+                                             onFocus="() => this.setFocus(b.name)"
+                                             points="b.name === 'mart_about_html'"/>
                                     <small t-if="b.help" t-esc="b.help"/>
                                 </div>
 

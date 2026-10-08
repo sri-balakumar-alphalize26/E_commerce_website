@@ -6,3 +6,4 @@ from . import product_page
 from . import rating_rating
 from . import product_template
 from . import product_showcase
+from . import product_category

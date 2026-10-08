@@ -1,6 +1,6 @@
 {
     'name': '369 Mart Product Page',
-    'version': '19.0.1.6.4',
+    'version': '19.0.1.6.5',
     'category': 'Website',
     'summary': 'Decide what the 369 Mart app shows on a product page - for '
                'every product at once, or one product at a time.',
@@ -42,6 +42,7 @@ frame with every field listed. The app reads the result from
         # naming it is parsed.
         'views/product_builder_views.xml',
         'views/product_template_views.xml',
+        'views/product_category_views.xml',
         'views/menus.xml',
         'data/sections.xml',
         'data/fields.xml',

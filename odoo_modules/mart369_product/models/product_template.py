@@ -21,7 +21,9 @@ class ProductTemplate(models.Model):
         string='About this item',
         help='Type it like a Word page: bullets, numbers, bold, links. Select '
              'words to get the toolbar. Shown as "About this item" on the '
-             'product page; tip - start each point with a short bold phrase.')
+             'product page; tip - start each point with a short bold phrase. '
+             'Shoppers see the first 5 points, then Show more; keep each under '
+             'about 2 lines. Pasting several lines makes a bulleted list.')
     mart_details = fields.Text(
         string='Product details',
         help='One per line: a label, a colon, the value - e.g. Brand: Apple, '
@@ -233,7 +235,9 @@ class ProductTemplate(models.Model):
             'New', 'Bestseller', 'Sale', 'Limited', 'Old stock', 'Organic',
             'Imported']},
         'mart_features': {'kind': 'points'},
-        'mart_details': {'kind': 'points'},
+        # Two boxes a line, Label and Value, kept as "Label: value" lines - a
+        # line typed without its colon used to vanish from the page silently.
+        'mart_details': {'kind': 'pairs'},
         'mart_showcase_json': {'kind': 'showcase'},
         # The same one-box-per-item entry, kept as the comma list the page
         # has always printed: "Product, cable, user manual".
@@ -517,6 +521,48 @@ class ProductTemplate(models.Model):
                 for c in self.env['product.public.category'].search([])
             ],
         }
+
+    # Product details a product usually lists, by words in its Odoo category's
+    # name - the first match wins. A category's own "Usual product details"
+    # (product.category.mart_detail_labels) beats these.
+    MART_DETAIL_TEMPLATES = [
+        (('laptop', 'notebook'), ['Brand', 'Model Name', 'Processor', 'RAM', 'Storage', 'Screen Size',
+                                  'Graphics', 'Operating System', 'Battery', 'Weight']),
+        (('desktop', 'all-in-one', 'all in one', ' pc', 'computer'),
+         ['Brand', 'Model Name', 'Processor', 'RAM', 'Storage', 'Graphics', 'Operating System', 'Ports']),
+        (('toner', 'cartridge', 'ink'), ['Brand', 'Compatible Printers', 'Colour', 'Page Yield', 'Type']),
+        (('printer',), ['Brand', 'Model Name', 'Printer Type', 'Functions', 'Print Speed',
+                        'Connectivity', 'Ink or Toner']),
+        (('phone', 'mobile'), ['Brand', 'Model Name', 'Operating System', 'Storage', 'RAM',
+                               'Screen Size', 'Camera', 'Battery']),
+        (('cctv', 'camera'), ['Brand', 'Model Name', 'Resolution', 'Night Vision', 'Lens',
+                              'Storage', 'Connectivity']),
+        (('network', 'router', 'switch', 'wifi'), ['Brand', 'Model Name', 'Speed', 'Ports',
+                                                   'Wireless Standard', 'Frequency Band']),
+        (('ups', 'battery', 'power'), ['Brand', 'Model Name', 'Capacity', 'Voltage', 'Backup Time',
+                                       'Compatible With']),
+        (('keyboard', 'mouse'), ['Brand', 'Model Name', 'Connectivity', 'Layout', 'Colour']),
+        (('headset', 'headphone', 'earphone', 'earbud', 'speaker'),
+         ['Brand', 'Model Name', 'Connectivity', 'Battery Life', 'Noise Cancellation', 'Colour']),
+    ]
+    MART_DETAIL_DEFAULT = ['Brand', 'Model Name', 'Colour', 'Material', 'Warranty']
+
+    @api.model
+    def mart369_detail_labels(self, categ_id=None):
+        """{category, labels} for the editor's "Add the usual details": the
+        category's own list when it has one, else the built-in one its name
+        matches, else a short general list."""
+        category = self.env['product.category'].browse(int(categ_id)).exists() if categ_id else None
+        if category and category.mart_detail_labels:
+            labels = [l.strip() for l in category.mart_detail_labels.splitlines() if l.strip()]
+            if labels:
+                return {'category': category.name, 'labels': labels}
+        # The whole path, so "All / Laptops / Gaming" matches laptop.
+        name = ' %s ' % (category.complete_name if category else '').lower()
+        for words, labels in self.MART_DETAIL_TEMPLATES:
+            if any(word in name for word in words):
+                return {'category': category.name, 'labels': labels}
+        return {'category': category.name if category else '', 'labels': self.MART_DETAIL_DEFAULT}
 
     @api.model
     def _mart369_site_url(self):

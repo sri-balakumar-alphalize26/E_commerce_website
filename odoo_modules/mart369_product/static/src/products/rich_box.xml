@@ -2,10 +2,13 @@
 <templates xml:space="preserve">
 
     <t t-name="mart369_product.RichBox">
-        <div class="pdk-rich" t-on-focusin="() => props.onFocus and props.onFocus()">
+        <div class="pdk-rich" t-on-focusin="() => props.onFocus and props.onFocus()"
+             t-on-paste.capture="(ev) => this.onPaste(ev)">
             <Wysiwyg config="config" onLoad.bind="onLoad"
                      class="'pdk-rich-box'" contentClass="'pdk-rich-content odoo-editor-editable'"/>
         </div>
+        <small t-if="props.points and countText" class="pdk-rich-count" t-esc="countText"/>
+        <small t-if="props.points and longText" class="pdk-warn" t-esc="longText"/>
     </t>
 
 </templates>

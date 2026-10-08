@@ -22,6 +22,7 @@
  */
 import { Component, onPatched, onWillUpdateProps, useEffect, useExternalListener, useRef, useState } from "@odoo/owl";
 import { getDataURLFromFile } from "@web/core/utils/urls";
+import { useService } from "@web/core/utils/hooks";
 import { _t } from "@web/core/l10n/translation";
 import { Icon } from "@mart369/ui/icon";
 import { Pick } from "@mart369/ui/pick";
@@ -81,7 +82,7 @@ export function splitValue(box, raw) {
         return { value: raw ? String(raw) : "", unit: box.units[0], other: null };
     }
     const text = String(raw || "").trim();
-    if (box.kind === "points") {
+    if (box.kind === "points" || box.kind === "pairs") {
         // Features are one per line; In the box is a comma list.
         const split = box.sep ? /,/ : /\n/;
         const list = text ? text.split(split).map((l) => l.trim()).filter(Boolean) : [];
@@ -116,9 +117,27 @@ export function splitValue(box, raw) {
         : { value: "", unit: units[0], other: text };
 }
 
+/** Product details: one "Label: value" line as its two boxes. A line saved
+ *  without a colon comes back as a value with an empty label, to be named. */
+export function pairOf(line) {
+    const at = String(line || "").indexOf(":");
+    if (at < 0) {
+        return { label: "", value: String(line || "") };
+    }
+    const rest = line.slice(at + 1);
+    return { label: line.slice(0, at), value: rest.startsWith(" ") ? rest.slice(1) : rest };
+}
+
+/** The two boxes back into the line. Spaces are kept while typing; the line
+ *  is trimmed when it is saved. */
+export function joinPair(label, value) {
+    const l = String(label || "").replace(/:/g, "");
+    return l || value ? `${l}: ${value || ""}` : "";
+}
+
 /** The parts back into the one value the column holds. */
 export function joinValue(box, p) {
-    if (box.kind === "points") {
+    if (box.kind === "points" || box.kind === "pairs") {
         return p.list.map((l) => l.trim()).filter(Boolean).join(box.sep || "\n");
     }
     if (box.kind === "choice") {
@@ -218,6 +237,7 @@ export class ProductEditor extends Component {
     };
 
     setup() {
+        this._orm = useService("orm");
         this.state = useState({
             form: formFrom(this.props.data),
             // The photograph open in the popup, as an index into `photoList`.
@@ -533,6 +553,32 @@ export class ProductEditor extends Component {
         }
     }
 
+    // Product details: Label and Value per line.
+
+    pairOf(line) {
+        return pairOf(line);
+    }
+
+    setPair(name, i, key, value) {
+        const now = pairOf(this.state.form.parts[name].list[i]);
+        now[key] = value;
+        this.setPoint(name, i, joinPair(now.label, now.value));
+    }
+
+    /** Enter in a Value starts the next line; Backspace in an empty line removes it. */
+    onPairKey(ev, name, i) {
+        const list = this.state.form.parts[name].list;
+        if (ev.key === "Enter") {
+            ev.preventDefault();
+            this.setPart(name, "list", [...list.slice(0, i + 1), "", ...list.slice(i + 1)]);
+            this.focusPoint(name, i + 1);
+        } else if (ev.key === "Backspace" && !(list[i] || "").replace(/[:\s]/g, "") && list.length > 1) {
+            ev.preventDefault();
+            this.setPart(name, "list", list.filter((_, j) => j !== i));
+            this.focusPoint(name, Math.max(0, i - 1));
+        }
+    }
+
     addPoint(name) {
         const list = this.state.form.parts[name].list;
         this.setPart(name, "list", [...list, ""]);
@@ -694,6 +740,36 @@ export class ProductEditor extends Component {
         return d.id && d.siteUrl ? d.siteUrl + "/product/" + d.id : "";
     }
 
+    // ------------------------------------------- Product details helpers
+
+    /** A line without "Label: value" never reaches the shop: say so. */
+    detailWarning(b) {
+        const list = this.state.form.parts[b.name]?.list || [];
+        const bad = list.map((line, i) => (line.trim() && !line.includes(":") ? i + 1 : 0)).filter(Boolean);
+        if (!bad.length) {
+            return "";
+        }
+        const which = bad.length === 1 ? `Line ${bad[0]} won't` : `Lines ${bad.join(", ")} won't`;
+        return `${which} show on the shop - write it as Label: value (e.g. Brand: Apple).`;
+    }
+
+    /** The labels a product of this category usually has, added as
+     *  "Label: " lines ready to fill; a label already there is skipped. */
+    async addUsualDetails(b) {
+        const categ = this.state.form.values.categ_id || null;
+        const answer = await this._orm.call("product.template", "mart369_detail_labels", [], {
+            categ_id: categ ? Number(categ) : null,
+        });
+        const list = (this.state.form.parts[b.name]?.list || []).filter((line) => line.trim());
+        const have = new Set(list.map((line) => line.split(":")[0].trim().toLowerCase()));
+        const added = (answer.labels || []).filter((label) => !have.has(label.toLowerCase()));
+        if (!added.length) {
+            return;
+        }
+        this.setFocus(b.name);
+        this.setPart(b.name, "list", [...list, ...added.map((label) => label + ": ")]);
+    }
+
     // ------------------------------------------- From the manufacturer
 
     /** The picture blocks as the box holds them: [{id?, url, data?, caption, width}]. */
@@ -712,12 +788,29 @@ export class ProductEditor extends Component {
         const added = [];
         for (const file of files) {
             const url = await getDataURLFromFile(file);
-            added.push({ url, data: url.split(",")[1], caption: "", width: "full" });
+            const px = await new Promise((done) => {
+                const img = new Image();
+                img.onload = () => done(img.naturalWidth);
+                img.onerror = () => done(0);
+                img.src = url;
+            });
+            added.push({ url, data: url.split(",")[1], caption: "", width: "full", px });
         }
         if (added.length) {
             this.setFocus(b.name);
             this.setShowcase(b, [...this.showcaseList(b), ...added]);
         }
+    }
+
+    /** A picture added this visit that is too narrow for its width. */
+    showcaseWarning(blk) {
+        if (!blk.px) {
+            return "";
+        }
+        if (blk.width === "half") {
+            return blk.px < 600 ? `Small for half width (${blk.px} px wide; 800 works best).` : "";
+        }
+        return blk.px < 1200 ? `Small for full width (${blk.px} px wide; 1600 works best).` : "";
     }
 
     editShowcase(b, index, change) {
