@@ -617,7 +617,14 @@ export default function PageEditor({ pageId }) {
       return shown[pid] || { id: pid, name: l.product_name, price: 0, unit: "",
         images: [`/web/image/product.template/${pid}/image_512`] };
     }) : [];
-    setPicking({ id, row: { id, name: v.name, subtitle: v.subtitle }, initial });
+    /* Which other rows on this tab already show each product - whatever
+       fills them, a category or a hand-pick - so the popup can say so. */
+    const elsewhere = {};
+    for (const s of preview?.sections || []) {
+      if (s.rid === id || s.banner || !s.items?.length) continue;
+      for (const p of s.items) (elsewhere[String(p.id)] ||= []).push(s.title || "Untitled row");
+    }
+    setPicking({ id, row: { id, name: v.name, subtitle: v.subtitle }, initial, elsewhere });
   };
   const onPicked = (res) => {
     const id = picking?.id;
@@ -955,7 +962,7 @@ export default function PageEditor({ pageId }) {
       </div>
 
       {picking && (
-        <RowProductPicker row={picking.row} initial={picking.initial}
+        <RowProductPicker row={picking.row} initial={picking.initial} elsewhere={picking.elsewhere}
           onClose={() => setPicking(null)} onSaved={onPicked} />
       )}
 

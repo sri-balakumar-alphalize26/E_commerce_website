@@ -348,7 +348,9 @@
 .rp-preview-top { display: flex; justify-content: space-between; align-items: center; }
 .rp-count { font-size: 13px; font-weight: 800; color: var(--ad-blue); background: #e8f3fa; border-radius: 999px; padding: 3px 10px; font-variant-numeric: tabular-nums; }
 .rp-count-full { color: #8a5a00; background: #fff1c9; }
-.rp-stage { background: transparent; }
+/* It borrows .hm-page for the shop's card styles, but not its full-screen
+   height - that pushed the product list and Save off the popup. */
+.rp-stage.hm-page { min-height: 0; padding-bottom: 0; background: transparent; }
 .rp-stage .rp-rail { margin: 0; }
 .rp-stage .hm-rail-head h2 { font-size: 18px; }
 .rp-card { position: relative; flex: 0 0 var(--hm-card-w); }
@@ -411,3 +413,8 @@
   .rp-row label { grid-template-columns: 20px 40px minmax(0, 1fr) auto; }
   .rp-row .rp-stock, .rp-row .rp-pos { display: none; }
 }
+/* "Also in: <row>" - already shows in another row on this tab. */
+.rp-also { display: inline-flex; align-items: center; gap: 4px; padding: 1px 7px; border-radius: 999px; background: #e9f0f6; color: #2f5d7a; font-size: 11.5px; font-weight: 600; white-space: nowrap; cursor: help; }
+.rp-name small { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.rp-card-also { position: absolute; left: 6px; right: 6px; bottom: 6px; z-index: 3; display: flex; justify-content: center; }
+.rp-card-also .rp-also { background: rgba(233, 240, 246, 0.95); }

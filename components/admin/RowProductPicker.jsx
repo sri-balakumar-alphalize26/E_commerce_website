@@ -28,7 +28,16 @@ const asCard = (p, stock) => ({
   ...(stock === "out" ? { stock: 0 } : {}),
 });
 
-function PreviewRow({ title, subtitle, items, onUntick }) {
+/* "Also in: New this week" - the product already shows in another row on
+   this tab. A heads-up only: the same thing in two rows can be on purpose. */
+function AlsoIn({ rows, short = false }) {
+  if (!rows?.length) return null;
+  const names = rows.join(", ");
+  const text = rows.length === 1 && !short ? `Also in: ${rows[0]}` : `Also in ${rows.length} row${rows.length === 1 ? "" : "s"}`;
+  return <span className="rp-also" title={`Already shows in: ${names}`}><Icon n="info" size={12} />{text}</span>;
+}
+
+function PreviewRow({ title, subtitle, items, onUntick, elsewhere = {} }) {
   const { ref, edge, by } = useRailScroll();
   return (
     <section className="hm-rail hm-in rp-rail">
@@ -40,6 +49,7 @@ function PreviewRow({ title, subtitle, items, onUntick }) {
               <ProductCard p={p} i={i} qty={0} setQty={() => {}} />
               <span className="rp-order" aria-hidden="true">{i + 1}</span>
               <button type="button" className="rp-untick" onClick={() => onUntick(p.id)} aria-label={`Take ${p.name} out of the row`}><Icon n="x" size={13} /></button>
+              {elsewhere[p.id] && <span className="rp-card-also"><AlsoIn rows={elsewhere[p.id]} short /></span>}
             </div>
           ))}
           {!items.length && <div className="rp-empty-row">Tick products below - they appear here one by one, in the order you tick them.</div>}
@@ -51,7 +61,7 @@ function PreviewRow({ title, subtitle, items, onUntick }) {
   );
 }
 
-export default function RowProductPicker({ row, initial = [], onClose, onSaved }) {
+export default function RowProductPicker({ row, initial = [], elsewhere = {}, onClose, onSaved }) {
   /* The ticked products, in tick order, as cards. Starts from what the row
      already hand-picks (the editor passes its cards). */
   const [ticked, setTicked] = useState(initial);
@@ -62,6 +72,7 @@ export default function RowProductPicker({ row, initial = [], onClose, onSaved }
   const [term, setTerm] = useState("");
   const [inStock, setInStock] = useState(false);
   const [onlyTicked, setOnlyTicked] = useState(false);
+  const [hideElsewhere, setHideElsewhere] = useState(false);
   const [sort, setSort] = useState("name");
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -109,11 +120,12 @@ export default function RowProductPicker({ row, initial = [], onClose, onSaved }
     let rows = data?.products || [];
     if (inStock) rows = rows.filter((p) => stateOf(p.id) !== "out");
     if (onlyTicked) rows = rows.filter((p) => tickedIds.has(String(p.id)));
+    if (hideElsewhere) rows = rows.filter((p) => tickedIds.has(String(p.id)) || !elsewhere[String(p.id)]);
     rows = [...rows];
     if (sort === "price-up") rows.sort((a, b) => (a.price || 0) - (b.price || 0));
     else if (sort === "price-down") rows.sort((a, b) => (b.price || 0) - (a.price || 0));
     return rows;
-  }, [data, inStock, onlyTicked, sort, tickedIds]); // eslint-disable-line
+  }, [data, inStock, onlyTicked, hideElsewhere, sort, tickedIds]); // eslint-disable-line
 
   const toggle = (p) => {
     const id = String(p.id);
@@ -169,7 +181,7 @@ export default function RowProductPicker({ row, initial = [], onClose, onSaved }
             <span className={"rp-count" + (full ? " rp-count-full" : "")}>{ticked.length} of {PICK_MAX}</span>
           </div>
           <div className="hm-page rp-stage">
-            <PreviewRow key={ticked.length} title={row.name} subtitle={row.subtitle} items={ticked} onUntick={untick} />
+            <PreviewRow key={ticked.length} title={row.name} subtitle={row.subtitle} items={ticked} onUntick={untick} elsewhere={elsewhere} />
           </div>
           {full && <p className="rp-full" role="status"><Icon n="info" size={15} />You&apos;ve reached {PICK_MAX} - this row is full. Untick one to add another.</p>}
         </div>
@@ -198,6 +210,7 @@ export default function RowProductPicker({ row, initial = [], onClose, onSaved }
               </label>
               <label className="rp-check"><input type="checkbox" checked={inStock} onChange={(e) => setInStock(e.target.checked)} />In stock only</label>
               <label className="rp-check"><input type="checkbox" checked={onlyTicked} onChange={(e) => setOnlyTicked(e.target.checked)} />Ticked only</label>
+              <label className="rp-check"><input type="checkbox" checked={hideElsewhere} onChange={(e) => setHideElsewhere(e.target.checked)} />Hide ones already in other rows</label>
               <select value={sort} onChange={(e) => setSort(e.target.value)} aria-label="Sort">
                 <option value="name">Sort: Name</option>
                 <option value="price-up">Price: low to high</option>
@@ -217,7 +230,9 @@ export default function RowProductPicker({ row, initial = [], onClose, onSaved }
                       <label>
                         <input type="checkbox" checked={on} disabled={!on && full} onChange={() => toggle(p)} />
                         <span className="rp-thumb">{p.image ? <img src={p.image} alt="" loading="lazy" /> : null}</span>
-                        <span className="rp-name"><b>{p.name}</b>{p.code && <small>{p.code}</small>}</span>
+                        <span className="rp-name"><b>{p.name}</b>
+                          {(p.code || elsewhere[id]) && <small>{p.code}{p.code && elsewhere[id] ? " · " : ""}<AlsoIn rows={elsewhere[id]} /></small>}
+                        </span>
                         <span className="rp-price">{money(p.price || 0)}</span>
                         {st && <span className={"rp-stock rp-" + st}>{STOCK_LABEL[st] || st}</span>}
                         {on && <span className="rp-pos">#{ticked.findIndex((x) => x.id === id) + 1}</span>}
