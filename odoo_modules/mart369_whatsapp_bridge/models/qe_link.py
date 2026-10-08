@@ -263,8 +263,10 @@ class DeliveryRuleQe(models.Model):
         return done
 
     def mart369_admin_list(self):
-        """The staff console's Delivery screen, from his records."""
-        if not qe_on(self.env):
+        """The staff console's Delivery screen, from his records. The Odoo
+        delivery desk (mart369_desk) keeps the website's own settings: it
+        writes them by id, so his ids must never reach it."""
+        if not qe_on(self.env) or self.env.context.get('mart369_desk'):
             return super().mart369_admin_list()
         env = self.env
         Rule = env['sa.qe.delivery.rule'].sudo().with_context(active_test=False)

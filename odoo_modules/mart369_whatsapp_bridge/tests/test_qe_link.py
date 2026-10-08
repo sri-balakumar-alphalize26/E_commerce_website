@@ -158,6 +158,15 @@ class TestQeLink(Mart369BridgeCase):
         self.assertTrue(row['quick'])
         self.assertEqual(row['quickKm'], 5.0)
 
+    def test_the_odoo_desk_keeps_the_website_settings(self):
+        """The desk writes what it lists by id, so it never gets his ids."""
+        self._slot()
+        data = self.env['mart369.delivery.rule'].with_context(
+            mart369_desk=True).mart369_admin_list()
+        Slot = self.env['mart369.delivery.slot'].sudo().with_context(active_test=False)
+        self.assertEqual({s['id'] for s in data['slots']}, set(Slot.search([]).ids))
+        self.assertFalse(any(str(s.get('key', '')).startswith('qe:') for s in data['slots']))
+
     # ---------------------------------------------------------- moving across
 
     def test_the_website_settings_are_copied_once(self):

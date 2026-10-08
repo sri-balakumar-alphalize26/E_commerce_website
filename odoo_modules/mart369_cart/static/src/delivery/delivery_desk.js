@@ -368,7 +368,11 @@ export class DeliveryDesk extends Component {
     async load() {
         this.state.loading = true;
         try {
-            const data = await this.orm.call(M.rule, "mart369_admin_list", []);
+            const data = await this.orm.call(M.rule, "mart369_admin_list", [], {
+                // Always the website's own settings, even where the bridge
+                // shows the senior's Quick / Express records in the console.
+                context: { mart369_desk: true },
+            });
             this.state.rules = data.rules;
             this.state.slots = data.slots;
             this.state.areas = data.areas;
