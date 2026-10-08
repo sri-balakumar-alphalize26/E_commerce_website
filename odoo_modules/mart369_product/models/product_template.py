@@ -303,7 +303,9 @@ class ProductTemplate(models.Model):
                 # and the save says what is missing.
                 none = 'Choose one' if name in self.MART_DESK_REQUIRED else 'None'
             options = [[str(r.id), r.display_name] for r in records]
-            if not field.required:
+            # Our starred boxes start empty even where another module makes
+            # the field required (inventory_stock_report_dynamic on Dubai).
+            if not field.required or name in self.MART_DESK_REQUIRED:
                 options = [['', none]] + options
             return {'kind': 'select', 'options': options}
         if field.type == 'many2many':

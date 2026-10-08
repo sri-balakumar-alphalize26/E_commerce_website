@@ -421,6 +421,12 @@ class TestProductDeskCategory(TransactionCase):
         self.assertEqual(box['options'][0], ['', 'Choose one'])
         self.assertIn([str(self.categ.id), self.categ.display_name], box['options'])
 
+    def test_it_starts_empty_where_another_module_requires_it(self):
+        """inventory_stock_report_dynamic (on Dubai) makes categ_id required."""
+        self.patch(self.Product._fields['categ_id'], 'required', True)
+        box = self._box(self.Product.mart369_desk_form(), 'categ_id')
+        self.assertEqual(box['options'][0], ['', 'Choose one'])
+
     def test_a_new_product_without_one_is_refused(self):
         with self.assertRaisesRegex(UserError, 'Choose a Category'):
             self.Product.mart369_desk_save({'name': 'Zz No Category', 'categ_id': ''})
@@ -436,6 +442,8 @@ class TestProductDeskCategory(TransactionCase):
     def test_a_save_that_leaves_it_out_still_works(self):
         """An older product with none, saved by a caller that does not send
         the box, keeps its price."""
+        if self.Product._fields['categ_id'].required:
+            self.skipTest('categ_id is NOT NULL here, so a product without one cannot exist')
         product = self.Product.create({'name': 'Zz Old', 'categ_id': False})
         self.Product.mart369_desk_save({'list_price': '12'}, product_id=product.id)
         self.assertEqual(product.list_price, 12)
