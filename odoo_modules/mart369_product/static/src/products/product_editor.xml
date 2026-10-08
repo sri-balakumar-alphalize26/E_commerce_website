@@ -265,6 +265,31 @@
                                     </t>
                                 </div>
 
+                                <!-- Trust badges: tick one to show it on this product, then its words. -->
+                                <div t-elif="b.kind === 'trust'" class="pdk-field pdk-wide">
+                                    <t t-call="mart369_product.BoxLabel"/>
+                                    <ul class="pdk-trust">
+                                        <li class="pdk-trust-row pdk-trust-fixed">
+                                            <label class="pdk-trust-tick"><input type="checkbox" checked="checked" disabled="disabled"/><b>Delivery time</b></label>
+                                            <small>Always shown - Quick 10–20 mins, or this product's Express delivery time.</small>
+                                        </li>
+                                        <li t-foreach="pt.rows" t-as="row" t-key="row.key" t-attf-class="pdk-trust-row {{ row.on ? '' : 'pdk-trust-off' }}">
+                                            <label class="pdk-trust-tick">
+                                                <input type="checkbox" t-att-checked="row.on ? 'checked' : false"
+                                                       t-on-change="(ev) => this.setTrust(b.name, row_index, { on: ev.target.checked })"/>
+                                                <b t-esc="row.label"/>
+                                            </label>
+                                            <input t-if="row.on" type="text" t-att-value="row.text"
+                                                   t-att-placeholder="row.shop ? row.shop + ' - the shop default' : 'Type what it says'"
+                                                   t-att-aria-label="row.label + ' badge words'"
+                                                   t-on-focus="() => this.setFocus(b.name)"
+                                                   t-on-input="(ev) => this.setTrust(b.name, row_index, { text: ev.target.value })"/>
+                                            <small t-else="">Not shown on this product.</small>
+                                        </li>
+                                    </ul>
+                                    <small t-if="b.help" t-esc="b.help"/>
+                                </div>
+
                                 <!-- Product details: a Label and a Value per line, the
                                      table under the options on the product page. -->
                                 <div t-elif="b.kind === 'pairs'" class="pdk-field pdk-wide">

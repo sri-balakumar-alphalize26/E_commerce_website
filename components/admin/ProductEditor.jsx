@@ -63,6 +63,12 @@ const unitIn = (units, word) => units.find((u) => u.toLowerCase() === (word || "
  *  fit keeps its text in `other`, so nothing is lost on the way in. */
 export function splitValue(box, raw) {
   if (box.numeric) return { value: raw ? String(raw) : "", unit: box.units[0], other: null };
+  if (box.kind === "trust") {
+    /* [{key, label, on, text, shop}] - the badges under the price. */
+    let rows = [];
+    try { rows = JSON.parse(raw || "[]"); } catch (e) { rows = []; }
+    return { rows: Array.isArray(rows) ? rows : [] };
+  }
   const text = String(raw || "").trim();
   if (box.kind === "points" || box.kind === "pairs") {
     const list = text ? text.split(box.sep ? /,/ : /\n/).map((l) => l.trim()).filter(Boolean) : [];
@@ -88,6 +94,7 @@ export function splitValue(box, raw) {
 
 /** The parts back into the one value the column holds. */
 export function joinValue(box, p) {
+  if (box.kind === "trust") return JSON.stringify(p.rows || []);
   if (box.kind === "points" || box.kind === "pairs") return p.list.map((l) => l.trim()).filter(Boolean).join(box.sep || "\n");
   if (box.kind === "choice") return p.choice === OTHER ? p.other.trim() : p.choice;
   if (box.numeric) {
@@ -118,7 +125,7 @@ const plainNumber = (raw, whole) => {
 };
 
 /* Kinds whose value is text split into boxes; select/bool/tags/digits hold the value as is. */
-const TEXT_KINDS = ["measure", "per_unit", "choice", "points", "pairs"];
+const TEXT_KINDS = ["measure", "per_unit", "choice", "points", "pairs", "trust"];
 
 /** Product details: one "Label: value" line as its two boxes, and back.
     Spaces are kept while typing; the line is trimmed when it is saved. */
@@ -868,6 +875,33 @@ export default function ProductEditor({ productId, currency, onClose, onSaved, f
             ))}
           </ol>
           <button type="button" className="ad-link pdk-add-point" onClick={() => addPoint(b.name)}><Icon n="plus" size={13} />{b.sep ? "Add an item" : "Add a point"}</button>
+        </div>
+      );
+    }
+    if (b.kind === "trust") {
+      const setTrust = (i, change) => setPart(b.name, "rows", pt.rows.map((r, j) => (j === i ? { ...r, ...change } : r)));
+      return (
+        <div key={b.name} className="pdk-field pdk-wide">
+          {label(b)}
+          <ul className="pdk-trust">
+            <li className="pdk-trust-row pdk-trust-fixed">
+              <label className="pdk-trust-tick"><input type="checkbox" checked disabled readOnly /><b>Delivery time</b></label>
+              <small>Always shown - Quick 10–20 mins, or this product&apos;s Express delivery time.</small>
+            </li>
+            {pt.rows.map((row, i) => (
+              <li key={row.key} className={"pdk-trust-row" + (row.on ? "" : " pdk-trust-off")}>
+                <label className="pdk-trust-tick">
+                  <input type="checkbox" checked={!!row.on} onChange={(e) => setTrust(i, { on: e.target.checked })} />
+                  <b>{row.label}</b>
+                </label>
+                {row.on
+                  ? <input type="text" value={row.text || ""} placeholder={row.shop ? `${row.shop} - the shop default` : "Type what it says"}
+                      aria-label={`${row.label} badge words`} onChange={(e) => setTrust(i, { text: e.target.value })} {...focusProps(b.name)} />
+                  : <small>Not shown on this product.</small>}
+              </li>
+            ))}
+          </ul>
+          {b.help && <small>{b.help}</small>}
         </div>
       );
     }

@@ -50,6 +50,7 @@
                 <field name="mart_details" invisible="1"/>
                 <field name="mart_about_html" invisible="1"/>
                 <field name="mart_showcase_json" invisible="1"/>
+                <field name="mart_trust_json" invisible="1"/>
 
                 <widget name="mart369_product_editor"/>
 

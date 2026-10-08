@@ -81,6 +81,16 @@ export function splitValue(box, raw) {
         // A number column kept in the first unit (weight: kg).
         return { value: raw ? String(raw) : "", unit: box.units[0], other: null };
     }
+    if (box.kind === "trust") {
+        // [{key, label, on, text, shop}] - the badges under the price.
+        let rows = [];
+        try {
+            rows = JSON.parse(raw || "[]");
+        } catch (e) {
+            rows = [];
+        }
+        return { rows: Array.isArray(rows) ? rows : [] };
+    }
     const text = String(raw || "").trim();
     if (box.kind === "points" || box.kind === "pairs") {
         // Features are one per line; In the box is a comma list.
@@ -137,6 +147,9 @@ export function joinPair(label, value) {
 
 /** The parts back into the one value the column holds. */
 export function joinValue(box, p) {
+    if (box.kind === "trust") {
+        return JSON.stringify(p.rows || []);
+    }
     if (box.kind === "points" || box.kind === "pairs") {
         return p.list.map((l) => l.trim()).filter(Boolean).join(box.sep || "\n");
     }
@@ -627,6 +640,14 @@ export class ProductEditor extends Component {
             this.setPart(name, "list", list.filter((_, j) => j !== i));
             this.focusPoint(name, Math.max(0, i - 1));
         }
+    }
+
+    // Trust badges: on or off, and this product's own words.
+
+    setTrust(name, i, change) {
+        const rows = this.state.form.parts[name].rows.map((r, j) => (j === i ? { ...r, ...change } : r));
+        this.setFocus(name);
+        this.setPart(name, "rows", rows);
     }
 
     // Product details: Label and Value per line.

@@ -472,3 +472,14 @@ tr.pdk-beat { animation: pdk-beat-row 900ms ease-out; }
 .pdk-pick-beat { border-radius: 12px; outline: 2px solid #f7931e; outline-offset: 4px; animation: pdk-pick-beat 1.6s ease-out; }
 .pdk-pick-note { margin: 0 0 10px; padding: 8px 12px; border-radius: 10px; background: #fff4c2; border: 1px solid #f2d36b; color: #7a5200; font-size: 13px; font-weight: 600; }
 @media (prefers-reduced-motion: reduce) { .pdk-pick-beat { animation: none; } }
+
+/* Trust badges in the editor: a tick per badge, its words once ticked. */
+.pdk-trust { list-style: none; margin: 4px 0 6px; padding: 0; display: grid; gap: 8px; }
+.pdk-trust-row { display: grid; grid-template-columns: 200px minmax(0, 1fr); align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid #e3eaef; border-radius: 10px; background: #fbfdfe; }
+.pdk-trust-row.pdk-trust-off { background: #f6f8fa; }
+.pdk-trust-row.pdk-trust-off b { color: #8795a0; }
+.pdk-trust-row > small { color: #6b7a86; font-size: 12px; }
+.pdk-trust-tick { display: inline-flex; align-items: center; gap: 8px; margin: 0; cursor: pointer; }
+.pdk-trust-tick input { width: 17px; height: 17px; accent-color: #0a78ab; }
+.pdk-trust-fixed .pdk-trust-tick { cursor: default; }
+@media (max-width: 760px) { .pdk-trust-row { grid-template-columns: minmax(0, 1fr); } }

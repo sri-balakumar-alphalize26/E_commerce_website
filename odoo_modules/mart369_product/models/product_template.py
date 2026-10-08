@@ -1,3 +1,5 @@
+import json
+
 from odoo import _, api, fields, models
 from odoo.exceptions import AccessError, UserError
 
@@ -30,6 +32,16 @@ class ProductTemplate(models.Model):
              'Operating System: iOS, Model Name: iPhone 18 Pro. Shown as the '
              'short table under the options on the product page; each '
              "variant's own specs (Colour, Size) are added to it.")
+    # The trust badges under the price, for this product: each on or off, and
+    # this product's own words (empty = the shop's or the category's). Kept
+    # in the Product page builder's own rows (mart369.product.override), so
+    # the console's "One product" view, Odoo's builder and this box are one
+    # setting; this is only the product form's way in.
+    mart_trust_json = fields.Text(
+        string='Trust badges', compute='_compute_mart_trust_json',
+        inverse='_inverse_mart_trust_json',
+        help='Tick a badge to show it on this product, and type its words; '
+             'empty words use the shop\'s. The delivery badge always shows.')
     mart_in_the_box = fields.Char(
         string='In the box',
         help="e.g. Product, cable, user manual.")
@@ -169,6 +181,8 @@ class ProductTemplate(models.Model):
         # The Word-style box; the older one-point-a-line mart_features stays
         # the page's fallback for a product whose box is empty.
         ('About this item', ['mart_about_html', 'mart_details']),
+        # The small promises under the price, ticked and worded per product.
+        ('Trust badges', ['mart_trust_json']),
         # Amazon's "From the manufacturer": big pictures with a caption.
         ('From the manufacturer', ['mart_showcase_json']),
         ('Website only', ['compare_list_price', 'mart_home_tag',
@@ -228,6 +242,72 @@ class ProductTemplate(models.Model):
     # lists live here, once, so a new unit is a one-line change.
     _WEIGHTS = ['kg', 'g', 'mg', 'L', 'ml', 'pcs', 'pack', 'dozen']
     _LENGTHS = ['mm', 'cm', 'm', 'in', 'ft']
+    # ------------------------------------------------ trust badges, per product
+
+    # [(badge, builder field key, label)] in the order the page shows them.
+    MART_TRUST = [
+        ('returns', 'trust_returns', 'Returns'),
+        ('warranty', 'trust_warranty', 'Warranty'),
+        ('cod', 'trust_cod', 'Cash on delivery'),
+        ('secure', 'trust_secure', 'Secure payment'),
+    ]
+
+    def _mart369_trust_fields(self):
+        Field = self.env['mart369.product.field'].sudo()
+        found = {f.key: f for f in Field.search([('key', 'in', [k for __, k, __ in self.MART_TRUST])])}
+        return found
+
+    def _compute_mart_trust_json(self):
+        """[{key, label, on, text, shop}] - `text` is this product's own
+        words, `shop` what it shows when they are empty."""
+        found = self._mart369_trust_fields()
+        Override = self.env['mart369.product.override'].sudo()
+        for product in self:
+            real = product.id if isinstance(product.id, int) else product._origin.id
+            overrides = {}
+            if real:
+                overrides = {(o.product_tmpl_id.id, o.field_id.id): o for o in Override.search(
+                    [('product_tmpl_id', '=', real), ('field_id', 'in', [f.id for f in found.values()])])}
+            target = product.browse(real) if real else product
+            rows = []
+            for badge, key, label in self.MART_TRUST:
+                field = found.get(key)
+                if not field:
+                    continue
+                own = overrides.get((real, field.id)) if real else None
+                shop = field._value_for(target, {}) if real else (field.default_value or '')
+                rows.append({
+                    'key': badge, 'label': label,
+                    'on': bool(field._visible_for(target, overrides)) if real else bool(field.show),
+                    'text': (own.value or '') if own else '',
+                    'shop': shop or '',
+                })
+            product.mart_trust_json = json.dumps(rows)
+
+    def _inverse_mart_trust_json(self):
+        """Back into the builder's rows: the words through
+        `set_product_value`, on/off through `set_product_state` - 'follow'
+        when on is what the shop does anyway, so a later shop-wide change
+        still reaches this product."""
+        found = self._mart369_trust_fields()
+        Field = self.env['mart369.product.field'].sudo()
+        by_badge = {badge: key for badge, key, __ in self.MART_TRUST}
+        for product in self:
+            try:
+                rows = json.loads(product.mart_trust_json or '[]')
+            except (TypeError, ValueError):
+                continue
+            for row in rows if isinstance(rows, list) else []:
+                field = found.get(by_badge.get(row.get('key')))
+                if not field:
+                    continue
+                Field.set_product_value(field.id, product.id, str(row.get('text') or ''))
+                on = bool(row.get('on'))
+                if on:
+                    Field.set_product_state(field.id, product.id, 'follow' if field.show else 'show')
+                else:
+                    Field.set_product_state(field.id, product.id, 'hide')
+
     MART_DESK_KINDS = {
         'mart_unit_text': {'kind': 'measure', 'units': _WEIGHTS},
         'mart_per_unit': {'kind': 'per_unit', 'units': _WEIGHTS},
@@ -239,6 +319,7 @@ class ProductTemplate(models.Model):
         # line typed without its colon used to vanish from the page silently.
         'mart_details': {'kind': 'pairs'},
         'mart_showcase_json': {'kind': 'showcase'},
+        'mart_trust_json': {'kind': 'trust'},
         # The same one-box-per-item entry, kept as the comma list the page
         # has always printed: "Product, cable, user manual".
         'mart_in_the_box': {'kind': 'points', 'sep': ', '},
