@@ -357,3 +357,14 @@ button.pd-about-more { border: 0; background: none; padding: 0; cursor: pointer;
   .pd-show-grid { grid-template-columns: minmax(0, 1fr); }
   .pd-show-blk.pd-show-half { grid-column: 1 / -1; }
 }
+
+/* A product link opened cold, while the shop answers: the page's shape, shimmering. */
+.pd-skel { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 24px; padding-block: 18px 40px; }
+.pd-skel-img, .pd-skel-info i { display: block; border-radius: 16px; background: linear-gradient(90deg, #e9eef2 25%, #f5f7f9 40%, #e9eef2 60%); background-size: 300% 100%; animation: sk-shimmer 1.2s linear infinite; }
+.pd-skel-img { aspect-ratio: 1; }
+.pd-skel-info { display: grid; align-content: start; gap: 14px; }
+.pd-skel-info i { height: 22px; }
+.pd-skel-info i:nth-child(1) { width: 40%; } .pd-skel-info i:nth-child(2) { width: 85%; height: 32px; }
+.pd-skel-info i:nth-child(3) { width: 55%; height: 40px; } .pd-skel-info i:nth-child(4) { height: 120px; }
+@media (max-width: 760px) { .pd-skel { grid-template-columns: minmax(0, 1fr); } }
+@media (prefers-reduced-motion: reduce) { .pd-skel-img, .pd-skel-info i { animation: none; } }

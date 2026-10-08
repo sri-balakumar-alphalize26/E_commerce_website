@@ -634,6 +634,28 @@ export default function Home({
   const product = view === "product" ? byId[route.param] : null;
   choose.current.viewing = view === "product" ? String(route.param) : null;
 
+  /* A product link opened cold - a reload, a shared link - knows nothing until
+     the shop answers. It used to say "Product not found" for that second, then
+     swap in the product. Now: "loading" until the shop answers, "missing" only
+     when the shop says there is no such product, "offline" when it could not
+     be asked (no connection, the shop down). */
+  const [lookup, setLookup] = useState({});
+  const wantId = view === "product" && route.param ? String(route.param) : null;
+  useEffect(() => {
+    if (!wantId || product || lookup[wantId]) return;
+    setLookup((l) => ({ ...l, [wantId]: "loading" }));
+    api(`/product/${encodeURIComponent(wantId)}`).then((res) => {
+      const cards = [...(res?.variants || []), ...(res?.card ? [res.card] : []),
+        ...(res?.p && !res?.variants?.length ? [res.p] : [])];
+      absorb(cards);
+      const there = cards.some((c) => String(c.id) === wantId);
+      setLookup((l) => ({ ...l, [wantId]: there ? "found" : "missing" }));
+    }).catch((e) => {
+      setLookup((l) => ({ ...l, [wantId]: e?.status === 404 ? "missing" : "offline" }));
+    });
+  }, [wantId, !!product]); // eslint-disable-line
+  const retryLookup = () => setLookup((l) => { const next = { ...l }; delete next[wantId]; return next; });
+
   /* A product's variants and its questions, asked for once per product when
      its page opens. A bare product link then moves to the variant the shop
      opens on (the first in stock), so the page always shows one real thing
@@ -779,9 +801,24 @@ export default function Home({
           onChangeAddress={() => setLocOpen(true)}
           onExplore={() => (product.cat ? nav("category", product.cat) : nav("home"))} />
       </main>
-    ) : (
+    ) : lookup[wantId] === "missing" ? (
       <main className="hm-wrap hm-view-browse" key="product-missing">
         <NotFoundView title="Product not found" text="It may have been removed or the link is incomplete." />
+      </main>
+    ) : lookup[wantId] === "offline" ? (
+      <main className="hm-wrap hm-view-browse" key="product-offline">
+        <div className="ls-empty" role="alert">
+          <h3>We can&apos;t reach the store right now</h3>
+          <p>Check your internet connection, then try again.</p>
+          <button className="ls-primary" onClick={retryLookup}>Try again</button>
+        </div>
+      </main>
+    ) : (
+      /* The shop has not answered yet: the page's shape, not a 404. */
+      <main className="hm-wrap hm-view-product" key="product-loading">
+        <div className="pd-skel" aria-label="Loading the product" role="status">
+          <span className="pd-skel-img" /><span className="pd-skel-info"><i /><i /><i /><i /></span>
+        </div>
       </main>
     );
   } else if (view === "account") {
