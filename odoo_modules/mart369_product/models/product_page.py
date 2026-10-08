@@ -118,6 +118,9 @@ class Mart369ProductPage(models.AbstractModel):
             'bundle': [card(b) for b in bundle],
             'similar': [card(s) for s in similar],
             'related': [card(r) for r in related],
+            # "Compare with similar items": the first three similar products
+            # with their Product details rows, next to this one on the page.
+            'compare': [dict(card(s), details=self.product_details(s)) for s in similar[:3]],
         }
 
     @api.model
@@ -164,9 +167,33 @@ class Mart369ProductPage(models.AbstractModel):
         showcase = self.showcase(product)
         if showcase:
             d['showcase'] = showcase
+        trust = self.trust(rows, values)
+        if trust:
+            d['trust'] = trust
 
         d.update(self.reviews(product, keys, values))
         return d
+
+    # The badges under the price, in this order: [(field key, badge key)].
+    TRUST = (('trust_returns', 'returns'), ('trust_warranty', 'warranty'),
+             ('trust_cod', 'cod'), ('trust_secure', 'secure'))
+
+    @api.model
+    def trust(self, detail_rows, values):
+        """[{key, text}] for the trust badges, from the builder's wording (shop,
+        category or product); a badge with no words is left out. The warranty
+        badge reads the product's own "Warranty: …" detail when it has one."""
+        warranty = next((value for label, value in (detail_rows or [])
+                         if label.strip().lower() == 'warranty'), '')
+        out = []
+        for field, key in self.TRUST:
+            text = str(values.get(field) or '').strip()
+            if not text:
+                continue
+            if key == 'warranty' and warranty:
+                text = warranty if 'warrant' in warranty.lower() else '%s warranty' % warranty
+            out.append({'key': key, 'text': text})
+        return out
 
     @api.model
     def about_html(self, product):

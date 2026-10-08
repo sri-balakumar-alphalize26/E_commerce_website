@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- The trust badges under the price (product_page.py `trust`). The
+         wording is the shop's: whole shop here, a category or one product in
+         the Product page builder; an empty text or a switched-off row hides
+         that badge. The delivery badge is not here - it is the product's own
+         Quick / Express promise. noupdate: the shop's wording survives upgrades. -->
+    <data noupdate="1">
+
+        <record id="f_trust_returns" model="mart369.product.field">
+            <field name="key">trust_returns</field>
+            <field name="name">Badge: returns</field>
+            <field name="section_id" ref="sec_buy"/>
+            <field name="sequence">55</field>
+            <field name="source">text</field>
+            <field name="value_kind">text</field>
+            <field name="default_value">7-day replacement</field>
+            <field name="note">A small badge under the price. Empty hides it.</field>
+        </record>
+
+        <record id="f_trust_warranty" model="mart369.product.field">
+            <field name="key">trust_warranty</field>
+            <field name="name">Badge: warranty</field>
+            <field name="section_id" ref="sec_buy"/>
+            <field name="sequence">56</field>
+            <field name="source">text</field>
+            <field name="value_kind">text</field>
+            <field name="default_value">Warranty as listed</field>
+            <field name="note">A product's own "Warranty: 1 year" detail is shown instead when it has one. Empty hides it.</field>
+        </record>
+
+        <record id="f_trust_cod" model="mart369.product.field">
+            <field name="key">trust_cod</field>
+            <field name="name">Badge: cash on delivery</field>
+            <field name="section_id" ref="sec_buy"/>
+            <field name="sequence">57</field>
+            <field name="source">text</field>
+            <field name="value_kind">text</field>
+            <field name="default_value">Cash on delivery</field>
+            <field name="note">Empty hides it - e.g. for a product that has to be paid online.</field>
+        </record>
+
+        <record id="f_trust_secure" model="mart369.product.field">
+            <field name="key">trust_secure</field>
+            <field name="name">Badge: secure payment</field>
+            <field name="section_id" ref="sec_buy"/>
+            <field name="sequence">58</field>
+            <field name="source">text</field>
+            <field name="value_kind">text</field>
+            <field name="default_value">Secure payment</field>
+            <field name="note">Empty hides it.</field>
+        </record>
+
+    </data>
+</odoo>

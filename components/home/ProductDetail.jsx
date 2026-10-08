@@ -454,6 +454,79 @@ function KeyDetails({ rows }) {
   );
 }
 
+/* The small promises under the price: how fast it comes (the product's own
+   Quick / Express promise), then the shop's words for returns, warranty, cash
+   on delivery and secure payment (mart369_product `trust`). */
+const TRUST_ICON = { returns: "reorder", warranty: "check", cod: "wallet", secure: "lock" };
+function TrustBadges({ p, quick, badges }) {
+  return (
+    <ul className="pd-trust" aria-label="Why buy here">
+      <li><span><Icon n={quick ? "bolt" : "truck"} size={16} className={quick ? "hm-fill" : ""} /></span>
+        {quick ? "Quick · 10–20 mins" : `Express · ${p.delivery}`}</li>
+      {(badges || []).map((b) => (
+        <li key={b.key}><span><Icon n={TRUST_ICON[b.key] || "check"} size={16} /></span>{b.text}</li>
+      ))}
+    </ul>
+  );
+}
+
+/* Amazon's "Compare with similar items": this product beside up to three
+   similar ones, and the Product details they share. */
+function CompareTable({ p, details, rating, ratingCount, others, cart, setQty }) {
+  const open = useContext(OpenContext);
+  if (!others?.length) return null;
+  const cols = [
+    { card: p, rows: details, rating, ratingCount, me: true },
+    ...others.map((c) => ({ card: c, rows: c.details || [], rating: c.ratingCount ? c.rating : null, ratingCount: c.ratingCount })),
+  ];
+  const labels = [];
+  cols.forEach((c) => (c.rows || []).forEach(([k]) => { if (!labels.includes(k)) labels.push(k); }));
+  const shown = labels.slice(0, 8);
+  const valueOf = (c, k) => (c.rows || []).find(([l]) => l === k)?.[1] || "—";
+  return (
+    <section className="pd-compare" aria-labelledby="pd-compare-h">
+      <h2 id="pd-compare-h">Compare with similar items</h2>
+      <div className="pd-compare-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col" className="pd-compare-corner" />
+              {cols.map((c) => (
+                <th key={c.card.id} scope="col" className={c.me ? "pd-compare-me" : ""}>
+                  {c.me && <span className="pd-compare-tag">This item</span>}
+                  <a href={`/product/${c.card.id}`} onClick={(e) => { if (open && !c.me) { e.preventDefault(); open(c.card); } else if (c.me) e.preventDefault(); }}>
+                    <span className="pd-compare-img"><Thumb p={c.card} /></span>
+                    <span className="pd-compare-name">{c.card.name}</span>
+                  </a>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            <tr><th scope="row">Price</th>{cols.map((c) => <td key={c.card.id} className={c.me ? "pd-compare-me" : ""}><b>{money(c.card.price)}</b></td>)}</tr>
+            <tr><th scope="row">Rating</th>{cols.map((c) => <td key={c.card.id} className={c.me ? "pd-compare-me" : ""}>{c.rating != null ? <>★ {Number(c.rating).toFixed(1)} <small>({c.ratingCount})</small></> : "—"}</td>)}</tr>
+            <tr><th scope="row">Delivery</th>{cols.map((c) => <td key={c.card.id} className={c.me ? "pd-compare-me" : ""}>{c.card.delivery ? `Express · ${c.card.delivery}` : "Quick · 10–20 mins"}</td>)}</tr>
+            {shown.map((k) => (
+              <tr key={k}><th scope="row">{k}</th>{cols.map((c) => <td key={c.card.id} className={c.me ? "pd-compare-me" : ""}>{valueOf(c, k)}</td>)}</tr>
+            ))}
+            <tr>
+              <th scope="row" />
+              {cols.map((c) => (
+                <td key={c.card.id} className={c.me ? "pd-compare-me" : ""}>
+                  {c.me ? <small>You are viewing this</small>
+                    : c.card.stock === 0 ? <small>Out of stock</small>
+                      : (cart[c.card.id] || 0) > 0 ? <small className="pd-compare-in">✓ {cart[c.card.id]} in cart</small>
+                        : <button className="pd-compare-add" onClick={() => setQty(c.card.id, 1)}>Add to cart</button>}
+                </td>
+              ))}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
 /* Amazon's "From the manufacturer": big pictures, a caption above each; a
    full block takes the row, two half blocks sit side by side. */
 function Showcase({ blocks }) {
@@ -530,6 +603,7 @@ export default function ProductDetail({
   p, cart, setQty, address, onBack, onChangeAddress, onExplore, fromRect,
   related = [], variants = [], attrs = [], onVariant, bundle = [], similar = [], recent = [], onViewSimilar, onEditReview,
   optionsFailed = false, onRetryOptions, reviewInfo, info, about = [], aboutHtml = "", details = [], showcase = [],
+  onBuyNow, trust = [], compare = [],
 }) {
   /* Every product shows what its setup holds, as the WhatsApp confirmation
      page does: its photos, the Variant specs table and the Sales Description
@@ -582,6 +656,11 @@ export default function ProductDetail({
   const off = p.mrp ? Math.round(((p.mrp - p.price) / p.mrp) * 100) : 0;
   const oos = p.stock === 0;
   const quick = !p.delivery;
+  /* How many to add, before any are in the basket: 1 up to 12, or what is
+     left when only a few are. */
+  const maxQty = Math.max(1, Math.min(12, p.low || 12));
+  const [pick, setPick] = useState(1);
+  useEffect(() => setPick(1), [p.id]);
 
   const group = p.variantGroup || p.id;
   useEffect(() => { window.scrollTo({ top: 0 }); }, [group]);
@@ -644,17 +723,34 @@ export default function ProductDetail({
               ? <p className="pd-var-wait">Couldn't load the options. <button className="pd-link" onClick={onRetryOptions}>Try again</button></p>
               : <p className="pd-var-wait">Loading the options…</p>)}
 
+            <TrustBadges p={p} quick={quick} badges={trust} />
+
             <div className="pd-cta">
               {oos ? (
                 <button className="pd-notify" onClick={() => flash("We'll notify you when it's back")}><Icon n="bell" size={16} />Notify me</button>
-              ) : qty === 0 ? (
-                <button ref={addBtn} className="pd-add" onClick={() => { flyToCart(addBtn.current.closest(".pd-page")?.querySelector(".pd-stage"), { id: p.id }); setQty(p.id, 1); }}>Add to cart</button>
               ) : (
-                <div className="pd-stepper" role="group" aria-label="Quantity">
-                  <button onClick={() => setQty(p.id, qty - 1)} aria-label="Remove one">−</button>
-                  <span key={qty}>{qty} in cart</span>
-                  <button onClick={() => setQty(p.id, Math.min(12, qty + 1))} aria-label="Add one">+</button>
-                </div>
+                <>
+                  {qty === 0 && (
+                    <label className="pd-qty">
+                      <span>Quantity:</span>
+                      <select value={pick} onChange={(e) => setPick(Number(e.target.value))} aria-label="Quantity">
+                        {Array.from({ length: maxQty }, (_, k) => <option key={k} value={k + 1}>{k + 1}</option>)}
+                      </select>
+                    </label>
+                  )}
+                  <div className="pd-cta-row">
+                    {qty === 0 ? (
+                      <button ref={addBtn} className="pd-add" onClick={() => { flyToCart(addBtn.current.closest(".pd-page")?.querySelector(".pd-stage"), { id: p.id }); setQty(p.id, pick); }}>Add to cart</button>
+                    ) : (
+                      <div className="pd-stepper" role="group" aria-label="Quantity">
+                        <button onClick={() => setQty(p.id, qty - 1)} aria-label="Remove one">−</button>
+                        <span key={qty}>{qty} in cart</span>
+                        <button onClick={() => setQty(p.id, Math.min(12, qty + 1))} aria-label="Add one">+</button>
+                      </div>
+                    )}
+                    {onBuyNow && <button className="pd-buynow" onClick={() => onBuyNow(p, qty || pick)}>Buy Now</button>}
+                  </div>
+                </>
               )}
             </div>
 
@@ -774,6 +870,8 @@ export default function ProductDetail({
       </div>
 
       <Showcase blocks={showcase} />
+      <CompareTable p={p} details={keyDetails(details, p.specs)} rating={d.rating} ratingCount={d.ratingCount}
+        others={compare} cart={cart} setQty={setQty} />
       {bundle.length > 0 && <BoughtTogether key={"fbt-" + p.id} p={p} items={bundle} cart={cart} setQty={setQty} />}
 
       {similar.length > 0 && (

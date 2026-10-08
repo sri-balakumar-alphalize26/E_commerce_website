@@ -607,6 +607,13 @@ export default function Home({
     nav("checkout");
   };
   const reorder = (o, el) => { flyTo(el); o.items.forEach(([id, q]) => byId[id] && byId[id].stock !== 0 && setQty(id, (cart[id] || 0) + q)); };
+  /* "Buy Now" on a product page: that many in the basket, then straight to
+     checkout. The checkout is the basket's, so anything already in it goes
+     too - and is listed there. */
+  const buyNow = (prod, n) => {
+    if ((cart[prod.id] || 0) < n) setQty(prod.id, n);
+    startCheckout({ how: "online" });
+  };
 
   /* A refund is the shop crediting the wallet, so there is nothing to add up
      here - only the ledger to read again once it has. */
@@ -674,7 +681,9 @@ export default function Home({
     api(`/product/${encodeURIComponent(product.id)}`).then((res) => {
       if (!live) return;
       absorb([...(res?.variants || []), ...(res?.card ? [res.card] : []),
-        ...(res?.p && !res?.variants?.length ? [res.p] : [])]);
+        ...(res?.p && !res?.variants?.length ? [res.p] : []),
+        /* The compared products, so "Add to cart" in the table finds them. */
+        ...(res?.compare || []).map(({ details, ...c }) => c)]);
       const d = res?.d || {};
       setGroups((g) => ({ ...g, [group]: {
         attrs: res?.attrs || [],
@@ -688,6 +697,9 @@ export default function Home({
         aboutHtml: d.aboutHtml || "",
         showcase: d.showcase || [],
         details: d.details || [],
+        /* The badges under the price, and the similar products to compare. */
+        trust: d.trust || [],
+        compare: res?.compare || [],
       } }));
     }).catch(() => { if (live) setGroups((g) => ({ ...g, [group]: { error: true } })); });
     return () => { live = false; };
@@ -784,6 +796,7 @@ export default function Home({
     body = product ? (
       <main className="hm-wrap hm-view-product" key={"product-" + (product.variantGroup || product.id)}>
         <ProductDetail onEditReview={() => nav("account", "reviews")} p={product} cart={cart} setQty={setQty} address={address}
+          onBuyNow={buyNow} trust={loaded?.trust || []} compare={loaded?.compare || []}
           fromRect={fromRect.current}
           variants={pd.variants}
           attrs={(product.variantGroup && groups[product.variantGroup]?.attrs) || []}
