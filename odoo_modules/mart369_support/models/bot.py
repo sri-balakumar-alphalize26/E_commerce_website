@@ -60,6 +60,9 @@ LOGIN_KINDS = {'order', 'track', 'refund', 'cancel', 'return', 'wallet', 'agent'
 # "Payment issue" start chip matched no rule (the payment rule's pattern lists
 # debited, upi, card declined... but not "payment").
 KIND_ALSO = {'payment': re.compile(r'\bpayment', re.I)}
+# Rules that are manners rather than answers, which the bot leaves alone while
+# a customer waits for the team (_mart369_known_answer).
+SMALL_TALK = {'mart369_support.rule_hello', 'mart369_support.rule_thanks'}
 
 
 class Mart369Bot(models.AbstractModel):
@@ -83,20 +86,70 @@ class Mart369Bot(models.AbstractModel):
         typed = (text or '').strip().lower()
         if not typed:
             return self._mart369_greeting(partner)
+        rule, reply = self._mart369_rule_reply(partner, typed, guest)
+        return reply or self._mart369_fallback()
 
+    @api.model
+    def _mart369_rule_reply(self, partner, typed, guest=False):
+        """(rule, answer) for the first rule that matches, or (rule or None,
+        None) when none does or the one that does is broken."""
         ctx = self._mart369_guest_context() if guest else self._mart369_context(partner, typed)
         for rule in self.env['mart369.bot.rule']._mart369_rules():
             if not self._mart369_matches(rule, typed):
                 continue
             if guest and rule.kind in LOGIN_KINDS:
-                return self._mart369_sign_in()
+                return rule, self._mart369_sign_in()
             try:
-                return self._mart369_answer(rule, ctx)
+                return rule, self._mart369_answer(rule, ctx)
             except Exception:  # noqa: BLE001
                 # A broken rule must not leave the customer with a dead panel.
                 _logger.exception('mart369: support rule %s failed', rule.id)
-                break
-        return self._mart369_fallback()
+                return rule, None
+        return None, None
+
+    @api.model
+    def _mart369_known_answer(self, partner, text):
+        """What the bot can really answer while the customer waits for the
+        team - None when it would only guess, or would hand over again.
+
+        Waiting used to mean silence: the bot spoke once in ten minutes, so a
+        customer who asked "where is my order" in the queue heard nothing
+        although the answer was one lookup away.
+        """
+        typed = (text or '').strip().lower()
+        if not typed:
+            return None
+        rule, reply = self._mart369_rule_reply(partner, typed)
+        if not rule or not reply or rule.kind == 'agent' or reply.get('agent'):
+            return None
+        # "Hi" and "thanks" in the queue are for the team, not a reason for
+        # the bot to greet them again; they get the queue line instead.
+        if self._mart369_is_small_talk(rule):
+            return None
+        return reply
+
+    @api.model
+    def _mart369_is_small_talk(self, rule):
+        return bool(rule) and rule.get_external_id().get(rule.id) in SMALL_TALK
+
+    @api.model
+    def _mart369_while_waiting(self, partner, ticket, text):
+        """(answer, settled) for a line typed while the team has not replied.
+
+        Every line gets something back at once - the customer goes straight on
+        to their next question instead of watching a quiet chat. `settled` says
+        whether the answer dealt with the line: a real answer or a "hi" does,
+        so the team's reply is not tagged to it; "got it, added to your
+        ticket" does not, so that question stays in the queue for the team.
+        """
+        known = self._mart369_known_answer(partner, text)
+        if known:
+            return known, True
+        typed = (text or '').strip().lower()
+        first = next((rule for rule in self.env['mart369.bot.rule']._mart369_rules()
+                      if self._mart369_matches(rule, typed)), None)
+        return ({'text': self._mart369_agent_reply(partner, ticket, text)},
+                self._mart369_is_small_talk(first))
 
     @api.model
     def _mart369_sign_in(self):
@@ -346,8 +399,9 @@ class Mart369Bot(models.AbstractModel):
         typed = (text or '').strip().lower()
         if re.match(r'^(hi|hello|hey|hai|namaste)\b', typed):
             return "Hi! You're in the queue - our team will reply here."
+        if re.match(r"^(no,? that|that's all|thanks|thank you|thankyou)\b", typed):
+            return "You're welcome! Our team will still reply here."
         if ticket and ticket.order_id:
-            return ("Thanks for the details. I've noted this against order #%s "
-                    'and someone will reply here shortly.' % (
-                        ticket.order_id.mart369_ref or ''))
-        return 'Thanks for the details. I have noted this and someone will reply here shortly.'
+            return ("Got it - I've added this to your ticket for order #%s. "
+                    'Our team will reply right here.' % (ticket.order_id.mart369_ref or ''))
+        return "Got it - I've added this to your ticket. Our team will reply right here."

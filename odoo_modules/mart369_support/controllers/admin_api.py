@@ -135,9 +135,12 @@ class Mart369SupportAdminApi(http.Controller):
         """
         if not self._may_edit():
             return self._fail('You do not have access to this.', status=403)
+        body = self._body()
+        # Left out: tag it to the oldest unanswered line. null: no tag.
+        reply_to = (body.get('reply_to') or False) if 'reply_to' in body else None
         try:
             ticket = self._tickets().mart369_admin_reply(
-                ref, self._body().get('text'))
+                ref, body.get('text'), reply_to=reply_to)
         except AccessError as exc:
             return self._fail(str(exc), status=403)
         except (UserError, ValidationError) as exc:

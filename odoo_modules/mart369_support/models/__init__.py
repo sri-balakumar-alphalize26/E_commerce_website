@@ -1,6 +1,7 @@
 from . import bot_rule
 from . import bot_rule_admin
 from . import bot
+from . import mail_message
 from . import ticket
 from . import ticket_admin
 from . import whatsapp

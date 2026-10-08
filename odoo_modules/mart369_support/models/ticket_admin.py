@@ -127,6 +127,9 @@ class Mart369TicketAdmin(models.Model):
         # Hidden rather than disabled, the way the returns desk does it: there
         # is nothing to reply to once a ticket is closed.
         detail['canReply'] = self.state in OPEN_STATES
+        # What the next reply will be tagged to unless staff pick another, so
+        # the console can show it before they send.
+        detail['suggestReplyTo'] = self._mart369_unanswered()[:1].id or None
         return detail
 
     # ------------------------------------------------------------ reading
@@ -238,8 +241,9 @@ class Mart369TicketAdmin(models.Model):
         return True
 
     @api.model
-    def mart369_admin_reply(self, ref, text):
-        """Answer the customer.
+    def mart369_admin_reply(self, ref, text, reply_to=None):
+        """Answer the customer - tagged to `reply_to`, a line of theirs, or
+        with None to the oldest one nobody has answered, False for none.
 
         Straight through `_mart369_say(from_customer=False)`, which already
         stamps `answered_at`, moves a new ticket to being handled and puts the
@@ -255,7 +259,7 @@ class Mart369TicketAdmin(models.Model):
         if ticket.state not in OPEN_STATES:
             raise UserError(self.env._(
                 "This ticket is closed. Reopen it before replying."))
-        ticket._mart369_say(said[:MAX_REPLY], from_customer=False)
+        ticket._mart369_say(said[:MAX_REPLY], from_customer=False, reply_to=reply_to)
         return ticket._mart369_admin_detail()
 
     @api.model

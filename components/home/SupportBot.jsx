@@ -55,7 +55,7 @@ export function BotFace({ className = "" }) {
   );
 }
 
-function Msg({ m, onChip, onAction, chips }) {
+function Msg({ m, onChip, onAction, onQuote, chips }) {
   if (m.from === "sys") {
     return (
       <div className={"sb-sys" + (m.queue ? " sb-queue" : "")}>
@@ -66,11 +66,22 @@ function Msg({ m, onChip, onAction, chips }) {
   }
   const mine = m.from === "me";
   return (
-    <div className={"sb-msg " + (mine ? "sb-mine" : m.from === "agent" ? "sb-agent" : "sb-bot")}>
+    <div className={"sb-msg " + (mine ? "sb-mine" : m.from === "agent" ? "sb-agent" : "sb-bot")} data-mid={m.id || undefined}>
       {!mine && <span className="sb-ava">{m.from === "agent" ? (m.name || "S")[0] : <BotFace />}</span>}
       <div className="sb-bubble-col">
         {m.from === "agent" && m.name && <b className="sb-who">{m.name}</b>}
-        <p>{m.text}</p>
+        <p>
+          {/* The question this answers, the way WhatsApp quotes one: tap it
+              to go back up to where it was asked. */}
+          {m.replyTo && (
+            <button type="button" className="sb-quote" onClick={() => onQuote(m.replyTo.id)}
+              aria-label={`Replying to: ${m.replyTo.text}. Show that message`}>
+              <b>{m.replyTo.from === "me" ? "You" : BOT_NAME}</b>
+              <span>{m.replyTo.text}</span>
+            </button>
+          )}
+          {m.text}
+        </p>
         {!!m.actions?.length && (
           <div className="sb-actions">
             {m.actions.map((a, k) => (
@@ -134,6 +145,22 @@ export default function SupportBot({ onNav, hidden = false, lift = 0 }) {
 
   /* The server's transcript is the conversation once a person is involved. */
   const fromTicket = (t) => (t?.messages || []).map((m) => ({ ...m, at: m.at || Date.now() }));
+  /* The ticket keeps words, not buttons: a bot answer's "Track order" stays
+     on screen when the transcript is swapped in. */
+  const keepButtons = (said, now) => said.map((m) => {
+    if (m.from !== "bot" || m.actions) return m;
+    const was = now.find((n) => n.from === "bot" && n.text === m.text && n.actions?.length);
+    return was ? { ...m, actions: was.actions } : m;
+  });
+
+  /* Tapping a quote: up to the question it answers, lit for a moment. */
+  const jumpTo = (id) => {
+    const el = list.current?.querySelector(`[data-mid="${id}"]`);
+    if (!el) return;
+    el.scrollIntoView({ block: "center", behavior: reduced() ? "auto" : "smooth" });
+    el.classList.remove("sb-flash"); void el.offsetWidth; el.classList.add("sb-flash");
+    later(() => el.classList.remove("sb-flash"), 1400);
+  };
 
   const open = (say = "") => {
     if (phase !== "closed") { if (say) send(say); return; }
@@ -177,7 +204,7 @@ export default function SupportBot({ onNav, hidden = false, lift = 0 }) {
         .then((r) => {
           if (!r?.ticket || r.ticket.closed) { ended(); return; }
           const said = fromTicket(r.ticket);
-          setMsgs((now) => (said.length > now.filter((m) => m.from !== "sys").length ? said : now));
+          setMsgs((now) => (said.length > now.filter((m) => m.from !== "sys").length ? keepButtons(said, now) : now));
         })
         .catch(() => {});
     }, POLL_MS);
@@ -232,7 +259,10 @@ export default function SupportBot({ onNav, hidden = false, lift = 0 }) {
         setTyping(false);
         if (agent) {
           if (r.closed) { ended(); return; }
-          if (r.reply) push({ from: "bot", text: r.reply });
+          /* While nobody from the team has answered, the bot still answers
+             what it knows - with its buttons. */
+          if (r.bot?.text) push({ from: "bot", text: r.bot.text, actions: r.bot.actions, chips: r.bot.chips });
+          else if (r.reply) push({ from: "bot", text: r.reply });
           return;
         }
         push({ from: "bot", text: r.text, actions: r.actions, chips: r.chips });
@@ -263,7 +293,11 @@ export default function SupportBot({ onNav, hidden = false, lift = 0 }) {
      greeting's again. Not while a person from the team is on it. A chat
      saved before `start` was kept finds them on the greeting. */
   const starters = start.length ? start : msgs.find((m) => m.from === "bot" && m.chips?.length)?.chips || [];
-  const nextChips = agent || typing ? null : lastBot?.chips?.length ? lastBot.chips : starters;
+  /* In the queue but nobody from the team has written yet: the bot is still
+     answering, so the topics stay - all but asking for a person again. */
+  const teamOn = agent && msgs.some((m) => m.from === "agent");
+  const offered = lastBot?.chips?.length ? lastBot.chips : starters;
+  const nextChips = typing || teamOn ? null : agent ? offered.filter((c) => !/\bagent\b/i.test(c)) : offered;
 
   return (
     <div className={"sb" + (hidden && !forced ? " sb-hidden" : "")}>
@@ -296,7 +330,7 @@ export default function SupportBot({ onNav, hidden = false, lift = 0 }) {
             </header>
             <div className="sb-list" ref={list} aria-live="polite">
               <p className="sb-day">Today</p>
-              {msgs.map((m, i) => <Msg key={`${i}-${m.at}`} m={m} chips={m === lastBot ? nextChips : null} onChip={send} onAction={onAction} />)}
+              {msgs.map((m, i) => <Msg key={`${i}-${m.at}`} m={m} chips={m === lastBot ? nextChips : null} onChip={send} onAction={onAction} onQuote={jumpTo} />)}
               {typing && (
                 <div className="sb-msg sb-bot sb-typing-row">
                   <span className="sb-ava"><BotFace /></span>
@@ -304,6 +338,12 @@ export default function SupportBot({ onNav, hidden = false, lift = 0 }) {
                 </div>
               )}
             </div>
+            {agent && !teamOn && (
+              <div className="sb-waitbar" role="status">
+                <i className="sb-qbar"><em /></i>
+                <span>Waiting for our team · your question stays in the queue</span>
+              </div>
+            )}
             <form className="sb-send" onSubmit={(e) => { e.preventDefault(); send(); }}>
               <input ref={input} value={text} onChange={(e) => setText(e.target.value)} placeholder={agent ? (person ? `Message ${person}` : "Message our team") : "Type your question"} aria-label="Message" maxLength={300} />
               <button type="submit" className={text.trim() ? "sb-ready" : ""} disabled={!text.trim() || typing} aria-label="Send"><Icon n="right" size={18} /></button>

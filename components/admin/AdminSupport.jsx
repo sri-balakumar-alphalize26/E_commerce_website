@@ -64,7 +64,13 @@ function TicketDrawer({ ref_, staff, onClose, onChanged, flash }) {
     `/admin/support/${encodeURIComponent(ref_)}`, { deps: [ref_] });
   const act = useAction();
   const [text, setText] = useState("");
+  /* Which of the customer's lines the reply answers: undefined follows the
+     server's pick (the oldest unanswered), null is none, a number is chosen. */
+  const [pick, setPick] = useState(undefined);
+  useEffect(() => setPick(undefined), [ref_]);
   const t = data?.ticket;
+  const replyTo = pick === undefined ? t?.suggestReplyTo || null : pick;
+  const quoted = replyTo ? (t?.messages || []).find((m) => m.id === replyTo) : null;
 
   /* The customer may still be typing: their new lines appear without a reload. */
   useEffect(() => {
@@ -92,9 +98,9 @@ function TicketDrawer({ ref_, staff, onClose, onChanged, flash }) {
     if (!said) return;
     const ok = await run(
       () => api(`/admin/support/${encodeURIComponent(ref_)}/reply`,
-        { method: "POST", body: { text: said } }),
+        { method: "POST", body: { text: said, reply_to: quoted ? replyTo : null } }),
       "Reply sent");
-    if (ok) setText("");
+    if (ok) { setText(""); setPick(undefined); }
   };
 
   const move = (action, ok) =>
@@ -158,9 +164,18 @@ function TicketDrawer({ ref_, staff, onClose, onChanged, flash }) {
             {!t.messages?.length && <p className="ad-hint">Nothing said yet.</p>}
             <ul className="ad-thread">
               {(t.messages || []).map((m, i) => (
-                <li key={i} className={m.from === "me" ? "ad-them" : "ad-us"}>
+                <li key={m.id || i} className={(m.from === "me" ? "ad-them" : "ad-us") + (m.id && m.id === replyTo ? " ad-picked" : "")}>
+                  {m.replyTo && (
+                    <span className="ad-quote"><b>{m.replyTo.from === "me" ? t.customer : "Bot"}</b><span>{m.replyTo.text}</span></span>
+                  )}
                   <p>{m.text}</p>
-                  <small>{m.from === "me" ? t.customer : m.from === "bot" ? "Bot" : (m.name || "Us")} · {since(m.at)}</small>
+                  <small>
+                    {m.from === "me" ? t.customer : m.from === "bot" ? "Bot" : (m.name || "Us")} · {since(m.at)}
+                    {/* Like swiping to reply on WhatsApp: tag the answer to this line. */}
+                    {t.canReply && m.from === "me" && m.id && m.id !== replyTo && (
+                      <button type="button" className="ad-quote-pick" onClick={() => setPick(m.id)}>Reply</button>
+                    )}
+                  </small>
                 </li>
               ))}
             </ul>
@@ -169,6 +184,13 @@ function TicketDrawer({ ref_, staff, onClose, onChanged, flash }) {
           {t.canReply && (
             <section className="ad-dsec">
               <h4>Reply</h4>
+              {quoted && (
+                <div className="ad-replying">
+                  <span><b>Replying to {t.customer}</b><i>{(quoted.text || "").split("\n").find((l) => l.trim()) || ""}</i></span>
+                  <button type="button" onClick={() => setPick(null)} aria-label="Send without quoting it"
+                    title="Send without quoting it"><Icon n="x" size={13} /></button>
+                </div>
+              )}
               <textarea className="ad-reply" rows={3} value={text} maxLength={500}
                 placeholder="Type what the customer should read…"
                 onChange={(e) => setText(e.target.value)} />

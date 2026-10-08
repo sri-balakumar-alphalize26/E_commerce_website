@@ -92,6 +92,15 @@
 .sb-msg p { margin: 0; padding: 10px 13px; font-size: 14px; line-height: 1.45; border-radius: 16px 16px 16px 5px; background: #fff; border: 1px solid var(--sb-line); overflow-wrap: anywhere; }
 .sb-mine p { background: var(--sb-blue); color: #fff; border-color: transparent; border-radius: 16px 16px 5px 16px; }
 .sb-agent p { background: #fff7ee; border-color: #ffe0bd; }
+/* The question a team reply answers, quoted inside it like WhatsApp does. */
+.sb-quote { display: flex; flex-direction: column; gap: 1px; width: 100%; margin: -2px 0 7px; padding: 6px 10px; border: 0; border-left: 3px solid var(--sb-blue); border-radius: 8px; background: rgba(10, 120, 171, 0.08); color: inherit; font: inherit; text-align: left; cursor: pointer; transition: background-color 180ms; }
+.sb-quote:hover { background: rgba(10, 120, 171, 0.14); }
+.sb-quote b { font-size: 11.5px; font-weight: 700; color: var(--sb-blue); }
+.sb-quote span { font-size: 12.5px; line-height: 1.35; color: #4b5c68; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sb-quote:focus-visible { outline: 2px solid var(--sb-blue); outline-offset: 2px; }
+/* Where a tapped quote lands: lit for a moment so the eye finds it. */
+.sb-msg p { transition: box-shadow 400ms; }
+.sb-flash p { box-shadow: 0 0 0 3px rgba(247, 147, 30, 0.6); }
 .sb-msg time { margin: 3px 4px 0; font-size: 10.5px; color: #97a4ae; }
 .sb-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .sb-actions button { display: inline-flex; align-items: center; gap: 4px; height: 32px; padding: 0 10px 0 12px; border-radius: 999px; border: 1.5px solid var(--sb-blue); background: #fff; color: var(--sb-blue) !important; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; animation: hm-pop 340ms var(--hm-spring, ease) backwards; animation-delay: calc(160ms + var(--k) * 60ms); transition: background-color 180ms, color 180ms; }
@@ -110,6 +119,11 @@
 .sb-qbar { display: block; width: 140px; height: 4px; border-radius: 4px; background: #dfe7ec; overflow: hidden; }
 .sb-qbar em { display: block; height: 100%; width: 40%; border-radius: inherit; background: var(--sb-orange); animation: sb-queue 1.1s ease-in-out infinite; }
 
+/* While nobody from the team has replied: their question is still in the
+   queue, and this stays in sight however far the chat scrolls. */
+.sb-waitbar { flex: none; display: flex; align-items: center; gap: 10px; padding: 7px 14px; background: #fff8ef; border-top: 1px solid #ffe0bd; font-size: 12px; font-weight: 600; color: #8a5a1c; animation: sb-roll 300ms ease both; }
+.sb-waitbar .sb-qbar { flex: none; width: 46px; background: #ffe6c7; }
+.sb-waitbar span { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sb-send { flex: none; display: flex; gap: 8px; padding: 10px 12px 6px; background: #fff; border-top: 1px solid var(--sb-line); }
 .sb-send input { flex: 1; min-width: 0; height: 44px; border: 1.5px solid var(--sb-line); border-radius: 999px; padding: 0 16px; font: inherit; font-size: 15px; color: var(--hm-ink, #13212b); background: #f6f9fb; outline: none; transition: border-color 200ms, background-color 200ms, box-shadow 220ms; }
 .sb-send input:focus { border-color: var(--sb-blue); background: #fff; box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.12); }

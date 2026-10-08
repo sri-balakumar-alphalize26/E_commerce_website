@@ -17,6 +17,7 @@ status, an owner and a thread is most of what one would have given us anyway.
 """
 
 from odoo import api, fields, models
+from odoo.exceptions import UserError
 from odoo.tools import html2plaintext
 
 STATE_CHOICES = [
@@ -122,16 +123,23 @@ class Mart369Ticket(models.Model):
             'order_id': order.id if order else False,
         })
 
-    def _mart369_say(self, text, from_customer=True, from_bot=False):
-        """Put one line of the conversation on the ticket.
+    def _mart369_say(self, text, from_customer=True, from_bot=False, reply_to=None):
+        """Put one line of the conversation on the ticket, and hand it back.
 
         The transcript was `sessionStorage` and gone when the tab closed, which
         is why an operator picking a ticket up had no idea what had been said.
+
+        `reply_to` is the customer's line this one answers. For a team reply,
+        None means "the oldest one nobody has answered" and False means none.
+        The bot quotes only what it is told to: its lines are bookkeeping, so
+        a question it already answered is not the next one tagged.
         """
         self.ensure_one()
         if not (text or '').strip():
             return False
         body = (text or '').strip()
+        team = not from_customer and not from_bot
+        quote = self._mart369_quote_for(reply_to, auto=team)
         # The bot's own lines (the conversation before the hand-over, and its
         # "you're in the queue") are signed by OdooBot, so the panel can tell
         # them from a person's and the ticket shows who really said what.
@@ -141,12 +149,87 @@ class Mart369Ticket(models.Model):
             author = self.partner_id
         else:
             author = self.env.user.partner_id
-        self.sudo().message_post(body=body, author_id=author.id, message_type='comment')
-        if not from_customer and not from_bot and not self.answered_at:
+        message = self.sudo().with_context(mart369_quoted=True).message_post(
+            body=body, author_id=author.id, message_type='comment')
+        message.sudo().write({'mart369_chat': True,
+                              'mart369_reply_to_id': quote.id or False})
+        # `message_ids` hangs off res_id, which is not a real relation, so a
+        # new message does not reach a list already read in this transaction.
+        self.invalidate_recordset(['message_ids'])
+        if team and not self.answered_at:
             self.sudo().write({'answered_at': fields.Datetime.now(),
                                'state': 'open',
                                'user_id': self.env.user.id})
-        return True
+        return message
+
+    # ------------------------------------------------------------ quoting
+
+    def _mart369_comments(self):
+        """The conversation on this ticket, oldest first: the chat's own
+        lines, and messages staff sent from Odoo - never a Log note.
+
+        Searched rather than read off `message_ids`, which can be stale
+        within a transaction (it hangs off res_id, not a real relation)."""
+        self.ensure_one()
+        return self.env['mail.message'].sudo().search([
+            ('model', '=', self._name), ('res_id', '=', self.id),
+            ('message_type', '=', 'comment'),
+        ], order='id').filtered(
+            lambda m: m.body and (m.mart369_chat
+                                  or not (m.subtype_id and m.subtype_id.internal)))
+
+    def _mart369_customer_lines(self):
+        """What the customer said on this ticket, oldest first."""
+        self.ensure_one()
+        return self._mart369_comments().filtered(lambda m: m.author_id == self.partner_id)
+
+    def _mart369_unanswered(self):
+        """The customer's lines no later line has answered, oldest first -
+        so three questions and three replies pair up in order."""
+        self.ensure_one()
+        answered = self._mart369_comments().mapped('mart369_reply_to_id')
+        return self._mart369_customer_lines() - answered
+
+    def _mart369_quote_for(self, reply_to, auto=False):
+        """The customer line a new line answers: a record or an id, False or
+        0 for none, None to pick the oldest unanswered when `auto`."""
+        self.ensure_one()
+        empty = self.env['mail.message']
+        if reply_to is None:
+            return self._mart369_unanswered()[:1] if auto else empty
+        if not reply_to:
+            return empty
+        if isinstance(reply_to, models.BaseModel):
+            # Handed over by the code that just posted it: it only has to be
+            # on this ticket. A customer's chat must never fail on a quote.
+            line = reply_to.sudo()[:1]
+            return line if line.model == self._name and line.res_id == self.id else empty
+        wanted = reply_to
+        try:
+            wanted = int(wanted)
+        except (TypeError, ValueError):
+            wanted = 0
+        line = self._mart369_customer_lines().filtered(lambda m: m.id == wanted)
+        if not line:
+            raise UserError(self.env._("That is not something this customer said on this ticket."))
+        return line
+
+    def message_post(self, **kwargs):
+        """A reply typed in Odoo's own chatter is tagged the way one from the
+        console is. `_mart369_say` has already chosen, so it says so."""
+        message = super().message_post(**kwargs)
+        if self.env.context.get('mart369_quoted') or len(self) != 1 or not message:
+            return message
+        self.invalidate_recordset(['message_ids'])
+        bot = self.env.ref('base.partner_root')
+        if (message.message_type == 'comment' and message.author_id
+                and message.author_id not in (self.partner_id | bot)
+                and not (message.subtype_id and message.subtype_id.internal)
+                and not message.mart369_reply_to_id):
+            pick = self._mart369_unanswered()[:1]
+            if pick:
+                message.sudo().mart369_reply_to_id = pick
+        return message
 
     # ------------------------------------------------------------- operator
 
@@ -177,12 +260,10 @@ class Mart369Ticket(models.Model):
         """
         self.ensure_one()
         # Never a Log note: those are staff writing to each other.
-        messages = self.sudo().message_ids.filtered(
-            lambda m: m.message_type == 'comment' and m.body
-            and not (m.subtype_id and m.subtype_id.internal))
+        messages = self._mart369_comments()[-limit:]
         bot = self.env.ref('base.partner_root')
         rows = []
-        for message in reversed(messages[:limit]):
+        for message in messages:
             said = html2plaintext(message.body).strip()
             if not said:
                 continue
@@ -193,7 +274,19 @@ class Mart369Ticket(models.Model):
             else:
                 # The person who really answered, by first name.
                 row = {'from': 'agent', 'name': (message.author_id.name or 'Support').split()[0]}
-            row.update(text=said, at=int(message.date.timestamp() * 1000) if message.date else None)
+                # The question it answers, shown above it like a WhatsApp reply.
+                quoted = message.mart369_reply_to_id
+                if quoted:
+                    # Its first line only, as WhatsApp previews a reply; the
+                    # whole question is a tap away.
+                    lines = [ln.strip() for ln in html2plaintext(quoted.body or '').splitlines()]
+                    row['replyTo'] = {
+                        'id': quoted.id,
+                        'text': next((ln for ln in lines if ln), '')[:140],
+                        'from': 'me' if quoted.author_id == self.partner_id else 'bot',
+                    }
+            row.update(id=message.id, text=said,
+                       at=int(message.date.timestamp() * 1000) if message.date else None)
             rows.append(row)
         return rows
 

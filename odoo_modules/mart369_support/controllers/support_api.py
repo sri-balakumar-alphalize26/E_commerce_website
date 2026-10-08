@@ -32,9 +32,6 @@ _POST = {'type': 'http', 'auth': 'user', 'methods': ['POST'], 'csrf': False, 'si
 MAX_INPUT = 500
 # How much of the bot conversation goes onto the ticket at the hand-over.
 MAX_HISTORY = 20
-# The bot says "you're in the queue" at most this often while nobody has
-# answered - not after every line the customer types.
-QUIET_MINUTES = 10
 
 
 class Mart369SupportApi(http.Controller):
@@ -120,19 +117,24 @@ class Mart369SupportApi(http.Controller):
         if fresh:
             # What was said to the bot first, so whoever picks this up does
             # not ask the customer to type it all again.
+            # Each bot line quotes the question before it: the bot already
+            # answered those, so the team's first reply is not tagged to one.
             history = self._body().get('history')
+            asked = False
             for line in (history if isinstance(history, list) else [])[-MAX_HISTORY:]:
                 if not isinstance(line, dict):
                     continue
                 text = str(line.get('text') or '').strip()[:MAX_INPUT]
                 if line.get('from') == 'me':
-                    ticket._mart369_say(text, from_customer=True)
+                    asked = ticket._mart369_say(text, from_customer=True)
                 elif line.get('from') == 'bot':
-                    ticket._mart369_say(text, from_customer=False, from_bot=True)
-        ticket._mart369_say(said, from_customer=True)
+                    ticket._mart369_say(text, from_customer=False, from_bot=True,
+                                        reply_to=asked or False)
+                    asked = False
+        asking = ticket._mart369_say(said, from_customer=True)
         # Honest: nobody has answered yet. Said by the bot, not in a person's name.
         reply = "You're in the queue - our team will reply right here. You can keep typing."
-        ticket._mart369_say(reply, from_customer=False, from_bot=True)
+        ticket._mart369_say(reply, from_customer=False, from_bot=True, reply_to=asking or False)
         return self._json({
             'ok': True,
             'ticket': ticket._mart369_serialize(),
@@ -155,20 +157,26 @@ class Mart369SupportApi(http.Controller):
             # Closed by the team while the panel was still open: say so,
             # rather than quietly starting a new ticket nobody asked for.
             return self._json({'ok': True, 'closed': True, 'reply': ''})
-        ticket._mart369_say(said, from_customer=True)
-        reply = ''
-        if not ticket.answered_at and self._bot_quiet(ticket):
-            reply = request.env['mart369.bot']._mart369_agent_reply(self._me(), ticket, said)
-            ticket._mart369_say(reply, from_customer=False, from_bot=True)
-        return self._json({'ok': True, 'reply': reply, 'ticket': ticket._mart369_serialize()})
-
-    def _bot_quiet(self, ticket):
-        """True when the bot has said nothing on this ticket for a while."""
-        from datetime import timedelta
-        from odoo import fields
-        bot = request.env.ref('base.partner_root')
-        last = ticket.sudo().message_ids.filtered(lambda m: m.author_id == bot)[:1]
-        return not last or last.date < fields.Datetime.now() - timedelta(minutes=QUIET_MINUTES)
+        asked = ticket._mart369_say(said, from_customer=True)
+        if ticket.answered_at:
+            # A person is on it now: the bot stays out of their conversation.
+            return self._json({'ok': True, 'reply': '', 'ticket': ticket._mart369_serialize()})
+        # Nobody from the team yet. The chat used to go quiet here for ten
+        # minutes; now every line gets an answer at once, and a question the
+        # bot cannot settle stays in the queue for the team.
+        answer, settled = request.env['mart369.bot'].sudo()._mart369_while_waiting(
+            self._me(), ticket, said)
+        reply = answer.get('text') or ''
+        ticket._mart369_say(reply, from_customer=False, from_bot=True,
+                            reply_to=(asked or False) if settled else False)
+        return self._json({
+            'ok': True,
+            # The bare string the phone app pushes as it is...
+            'reply': reply,
+            # ...and the whole answer, buttons included, for the web chat.
+            'bot': {key: answer[key] for key in ('text', 'actions', 'chips') if answer.get(key)},
+            'ticket': ticket._mart369_serialize(),
+        })
 
     @http.route('/369mart/support/ticket', **_GET)
     def ticket(self, **kwargs):
