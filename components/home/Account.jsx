@@ -254,9 +254,15 @@ function OrdersSec({ orders, byId, onReorder, onTrack }) {
           const at = STEP_OF[o.status] ?? -1;
           const isOpen = open === o.id;
           const cancelled = o.status === "cancelled";
+          const label = cancelled ? "Cancelled" : o.status === "delivered" ? "Delivered" : o.status === "out" ? `Arriving in ${o.eta}` : steps[at];
+          const fold = () => setOpen(isOpen ? null : o.id);
+          /* Tapping the order opens its full page; the arrow still folds the
+             card open here, as it always did. */
+          const details = () => (onTrack ? onTrack(o) : fold());
           return (
             <article key={o.id} className={"ac-card ac-order" + (isOpen ? " ac-open" : "")} style={{ "--i": i }}>
-              <button className="ac-order-head" onClick={() => setOpen(isOpen ? null : o.id)} aria-expanded={isOpen}>
+              <div className="ac-order-top">
+              <button className="ac-order-head" onClick={details} aria-label={`Order #${o.id}, ${label}. Open order details`}>
                 <span className="ac-thumbs">
                   {o.items.slice(0, 3).map(([id]) => byId[id] && <span key={id} className="ac-thumb"><Thumb p={byId[id]} /></span>)}
                   {o.items.length > 3 && <span className="ac-thumb ac-more">+{o.items.length - 3}</span>}
@@ -266,9 +272,13 @@ function OrdersSec({ orders, byId, onReorder, onTrack }) {
                     Order #{o.id}{o.channel === "whatsapp" && <em className="ac-wa">via WhatsApp</em>}</b>
                   <small>{fmtPlaced(o.at)} · {money(o.total)}</small>
                 </span>
-                <span className={"ac-status ac-s-" + o.status}>{cancelled ? "Cancelled" : o.status === "delivered" ? "Delivered" : o.status === "out" ? `Arriving in ${o.eta}` : steps[at]}</span>
+                <span className={"ac-status ac-s-" + o.status}>{label}</span>
+              </button>
+              <button className="ac-order-fold" onClick={fold} aria-expanded={isOpen}
+                aria-label={isOpen ? "Hide the items" : "Show the items here"}>
                 <Icon n="chev" size={18} className="ac-chev" />
               </button>
+              </div>
               {!cancelled && (
                 <div className="ac-track" style={{ "--p": at / (steps.length - 1) }}>
                   <div className="ac-track-line"><i /></div>
@@ -284,12 +294,14 @@ function OrdersSec({ orders, byId, onReorder, onTrack }) {
                 <div className="ac-order-body">
                   <ul>
                     {o.items.map(([id, q]) => byId[id] && (
-                      <li key={id}><span className="ac-thumb"><Thumb p={byId[id]} /></span><span>{byId[id].name}<small> × {q}</small></span><b>{money(byId[id].price * q)}</b></li>
+                      <li key={id}><button type="button" className="ac-line" onClick={details} tabIndex={isOpen ? 0 : -1}>
+                        <span className="ac-thumb"><Thumb p={byId[id]} /></span><span>{byId[id].name}<small> × {q}</small></span><b>{money(byId[id].price * q)}</b>
+                      </button></li>
                     ))}
                   </ul>
                   <div className="ac-order-meta">
-                    <span><small>Status</small>{o.eta}</span>
-                    <span><small>Paid with</small>{o.pay}</span>
+                    <span><small>Status</small>{o.eta || label}</span>
+                    <span><small>Paid with</small>{o.pay || "—"}</span>
                     <span><small>Total</small><b>{money(o.total)}</b></span>
                   </div>
                   <div className="ac-order-act">
