@@ -15,7 +15,7 @@
  * Every field it writes is on the view (invisibly, in the tab) - the record
  * only saves fields the view knows about.
  */
-import { Component, markup, useState } from "@odoo/owl";
+import { Component, markup, onMounted, onWillUnmount, useRef, useState } from "@odoo/owl";
 import { useRecordObserver } from "@web/model/relational_model/utils";
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
@@ -66,6 +66,8 @@ export class ProductEditorWidget extends Component {
         this.wasDirty = false;
         this.resId = this.props.record.resId;
 
+        this.useFullWidth();
+
         this.photoHost = {
             add: (photos) => this.addPhotos(photos),
             remove: (item) => this.removePhoto(item),
@@ -94,6 +96,74 @@ export class ProductEditorWidget extends Component {
 
     get record() {
         return this.props.record;
+    }
+
+    /** On a wide screen Odoo puts the log (chatter) in a column beside the
+     *  whole form, which squeezed this editor - its details and its "How
+     *  shoppers see it" preview - into the left part, over an empty strip of
+     *  log. Here the log stops just above 369 MART and the editor runs to the
+     *  right edge of the page: details from the left to the centre, the
+     *  preview from the centre to the right.
+     *
+     *  Measured rather than styled: the editor sits deep inside the form's
+     *  column, and how far it has to reach depends on the window. Narrower
+     *  windows put the log underneath and need nothing. */
+    useFullWidth() {
+        this.root = useRef("root");
+        let chatter = null;
+        const reset = (el) => {
+            el?.classList.remove("o_mart369_breakout");
+            el?.style.removeProperty("--mart-breakout");
+            if (chatter) {
+                chatter.style.removeProperty("max-height");
+                chatter.style.removeProperty("overflow");
+                chatter = null;
+            }
+        };
+        const layout = () => {
+            const el = this.root.el;
+            const column = el?.parentElement;
+            const renderer = el?.closest(".o_form_renderer");
+            const aside = renderer?.querySelector(":scope > .o-mail-Form-chatter.o-aside");
+            if (!el || !column || !aside || !el.offsetParent) {
+                return reset(el);
+            }
+            // The column's edge, not the editor's: the editor's own edge moves
+            // once it reaches out, the column's does not.
+            const box = renderer.getBoundingClientRect();
+            const reach = Math.max(0, box.right - column.getBoundingClientRect().right - 16);
+            el.style.setProperty("--mart-breakout", `${reach}px`);
+            el.classList.add("o_mart369_breakout");
+            const stop = Math.max(160, el.getBoundingClientRect().top - box.top - 8);
+            chatter = aside;
+            aside.style.maxHeight = `${stop}px`;
+            aside.style.overflow = "auto";
+        };
+        let observer = null;
+        let frame = 0;
+        const later = () => {
+            cancelAnimationFrame(frame);
+            frame = requestAnimationFrame(layout);
+        };
+        onMounted(() => {
+            layout();
+            window.addEventListener("resize", later);
+            if (window.ResizeObserver) {
+                // Also fires when the General Information tab is shown or hidden.
+                observer = new ResizeObserver(later);
+                observer.observe(this.root.el);
+                const renderer = this.root.el.closest(".o_form_renderer");
+                if (renderer) {
+                    observer.observe(renderer);
+                }
+            }
+        });
+        onWillUnmount(() => {
+            cancelAnimationFrame(frame);
+            window.removeEventListener("resize", later);
+            observer?.disconnect();
+            reset(this.root.el);
+        });
     }
 
     /** The boxes from the server, the values from the record. */

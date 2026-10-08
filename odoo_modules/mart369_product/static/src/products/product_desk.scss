@@ -1053,6 +1053,24 @@
     overflow: visible !important;
 }
 
+/* Wide screens, with the log beside the form: the editor reaches out under the
+   log's column to the page's right edge (editor_widget.js `useFullWidth`
+   measures how far, as --mart-breakout, and stops the log above it). */
+.o_mart369_editor_widget.o_mart369_breakout {
+    position: relative;
+    z-index: 2;
+    width: calc(100% + var(--mart-breakout, 0px));
+    max-width: none;
+    margin-right: calc(-1 * var(--mart-breakout, 0px));
+    background: var(--o-view-background-color, #fff);
+}
+.o_form_sheet_bg:has(.o_mart369_breakout) .o_form_sheet,
+.o_form_sheet_bg:has(.o_mart369_breakout) .o_notebook,
+.o_form_sheet_bg:has(.o_mart369_breakout) .tab-content,
+.o_form_sheet_bg:has(.o_mart369_breakout) .tab-pane {
+    overflow: visible !important;
+}
+
 /* The Word-style boxes (rich_box.js): Odoo's editor in the editor's own frame. */
 .o_mart369_desk .pdk-rich { border: 1px solid #d6e1e9; border-radius: 10px; background: #fff; }
 .o_mart369_desk .pdk-rich:focus-within { border-color: #0a78ab; box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.12); }
