@@ -30,6 +30,8 @@ _PATCH = {'type': 'http', 'auth': 'user', 'methods': ['PATCH'],
           'csrf': False, 'sitemap': False}
 _DELETE = {'type': 'http', 'auth': 'user', 'methods': ['DELETE'],
            'csrf': False, 'sitemap': False}
+_PUT = {'type': 'http', 'auth': 'user', 'methods': ['PUT'],
+        'csrf': False, 'sitemap': False}
 
 EDITOR_GROUP = 'website.group_website_designer'
 
@@ -529,6 +531,32 @@ class Mart369HomeAdminApi(http.Controller):
         except (AccessError, UserError, ValueError) as exc:
             return self._fail(str(exc))
         return self._json({'ok': True, 'band': self._serialize_band(kind, band)})
+
+    @http.route('/369mart/admin/home/bands/section/<int:band_id>/products', **_PUT)
+    def set_row_products(self, band_id, **kwargs):
+        """The console's "Choose products": this row shows these products, in
+        this order, at most 12 (`mart369.home.section.PICK_MAX`).
+
+        Answers the row as the builder lists it and as the app draws it, so
+        the editor shows the real cards straight away."""
+        if not self._may_edit():
+            return self._fail('You do not have access to this.', status=403)
+        row = self._band('section', band_id)
+        if not row:
+            return self._fail('No such row.', status=404)
+        ids = self._body().get('ids')
+        if not isinstance(ids, list):
+            return self._fail('Send the products as a list.')
+        try:
+            row._mart369_set_picked(ids)
+        except (AccessError, UserError) as exc:
+            return self._fail(str(exc))
+        price_ctx = row.mode_id._price_context(row)
+        preview = row._serialize(price_ctx) or {
+            'key': row.key or 'sec%s' % row.id, 'title': row.name or '',
+            'subtitle': row.subtitle or '', 'items': [], 'empty': True}
+        return self._json({'ok': True, 'band': row._builder_vals(price_ctx),
+                           'preview': dict(preview, rid=row.id, active=row.active)})
 
     @http.route('/369mart/admin/home/pages/<int:page_id>', **_PATCH)
     def update_page(self, page_id, **kwargs):

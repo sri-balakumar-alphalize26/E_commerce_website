@@ -3,6 +3,7 @@ from datetime import timedelta
 from markupsafe import Markup, escape
 
 from odoo import api, fields, models
+from odoo.exceptions import UserError
 from odoo.fields import Domain
 
 from odoo.addons.mart369.models.serializers import ART_CHOICES, slugify
@@ -371,6 +372,49 @@ class Mart369HomeSection(models.Model):
         self.ensure_one()
         return self.env['mart369.serializable']._serialize_product(
             product, line, price_ctx, self.mode_id.key)
+
+    # ------------------------------------------------- hand-picked, in one go
+
+    # The console's "Choose products": a row holds at most this many. Six
+    # show at once on a computer and the arrow brings the rest; every
+    # product in every row loads with the home page, so more costs every
+    # shopper and is rarely scrolled to.
+    PICK_MAX = 12
+
+    def _mart369_set_picked(self, product_ids):
+        """Make this row hand-picked, showing these products in this order.
+
+        Lines for products still ticked are kept - with any wording an
+        operator set on them in Odoo - and only reordered; unticked ones go;
+        new ones are added. Raises UserError with a sentence for the screen."""
+        self.ensure_one()
+        if self.kind != 'rail':
+            raise UserError(self.env._('Only a product row can have products chosen for it.'))
+        try:
+            ids = [int(i) for i in (product_ids or [])]
+        except (TypeError, ValueError):
+            raise UserError(self.env._('Those products could not be read. Please try again.'))
+        ids = list(dict.fromkeys(ids))  # one of each, first tick wins
+        if len(ids) > self.PICK_MAX:
+            raise UserError(self.env._('A row holds at most %s products.', self.PICK_MAX))
+        Template = self.env['product.template'].sudo()
+        listed = Template.search(
+            Template._mart369_listed_domain() + [('id', 'in', ids)]) if ids else Template
+        if len(listed) != len(ids):
+            raise UserError(self.env._(
+                'Some of those products are not on the shop any more. Refresh the list and pick again.'))
+
+        lines = {line.product_tmpl_id.id: line for line in self.picked_product_ids}
+        commands = [(2, line.id) for pid, line in lines.items() if pid not in ids]
+        for i, pid in enumerate(ids):
+            seq = (i + 1) * 10
+            if pid in lines:
+                commands.append((1, lines[pid].id, {'sequence': seq}))
+            else:
+                commands.append((0, 0, {'product_tmpl_id': pid, 'sequence': seq}))
+        self.write({'source': 'manual', 'limit': self.PICK_MAX,
+                    'picked_product_ids': commands})
+        return True
 
     # ---------------------------------------------------------- the builder
 

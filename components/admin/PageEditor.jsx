@@ -41,6 +41,7 @@ import { Rail } from "@/components/home/shared";
 import "@/components/home/home.css";
 import { Confirm, Drawer, Empty, Icon, useToast } from "./AdminUI";
 import BannerPicture from "./BannerPicture";
+import RowProductPicker from "./RowProductPicker";
 import "./editor.css";
 
 /* Which group each thing belongs to, what the server calls it, and which of
@@ -317,8 +318,21 @@ function ModePanel({ mode, modeKey, vocab, onModeField, onRemove }) {
   );
 }
 
+/* Where a row's products come from, in a sentence. */
+const RULE_WORDS = { new: "Newest first", best: "Best sellers", discount: "Biggest discount" };
+function rowSource(v) {
+  if (v.source === "manual") {
+    const n = (v.picked || []).length;
+    return n ? `Hand-picked · ${n} product${n === 1 ? "" : "s"}` : "Hand-picked · none yet";
+  }
+  if (v.source === "category") return v.public_categ_name ? `From category: ${v.public_categ_name}` : "From a category (none chosen)";
+  if (v.source === "tag") return v.product_tag_name ? `From tag: ${v.product_tag_name}` : "From a tag (none chosen)";
+  if (v.source === "rule") return `Chosen automatically: ${RULE_WORDS[v.rule] || "rule"}`;
+  return "";
+}
+
 function Panel({ selected, vals, vocab, onField, onToggle, onRemove, busy,
-  mode, modeKey, onModeField }) {
+  mode, modeKey, onModeField, onChooseProducts }) {
   if (!selected) {
     return (
       <ModePanel mode={mode} modeKey={modeKey} vocab={vocab}
@@ -416,6 +430,18 @@ function Panel({ selected, vals, vocab, onField, onToggle, onRemove, busy,
         })}
       </div>
 
+      {/* A product row: which products it shows, and the way to choose them. */}
+      {selected.kind === "section" && vals.kind !== "banner_row" && (
+        <div className="pe-products">
+          <span className="pe-products-label">Products</span>
+          <p>{rowSource(vals)}</p>
+          <button type="button" className="ad-btn ad-primary" onClick={() => onChooseProducts?.(selected.id)}>
+            <Icon n="check" size={14} />Choose products
+          </button>
+          <em className="pe-hint">Pick up to 12 yourself. Saving makes this row show exactly those, in your order.</em>
+        </div>
+      )}
+
       <div className="pe-panel-foot">
         <button className="ad-btn ad-danger" disabled={!!busy}
           onClick={() => onRemove(selected.kind, selected.id)}>
@@ -424,8 +450,8 @@ function Panel({ selected, vals, vocab, onField, onToggle, onRemove, busy,
       </div>
 
       <p className="ad-hint pe-note"><Icon n="info" size={14} />
-        Removing puts it in the Trash, where it can be put back. Images, the
-        products inside a row, and the Trash itself are still in Odoo.
+        Removing puts it in the Trash, where it can be put back. The Trash
+        itself is still in Odoo.
       </p>
     </>
   );
@@ -577,6 +603,29 @@ export default function PageEditor({ pageId }) {
       [KINDS[kind].group]: (p[KINDS[kind].group] || []).map(
         (it) => (it.rid === id ? { ...it, ...patch } : it)),
     }));
+
+  /* "Choose products": the row being picked for, and the cards it starts
+     from - its hand-picked products in order, drawn as the page draws them
+     where the page has them. */
+  const [picking, setPicking] = useState(null);
+  const openPicker = (id) => {
+    const v = vals[uid("section", id)] || {};
+    const shown = Object.fromEntries(((preview?.sections || []).find((s) => s.rid === id)?.items || [])
+      .map((p) => [String(p.id), p]));
+    const initial = v.source === "manual" ? (v.picked || []).map((l) => {
+      const pid = String(l.product_tmpl_id);
+      return shown[pid] || { id: pid, name: l.product_name, price: 0, unit: "",
+        images: [`/web/image/product.template/${pid}/image_512`] };
+    }) : [];
+    setPicking({ id, row: { id, name: v.name, subtitle: v.subtitle }, initial });
+  };
+  const onPicked = (res) => {
+    const id = picking?.id;
+    if (!id || !res) return;
+    if (res.band) setVals((v) => ({ ...v, [uid("section", id)]: { ...v[uid("section", id)], ...res.band } }));
+    if (res.preview) patchPreview("section", id, res.preview);
+    flash(res.preview?.items?.length ? "Row saved - it now shows your products" : "Row saved - it has no products to show");
+  };
 
   const onField = (kind, id, field, value) => {
     setVals((v) => ({ ...v, [uid(kind, id)]: { ...v[uid(kind, id)], [field]: value } }));
@@ -900,9 +949,15 @@ export default function PageEditor({ pageId }) {
             vals={selected ? vals[uid(selected.kind, selected.id)] : null}
             vocab={data?.vocab} onField={onField} onToggle={onToggle}
             onRemove={onRemove} busy={busy}
-            mode={modeVals} modeKey={mode} onModeField={onModeField} />
+            mode={modeVals} modeKey={mode} onModeField={onModeField}
+            onChooseProducts={openPicker} />
         </aside>
       </div>
+
+      {picking && (
+        <RowProductPicker row={picking.row} initial={picking.initial}
+          onClose={() => setPicking(null)} onSaved={onPicked} />
+      )}
 
       {trashOpen && (
         <TrashDrawer rows={trash} drawings={data?.trash_preview} days={data?.trash_days} busy={busy}
