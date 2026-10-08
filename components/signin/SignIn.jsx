@@ -21,6 +21,7 @@ import { money, setCurrency, useCurrency } from "@/lib/money";
 import { useResource } from "@/lib/useFetch";
 import { Thumb, firstImage } from "@/components/home/shared";
 import CountryPicker from "./CountryPicker";
+import "@/components/admin/staff-signin.css";
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const demo = {
@@ -165,6 +166,18 @@ function CodeInput({ value, onChange, shake, onComplete }) {
 const Check = () => (
   <span className="si-box" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span>
 );
+/* Mobile | Email, the staff sign-in's switch (staff-signin.css). */
+function SignInTabs({ mode, go }) {
+  return (
+    <div className="ss-tabs" role="tablist" aria-label="How to sign in">
+      {[["phone", "Mobile"], ["email", "Email or name"]].map(([k, l]) => (
+        <button key={k} type="button" role="tab" aria-selected={mode === k}
+          className={mode === k ? "ss-on" : ""} onClick={() => mode !== k && go(k, k === "email" ? 1 : -1)}>{l}</button>
+      ))}
+    </div>
+  );
+}
+
 const BackIcon = () => <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6" /></svg>;
 
 export function SignInCard({
@@ -388,6 +401,7 @@ export function SignInCard({
               <h1 id="si-title">Sign in</h1>
               <p>Use the mobile number you shop with - on the website, the app or WhatsApp.</p>
             </header>
+            <SignInTabs mode={mode} go={go} />
             {notice === "signin" && (
               <p className="si-note" role="status">You already have an account with this number. Sign in below.</p>
             )}
@@ -400,9 +414,6 @@ export function SignInCard({
                 {busy ? <><Spinner />Sending code…</> : "Continue"}
               </button>
             </form>
-            <p className="si-alt">
-              <button type="button" className="si-link" onClick={() => go("email")}>Sign in with email instead</button>
-            </p>
             <div className="si-or"><span>New to 369 Mart?</span></div>
             <button type="button" className="si-ghost" onClick={() => go("create")}>Create an account</button>
             {onGuest && (
@@ -464,11 +475,11 @@ export function SignInCard({
 
         {mode === "email" && (
           <>
-            <button type="button" className="si-back-btn" onClick={() => go("phone", -1)}><BackIcon />Sign in with mobile number</button>
             <header className="si-head">
-              <h1 id="si-title">Sign in with email</h1>
+              <h1 id="si-title">Sign in</h1>
               <p>For accounts made with an email. You'll add your mobile number next, once.</p>
             </header>
+            <SignInTabs mode={mode} go={go} />
             <form onSubmit={submitEmail} noValidate className="si-form">
               {emailField(true, { label: "Email or name", loose: true })}
               <Field id="si-pw" label="Password" error={errFor("password")} hint={caps ? "Caps Lock is on." : ""}
@@ -643,16 +654,30 @@ export function SignInAside() {
   );
 }
 
-export default function SignInPage(props) {
+/* The staff sign-in's frame (StaffSignIn.jsx): navy brand panel, white card.
+   The card keeps its own .si-page scope for its colours and fields. */
+export default function SignInPage({ banner, ...props }) {
   return (
-    <main className="si-page">
-      <a className="si-crumb" href="/">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6" /></svg>Back to shopping
-      </a>
-      <div className="si-grid">
-        <SignInAside />
-        <SignInCard {...props} />
-      </div>
-    </main>
+    <div className="ss-page">
+      <aside className="ss-brand" aria-label="Why sign in">
+        <a className="ss-logo" href="/" aria-label="369 Mart home"><img src="/brand/369mart-logo.png" alt="369 Mart" width="166" height="88" /></a>
+        <p className="ss-eyebrow">369 Mart account</p>
+        <h1>One number for the website and WhatsApp.</h1>
+        <ul className="ss-perks">
+          <li><span aria-hidden="true">🛵</span>Track every order live, from packing to your door</li>
+          <li><span aria-hidden="true">🧾</span>Orders placed on WhatsApp show up in My Orders</li>
+          <li><span aria-hidden="true">📍</span>Home, Work and other addresses saved for checkout</li>
+          <li><span aria-hidden="true">🔁</span>Buy again from past orders in one tap</li>
+        </ul>
+        <p className="ss-trust"><span aria-hidden="true">🔒</span>Sign in with a code sent to your WhatsApp. We never share or sell your number.</p>
+      </aside>
+      <main className="ss-main">
+        <div className="si-page">
+          {banner}
+          <SignInCard {...props} />
+          <a className="ss-back" href="/">← Back to the store</a>
+        </div>
+      </main>
+    </div>
   );
 }

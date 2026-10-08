@@ -399,3 +399,9 @@ input.si-input::placeholder, .si-input input::placeholder { color: #9aabb8; }
   letter-spacing: .12em;
   font-weight: 600;
 }
+
+/* ---------------- in the staff sign-in's frame (SignInPage) ---------------- */
+.ss-main > .si-page { width: 100%; max-width: 420px; margin: 0; padding: 0; display: grid; gap: 14px; }
+.ss-main .si-card { border-radius: 20px; padding: 30px 28px 22px; box-shadow: 0 24px 60px -32px rgba(15, 34, 51, 0.35); }
+.ss-main .lg-again { margin: 0; }
+.si-card .ss-tabs { margin-top: -4px; }
