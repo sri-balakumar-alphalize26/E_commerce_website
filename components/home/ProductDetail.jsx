@@ -432,6 +432,25 @@ function KeyDetails({ rows }) {
   );
 }
 
+/* Amazon's "From the manufacturer": big pictures, a caption above each; a
+   full block takes the row, two half blocks sit side by side. */
+function Showcase({ blocks }) {
+  if (!blocks?.length) return null;
+  return (
+    <section className="pd-show" aria-labelledby="pd-show-h">
+      <h2 id="pd-show-h">From the manufacturer</h2>
+      <div className="pd-show-grid">
+        {blocks.map((b, k) => (
+          <figure key={k} className={"pd-show-blk" + (b.width === "half" ? " pd-show-half" : "")}>
+            {b.caption ? <figcaption>{b.caption}</figcaption> : null}
+            <img src={b.src} alt={b.caption || ""} loading="lazy" />
+          </figure>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 /* "About this item" as typed in the Word-style box: lists, bold, links -
    cleaned twice (Odoo, then toSafeHtml). A long one is cut to a few lines
    with Show more. */
@@ -488,7 +507,7 @@ function unitPrice(v) {
 export default function ProductDetail({
   p, cart, setQty, address, onBack, onChangeAddress, onExplore, fromRect,
   related = [], variants = [], attrs = [], onVariant, bundle = [], similar = [], recent = [], onViewSimilar, onEditReview,
-  optionsFailed = false, onRetryOptions, reviewInfo, info, about = [], aboutHtml = "", details = [],
+  optionsFailed = false, onRetryOptions, reviewInfo, info, about = [], aboutHtml = "", details = [], showcase = [],
 }) {
   /* Every product shows what its setup holds, as the WhatsApp confirmation
      page does: its photos, the Variant specs table and the Sales Description
@@ -732,6 +751,7 @@ export default function ProductDetail({
         </div>
       </div>
 
+      <Showcase blocks={showcase} />
       {bundle.length > 0 && <BoughtTogether key={"fbt-" + p.id} p={p} items={bundle} cart={cart} setQty={setQty} />}
 
       {similar.length > 0 && (

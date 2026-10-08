@@ -11,3 +11,6 @@ access_mart369_pcatval_manager,mart369.product.category.value manager,model_mart
 access_mart369_poverride_user,mart369.product.override user,model_mart369_product_override,base.group_user,1,0,0,0
 access_mart369_poverride_designer,mart369.product.override designer,model_mart369_product_override,website.group_website_designer,1,1,1,1
 access_mart369_poverride_manager,mart369.product.override manager,model_mart369_product_override,base.group_system,1,1,1,1
+access_mart369_pshowcase_user,mart369.product.showcase user,model_mart369_product_showcase,base.group_user,1,0,0,0
+access_mart369_pshowcase_designer,mart369.product.showcase designer,model_mart369_product_showcase,website.group_website_designer,1,1,1,1
+access_mart369_pshowcase_manager,mart369.product.showcase manager,model_mart369_product_showcase,base.group_system,1,1,1,1

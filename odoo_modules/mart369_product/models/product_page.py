@@ -161,6 +161,9 @@ class Mart369ProductPage(models.AbstractModel):
         rows = self.product_details(product)
         if rows:
             d['details'] = rows
+        showcase = self.showcase(product)
+        if showcase:
+            d['showcase'] = showcase
 
         d.update(self.reviews(product, keys, values))
         return d
@@ -194,6 +197,18 @@ class Mart369ProductPage(models.AbstractModel):
                     break
             out.append({'lead': lead, 'text': text})
         return out
+
+    @api.model
+    def showcase(self, product):
+        """[{src, caption, width}] for "From the manufacturer", in order."""
+        helper = self.env['mart369.serializable'].sudo()
+        return [{
+            'src': '%s?unique=%s' % (
+                helper._image_url('image', '1920x1920', record=block),
+                int(block.write_date.timestamp()) if block.write_date else 0),
+            'caption': block.caption or '',
+            'width': block.width,
+        } for block in product.sudo().mart_showcase_ids if block.image]
 
     @api.model
     def product_details(self, product):

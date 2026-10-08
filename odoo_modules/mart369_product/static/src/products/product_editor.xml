@@ -96,8 +96,42 @@
                             <t t-foreach="shownBoxes(g)" t-as="b" t-key="b.name">
                                 <t t-set="pt" t-value="state.form.parts[b.name]"/>
 
+                                <!-- From the manufacturer: big pictures, each with a caption and a width. -->
+                                <div t-if="b.kind === 'showcase'" class="pdk-field pdk-wide">
+                                    <t t-call="mart369_product.BoxLabel"/>
+                                    <small t-if="b.help" t-esc="b.help"/>
+                                    <ul t-if="showcaseList(b).length" class="pdk-show">
+                                        <li t-foreach="showcaseList(b)" t-as="blk" t-key="blk.id || blk.url" class="pdk-show-row">
+                                            <img t-att-src="blk.url" alt=""/>
+                                            <input type="text" placeholder="Caption above the picture (optional)"
+                                                   t-att-value="blk.caption"
+                                                   t-on-focus="() => this.setFocus(b.name)"
+                                                   t-on-input="(ev) => this.editShowcase(b, blk_index, { caption: ev.target.value })"/>
+                                            <div class="pdk-show-width" role="group" aria-label="Width">
+                                                <button type="button" t-att-class="blk.width !== 'half' ? 'pdk-on' : ''"
+                                                        t-on-click="() => this.editShowcase(b, blk_index, { width: 'full' })">Full</button>
+                                                <button type="button" t-att-class="blk.width === 'half' ? 'pdk-on' : ''"
+                                                        t-on-click="() => this.editShowcase(b, blk_index, { width: 'half' })">Half</button>
+                                            </div>
+                                            <button type="button" class="pdk-show-btn" title="Move up" aria-label="Move up"
+                                                    t-att-disabled="blk_index === 0"
+                                                    t-on-click="() => this.moveShowcase(b, blk_index, -1)">↑</button>
+                                            <button type="button" class="pdk-show-btn" title="Move down" aria-label="Move down"
+                                                    t-att-disabled="blk_index === showcaseList(b).length - 1"
+                                                    t-on-click="() => this.moveShowcase(b, blk_index, 1)">↓</button>
+                                            <button type="button" class="pdk-show-btn" title="Remove" aria-label="Remove"
+                                                    t-on-click="() => this.dropShowcase(b, blk_index)">✕</button>
+                                        </li>
+                                    </ul>
+                                    <label class="pdk-show-add">
+                                        <input type="file" accept="image/*" multiple="multiple" class="d-none"
+                                               t-on-change="(ev) => this.addShowcase(b, ev)"/>
+                                        + Add picture
+                                    </label>
+                                </div>
+
                                 <!-- One of a list: product type, a company, an Odoo category. -->
-                                <div t-if="b.kind === 'select'" class="pdk-field">
+                                <div t-elif="b.kind === 'select'" class="pdk-field">
                                     <t t-call="mart369_product.BoxLabel"/>
                                     <Pick value="selectValue(b)" options="b.options" label="b.label"
                                           onChange="(v) => this.pickField(b.name, v)"/>

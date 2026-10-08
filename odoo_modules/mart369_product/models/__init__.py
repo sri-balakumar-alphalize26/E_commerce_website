@@ -5,3 +5,4 @@ from . import product_override
 from . import product_page
 from . import rating_rating
 from . import product_template
+from . import product_showcase

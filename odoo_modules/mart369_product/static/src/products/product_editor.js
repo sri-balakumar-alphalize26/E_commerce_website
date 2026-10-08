@@ -687,6 +687,50 @@ export class ProductEditor extends Component {
 
     /** Pictures from the + tile or dropped on the section; anything that is
      *  not a picture is left out. */
+    // ------------------------------------------- From the manufacturer
+
+    /** The picture blocks as the box holds them: [{id?, url, data?, caption, width}]. */
+    showcaseList(b) {
+        const list = this.state.form.values[b.name];
+        return Array.isArray(list) ? list : [];
+    }
+
+    setShowcase(b, list) {
+        this.setField(b.name, list);
+    }
+
+    async addShowcase(b, ev) {
+        const files = [...(ev.target.files || [])].filter((f) => (f.type || "").startsWith("image/"));
+        ev.target.value = "";
+        const added = [];
+        for (const file of files) {
+            const url = await getDataURLFromFile(file);
+            added.push({ url, data: url.split(",")[1], caption: "", width: "full" });
+        }
+        if (added.length) {
+            this.setFocus(b.name);
+            this.setShowcase(b, [...this.showcaseList(b), ...added]);
+        }
+    }
+
+    editShowcase(b, index, change) {
+        this.setShowcase(b, this.showcaseList(b).map((blk, i) => (i === index ? { ...blk, ...change } : blk)));
+    }
+
+    moveShowcase(b, index, by) {
+        const list = [...this.showcaseList(b)];
+        const to = index + by;
+        if (to < 0 || to >= list.length) {
+            return;
+        }
+        [list[index], list[to]] = [list[to], list[index]];
+        this.setShowcase(b, list);
+    }
+
+    dropShowcase(b, index) {
+        this.setShowcase(b, this.showcaseList(b).filter((_blk, i) => i !== index));
+    }
+
     async addFiles(all) {
         const files = all.filter((f) => (f.type || "").startsWith("image/"));
         if (!files.length) {

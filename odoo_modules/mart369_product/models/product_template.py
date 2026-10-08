@@ -167,6 +167,8 @@ class ProductTemplate(models.Model):
         # The Word-style box; the older one-point-a-line mart_features stays
         # the page's fallback for a product whose box is empty.
         ('About this item', ['mart_about_html', 'mart_details']),
+        # Amazon's "From the manufacturer": big pictures with a caption.
+        ('From the manufacturer', ['mart_showcase_json']),
         ('Website only', ['compare_list_price', 'mart_home_tag',
                           'mart_delivery_text', 'mart_low_stock_at',
                           'mart_unit_text', 'mart_per_unit', 'mart_note']),
@@ -232,6 +234,7 @@ class ProductTemplate(models.Model):
             'Imported']},
         'mart_features': {'kind': 'points'},
         'mart_details': {'kind': 'points'},
+        'mart_showcase_json': {'kind': 'showcase'},
         # The same one-box-per-item entry, kept as the comma list the page
         # has always printed: "Product, cable, user manual".
         'mart_in_the_box': {'kind': 'points', 'sep': ', '},
