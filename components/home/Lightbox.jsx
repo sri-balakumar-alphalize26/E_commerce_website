@@ -3,7 +3,7 @@
    The console's viewer (components/admin/AdminUI.jsx Lightbox), with the
    shop's own styles: items are { kind: "photo" | "video", src, label? };
    ← → move through them, Esc or a tap outside closes. */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Icon } from "./shared";
 
@@ -39,10 +39,14 @@ export function ReviewMedia({ media, own = false, onOpen }) {
   );
 }
 
-export default function Lightbox({ items, start = 0, onClose }) {
+/* Also the product page's "all photos" viewer: `kind: "embed"` plays a
+   YouTube/Vimeo link in a frame, `thumb` is the small picture in the strip
+   along the bottom (shown with `strip`), and a swipe moves on phones. */
+export default function Lightbox({ items, start = 0, onClose, strip = false, label = "Customer photo" }) {
   const [i, setI] = useState(start);
   const count = items.length;
   const go = (d) => setI((n) => (n + d + count) % count);
+  const touch = useRef(null);
   useEffect(() => {
     const k = (e) => {
       if (e.key === "Escape") { e.stopPropagation(); onClose(); }
@@ -55,14 +59,34 @@ export default function Lightbox({ items, start = 0, onClose }) {
   if (typeof document === "undefined" || !count) return null;
   const item = items[Math.min(i, count - 1)];
   return createPortal(
-    <div className="lb" role="dialog" aria-modal="true" aria-label={item.label || "Customer photo"} onClick={onClose}>
+    <div className={"lb" + (strip ? " lb-with-strip" : "")} role="dialog" aria-modal="true" aria-label={item.label || label} onClick={onClose}
+      onTouchStart={(e) => { touch.current = e.touches[0].clientX; }}
+      onTouchEnd={(e) => {
+        const from = touch.current; touch.current = null;
+        const dx = from == null ? 0 : e.changedTouches[0].clientX - from;
+        if (Math.abs(dx) > 50 && count > 1) go(dx < 0 ? 1 : -1);
+      }}>
       <button className="lb-x" onClick={onClose} aria-label="Close" autoFocus><Icon n="x" size={20} /></button>
       {count > 1 && <span className="lb-count">{i + 1} / {count}</span>}
       <figure className="lb-stage" onClick={(e) => e.stopPropagation()}>
         {item.kind === "video"
           ? <video key={item.src} src={item.src} controls autoPlay playsInline />
-          : <img key={item.src} src={item.src} alt={item.label || "Customer photo"} />}
+          : item.kind === "embed"
+            ? <iframe key={item.src} className="lb-embed" src={item.src} title={item.label || "Video"}
+                allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+            : <img key={item.src} src={item.src} alt={item.label || label} />}
       </figure>
+      {strip && count > 1 && (
+        <div className="lb-strip" onClick={(e) => e.stopPropagation()} role="tablist" aria-label="All pictures">
+          {items.map((it, k) => (
+            <button key={k} role="tab" aria-selected={k === i} className={"lb-thumb" + (k === i ? " lb-on" : "")}
+              onClick={() => setI(k)} aria-label={`${it.kind === "embed" || it.kind === "video" ? "Video" : "Picture"} ${k + 1}`}>
+              {it.thumb || it.kind === "photo" ? <img src={it.thumb || it.src} alt="" loading="lazy" /> : null}
+              {(it.kind === "embed" || it.kind === "video") && <span className="lb-play" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg></span>}
+            </button>
+          ))}
+        </div>
+      )}
       {count > 1 && (
         <>
           <button className="lb-nav lb-prev" onClick={(e) => { e.stopPropagation(); go(-1); }} aria-label="Previous"><Icon n="left" size={22} /></button>

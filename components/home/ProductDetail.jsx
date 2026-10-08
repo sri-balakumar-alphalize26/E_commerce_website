@@ -47,6 +47,15 @@ function DetailGallery({ p, fromRect }) {
   }, [p.media, p.images, p.image]);
   const imgs = items; /* kept for the counts and dots below */
   const [idx, setIdx] = useState(0);
+  /* Many pictures: five thumbnails, then a sixth reading "+4" that opens them
+     all, full screen - as Amazon does - rather than a strip that scrolls on. */
+  const SHOWN = 6;
+  const more = items.length > SHOWN ? items.length - (SHOWN - 1) : 0;
+  const strip = more ? items.slice(0, SHOWN - 1) : items;
+  const [viewer, setViewer] = useState(null); /* index to open at, or null */
+  const viewItems = useMemo(() => items.filter((it) => it && (it.src || it.poster)).map((it) => (it.type === "video"
+    ? { kind: "embed", src: it.src, thumb: it.poster || null, label: `${p.name} video` }
+    : { kind: "photo", src: it.src, thumb: it.src, label: p.name })), [items, p.name]);
   const [zoom, setZoom] = useState(null); // {x, y} in 0..1
   const track = useRef(null);
   const thumbs = useRef(null);
@@ -122,13 +131,20 @@ function DetailGallery({ p, fromRect }) {
       <div className="pd-thumbs-wrap">
         <button className="pd-tbtn pd-tup" onClick={() => scrollThumbs(-1)} disabled={thumbEdge.top} aria-label="Scroll thumbnails up"><Icon n="chev" size={16} /></button>
         <div className="pd-thumbs" ref={thumbs} onScroll={onThumbScroll} role="tablist" aria-label="Product images">
-          {items.map((it, k) => (
+          {strip.map((it, k) => (
             <button key={k} role="tab" aria-selected={k === idx} className={"pd-thumb" + (k === idx ? " pd-on" : "") + (it?.type === "video" ? " pd-thumb-video" : "")}
               style={{ "--k": k }} onClick={() => goTo(k)} onMouseEnter={() => canZoom && goTo(k)} aria-label={it?.type === "video" ? `Video ${k + 1}` : `Image ${k + 1}`}>
               {posterOf(it) ? <img src={posterOf(it)} alt="" /> : <ProductArt art={p.art} color={p.color} label={p.label} />}
               {it?.type === "video" && <span className="pd-play" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg></span>}
             </button>
           ))}
+          {more > 0 && (
+            <button className={"pd-thumb pd-thumb-more" + (idx >= SHOWN - 1 ? " pd-on" : "")} style={{ "--k": SHOWN - 1 }}
+              onClick={() => setViewer(SHOWN - 1)} aria-label={`See all ${items.length} pictures`}>
+              {posterOf(items[SHOWN - 1]) ? <img src={posterOf(items[SHOWN - 1])} alt="" /> : null}
+              <span>+{more}</span>
+            </button>
+          )}
         </div>
         <button className="pd-tbtn pd-tdown" onClick={() => scrollThumbs(1)} disabled={thumbEdge.bottom} aria-label="Scroll thumbnails down"><Icon n="chev" size={16} /></button>
       </div>
@@ -138,7 +154,8 @@ function DetailGallery({ p, fromRect }) {
           onKeyDown={(e) => { if (e.key === "ArrowRight") goTo(idx + 1); if (e.key === "ArrowLeft") goTo(idx - 1); }}>
           {items.map((it, k) => (
             <div key={k} className={"pd-slide" + (k === idx ? " pd-cur" : "") + (it?.type === "video" ? " pd-slide-video" : "")} aria-label={`${k + 1} of ${items.length}`}
-              onMouseMove={onMove} onMouseLeave={() => setZoom(null)}>
+              onMouseMove={onMove} onMouseLeave={() => setZoom(null)}
+              onClick={() => { if (it?.type !== "video" && posterOf(it)) { setZoom(null); setViewer(k); } }}>
               {it?.type === "video" && k === idx ? (
                 <iframe className="pd-video" src={it.src} title={`${p.name} video`} loading="lazy"
                   allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
@@ -165,6 +182,11 @@ function DetailGallery({ p, fromRect }) {
             </div>
             <span className="pd-count">{idx + 1} / {imgs.length}</span>
           </>
+        )}
+
+        {viewer !== null && viewItems.length > 0 && (
+          <Lightbox items={viewItems} start={Math.min(viewer, viewItems.length - 1)} strip label={p.name}
+            onClose={() => setViewer(null)} />
         )}
 
         {/* magnified pane — sits over the info column while hovering */}
