@@ -1,6 +1,6 @@
 {
     'name': '369 Mart Product Page',
-    'version': '19.0.1.5.4',
+    'version': '19.0.1.5.5',
     'category': 'Website',
     'summary': 'Decide what the 369 Mart app shows on a product page - for '
                'every product at once, or one product at a time.',

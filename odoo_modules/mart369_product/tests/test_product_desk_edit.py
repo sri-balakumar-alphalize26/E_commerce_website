@@ -427,6 +427,13 @@ class TestProductDeskCategory(TransactionCase):
         box = self._box(self.Product.mart369_desk_form(), 'categ_id')
         self.assertEqual(box['options'][0], ['', 'Choose one'])
 
+    def test_every_category_is_offered(self):
+        """DUBAI_TEST has about 280; one past the 200th must still be pickable."""
+        last = self.env['product.category'].create([
+            {'name': 'Zz Many %03d' % i} for i in range(205)])[-1]
+        box = self._box(self.Product.mart369_desk_form(), 'categ_id')
+        self.assertIn([str(last.id), last.display_name], box['options'])
+
     def test_a_new_product_without_one_is_refused(self):
         with self.assertRaisesRegex(UserError, 'Choose a Category'):
             self.Product.mart369_desk_save({'name': 'Zz No Category', 'categ_id': ''})

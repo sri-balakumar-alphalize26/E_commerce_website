@@ -298,7 +298,12 @@ class ProductTemplate(models.Model):
                 records = self.env.user.company_ids
                 none = 'All companies'
             else:
-                records = Model.search([], limit=200)
+                # Every category, so one past the 200th can still be picked
+                # (DUBAI_TEST has about 280); other lists stay capped.
+                if field.comodel_name == 'product.category':
+                    records = Model.search([], order='complete_name')
+                else:
+                    records = Model.search([], limit=200)
                 # Still offered when required: a new product starts empty,
                 # and the save says what is missing.
                 none = 'Choose one' if name in self.MART_DESK_REQUIRED else 'None'
