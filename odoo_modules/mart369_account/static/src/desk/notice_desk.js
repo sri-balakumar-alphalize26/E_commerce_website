@@ -115,6 +115,7 @@ export class NoticeDialog extends Component {
                 until: n ? toInput(n.until) : "",
                 go_view: n ? n.goView : "",
                 go_param: n ? n.goParam : "",
+                popup: n ? !!n.popup : false,
             },
             busy: false,
             error: "",

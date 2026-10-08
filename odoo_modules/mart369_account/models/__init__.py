@@ -11,3 +11,4 @@ from . import notice_admin
 from . import push
 from . import sale_order
 from . import account_board
+from . import push_settings

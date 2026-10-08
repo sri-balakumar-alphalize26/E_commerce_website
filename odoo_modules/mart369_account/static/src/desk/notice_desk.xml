@@ -168,6 +168,20 @@
                         <input type="text" t-model="state.form.go_param" placeholder="wallet"/>
                     </label>
                 </div>
+
+                <label class="nt-field nt-popup">
+                    <span>
+                        <input type="checkbox" t-model="state.form.popup"/>
+                        Also send as a pop-up
+                    </span>
+                </label>
+                <p class="mart-hint">
+                    A pop-up on the phone or computer of everyone who has pop-ups on, once it is
+                    live. It goes once.
+                    <t t-if="props.notice and props.notice.popupSent">
+                        Sent to <t t-esc="props.notice.popupCount"/> customer(s).
+                    </t>
+                </p>
             </div>
 
             <t t-set-slot="footer">

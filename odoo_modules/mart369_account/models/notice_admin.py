@@ -32,7 +32,7 @@ KINDS = dict(TYPE_CHOICES)
 
 # What a screen may set. A notice's own words and its window, and nothing else
 # - `active` is reached through the retire route, which says what it does.
-WRITABLE = ('name', 'text', 'kind', 'publish_at', 'until', 'go_view', 'go_param')
+WRITABLE = ('name', 'text', 'kind', 'publish_at', 'until', 'go_view', 'go_param', 'popup')
 
 MAX_ROWS = 100
 
@@ -87,6 +87,9 @@ class Mart369NoticeAdmin(models.Model):
             'until': int(self.until.timestamp() * 1000) if self.until else None,
             'goView': self.go_view or '',
             'goParam': self.go_param or '',
+            'popup': bool(self.popup),
+            'popupSent': int(self.popup_sent_at.timestamp() * 1000) if self.popup_sent_at else None,
+            'popupCount': self.popup_count or 0,
         }
 
     # ------------------------------------------------------------ reading

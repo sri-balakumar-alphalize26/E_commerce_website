@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Each order step's pop-up: on or off, and its words. -->
+    <record id="view_mart369_order_popups_form" model="ir.ui.view">
+        <field name="name">mart369.config.order.popups</field>
+        <field name="model">mart369.config</field>
+        <field name="priority">91</field>
+        <field name="arch" type="xml">
+            <form string="Order pop-ups">
+                <sheet>
+                    <div class="oe_title"><h1>Order pop-ups</h1></div>
+                    <div class="text-muted mb-3">
+                        The pop-up a customer gets on their phone or computer as their order moves.
+                        Switch a step off, or write its words yourself - %(ref)s is the order number,
+                        %(eta)s the delivery time. Empty words keep the shop's own.
+                    </div>
+                    <group>
+                        <group string="Send a pop-up when an order is">
+                            <field name="push_on_placed"/>
+                            <field name="push_on_packed"/>
+                            <field name="push_on_shipped"/>
+                            <field name="push_on_out"/>
+                            <field name="push_on_delivered"/>
+                            <field name="push_on_cancelled"/>
+                        </group>
+                        <group string="Its words">
+                            <field name="push_text_placed" placeholder="%(ref)s is confirmed. %(eta)s" readonly="not push_on_placed"/>
+                            <field name="push_text_packed" placeholder="%(ref)s is packed and waiting for the rider." readonly="not push_on_packed"/>
+                            <field name="push_text_shipped" placeholder="%(ref)s has been handed to our delivery partner." readonly="not push_on_shipped"/>
+                            <field name="push_text_out" placeholder="%(ref)s is out for delivery. %(eta)s" readonly="not push_on_out"/>
+                            <field name="push_text_delivered" placeholder="How was %(ref)s? Tell us in a moment." readonly="not push_on_delivered"/>
+                            <field name="push_text_cancelled" placeholder="%(ref)s was cancelled. Any refund is on its way." readonly="not push_on_cancelled"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_mart369_order_popups" model="ir.actions.server">
+        <field name="name">Order pop-ups</field>
+        <field name="model_id" ref="mart369.model_mart369_config"/>
+        <field name="state">code</field>
+        <field name="code">action = model.mart369_action_order_popups()</field>
+    </record>
+
+    <menuitem id="menu_mart369_order_popups"
+              name="Order pop-ups"
+              parent="mart369.menu_mart369_store"
+              action="action_mart369_order_popups"
+              groups="sales_team.group_sale_salesman"
+              sequence="31"/>
+
+    <!-- The notice list: the pop-up switch, and when it went. -->
+    <record id="view_mart369_notice_list_popup" model="ir.ui.view">
+        <field name="name">mart369.notice.list.popup</field>
+        <field name="model">mart369.notice</field>
+        <field name="inherit_id" ref="mart369_account.view_mart369_notice_list"/>
+        <field name="arch" type="xml">
+            <field name="active" position="before">
+                <field name="popup" string="Pop-up" widget="boolean_toggle"/>
+                <field name="popup_sent_at" string="Pop-up sent" optional="show"/>
+                <field name="popup_count" string="To" optional="hide"/>
+            </field>
+        </field>
+    </record>
+
+    <!-- A notice set to start later sends its pop-up when that time comes. -->
+    <record id="cron_mart369_notice_popups" model="ir.cron">
+        <field name="name">369 Mart: send scheduled notification pop-ups</field>
+        <field name="model_id" ref="mart369_account.model_mart369_notice"/>
+        <field name="state">code</field>
+        <field name="code">model._mart369_push_due()</field>
+        <field name="interval_number">5</field>
+        <field name="interval_type">minutes</field>
+        <field name="active" eval="True"/>
+    </record>
+
+</odoo>

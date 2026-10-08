@@ -1,6 +1,6 @@
 {
     'name': '369 Mart Account',
-    'version': '19.0.1.5.1',
+    'version': '19.0.1.6.0',
     'category': 'Website',
     'summary': "The customer's own things - profile, reviews, notifications, "
                "referrals, wishlist and rewards.",
@@ -51,6 +51,7 @@ Operators work these in **369 Mart -> Reviews**, **Referrals** and **Rewards**.
         'views/scratch_views.xml',
         'views/reward_desk_views.xml',
         'views/notice_desk_views.xml',
+        'views/push_settings_views.xml',
         'views/menus.xml',
     ],
     'assets': {
