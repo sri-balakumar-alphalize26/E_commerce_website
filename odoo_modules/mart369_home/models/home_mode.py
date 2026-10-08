@@ -253,6 +253,32 @@ class Mart369HomeMode(models.Model):
         return out
 
     @api.model
+    @api.model
+    def _mart369_link_choices(self):
+        """Where a row's "View all", a tile and a banner can send a shopper,
+        as pick-lists - typing an address by hand is how a row ended up
+        pointing at "laptop-desktop-pars".
+
+        `routes`: [path, label] for every category the shop shows and the
+        sub-categories directly under it (the storefront opens two levels),
+        path as the starter writes it (`_mart369_category_path`).
+        `links`: the same as /category/<path>, plus the shop's other pages."""
+        Category = self.env['product.public.category'].sudo()
+        top_domain = [('parent_id', '=', False)]
+        if 'mart_in_app' in Category._fields:
+            top_domain.append(('mart_in_app', '=', True))
+        path_of = self.env['mart369.home.version']._mart369_category_path
+        routes = []
+        for top in Category.search(top_domain, order='sequence, name'):
+            routes.append([path_of(top), top.name])
+            for sub in top.child_id.sorted(lambda c: (c.sequence, c.name or '')):
+                routes.append([path_of(sub), '%s › %s' % (top.name, sub.name)])
+        routes = [r for r in routes if r[0]]
+        links = [['/categories', _('All categories')], ['/offers', _('Offers')],
+                 ['/buy-again', _('Buy again')]]
+        links += [['/category/%s' % path, label] for path, label in routes]
+        return {'routes': routes, 'links': links}
+
     def builder_load(self, key, version_id=None):
         """Everything the visual builder screen needs for one mode, in one call.
 
@@ -289,11 +315,11 @@ class Mart369HomeMode(models.Model):
                       for m in self.with_context(active_test=False).search(
                           [('version_id', '=', mode.version_id.id)],
                           order='sequence, id')],
-            'vocab': {
+            'vocab': dict({
                 'art': ART_CHOICES,
                 'icons': ICON_CHOICES,
                 'tones': TONE_CHOICES,
-            },
+            }, **self._mart369_link_choices()),
             'bands': [s._builder_vals(price_ctx) for s in sections],
             'banners': [b._builder_vals()
                         for b in mode.banner_ids._kept().sorted('sequence')],

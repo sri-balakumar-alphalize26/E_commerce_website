@@ -12,7 +12,7 @@
    Pass real data through props (same shape as sampleData.js). Items with an
    `image` URL show the photo; items without one get a drawn placeholder.
    ========================================================================== */
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import ProductArt from "./art";
 import { Icon, OpenContext, Rail, SEARCH_WORDS, Thumb, WishContext, flyTo, money, useInView, useRailScroll } from "./shared";
 import AccountPage from "./Account";
@@ -152,18 +152,43 @@ export function Tabs({ tabs, active, onChange }) {
 }
 
 /* ---------- banners ---------- */
+/* A banner is the shop's colour with drawings, or a picture the shop uploaded.
+   An uploaded picture is usually a finished design with its own words and
+   button, so it shows on its own; `textOnImage` (a switch on each banner)
+   draws the small line, headline and Shop now over it instead.
+   Tapping it opens its link - a page of this shop, or another site. */
 export function Banner({ b, i }) {
+  const nav = useContext(NavContext);
+  const pic = !!b.image;
+  const words = !pic || !!b.textOnImage;
+  const open = (e) => {
+    e.preventDefault();
+    if (!b.href) return;
+    if (/^https?:\/\//i.test(b.href) && !b.href.startsWith(window.location.origin)) {
+      window.open(b.href, "_blank", "noopener");
+      return;
+    }
+    const url = new URL(b.href, window.location.origin);
+    const r = pathToRoute(url.pathname, url.search);
+    if (r.view !== "notfound") nav(r.view, r.param);
+  };
   return (
-    <a className={"hm-banner hm-tone-" + b.tone} href="#" onClick={(e) => e.preventDefault()} style={{ "--i": i }}>
-      <div className="hm-banner-copy">
-        <span className="hm-kicker">{b.kicker}</span>
-        <strong>{b.title}</strong>
-        <span className="hm-note">{b.note}</span>
-        <span className="hm-shop">Shop now <Icon n="right" size={14} /></span>
-      </div>
-      <div className="hm-banner-art" aria-hidden="true">
-        {b.art.map((a, k) => <span key={k} style={{ "--k": k }}><ProductArt art={a} /></span>)}
-      </div>
+    <a className={"hm-banner hm-tone-" + b.tone + (pic ? " hm-banner-pic" : "") + (pic && words ? " hm-banner-words" : "")}
+      href={b.href || "#"} onClick={open} style={{ "--i": i }} aria-label={pic && !words ? b.title || "Offer" : undefined}>
+      {pic && <img className="hm-banner-img" src={b.image} alt="" draggable="false" />}
+      {words && (
+        <div className="hm-banner-copy">
+          {b.kicker && <span className="hm-kicker">{b.kicker}</span>}
+          {b.title && <strong>{b.title}</strong>}
+          {b.note && <span className="hm-note">{b.note}</span>}
+          <span className="hm-shop">Shop now <Icon n="right" size={14} /></span>
+        </div>
+      )}
+      {!pic && (
+        <div className="hm-banner-art" aria-hidden="true">
+          {(b.art || []).map((a, k) => <span key={k} style={{ "--k": k }}><ProductArt art={a} /></span>)}
+        </div>
+      )}
     </a>
   );
 }

@@ -149,6 +149,15 @@
 .hm-banner-art > span { position: absolute; width: 58%; aspect-ratio: 1.2; bottom: calc(var(--k) * 10%); right: calc(var(--k) * 30%); filter: drop-shadow(0 10px 12px rgba(0, 0, 0, 0.18)); animation: hm-float 5s ease-in-out infinite; animation-delay: calc(var(--k) * -1.6s); }
 .hm-banner-art > span:first-child { width: 66%; z-index: 2; }
 
+/* An uploaded picture: the card takes the picture's 5:2 shape (1600 x 640),
+   the shop's colour behind it while it loads. */
+.hm-banner.hm-banner-pic { padding: 0; min-height: 0; aspect-ratio: 5 / 2; height: auto; }
+.hm-banner-pic::before { display: none; }
+.hm-banner-img { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; object-fit: cover; }
+/* Words drawn over a photo: a soft shade on the left keeps them readable. */
+.hm-banner.hm-banner-pic.hm-banner-words { padding: 22px 24px; }
+.hm-banner-words::after { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(90deg, rgba(8, 18, 26, 0.62), rgba(8, 18, 26, 0.18) 60%, transparent); }
+
 .hm-inline-banners { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .hm-inline-banners .hm-banner { min-height: 150px; }
 

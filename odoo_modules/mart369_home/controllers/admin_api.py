@@ -75,7 +75,8 @@ class Mart369HomeAdminApi(http.Controller):
     # whatever arrived": a form that can set any field can set `key`, which
     # the app matches on, or `sequence` for a band on another page.
     BAND_FIELDS = {
-        'banner': ('kicker', 'name', 'note', 'tone', 'href', 'active'),
+        'banner': ('kicker', 'name', 'note', 'tone', 'href', 'active',
+                   'image_1920', 'text_on_image'),
         'tab': ('name', 'icon', 'active'),
         'tile': ('name', 'route', 'active'),
         'section': ('name', 'subtitle', 'view_all_route', 'active'),
@@ -101,6 +102,13 @@ class Mart369HomeAdminApi(http.Controller):
                'active': band.active, 'name': band.name or ''}
         for field in self.BAND_FIELDS[kind]:
             if field in ('name', 'active'):
+                continue
+            if field == 'image_1920':
+                # The address, never the picture's bytes.
+                out['image_url'] = band._mart369_picture_url()
+                continue
+            if field == 'text_on_image':
+                out[field] = bool(band[field])
                 continue
             value = band[field]
             out[field] = value if value else ''
@@ -491,11 +499,21 @@ class Mart369HomeAdminApi(http.Controller):
             return self._fail('No such item.', status=404)
         body = self._body()
         values = {}
-        for field in self.BAND_FIELDS[kind]:
-            if field not in body:
-                continue
-            value = body[field]
-            values[field] = bool(value) if field == 'active' else (value or '').strip()
+        try:
+            for field in self.BAND_FIELDS[kind]:
+                if field not in body:
+                    continue
+                value = body[field]
+                if field in ('active', 'text_on_image'):
+                    values[field] = bool(value)
+                elif field == 'image_1920':
+                    # A banner's uploaded picture: checked, then stored as Odoo
+                    # stores any picture; false takes it off.
+                    values[field] = band._mart369_check_picture(value)
+                else:
+                    values[field] = (value or '').strip()
+        except UserError as exc:
+            return self._fail(str(exc))
         if not values:
             return self._fail('Nothing to change.')
         try:

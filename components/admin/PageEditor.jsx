@@ -40,6 +40,7 @@ import {
 import { Rail } from "@/components/home/shared";
 import "@/components/home/home.css";
 import { Confirm, Drawer, Empty, Icon, useToast } from "./AdminUI";
+import BannerPicture from "./BannerPicture";
 import "./editor.css";
 
 /* Which group each thing belongs to, what the server calls it, and which of
@@ -47,21 +48,26 @@ import "./editor.css";
    admin_api.py exactly: a panel that offers a field the server refuses is a
    form that silently does nothing. */
 const KINDS = {
+  /* [field, label, hint, pick-list, kind]. A pick-list ("tones", "links",
+     "routes") draws a drop-down; kind "picture" the banner's own picture,
+     "switch" an on/off. */
   banner: {
     group: "banners", src: "banners", title: "Banner", short: "Banner",
     fields: [
+      ["image_1920", "Picture", "", null, "picture"],
+      ["text_on_image", "Show text on the picture", "Off: just your picture - for a design that already has its own words. On: the lines below and Shop now are drawn over it.", null, "switch"],
       ["kicker", "Kicker", "The small line above the headline"],
       ["name", "Headline", ""],
       ["note", "Note", "The line underneath"],
       ["tone", "Colour", "", "tones"],
-      ["href", "Link", "Where clicking it goes, e.g. /category/ssd"],
+      ["href", "Link", "Where tapping the banner goes", "links"],
     ],
   },
   tile: {
     group: "categories", src: "tiles", title: "Category tile", short: "Tile",
     fields: [
       ["name", "Label", ""],
-      ["route", "Link", "The category slug, e.g. keyboards"],
+      ["route", "Link", "The category it opens", "routes"],
     ],
   },
   tab: {
@@ -76,7 +82,7 @@ const KINDS = {
     fields: [
       ["name", "Title", ""],
       ["subtitle", "Subtitle", ""],
-      ["view_all_route", "See all link", "Where “View all” goes"],
+      ["view_all_route", "See all link", "Where “View all” goes", "routes"],
     ],
   },
 };
@@ -333,25 +339,64 @@ function Panel({ selected, vals, vocab, onField, onToggle, onRemove, busy,
       </header>
 
       <div className="ad-form pe-form">
-        {spec.fields.map(([field, label, hint, vocabKey]) => (
+        {spec.fields.map(([field, label, hint, vocabKey, type]) => {
+          const set = (value) => onField(selected.kind, selected.id, field, value);
+          /* A banner's picture: what was just picked, else what is saved. */
+          const picture = vals.image_1920 === false ? "" : (typeof vals.image_1920 === "string" && vals.image_1920) || vals.image_url || "";
+          if (type === "picture") {
+            return (
+              <div key={field} className="ad-field ad-span2">
+                <span>{label}</span>
+                <BannerPicture url={picture} tone={vals.tone} onPick={set} onRemove={() => set(false)} />
+              </div>
+            );
+          }
+          if (type === "switch") {
+            /* Only means something once there is a picture. */
+            if (!picture) return null;
+            return (
+              <div key={field} className="ad-field ad-span2 pe-switch-row">
+                <label className="ad-switch-lbl">
+                  <span>{label}</span>
+                  <button type="button" className={"ad-switch" + (vals[field] ? " ad-on" : "")} role="switch"
+                    aria-checked={!!vals[field]} onClick={() => set(!vals[field])}><i aria-hidden="true" /></button>
+                </label>
+                {hint && <em className="pe-hint">{hint}</em>}
+              </div>
+            );
+          }
+          const isLink = vocabKey === "links" || vocabKey === "routes";
+          const options = vocab?.[vocabKey] || [];
+          const current = vals[field] || "";
+          const unknown = isLink && current && !options.some(([v]) => v === current);
+          return (
           <label key={field} className="ad-field ad-span2">
             <span>{label}</span>
             {vocabKey ? (
-              <select value={vals[field] || ""}
-                onChange={(e) => onField(selected.kind, selected.id, field, e.target.value)}>
-                {(vocab?.[vocabKey] || []).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              <select value={current} className={unknown ? "pe-bad" : ""}
+                onChange={(e) => set(e.target.value)}>
+                {isLink && <option value="">No link</option>}
+                {unknown && <option value={current}>⚠ {current} - not found, pick one</option>}
+                {options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
               </select>
             ) : (
               <input value={vals[field] ?? ""} placeholder={hint} aria-label={label}
                 onChange={(e) => onField(selected.kind, selected.id, field, e.target.value)} />
             )}
-            {hint && !vocabKey && <em className="pe-hint">{hint}</em>}
+            {hint && (!vocabKey || isLink) && <em className="pe-hint">{hint}</em>}
+            {unknown && <em className="pe-hint pe-bad-hint">This link goes nowhere - pick where it should open.</em>}
+            {/* A banner showing only its picture: say which boxes it ignores. */}
+            {selected.kind === "banner" && picture && !vals.text_on_image && ["kicker", "name", "note"].includes(field) &&
+              <em className="pe-hint">Not drawn - the picture shows on its own.{field === "name" ? " Still read out for people using a screen reader." : ""}</em>}
+            {selected.kind === "banner" && picture && field === "tone" &&
+              <em className="pe-hint">Shows behind the picture while it loads.</em>}
             {/* A tab or tile that wears its category's logo: the icon or
                 drawing picked here is only its fallback. */}
             {(field === "icon" || field === "art") && vals.logo_from &&
               <em className="pe-hint">The app shows {vals.logo_from}&apos;s logo instead. Change it in Catalog → Categories.</em>}
           </label>
-        ))}
+          );
+        })}
       </div>
 
       <div className="pe-panel-foot">
@@ -502,7 +547,8 @@ export default function PageEditor({ pageId }) {
      page reads the app's own field names, the panel reads Odoo's, so one
      edit touches both. */
   const PREVIEW_FIELD = {
-    banner: { name: "title", kicker: "kicker", note: "note", tone: "tone", href: "href" },
+    banner: { name: "title", kicker: "kicker", note: "note", tone: "tone", href: "href",
+      image_1920: "image", text_on_image: "textOnImage" },
     tile: { name: "label", route: "route" },
     tab: { name: "label", icon: "icon" },
     section: { name: "title", subtitle: "subtitle", view_all_route: "route" },
@@ -518,8 +564,11 @@ export default function PageEditor({ pageId }) {
   const onField = (kind, id, field, value) => {
     setVals((v) => ({ ...v, [uid(kind, id)]: { ...v[uid(kind, id)], [field]: value } }));
     const mapped = PREVIEW_FIELD[kind]?.[field];
-    if (mapped) patchPreview(kind, id, { [mapped]: value });
-    save.queue(uid(kind, id), `/admin/home/bands/${kind}/${id}`, { [field]: value });
+    if (mapped) patchPreview(kind, id, { [mapped]: value || (field === "image_1920" ? "" : value) });
+    /* A picture is saved at once, not after the typing pause: it is one
+       deliberate act, and a big one to lose. */
+    save.queue(uid(kind, id), `/admin/home/bands/${kind}/${id}`, { [field]: value },
+      field === "image_1920" ? { now: true } : undefined);
   };
 
   const onToggle = (kind, id, active) => {

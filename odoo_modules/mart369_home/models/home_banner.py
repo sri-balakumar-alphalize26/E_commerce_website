@@ -1,6 +1,11 @@
+import base64
+import binascii
+
 from markupsafe import Markup, escape
 
 from odoo import api, fields, models
+from odoo.exceptions import UserError
+from odoo.tools.mimetypes import guess_mimetype
 
 from odoo.addons.mart369.models.serializers import TONE_CHOICES, TONE_CSS, slugify
 
@@ -56,6 +61,11 @@ class Mart369HomeBanner(models.Model):
         string='Opens',
         help='Where tapping the banner takes the customer, e.g. /category/'
              'fruits-vegetables. Leave empty for a banner that does nothing.')
+    text_on_image = fields.Boolean(
+        string='Show text on the picture', default=False,
+        help='Off: an uploaded picture is shown on its own - for a designed '
+             'banner that already carries its words and button. On: the small '
+             'line, headline, offer line and Shop now are drawn over it.')
 
     usage_count = fields.Integer(
         string='Used in strips', compute='_compute_usage_count',
@@ -129,6 +139,15 @@ class Mart369HomeBanner(models.Model):
 
     # ------------------------------------------------------------- serialise
 
+    def _mart369_picture_url(self):
+        """The uploaded picture at full width, with its save time on the end
+        so a replaced picture is not served from yesterday's cache."""
+        self.ensure_one()
+        if not self.image_1920:
+            return ''
+        stamp = int(self.write_date.timestamp()) if self.write_date else 0
+        return '%s?unique=%d' % (self._image_url('image_1920', '1920x768'), stamp)
+
     def _serialize(self):
         self.ensure_one()
         vals = {
@@ -140,10 +159,38 @@ class Mart369HomeBanner(models.Model):
             'art': self._lines_to_list(self.art_lines),
         }
         if self.image_1920:
-            vals['image'] = self._image_url('image_1024', '1024x512')
+            vals['image'] = self._mart369_picture_url()
+            if self.text_on_image:
+                vals['textOnImage'] = True
         if self.href:
             vals['href'] = self.href
         return vals
+
+    # Pictures the console may upload: a designed banner is a photo or a flat
+    # graphic, never a script. 5 MB is far more than a 1600 x 640 JPEG needs.
+    PICTURE_MAX_BYTES = 5 * 1024 * 1024
+    PICTURE_TYPES = ('image/png', 'image/jpeg', 'image/webp')
+
+    @api.model
+    def _mart369_check_picture(self, value):
+        """An upload from the console as Odoo stores it: base64 text, or False
+        to take the picture off. Accepts a data: URL. Raises UserError with a
+        sentence a shop owner can act on."""
+        if not value:
+            return False
+        if not isinstance(value, str):
+            raise UserError(self.env._('That picture could not be read. Please pick the file again.'))
+        if value.startswith('data:'):
+            value = value.split(',', 1)[-1]
+        try:
+            raw = base64.b64decode(value, validate=True)
+        except (binascii.Error, ValueError):
+            raise UserError(self.env._('That picture could not be read. Please pick the file again.'))
+        if len(raw) > self.PICTURE_MAX_BYTES:
+            raise UserError(self.env._('That picture is too big. Please use one under 5 MB.'))
+        if guess_mimetype(raw) not in self.PICTURE_TYPES:
+            raise UserError(self.env._('Please use a JPG, PNG or WebP picture.'))
+        return value
 
     def _can_return_content(self, field_name=None, access_token=None):
         """Let the app load banner pictures without logging in. Only the
@@ -169,7 +216,7 @@ class Mart369HomeBanner(models.Model):
             'sequence': self.sequence,
             'usage_count': self.usage_count,
             'has_image': bool(self.image_1920),
-            'image_url': (self._image_url('image_1024', '1024x512')
-                          if self.image_1920 else ''),
+            'image_url': self._mart369_picture_url(),
+            'text_on_image': self.text_on_image,
             'write_date': fields.Datetime.to_string(self.write_date),
         }

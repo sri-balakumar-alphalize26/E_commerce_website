@@ -197,7 +197,10 @@ export class HomeBuilder extends Component {
     }
     bannerStyle(b) {
         if (b.image_url) {
-            return `background-image:url('${b.image_url}?unique=${encodeURIComponent(b.write_date)}');background-size:cover;background-position:center;`;
+            // A banner's address already carries its own ?unique= stamp.
+            const url = b.image_url.includes("?") ? b.image_url
+                : `${b.image_url}?unique=${encodeURIComponent(b.write_date)}`;
+            return `background-image:url('${url}');background-size:cover;background-position:center;`;
         }
         return "";
     }

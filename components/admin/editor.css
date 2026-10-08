@@ -221,6 +221,34 @@
 
 .pe-form { grid-template-columns: minmax(0, 1fr); }
 .pe-hint { font-style: normal; font-size: 11.5px; font-weight: 500; color: var(--ad-muted); }
+
+/* A link that points nowhere: the box itself says so. */
+.pe-form select.pe-bad { border-color: #d9534f; background: #fff5f4; }
+.pe-bad-hint { color: #b4352f; font-weight: 600; }
+.pe-switch-row .ad-switch-lbl { justify-content: space-between; font-size: 13px; color: var(--ad-ink); }
+
+/* A banner's own picture (BannerPicture.jsx) */
+.bp { display: grid; gap: 8px; }
+.bp-preview { position: relative; aspect-ratio: 5 / 2; border-radius: 12px; overflow: hidden; display: grid; place-items: center; padding: 12px; text-align: center; color: #fff; font-size: 12.5px; font-weight: 600; }
+.bp-preview img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.bp-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.bp-error { color: #b4352f; font-weight: 600; }
+.bp-wrap { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; padding: 16px; background: rgba(8, 20, 30, 0.6); }
+.bp-dialog { width: min(780px, 100%); max-height: calc(100vh - 32px); overflow: auto; background: #fff; border-radius: 18px; padding: 18px 20px; display: grid; gap: 14px; box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.5); }
+.bp-head { display: flex; justify-content: space-between; gap: 12px; }
+.bp-head h3 { margin: 0; font-size: 18px; }
+.bp-head p { margin: 4px 0 0; font-size: 13px; color: var(--ad-muted); }
+.bp-x { flex: none; width: 34px; height: 34px; border: 0; border-radius: 50%; background: #f1f4f6; display: grid; place-items: center; cursor: pointer; }
+.bp-frame { position: relative; width: 100%; overflow: hidden; border-radius: 12px; background: #fff; outline: 2px solid var(--ad-blue, #0a78ab); outline-offset: 2px; cursor: grab; touch-action: none;
+  background-image: linear-gradient(45deg, #eef2f5 25%, transparent 25%, transparent 75%, #eef2f5 75%), linear-gradient(45deg, #eef2f5 25%, transparent 25%, transparent 75%, #eef2f5 75%);
+  background-size: 16px 16px; background-position: 0 0, 8px 8px; }
+.bp-frame:active { cursor: grabbing; }
+.bp-frame img { position: absolute; max-width: none; user-select: none; pointer-events: none; }
+.bp-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.bp-zoom { flex: 1 1 180px; display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 700; color: var(--ad-muted); }
+.bp-zoom input { flex: 1; }
+.bp-warn { display: flex; gap: 6px; align-items: center; margin: 0; padding: 8px 10px; border-radius: 10px; background: #fff4e2; color: #8a4b05; font-size: 12.5px; }
+.bp-foot { display: flex; justify-content: flex-end; gap: 8px; }
 .pe-note { margin-top: 14px; }
 
 .pe-empty {
