@@ -371,10 +371,11 @@ export class ProductEditor extends Component {
             details: ["mart_details"], about: ["mart_about_html"], showcase: ["mart_showcase_json"],
             description: ["description_sale"], info: ["categ_id", "default_code"],
             unit: ["mart_unit_text"], lowstock: ["mart_low_stock_at"], variants: ["__variants"],
+            trust: ["mart_trust_json"],
         };
         const ELSEWHERE = {
             variants: _t("Options and variants are on the Attributes & Variants tab above."),
-            trust: _t("The badges' words are set in the Product page settings - for the whole shop or this product."),
+            trust: _t("The badges are set in the Trust badges box - upgrade 369 Mart Product Page if you can't see it."),
             reviews: _t("Reviews are written by customers; answer them under Reviews."),
         };
         const names = PICK[target] || [];
