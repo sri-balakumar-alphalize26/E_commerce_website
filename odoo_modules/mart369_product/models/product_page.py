@@ -230,9 +230,7 @@ class Mart369ProductPage(models.AbstractModel):
         """[{src, caption, width}] for "From the manufacturer", in order."""
         helper = self.env['mart369.serializable'].sudo()
         return [{
-            'src': '%s?unique=%s' % (
-                helper._image_url('image', '1920x1920', record=block),
-                int(block.write_date.timestamp()) if block.write_date else 0),
+            'src': helper._image_url('image', '1920x1920', record=block),
             'caption': block.caption or '',
             'width': block.width,
         } for block in product.sudo().mart_showcase_ids if block.image]

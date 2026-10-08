@@ -145,8 +145,7 @@ class Mart369HomeBanner(models.Model):
         self.ensure_one()
         if not self.image_1920:
             return ''
-        stamp = int(self.write_date.timestamp()) if self.write_date else 0
-        return '%s?unique=%d' % (self._image_url('image_1920', '1920x768'), stamp)
+        return self._image_url('image_1920', '1920x768')
 
     def _serialize(self):
         self.ensure_one()

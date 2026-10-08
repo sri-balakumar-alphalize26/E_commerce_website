@@ -144,11 +144,18 @@ class Mart369Serializable(models.AbstractModel):
         return self.env['mart369.config'].sudo()._get().image_base_url or ''
 
     def _image_url(self, field='image_512', size='256x256', record=None):
-        """A /web/image URL the phone app can load without logging in."""
+        """A /web/image URL the phone app can load without logging in.
+
+        Its save time rides on the end. Without it Odoo answers every
+        picture "no-cache", so a phone asks again for all of them on every
+        screen; with it the answer is "keep for a year", and a replaced
+        picture gets a new address instead of hiding behind the old one.
+        """
         record = record if record is not None else self
         record.ensure_one()
-        return '%s/web/image/%s/%s/%s/%s' % (
-            self._api_base(), record._name, record.id, field, size)
+        stamp = int(record.write_date.timestamp()) if record.write_date else 0
+        return '%s/web/image/%s/%s/%s/%s?unique=%d' % (
+            self._api_base(), record._name, record.id, field, size, stamp)
 
     # ---------------------------------------------------- the money
 

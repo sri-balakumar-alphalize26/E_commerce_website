@@ -166,8 +166,7 @@ class Mart369HomeTile(models.Model):
         self.ensure_one()
         if self.image_source != 'upload' or not self.image_1920:
             return ''
-        stamp = int(self.write_date.timestamp()) if self.write_date else 0
-        return '%s?unique=%d' % (self._image_url('image_512', '512x512'), stamp)
+        return self._image_url('image_512', '512x512')
 
     def _serialize(self):
         self.ensure_one()

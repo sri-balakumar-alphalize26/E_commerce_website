@@ -210,10 +210,8 @@ class ProductPublicCategory(models.Model):
         self.ensure_one()
         image = ''
         if self.mart_logo:
-            image = '%s?unique=%s' % (
-                self.env['mart369.serializable']._image_url(
-                    'mart_logo', '512x512', record=self),
-                int(self.write_date.timestamp()) if self.write_date else 0)
+            image = self.env['mart369.serializable']._image_url(
+                'mart_logo', '512x512', record=self)
         return {
             'icon': self.mart_icon or '',
             'art': self.mart_art or '',
