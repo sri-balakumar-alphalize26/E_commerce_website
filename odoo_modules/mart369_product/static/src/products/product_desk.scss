@@ -1070,3 +1070,22 @@
 .o_mart369_desk .pdk-show-btn { flex: none; width: 28px; height: 28px; border: 1px solid #d6e1e9; border-radius: 7px; background: #fff; color: #33475b; }
 .o_mart369_desk .pdk-show-btn:disabled { opacity: 0.35; }
 .o_mart369_desk .pdk-show-add { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border: 1px dashed #9db6c6; border-radius: 9px; color: #0a78ab; font-weight: 600; cursor: pointer; }
+
+/* The editor fills Odoo's form, its two halves equal: what you edit on the
+   left, the real shop page on the right (shop_frame.js). */
+.o_form_sheet_bg:has(.o_mart369_editor_widget) .o_form_sheet { max-width: none; }
+.o_mart369_desk .pdk-editor .pdk-cols,
+.o_mart369_desk .pdk-editor.pdk-embedded .pdk-cols { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+@media (max-width: 900px) {
+    .o_mart369_desk .pdk-editor .pdk-cols,
+    .o_mart369_desk .pdk-editor.pdk-embedded .pdk-cols { grid-template-columns: minmax(0, 1fr); }
+}
+.o_mart369_desk .pdk-shop { display: grid; gap: 8px; }
+.o_mart369_desk .pdk-shop-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.o_mart369_desk .pdk-shop-bar h3 { margin: 0 auto 0 0; }
+.o_mart369_desk .pdk-shop-mode { display: inline-flex; border: 1px solid #d6e1e9; border-radius: 8px; overflow: hidden; }
+.o_mart369_desk .pdk-shop-mode button { border: 0; background: #fff; padding: 4px 10px; font-size: 12.5px; font-weight: 600; color: #5f7385; }
+.o_mart369_desk .pdk-shop-mode button.pdk-on { background: #0a78ab; color: #fff; }
+.o_mart369_desk .pdk-shop-btn { border: 1px solid #d6e1e9; border-radius: 8px; background: #fff; padding: 4px 10px; font-size: 12.5px; font-weight: 600; color: #0a78ab; text-decoration: none; }
+.o_mart369_desk .pdk-shop-box { position: relative; height: calc(100vh - 230px); min-height: 420px; overflow: hidden; border: 1px solid #e3eaef; border-radius: 12px; background: #f2f6f9; }
+.o_mart369_desk .pdk-shop-box iframe { position: absolute; top: 0; left: 0; border: 0; background: #fff; transform-origin: 0 0; }

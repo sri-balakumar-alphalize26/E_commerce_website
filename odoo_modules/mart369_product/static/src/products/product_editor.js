@@ -27,6 +27,7 @@ import { Icon } from "@mart369/ui/icon";
 import { Pick } from "@mart369/ui/pick";
 import { VariantsBlock, vxFrom } from "./variants_block";
 import { RichBox } from "./rich_box";
+import { ShopFrame } from "./shop_frame";
 
 /* Where each box shows up for the shopper, for the eye button's card.
    `card` and `page` draw a mock of that screen with the box outlined; `note`
@@ -196,7 +197,7 @@ function formFrom(data) {
 
 export class ProductEditor extends Component {
     static template = "mart369_product.DetailsEditor";
-    static components = { Icon, Pick, VariantsBlock, RichBox };
+    static components = { Icon, Pick, VariantsBlock, RichBox, ShopFrame };
     static props = {
         // A `mart369_desk_form` answer: groups, values, categories, photos.
         data: Object,
@@ -687,6 +688,12 @@ export class ProductEditor extends Component {
 
     /** Pictures from the + tile or dropped on the section; anything that is
      *  not a picture is left out. */
+    /** The product's page on the shop, once it has been saved. */
+    get shopUrl() {
+        const d = this.props.data || {};
+        return d.id && d.siteUrl ? d.siteUrl + "/product/" + d.id : "";
+    }
+
     // ------------------------------------------- From the manufacturer
 
     /** The picture blocks as the box holds them: [{id?, url, data?, caption, width}]. */

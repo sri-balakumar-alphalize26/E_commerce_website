@@ -506,6 +506,8 @@ class ProductTemplate(models.Model):
                       % (product.id, product.write_date)
                       if product and product.image_1920 else ''),
             'photos': [],
+            # Where the editor's preview opens the real shop page.
+            'siteUrl': self._mart369_site_url(),
             'variants': self._mart369_desk_variants(product),
             'categories': [
                 # The model's own order (sequence, then name). There is no
@@ -515,6 +517,18 @@ class ProductTemplate(models.Model):
                 for c in self.env['product.public.category'].search([])
             ],
         }
+
+    @api.model
+    def _mart369_site_url(self):
+        """The shop's own address (https://shop.369ai.biz): the scheme and host
+        of the order-tracking link the shop already sends (mart369_support),
+        else the shop's usual address."""
+        from urllib.parse import urlsplit
+        pattern = self.env['ir.config_parameter'].sudo().get_param('mart369_support.track_url') or ''
+        parts = urlsplit(pattern)
+        if parts.scheme in ('http', 'https') and parts.netloc:
+            return '%s://%s' % (parts.scheme, parts.netloc)
+        return 'https://shop.369ai.biz'
 
     @api.model
     def mart369_desk_save(self, values, product_id=None, photos=None, variants=None):

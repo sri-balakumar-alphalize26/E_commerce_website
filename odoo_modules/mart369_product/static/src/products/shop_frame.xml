@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="mart369_product.ShopFrame">
+        <div class="ad-card pdk-sec pdk-shop">
+            <header class="pdk-shop-bar">
+                <h3>How shoppers see it</h3>
+                <div class="pdk-shop-mode" role="group" aria-label="Screen">
+                    <button type="button" t-att-class="state.mode === 'desktop' ? 'pdk-on' : ''"
+                            t-on-click="() => this.setMode('desktop')">Desktop</button>
+                    <button type="button" t-att-class="state.mode === 'phone' ? 'pdk-on' : ''"
+                            t-on-click="() => this.setMode('phone')">Phone</button>
+                </div>
+                <button type="button" class="pdk-shop-btn" t-on-click="() => this.refresh()">⟳ Refresh</button>
+                <a class="pdk-shop-btn" t-att-href="props.url" target="_blank" rel="noopener">↗ Open</a>
+            </header>
+            <div class="pdk-shop-box" t-ref="box">
+                <iframe t-att-src="src" title="The product page on the shop" loading="lazy"
+                        t-attf-style="width: {{ width }}px; height: {{ state.height }}px; transform: scale({{ state.scale }});"/>
+            </div>
+            <p class="pdk-preview-note">The real shop page, as saved. Press Save and it shows your changes. A product that is not published yet is not on the shop.</p>
+        </div>
+    </t>
+
+</templates>

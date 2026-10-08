@@ -333,7 +333,9 @@
 
                 <!-- ====================================== how shoppers see it -->
                 <aside class="pdk-preview" aria-label="How it looks in the app">
-                    <div class="ad-card pdk-sec">
+                    <!-- A saved product: the real shop page. A new one: the drawing below. -->
+                    <ShopFrame t-if="shopUrl" url="shopUrl"/>
+                    <div t-else="" class="ad-card pdk-sec">
                         <header class="pdk-sec-head">
                             <h3>How shoppers see it</h3>
                             <small>Grey text is only a sample</small>
