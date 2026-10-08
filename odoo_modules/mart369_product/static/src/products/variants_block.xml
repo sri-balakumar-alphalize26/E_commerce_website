@@ -39,7 +39,7 @@
                                 <span class="pdk-affix">
                                     <em>+</em>
                                     <input type="text" inputmode="decimal"
-                                           t-att-placeholder="v.extra ? String(v.extra) : '0'"
+                                           t-att-placeholder="v.extra ? '' + v.extra : '0'"
                                            t-att-value="extraOf(line, v.key)"
                                            t-att-aria-label="'Price extra for ' + v.name"
                                            t-on-input="(ev) => this.onExtra(ev, line, v.key)"/>
