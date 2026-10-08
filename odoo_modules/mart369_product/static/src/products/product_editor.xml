@@ -16,7 +16,8 @@
                              t-on-dragover="onDragOver" t-on-dragleave="onDragLeave" t-on-drop="onDrop">
                         <header t-if="props.embedded" class="pdk-sec-head">
                             <h3>Photographs</h3>
-                            <small t-esc="photoList.length ? photoList.length + ' in all' : 'None yet'"/>
+                            <small t-attf-class="{{ photosFull ? 'pdk-photo-count-full' : '' }}"
+                                   t-esc="photoList.length ? photoList.length + ' of ' + photoMax : 'None yet'"/>
                         </header>
                         <!-- The desk: one picture for the product, as on the web console. -->
                         <header t-else="" class="pdk-sec-head">
@@ -33,7 +34,13 @@
                         </div>
                         <div t-attf-class="pdk-photos {{ state.picked.length ? 'pdk-picking' : '' }}">
                             <div t-foreach="photoList" t-as="ph" t-key="ph.kind + ph_index + ph.url.slice(-16)"
-                                 t-attf-class="pdk-photo {{ ph.kind === 'main' ? 'pdk-main' : '' }} {{ ph.kind === 'new' ? 'pdk-new' : '' }} {{ isPicked(ph) ? 'pdk-picked' : '' }}">
+                                 t-attf-class="pdk-photo {{ ph.kind === 'main' ? 'pdk-main' : '' }} {{ ph.kind === 'new' ? 'pdk-new' : '' }} {{ isPicked(ph) ? 'pdk-picked' : '' }} {{ state.photoDrag === ph_index ? 'pdk-photo-moving' : '' }} {{ photoDropClass(ph_index) }}"
+                                 t-att-draggable="canMovePhotos ? 'true' : 'false'"
+                                 t-att-title="canMovePhotos ? 'Drag to move - first is the picture on the card' : false"
+                                 t-on-dragstart="(ev) => this.onPhotoDragStart(ev, ph_index)"
+                                 t-on-dragover="(ev) => this.onPhotoDragOver(ev, ph_index)"
+                                 t-on-drop="(ev) => this.onPhotoDrop(ev, ph_index)"
+                                 t-on-dragend="() => this.endPhotoDrag()">
                                 <button type="button" class="pdk-photo-view"
                                         t-att-aria-label="'View photograph ' + (ph_index + 1)"
                                         t-on-click="() => this.viewPhoto(ph_index)">
@@ -53,10 +60,12 @@
                                 <small t-elif="ph.kind === 'new'">Not saved</small>
                                 <small t-elif="ph.kind === 'demoted'">Was on the card</small>
                             </div>
-                            <label t-if="props.embedded" class="pdk-photo pdk-add pdk-photo-add" aria-label="Add photographs">
+                            <label t-if="props.embedded" t-attf-class="pdk-photo pdk-add pdk-photo-add {{ photosFull ? 'pdk-photo-add-off' : '' }}"
+                                   t-att-aria-label="photosFull ? 'Full - remove a picture to add another' : 'Add photographs'">
                                 <Icon n="'plus'" size="22"/>
-                                <span>Add</span>
+                                <span t-esc="photosFull ? 'Full' : 'Add'"/>
                                 <input type="file" accept="image/*" multiple="" hidden=""
+                                       t-att-disabled="photosFull ? 'disabled' : false"
                                        t-on-change="(ev) => this.onPhotos(ev)"/>
                             </label>
                             <label t-else="" class="pdk-photo pdk-add pdk-photo-add"
@@ -67,10 +76,15 @@
                                        t-on-change="(ev) => this.onPhotos(ev)"/>
                             </label>
                         </div>
+                        <p t-if="props.embedded and photosFull" class="pdk-photo-full" role="status">
+                            <Icon n="'info'" size="14"/>
+                            <t t-esc="photoMax"/> is the most the shop shows - remove one to add another.
+                        </p>
+                        <p t-if="state.photoNote and !photosFull" class="pdk-photo-full" role="status" t-esc="state.photoNote"/>
                         <p t-if="props.embedded" class="pdk-hint">
-                            Tap Add, or drop pictures here. The first is the picture on the
-                            card; the rest become the gallery shoppers swipe. Tap a picture
-                            to see it large, put it on the card, or remove it.
+                            Tap Add, or drop pictures here. Drag a picture to move it - the
+                            first is the picture on the card; the rest become the gallery
+                            shoppers swipe, in this order. Tap a picture to see it large or remove it.
                         </p>
                         <p t-else="" class="pdk-hint">
                             The general product photo, used when a variant has no picture of its

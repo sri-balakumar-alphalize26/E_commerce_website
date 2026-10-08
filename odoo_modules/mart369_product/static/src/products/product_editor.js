@@ -250,6 +250,11 @@ export class ProductEditor extends Component {
             beat: null,
             // Photographs being dragged over the section.
             dragging: false,
+            // A photograph being moved inside the box: from, and over which.
+            photoDrag: null,
+            photoOver: null,
+            // "3 added, 2 left out" when more were picked than the shop shows.
+            photoNote: "",
             // Save was pressed with no name.
             nameBad: false,
             // Ticked photographs, for "Remove selected".
@@ -717,7 +722,10 @@ export class ProductEditor extends Component {
 
     onDragOver(ev) {
         ev.preventDefault();
-        this.state.dragging = true;
+        // A photograph being moved inside the box is not a file arriving.
+        if (this.state.photoDrag === null) {
+            this.state.dragging = true;
+        }
     }
 
     onDragLeave(ev) {
@@ -729,7 +737,73 @@ export class ProductEditor extends Component {
     onDrop(ev) {
         ev.preventDefault();
         this.state.dragging = false;
+        if (this.state.photoDrag !== null) {
+            this.endPhotoDrag();
+            return;
+        }
         return this.addFiles([...(ev.dataTransfer?.files || [])]);
+    }
+
+    // Drag a photograph to another place (the form only - the desk keeps one).
+
+    get canMovePhotos() {
+        return !!this.props.photoHost?.move;
+    }
+
+    onPhotoDragStart(ev, i) {
+        if (!this.canMovePhotos) {
+            return;
+        }
+        this.state.photoDrag = i;
+        ev.dataTransfer.effectAllowed = "move";
+        ev.dataTransfer.setData("application/x-mart369-photo", String(i));
+    }
+
+    onPhotoDragOver(ev, i) {
+        if (this.state.photoDrag === null) {
+            return;
+        }
+        ev.preventDefault();
+        ev.stopPropagation();
+        ev.dataTransfer.dropEffect = "move";
+        this.state.photoOver = i;
+    }
+
+    async onPhotoDrop(ev, i) {
+        if (this.state.photoDrag === null) {
+            return;
+        }
+        ev.preventDefault();
+        ev.stopPropagation();
+        const from = this.state.photoDrag;
+        this.endPhotoDrag();
+        if (from !== i) {
+            this.markDirty();
+            await this.props.photoHost.move(from, i);
+        }
+    }
+
+    endPhotoDrag() {
+        this.state.photoDrag = null;
+        this.state.photoOver = null;
+    }
+
+    /** Where a drop would put the dragged photograph, for the line drawn there. */
+    photoDropClass(i) {
+        const from = this.state.photoDrag;
+        if (from === null || this.state.photoOver !== i || from === i) {
+            return "";
+        }
+        return from > i ? "pdk-drop-before" : "pdk-drop-after";
+    }
+
+    /** The shop shows the card picture and 12 more (mart369 MAX_EXTRA_IMAGES). */
+    get photoMax() {
+        return 13;
+    }
+
+    get photosFull() {
+        return !!this.props.embedded && this.photoList.length >= this.photoMax;
     }
 
     /** Pictures from the + tile or dropped on the section; anything that is
@@ -832,7 +906,19 @@ export class ProductEditor extends Component {
     }
 
     async addFiles(all) {
-        const files = all.filter((f) => (f.type || "").startsWith("image/"));
+        let files = all.filter((f) => (f.type || "").startsWith("image/"));
+        this.state.photoNote = "";
+        if (this.props.photoHost) {
+            // No more than the shop shows: what fits goes in, the rest is named.
+            const room = Math.max(0, this.photoMax - this.photoList.length);
+            if (files.length > room) {
+                const left = files.length - room;
+                this.state.photoNote = room
+                    ? `${room} added. ${left} left out - the shop shows at most ${this.photoMax} pictures.`
+                    : `Not added - the shop shows at most ${this.photoMax} pictures. Remove one to add another.`;
+                files = files.slice(0, room);
+            }
+        }
         if (!files.length) {
             return;
         }

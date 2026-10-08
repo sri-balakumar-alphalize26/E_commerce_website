@@ -72,6 +72,7 @@ export class ProductEditorWidget extends Component {
             add: (photos) => this.addPhotos(photos),
             remove: (item) => this.removePhoto(item),
             useOnCard: (item) => this.useOnCard(item),
+            move: (from, to) => this.movePhoto(from, to),
         };
 
         // First call builds; later calls fire whenever the record changes.
@@ -219,7 +220,10 @@ export class ProductEditorWidget extends Component {
         }
         const gallery = galleryOf(record);
         const list = record.data[gallery.field];
-        const photos = (list ? list.records : []).map((rec) => ({
+        const recs = list ? [...list.records].map((rec, i) => ({ rec, i }))
+            .sort((a, b) => ((a.rec.data.sequence ?? 0) - (b.rec.data.sequence ?? 0)) || a.i - b.i)
+            .map(({ rec }) => rec) : [];
+        const photos = recs.map((rec) => ({
             id: rec.resId || rec.id,
             rec,
             pending: !rec.resId,
@@ -307,6 +311,63 @@ export class ProductEditorWidget extends Component {
         }
         await this.record.update({ [IMAGE]: galleryData });
         this.refreshPhotos();
+    }
+
+    /** A photograph dragged from one place to another, in the order the
+     *  editor shows them: the card picture first, then the gallery. Dragged
+     *  to the front it becomes the card picture, and the old card picture
+     *  takes its place in the gallery - the same swap as "Use on the card".
+     *  The gallery's order is each picture's `sequence`; nothing is written
+     *  until Odoo's Save. */
+    async movePhoto(from, to) {
+        const gallery = galleryOf(this.record);
+        const recs = this.galleryRecords(gallery);
+        const hasMain = !!this.record.data[IMAGE];
+        const items = [...(hasMain ? ["main"] : []), ...recs];
+        if (from === to || from < 0 || to < 0 || from >= items.length || to >= items.length) {
+            return;
+        }
+        const [moved] = items.splice(from, 1);
+        items.splice(to, 0, moved);
+        if (hasMain && items[0] !== "main") {
+            const rec = items[0];
+            const galleryData = isData(rec.data[gallery.image])
+                ? rec.data[gallery.image]
+                : await this.readImage(gallery.model, rec.resId, gallery.image);
+            const mainNow = this.record.data[IMAGE];
+            const mainData = isData(mainNow)
+                ? mainNow
+                : await this.readImage(this.record.resModel, this.record.resId);
+            await rec.update({ [gallery.image]: mainData });
+            await this.record.update({ [IMAGE]: galleryData });
+            // That gallery row now holds the old card picture: it goes where
+            // the card picture was dropped.
+            items[items.indexOf("main")] = rec;
+            items.shift();
+        } else if (hasMain) {
+            items.shift();
+        }
+        for (let i = 0; i < items.length; i++) {
+            // A gallery whose rows carry no order on this form (the older
+            // Variant images tab) keeps its order; only the card swap applies.
+            if (!("sequence" in (items[i].activeFields || {}))) {
+                continue;
+            }
+            if (items[i].data.sequence !== (i + 1) * 10) {
+                await items[i].update({ sequence: (i + 1) * 10 });
+            }
+        }
+        this.refreshPhotos();
+    }
+
+    /** The gallery's rows in the order the shop shows them. */
+    galleryRecords(gallery = galleryOf(this.record)) {
+        const list = this.record.data[gallery.field];
+        const recs = list ? [...list.records] : [];
+        return recs
+            .map((rec, i) => ({ rec, i }))
+            .sort((a, b) => ((a.rec.data.sequence ?? 0) - (b.rec.data.sequence ?? 0)) || a.i - b.i)
+            .map(({ rec }) => rec);
     }
 
     async readImage(model, id, field = "image_1920") {
