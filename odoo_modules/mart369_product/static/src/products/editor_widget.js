@@ -23,7 +23,21 @@ import { standardWidgetProps } from "@web/views/widgets/standard_widget_props";
 import { ProductEditor } from "./product_editor";
 
 const IMAGE = "image_1920";
-const GALLERY = "product_template_image_ids";
+
+/** Where the Photographs box keeps the extra pictures. The product's gallery
+ *  is shared by every variant, so on a variant's own form (Product Variants)
+ *  they go to that variant's Variant images tab (sales_automation_confirm)
+ *  when the form has it - the photos WhatsApp and the website show for that
+ *  colour only. Without the tab, the product's gallery, as before. */
+const TEMPLATE_GALLERY = { field: "product_template_image_ids", model: "product.image", image: "image_1920", thumb: "image_256" };
+const VARIANT_GALLERY = { field: "sa_variant_picture_ids", model: "sa.confirm.picture", image: "image", thumb: "image/256x256" };
+
+function galleryOf(record) {
+    if (record.resModel === "product.product" && record.data[VARIANT_GALLERY.field]) {
+        return VARIANT_GALLERY;
+    }
+    return TEMPLATE_GALLERY;
+}
 
 /** A binary field read into a form holds its size ("12.3 Kb"), not the
  *  picture, until somebody changes it - then it holds the base64 data. */
@@ -78,8 +92,12 @@ export class ProductEditorWidget extends Component {
     /** The boxes from the server, the values from the record. */
     async build(record = this.record) {
         try {
+            // On a variant's form the record is the variant; the boxes are its product's.
+            const productId = record.resModel === "product.product"
+                ? record.data.product_tmpl_id?.id || null
+                : record.resId || null;
             const form = await this.orm.call("product.template", "mart369_desk_form", [], {
-                product_id: record.resId || null,
+                product_id: productId,
             });
             const values = {};
             for (const g of form.groups) {
@@ -120,16 +138,17 @@ export class ProductEditorWidget extends Component {
         if (isData(main)) {
             photo = "data:image/png;base64," + main;
         } else if (main && record.resId) {
-            photo = `/web/image/product.template/${record.resId}/image_256?unique=${encodeURIComponent(record.data.write_date || "")}`;
+            photo = `/web/image/${record.resModel}/${record.resId}/image_256?unique=${encodeURIComponent(record.data.write_date || "")}`;
         }
-        const list = record.data[GALLERY];
+        const gallery = galleryOf(record);
+        const list = record.data[gallery.field];
         const photos = (list ? list.records : []).map((rec) => ({
             id: rec.resId || rec.id,
             rec,
             pending: !rec.resId,
-            url: isData(rec.data.image_1920)
-                ? "data:image/png;base64," + rec.data.image_1920
-                : `/web/image/product.image/${rec.resId}/image_256`,
+            url: isData(rec.data[gallery.image])
+                ? "data:image/png;base64," + rec.data[gallery.image]
+                : `/web/image/${gallery.model}/${rec.resId}/${gallery.thumb}`,
         }));
         return { photo, photos };
     }
@@ -171,8 +190,9 @@ export class ProductEditorWidget extends Component {
                 await this.record.update({ [IMAGE]: ph.data });
                 continue;
             }
-            const rec = await this.record.data[GALLERY].addNewRecord({ position: "bottom" });
-            await rec.update({ name: ph.name || this.record.data.name || "Photograph", image_1920: ph.data });
+            const gallery = galleryOf(this.record);
+            const rec = await this.record.data[gallery.field].addNewRecord({ position: "bottom" });
+            await rec.update({ name: ph.name || this.record.data.name || "Photograph", [gallery.image]: ph.data });
         }
         this.refreshPhotos();
     }
@@ -181,7 +201,7 @@ export class ProductEditorWidget extends Component {
         if (item.kind === "main") {
             await this.record.update({ [IMAGE]: false });
         } else {
-            await this.record.data[GALLERY].delete(item.photo.rec);
+            await this.record.data[galleryOf(this.record).field].delete(item.photo.rec);
         }
         this.refreshPhotos();
     }
@@ -190,29 +210,30 @@ export class ProductEditorWidget extends Component {
      *  card picture takes its place in the gallery. Nothing is lost. */
     async useOnCard(item) {
         const rec = item.photo.rec;
-        const galleryData = isData(rec.data.image_1920)
-            ? rec.data.image_1920
-            : await this.readImage("product.image", rec.resId);
+        const gallery = galleryOf(this.record);
+        const galleryData = isData(rec.data[gallery.image])
+            ? rec.data[gallery.image]
+            : await this.readImage(gallery.model, rec.resId, gallery.image);
         const mainNow = this.record.data[IMAGE];
         const mainData = isData(mainNow)
             ? mainNow
             : mainNow && this.record.resId
-                ? await this.readImage("product.template", this.record.resId)
+                ? await this.readImage(this.record.resModel, this.record.resId)
                 : false;
         if (mainData) {
-            await rec.update({ image_1920: mainData });
+            await rec.update({ [gallery.image]: mainData });
         } else {
-            await this.record.data[GALLERY].delete(rec);
+            await this.record.data[gallery.field].delete(rec);
         }
         await this.record.update({ [IMAGE]: galleryData });
         this.refreshPhotos();
     }
 
-    async readImage(model, id) {
-        const [row] = await this.orm.read(model, [id], ["image_1920"], {
+    async readImage(model, id, field = "image_1920") {
+        const [row] = await this.orm.read(model, [id], [field], {
             context: { bin_size: false },
         });
-        return row ? row.image_1920 : false;
+        return row ? row[field] : false;
     }
 
     refreshPhotos() {
