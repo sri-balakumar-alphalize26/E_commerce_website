@@ -444,3 +444,9 @@ tr.pdk-beat { animation: pdk-beat-row 900ms ease-out; }
 .pdk-vx-spec-act .ad-icon-btn { display: inline-grid; vertical-align: middle; width: 28px; height: 28px; }
 
 }
+
+/* Product details: Label | Value per line; a line with no label says why it is not shown. */
+.pdk-pairs li { flex-wrap: wrap; }
+.pdk-pairs input.pdk-pair-label { flex: 0 1 38%; min-width: 0; font-weight: 600; }
+.pdk-pairs input:not(.pdk-pair-label) { flex: 1 1 0; min-width: 0; }
+.pdk-pair-warn { flex-basis: 100%; padding-left: 28px; color: #b4352f; font-size: 12px; font-weight: 600; }

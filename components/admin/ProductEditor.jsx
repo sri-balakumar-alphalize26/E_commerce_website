@@ -64,7 +64,7 @@ const unitIn = (units, word) => units.find((u) => u.toLowerCase() === (word || "
 export function splitValue(box, raw) {
   if (box.numeric) return { value: raw ? String(raw) : "", unit: box.units[0], other: null };
   const text = String(raw || "").trim();
-  if (box.kind === "points") {
+  if (box.kind === "points" || box.kind === "pairs") {
     const list = text ? text.split(box.sep ? /,/ : /\n/).map((l) => l.trim()).filter(Boolean) : [];
     return { list: list.length ? list : [""] };
   }
@@ -88,7 +88,7 @@ export function splitValue(box, raw) {
 
 /** The parts back into the one value the column holds. */
 export function joinValue(box, p) {
-  if (box.kind === "points") return p.list.map((l) => l.trim()).filter(Boolean).join(box.sep || "\n");
+  if (box.kind === "points" || box.kind === "pairs") return p.list.map((l) => l.trim()).filter(Boolean).join(box.sep || "\n");
   if (box.kind === "choice") return p.choice === OTHER ? p.other.trim() : p.choice;
   if (box.numeric) {
     if (!p.value) return "";
@@ -118,7 +118,21 @@ const plainNumber = (raw, whole) => {
 };
 
 /* Kinds whose value is text split into boxes; select/bool/tags/digits hold the value as is. */
-const TEXT_KINDS = ["measure", "per_unit", "choice", "points"];
+const TEXT_KINDS = ["measure", "per_unit", "choice", "points", "pairs"];
+
+/** Product details: one "Label: value" line as its two boxes, and back.
+    Spaces are kept while typing; the line is trimmed when it is saved. */
+export function pairOf(line) {
+  const s = String(line || "");
+  const at = s.indexOf(":");
+  if (at < 0) return { label: "", value: s };
+  const rest = s.slice(at + 1);
+  return { label: s.slice(0, at), value: rest.startsWith(" ") ? rest.slice(1) : rest };
+}
+export function joinPair(label, value) {
+  const l = String(label || "").replace(/:/g, "");
+  return l || value ? `${l}: ${value || ""}` : "";
+}
 
 function formFrom(data) {
   const boxes = {};
@@ -610,6 +624,24 @@ export default function ProductEditor({ productId, currency, onClose, onSaved, f
     }
   };
   const addPoint = (name) => { const list = form.parts[name].list; setPart(name, "list", [...list, ""]); pendingFocus.current = { name, i: list.length }; };
+  /* Product details: a Label and a Value per "Label: value" line. */
+  const setPair = (name, i, key, value) => {
+    const now = pairOf(form.parts[name].list[i]);
+    now[key] = value;
+    setPoint(name, i, joinPair(now.label, now.value));
+  };
+  const onPairKey = (e, name, i) => {
+    const list = form.parts[name].list;
+    if (e.key === "Enter") {
+      e.preventDefault();
+      setPart(name, "list", [...list.slice(0, i + 1), "", ...list.slice(i + 1)]);
+      pendingFocus.current = { name, i: i + 1 };
+    } else if (e.key === "Backspace" && !(list[i] || "").replace(/[:\s]/g, "") && list.length > 1) {
+      e.preventDefault();
+      setPart(name, "list", list.filter((_, j) => j !== i));
+      pendingFocus.current = { name, i: Math.max(0, i - 1) };
+    }
+  };
   const removePoint = (name, i) => { const list = form.parts[name].list; setPart(name, "list", list.length > 1 ? list.filter((_, j) => j !== i) : [""]); };
 
   /* ------------------------------------------------------------- categories */
@@ -836,6 +868,31 @@ export default function ProductEditor({ productId, currency, onClose, onSaved, f
             ))}
           </ol>
           <button type="button" className="ad-link pdk-add-point" onClick={() => addPoint(b.name)}><Icon n="plus" size={13} />{b.sep ? "Add an item" : "Add a point"}</button>
+        </div>
+      );
+    }
+    if (b.kind === "pairs") {
+      return (
+        <div key={b.name} className="pdk-field pdk-wide">
+          {label(b)}
+          <ol className="pdk-points pdk-pairs" data-name={b.name}>
+            {pt.list.map((line, i) => {
+              const pair = pairOf(line);
+              return (
+                <li key={i}>
+                  <input type="text" className="pdk-pair-label" value={pair.label} placeholder="Label, e.g. Brand"
+                    aria-label={`${b.label} ${i + 1}, label`}
+                    onChange={(e) => setPair(b.name, i, "label", e.target.value)} {...focusProps(b.name)} />
+                  <input type="text" data-i={i} value={pair.value} placeholder="Value, e.g. Apple"
+                    aria-label={`${b.label} ${i + 1}, value`}
+                    onChange={(e) => setPair(b.name, i, "value", e.target.value)} onKeyDown={(e) => onPairKey(e, b.name, i)} {...focusProps(b.name)} />
+                  <button type="button" className="ad-icon-btn" aria-label="Remove this detail" onClick={() => removePoint(b.name, i)}><Icon n="x" size={13} /></button>
+                  {pair.value.trim() && !pair.label.trim() && <small className="pdk-pair-warn">Add a label - without one this line is not shown.</small>}
+                </li>
+              );
+            })}
+          </ol>
+          <button type="button" className="ad-link pdk-add-point" onClick={() => addPoint(b.name)}><Icon n="plus" size={13} />Add a detail</button>
         </div>
       );
     }

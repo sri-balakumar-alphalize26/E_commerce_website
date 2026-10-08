@@ -325,3 +325,9 @@ tr.pdk-beat { animation: pdk-beat-row 900ms ease-out; }
   .pdk-vx-row-head { flex-wrap: wrap; }
   .pdk-vx-row-head b { flex-basis: calc(100% - 60px); white-space: normal; }
 }
+
+/* Product details: Label | Value per line; a line with no label says why it is not shown. */
+.pdk-pairs li { flex-wrap: wrap; }
+.pdk-pairs input.pdk-pair-label { flex: 0 1 38%; min-width: 0; font-weight: 600; }
+.pdk-pairs input:not(.pdk-pair-label) { flex: 1 1 0; min-width: 0; }
+.pdk-pair-warn { flex-basis: 100%; padding-left: 28px; color: #b4352f; font-size: 12px; font-weight: 600; }
