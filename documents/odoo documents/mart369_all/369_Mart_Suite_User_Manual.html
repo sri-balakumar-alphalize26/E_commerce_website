@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>369 Mart Suite — User Manual</title>
+<style>
+  :root{
+    --navy:#1e2a78; --orange:#f08a24; --ink:#1f2230; --muted:#6b6f80;
+    --line:#e6e8f0; --alt:#f2f4fb; --tint:#eef2fc;
+    --tip:#2e6fb0; --good:#2e8b57; --good-bg:#e7f6ea;
+    --warn-bg:#fff3da; --warn-ink:#c0701a;
+  }
+  @page{
+    size:A4; margin:22mm 20mm 20mm 20mm;
+    @bottom-left{content:"369ai · 369 Mart Suite"; font:8.5pt "Liberation Serif",Georgia,serif; color:#6b6f80;}
+    @bottom-right{content:"Page " counter(page); font:8.5pt "Liberation Serif",Georgia,serif; color:#6b6f80;}
+  }
+  @page:first{ margin-top:14mm; }
+  *{box-sizing:border-box}
+  html{background:#fff}
+  body{margin:0; font-family:"Liberation Serif","Times New Roman",Georgia,serif; font-size:10.5pt; line-height:1.5; color:var(--ink); background:#fff}
+  @media screen{ body{max-width:794px; margin:24px auto; padding:0 16px} }
+  p{margin:0 0 7pt}
+  b,strong{font-weight:700}
+  .k{color:var(--navy); font-weight:700}          /* navy key term */
+  code{font-family:"DejaVu Sans Mono",monospace; font-size:8.5pt; background:#f1f2f6; padding:1px 4px; border-radius:3px}
+  .arr{color:var(--navy); font-weight:700}
+
+  /* ---------- Cover ---------- */
+  .topbar{height:7px; background:var(--navy); border-bottom:3px solid var(--orange); margin:0 -8mm 10pt}
+  .cover{background:var(--navy); color:#fff; text-align:center; border-radius:9px; padding:26pt 20pt 22pt; margin-bottom:18pt}
+  .cover h1{margin:0; font-size:31pt; letter-spacing:1.5pt; font-weight:700; text-transform:uppercase}
+  .cover .sub{color:var(--orange); font-size:15pt; font-weight:700; margin:12pt 0 10pt}
+  .cover .meta{font-size:10pt; color:#d5d9ee}
+
+  /* ---------- H2 section with orange rule ---------- */
+  h2{color:var(--navy); font-size:15pt; margin:16pt 0 9pt; padding-bottom:5pt; border-bottom:1.6px solid var(--orange); page-break-after:avoid}
+
+  /* ---------- Flow cards (3–4 steps) ---------- */
+  .flow{display:flex; align-items:center; gap:6pt; margin:10pt 0 10pt}
+  .flow .card{flex:1; border:1px solid #d9dcea; border-radius:6px; padding:8pt 9pt; min-height:66pt}
+  .flow .card b{display:block; color:var(--navy); font-size:10.5pt; margin-bottom:2pt}
+  .flow .card span{font-size:8.5pt; color:var(--muted); line-height:1.35}
+  .flow .to{color:var(--orange); font-size:13pt}
+
+  /* ---------- Callouts ---------- */
+  .note{border-left:3px solid var(--orange); background:var(--tint); border-radius:0 5px 5px 0; padding:8pt 12pt; margin:10pt 0 12pt; font-size:9.5pt; page-break-inside:avoid}
+  .note .lbl{font-weight:700; text-transform:uppercase; font-size:8.5pt; letter-spacing:.3pt; margin-right:4pt}
+  .note.start .lbl{color:var(--warn-ink)}
+  .note.tip{border-color:var(--tip)}              .note.tip .lbl{color:var(--tip)}
+  .note.good{border-color:var(--good); background:var(--good-bg)} .note.good .lbl{color:var(--good)}
+  .note.imp{border-color:var(--navy)}             .note.imp .lbl{color:var(--navy)}
+  .note.warn{border-color:var(--orange); background:var(--warn-bg)} .note.warn .lbl{color:var(--warn-ink)}
+
+  /* ---------- Part banner ---------- */
+  .part{background:var(--navy); color:#fff; text-align:center; border-radius:6px; padding:12pt; margin:20pt 0 10pt; font-size:15pt; font-weight:700; letter-spacing:1.5pt; text-transform:uppercase; page-break-after:avoid}
+  .part-intro{color:var(--muted); margin-bottom:12pt}
+
+  /* ---------- Numbered step ---------- */
+  h3.step{display:flex; align-items:center; gap:9pt; color:var(--navy); font-size:13pt; margin:16pt 0 7pt; page-break-after:avoid}
+  h3.step .n{display:inline-block; min-width:17pt; height:17pt; line-height:17pt; text-align:center; background:var(--orange); color:#fff; border-radius:3px; font-family:"Liberation Sans",Arial,sans-serif; font-size:10pt; font-weight:700}
+
+  /* ---------- Field bullets (orange square markers) ---------- */
+  ul.f{list-style:none; padding:0; margin:4pt 0 8pt}
+  ul.f li{position:relative; padding-left:13pt; margin-bottom:4pt}
+  ul.f li::before{content:""; position:absolute; left:1pt; top:6.5pt; width:4pt; height:4pt; background:var(--orange)}
+  ul.f li b:first-child{color:var(--navy)}
+
+  /* ---------- Tables ---------- */
+  table{width:100%; border-collapse:collapse; margin:8pt 0 12pt; font-size:9pt}
+  thead{display:table-header-group}
+  th{background:var(--navy); color:#fff; text-align:left; padding:6pt 8pt; font-weight:700}
+  th+th{border-left:1px solid #34408a}
+  td{padding:6pt 8pt; border-bottom:1px solid var(--line); vertical-align:top}
+  tr:nth-child(even) td{background:var(--alt)}
+  td:first-child{color:var(--navy); font-weight:700}
+  tr{page-break-inside:avoid}
+
+  /* ---------- Quick tips ---------- */
+  ul.tips{margin:4pt 0 12pt; padding-left:14pt}
+  ul.tips li{margin-bottom:3pt}
+  /* ---------- Screenshots + glossary (added for 369 Mart manuals) ---------- */
+  figure.shot{margin:8pt 0 12pt; page-break-inside:avoid; break-inside:avoid; text-align:center}
+  figure.shot img{max-width:100%; max-height:118mm; border:1px solid var(--line); border-radius:6px; box-shadow:0 1px 4px rgba(30,42,120,.12)}
+  figure.shot.phone img{max-width:62mm}
+  figure.shot figcaption{font-size:8.5pt; color:var(--muted); margin-top:4pt; text-align:left}
+  table.gloss td:first-child{width:28%}
+  h2, h3.step, .part{break-after:avoid}
+</style>
+</head>
+<body>
+<div class="topbar"></div>
+<div class="cover">
+  <h1>369 Mart Suite</h1>
+  <div class="sub">Every 369 Mart Module in One Install</div>
+  <div class="meta">User Manual &nbsp;|&nbsp; 369ai</div>
+</div>
+
+<h2>What this does</h2>
+<p><span class="k">369 Mart Suite</span> is a shortcut. It has no screens and no settings of its own. Installing it installs the <span class="k">base</span> (369 Mart) and every <span class="k">standard part</span> of the shop in the right order, so you install one thing instead of a dozen.</p>
+<p>Each part can still be installed on its own. If you only want some of the shop, <b>skip the Suite</b>: install <b>369 Mart</b> and then pick the parts you want from the Apps list.</p>
+<div class="flow">
+  <div class="card"><b>1. Open Apps</b><span>Find "369 Mart Suite"</span></div><span class="to">→</span>
+  <div class="card"><b>2. Install</b><span>The base and every standard part come with it</span></div><span class="to">→</span>
+  <div class="card"><b>3. Set up</b><span>Follow each part's own manual</span></div>
+</div>
+<div class="note start"><span class="lbl">Before you start:</span> Installing needs an administrator (Administrator (Settings)). Nothing is asked during the install; everything you set up afterwards is described in each module's own manual.</div>
+
+<h2>What it installs</h2>
+<table>
+  <thead><tr><th style="width:34%">Module</th><th>What it is for</th></tr></thead>
+  <tbody>
+    <tr><td>369 Mart</td><td>The base: the 369 Mart menu and the settings all parts share.</td></tr>
+    <tr><td>369 Mart Home Page</td><td>Build the shop app's home page — banners, sections and tiles — without code.</td></tr>
+    <tr><td>369 Mart Product Page</td><td>Decide what the shop app shows on a product page.</td></tr>
+    <tr><td>369 Mart Catalog</td><td>Categories, browsing and search.</td></tr>
+    <tr><td>369 Mart Sign In</td><td>Customers create their own account and sign in.</td></tr>
+    <tr><td>369 Mart Delivery Addresses</td><td>Customers' delivery addresses, found from their live location.</td></tr>
+    <tr><td>369 Mart Delivery &amp; Pricing</td><td>The bill, delivery fees, coupons, service areas and delivery slots.</td></tr>
+    <tr><td>369 Mart Payments &amp; Wallet</td><td>Real payments, saved cards and UPI IDs, and the 369 Wallet.</td></tr>
+    <tr><td>369 Mart Orders</td><td>The real orders behind the app — placed, packed, delivered, returned.</td></tr>
+    <tr><td>369 Mart Account</td><td>The customer's own things: profile, reviews, notifications.</td></tr>
+    <tr><td>369 Mart Support</td><td>The support bot, real tickets, and order updates on WhatsApp.</td></tr>
+    <tr><td>369 Mart Pages</td><td>The shop footer's pages — Terms, Privacy, About, Help, Contact.</td></tr>
+    <tr><td>369 Mart Loyalty Points</td><td>Loyalty points earned on orders and spent at checkout; brings the shop counter's point of sale and its loyalty card with it.</td></tr>
+  </tbody>
+</table>
+<p>Two more come along because the parts above need them: <b>369 Mart Roles</b> (needed by Orders) and <b>Loyalty Card</b> (needed by Loyalty Points).</p>
+<div class="note good"><span class="lbl">Good to know:</span> These are <b>not</b> installed by the Suite. Add them yourself if you need them: <b>369 Mart: New Orders Board</b> (the shop counter's orders screen), <b>369 Mart: WhatsApp Bridge</b> (one shop across the website and WhatsApp selling; also what sends sign-in codes on WhatsApp) and <b>369 Mart Sample Catalogue - Computer Parts</b> (sample products for trying the screens).</div>
+
+<h2>When to use it</h2>
+<ul class="f">
+  <li><b>New shop, full setup</b> — install the Suite.</li>
+  <li><b>Only some parts</b> — install 369 Mart and the parts you want, one by one.</li>
+  <li><b>Adding a missing part later</b> — install just that part; the Suite is not needed.</li>
+</ul>
+
+<h2>How to remove it</h2>
+<p>Uninstalling the Suite removes only the Suite itself. Every module it brought in stays installed and keeps working, with all your data. To remove a part, uninstall that part. Uninstalling <b>369 Mart</b> (the base) offers to remove the whole suite, because every part depends on it.</p>
+<div class="note warn"><span class="lbl">Watch out:</span> Removing a part can remove the screens of other parts that need it. Read the list of modules the uninstall offers before you confirm.</div>
+
+<h2>If something goes wrong</h2>
+<table>
+  <thead><tr><th style="width:36%">What you see</th><th>What to do</th></tr></thead>
+  <tbody>
+    <tr><td>The Suite doesn't appear in Apps</td><td>Search Apps for "369 Mart Suite". If it is still missing, the 369 Mart modules are not on the server yet: ask whoever looks after your system to add them and update the apps list.</td></tr>
+    <tr><td>A screen I expected is missing</td><td>It may belong to a module the Suite does not install (see the Good to know box above). Install that module.</td></tr>
+    <tr><td>Sign-in codes on WhatsApp don't arrive</td><td>The WhatsApp Bridge is not part of the Suite. Install it to send codes.</td></tr>
+  </tbody>
+</table>
+
+</body>
+</html>

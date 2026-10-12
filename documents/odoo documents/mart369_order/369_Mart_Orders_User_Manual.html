@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>369 Mart Orders — User Manual</title>
+<style>
+  :root{
+    --navy:#1e2a78; --orange:#f08a24; --ink:#1f2230; --muted:#6b6f80;
+    --line:#e6e8f0; --alt:#f2f4fb; --tint:#eef2fc;
+    --tip:#2e6fb0; --good:#2e8b57; --good-bg:#e7f6ea;
+    --warn-bg:#fff3da; --warn-ink:#c0701a;
+  }
+  @page{
+    size:A4; margin:22mm 20mm 20mm 20mm;
+    @bottom-left{content:"369ai · 369 Mart Orders"; font:8.5pt "Liberation Serif",Georgia,serif; color:#6b6f80;}
+    @bottom-right{content:"Page " counter(page); font:8.5pt "Liberation Serif",Georgia,serif; color:#6b6f80;}
+  }
+  @page:first{ margin-top:14mm; }
+  *{box-sizing:border-box}
+  html{background:#fff}
+  body{margin:0; font-family:"Liberation Serif","Times New Roman",Georgia,serif; font-size:10.5pt; line-height:1.5; color:var(--ink); background:#fff}
+  @media screen{ body{max-width:794px; margin:24px auto; padding:0 16px} }
+  p{margin:0 0 7pt}
+  b,strong{font-weight:700}
+  .k{color:var(--navy); font-weight:700}          /* navy key term */
+  code{font-family:"DejaVu Sans Mono",monospace; font-size:8.5pt; background:#f1f2f6; padding:1px 4px; border-radius:3px}
+  .arr{color:var(--navy); font-weight:700}
+
+  /* ---------- Cover ---------- */
+  .topbar{height:7px; background:var(--navy); border-bottom:3px solid var(--orange); margin:0 -8mm 10pt}
+  .cover{background:var(--navy); color:#fff; text-align:center; border-radius:9px; padding:26pt 20pt 22pt; margin-bottom:18pt}
+  .cover h1{margin:0; font-size:31pt; letter-spacing:1.5pt; font-weight:700; text-transform:uppercase}
+  .cover .sub{color:var(--orange); font-size:15pt; font-weight:700; margin:12pt 0 10pt}
+  .cover .meta{font-size:10pt; color:#d5d9ee}
+
+  /* ---------- H2 section with orange rule ---------- */
+  h2{color:var(--navy); font-size:15pt; margin:16pt 0 9pt; padding-bottom:5pt; border-bottom:1.6px solid var(--orange); page-break-after:avoid}
+
+  /* ---------- Flow cards (3–4 steps) ---------- */
+  .flow{display:flex; align-items:center; gap:6pt; margin:10pt 0 10pt}
+  .flow .card{flex:1; border:1px solid #d9dcea; border-radius:6px; padding:8pt 9pt; min-height:66pt}
+  .flow .card b{display:block; color:var(--navy); font-size:10.5pt; margin-bottom:2pt}
+  .flow .card span{font-size:8.5pt; color:var(--muted); line-height:1.35}
+  .flow .to{color:var(--orange); font-size:13pt}
+
+  /* ---------- Callouts ---------- */
+  .note{border-left:3px solid var(--orange); background:var(--tint); border-radius:0 5px 5px 0; padding:8pt 12pt; margin:10pt 0 12pt; font-size:9.5pt; page-break-inside:avoid}
+  .note .lbl{font-weight:700; text-transform:uppercase; font-size:8.5pt; letter-spacing:.3pt; margin-right:4pt}
+  .note.start .lbl{color:var(--warn-ink)}
+  .note.tip{border-color:var(--tip)}              .note.tip .lbl{color:var(--tip)}
+  .note.good{border-color:var(--good); background:var(--good-bg)} .note.good .lbl{color:var(--good)}
+  .note.imp{border-color:var(--navy)}             .note.imp .lbl{color:var(--navy)}
+  .note.warn{border-color:var(--orange); background:var(--warn-bg)} .note.warn .lbl{color:var(--warn-ink)}
+
+  /* ---------- Part banner ---------- */
+  .part{background:var(--navy); color:#fff; text-align:center; border-radius:6px; padding:12pt; margin:20pt 0 10pt; font-size:15pt; font-weight:700; letter-spacing:1.5pt; text-transform:uppercase; page-break-after:avoid}
+  .part-intro{color:var(--muted); margin-bottom:12pt}
+
+  /* ---------- Numbered step ---------- */
+  h3.step{display:flex; align-items:center; gap:9pt; color:var(--navy); font-size:13pt; margin:16pt 0 7pt; page-break-after:avoid}
+  h3.step .n{display:inline-block; min-width:17pt; height:17pt; line-height:17pt; text-align:center; background:var(--orange); color:#fff; border-radius:3px; font-family:"Liberation Sans",Arial,sans-serif; font-size:10pt; font-weight:700}
+
+  /* ---------- Field bullets (orange square markers) ---------- */
+  ul.f{list-style:none; padding:0; margin:4pt 0 8pt}
+  ul.f li{position:relative; padding-left:13pt; margin-bottom:4pt}
+  ul.f li::before{content:""; position:absolute; left:1pt; top:6.5pt; width:4pt; height:4pt; background:var(--orange)}
+  ul.f li b:first-child{color:var(--navy)}
+
+  /* ---------- Tables ---------- */
+  table{width:100%; border-collapse:collapse; margin:8pt 0 12pt; font-size:9pt}
+  thead{display:table-header-group}
+  th{background:var(--navy); color:#fff; text-align:left; padding:6pt 8pt; font-weight:700}
+  th+th{border-left:1px solid #34408a}
+  td{padding:6pt 8pt; border-bottom:1px solid var(--line); vertical-align:top}
+  tr:nth-child(even) td{background:var(--alt)}
+  td:first-child{color:var(--navy); font-weight:700}
+  tr{page-break-inside:avoid}
+
+  /* ---------- Quick tips ---------- */
+  ul.tips{margin:4pt 0 12pt; padding-left:14pt}
+  ul.tips li{margin-bottom:3pt}
+
+  /* ---------- Screenshots + glossary (added for 369 Mart manuals) ---------- */
+  figure.shot{margin:8pt 0 12pt; page-break-inside:avoid; break-inside:avoid; text-align:center}
+  figure.shot img{max-width:100%; max-height:118mm; border:1px solid var(--line); border-radius:6px; box-shadow:0 1px 4px rgba(30,42,120,.12)}
+  figure.shot.phone img{max-width:62mm}
+  figure.shot figcaption{font-size:8.5pt; color:var(--muted); margin-top:4pt; text-align:left}
+  table.gloss td:first-child{width:28%}
+  h2, h3.step, .part{break-after:avoid}
+</style>
+</head>
+<body>
+<div class="topbar"></div>
+<div class="cover">
+  <h1>369 Mart Orders</h1>
+  <div class="sub">Pack, Deliver, Return &amp; Refund — One Desk</div>
+  <div class="meta">User Manual &nbsp;|&nbsp; 369ai</div>
+</div>
+
+<h2>What this does</h2>
+<p><span class="k">369 Mart Orders</span> turns every order a customer places in the shop app or on the website into a real order in the backend, and gives your team two working screens: the <span class="k">Orders desk</span>, which always answers “what do I pack next?”, and the <span class="k">Returns desk</span>, which answers “which return is waiting on us?”. Each order moves through a short list of <span class="k">statuses</span>, one button press at a time.</p>
+<p>The last step is protected: an order only becomes <b>Delivered</b> when the customer reads out their six-digit <span class="k">door code</span>. Every refund — a cancellation, a return, an item taken out — goes to the customer's <span class="k">369 Wallet</span> straight away, with a credit note for the accounts. This module <b>sends no messages of its own</b>: the customer sees each change on their own order page in the shop app.</p>
+<div class="flow">
+  <div class="card"><b>1. Order placed</b><span>Paid online, or cash on delivery accepted</span></div><span class="to">→</span>
+  <div class="card"><b>2. Packed / Shipped</b><span>Quick orders are packed; Express orders are shipped</span></div><span class="to">→</span>
+  <div class="card"><b>3. Out for delivery</b><span>With the rider, on the way to the door</span></div><span class="to">→</span>
+  <div class="card"><b>4. Delivered</b><span>Closed only with the customer's door code</span></div>
+</div>
+<div class="note start"><span class="lbl">Before you start:</span> Setup is small and done once by an administrator. Staff who work the desks need <b>Salesperson</b> rights (the Sales access level). To hand orders to riders, at least one staff member needs the <b>Rider</b> role from 369 Mart Roles. Day-to-day staff only press the buttons described in Part 2.</div>
+
+<h2>Words you'll see</h2>
+<table class="gloss">
+  <thead><tr><th>Word</th><th>What it means</th></tr></thead>
+  <tbody>
+    <tr><td>Quick / Express</td><td>The two shop fronts (shown as <b>Storefront</b>). Quick orders go Packed → Out for delivery; Express orders go Shipped → Out for delivery.</td></tr>
+    <tr><td>Door code</td><td>A six-digit code the customer sees in their app. Asking for it at the door is the only way to mark an order Delivered.</td></tr>
+    <tr><td>Late</td><td>Still on its way after the time the customer was promised.</td></tr>
+    <tr><td>Cash to collect</td><td>Cash-on-delivery orders still on their way: money the rider must bring back.</td></tr>
+    <tr><td>369 Wallet</td><td>The customer's money balance in the shop. All refunds land here.</td></tr>
+    <tr><td>Credit note</td><td>The accounting document that records money given back against an invoice.</td></tr>
+    <tr><td>Replacement offer</td><td>Up to three other products you suggest when an item has run out. The customer picks one, or a refund.</td></tr>
+  </tbody>
+</table>
+
+<h2>How the manual is arranged</h2>
+<p><b>Part 1 – Setting Up</b> shows where the screens live and the one setting this module adds. <b>Part 2 – Everyday Use</b> walks through the Orders desk, the door code, out-of-stock items, failed deliveries, cancellations, printing and the Returns desk. <b>Part 3 – Keeping It Secure &amp; In Order</b> covers the door code's privacy, the order history, where refund money goes and who can do what.</p>
+
+<div class="part">Part 1 — Setting Up</div>
+<p class="part-intro">Done once by an administrator. If the menus below are visible and the answer times suit you, skip to Part 2.</p>
+
+<h3 class="step"><span class="n">1</span>Where everything lives</h3>
+<p>Open <b>369 Mart</b> from the main menu. This module adds:</p>
+<ul class="f">
+  <li><b>Sales <span class="arr">→</span> Orders</b> — the Orders desk. (If <b>369 Mart: New Orders Board</b> is installed, this entry opens the Counter first; press <b>All orders</b> at the top to reach the desk.)</li>
+  <li><b>Sales <span class="arr">→</span> Returns</b> — the Returns desk.</li>
+  <li><b>Advanced <span class="arr">→</span> Orders (all views)</b> — the same orders as a board, a list and a full form, for grouping, saved filters and exporting.</li>
+  <li><b>Advanced <span class="arr">→</span> Returns (all views)</b> — the same for returns, including adding or removing a return's photos.</li>
+  <li><b>Store <span class="arr">→</span> Settings <span class="arr">→</span> Orders</b> — how long a customer has to answer a replacement offer. The Settings screen itself belongs to 369 Mart Payments &amp; Wallet; this module adds the <b>Orders</b> tab.</li>
+</ul>
+<p>The Orders and Returns entries are shown only to staff with <b>Salesperson</b> rights or higher.</p>
+
+<h3 class="step"><span class="n">2</span>Set the replacement answer times</h3>
+<p>Open <b>Store <span class="arr">→</span> Settings</b> and pick the <b>Orders</b> tab. When an item runs out and you offer a replacement, the customer has this long to choose; with no answer, the item is refunded to their 369 Wallet.</p>
+<ul class="f">
+  <li><b>Quick orders: answer a replacement within</b> — default <b>10 min</b>. Choices 5, 10, 15, 20 or 30 minutes, or <b>Custom…</b>.</li>
+  <li><b>Express orders: answer a replacement within</b> — default <b>2 h</b>. Choices from 30 minutes to 24 hours, or <b>Custom…</b>.</li>
+</ul>
+<p>Press <b>Save changes</b> (or <b>Reset</b> to undo). The wait must be at least one minute.</p>
+<figure class="shot"><img src="screenshots/01-settings-orders.png" alt="Settings screen, Orders tab" style="max-height:60mm"><figcaption>Figure 1 — Store → Settings, Orders tab: Quick set to 10 min and Express to 2 h, with Reset and Save changes at the top right.</figcaption></figure>
+<div class="note good"><span class="lbl">Good to know:</span> A change applies to offers made from now on. An offer already sent keeps the deadline it was sent with.</div>
+
+<h3 class="step"><span class="n">3</span>Give riders the Rider role</h3>
+<p>Only staff with the <b>Rider</b> role appear in an order's <b>Rider</b> list. Give the role on the staff member's user form (see the 369 Mart Roles manual). Until someone has it, the order screen says <i>“Nobody has the Rider role yet - give it under Staff &amp; roles.”</i></p>
+
+<h3 class="step"><span class="n">4</span>What is prepared for you</h3>
+<p>Installing the module sets up a few things you do not need to touch:</p>
+<table>
+  <thead><tr><th style="width:34%">Item</th><th>Why it exists</th></tr></thead>
+  <tbody>
+    <tr><td>Delivery, Coupon discount</td><td>Two hidden service products that carry the delivery fee and coupon lines on an order. They never show in the shop.</td></tr>
+    <tr><td>Cash on delivery and 369 Wallet journals</td><td>One of each per company, so cash a rider brings back and wallet money are not booked as bank money.</td></tr>
+    <tr><td>369 Wallet balances / 369 Wallet rewards</td><td>Accounts that record the money the shop owes customers in their wallets, and the cost of rewards and goodwill credits.</td></tr>
+    <tr><td>Automatic invoice</td><td>When an order is confirmed, its invoice is made and posted on its own, and the payment is matched to it.</td></tr>
+    <tr><td>Replacement timer</td><td>A job that runs every minute and refunds replacement offers nobody answered in time.</td></tr>
+  </tbody>
+</table>
+
+<div class="part">Part 2 — Everyday Use</div>
+<p class="part-intro">This is all the desk staff use. Everything here is also on the staff console, with the same buttons and the same data.</p>
+
+<h3 class="step"><span class="n">1</span>The Orders desk</h3>
+<p>Open <b>369 Mart <span class="arr">→</span> Sales <span class="arr">→</span> Orders</b>. The desk opens on <b>Needs me</b>: every order still on its way, grouped by what you do next (<b>To pack</b>, <b>Ready to send</b>, <b>Out for delivery</b>). It refreshes itself every 30 seconds, and a new order brings a pop-up and a short chime.</p>
+<figure class="shot"><img src="screenshots/02-orders-desk.png" alt="The Orders desk"><figcaption>Figure 2 — The Orders desk: tiles across the top, the Needs me tab with filters, two orders ticked with Move all on, Packing slips and Picklist, and each row's own next-step button on the right.</figcaption></figure>
+<table>
+  <thead><tr><th style="width:30%">On the screen</th><th>What it does</th></tr></thead>
+  <tbody>
+    <tr><td>Tiles</td><td><b>To pack</b>, <b>Ready to send</b>, <b>Out for delivery</b>, <b>Late</b> and <b>Cash to collect</b> (the total still to collect at doors). Click a tile to show only those orders. Late turns red when it is not zero.</td></tr>
+    <tr><td>Tabs</td><td><b>Needs me</b>, <b>All</b>, <b>Delivered</b>, <b>Returns</b> (orders with a return) and <b>Cancelled</b>.</td></tr>
+    <tr><td>Search and filters</td><td>Search by order number, name or phone. Filter by type (<b>All types</b> / <b>Quick</b> / <b>Express</b>), period (<b>All time</b> / <b>Today</b> / <b>Last 7 days</b>), payment (<b>Any payment</b> / <b>Cash on delivery</b> / <b>Prepaid</b>), and sort by <b>Most urgent first</b>, <b>Longest wait first</b>, <b>Newest first</b> or <b>Highest value</b>.</td></tr>
+    <tr><td>Sound on / Sound off</td><td>The new-order chime. Remembered on this browser.</td></tr>
+    <tr><td>Export these</td><td>Downloads the rows on screen as a spreadsheet file.</td></tr>
+    <tr><td>All views</td><td>Jumps to Orders (all views) — see step 10.</td></tr>
+  </tbody>
+</table>
+<p>Each row shows the customer's name and area, any staff tags, a red <b>COD off</b> tag if cash on delivery is switched off for them, the order number, Quick or Express, the item count and how long ago it was placed. Below that: how late it is or when it is due, how it was paid (for example <i>“Cash on delivery - collect at the door”</i>), the rider, a waiting replacement, and any failed delivery tries. On the right are the total and the next-step button.</p>
+
+<h3 class="step"><span class="n">2</span>Move an order on</h3>
+<p>Press the button on the row (or inside the opened order). The button's name tells you what happens:</p>
+<table>
+  <thead><tr><th style="width:28%">Status now</th><th style="width:22%">Quick order</th><th style="width:22%">Express order</th><th>Becomes</th></tr></thead>
+  <tbody>
+    <tr><td>Order placed</td><td>Start packing</td><td>Mark shipped</td><td>Packed (Quick) / Shipped (Express)</td></tr>
+    <tr><td>Packed / Shipped</td><td>Send out</td><td>Send out</td><td>Out for delivery</td></tr>
+    <tr><td>Out for delivery</td><td>Mark delivered</td><td>Mark delivered</td><td>Delivered — asks for the door code</td></tr>
+  </tbody>
+</table>
+<p>To move several at once, tick them and press <b>Move all on</b>. Orders out for delivery are skipped, because each needs its own door code; a message tells you how many moved and which did not. <b>Clear</b> unticks everything.</p>
+<div class="note tip"><span class="lbl">Tip:</span> If a button is refused, the screen was out of date — someone else already moved that order. The desk reloads itself; just look again.</div>
+
+<h3 class="step"><span class="n">3</span>Mark delivered with the door code</h3>
+<p>Pressing <b>Mark delivered</b> opens a small box: <i>“Ask for the six-digit code on the customer's phone.”</i> Type the six digits and press <b>Mark delivered</b>. The code works once.</p>
+<p>On success the order becomes <b>Delivered</b>, a cash payment is marked collected, and the goods are taken out of stock. A wrong code, or one already used, gets the same answer — <i>“That delivery code is not right.”</i> — so nobody can tell by guessing whether a code is live. The box stays open so you can ask again.</p>
+<div class="note imp"><span class="lbl">Important:</span> Staff never see the code. Inside the order, <b>Door code</b> only says when it was sent and whether it has been used, e.g. <i>“Sent …, not used yet. The customer has it in their app.”</i></div>
+
+<h3 class="step"><span class="n">4</span>Open an order</h3>
+<p>Click a row to open the order in a window. From top to bottom:</p>
+<ul class="f">
+  <li><b>Progress</b> — the four steps with their times, a one-line status (on time or how late), and the <b>Next step</b> button.</li>
+  <li><b>Who</b> — the customer's name (click it to open their full profile, see Part 3), <i>first order</i> or how many orders so far, their tags, a warning line if they often cancel, refuse or return, and <b>Call</b> / <b>WhatsApp</b> buttons.</li>
+  <li><b>Deliver to</b> — the address. While the order is <b>Order placed</b> or <b>Packed</b> you can press <b>Change</b>, pick another of the customer's saved addresses and press <b>Deliver here</b>.</li>
+  <li><b>When</b> and <b>Customer's note</b> — the slot, the promised time and any delivery instructions.</li>
+  <li><b>Items</b> — each line with <b>Replace</b> and <b>Remove</b> buttons while allowed, then the bill (Items, Delivery, Coupon, From wallet, Total) and how it was paid.</li>
+  <li><b>Delivery</b> — the <b>Rider</b> picker, the door-code line and, when out for delivery, <b>Couldn't deliver?</b>.</li>
+  <li><b>Staff notes</b> — internal notes such as <i>“Called, no answer - gate is locked”</i>. Never sent to the customer. You can edit or delete only your own.</li>
+  <li><b>Support &amp; returns</b> and a folded <b>History</b> of every update.</li>
+</ul>
+<p>The bottom bar holds <b>Cancel order</b> (while allowed), the next-step button, <b>Packing slip</b>, <b>Invoice</b> (once posted) and <b>Close</b>.</p>
+<figure class="shot"><img src="screenshots/03-change-address.png" alt="Choosing another delivery address" style="max-height:38mm"><figcaption>Figure 3 — Changing the address: Home (marked “now”) and Work to choose from, with Cancel and Deliver here.</figcaption></figure>
+
+<h3 class="step"><span class="n">5</span>An item ran out — take it out</h3>
+<p>Press <b>Remove</b> beside the item and confirm. The rest of the order carries on. Allowed while the order is still in the store (Order placed, Packed or Shipped) and never for the last item — that is a cancellation.</p>
+<ul class="f">
+  <li><b>Paid orders</b> — the item's price goes to the customer's 369 Wallet straight away, however they paid.</li>
+  <li><b>Cash on delivery</b> — nothing was paid, so the cash to collect at the door drops instead.</li>
+</ul>
+<p>The item stays on the order struck through with the reason, and a credit note is made if the order was already invoiced.</p>
+<figure class="shot"><img src="screenshots/04-item-removed.png" alt="Order with one item removed" style="max-height:78mm"><figcaption>Figure 4 — A packed card-paid order: the monitor is struck through with “Out of stock · 9,499.000 to wallet”, the total drops to 1,999.000, and Send out is ready.</figcaption></figure>
+
+<h3 class="step"><span class="n">6</span>An item ran out — offer a replacement</h3>
+<p>Press <b>Replace</b> beside the item. In <b>Offer a replacement</b>, search and tick up to three in-stock products, then press <b>Send … to customer</b>. Each product shows what the shop pays extra (<i>shop pays +…</i>) or what goes back to the customer — the customer never pays more than they did.</p>
+<figure class="shot"><img src="screenshots/05-offer-replacement.png" alt="Offer a replacement dialog" style="max-height:75mm"><figcaption>Figure 5 — Offer a replacement: three products ticked, each showing “shop pays +…”, and the Send 3 to customer button.</figcaption></figure>
+<p>While the customer decides, the item shows <i>“… offered · waiting · N min left”</i> with a <b>Withdraw</b> button, and an Order placed order cannot be packed.</p>
+<figure class="shot"><img src="screenshots/06-replacement-waiting.png" alt="Order waiting on a replacement answer" style="max-height:78mm"><figcaption>Figure 6 — An offer waiting with 10 min left and a Withdraw button; an earlier item below is struck through as “Replaced by …”.</figcaption></figure>
+<table>
+  <thead><tr><th style="width:30%">Customer's answer</th><th>What happens</th></tr></thead>
+  <tbody>
+    <tr><td>Picks one</td><td>It goes in the bag at the original price. If it is cheaper, the difference goes to their 369 Wallet (cash orders: less to collect).</td></tr>
+    <tr><td>No, refund me</td><td>The item is taken out and refunded, exactly as <b>Remove</b> does.</td></tr>
+    <tr><td>No answer in time</td><td>Treated as “refund me”. If it was the last item, the order is left for staff to decide.</td></tr>
+  </tbody>
+</table>
+<p><b>What the customer sees.</b> In the shop app the customer gets a <b>Choose a replacement</b> card with each option, <i>“You pay … — no extra, we cover …”</i>, a countdown, and the buttons <b>Accept this one</b> and <b>No, refund me</b>. Their order page then shows the replaced items struck through.</p>
+<figure class="shot"><img src="screenshots/07-customer-choice.png" alt="Customer's replacement choice" style="max-height:60mm"><figcaption>Figure 7 — The customer's choice card: three options, “Answer within 8 min, or we'll refund the item”, Accept this one and No, refund me.</figcaption></figure>
+<figure class="shot"><img src="screenshots/08-customer-order-page.png" alt="Customer's order page after a replacement" style="max-height:80mm"><figcaption>Figure 8 — The customer's order page: Order confirmed, the status steps, and in Items two lines marked “Removed — Replaced by …”.</figcaption></figure>
+
+<h3 class="step"><span class="n">7</span>Couldn't deliver?</h3>
+<p>For an order <b>Out for delivery</b>, open it and use <b>Couldn't deliver?</b>. Pick what went wrong: <b>Customer not reachable</b>, <b>Wrong address</b>, <b>Customer refused the order</b>, <b>Customer asked to come later</b> or <b>Other</b>. Then:</p>
+<ul class="f">
+  <li><b>Try again</b> — the order stays out for delivery, the failed try is counted, and the customer gets a <b>new</b> door code.</li>
+  <li><b>Return to store</b> — after you confirm, the order is closed as returned (it shows as Cancelled). Everything paid goes to the 369 Wallet; a cash order simply has nothing to collect. The slot and coupon are freed.</li>
+</ul>
+<figure class="shot"><img src="screenshots/09-couldnt-deliver.png" alt="Failed delivery controls" style="max-height:80mm"><figcaption>Figure 9 — An order out for delivery with “Attempt 1 failed: Customer not reachable”, and the footer's Couldn't deliver? picker with Try again, Return to store and Mark delivered.</figcaption></figure>
+
+<h3 class="step"><span class="n">8</span>Cancel an order</h3>
+<p>An order can be cancelled only while it is <b>Order placed</b>; after packing, the button disappears. Open the order, choose a reason under <b>If you cancel, tell the customer</b> — <b>Item out of stock</b>, <b>Customer asked to cancel</b>, <b>Address not reachable</b>, <b>Payment not confirmed</b> or <b>Store closed</b> — and press <b>Cancel order</b>. The confirmation tells you how much goes back.</p>
+<p>The reason appears on the customer's own tracking screen. Anything paid goes to their 369 Wallet straight away with a credit note; cash on delivery has nothing to refund. The delivery slot and the coupon are given back.</p>
+<div class="note warn"><span class="lbl">Watch out:</span> The reason is shown to the customer exactly as written. Pick the one that is true — there is no free-text box on purpose.</div>
+
+<h3 class="step"><span class="n">9</span>Print and export</h3>
+<ul class="f">
+  <li><b>Packing slips</b> — tick orders and press it, or use <b>Packing slip</b> inside one order. One page per order: number, Quick/Express, slot, rider, the address and phone, a tick box per item, and either <i>“Collect cash: …”</i> or <i>“Paid - … - nothing to collect”</i>.</li>
+  <li><b>Picklist</b> — every item across the ticked orders, counted once per product and grouped by category, so one person walks the store once.</li>
+  <li><b>Invoice</b> — inside an order, once its invoice is posted.</li>
+  <li><b>Export these</b> — exactly the rows on screen (order, placed, storefront, customer, phone, area, items, total, payment, status, late), ready for Excel. For every field, export from Orders (all views).</li>
+</ul>
+
+<h3 class="step"><span class="n">10</span>The Returns desk</h3>
+<p>Open <b>369 Mart <span class="arr">→</span> Sales <span class="arr">→</span> Returns</b>. Returns the customer asked for in the app wait here, longest wait first. Tiles: <b>Requested</b>, <b>Pickup scheduled</b>, <b>Picked up</b>, <b>Refunded</b>, <b>Refused</b>. Tabs: <b>Needs me</b>, <b>All</b>, <b>Refunded</b>, <b>Refused</b>. Search by order, customer or reason; filter <b>Wants</b> (Refund or Replacement); sort by longest wait or newest.</p>
+<p>Each row's button moves the return on: <b>Schedule pickup</b> <span class="arr">→</span> <b>Mark picked up</b> <span class="arr">→</span> <b>Issue refund</b>. Click a row to see the customer, the reason, what happened, the photos, <b>The money</b> and the <b>Progress</b>.</p>
+<figure class="shot"><img src="screenshots/10-return-refund.png" alt="A return opened on the Returns desk" style="max-height:78mm"><figcaption>Figure 10 — A picked-up return: customer, reason “Quality not as expected”, no photos, 11,498.000 to the customer's 369 Wallet, and Issue refund, Refuse and Close.</figcaption></figure>
+<ul class="f">
+  <li><b>Issue refund</b> — the whole refund goes to the 369 Wallet at once, with a credit note, and the goods are put back into stock at the same moment. It is never more than the customer is still owed.</li>
+  <li><b>Refuse</b> — after you confirm, the customer is told it was refused on their tracking screen; nothing is refunded and it stops there.</li>
+</ul>
+<figure class="shot"><img src="screenshots/11-return-progress.png" alt="Return progress steps" style="max-height:30mm"><figcaption>Figure 11 — A return's progress: Return requested and Pickup scheduled done, Picked up now, Refund issued next.</figcaption></figure>
+
+<h3 class="step"><span class="n">11</span>All views — board, list and form</h3>
+<p><b>Advanced <span class="arr">→</span> Orders (all views)</b> shows the same orders as a board with one column per status. A strip of numbers on top — <b>Today</b> (with a 14-day bar chart), <b>To pack</b>, <b>Out for delivery</b>, <b>Late</b>, <b>Cash to collect</b> — filters the board when clicked. Each card has a <b>Move on</b> button; late cards say <i>“Past its promise”</i>.</p>
+<figure class="shot"><img src="screenshots/12-orders-board.png" alt="Orders board" style="max-height:78mm"><figcaption>Figure 12 — Orders (all views) as a board: the number strip, then Order placed, Packed, Shipped and Out for delivery columns with Move on buttons.</figcaption></figure>
+<p>Switch to the list for columns and totals, or open an order for the full form with the <b>Basket</b>, <b>Timeline</b>, <b>Returns</b> and <b>Doorstep</b> tabs. Filters include <b>Today</b>, <b>Late</b>, <b>To pack</b>, <b>Out for delivery</b>, <b>On its way</b>, <b>Delivered</b>, <b>Cash on delivery</b>, <b>Has a return</b>, <b>Quick</b> and <b>Express</b>; group by Status, Storefront, Slot or Placed on.</p>
+<figure class="shot"><img src="screenshots/13-orders-list.png" alt="Orders list" style="max-height:58mm"><figcaption>Figure 13 — The list view: Order, Customer, Placed, Storefront, Slot, Paid by, Total and status, with late orders in red and the total at the bottom.</figcaption></figure>
+<figure class="shot"><img src="screenshots/14-order-form.png" alt="Order form" style="max-height:75mm"><figcaption>Figure 14 — One order's form: Move on and the status bar at the top, Delivery and Payment details, and the Basket tab.</figcaption></figure>
+<div class="note warn"><span class="lbl">Watch out:</span> <b>Move on</b> here cannot deliver an order. On an order out for delivery it is refused with <i>“Enter the delivery code to close it.”</i> — use the Orders desk.</div>
+<p><b>Advanced <span class="arr">→</span> Returns (all views)</b> does the same for returns: a board by status with <b>Move on</b>, and a form with <b>Move on</b>, <b>Refuse</b> and the customer's photos.</p>
+<figure class="shot"><img src="screenshots/15-returns-board.png" alt="Returns board" style="max-height:48mm"><figcaption>Figure 15 — Returns (all views): Return requested, Pickup scheduled, Picked up and Refund issued columns, each card marked Refund or Replacement.</figcaption></figure>
+
+<h3 class="step"><span class="n">12</span>The same desk on the staff console</h3>
+<p>The staff console has the same <b>Orders</b>, <b>Returns</b> and <b>Settings</b> screens. They read and change the same orders, so a step taken in one shows in the other.</p>
+<figure class="shot"><img src="screenshots/16-console-orders.png" alt="Orders on the staff console" style="max-height:78mm"><figcaption>Figure 16 — The staff console's Orders screen: the same tabs and filters, two orders selected with Move all on, Packing slips and Picklist.</figcaption></figure>
+<figure class="shot phone"><img src="screenshots/17-console-order.png" alt="An order opened on the staff console" style="max-height:95mm"><figcaption>Figure 17 — An order opened on the staff console: customer, rider note, the failed attempt, Couldn't deliver? with Try again and Return to store, and Mark delivered.</figcaption></figure>
+
+<div class="part">Part 3 — Keeping It Secure &amp; In Order</div>
+
+<h3 class="step"><span class="n">1</span>The door code stays private</h3>
+<p>The door code is made by the backend, once per delivery attempt, and kept only in scrambled form. Only the customer sees it, in their own app. Staff screens show when it was sent and when it was used — the <b>Doorstep</b> tab on the order form says: <i>“The delivery code itself is never shown here.”</i> After <b>Try again</b> a fresh code replaces the old one, in case the old one was read out to someone.</p>
+
+<h3 class="step"><span class="n">2</span>Every step is recorded</h3>
+<p>Each status change is stamped once with the time and who did it. See it on the order form's <b>Timeline</b> tab (When, Step, By, Note) or in the folded <b>History</b> inside the desk. System notes — an address changed, an item removed or replaced, a rider assigned — appear there too.</p>
+<figure class="shot"><img src="screenshots/18-order-timeline.png" alt="Order timeline tab" style="max-height:62mm"><figcaption>Figure 18 — The Timeline tab of an order: one row, “Order placed”, with its time and who placed it.</figcaption></figure>
+
+<h3 class="step"><span class="n">3</span>Where refund money goes</h3>
+<p>There is one way money goes back: to the customer's <b>369 Wallet</b>, in full, at once — whether they paid by UPI, card or wallet. No refund waits on a payment gateway. Each refund is capped at what the customer is still owed, so an item removed and a later return can never refund the same money twice. A credit note records it for the accounts; if a credit note ever fails, the customer keeps the refund and finance re-creates the note.</p>
+
+<h3 class="step"><span class="n">4</span>The customer's profile</h3>
+<p>Click the customer's name in an order to open their profile: orders, addresses, returns, support tickets, wallet history, staff notes and tags. Two actions matter for orders:</p>
+<ul class="f">
+  <li><b>Cash on delivery</b> switch — when off, <i>“Cash on delivery isn't offered to this customer at checkout - they pay online.”</i> Useful for someone who often refuses at the door.</li>
+  <li><b>+ Goodwill credit</b> — adds money to their wallet with a reason. The customer sees it as “Goodwill credit”, with your reason and name.</li>
+</ul>
+
+<h3 class="step"><span class="n">5</span>Who can do what</h3>
+<table>
+  <thead><tr><th style="width:30%">Role</th><th>What they can do</th></tr></thead>
+  <tbody>
+    <tr><td>Salesperson</td><td>Opens the Orders and Returns desks and the all-views screens; moves, delivers (with the code), cancels and returns orders; prints slips and picklists.</td></tr>
+    <tr><td>Manager</td><td>Also writes staff notes, changes a customer's cash-on-delivery switch and gives goodwill credit.</td></tr>
+    <tr><td>Rider</td><td>Appears in an order's Rider list so orders can be handed to them.</td></tr>
+    <tr><td>Owner / Administrator (Settings)</td><td>Everything, including editing or deleting anyone's staff note.</td></tr>
+    <tr><td>Internal user</td><td>No order menus and no order screens. Give Salesperson rights to work the desks.</td></tr>
+  </tbody>
+</table>
+
+<h3 class="step"><span class="n">6</span>Messages and privacy</h3>
+<p>This module sends no SMS, email or WhatsApp. Customers follow their order on their own tracking screen in the shop app, where they also see your cancellation reason, replacement offers and refunds. Staff notes are internal and never reach the customer.</p>
+
+<h2>Status reference — orders</h2>
+<table>
+  <thead><tr><th style="width:24%">State</th><th>Meaning</th><th style="width:30%">How to change it</th></tr></thead>
+  <tbody>
+    <tr><td>Not paid for</td><td>A basket that was never paid for. Never shown on the desks.</td><td>—</td></tr>
+    <tr><td>Order placed</td><td>Paid, or cash on delivery accepted. Waiting to be packed or shipped.</td><td>Start packing / Mark shipped, or Cancel order.</td></tr>
+    <tr><td>Packed</td><td>Quick orders only. Packed in the store.</td><td>Send out.</td></tr>
+    <tr><td>Shipped</td><td>Express orders only. Shipped from the store.</td><td>Send out.</td></tr>
+    <tr><td>Out for delivery</td><td>With the rider.</td><td>Mark delivered (door code), or Couldn't deliver?</td></tr>
+    <tr><td>Delivered</td><td>Closed with the customer's door code.</td><td>— (returns go through the Returns desk)</td></tr>
+    <tr><td>Cancelled</td><td>Cancelled while placed, or returned to the store after a failed delivery.</td><td>—</td></tr>
+  </tbody>
+</table>
+
+<h2>Status reference — returns and replacement offers</h2>
+<table>
+  <thead><tr><th style="width:24%">State</th><th>Meaning</th><th style="width:30%">How to change it</th></tr></thead>
+  <tbody>
+    <tr><td>Return requested</td><td>The customer asked for a refund or a replacement.</td><td>Schedule pickup, or Refuse.</td></tr>
+    <tr><td>Pickup scheduled</td><td>Collection arranged.</td><td>Mark picked up, or Refuse.</td></tr>
+    <tr><td>Picked up</td><td>The goods are back with you.</td><td>Issue refund, or Refuse.</td></tr>
+    <tr><td>Refund issued</td><td>Money sent to the 369 Wallet; goods back in stock.</td><td>Finished.</td></tr>
+    <tr><td>Refused</td><td>Turned down; nothing refunded.</td><td>Finished.</td></tr>
+    <tr><td>Waiting for the customer</td><td>A replacement offer is open.</td><td>Customer answers, it times out, or Withdraw.</td></tr>
+    <tr><td>Accepted / Declined / No answer / Withdrawn</td><td>How a replacement offer ended.</td><td>Finished.</td></tr>
+  </tbody>
+</table>
+
+<h2>Quick tips</h2>
+<ul class="tips">
+  <li>Work from <b>Needs me</b> with <b>Most urgent first</b>: the order closest to breaking its promise is on top.</li>
+  <li>Quick orders are packed; Express orders are shipped. The button always names the right step.</li>
+  <li>Only the customer's door code can mark an order Delivered — no button can skip it.</li>
+  <li>Use <b>Remove</b> or <b>Replace</b> for one missing item; cancel only when the whole order cannot go.</li>
+  <li>Every refund goes to the 369 Wallet straight away, with a credit note.</li>
+  <li>Tick several orders and print one <b>Picklist</b> to walk the store once.</li>
+  <li><b>Export these</b> exports only what is on screen.</li>
+  <li>Turn <b>Sound on</b> once per browser so new orders chime.</li>
+</ul>
+
+<h2>If something goes wrong</h2>
+<table>
+  <thead><tr><th style="width:36%">What you see</th><th>What to do</th></tr></thead>
+  <tbody>
+    <tr><td>“That delivery code is not right.”</td><td>Ask the customer to read the code again from their app. If they had a failed try earlier, only the newest code works.</td></tr>
+    <tr><td>“… is waiting for the customer to answer about a replacement.”</td><td>Wait for the answer or the deadline, or press <b>Withdraw</b> on the offer, then pack.</td></tr>
+    <tr><td>No Cancel order button</td><td>The order is past Order placed. Use <b>Remove</b> for single items, or <b>Couldn't deliver? → Return to store</b> once it is out.</td></tr>
+    <tr><td>No Remove button on an item</td><td>It is the last item, or the order has left the store. Cancel instead (if still placed).</td></tr>
+    <tr><td>Rider list is empty</td><td>Nobody has the <b>Rider</b> role. Give it on the staff member's user form.</td></tr>
+    <tr><td>“Enter the delivery code to close it.” on the board</td><td>The board cannot deliver. Use the Orders desk's <b>Mark delivered</b>.</td></tr>
+    <tr><td>A button is refused and the list jumps</td><td>Someone moved that order first. The desk has reloaded — check the order's new status.</td></tr>
+    <tr><td>“You do not have access to this.” when adding a note</td><td>Staff notes need the <b>Manager</b> role.</td></tr>
+    <tr><td>Orders menu missing</td><td>The user needs Salesperson rights. If 369 Mart: New Orders Board is installed, Orders opens the Counter — press <b>All orders</b>.</td></tr>
+  </tbody>
+</table>
+
+</body>
+</html>

@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>369 Mart Pages — User Manual</title>
+<style>
+  :root{
+    --navy:#1e2a78; --orange:#f08a24; --ink:#1f2230; --muted:#6b6f80;
+    --line:#e6e8f0; --alt:#f2f4fb; --tint:#eef2fc;
+    --tip:#2e6fb0; --good:#2e8b57; --good-bg:#e7f6ea;
+    --warn-bg:#fff3da; --warn-ink:#c0701a;
+  }
+  @page{
+    size:A4; margin:22mm 20mm 20mm 20mm;
+    @bottom-left{content:"369ai · 369 Mart Pages"; font:8.5pt "Liberation Serif",Georgia,serif; color:#6b6f80;}
+    @bottom-right{content:"Page " counter(page); font:8.5pt "Liberation Serif",Georgia,serif; color:#6b6f80;}
+  }
+  @page:first{ margin-top:14mm; }
+  *{box-sizing:border-box}
+  html{background:#fff}
+  body{margin:0; font-family:"Liberation Serif","Times New Roman",Georgia,serif; font-size:10.5pt; line-height:1.5; color:var(--ink); background:#fff}
+  @media screen{ body{max-width:794px; margin:24px auto; padding:0 16px} }
+  p{margin:0 0 7pt}
+  b,strong{font-weight:700}
+  .k{color:var(--navy); font-weight:700}          /* navy key term */
+  code{font-family:"DejaVu Sans Mono",monospace; font-size:8.5pt; background:#f1f2f6; padding:1px 4px; border-radius:3px}
+  .arr{color:var(--navy); font-weight:700}
+
+  /* ---------- Cover ---------- */
+  .topbar{height:7px; background:var(--navy); border-bottom:3px solid var(--orange); margin:0 -8mm 10pt}
+  .cover{background:var(--navy); color:#fff; text-align:center; border-radius:9px; padding:26pt 20pt 22pt; margin-bottom:18pt}
+  .cover h1{margin:0; font-size:31pt; letter-spacing:1.5pt; font-weight:700; text-transform:uppercase}
+  .cover .sub{color:var(--orange); font-size:15pt; font-weight:700; margin:12pt 0 10pt}
+  .cover .meta{font-size:10pt; color:#d5d9ee}
+
+  /* ---------- H2 section with orange rule ---------- */
+  h2{color:var(--navy); font-size:15pt; margin:16pt 0 9pt; padding-bottom:5pt; border-bottom:1.6px solid var(--orange); page-break-after:avoid}
+
+  /* ---------- Flow cards (3–4 steps) ---------- */
+  .flow{display:flex; align-items:center; gap:6pt; margin:10pt 0 10pt}
+  .flow .card{flex:1; border:1px solid #d9dcea; border-radius:6px; padding:8pt 9pt; min-height:66pt}
+  .flow .card b{display:block; color:var(--navy); font-size:10.5pt; margin-bottom:2pt}
+  .flow .card span{font-size:8.5pt; color:var(--muted); line-height:1.35}
+  .flow .to{color:var(--orange); font-size:13pt}
+
+  /* ---------- Callouts ---------- */
+  .note{border-left:3px solid var(--orange); background:var(--tint); border-radius:0 5px 5px 0; padding:8pt 12pt; margin:10pt 0 12pt; font-size:9.5pt; page-break-inside:avoid}
+  .note .lbl{font-weight:700; text-transform:uppercase; font-size:8.5pt; letter-spacing:.3pt; margin-right:4pt}
+  .note.start .lbl{color:var(--warn-ink)}
+  .note.tip{border-color:var(--tip)}              .note.tip .lbl{color:var(--tip)}
+  .note.good{border-color:var(--good); background:var(--good-bg)} .note.good .lbl{color:var(--good)}
+  .note.imp{border-color:var(--navy)}             .note.imp .lbl{color:var(--navy)}
+  .note.warn{border-color:var(--orange); background:var(--warn-bg)} .note.warn .lbl{color:var(--warn-ink)}
+
+  /* ---------- Part banner ---------- */
+  .part{background:var(--navy); color:#fff; text-align:center; border-radius:6px; padding:12pt; margin:20pt 0 10pt; font-size:15pt; font-weight:700; letter-spacing:1.5pt; text-transform:uppercase; page-break-after:avoid}
+  .part-intro{color:var(--muted); margin-bottom:12pt}
+
+  /* ---------- Numbered step ---------- */
+  h3.step{display:flex; align-items:center; gap:9pt; color:var(--navy); font-size:13pt; margin:16pt 0 7pt; page-break-after:avoid}
+  h3.step .n{display:inline-block; min-width:17pt; height:17pt; line-height:17pt; text-align:center; background:var(--orange); color:#fff; border-radius:3px; font-family:"Liberation Sans",Arial,sans-serif; font-size:10pt; font-weight:700}
+
+  /* ---------- Field bullets (orange square markers) ---------- */
+  ul.f{list-style:none; padding:0; margin:4pt 0 8pt}
+  ul.f li{position:relative; padding-left:13pt; margin-bottom:4pt}
+  ul.f li::before{content:""; position:absolute; left:1pt; top:6.5pt; width:4pt; height:4pt; background:var(--orange)}
+  ul.f li b:first-child{color:var(--navy)}
+
+  /* ---------- Tables ---------- */
+  table{width:100%; border-collapse:collapse; margin:8pt 0 12pt; font-size:9pt}
+  thead{display:table-header-group}
+  th{background:var(--navy); color:#fff; text-align:left; padding:6pt 8pt; font-weight:700}
+  th+th{border-left:1px solid #34408a}
+  td{padding:6pt 8pt; border-bottom:1px solid var(--line); vertical-align:top}
+  tr:nth-child(even) td{background:var(--alt)}
+  td:first-child{color:var(--navy); font-weight:700}
+  tr{page-break-inside:avoid}
+
+  /* ---------- Quick tips ---------- */
+  ul.tips{margin:4pt 0 12pt; padding-left:14pt}
+  ul.tips li{margin-bottom:3pt}
+
+  /* ---------- Screenshots + glossary (added for 369 Mart manuals) ---------- */
+  figure.shot{margin:8pt 0 12pt; page-break-inside:avoid; break-inside:avoid; text-align:center}
+  figure.shot img{max-width:100%; max-height:118mm; border:1px solid var(--line); border-radius:6px; box-shadow:0 1px 4px rgba(30,42,120,.12)}
+  figure.shot.phone img{max-width:62mm}
+  figure.shot figcaption{font-size:8.5pt; color:var(--muted); margin-top:4pt; text-align:left}
+  table.gloss td:first-child{width:28%}
+  h2, h3.step, .part{break-after:avoid}
+</style>
+</head>
+<body>
+<div class="topbar"></div>
+<div class="cover">
+  <h1>369 Mart Pages</h1>
+  <div class="sub">The Shop Footer and Its Pages</div>
+  <div class="meta">User Manual &nbsp;|&nbsp; 369ai</div>
+</div>
+
+<h2>What this does</h2>
+<p><span class="k">369 Mart Pages</span> looks after the strip at the foot of every shop page — the <span class="k">footer</span> — and the pages it links to: Terms of use, Privacy policy, FAQs, Contact us, About 369 Mart and the rest. You write each <span class="k">info page</span> in the backend with a simple editor, choose which footer column it sits under, and see the real shop page beside your text.</p>
+<p>The <span class="k">Footer</span> settings hold the rest of the strip: the line under the logo, the app download buttons, the <b>“We accept”</b> payment chips and the categories in the Shop column. Everything here is <b>public</b> — it is what any shopper reads on the website — so write it as your shop's own word.</p>
+<div class="flow">
+  <div class="card"><b>1. Write the page</b><span>Title, column, type and text in Info pages</span></div><span class="to">→</span>
+  <div class="card"><b>2. Save</b><span>The real shop page appears on the right</span></div><span class="to">→</span>
+  <div class="card"><b>3. Footer link</b><span>The page's title shows under its column</span></div><span class="to">→</span>
+  <div class="card"><b>4. Shoppers read it</b><span>On the website, from any page's footer</span></div>
+</div>
+<div class="note start"><span class="lbl">Before you start:</span> The module arrives with <b>12 sample pages</b> already filled in. Their wording is placeholder text. You need the <b>Manager</b> or <b>Owner</b> role to change pages and the footer; other staff can only look.</div>
+
+<h2>Words you'll see</h2>
+<table class="gloss"><thead><tr><th>Word</th><th>What it means</th></tr></thead><tbody>
+<tr><td>Footer</td><td>The strip at the bottom of every shop page, with links, app buttons and payment chips.</td></tr>
+<tr><td>Info page</td><td>One footer page, such as Terms of use or FAQs, kept in the backend.</td></tr>
+<tr><td>Footer column</td><td>The heading a page's link sits under: <b>Help</b>, <b>Company</b> or <b>Policies</b>.</td></tr>
+<tr><td>Page type</td><td>What the page holds besides text: plain text, questions and answers, contact details or delivery areas.</td></tr>
+<tr><td>Address</td><td>The short name at the end of the page's web address, e.g. <b>terms</b> for the Terms page.</td></tr>
+<tr><td>Chips</td><td>Small rounded labels, here one per payment method under “We accept”.</td></tr>
+</tbody></table>
+
+<h2>How the manual is arranged</h2>
+<p><b>Part 1 – Setting Up</b> covers the footer strip and the categories it lists, done once. <b>Part 2 – Everyday Use</b> is writing and changing the info pages, which you will come back to whenever a policy or a phone number changes. <b>Part 3 – Keeping It Secure &amp; In Order</b> covers who can change what, and what is public. Reference tables, quick tips and fixes follow.</p>
+
+<div class="part">Part 1 — Setting Up</div>
+<p class="part-intro">Done once by a Manager or the Owner, from the 369 Mart menu.</p>
+
+<h3 class="step"><span class="n">1</span>Where everything lives</h3>
+<p>Open <b>369 Mart</b> from the main menu. This module adds two screens under <b>Page building</b>, plus one switch in the category list:</p>
+<ul class="f">
+  <li><b>Page building <span class="arr">→</span> Info pages</b> — every page the footer links to, one row each.</li>
+  <li><b>Page building <span class="arr">→</span> Footer</b> — the footer strip: tagline, app links, Shop column, payment chips.</li>
+  <li><b>Advanced <span class="arr">→</span> Catalog (all views)</b>, list view — the <b>In footer</b> switch on each category (Owner only).</li>
+</ul>
+
+<h3 class="step"><span class="n">2</span>Set up the footer strip</h3>
+<p>Open <b>Page building <span class="arr">→</span> Footer</b>. It is one form for the whole shop, in three blocks.</p>
+<p><b>Brand</b></p>
+<ul class="f">
+  <li><b>Line under the logo</b> — a short tagline. Default: <i>Computer parts and gear. In minutes, or in days.</i></li>
+  <li><b>Android app link</b> — your Play Store address. Leave it empty and the Android button is hidden.</li>
+  <li><b>iPhone app link</b> — your App Store address. Leave it empty and the iPhone button is hidden.</li>
+</ul>
+<p><b>Shop column</b></p>
+<ul class="f">
+  <li><b>Categories in the footer</b> — how many categories the Shop column lists when you have not picked any yourself. Default: <b>5</b>.</li>
+</ul>
+<p><b>We accept</b> — one payment method per line; each line becomes a chip at the foot of every page. The default list is UPI, Credit &amp; debit cards, Net banking, Cash on delivery and 369 Wallet. Clear the box and the whole row is hidden.</p>
+<div class="note tip"><span class="lbl">Tip:</span> List only the payment methods you really take. If you switch off cash on delivery elsewhere, remove <b>Cash on delivery</b> here too — this box does not update itself.</div>
+
+<h3 class="step"><span class="n">3</span>Choose the categories in the Shop column</h3>
+<p>The Shop column lists product categories. There are two ways to fill it:</p>
+<ul class="f">
+  <li><b>Automatic</b> (nothing picked) — the first main categories, in your catalogue's order, up to <b>Categories in the footer</b>.</li>
+  <li><b>Your own pick</b> — open <b>Advanced <span class="arr">→</span> Catalog (all views)</b>, switch to the list view and turn on <b>In footer</b> for each category you want. Drag the rows to set their order. As soon as one category is ticked, only ticked ones are listed and the number above is ignored.</li>
+</ul>
+<p>Either way, a category only appears if its <b>In the app</b> switch is on and it has an <b>App address</b>. When the shop has more main categories than the footer lists, an “All categories” link is added.</p>
+<div class="note warn"><span class="lbl">Watch out:</span> The hint on the Footer form points to “369 Mart &gt; Catalogue &gt; Categories”. The <b>In footer</b> switch is actually in <b>Advanced <span class="arr">→</span> Catalog (all views)</b>, in the list view, which only the Owner can open.</div>
+
+<div class="part">Part 2 — Everyday Use</div>
+<p class="part-intro">Writing and updating the footer pages. Do this whenever a policy, phone number or delivery promise changes.</p>
+
+<h3 class="step"><span class="n">1</span>The Info pages list</h3>
+<p>Open <b>Page building <span class="arr">→</span> Info pages</b>. Each row shows the <b>Title</b>, <b>Footer column</b>, <b>Page type</b>, <b>Address</b> and an <b>Active</b> switch. Switched-off pages stay in the list so you can turn them back on. Drag rows by the handle to set the order of links inside a column.</p>
+<p>These 12 sample pages are there from the start:</p>
+<table><thead><tr><th style="width:18%">Column</th><th>Pages (address)</th></tr></thead><tbody>
+<tr><td>Help</td><td>FAQs (faqs) · Cancellations &amp; returns (cancellation-policy) · Delivery areas (delivery-areas) · Contact us (contact)</td></tr>
+<tr><td>Company</td><td>About 369 Mart (about) · Careers (careers) · Sell on 369 Mart (sell) · Press (press)</td></tr>
+<tr><td>Policies</td><td>Terms of use (terms) · Privacy policy (privacy) · Shipping policy (shipping-policy) · Grievance redressal (grievance)</td></tr>
+</tbody></table>
+<div class="note warn"><span class="lbl">Watch out:</span> All of the sample wording is placeholder text, and some of it may not match how your shop actually works — for example, how refunds are paid, how fast you reply to a complaint, or which buttons the app has. <b>Read and correct every page before going live.</b> <b>Terms of use</b> and <b>Privacy policy</b> also open with a bold reminder line starting “Edit this page …”; shoppers see that line until you delete it.</div>
+
+<h3 class="step"><span class="n">2</span>Write or change a page</h3>
+<p>Open a page, or press <b>New</b>. The form is split in two: what you edit on the left, the real shop page on the right.</p>
+<ul class="f">
+  <li><b>Title</b> — the page heading and the footer link's wording, e.g. <i>Terms of use</i>. Required.</li>
+  <li><b>Summary</b> — one line under the title, e.g. <i>How we look after your data</i>. Optional.</li>
+  <li><b>Footer column</b> — <b>Help</b> (default), <b>Company</b>, <b>Policies</b>, or <b>Not in the footer</b>.</li>
+  <li><b>Page type</b> — <b>A page of text</b> (default), <b>Questions and answers</b>, <b>Contact details</b> or <b>Delivery areas</b>. See Step 3.</li>
+  <li><b>Address</b> — the end of the page's web address on the shop, e.g. <b>terms</b> gives …/page/terms. Filled in from the title for a new page (lower case, words joined by hyphens); you can change it. Required, and no two pages may share one.</li>
+  <li><b>Active</b> — off removes the page and its footer link from the shop.</li>
+  <li><b>Text</b> — the body of the page. Select words to get the toolbar: bold, italic, links, bullets, numbers. You can paste from anywhere.</li>
+</ul>
+<p>Press <b>Save</b>. The right-hand side then shows the page as shoppers see it. Before the first save it says <i>“Save the page to see it here as shoppers do.”</i></p>
+<div class="note good"><span class="lbl">Good to know:</span> Colours, fonts and other styling pasted in from Word or a website are dropped on the shop; headings, bullets, bold and links are kept. The preview shows the <b>saved</b> page, so save again to see each change.</div>
+<div class="note imp"><span class="lbl">Important:</span> Changing the <b>Address</b> of a live page breaks any link to the old address that you have shared, printed or put in a message. Change it only before going live.</div>
+
+<h3 class="step"><span class="n">3</span>Page types</h3>
+<p>Every type shows your <b>Text</b> first. Three types add something under it:</p>
+<ul class="f">
+  <li><b>Questions and answers</b> — a <b>Questions and answers</b> table appears on the form. Add a row per <b>Question</b> with its <b>Answer</b> (the answer can have bold, links and bullets). Drag rows to reorder. The sample <b>FAQs</b> page has five.</li>
+  <li><b>Contact details</b> — shows the shop's phone, email and address under the text. These come from <b>Settings <span class="arr">→</span> Companies</b>, not from this form. The sample <b>Contact us</b> and <b>Grievance redressal</b> pages use this type.</li>
+  <li><b>Delivery areas</b> — lists the pincodes the shop delivers to, in pincode order, from the delivery settings, with each area's name, whether Quick and Express run there, and the delivery time.</li>
+</ul>
+<div class="note tip"><span class="lbl">Tip:</span> The sample <b>Grievance redressal</b> page tells shoppers to write to the grievance officer “at the email below”, which is the shop's main email from Settings. If complaints go to a different person, put their name and email in the page's text.</div>
+
+<h3 class="step"><span class="n">4</span>What the customer sees</h3>
+<p>At the foot of every shop page, the footer shows the line under the logo, the app buttons you filled in, the Shop column, then <b>Help</b>, <b>Company</b> and <b>Policies</b>, each listing its active pages in your order. A column with no pages is left out. The <b>We accept</b> chips sit along the bottom. Pages set to <b>Not in the footer</b> have no link but still open at their address, so you can link to them from elsewhere.</p>
+<p>Changes can take about <b>a minute</b> to reach shoppers after you save.</p>
+
+<div class="part">Part 3 — Keeping It Secure &amp; In Order</div>
+
+<h3 class="step"><span class="n">1</span>Who can do what</h3>
+<table style="break-inside:avoid; page-break-inside:avoid"><thead><tr><th style="width:30%">Role</th><th>What they can do</th></tr></thead><tbody>
+<tr><td>Owner</td><td>Everything: create, change and delete info pages and questions; edit the Footer; tick <b>In footer</b> on categories.</td></tr>
+<tr><td>Manager</td><td>Create, change and delete info pages and questions; edit the Footer. Cannot reach the <b>In footer</b> switch.</td></tr>
+<tr><td>Packer, Accountant, Rider</td><td>Can open and read the pages and the Footer form, but cannot change anything.</td></tr>
+</tbody></table>
+<p>The Manager's rights come with the <b>Website designer</b> right; any other user given Website designer can edit pages too. The Owner's come with <b>Administrator (Settings)</b>.</p>
+
+<h3 class="step"><span class="n">2</span>Keeping track of changes</h3>
+<p>Pages have no change history or notes log. Before a big rewrite of <b>Terms of use</b> or <b>Privacy policy</b>, copy the old text somewhere safe. To take a page down for a while, switch <b>Active</b> off instead of deleting it — the text stays ready to switch back on.</p>
+<div class="note good"><span class="lbl">Good to know:</span> Updating the module never puts the sample text back over your own wording.</div>
+
+<h3 class="step"><span class="n">3</span>Privacy</h3>
+<p>Info pages and the footer can be read by <b>anyone</b>, signed in or not. Never put private details — a staff member's personal number, an internal note — in a page's text. <b>Contact details</b> pages publish the company phone, email and address from Settings, so check those are the ones you want shoppers to use.</p>
+
+<h2>Status reference — info pages</h2>
+<table><thead><tr><th style="width:24%">State</th><th>Meaning</th><th style="width:30%">How to change it</th></tr></thead><tbody>
+<tr><td>Live in the footer</td><td><b>Active</b> on, column Help, Company or Policies. Linked from every page.</td><td>—</td></tr>
+<tr><td>Live, no link</td><td><b>Active</b> on, column <b>Not in the footer</b>. Opens only at its address.</td><td>Pick a column to add the link.</td></tr>
+<tr><td>Off</td><td><b>Active</b> off. Gone from the shop, link and all; kept in the list.</td><td>Turn <b>Active</b> back on.</td></tr>
+</tbody></table>
+
+<h2>Quick tips</h2>
+<ul class="tips" style="break-inside:avoid; page-break-inside:avoid">
+  <li>Read every sample page before going live; the wording is placeholder text.</li>
+  <li>A footer column with no active pages is left out of the footer.</li>
+  <li>Save to refresh the preview on the right; it shows the saved page.</li>
+  <li>Switch a page off rather than deleting it if you may need it again.</li>
+  <li>Set the Address once and leave it; shared links depend on it.</li>
+  <li>Empty app link = no app button; empty “We accept” = no payment row.</li>
+  <li>Tick <b>In footer</b> on categories to choose the Shop column yourself.</li>
+  <li>Keep the company phone and email in Settings current; Contact pages show them.</li>
+</ul>
+
+<h2>If something goes wrong</h2>
+<table><thead><tr><th style="width:36%">What you see</th><th>What to do</th></tr></thead><tbody>
+<tr><td>“Another page already uses this address.”</td><td>Two pages can't share an <b>Address</b>. Pick a different one on the page form.</td></tr>
+<tr><td>A page's link is missing from the footer</td><td>On the page form, check <b>Active</b> is on and <b>Footer column</b> is not <b>Not in the footer</b>. Wait a minute and reload the shop.</td></tr>
+<tr><td>The right side says “Save the page to see it here as shoppers do.”</td><td>The page is new and not saved yet. Press <b>Save</b>.</td></tr>
+<tr><td>The preview doesn't show my latest edit</td><td>It shows the saved page. Press <b>Save</b>.</td></tr>
+<tr><td>The Questions and answers table isn't on the form</td><td>Set <b>Page type</b> to <b>Questions and answers</b>.</td></tr>
+<tr><td>Contact page shows an old phone or email</td><td>Update the company in <b>Settings <span class="arr">→</span> Companies</b>; the page reads them from there.</td></tr>
+<tr><td>Delivery areas page is empty or out of date</td><td>The list comes from the shop's delivery settings. Add or fix the areas there.</td></tr>
+<tr><td>Shop column shows the wrong categories</td><td>If any category has <b>In footer</b> on, only those show. Otherwise check <b>Categories in the footer</b> on the Footer form, and that each category's <b>In the app</b> is on.</td></tr>
+<tr><td>Colours or fonts from my document are gone</td><td>The shop draws pages in its own look. Use headings, bold and bullets instead.</td></tr>
+<tr><td>You can open a page or the Footer but can't change it</td><td>Your role can only read. Ask a Manager or the Owner.</td></tr>
+</tbody></table>
+
+</body>
+</html>

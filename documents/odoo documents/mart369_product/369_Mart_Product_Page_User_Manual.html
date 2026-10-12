@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>369 Mart Product Page — User Manual</title>
+<style>
+  :root{
+    --navy:#1e2a78; --orange:#f08a24; --ink:#1f2230; --muted:#6b6f80;
+    --line:#e6e8f0; --alt:#f2f4fb; --tint:#eef2fc;
+    --tip:#2e6fb0; --good:#2e8b57; --good-bg:#e7f6ea;
+    --warn-bg:#fff3da; --warn-ink:#c0701a;
+  }
+  @page{
+    size:A4; margin:22mm 20mm 20mm 20mm;
+    @bottom-left{content:"369ai · 369 Mart Product Page"; font:8.5pt "Liberation Serif",Georgia,serif; color:#6b6f80;}
+    @bottom-right{content:"Page " counter(page); font:8.5pt "Liberation Serif",Georgia,serif; color:#6b6f80;}
+  }
+  @page:first{ margin-top:14mm; }
+  *{box-sizing:border-box}
+  html{background:#fff}
+  body{margin:0; font-family:"Liberation Serif","Times New Roman",Georgia,serif; font-size:10.5pt; line-height:1.5; color:var(--ink); background:#fff}
+  @media screen{ body{max-width:794px; margin:24px auto; padding:0 16px} }
+  p{margin:0 0 7pt}
+  b,strong{font-weight:700}
+  .k{color:var(--navy); font-weight:700}          /* navy key term */
+  code{font-family:"DejaVu Sans Mono",monospace; font-size:8.5pt; background:#f1f2f6; padding:1px 4px; border-radius:3px}
+  .arr{color:var(--navy); font-weight:700}
+
+  /* ---------- Cover ---------- */
+  .topbar{height:7px; background:var(--navy); border-bottom:3px solid var(--orange); margin:0 -8mm 10pt}
+  .cover{background:var(--navy); color:#fff; text-align:center; border-radius:9px; padding:26pt 20pt 22pt; margin-bottom:18pt}
+  .cover h1{margin:0; font-size:31pt; letter-spacing:1.5pt; font-weight:700; text-transform:uppercase}
+  .cover .sub{color:var(--orange); font-size:15pt; font-weight:700; margin:12pt 0 10pt}
+  .cover .meta{font-size:10pt; color:#d5d9ee}
+
+  /* ---------- H2 section with orange rule ---------- */
+  h2{color:var(--navy); font-size:15pt; margin:16pt 0 9pt; padding-bottom:5pt; border-bottom:1.6px solid var(--orange); page-break-after:avoid}
+
+  /* ---------- Flow cards (3–4 steps) ---------- */
+  .flow{display:flex; align-items:center; gap:6pt; margin:10pt 0 10pt}
+  .flow .card{flex:1; border:1px solid #d9dcea; border-radius:6px; padding:8pt 9pt; min-height:66pt}
+  .flow .card b{display:block; color:var(--navy); font-size:10.5pt; margin-bottom:2pt}
+  .flow .card span{font-size:8.5pt; color:var(--muted); line-height:1.35}
+  .flow .to{color:var(--orange); font-size:13pt}
+
+  /* ---------- Callouts ---------- */
+  .note{border-left:3px solid var(--orange); background:var(--tint); border-radius:0 5px 5px 0; padding:8pt 12pt; margin:10pt 0 12pt; font-size:9.5pt; page-break-inside:avoid}
+  .note .lbl{font-weight:700; text-transform:uppercase; font-size:8.5pt; letter-spacing:.3pt; margin-right:4pt}
+  .note.start .lbl{color:var(--warn-ink)}
+  .note.tip{border-color:var(--tip)}              .note.tip .lbl{color:var(--tip)}
+  .note.good{border-color:var(--good); background:var(--good-bg)} .note.good .lbl{color:var(--good)}
+  .note.imp{border-color:var(--navy)}             .note.imp .lbl{color:var(--navy)}
+  .note.warn{border-color:var(--orange); background:var(--warn-bg)} .note.warn .lbl{color:var(--warn-ink)}
+
+  /* ---------- Part banner ---------- */
+  .part{background:var(--navy); color:#fff; text-align:center; border-radius:6px; padding:12pt; margin:20pt 0 10pt; font-size:15pt; font-weight:700; letter-spacing:1.5pt; text-transform:uppercase; page-break-after:avoid}
+  .part-intro{color:var(--muted); margin-bottom:12pt}
+
+  /* ---------- Numbered step ---------- */
+  h3.step{display:flex; align-items:center; gap:9pt; color:var(--navy); font-size:13pt; margin:16pt 0 7pt; page-break-after:avoid}
+  h3.step .n{display:inline-block; min-width:17pt; height:17pt; line-height:17pt; text-align:center; background:var(--orange); color:#fff; border-radius:3px; font-family:"Liberation Sans",Arial,sans-serif; font-size:10pt; font-weight:700}
+
+  /* ---------- Field bullets (orange square markers) ---------- */
+  ul.f{list-style:none; padding:0; margin:4pt 0 8pt}
+  ul.f li{position:relative; padding-left:13pt; margin-bottom:4pt}
+  ul.f li::before{content:""; position:absolute; left:1pt; top:6.5pt; width:4pt; height:4pt; background:var(--orange)}
+  ul.f li b:first-child{color:var(--navy)}
+
+  /* ---------- Tables ---------- */
+  table{width:100%; border-collapse:collapse; margin:8pt 0 12pt; font-size:9pt}
+  thead{display:table-header-group}
+  th{background:var(--navy); color:#fff; text-align:left; padding:6pt 8pt; font-weight:700}
+  th+th{border-left:1px solid #34408a}
+  td{padding:6pt 8pt; border-bottom:1px solid var(--line); vertical-align:top}
+  tr:nth-child(even) td{background:var(--alt)}
+  td:first-child{color:var(--navy); font-weight:700}
+  tr{page-break-inside:avoid}
+
+  /* ---------- Quick tips ---------- */
+  ul.tips{margin:4pt 0 12pt; padding-left:14pt}
+  ul.tips li{margin-bottom:3pt}
+
+  /* ---------- Screenshots + glossary (added for 369 Mart manuals) ---------- */
+  figure.shot{margin:8pt 0 12pt; page-break-inside:avoid; break-inside:avoid; text-align:center}
+  figure.shot img{max-width:100%; max-height:118mm; border:1px solid var(--line); border-radius:6px; box-shadow:0 1px 4px rgba(30,42,120,.12)}
+  figure.shot.phone img{max-width:62mm}
+  figure.shot figcaption{font-size:8.5pt; color:var(--muted); margin-top:4pt; text-align:left}
+  table.gloss td:first-child{width:28%}
+  h2, h3.step, .part{break-after:avoid}
+</style>
+</head>
+<body>
+<div class="topbar"></div>
+<div class="cover">
+  <h1>369 Mart Product Page</h1>
+  <div class="sub">What Every Product Page Shows — Shop-Wide or One by One</div>
+  <div class="meta">User Manual &nbsp;|&nbsp; 369ai</div>
+</div>
+
+<h2>What this does</h2>
+<p><span class="k">369 Mart Product Page</span> decides what a customer sees when they open a product in the shop app or on the website: the price box, the small promise badges under the price, the specifications, the description, ratings and reviews, and the rows of other products at the bottom. You switch each part on or off <span class="k">for the whole shop</span> once, and then let <span class="k">one product</span> differ only where it really needs to.</p>
+<p>It also gives staff the <b>Products</b> desk: a picture-led list of every product, a read-out of exactly what each product's page will show and <b>where each line comes from</b>, and an editor for the product's own details, photographs and choices (size, colour, RAM…).</p>
+<div class="flow">
+  <div class="card"><b>1. Whole shop</b><span>Switch each part of the page on or off for every product</span></div><span class="to">→</span>
+  <div class="card"><b>2. By category</b><span>Give a whole category its own wording, once</span></div><span class="to">→</span>
+  <div class="card"><b>3. One product</b><span>Always show, always hide, or own wording — only where needed</span></div><span class="to">→</span>
+  <div class="card"><b>4. The page</b><span>The shop shows the result to customers</span></div>
+</div>
+<div class="note start"><span class="lbl">Before you start:</span> The shop-wide choices are made once by a <b>Manager</b> or the <b>Owner</b>. You need some <b>published products</b> (products switched on for the shop) — the editor draws a real product, and shows a message instead if there is none yet. Everyday staff only need the <b>Products</b> desk.</div>
+
+<h2>Words you'll see</h2>
+<table class="gloss"><thead><tr><th>Word</th><th>What it means</th></tr></thead><tbody>
+<tr><td>Product page</td><td>The screen a customer sees after tapping a product in the shop.</td></tr>
+<tr><td>Section</td><td>One band of that page, such as <b>Ratings and reviews</b>. Its switch turns the whole band off.</td></tr>
+<tr><td>Field</td><td>One thing inside a section, such as <b>Average rating</b>. Each has its own switch.</td></tr>
+<tr><td>Whole shop</td><td>The default every product follows.</td></tr>
+<tr><td>One product</td><td>A single product's own choice, which can differ from the whole shop.</td></tr>
+<tr><td>Follow the default</td><td>The product does whatever the whole-shop switch says — now and after any later change.</td></tr>
+<tr><td>Trust badge</td><td>A small promise under the price: returns, warranty, cash on delivery, secure payment.</td></tr>
+</tbody></table>
+
+<h2>How the manual is arranged</h2>
+<p><b>Part 1 – Setting Up</b> is done once, from <b>369 Mart <span class="arr">→</span> Store <span class="arr">→</span> Product Page</b>: what every product page shows and what it says. <b>Part 2 – Everyday Use</b> covers making one product differ, and the <b>Products</b> desk where staff read and edit products. <b>Part 3 – Keeping It Secure &amp; In Order</b> covers who may change what, how to find and undo exceptions, and reviews.</p>
+
+<div class="part">Part 1 — Setting Up</div>
+<p class="part-intro">Done by a Manager or the Owner. Once the whole-shop page looks right, most products never need touching again.</p>
+
+<h3 class="step"><span class="n">1</span>Where everything lives</h3>
+<p>Open <b>369 Mart</b> from the main menu. This module adds:</p>
+<ul class="f">
+  <li><b>Store <span class="arr">→</span> Product Page</b> — the editor: the real product page, wide, with a switch on every part. This is the main screen.</li>
+  <li><b>Store <span class="arr">→</span> Product pages</b> — the <b>Products</b> desk: browse products, read what each page shows, and edit a product's own details.</li>
+  <li><b>Advanced <span class="arr">→</span> Product Page (all settings)</b> — the same page drawn in a phone frame, with every field of a section listed at once.</li>
+  <li><b>Page building <span class="arr">→</span> Product Page Fields</b> — the full list of fields, grouped by section.</li>
+  <li><b>Page building <span class="arr">→</span> Product Page Sections</b> — the list of sections.</li>
+  <li><b>Page building <span class="arr">→</span> Wording by Category</b> — words set once for a whole category.</li>
+</ul>
+<p>It also adds a <b>369 Mart</b> part to each product's own form (see Part 2, step 8) and a <b>Usual product details</b> box to each product category (step 6 below).</p>
+
+<h3 class="step"><span class="n">2</span>Decide what every product shows</h3>
+<p>Open <b>Store <span class="arr">→</span> Product Page</b>. It opens on <b>Editing: Whole shop</b>. The left side is the page as shoppers see it, drawn from a real published product; the right side is the panel <b>The whole page</b>, listing each section with a count such as <b>2 of 2 shown</b>.</p>
+<ul class="f">
+  <li><b>Click a section</b> on the page (or in the list) to open it. The <b>Shown / Hidden</b> switch at the top turns the whole section off for every product.</li>
+  <li><b>The eye</b> on the top-right of each band does the same thing straight from the page — it takes the section out of the app <b>without deleting anything</b>.</li>
+  <li><b>Click a field</b> to open it. <b>Shown on every product</b> is that field's whole-shop switch. In the section list, the eye beside a field does the same.</li>
+  <li><b>Show what is switched off (N)</b> — tick it to see the parts you have hidden, greyed out, so you can switch them back on.</li>
+</ul>
+<p>Every change saves at once; the chip on the toolbar reads <b>Saving…</b>, then <b>Saved</b>. There is no Save button.</p>
+<figure class="shot"><img src="screenshots/01-editor-whole-shop.png" alt="The product page editor in Whole shop mode" style="max-height:80mm"><figcaption>Figure 1 — The editor on <b>Whole shop</b>: the product page on the left with a tag and an eye on each band, and <b>The whole page</b> panel on the right listing each section with how many of its fields are shown. <b>More settings</b> is top right.</figcaption></figure>
+<div class="note good"><span class="lbl">Good to know:</span> The pictures in this manual were taken on an earlier version and show a few sections your screen no longer has (such as Key features or Return policy). Today the page has seven sections — see <b>Sections and fields</b> near the end.</div>
+<div class="note imp"><span class="lbl">Important:</span> A section switch beats everything. With a section off, none of its fields show on any product — even fields set to <b>Always show</b> on one product.</div>
+
+<h3 class="step"><span class="n">3</span>Set the shop's wording</h3>
+<p>Some fields print words you type rather than something worked out from the product. Open the field on <b>Whole shop</b> and fill in <b>Default wording</b>. The fields that work this way, with their starting words:</p>
+<ul class="f">
+  <li><b>Badge: returns</b> — <i>7-day replacement</i>.</li>
+  <li><b>Badge: warranty</b> — <i>Warranty as listed</i>. A product whose <b>Product details</b> has a <b>Warranty</b> line (for example <i>Warranty: 1 year</i>) shows that instead.</li>
+  <li><b>Badge: cash on delivery</b> — <i>Cash on delivery</i>.</li>
+  <li><b>Badge: secure payment</b> — <i>Secure payment</i>.</li>
+  <li><b>Be-the-first-to-review line</b> — <i>Be the first to review this product</i>, shown when a product has no reviews yet.</li>
+</ul>
+<p>Other fields say where their value comes from instead: <b>Comes from the product's own … field</b> (taken from the product, such as its price) or <b>Worked out by the app</b> (such as the average rating).</p>
+<div class="note tip"><span class="lbl">Tip:</span> Empty wording hides that badge. To drop the cash-on-delivery badge for the whole shop, either clear its words or switch the field off.</div>
+
+<h3 class="step"><span class="n">4</span>Wording for a whole category</h3>
+<p>When a group of products needs different words — longer warranty on laptops, no cash on delivery for one category — open <b>Page building <span class="arr">→</span> Wording by Category</b> and add a line:</p>
+<ul class="f">
+  <li><b>Category</b> — the shop category (the aisle customers browse).</li>
+  <li><b>Field</b> — which field the words are for. <b>Section</b> fills itself in.</li>
+  <li><b>Value for this category</b> — the words every product in that category uses, unless the product has its own.</li>
+</ul>
+<p>Each field can have one line per category. If a product sits in several categories, the most specific one wins — a sub-category beats its parent.</p>
+<div class="note warn"><span class="lbl">Watch out:</span> A line left with an empty value still counts. It blanks that field for the whole category (an empty badge is hidden). To go back to the shop's words, <b>delete the line</b> instead of clearing it.</div>
+<p>The value a customer finally sees is picked in this order: <b>the product's own words</b>, then <b>its category's</b>, then <b>the shop default</b>.</p>
+
+<h3 class="step"><span class="n">5</span>More settings: every field at once</h3>
+<p>Press <b>More settings</b> on the editor (or open <b>Advanced <span class="arr">→</span> Product Page (all settings)</b>). The same page appears in a phone frame. <b>Click a band on the phone</b> to list every field in it with its switch; the same <b>Whole shop</b> / <b>One product</b> choice sits in the top bar, and <b>The page</b> takes you back. Greyed parts are hidden from customers.</p>
+<figure class="shot"><img src="screenshots/02-all-settings-phone.png" alt="All settings screen with the page in a phone frame" style="max-height:72mm"><figcaption>Figure 2 — <b>Product Page (all settings)</b>: the page in a phone frame on the left, and <b>Click a band on the phone</b> on the right. The top bar shows <b>The page</b>, <b>Whole shop</b> / <b>One product</b> and the <b>Saved</b> chip.</figcaption></figure>
+<p>For plain lists, use <b>Page building</b>:</p>
+<ul class="f">
+  <li><b>Product Page Sections</b> — each section with <b>What it is</b>, <b>Fields shown</b> and a <b>Show in the app</b> switch. Open one to see and switch its fields.</li>
+  <li><b>Product Page Fields</b> — every field, grouped by section, with <b>Value comes from</b>, <b>Default</b>, <b>Products differing</b> and <b>Show in the app</b>. Filters: <b>Shown</b>, <b>Hidden</b> and <b>Some products differ</b>. A field's form also has <b>Can differ per product</b> (off means a product can be hidden but never given its own words) and a <b>Different for some categories</b> table.</li>
+</ul>
+<div class="note warn"><span class="lbl">Watch out:</span> Leave each field's and section's <b>Key</b> alone. The shop finds the field by it; changing it breaks that part of the page.</div>
+
+<h3 class="step"><span class="n">6</span>The usual product details for a category</h3>
+<p>Open a product category from <b>Inventory <span class="arr">→</span> Configuration <span class="arr">→</span> Product Categories</b>. In its <b>369 Mart</b> group, fill <b>Usual product details</b> with one label per line — for example <i>Processor</i>, <i>RAM</i>, <i>Storage</i>. On a product of that category, the editor's <b>Add the usual details for this category</b> button then adds those labels, ready to fill.</p>
+<p>Left empty, a built-in list is used, chosen from words in the category's name (laptop, printer, phone, router, headphone and so on). A category matching none of them gets <i>Brand, Model Name, Colour, Material, Warranty</i>.</p>
+
+<div class="part">Part 2 — Everyday Use</div>
+<p class="part-intro">For anyone who looks after products: making one product differ, and the Products desk.</p>
+
+<h3 class="step"><span class="n">1</span>Make one product differ</h3>
+<p>On <b>Store <span class="arr">→</span> Product Page</b>, press <b>One product</b>. The shop opens to browse: categories with counts on the left (plus <b>Uncategorised</b> for products filed nowhere), a <b>Find a product…</b> box that searches names and codes, and <b>Only ones already edited</b>. A tile showing <b>N changed</b> already differs in that many places. Tap a tile to open its page.</p>
+<figure class="shot"><img src="screenshots/03-one-product-picker.png" alt="Choosing one product by browsing categories" style="max-height:78mm"><figcaption>Figure 3 — <b>One product</b>: the category list with counts, the <b>Find a product…</b> box, <b>Only ones already edited</b>, and product tiles. The first tile is marked <b>1 changed</b>.</figcaption></figure>
+<p>Click a field and choose one of three:</p>
+<ul class="f">
+  <li><b>Follow the default</b> — do what the whole shop does. The hint shows whether that means <i>shown</i> or <i>hidden</i> right now.</li>
+  <li><b>Always show</b> — show it on this product even if the shop hides it.</li>
+  <li><b>Always hide</b> — hide it on this product even if the shop shows it.</li>
+</ul>
+<p><b>Wording just for this product</b> gives this product its own words (empty means it uses the shop's or its category's). A changed field is marked <b>differs</b>; <b>Put this one back</b> returns it to the default and clears its own words, and <b>Put these back to the shop default</b> does a whole section. <b>All products</b> takes you back to the list.</p>
+<div class="note imp"><span class="lbl">Important:</span> Switching from <b>One product</b> back to <b>Whole shop</b> asks <b>Switch to the whole shop?</b> first — from there, every switch changes all products. Moving to another product after changing one asks <b>Move to a different product?</b> Your changes are already saved either way.</div>
+<div class="note good"><span class="lbl">Good to know:</span> Typing words for a product never forces the field on. If the field is hidden shop-wide and the product follows the default, it stays hidden until you choose <b>Always show</b>.</div>
+
+<h3 class="step"><span class="n">2</span>What the customer sees</h3>
+<p>Top to bottom, the page shows the photos, the name and price box with the trust badges, the chosen variant's specifications, the Sales Description, ratings and reviews, then rows of other products:</p>
+<ul class="f">
+  <li><b>Frequently bought together</b> — up to 2 of the product's accessory products, or picked from the same category if none are set, with a total and an <b>Add … to cart</b> button.</li>
+  <li><b>Similar products</b> — up to 12 alternative products set on the product, or from the same category.</li>
+  <li><b>Others you may also like</b> — up to 10 more from the same category.</li>
+</ul>
+<p>Products picked automatically are published ones from the same category, in stock first and cheapest first. A product in no category gets no automatic picks.</p>
+<figure class="shot"><img src="screenshots/04-below-the-page.png" alt="The lower part of the page in the editor" style="max-height:78mm"><figcaption>Figure 4 — Lower down the editor: the star bars of <b>Ratings and reviews</b>, <b>Frequently bought together</b> with <b>Total for 3 items</b> and <b>Add 3 to cart</b>, and the start of <b>Similar products</b>.</figcaption></figure>
+<div class="note good"><span class="lbl">Good to know:</span> Reviews are real. Only reviews customers actually submitted and rated, and that are published, are counted; the newest 20 are shown. A product with none shows the <b>Be-the-first-to-review line</b> instead of invented reviews.</div>
+
+<h3 class="step"><span class="n">3</span>The Products desk</h3>
+<p>Open <b>Store <span class="arr">→</span> Product pages</b>. The <b>Products</b> desk lists every product in the shop as cards or as a list (the two buttons top right; your choice is remembered). Use:</p>
+<ul class="f">
+  <li><b>Name or code</b> — search by name or item code.</li>
+  <li><b>Category chips</b> — <b>All categories</b>, each category, and <b>Uncategorised</b>. Tap a chip again to clear it; <b>Clear filters</b> clears everything.</li>
+  <li><b>New product</b> — start a new product (step 5).</li>
+</ul>
+<p>When the <b>369 Mart Catalog</b> module is installed, the desk also shows the tiles <b>Products</b>, <b>Stock value</b>, <b>Low stock</b> and <b>Out of stock</b> (tap one to filter), the tabs <b>All</b>, <b>Low</b>, <b>Out of stock</b> and <b>Hidden</b> (products not published), and a sort: <b>Name A-Z</b>, <b>Lowest stock</b>, <b>Best selling</b>, <b>Highest price</b>. The list view has the columns <b>Product</b>, <b>Category</b>, <b>Price</b>, <b>Sold / 7d</b>, <b>In stock</b> and <b>Live</b> (<i>Live</i> or <i>Hidden</i>).</p>
+<figure class="shot"><img src="screenshots/05-products-desk.png" alt="The Products desk with tiles, tabs and product cards" style="max-height:78mm"><figcaption>Figure 5 — The <b>Products</b> desk: the four tiles, the <b>All / Low / Out of stock / Hidden</b> tabs, search, sort, <b>New product</b>, a category list on the left and product cards.</figcaption></figure>
+
+<h3 class="step"><span class="n">4</span>Read what one product's page shows</h3>
+<p>Tap a product. The header gives its name, <b>N parts on its page</b> and its categories, and three buttons: <b>All views</b> (the product's full form in the backend), <b>Edit details</b> (step 5) and <b>Edit page</b> (opens the editor on this product, as in step 1).</p>
+<p>Below, the page is read out section by section: <b>Top of the page</b>, <b>Choices</b>, <b>Item specifications</b>, <b>Product description</b>, <b>Ratings and reviews</b> and <b>Below the page</b>. Each row gives the value it shows (<i>Nothing set</i> when empty) and where it comes from. A row the page leaves out — empty, or switched off — stays listed, greyed with a crossed-out eye, so you can tell "nothing to show" from "switched off".</p>
+<p>With the <b>369 Mart Catalog</b> module installed, the number strip appears above the sections; tapping <b>On hand</b>, <b>Forecast</b> or <b>Sold</b> opens the matching backend screen.</p>
+<figure class="shot"><img src="screenshots/06-product-read-view.png" alt="One product's page read out section by section" style="max-height:60mm"><figcaption>Figure 6 — One product on the desk: <b>All products</b>, <b>All views</b>, <b>Edit details</b> and <b>Edit page</b>; a strip of <b>On hand</b>, <b>Forecast</b>, <b>Sold, 30 days</b>, <b>Price</b>, <b>Cost</b> and <b>Margin</b>; then sections with <b>N of N shown</b> and, on the right of each row, where the value comes from.</figcaption></figure>
+<p>The words on the right of each row say where the value comes from:</p>
+<table style="break-inside:avoid"><thead><tr><th style="width:26%">Where it comes from</th><th>Meaning</th></tr></thead><tbody>
+<tr><td>this product</td><td>Words typed for this product only.</td></tr>
+<tr><td>its category</td><td>Words set under <b>Wording by Category</b>.</td></tr>
+<tr><td>the product record</td><td>Taken from the product itself — its name, price, photos, specs or description.</td></tr>
+<tr><td>the shop</td><td>The shop-wide default wording.</td></tr>
+</tbody></table>
+
+<h3 class="step"><span class="n">5</span>Add or edit a product</h3>
+<p>Press <b>New product</b>, or <b>Edit details</b> on a product. A bar stays at the top with <b>Back</b>, the product's name (or <i>Not saved yet</i>), <b>Unsaved changes</b> when you have typed something, <b>Cancel</b>, and <b>Create product</b> or <b>Save</b>. <b>Ctrl+S</b> also saves. Cancelling with changes asks <b>Discard your changes?</b> — <b>Discard</b> or <b>Keep editing</b>.</p>
+<figure class="shot"><img src="screenshots/07-new-product-editor.png" alt="A new product in the desk editor" style="max-height:78mm"><figcaption>Figure 7 — <b>New product</b>: a photograph area with <b>Add</b>, the <b>Basics</b> boxes (Name with a red star, Brand, Article ID, Categories, Price, MRP, Cost) and, on the right, <b>How shoppers see it</b> with grey sample text.</figcaption></figure>
+<ul class="f">
+  <li><b>Name</b> — required. Saving without it says <b>A product needs a name.</b></li>
+  <li><b>Category</b> — required: the product's accounting and stock category. Saving without it says <b>Choose a Category: every product needs one.</b></li>
+  <li><b>Categories</b> — the aisles customers browse. Pick from <b>Choose categories</b>, with <b>Find a category</b> to search. With none, it warns <i>Not in any category yet - shoppers will only find it by searching.</i></li>
+  <li><b>Barcode</b> — digits only, up to 14.</li>
+</ul>
+<figure class="shot"><img src="screenshots/08-categories-dropdown.png" alt="The Categories dropdown open with a search box" style="max-height:72mm"><figcaption>Figure 8 — <b>Categories</b> opened: <b>Find a category</b> and a tick list. The note on the right explains that categories decide the aisles a product is listed under, and which page settings apply to it.</figcaption></figure>
+<div class="note good"><span class="lbl">Good to know:</span> A product created on the desk is published straight away, so it appears in the desk's list. Once a product has a category, a box its page has been told not to print (for example <b>MRP</b>, when <b>MRP and discount</b> is hidden for it) is no longer asked for. Name, Sales Price, Category, Categories and Sales Description are always asked.</div>
+
+<h3 class="step"><span class="n">6</span>See where a box shows</h3>
+<p>The right-hand side shows <b>How shoppers see it</b>. For a saved product it is the real shop page, with <b>Desktop</b> / <b>Phone</b>, <b>Refresh</b> and <b>Open</b>; tap a part of it to jump to the box that fills it. Press <b>Save</b> to see your changes there. A product not yet published is not on the shop. For a new product it is a drawing where grey text is only a sample. Hover the small <b>ⓘ</b> beside a box, or click into it, and the spot it fills is outlined.</p>
+<figure class="shot"><img src="screenshots/09-where-it-shows.png" alt="A preview highlighting where Pack size appears on the card" style="max-height:42mm"><figcaption>Figure 9 — <b>How Pack size looks in the app</b>: a product card with the pack size outlined in orange, and the note that it uses what you typed while grey text is only a sample.</figcaption></figure>
+
+<h3 class="step"><span class="n">7</span>The boxes, group by group</h3>
+<ul class="f">
+  <li><b>Product</b> — name, sold/bought ticks, product type, stock tracking, <b>Sales Price</b>, taxes, <b>Cost</b>, <b>Category</b>, <b>Article ID</b>, <b>Barcode</b>, <b>Sales Description</b> and <b>Categories</b>. Helpful notes say what each is for, for example that cost is never shown to customers.</li>
+  <li><b>About this item</b> — typed like a Word page (bullets, bold, links); shoppers see the first 5 points, then <i>Show more</i>. <b>Product details</b> is the short table under the options: a <b>Label</b> and a <b>Value</b> per line (<b>Add a detail</b>). A line without a label is not shown, and the box says so.</li>
+  <li><b>Trust badges</b> — <b>Delivery time</b> is always shown. Tick <b>Returns</b>, <b>Warranty</b>, <b>Cash on delivery</b> or <b>Secure payment</b> to show it on this product, and type its words; empty uses the shop's. Unticked reads <i>Not shown on this product.</i></li>
+  <li><b>From the manufacturer</b> — big pictures with an optional caption. <b>+ Add picture</b>, then choose <b>Full</b> or <b>Half</b> width and move with the arrows. Best sizes: full width 1600 × 900 px, half width 800 × 800 px; a narrow picture gets a <i>Small for…</i> warning.</li>
+  <li><b>Website only</b> (folded, <i>Not used on WhatsApp</i>) — <b>MRP</b>, <b>Badge</b> (New, Bestseller, Sale, Limited, Old stock, Organic, Imported or <b>Other…</b>), <b>Express delivery time</b>, <b>Warn when stock reaches</b>, <b>Pack size</b>, <b>Price per unit</b> and <b>Small note</b>.</li>
+</ul>
+<figure class="shot"><img src="screenshots/10-stock-tax-boxes.png" alt="Product type, stock, barcode, tax and company boxes"><figcaption>Figure 10 — Boxes for <b>Product Type</b>, <b>Track Inventory</b>, <b>On hand</b>, <b>Barcode</b>, product category, <b>Sales Taxes</b>, <b>Purchase Taxes</b> and <b>Company</b>, each with a short note underneath.</figcaption></figure>
+<div class="note tip"><span class="lbl">Tip:</span> <b>MRP</b> is the old, struck-through price. If it is not above the price, the box warns <i>MRP is not above the price, so no discount will show.</i> Leave it empty when there is no discount.</div>
+
+<h3 class="step"><span class="n">8</span>Photographs, choices and variants</h3>
+<p>On the desk, <b>Picture</b> holds the product's general photo, used when a variant has no picture of its own. Tap a picture to see it large; the viewer has <b>Use on the card</b> and <b>Remove</b>.</p>
+<figure class="shot"><img src="screenshots/11-photo-viewer.png" alt="A photograph opened large in the viewer" style="max-height:66mm"><figcaption>Figure 11 — A picture opened large: <b>2 of 2 · Not saved yet</b>, <b>Remove</b>, arrows to step through, and the close button.</figcaption></figure>
+<p><b>Attributes &amp; Variants</b> (<i>What the customer chooses</i>) sets the choices, such as Brand, RAM or Colour:</p>
+<ul class="f">
+  <li><b>+ Add an attribute (Brand, RAM, Colour…)</b>, then tap values to pick them, or type a new one in <b>+ value</b>. Each picked value can add to the price (<b>+</b> box).</li>
+  <li>An attribute marked <i>Information only - makes no variants</i> is shown on the product but creates no choices.</li>
+  <li><b>Variants</b> lists each resulting variant with its price. Open one for its <b>Image</b> and, when stock is tracked, <b>On hand</b> (saved as a stock adjustment). Systems with the WhatsApp product setup also show <b>Variant images</b> and <b>Variant specs</b>, with <b>Fill from attributes</b>.</li>
+</ul>
+<div class="note warn"><span class="lbl">Watch out:</span> <i>Adding or deleting attributes deletes and makes the variants again.</i> Variants are made or removed when you save — finish the choices before you add per-variant pictures and stock.</div>
+
+<h3 class="step"><span class="n">9</span>From a product's own form</h3>
+<p>The same editor appears on every product's form, on the <b>General Information</b> tab under a <b>369 Mart</b> heading, so products edited from <b>Inventory <span class="arr">→</span> Products</b> are asked the same questions. Here it is saved with the form's own <b>Save</b>; <b>Photographs</b> takes up to 13 pictures (the first is the picture on the card, the rest the gallery, drag to reorder); and choices stay on the form's own <b>Attributes &amp; Variants</b> tab.</p>
+<figure class="shot"><img src="screenshots/12-product-form-section.png" alt="A product form with the 369 Mart heading" style="max-height:78mm"><figcaption>Figure 12 — A product's form on <b>General Information</b>: the usual product fields at the top, then the <b>369 MART</b> heading with its note and the <b>Photographs</b> area, the first picture marked <b>On the card</b>.</figcaption></figure>
+<p>Lower down the same tab:</p>
+<ul class="f">
+  <li><b>Drawing (used only when the product has no photo)</b> — <b>Drawing</b>, <b>Drawing colour</b> and <b>Text on drawing</b>, so a card is never blank.</li>
+  <li><b>Product page exceptions</b> — the fields this product does differently, with <b>Section</b>, <b>Field</b>, <b>Shown?</b> and <b>Value for this product</b>. <b>Open in 369 Mart &gt; Products</b> opens the desk straight on this product.</li>
+</ul>
+<div class="note good"><span class="lbl">Good to know:</span> A new product created here and given a shop category is switched to published, so it appears in the shop without an extra step.</div>
+
+<div class="part">Part 3 — Keeping It Secure &amp; In Order</div>
+
+<h3 class="step"><span class="n">1</span>Who can do what</h3>
+<table><thead><tr><th style="width:32%">Role</th><th>What they can do</th></tr></thead><tbody>
+<tr><td>Internal user (incl. Packer, Accountant, Rider)</td><td>Open the screens and read the settings and products. Cannot change any switch or wording. Saving on the desk says <i>You do not have permission to change products. Ask an administrator for the website designer role.</i></td></tr>
+<tr><td>Website designer / Manager</td><td>Everything in this manual: sections, fields, wording, category wording, per-product choices, and creating and editing products on the desk.</td></tr>
+<tr><td>Owner / Administrator (Settings)</td><td>The same full rights.</td></tr>
+</tbody></table>
+<p>A Manager has the Website designer rights automatically. The staff console's product page screens follow the same rule.</p>
+
+<h3 class="step"><span class="n">2</span>Find and undo exceptions</h3>
+<ul class="f">
+  <li><b>Which products differ?</b> — on <b>One product</b>, tick <b>Only ones already edited</b>; tiles show <b>N changed</b>.</li>
+  <li><b>Which fields have exceptions?</b> — <b>Product Page Fields</b> with the filter <b>Some products differ</b>; the <b>Products differing</b> column counts them.</li>
+  <li><b>One product, everything back</b> — on its form, <b>Put every field back to the shop default</b> (shown only when something differs). It asks first; any words typed only for that product are removed.</li>
+</ul>
+<div class="note good"><span class="lbl">Good to know:</span> A product that follows the default stores nothing of its own. That is why switching a field off for the whole shop later still reaches every product that follows.</div>
+
+<h3 class="step"><span class="n">3</span>Reviews and when changes appear</h3>
+<p>Every review has a <b>Moderation</b> state, and only <b>Published</b> reviews appear on the page or count towards the rating. New reviews are published straight away; customers' reviews are answered under <b>Reviews</b>. The shop may reuse a fetched page for the <b>Remember for (seconds)</b> time in <b>369 Mart Settings</b> (60 by default), so a change can take up to a minute to show.</p>
+<div class="note imp"><span class="lbl">Important:</span> Cost is never shown to customers; the desk says so beside the box. The <b>Hidden</b> tab on the desk lists unpublished products — they have no page in the shop.</div>
+
+<h2>Sections and fields</h2>
+<table style="break-inside:avoid"><thead><tr><th style="width:26%">Section</th><th>Fields</th></tr></thead><tbody>
+<tr><td>Photos</td><td>Photos (always shown).</td></tr>
+<tr><td>Price and buy box</td><td>Product name and Price (always shown), MRP and discount, Only-N-left warning, Badge: returns, Badge: warranty, Badge: cash on delivery, Badge: secure payment.</td></tr>
+<tr><td>Item specifications</td><td>Variant specs — the chosen variant's specs table.</td></tr>
+<tr><td>Product description</td><td>Sales Description.</td></tr>
+<tr><td>Ratings and reviews</td><td>Average rating, Number of ratings, Star breakdown, Customer reviews, Be-the-first-to-review line.</td></tr>
+<tr><td>Frequently bought together</td><td>Frequently bought together.</td></tr>
+<tr><td>Similar and related products</td><td>Similar products, Others you may also like.</td></tr>
+</tbody></table>
+
+<h2>Status reference — one field on one product</h2>
+<table style="break-inside:avoid"><thead><tr><th style="width:22%">State</th><th>Meaning</th><th style="width:34%">How to change it</th></tr></thead><tbody>
+<tr><td>Follow the default</td><td>Does what the whole-shop switch says, now and later. Stores nothing.</td><td>Choose it on <b>One product</b>, or <b>Put this one back</b>.</td></tr>
+<tr><td>Always show</td><td>Shown on this product whatever the shop does — unless its section is off.</td><td>Choose it on <b>One product</b>.</td></tr>
+<tr><td>Always hide</td><td>Hidden on this product whatever the shop does.</td><td>Choose it on <b>One product</b>.</td></tr>
+</tbody></table>
+
+<h2>Is it shown?</h2>
+<table style="break-inside:avoid"><thead><tr><th style="width:22%">Section switch</th><th style="width:26%">Product's choice</th><th>Result</th></tr></thead><tbody>
+<tr><td>Off</td><td>Anything</td><td>Hidden.</td></tr>
+<tr><td>On</td><td>Always show</td><td>Shown.</td></tr>
+<tr><td>On</td><td>Always hide</td><td>Hidden.</td></tr>
+<tr><td>On</td><td>Follow the default</td><td>Shown if <b>Shown on every product</b> is on, hidden if off.</td></tr>
+</tbody></table>
+
+
+<h2>Quick tips</h2>
+<ul class="tips">
+  <li>Set the whole shop first; make single products differ only where they truly must.</li>
+  <li>A section switch beats every field and product choice inside it.</li>
+  <li>To give a category its own words, use Wording by Category — and delete a line rather than leaving it empty.</li>
+  <li>Empty badge words hide that badge.</li>
+  <li><b>Only ones already edited</b> shows every product with exceptions.</li>
+  <li>On the desk, <b>Edit details</b> changes the product; <b>Edit page</b> changes what its page shows.</li>
+  <li>Write Product details as a label and a value, such as <i>Brand: Apple</i>.</li>
+  <li>Set attributes before per-variant pictures and stock — changing them remakes the variants.</li>
+</ul>
+
+<h2>If something goes wrong</h2>
+<table><thead><tr><th style="width:36%">What you see</th><th>What to do</th></tr></thead><tbody>
+<tr><td>A field set to Always show is still missing</td><td>Its whole section is off. Open the section in <b>Product Page</b> and turn <b>Shown</b> on (or tick <b>Show what is switched off</b> to find it).</td></tr>
+<tr><td>A badge vanished for one category</td><td>Look in <b>Wording by Category</b> for a line for that field with an empty value, and delete it.</td></tr>
+<tr><td>The editor says there is no published product to draw</td><td>Publish at least one product, then come back.</td></tr>
+<tr><td>A product isn't in the One product list</td><td>Only published products are listed. Check <b>Uncategorised</b> too, or search by name or code.</td></tr>
+<tr><td>Saving on the desk is refused</td><td>Read the message: a missing <b>Name</b> or <b>Category</b>, a barcode with letters, or no Website designer rights (ask the Owner).</td></tr>
+<tr><td>A Product details line isn't on the shop</td><td>It has no label. Write it as <i>Label: value</i> — the box warns which line.</td></tr>
+<tr><td>No discount shows</td><td><b>MRP</b> must be above the price, and <b>MRP and discount</b> must be shown for the product.</td></tr>
+<tr><td>A change doesn't show on the shop yet</td><td>Wait for the <b>Remember for (seconds)</b> time (60 by default), then refresh. In the desk's preview, press <b>Save</b>, then <b>Refresh</b>.</td></tr>
+<tr><td>The chip says <b>Not saved</b></td><td>The last change did not reach the server. Check the connection and make the change again.</td></tr>
+</tbody></table>
+
+</body>
+</html>

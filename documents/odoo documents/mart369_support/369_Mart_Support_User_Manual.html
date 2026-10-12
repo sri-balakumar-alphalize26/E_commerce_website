@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>369 Mart Support — User Manual</title>
+<style>
+  :root{
+    --navy:#1e2a78; --orange:#f08a24; --ink:#1f2230; --muted:#6b6f80;
+    --line:#e6e8f0; --alt:#f2f4fb; --tint:#eef2fc;
+    --tip:#2e6fb0; --good:#2e8b57; --good-bg:#e7f6ea;
+    --warn-bg:#fff3da; --warn-ink:#c0701a;
+  }
+  @page{
+    size:A4; margin:22mm 20mm 20mm 20mm;
+    @bottom-left{content:"369ai · 369 Mart Support"; font:8.5pt "Liberation Serif",Georgia,serif; color:#6b6f80;}
+    @bottom-right{content:"Page " counter(page); font:8.5pt "Liberation Serif",Georgia,serif; color:#6b6f80;}
+  }
+  @page:first{ margin-top:14mm; }
+  *{box-sizing:border-box}
+  html{background:#fff}
+  body{margin:0; font-family:"Liberation Serif","Times New Roman",Georgia,serif; font-size:10.5pt; line-height:1.5; color:var(--ink); background:#fff}
+  @media screen{ body{max-width:794px; margin:24px auto; padding:0 16px} }
+  p{margin:0 0 7pt}
+  b,strong{font-weight:700}
+  .k{color:var(--navy); font-weight:700}          /* navy key term */
+  code{font-family:"DejaVu Sans Mono",monospace; font-size:8.5pt; background:#f1f2f6; padding:1px 4px; border-radius:3px}
+  .arr{color:var(--navy); font-weight:700}
+
+  /* ---------- Cover ---------- */
+  .topbar{height:7px; background:var(--navy); border-bottom:3px solid var(--orange); margin:0 -8mm 10pt}
+  .cover{background:var(--navy); color:#fff; text-align:center; border-radius:9px; padding:26pt 20pt 22pt; margin-bottom:18pt}
+  .cover h1{margin:0; font-size:31pt; letter-spacing:1.5pt; font-weight:700; text-transform:uppercase}
+  .cover .sub{color:var(--orange); font-size:15pt; font-weight:700; margin:12pt 0 10pt}
+  .cover .meta{font-size:10pt; color:#d5d9ee}
+
+  /* ---------- H2 section with orange rule ---------- */
+  h2{color:var(--navy); font-size:15pt; margin:16pt 0 9pt; padding-bottom:5pt; border-bottom:1.6px solid var(--orange); page-break-after:avoid}
+
+  /* ---------- Flow cards (3–4 steps) ---------- */
+  .flow{display:flex; align-items:center; gap:6pt; margin:10pt 0 10pt}
+  .flow .card{flex:1; border:1px solid #d9dcea; border-radius:6px; padding:8pt 9pt; min-height:66pt}
+  .flow .card b{display:block; color:var(--navy); font-size:10.5pt; margin-bottom:2pt}
+  .flow .card span{font-size:8.5pt; color:var(--muted); line-height:1.35}
+  .flow .to{color:var(--orange); font-size:13pt}
+
+  /* ---------- Callouts ---------- */
+  .note{border-left:3px solid var(--orange); background:var(--tint); border-radius:0 5px 5px 0; padding:8pt 12pt; margin:10pt 0 12pt; font-size:9.5pt; page-break-inside:avoid}
+  .note .lbl{font-weight:700; text-transform:uppercase; font-size:8.5pt; letter-spacing:.3pt; margin-right:4pt}
+  .note.start .lbl{color:var(--warn-ink)}
+  .note.tip{border-color:var(--tip)}              .note.tip .lbl{color:var(--tip)}
+  .note.good{border-color:var(--good); background:var(--good-bg)} .note.good .lbl{color:var(--good)}
+  .note.imp{border-color:var(--navy)}             .note.imp .lbl{color:var(--navy)}
+  .note.warn{border-color:var(--orange); background:var(--warn-bg)} .note.warn .lbl{color:var(--warn-ink)}
+
+  /* ---------- Part banner ---------- */
+  .part{background:var(--navy); color:#fff; text-align:center; border-radius:6px; padding:12pt; margin:20pt 0 10pt; font-size:15pt; font-weight:700; letter-spacing:1.5pt; text-transform:uppercase; page-break-after:avoid}
+  .part-intro{color:var(--muted); margin-bottom:12pt}
+
+  /* ---------- Numbered step ---------- */
+  h3.step{display:flex; align-items:center; gap:9pt; color:var(--navy); font-size:13pt; margin:16pt 0 7pt; page-break-after:avoid}
+  h3.step .n{display:inline-block; min-width:17pt; height:17pt; line-height:17pt; text-align:center; background:var(--orange); color:#fff; border-radius:3px; font-family:"Liberation Sans",Arial,sans-serif; font-size:10pt; font-weight:700}
+
+  /* ---------- Field bullets (orange square markers) ---------- */
+  ul.f{list-style:none; padding:0; margin:4pt 0 8pt}
+  ul.f li{position:relative; padding-left:13pt; margin-bottom:4pt}
+  ul.f li::before{content:""; position:absolute; left:1pt; top:6.5pt; width:4pt; height:4pt; background:var(--orange)}
+  ul.f li b:first-child{color:var(--navy)}
+
+  /* ---------- Tables ---------- */
+  table{width:100%; border-collapse:collapse; margin:8pt 0 12pt; font-size:9pt}
+  thead{display:table-header-group}
+  th{background:var(--navy); color:#fff; text-align:left; padding:6pt 8pt; font-weight:700}
+  th+th{border-left:1px solid #34408a}
+  td{padding:6pt 8pt; border-bottom:1px solid var(--line); vertical-align:top}
+  tr:nth-child(even) td{background:var(--alt)}
+  td:first-child{color:var(--navy); font-weight:700}
+  tr{page-break-inside:avoid}
+
+  /* ---------- Quick tips ---------- */
+  ul.tips{margin:4pt 0 12pt; padding-left:14pt}
+  ul.tips li{margin-bottom:3pt}
+
+  /* ---------- Screenshots + glossary (added for 369 Mart manuals) ---------- */
+  figure.shot{margin:8pt 0 12pt; page-break-inside:avoid; break-inside:avoid; text-align:center}
+  figure.shot img{max-width:100%; max-height:118mm; border:1px solid var(--line); border-radius:6px; box-shadow:0 1px 4px rgba(30,42,120,.12)}
+  figure.shot.phone img{max-width:62mm}
+  figure.shot figcaption{font-size:8.5pt; color:var(--muted); margin-top:4pt; text-align:left}
+  table.gloss td:first-child{width:28%}
+  h2, h3.step, .part{break-after:avoid}
+</style>
+</head>
+<body>
+<div class="topbar"></div>
+<div class="cover">
+  <h1>369 Mart Support</h1>
+  <div class="sub">Support Bot, Tickets &amp; WhatsApp Order Updates</div>
+  <div class="meta">User Manual &nbsp;|&nbsp; 369ai</div>
+</div>
+
+<h2>What this does</h2>
+<p><span class="k">369 Mart Support</span> runs the help chat in the shop app and on the website. A bot called <span class="k">Mitra</span> answers first, using a list of <span class="k">bot answers</span> your staff can edit. Answers about delivery charges, coupon codes, orders and the 369 Wallet are looked up live, so the bot always says what the shop really charges.</p>
+<p>When a customer asks for a person, a real <span class="k">ticket</span> opens with the whole chat on it, and your team answers from the <b>Support</b> desk. A one- or two-star rating also opens a ticket, so <b>an unhappy customer is always followed up</b>.</p>
+
+<div class="flow">
+  <div class="card"><b>1. Customer asks</b><span>Types a question or taps a topic in the chat</span></div><span class="to">→</span>
+  <div class="card"><b>2. Bot answers</b><span>The first bot answer that fits replies</span></div><span class="to">→</span>
+  <div class="card"><b>3. Ticket opens</b><span>When they ask for a person or rate 1–2 stars</span></div><span class="to">→</span>
+  <div class="card"><b>4. Team replies</b><span>From the Support desk; the reply shows in their chat</span></div>
+</div>
+
+<div class="note start"><span class="lbl">Before you start:</span> The module installs 13 ready-made bot answers, so the chat works at once. Staff who answer tickets need <b>Salesperson</b> rights. Delivery charges and coupons must already be set up in 369 Mart, because the bot reads them from there.</div>
+
+<h2>Words you'll see</h2>
+<table class="gloss">
+  <thead><tr><th>Word</th><th>What it means</th></tr></thead>
+  <tbody>
+    <tr><td>Bot answer</td><td>One topic the bot knows: the words it listens for and what it says back.</td></tr>
+    <tr><td>Matches</td><td>The words a bot answer listens for. <i>refund|money back</i> means "refund" or "money back".</td></tr>
+    <tr><td>Ticket</td><td>One customer's request for a person, with the chat on it. Numbered like <i>369S-00044</i>.</td></tr>
+    <tr><td>Hands over</td><td>A bot answer that passes the customer to your team and opens a ticket.</td></tr>
+    <tr><td>Handled by</td><td>The staff member looking after a ticket.</td></tr>
+    <tr><td>Suggestions</td><td>Small buttons under a bot reply that the customer can tap instead of typing.</td></tr>
+  </tbody>
+</table>
+
+<h2>How the manual is arranged</h2>
+<p><b>Part 1 – Setting Up</b> covers the bot answers. <b>Part 2 – Everyday Use</b> covers the Support desk, low-rating tickets and WhatsApp order updates. <b>Part 3 – Keeping It Secure &amp; In Order</b> covers the full lists, who can do what, and privacy.</p>
+
+<!-- ===================== PART 1 ===================== -->
+<div class="part">Part 1 — Setting Up</div>
+<p class="part-intro">Done by a manager or a senior Salesperson. The installed answers are a good start; change them when the shop's wording changes.</p>
+
+<h3 class="step"><span class="n">1</span>Where everything lives</h3>
+<p>Open <b>369 Mart</b> from the main menu:</p>
+<ul class="f">
+  <li><b>Sales <span class="arr">→</span> Support</b> — the Support desk, where tickets are answered.</li>
+  <li><b>Store <span class="arr">→</span> Bot answers</b> — what the bot says, in the order it tries them.</li>
+  <li><b>Advanced <span class="arr">→</span> Support (all views)</b> — tickets as a board, list and full form.</li>
+  <li><b>Advanced <span class="arr">→</span> Bot answers (all views)</b> — the bot answers as one editable list.</li>
+</ul>
+<p>All four need <b>Salesperson</b> rights.</p>
+
+<h3 class="step"><span class="n">2</span>The Bot answers desk</h3>
+<p>Open <b>Store <span class="arr">→</span> Bot answers</b>. The tiles count answers <b>In use</b>, those that <b>Hand over</b> to a person, those <b>Switched off</b>, and <b>Cannot match</b> (an answer whose Matches line has a typing mistake, so it never fires).</p>
+<figure class="shot"><img src="screenshots/01-bot-answers-desk.png" alt="Bot answers desk" style="max-height:78mm"><figcaption>Figure 1 — The Bot answers desk on In use: each answer with its name, its kind (Fixed answer, About one order they named, Hand over to a person), the words it matches and what it says.</figcaption></figure>
+<p>The bot reads the list <b>from the top</b> and uses the <b>first answer that matches</b>. Use the up and down arrows on each row to change the order. The arrows only show on the <b>All</b> tab with the search box empty.</p>
+<div class="note warn"><span class="lbl">Watch out:</span> A broad answer placed high in the list catches questions meant for the answers below it. Keep narrow answers (such as an order number) near the top.</div>
+
+<h3 class="step"><span class="n">3</span>Write or change an answer</h3>
+<p>Press <b>New answer</b>, or <b>Edit</b> on a row. Fill in:</p>
+<ul class="f">
+  <li><b>What it covers</b> — a name for staff, e.g. <i>Opening hours</i>. Customers never see it.</li>
+  <li><b>Matches</b> — the words to listen for, separated by <b>|</b>. For example <i>refund|money back</i> fires on either. Case does not matter. Copy the style of the installed answers.</li>
+  <li><b>Kind</b> — what sort of answer it is (table below).</li>
+  <li><b>Says</b> — for a <b>Fixed answer</b>, the reply. For other kinds the label reads <b>Says if the shop has nothing to tell them</b>: the bot works the answer out itself and uses your words only when there is nothing to report.</li>
+  <li><b>Suggestions under it</b> — topics shown as buttons, separated by commas. Each must be something the answers can match.</li>
+  <li><b>Button says</b> / <b>Opens</b> — an optional button and the app screen it opens, e.g. <i>account</i>.</li>
+</ul>
+<p>Press <b>Save</b>. If the Matches line has a mistake, the backend says so and does not save it.</p>
+<table>
+  <thead><tr><th style="width:34%">Kind</th><th>What the bot answers</th></tr></thead>
+  <tbody>
+    <tr><td>Fixed answer</td><td>Exactly the words in <b>Says</b>.</td></tr>
+    <tr><td>About one order they named</td><td>Where that order is, its total and how it was paid.</td></tr>
+    <tr><td>Where their orders are</td><td>Their orders on the way, with tracking buttons.</td></tr>
+    <tr><td>A refund they are waiting for</td><td>Their cancelled order, refund timing and wallet balance.</td></tr>
+    <tr><td>Cancelling an order</td><td>Whether their latest order can still be cancelled.</td></tr>
+    <tr><td>Returning something</td><td>How many days returns stay open, and a button to start one.</td></tr>
+    <tr><td>A payment problem</td><td>What happens when money left the bank but no order was made.</td></tr>
+    <tr><td>Delivery charges and minimums</td><td>The real delivery fees, free-delivery limits and minimum orders.</td></tr>
+    <tr><td>Current coupon codes</td><td>Up to four coupon codes that work today.</td></tr>
+    <tr><td>Their wallet balance</td><td>Their 369 Wallet balance.</td></tr>
+    <tr><td>Hand over to a person</td><td>Passes them to the team and opens a ticket.</td></tr>
+  </tbody>
+</table>
+<div class="note good"><span class="lbl">Good to know:</span> <b>Switch off</b> keeps an answer but stops the bot using it; <b>Put back</b> turns it on again. Nothing is deleted from this desk.</div>
+
+<!-- ===================== PART 2 ===================== -->
+<div class="part">Part 2 — Everyday Use</div>
+<p class="part-intro">The Support desk is where the team works through tickets during the day.</p>
+
+<h3 class="step"><span class="n">1</span>What the customer sees</h3>
+<p>The chat opens with <i>Hello! How can I help you today?</i> and six topics: <b>Track my order</b>, <b>Refund status</b>, <b>Cancel an order</b>, <b>Payment issue</b>, <b>Delivery charges</b> and <b>Talk to an agent</b>. If nothing matches, the bot offers the topics again or a person.</p>
+<ul class="f">
+  <li><b>Not signed in</b> — the bot answers shop facts (delivery, coupons, payments, addresses). For their own orders, wallet or a person, it asks them to sign in.</li>
+  <li><b>Asking for a person</b> — a ticket opens with the chat so far. If they already have an open ticket, the same one is used.</li>
+  <li><b>While they wait</b> — the bot still answers what it can, and adds anything else to the ticket: <i>Got it - I've added this to your ticket… Our team will reply right here.</i></li>
+  <li><b>Your reply</b> — appears in their chat, under your first name.</li>
+</ul>
+
+<h3 class="step"><span class="n">2</span>The Support desk</h3>
+<p>Open <b>Sales <span class="arr">→</span> Support</b>. The desk opens on <b>Needs a reply</b>: open tickets nobody has answered yet, longest wait first. The tiles show <b>Needs a reply</b>, <b>Waiting over 30 min</b>, <b>Longest wait</b> and <b>Answered today</b>. The screen refreshes itself every 30 seconds.</p>
+<figure class="shot"><img src="screenshots/02-support-desk.png" alt="Support desk" style="max-height:78mm"><figcaption>Figure 2 — The Support desk on All: six tickets, each with its number, question, status, customer, wait time, who handles it and how many messages, plus an Answered button.</figcaption></figure>
+<p>Use the tabs (<b>Waiting</b>, <b>Being handled</b>, <b>On the customer</b>, <b>Answered</b>, <b>All</b>), the search box, <b>Anyone's</b> / <b>Mine only</b>, a <b>Handled by</b> name, and <b>Longest wait first</b> / <b>Newest first</b>.</p>
+<div class="note warn"><span class="lbl">Watch out:</span> A ticket with no reply <b>30 minutes</b> after the customer asked is marked late and counted in <b>Waiting over 30 min</b>. Answer these first.</div>
+
+<h3 class="step"><span class="n">3</span>Answer a ticket</h3>
+<p>Click a ticket to open it. You see the question, the customer, the order it is about, the whole chat, and <b>Handled by</b>.</p>
+<figure class="shot"><img src="screenshots/03-ticket-window.png" alt="One ticket opened" style="max-height:80mm"><figcaption>Figure 3 — An answered ticket opened: the customer's message and the team's reply in the chat, and Handled by at the top.</figcaption></figure>
+<ul class="f">
+  <li><b>Take it</b> — puts your name on a new ticket and moves it to <b>Being handled</b>.</li>
+  <li><b>Send reply</b> — type in the box (up to 500 characters) and send. Your first reply also takes the ticket for you and stops the wait clock.</li>
+  <li><b>Waiting on them</b> — you asked the customer something and are waiting for their answer.</li>
+  <li><b>Answered</b> — the matter is settled. The ticket closes.</li>
+  <li><b>Drop it</b> — closes it without an answer. The customer is not told.</li>
+  <li><b>Handled by</b> — pass the ticket to a colleague, or choose <b>Nobody yet</b> to put it back in the pile.</li>
+</ul>
+<div class="note good"><span class="lbl">Good to know:</span> The reply box disappears once a ticket is Answered or Dropped. If the customer asks for a person again, a new ticket opens.</div>
+
+<h3 class="step"><span class="n">4</span>Tickets from low ratings</h3>
+<p>When a customer gives <b>one or two stars</b> to an order or in a product review, a ticket opens for them automatically (or their open ticket is used). The rating and their words are posted on it, e.g. <i>Rated 1 of 5 - review of …</i>, with the order when there is one. On the <b>Reviews</b> desk, such a review shows a <b>Ticket</b> label with the ticket number. An order's tickets also show in the order's details, and a customer's tickets on their profile in the staff console.</p>
+
+<h3 class="step"><span class="n">5</span>WhatsApp order updates</h3>
+<p>The customer can get a WhatsApp message at each order step: confirmed, packed, shipped, out for delivery, delivered and cancelled. The confirmed, packed, shipped and out-for-delivery messages carry a tracking link. A message is sent only when <b>all</b> of these are true:</p>
+<ul class="f">
+  <li>The customer ticked WhatsApp updates for this order at checkout.</li>
+  <li>They have not switched WhatsApp off in their account's notification settings.</li>
+  <li>There is a phone number on the delivery address or on their account.</li>
+  <li>A <b>WhatsApp gateway</b> (the add-on that actually sends WhatsApp messages) is installed.</li>
+</ul>
+<div class="note imp"><span class="lbl">Important:</span> Without a WhatsApp gateway nothing is sent, but the customer's choice is still saved. Once a gateway is installed, customers who already said yes start getting updates.</div>
+
+<!-- ===================== PART 3 ===================== -->
+<div class="part">Part 3 — Keeping It Secure &amp; In Order</div>
+
+<h3 class="step"><span class="n">1</span>The full lists and history</h3>
+<p><b>All views</b> on the Support desk opens the tickets as a board with a column per status, filtered to <b>Still open</b>. The tiles show <b>Asked today</b>, <b>Waiting</b>, <b>No reply yet</b>, <b>Average wait</b> and <b>Yours</b>. Late cards say <i>Waiting over 30 minutes</i>.</p>
+<figure class="shot"><img src="screenshots/04-tickets-board.png" alt="Tickets board" style="max-height:78mm"><figcaption>Figure 4 — Support (all views): Waiting, Being handled, Waiting on customer and Answered columns; one card shows a Take it button and the red "Waiting over 30 minutes" flag.</figcaption></figure>
+<p>A ticket's full form keeps the record: <b>What they asked</b>, <b>Order number</b>, <b>Asked at</b>, <b>First answered</b>, <b>Waiting</b> (minutes) and <b>Handled by</b>, with the chat and every status change on the right.</p>
+<figure class="shot"><img src="screenshots/05-ticket-form.png" alt="Ticket form" style="max-height:62mm"><figcaption>Figure 5 — A ticket's full form: Take it, Answered and Drop buttons, the status bar, the ticket details and the chat on the right.</figcaption></figure>
+<div class="note warn"><span class="lbl">Watch out:</span> On the full form, <b>Send message</b> reaches the customer's chat. <b>Log note</b> is for staff only and is never shown to the customer.</div>
+<p><b>Bot answers (all views)</b> shows every answer in one list, which is handy for checking the order at a glance or exporting.</p>
+<figure class="shot"><img src="screenshots/06-bot-answers-list.png" alt="Bot answers list" style="max-height:78mm"><figcaption>Figure 6 — Bot answers (all views): 13 answers in the order they are tried, with their matches, kind, words and an Active switch.</figcaption></figure>
+
+<h3 class="step"><span class="n">2</span>Who can do what</h3>
+<table>
+  <thead><tr><th style="width:30%">Role</th><th>What they can do</th></tr></thead>
+  <tbody>
+    <tr><td>Internal user</td><td>Read only. The menus are hidden.</td></tr>
+    <tr><td>Salesperson</td><td>The Support desk and the Bot answers desk: answer, take, close and drop tickets; write, reorder and switch off answers. Cannot delete.</td></tr>
+    <tr><td>Website designer (Manager)</td><td>Tickets in the staff console.</td></tr>
+    <tr><td>Administrator (Settings) (Owner)</td><td>Everything, including deleting tickets and answers.</td></tr>
+  </tbody>
+</table>
+
+<h3 class="step"><span class="n">3</span>Privacy</h3>
+<p>The bot only reads the signed-in customer's own orders and wallet, and a customer can only see their own ticket. The bot <b>never says an order's delivery code</b> in the chat. Staff notes logged on a ticket never reach the customer.</p>
+
+<!-- ===================== REFERENCE ===================== -->
+<h2>Status reference — tickets</h2>
+<table>
+  <thead><tr><th style="width:24%">State</th><th>Meaning</th><th style="width:30%">How to change it</th></tr></thead>
+  <tbody>
+    <tr><td>Waiting</td><td>New. Nobody has taken it or replied.</td><td><b>Take it</b>, or send a reply.</td></tr>
+    <tr><td>Being handled</td><td>A staff member has it.</td><td><b>Waiting on them</b>, <b>Answered</b> or <b>Drop it</b>.</td></tr>
+    <tr><td>Waiting on customer (On the customer)</td><td>You asked the customer something.</td><td><b>Answered</b> or <b>Drop it</b>.</td></tr>
+    <tr><td>Answered</td><td>Settled and closed.</td><td>Final. A new request opens a new ticket.</td></tr>
+    <tr><td>Dropped</td><td>Closed without an answer; the customer was not told.</td><td>Final.</td></tr>
+  </tbody>
+</table>
+
+<h2>Quick tips</h2>
+<ul class="tips">
+  <li>Start on <b>Needs a reply</b> and clear anything in <b>Waiting over 30 min</b> first.</li>
+  <li>Your first reply takes the ticket for you; you do not need to press Take it first.</li>
+  <li>Use <b>Waiting on them</b> when the ball is in the customer's court, so the queue stays honest.</li>
+  <li>Prefer <b>Answered</b> over <b>Drop it</b>; dropping tells the customer nothing.</li>
+  <li>Keep narrow bot answers at the top; the first match wins.</li>
+  <li>Change delivery fees and coupons in their own screens; the bot picks them up by itself.</li>
+  <li>Switch an answer off rather than deleting it.</li>
+</ul>
+
+<h2>If something goes wrong</h2>
+<table>
+  <thead><tr><th style="width:36%">What you see</th><th>What to do</th></tr></thead>
+  <tbody>
+    <tr><td>The bot gives the wrong answer to a question</td><td>A broader answer higher up matched first. On <b>Bot answers</b>, open <b>All</b> with an empty search and move the right answer up.</td></tr>
+    <tr><td>A bot answer never fires</td><td>Check the <b>Cannot match</b> tile, and that the answer is not <b>Switched off</b>. Check its <b>Matches</b> words.</td></tr>
+    <tr><td>Saving an answer fails</td><td>The <b>Matches</b> line has a typing mistake. Follow the style of an installed answer.</td></tr>
+    <tr><td>The bot quotes old delivery charges or coupons</td><td>It reads the shop's real delivery and coupon settings; correct them there.</td></tr>
+    <tr><td>There is no reply box on a ticket</td><td>The ticket is Answered or Dropped. The customer can ask for a person again to open a new one.</td></tr>
+    <tr><td>Customers get no WhatsApp updates</td><td>No WhatsApp gateway is installed, or the customer did not tick WhatsApp updates at checkout, switched WhatsApp off, or has no phone number.</td></tr>
+    <tr><td>A guest says the bot keeps asking them to sign in</td><td>Answers about their own orders, wallet or a person need them signed in.</td></tr>
+  </tbody>
+</table>
+
+</body>
+</html>

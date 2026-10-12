@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>369 Mart Account — User Manual</title>
+<style>
+  :root{
+    --navy:#1e2a78; --orange:#f08a24; --ink:#1f2230; --muted:#6b6f80;
+    --line:#e6e8f0; --alt:#f2f4fb; --tint:#eef2fc;
+    --tip:#2e6fb0; --good:#2e8b57; --good-bg:#e7f6ea;
+    --warn-bg:#fff3da; --warn-ink:#c0701a;
+  }
+  @page{
+    size:A4; margin:22mm 20mm 20mm 20mm;
+    @bottom-left{content:"369ai · 369 Mart Account"; font:8.5pt "Liberation Serif",Georgia,serif; color:#6b6f80;}
+    @bottom-right{content:"Page " counter(page); font:8.5pt "Liberation Serif",Georgia,serif; color:#6b6f80;}
+  }
+  @page:first{ margin-top:14mm; }
+  *{box-sizing:border-box}
+  html{background:#fff}
+  body{margin:0; font-family:"Liberation Serif","Times New Roman",Georgia,serif; font-size:10.5pt; line-height:1.5; color:var(--ink); background:#fff}
+  @media screen{ body{max-width:794px; margin:24px auto; padding:0 16px} }
+  p{margin:0 0 7pt}
+  b,strong{font-weight:700}
+  .k{color:var(--navy); font-weight:700}          /* navy key term */
+  code{font-family:"DejaVu Sans Mono",monospace; font-size:8.5pt; background:#f1f2f6; padding:1px 4px; border-radius:3px}
+  .arr{color:var(--navy); font-weight:700}
+
+  /* ---------- Cover ---------- */
+  .topbar{height:7px; background:var(--navy); border-bottom:3px solid var(--orange); margin:0 -8mm 10pt}
+  .cover{background:var(--navy); color:#fff; text-align:center; border-radius:9px; padding:26pt 20pt 22pt; margin-bottom:18pt}
+  .cover h1{margin:0; font-size:31pt; letter-spacing:1.5pt; font-weight:700; text-transform:uppercase}
+  .cover .sub{color:var(--orange); font-size:15pt; font-weight:700; margin:12pt 0 10pt}
+  .cover .meta{font-size:10pt; color:#d5d9ee}
+
+  /* ---------- H2 section with orange rule ---------- */
+  h2{color:var(--navy); font-size:15pt; margin:16pt 0 9pt; padding-bottom:5pt; border-bottom:1.6px solid var(--orange); page-break-after:avoid}
+
+  /* ---------- Flow cards (3–4 steps) ---------- */
+  .flow{display:flex; align-items:center; gap:6pt; margin:10pt 0 10pt}
+  .flow .card{flex:1; border:1px solid #d9dcea; border-radius:6px; padding:8pt 9pt; min-height:66pt}
+  .flow .card b{display:block; color:var(--navy); font-size:10.5pt; margin-bottom:2pt}
+  .flow .card span{font-size:8.5pt; color:var(--muted); line-height:1.35}
+  .flow .to{color:var(--orange); font-size:13pt}
+
+  /* ---------- Callouts ---------- */
+  .note{border-left:3px solid var(--orange); background:var(--tint); border-radius:0 5px 5px 0; padding:8pt 12pt; margin:10pt 0 12pt; font-size:9.5pt; page-break-inside:avoid}
+  .note .lbl{font-weight:700; text-transform:uppercase; font-size:8.5pt; letter-spacing:.3pt; margin-right:4pt}
+  .note.start .lbl{color:var(--warn-ink)}
+  .note.tip{border-color:var(--tip)}              .note.tip .lbl{color:var(--tip)}
+  .note.good{border-color:var(--good); background:var(--good-bg)} .note.good .lbl{color:var(--good)}
+  .note.imp{border-color:var(--navy)}             .note.imp .lbl{color:var(--navy)}
+  .note.warn{border-color:var(--orange); background:var(--warn-bg)} .note.warn .lbl{color:var(--warn-ink)}
+
+  /* ---------- Part banner ---------- */
+  .part{background:var(--navy); color:#fff; text-align:center; border-radius:6px; padding:12pt; margin:20pt 0 10pt; font-size:15pt; font-weight:700; letter-spacing:1.5pt; text-transform:uppercase; page-break-after:avoid}
+  .part-intro{color:var(--muted); margin-bottom:12pt}
+
+  /* ---------- Numbered step ---------- */
+  h3.step{display:flex; align-items:center; gap:9pt; color:var(--navy); font-size:13pt; margin:16pt 0 7pt; page-break-after:avoid}
+  h3.step .n{display:inline-block; min-width:17pt; height:17pt; line-height:17pt; text-align:center; background:var(--orange); color:#fff; border-radius:3px; font-family:"Liberation Sans",Arial,sans-serif; font-size:10pt; font-weight:700}
+
+  /* ---------- Field bullets (orange square markers) ---------- */
+  ul.f{list-style:none; padding:0; margin:4pt 0 8pt}
+  ul.f li{position:relative; padding-left:13pt; margin-bottom:4pt}
+  ul.f li::before{content:""; position:absolute; left:1pt; top:6.5pt; width:4pt; height:4pt; background:var(--orange)}
+  ul.f li b:first-child{color:var(--navy)}
+
+  /* ---------- Tables ---------- */
+  table{width:100%; border-collapse:collapse; margin:8pt 0 12pt; font-size:9pt}
+  thead{display:table-header-group}
+  th{background:var(--navy); color:#fff; text-align:left; padding:6pt 8pt; font-weight:700}
+  th+th{border-left:1px solid #34408a}
+  td{padding:6pt 8pt; border-bottom:1px solid var(--line); vertical-align:top}
+  tr:nth-child(even) td{background:var(--alt)}
+  td:first-child{color:var(--navy); font-weight:700}
+  tr{page-break-inside:avoid}
+
+  /* ---------- Quick tips ---------- */
+  ul.tips{margin:4pt 0 12pt; padding-left:14pt}
+  ul.tips li{margin-bottom:3pt}
+
+  /* ---------- Screenshots + glossary (added for 369 Mart manuals) ---------- */
+  figure.shot{margin:8pt 0 12pt; page-break-inside:avoid; break-inside:avoid; text-align:center}
+  figure.shot img{max-width:100%; max-height:118mm; border:1px solid var(--line); border-radius:6px; box-shadow:0 1px 4px rgba(30,42,120,.12)}
+  figure.shot.phone img{max-width:62mm}
+  figure.shot figcaption{font-size:8.5pt; color:var(--muted); margin-top:4pt; text-align:left}
+  table.gloss td:first-child{width:28%}
+  h2, h3.step, .part{break-after:avoid}
+</style>
+</head>
+<body>
+<div class="topbar"></div>
+<div class="cover">
+  <h1>369 Mart Account</h1>
+  <div class="sub">Reviews, Referrals, Rewards &amp; Notifications</div>
+  <div class="meta">User Manual &nbsp;|&nbsp; 369ai</div>
+</div>
+
+<h2>What this does</h2>
+<p><span class="k">369 Mart Account</span> keeps the customer's own things safe in the backend: their profile, wishlist, <span class="k">reviews</span>, <span class="k">referrals</span> (inviting friends), <span class="k">scratch cards</span> and their <span class="k">notifications</span>. What a customer saves in the shop app or on the website stays saved, on every phone and computer they sign in from.</p>
+<p>Staff look after these from four desks: <b>Reviews</b>, <b>Referrals</b>, <b>Rewards</b> and <b>Notifications</b>. Reviews go live straight away, but <b>a review with a phone number, a link or a rude word waits for staff</b> before anyone else can see it.</p>
+
+<div class="flow">
+  <div class="card"><b>1. Customer orders</b><span>Each step can send a pop-up to their phone or computer</span></div><span class="to">→</span>
+  <div class="card"><b>2. Order delivered</b><span>A scratch card is made for the order</span></div><span class="to">→</span>
+  <div class="card"><b>3. Customer reviews</b><span>Clean reviews go live; doubtful ones wait</span></div><span class="to">→</span>
+  <div class="card"><b>4. Staff check</b><span>Publish, hide or reply from the Reviews desk</span></div>
+</div>
+
+<div class="note start"><span class="lbl">Before you start:</span> Setup is short and done once by a <b>Manager</b> or <b>Owner</b>. You need the 369 Mart shop and its orders running, and the <b>369 Wallet</b> in place, because referral rewards and scratch-card cash are paid into it. Staff who only read and answer reviews need <b>Salesperson</b> rights and nothing else.</div>
+
+<h2>Words you'll see</h2>
+<table class="gloss">
+  <thead><tr><th>Word</th><th>What it means</th></tr></thead>
+  <tbody>
+    <tr><td>Waiting</td><td>A review the shop has not shown yet. Only its writer can see it.</td></tr>
+    <tr><td>Published</td><td>A review shoppers can see on the product page.</td></tr>
+    <tr><td>Hidden</td><td>A review staff took off the product page. It no longer counts towards the star rating.</td></tr>
+    <tr><td>Verified purchase</td><td>The customer really bought this product. The backend checks their own orders.</td></tr>
+    <tr><td>Referral code</td><td>A customer's own code (six letters or numbers, then 369) that friends type when they sign up.</td></tr>
+    <tr><td>369 Wallet</td><td>The customer's money balance in the shop. Rewards are paid into it.</td></tr>
+    <tr><td>Scratch card</td><td>A small prize card the customer opens in the app after a delivery.</td></tr>
+    <tr><td>Pop-up</td><td>A message on the customer's phone or computer screen, even when the shop is closed. Only for customers who turned pop-ups on.</td></tr>
+  </tbody>
+</table>
+
+<h2>How the manual is arranged</h2>
+<p><b>Part 1 – Setting Up</b> covers the review limits, the referral reward and the order pop-ups. <b>Part 2 – Everyday Use</b> walks through the four desks and what the customer sees. <b>Part 3 – Keeping It Secure &amp; In Order</b> covers the full lists, who can do what, and privacy.</p>
+
+<!-- ===================== PART 1 ===================== -->
+<div class="part">Part 1 — Setting Up</div>
+<p class="part-intro">Done once by a Manager or Owner. Everything works with the built-in settings, so you can skip to Part 2 and come back later.</p>
+
+<h3 class="step"><span class="n">1</span>Where everything lives</h3>
+<p>Open <b>369 Mart</b> from the main menu. This module adds these screens:</p>
+<ul class="f">
+  <li><b>Sales <span class="arr">→</span> Reviews</b> — the Reviews desk: read, publish, hide and reply.</li>
+  <li><b>Sales <span class="arr">→</span> Referrals</b> — who invited whom, and the reward per referral.</li>
+  <li><b>Sales <span class="arr">→</span> Rewards</b> — every scratch card and what it paid.</li>
+  <li><b>Store <span class="arr">→</span> Notifications</b> — the messages every customer sees in their notification list.</li>
+  <li><b>Store <span class="arr">→</span> Order pop-ups</b> — the pop-up sent at each order step.</li>
+  <li><b>Store <span class="arr">→</span> Settings <span class="arr">→</span> Reviews</b> tab — photo and video limits, and extra words that hold a review.</li>
+  <li><b>Advanced <span class="arr">→</span> Reviews / Referrals / Rewards / Notifications (all views)</b> — the full lists, for grouping, filtering and exporting.</li>
+</ul>
+<p>The desks need <b>Salesperson</b> rights. Saving <b>Order pop-ups</b> and opening <b>Settings</b> need <b>Website designer</b> or <b>Administrator (Settings)</b> rights, which Managers and Owners have.</p>
+
+<h3 class="step"><span class="n">2</span>Review limits and blocked words</h3>
+<p>Open <b>Store <span class="arr">→</span> Settings</b> and click the <b>Reviews</b> tab. Set:</p>
+<ul class="f">
+  <li><b>Photos per review</b> — 1, 3, 5 or 8, or <b>Custom…</b>. Default <b>5 photos</b>.</li>
+  <li><b>Max size per photo</b> — 2, 5 or 10 MB, or Custom. Default <b>5 MB</b>. Photos are made smaller (1600 pixels on the longest side) before saving.</li>
+  <li><b>Allow one video per review</b> — on by default. When it is on, two more fields appear:</li>
+  <li><b>Max video length</b> — 15, 30 or 60 seconds, or Custom. Default <b>30 seconds</b>.</li>
+  <li><b>Max video size</b> — 10, 25 or 50 MB, or Custom. Default <b>25 MB</b>.</li>
+  <li><b>Also hold reviews with these words</b> — one word per line, in any language. These are added to the built-in list (see Part 2, step 2).</li>
+</ul>
+<p>Press <b>Save changes</b>. <b>Reset</b> throws away what you changed since the last save.</p>
+<figure class="shot"><img src="screenshots/01-settings-reviews.png" alt="Settings screen, Reviews tab" style="max-height:78mm"><figcaption>Figure 1 — Store → Settings, Reviews tab: 5 photos, 5 MB, video on at 30 seconds and 25 MB, and the empty box for extra words.</figcaption></figure>
+<div class="note good"><span class="lbl">Good to know:</span> Changes apply to <b>new</b> reviews and uploads only. The limits are checked in the backend, so the app cannot send a bigger file than you allow.</div>
+
+<h3 class="step"><span class="n">3</span>Set the referral reward</h3>
+<p>Open <b>Sales <span class="arr">→</span> Referrals</b>. The box under the tiles says <b>One referral pays …</b>. Press <b>Change reward</b>, type the amount in <b>Reward</b> and press <b>Save</b>. The default is <b>100</b> in the shop's currency.</p>
+<figure class="shot"><img src="screenshots/02-referral-reward.png" alt="What a referral pays dialog" style="max-height:78mm"><figcaption>Figure 2 — The "What a referral pays" window, with Reward set to 100.</figcaption></figure>
+<div class="note good"><span class="lbl">Good to know:</span> Rewards already paid keep what they were worth. A new amount only changes what is paid next.</div>
+
+<h3 class="step"><span class="n">4</span>Order pop-ups</h3>
+<p>Open <b>Store <span class="arr">→</span> Order pop-ups</b>. Under <b>Send a pop-up when an order is</b>, each step has an on/off switch: <b>Confirmed</b>, <b>Packed</b>, <b>Shipped</b>, <b>On the way</b>, <b>Delivered</b> and <b>Cancelled</b>. All are on by default.</p>
+<p>Under <b>Its words</b> you can write your own text for each step. Leave a box empty to keep the shop's own wording (shown in grey). Two short codes fill in details for you:</p>
+<ul class="f">
+  <li><b>%(ref)s</b> — the order number.</li>
+  <li><b>%(eta)s</b> — the expected delivery time.</li>
+</ul>
+<p>For example, <i>%(ref)s is out for delivery. %(eta)s</i>. A step that is switched off cannot have its words changed.</p>
+<div class="note tip"><span class="lbl">Tip:</span> A pop-up only reaches customers who said yes to pop-ups in their browser. Everyone still sees the order in their notification list.</div>
+
+<!-- ===================== PART 2 ===================== -->
+<div class="part">Part 2 — Everyday Use</div>
+<p class="part-intro">The four desks staff use. Each desk has tiles at the top: click a tile to show those records.</p>
+
+<h3 class="step"><span class="n">1</span>The Reviews desk</h3>
+<p>Open <b>Sales <span class="arr">→</span> Reviews</b>. The tiles show the <b>Average rating</b> and how many reviews are <b>Waiting</b>, <b>Published</b> and <b>Hidden</b>. The desk opens on <b>Waiting</b>, the reviews that need you. Use the search box (product, customer or text), <b>Bought or not</b> and <b>With or without photos</b> to narrow the list.</p>
+<p>Above the list, <b>Worst rated</b> names the products with the lowest average (three reviews or more), and <b>Top complaints · 30 days</b> counts the complaint tags customers ticked, such as <i>Damaged</i> or <i>Late delivery</i>.</p>
+<figure class="shot"><img src="screenshots/03-reviews-desk.png" alt="Reviews desk" style="max-height:78mm"><figcaption>Figure 3 — The Reviews desk on the Waiting tab: 4 waiting, the Worst rated and Top complaints strip, and a review marked "Held: phone number" with a photo waiting and a reply.</figcaption></figure>
+<p>Each review shows coloured labels: <b>Held:</b> (why it waits), <b>Hidden:</b> (why staff hid it), <b>photo/video waiting</b>, <b>Reported ×</b> (shopper reports), <b>Ticket</b> (a support ticket was opened for it) and <b>Replied</b>. Press <b>Publish</b> or <b>Hide</b> right in the list, or <b>Open</b> to see it in full.</p>
+
+<h3 class="step"><span class="n">2</span>Why a review waits</h3>
+<p>A new review goes live at once, unless the automatic filter finds one of these:</p>
+<ul class="f">
+  <li><b>phone number</b> — seven digits or more, however they are spaced.</li>
+  <li><b>link or e-mail</b> — a web address or an e-mail address.</li>
+  <li><b>abusive words</b> — a built-in list of rude words in English, Tamil, Malayalam, Telugu, Urdu/Hindi and Arabic (in their own letters and in English letters), plus the words you added in Settings. Tricks such as <i>@</i> for <i>a</i> or stretched letters are caught too.</li>
+  <li><b>reported by shoppers</b> — when <b>three</b> shoppers press Report on a published review, it goes back to Waiting.</li>
+</ul>
+<p>If the writer edits a held review and removes the problem, it goes live by itself. If they edit a published review and add a problem, it goes back to Waiting.</p>
+<div class="note warn"><span class="lbl">Watch out:</span> A review you <b>hid</b> stays hidden, however its writer rewrites it. Only staff can publish it again.</div>
+
+<h3 class="step"><span class="n">3</span>Open a review: photos, video and your reply</h3>
+<p>Press <b>Open</b>. The window shows the stars, headline, text, why it is held, the tags, and how many shoppers marked it <b>Reported</b> or <b>Helpful</b>.</p>
+<ul class="f">
+  <li><b>Photos and video</b> — every photo or video starts as <b>Waiting</b>. Shoppers see it only after you press <b>Approve</b>. <b>Remove</b> deletes the file for good. Click a picture to see it full size.</li>
+  <li><b>Reply from 369 Mart</b> — type an answer and press <b>Save reply</b>. It shows under the review on the product page, and the window notes who replied last. Empty the box and save to remove a reply.</li>
+</ul>
+<figure class="shot"><img src="screenshots/04-review-panel.png" alt="One review opened" style="max-height:88mm"><figcaption>Figure 4 — An opened review: "Held because: phone number", one photo waiting with Approve and Remove, and a reply typed in the box.</figcaption></figure>
+
+<h3 class="step"><span class="n">4</span>Publish or hide</h3>
+<p><b>Publish</b> puts the review on the product page and clears any held reason. <b>Hide…</b> asks <b>Why</b>: <b>Abusive</b>, <b>Not about the product</b>, <b>Personal details</b>, <b>Spam</b> or <b>Other</b>. Pick one and press <b>Hide review</b>. The reason stays with the review for the next person who looks.</p>
+<figure class="shot"><img src="screenshots/05-hide-review.png" alt="Hide this review window" style="max-height:78mm"><figcaption>Figure 5 — "Hide this review?" with Why set to Abusive. A hidden review stops counting towards the product's rating.</figcaption></figure>
+<div class="note good"><span class="lbl">Good to know:</span> Nothing on this desk deletes a review. Hiding is always reversible with <b>Publish</b>.</div>
+
+<h3 class="step"><span class="n">5</span>The Referrals desk</h3>
+<p>Open <b>Sales <span class="arr">→</span> Referrals</b>. Every customer has their own referral code. An invite moves through three steps, and the backend moves it, not the customer:</p>
+<ul class="f">
+  <li><b>Invited</b> (shown as <b>Waiting</b>) — the customer sent an invite from the app.</li>
+  <li><b>Joined</b> — the friend signed up with the code. A friend who signs up with a code but was never invited through the app is added here too.</li>
+  <li><b>Ordered</b> (shown as <b>Rewarded</b>) — the friend placed their first order. The reward is paid into the <b>inviter's 369 Wallet</b> at that moment, once.</li>
+</ul>
+<p>The tiles count <b>Invited</b>, <b>Joined</b> and <b>Rewarded</b>, and <b>Paid out</b> shows the total paid into inviters' wallets. Each row says who invited them (with the code), the friend's contact, and on the right either the amount paid, <i>waiting on their first order</i>, or <i>not yet signed up</i>.</p>
+<figure class="shot"><img src="screenshots/06-referrals-desk.png" alt="Referrals desk" style="max-height:78mm"><figcaption>Figure 6 — The Referrals desk: one invite each at Waiting, Joined and Rewarded, the reward box, and the paid amount on the rewarded row.</figcaption></figure>
+
+<h3 class="step"><span class="n">6</span>The Rewards desk (scratch cards)</h3>
+<p>Each <b>delivered</b> order makes one scratch card for its customer. The prize is decided when the card is made, so it never changes later. The chances are fixed:</p>
+<table>
+  <thead><tr><th style="width:30%">Prize</th><th>How often</th></tr></thead>
+  <tbody>
+    <tr><td>No prize</td><td>About 55 cards in every 100 ("Better luck next time").</td></tr>
+    <tr><td>Wallet cash</td><td>About 35 in every 100. The amount is 10, 20, 25 or 50, each equally likely.</td></tr>
+    <tr><td>Coupon</td><td>About 10 in every 100: the first active coupon in the shop. If there is no active coupon, the card has no prize.</td></tr>
+  </tbody>
+</table>
+<p>Cash goes into the 369 Wallet when the customer opens (scratches) the card. Open <b>Sales <span class="arr">→</span> Rewards</b> to see the cards: tiles for <b>Cards minted</b>, <b>Waiting to be opened</b>, <b>Paid out</b> and <b>Won nothing</b>, and tabs for <b>Cash won</b> and <b>Coupon won</b>. Search by customer or order.</p>
+<figure class="shot"><img src="screenshots/07-rewards-desk.png" alt="Rewards desk" style="max-height:78mm"><figcaption>Figure 7 — The Rewards desk on "Waiting to be opened": four cards, each marked "Not opened yet", with the customer and the order it came from.</figcaption></figure>
+<div class="note imp"><span class="lbl">Important:</span> This desk is <b>read-only</b>. Staff cannot make, change or cancel a card, because a card is money.</div>
+
+<h3 class="step"><span class="n">7</span>The Notifications desk</h3>
+<p>Open <b>Store <span class="arr">→</span> Notifications</b>. These are the messages every customer sees in their notification list, next to their own order updates. The tiles are <b>Live now</b>, <b>Scheduled</b>, <b>Finished</b> and <b>Taken down</b>. Two are installed to start with: <i>Add money, get more</i> and <i>Invite a friend, both of you win</i>.</p>
+<figure class="shot"><img src="screenshots/08-notifications-desk.png" alt="Notifications desk" style="max-height:78mm"><figcaption>Figure 8 — The Notifications desk on Live now: each notification with its kind (Wallet, Order, Offer), start date and the Edit and Take down buttons.</figcaption></figure>
+<p>Press <b>New notification</b> (or <b>Edit</b>) and fill in:</p>
+<ul class="f">
+  <li><b>Title</b> and <b>Words</b> — what the customer reads. Both are needed.</li>
+  <li><b>Kind</b> — <b>Offer</b>, <b>Order</b> or <b>Wallet</b>.</li>
+  <li><b>Show from</b> / <b>Show until</b> — when it runs. Leave the end empty and it runs until somebody takes it down.</li>
+  <li><b>Tapping it opens</b> / <b>With</b> — the app screen it opens, e.g. <i>offers</i>, or <i>account</i> with <i>wallet</i>.</li>
+  <li><b>Also send as a pop-up</b> — also sends it once as a pop-up when it goes live. Customers who switched off offers (or wallet) messages do not get the pop-up.</li>
+</ul>
+<figure class="shot"><img src="screenshots/09-new-notification.png" alt="New notification window" style="max-height:78mm"><figcaption>Figure 9 — The New notification window: Title, Words, Kind, Show from, Show until, and Tapping it opens / With.</figcaption></figure>
+<div class="note good"><span class="lbl">Good to know:</span> A notification is never deleted. <b>Take down</b> stops it showing to anybody new, but customers who already got it keep it. <b>Put back</b> brings it back.</div>
+
+<h3 class="step"><span class="n">8</span>What the customer sees</h3>
+<ul class="f">
+  <li><b>Profile and wishlist</b> — name, email, mobile and saved products, kept on every device.</li>
+  <li><b>Reviews</b> — one review per product, with stars, a headline, tags, photos and a video. While a review waits, its writer is told why nobody else can see it. Other shoppers can press <b>Helpful</b> or <b>Report</b> once each, but not on their own review.</li>
+  <li><b>Notifications</b> — order updates, your notifications, and a reminder to review the items two days after delivery. Customers choose which kinds they want and can turn on pop-ups.</li>
+  <li><b>Refer a friend</b> — their code, their invites and what they have earned.</li>
+  <li><b>Rewards</b> — their scratch cards, and the coupon codes they have won.</li>
+</ul>
+
+<!-- ===================== PART 3 ===================== -->
+<div class="part">Part 3 — Keeping It Secure &amp; In Order</div>
+
+<h3 class="step"><span class="n">1</span>The full lists</h3>
+<p>Each desk has an <b>All views</b> button (also under <b>Advanced</b>). The lists add grouping, filters and exporting, with summary tiles on top.</p>
+<figure class="shot"><img src="screenshots/10-reviews-list.png" alt="Reviews list" style="max-height:78mm"><figcaption>Figure 10 — Reviews (all views): tiles for Reviews, Average, Unhappy (two stars or fewer), Verified purchase and With photos. Unhappy reviews show in red.</figcaption></figure>
+<p>The reviews list has filters for <b>Unhappy</b>, <b>Happy</b>, <b>Waiting</b>, <b>Published</b>, <b>Hidden</b>, <b>Verified purchase</b>, <b>With photos</b> and <b>Last 30 days</b>. On a review's form, <b>Shown</b> is the only field staff may change; the rest is the customer's own words.</p>
+<figure class="shot"><img src="screenshots/11-referrals-board.png" alt="Referrals board" style="max-height:78mm"><figcaption>Figure 11 — Referrals (all views) as a board with Invited, Joined and Ordered columns, and tiles for Waiting, Signed up, Ordered, Paid out and Invites that buy.</figcaption></figure>
+<figure class="shot"><img src="screenshots/12-rewards-list.png" alt="Rewards list" style="max-height:78mm"><figcaption>Figure 12 — Rewards (all views): each card's customer, order, reward, amount, coupon and whether it was scratched, with the total at the bottom.</figcaption></figure>
+
+<h3 class="step"><span class="n">2</span>Who can do what</h3>
+<table>
+  <thead><tr><th style="width:30%">Role</th><th>What they can do</th></tr></thead>
+  <tbody>
+    <tr><td>Internal user</td><td>Read only. The desks are hidden.</td></tr>
+    <tr><td>Salesperson</td><td>All four desks: publish, hide and reply to reviews; change the referral reward; write and take down notifications. Rewards are read-only. They can open <b>Order pop-ups</b> but not save changes there.</td></tr>
+    <tr><td>Website designer (Manager)</td><td>Saving <b>Order pop-ups</b> and the <b>Store → Settings</b> screen, including the Reviews tab. Also the same screens in the staff console.</td></tr>
+    <tr><td>Administrator (Settings) (Owner)</td><td>Everything above.</td></tr>
+  </tbody>
+</table>
+
+<h3 class="step"><span class="n">3</span>Privacy</h3>
+<p>A review with a phone number, link or e-mail never goes public without a staff check. When you hide a review for personal details, pick <b>Personal details</b> as the reason. A removed photo or video is deleted from the backend, not just hidden. Pop-up messages are locked so only the customer's own browser can read them.</p>
+
+<!-- ===================== REFERENCE ===================== -->
+<h2>Status reference — reviews</h2>
+<table>
+  <thead><tr><th style="width:20%">State</th><th>Meaning</th><th style="width:32%">How to change it</th></tr></thead>
+  <tbody>
+    <tr><td>Waiting</td><td>Held by the filter or by three reports. Only the writer sees it.</td><td><b>Publish</b> or <b>Hide…</b> on the Reviews desk.</td></tr>
+    <tr><td>Published</td><td>On the product page and counted in the rating.</td><td><b>Hide…</b>; or it returns to Waiting after three reports.</td></tr>
+    <tr><td>Hidden</td><td>Off the product page, not counted. Keeps its reason.</td><td><b>Publish</b>. The writer's edits do not bring it back.</td></tr>
+  </tbody>
+</table>
+
+<h2>Status reference — referrals and notifications</h2>
+<table>
+  <thead><tr><th style="width:20%">State</th><th>Meaning</th><th style="width:32%">How it changes</th></tr></thead>
+  <tbody>
+    <tr><td>Invited / Waiting</td><td>Invite sent, friend not signed up.</td><td>Automatically, when the friend signs up with the code.</td></tr>
+    <tr><td>Joined</td><td>Friend signed up.</td><td>Automatically, at their first order.</td></tr>
+    <tr><td>Ordered / Rewarded</td><td>First order placed; reward paid to the inviter's wallet.</td><td>Final.</td></tr>
+    <tr><td>Live now</td><td>Notification showing to customers.</td><td>Ends at <b>Show until</b>, or <b>Take down</b>.</td></tr>
+    <tr><td>Scheduled</td><td>Starts at a later <b>Show from</b>.</td><td>Goes live by itself.</td></tr>
+    <tr><td>Finished</td><td>Its <b>Show until</b> has passed.</td><td><b>Edit</b> the dates to run it again.</td></tr>
+    <tr><td>Taken down</td><td>Switched off by staff.</td><td><b>Put back</b>.</td></tr>
+  </tbody>
+</table>
+
+<h2>Quick tips</h2>
+<ul class="tips">
+  <li>Start each day on the Reviews desk's <b>Waiting</b> tile; an empty Waiting list means nothing needs you.</li>
+  <li>Approve customer photos one by one; nothing a customer uploads is public until you do.</li>
+  <li>Hide with the right reason; the next person sees why.</li>
+  <li>Add local rude words in <b>Settings → Reviews</b>, one per line.</li>
+  <li>Changing the referral reward never changes rewards already paid.</li>
+  <li>Use <b>Take down</b>, not delete, for an old notification; nothing is ever deleted.</li>
+  <li>Leave an order pop-up's words empty to keep the shop's own wording.</li>
+</ul>
+
+<h2>If something goes wrong</h2>
+<table>
+  <thead><tr><th style="width:36%">What you see</th><th>What to do</th></tr></thead>
+  <tbody>
+    <tr><td>A customer says their review is not showing</td><td>Find it on the Reviews desk under <b>Waiting</b> or <b>Hidden</b>. The <b>Held:</b> or <b>Hidden:</b> label says why. Publish it if it is fine.</td></tr>
+    <tr><td>A customer's photo is not on the product page</td><td>Open the review and press <b>Approve</b> under <b>Photos and video</b>.</td></tr>
+    <tr><td>A customer cannot upload a photo or video</td><td>It is bigger or longer than the limits in <b>Store → Settings → Reviews</b>, or videos are switched off there.</td></tr>
+    <tr><td>A referral reward was not paid</td><td>On the Referrals desk the invite must show <b>Joined</b> before the first order; a friend who signed up without the code is not linked. The inviter also needs a 369 Wallet.</td></tr>
+    <tr><td>A customer opened a cash card but has no money</td><td>Their account has no 369 Wallet yet. The card stays unopened, so once the wallet exists they can scratch it again.</td></tr>
+    <tr><td>A notification is not showing</td><td>Check its tile: <b>Scheduled</b> (start date later), <b>Finished</b> (end date passed) or <b>Taken down</b>.</td></tr>
+    <tr><td>No pop-ups arrive for an order step</td><td>Check that step's switch in <b>Store → Order pop-ups</b>, and that the customer turned pop-ups on.</td></tr>
+    <tr><td>The Settings menu is missing</td><td>It needs Website designer (Manager) or Administrator (Settings) rights.</td></tr>
+  </tbody>
+</table>
+
+</body>
+</html>

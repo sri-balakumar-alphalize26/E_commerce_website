@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>369 Mart Delivery Addresses — User Manual</title>
+<style>
+  :root{
+    --navy:#1e2a78; --orange:#f08a24; --ink:#1f2230; --muted:#6b6f80;
+    --line:#e6e8f0; --alt:#f2f4fb; --tint:#eef2fc;
+    --tip:#2e6fb0; --good:#2e8b57; --good-bg:#e7f6ea;
+    --warn-bg:#fff3da; --warn-ink:#c0701a;
+  }
+  @page{
+    size:A4; margin:22mm 20mm 20mm 20mm;
+    @bottom-left{content:"369ai · 369 Mart Delivery Addresses"; font:8.5pt "Liberation Serif",Georgia,serif; color:#6b6f80;}
+    @bottom-right{content:"Page " counter(page); font:8.5pt "Liberation Serif",Georgia,serif; color:#6b6f80;}
+  }
+  @page:first{ margin-top:14mm; }
+  *{box-sizing:border-box}
+  html{background:#fff}
+  body{margin:0; font-family:"Liberation Serif","Times New Roman",Georgia,serif; font-size:10.5pt; line-height:1.5; color:var(--ink); background:#fff}
+  @media screen{ body{max-width:794px; margin:24px auto; padding:0 16px} }
+  p{margin:0 0 7pt}
+  b,strong{font-weight:700}
+  .k{color:var(--navy); font-weight:700}          /* navy key term */
+  code{font-family:"DejaVu Sans Mono",monospace; font-size:8.5pt; background:#f1f2f6; padding:1px 4px; border-radius:3px}
+  .arr{color:var(--navy); font-weight:700}
+
+  /* ---------- Cover ---------- */
+  .topbar{height:7px; background:var(--navy); border-bottom:3px solid var(--orange); margin:0 -8mm 10pt}
+  .cover{background:var(--navy); color:#fff; text-align:center; border-radius:9px; padding:26pt 20pt 22pt; margin-bottom:18pt}
+  .cover h1{margin:0; font-size:31pt; letter-spacing:1.5pt; font-weight:700; text-transform:uppercase}
+  .cover .sub{color:var(--orange); font-size:15pt; font-weight:700; margin:12pt 0 10pt}
+  .cover .meta{font-size:10pt; color:#d5d9ee}
+
+  /* ---------- H2 section with orange rule ---------- */
+  h2{color:var(--navy); font-size:15pt; margin:16pt 0 9pt; padding-bottom:5pt; border-bottom:1.6px solid var(--orange); page-break-after:avoid}
+
+  /* ---------- Flow cards (3–4 steps) ---------- */
+  .flow{display:flex; align-items:center; gap:6pt; margin:10pt 0 10pt}
+  .flow .card{flex:1; border:1px solid #d9dcea; border-radius:6px; padding:8pt 9pt; min-height:66pt}
+  .flow .card b{display:block; color:var(--navy); font-size:10.5pt; margin-bottom:2pt}
+  .flow .card span{font-size:8.5pt; color:var(--muted); line-height:1.35}
+  .flow .to{color:var(--orange); font-size:13pt}
+
+  /* ---------- Callouts ---------- */
+  .note{border-left:3px solid var(--orange); background:var(--tint); border-radius:0 5px 5px 0; padding:8pt 12pt; margin:10pt 0 12pt; font-size:9.5pt; page-break-inside:avoid}
+  .note .lbl{font-weight:700; text-transform:uppercase; font-size:8.5pt; letter-spacing:.3pt; margin-right:4pt}
+  .note.start .lbl{color:var(--warn-ink)}
+  .note.tip{border-color:var(--tip)}              .note.tip .lbl{color:var(--tip)}
+  .note.good{border-color:var(--good); background:var(--good-bg)} .note.good .lbl{color:var(--good)}
+  .note.imp{border-color:var(--navy)}             .note.imp .lbl{color:var(--navy)}
+  .note.warn{border-color:var(--orange); background:var(--warn-bg)} .note.warn .lbl{color:var(--warn-ink)}
+
+  /* ---------- Part banner ---------- */
+  .part{background:var(--navy); color:#fff; text-align:center; border-radius:6px; padding:12pt; margin:20pt 0 10pt; font-size:15pt; font-weight:700; letter-spacing:1.5pt; text-transform:uppercase; page-break-after:avoid}
+  .part-intro{color:var(--muted); margin-bottom:12pt}
+
+  /* ---------- Numbered step ---------- */
+  h3.step{display:flex; align-items:center; gap:9pt; color:var(--navy); font-size:13pt; margin:16pt 0 7pt; page-break-after:avoid}
+  h3.step .n{display:inline-block; min-width:17pt; height:17pt; line-height:17pt; text-align:center; background:var(--orange); color:#fff; border-radius:3px; font-family:"Liberation Sans",Arial,sans-serif; font-size:10pt; font-weight:700}
+
+  /* ---------- Field bullets (orange square markers) ---------- */
+  ul.f{list-style:none; padding:0; margin:4pt 0 8pt}
+  ul.f li{position:relative; padding-left:13pt; margin-bottom:4pt}
+  ul.f li::before{content:""; position:absolute; left:1pt; top:6.5pt; width:4pt; height:4pt; background:var(--orange)}
+  ul.f li b:first-child{color:var(--navy)}
+
+  /* ---------- Tables ---------- */
+  table{width:100%; border-collapse:collapse; margin:8pt 0 12pt; font-size:9pt}
+  thead{display:table-header-group}
+  th{background:var(--navy); color:#fff; text-align:left; padding:6pt 8pt; font-weight:700}
+  th+th{border-left:1px solid #34408a}
+  td{padding:6pt 8pt; border-bottom:1px solid var(--line); vertical-align:top}
+  tr:nth-child(even) td{background:var(--alt)}
+  td:first-child{color:var(--navy); font-weight:700}
+  tr{page-break-inside:avoid}
+
+  /* ---------- Quick tips ---------- */
+  ul.tips{margin:4pt 0 12pt; padding-left:14pt}
+  ul.tips li{margin-bottom:3pt}
+  /* ---------- Screenshots + glossary (added for 369 Mart manuals) ---------- */
+  figure.shot{margin:8pt 0 12pt; page-break-inside:avoid; break-inside:avoid; text-align:center}
+  figure.shot img{max-width:100%; max-height:118mm; border:1px solid var(--line); border-radius:6px; box-shadow:0 1px 4px rgba(30,42,120,.12)}
+  figure.shot.phone img{max-width:62mm}
+  figure.shot figcaption{font-size:8.5pt; color:var(--muted); margin-top:4pt; text-align:left}
+  table.gloss td:first-child{width:28%}
+  h2, h3.step, .part{break-after:avoid}
+</style>
+</head>
+<body>
+<div class="topbar"></div>
+<div class="cover">
+  <h1>369 Mart Delivery Addresses</h1>
+  <div class="sub">Customers' Addresses, Checked Before a Rider Sets Out</div>
+  <div class="meta">User Manual &nbsp;|&nbsp; 369ai</div>
+</div>
+
+<h2>What this does</h2>
+<p><span class="k">369 Mart Delivery Addresses</span> lets every customer keep several <span class="k">delivery addresses</span> — Home, Work or any name they like — and pick one as the <span class="k">default</span>, the address orders ship to. In the shop app, <b>Use my current location</b> fills in the area, city, state and pincode from the phone's location, and the customer adds the rest.</p>
+<p>Staff see every address in one place and spot the <span class="k">gaps</span> — no mobile, no pincode, no street, no map location — before a rider is sent out. Staff can add an address or fix one for a customer, but never delete one, and <b>an address an order already went to is never rewritten</b>: the order keeps what it was placed with.</p>
+<div class="flow">
+  <div class="card"><b>1. Customer adds</b><span>From their location, or typed in, in the shop app</span></div><span class="to">→</span>
+  <div class="card"><b>2. One is default</b><span>The first address, or the one they choose</span></div><span class="to">→</span>
+  <div class="card"><b>3. Staff check</b><span>Gaps are flagged on the Addresses desk</span></div><span class="to">→</span>
+  <div class="card"><b>4. Order ships</b><span>To the default, and keeps that address</span></div>
+</div>
+<div class="note start"><span class="lbl">Before you start:</span> There is nothing to configure. The module needs <b>369 Mart Sign In</b> (customers must have an account). Looking up a location uses a free map service with no key, and Indian pincodes are looked up with India Post's free service; both need the server to reach the internet.</div>
+
+<h2>Words you'll see</h2>
+<table class="gloss">
+  <thead><tr><th>Word</th><th>What it means</th></tr></thead>
+  <tbody>
+    <tr><td>Address type</td><td>What the customer calls the address: Home, Work, Other, or their own word such as "Parents".</td></tr>
+    <tr><td>Default</td><td>The address the shop app selects for the customer, shown as "Default" or "Ships here". Only one per customer.</td></tr>
+    <tr><td>Missing</td><td>What an address still needs before a rider can be sent: mobile, pincode, street or map location.</td></tr>
+    <tr><td>Map location / map pin</td><td>The point on the map saved when the customer used their phone's location.</td></tr>
+    <tr><td>Removed</td><td>An address the customer deleted. Kept in the background because past orders point to it.</td></tr>
+    <tr><td>Pincode</td><td>The postal code. Six digits in India; 3 to 10 digits elsewhere.</td></tr>
+  </tbody>
+</table>
+
+<h2>How the manual is arranged</h2>
+<p><b>Part 1 – Setting Up</b> shows where the screens live and the rules every address must meet. <b>Part 2 – Everyday Use</b> is the Addresses desk, the customer's Delivery addresses tab, adding and fixing addresses, and what the customer sees. <b>Part 3 – Keeping It Secure &amp; In Order</b> covers who can change what and how past orders are protected.</p>
+
+<div class="part">Part 1 — Setting Up</div>
+<p class="part-intro">Nothing to switch on. Read this part once to know the screens and the rules.</p>
+
+<h3 class="step"><span class="n">1</span>Where everything lives</h3>
+<p>Open <b>369 Mart</b> from the main menu:</p>
+<ul class="f">
+  <li><b>Sales <span class="arr">→</span> Addresses</b> — the Addresses desk: every customer's addresses and what is missing from them.</li>
+  <li><b>Advanced <span class="arr">→</span> Addresses (all views)</b> — the same addresses as a board and a list, with search, grouping and export.</li>
+  <li><b>Sales <span class="arr">→</span> Customers</b> — open a customer, then the <b>Delivery addresses</b> tab, to add, edit or choose the default.</li>
+</ul>
+<p>Both Addresses screens are shown to the <b>Salesperson</b> role — the people who answer "where is my order". Adding and editing need the <b>Website designer</b> or <b>Administrator (Settings)</b> role.</p>
+
+<h3 class="step"><span class="n">2</span>What every address must have</h3>
+<p>The same rules apply whoever saves the address — the customer in the shop app or staff in the backend:</p>
+<ul class="f">
+  <li><b>Full name</b> — who it is delivered to.</li>
+  <li><b>Mobile number</b> — a mobile valid for the address's country, for example +91 and ten digits for India, +968 and eight digits for Oman. A landline is refused.</li>
+  <li><b>House no., building, apartment</b> and <b>Road name, area, colony</b> — both required.</li>
+  <li><b>City / District / Town</b> — required.</li>
+  <li><b>Pincode</b> — required; exactly 6 digits for India, 3 to 10 digits elsewhere.</li>
+  <li><b>State</b> — required when the country has states.</li>
+  <li><b>Alternate mobile</b> and <b>Landmark</b> — optional. A landmark is something a rider can see from the road, such as "Near the bus stand".</li>
+</ul>
+<div class="note good"><span class="lbl">Good to know:</span> The phone rule follows the <b>address's</b> country, not the customer's. A Chennai address booked from Muscat still needs a +91 number. A new address starts on the customer's own country, else India.</div>
+
+<div class="part" style="break-before:page">Part 2 — Everyday Use</div>
+<p class="part-intro">Where support staff look when a delivery fails or a rider cannot find a door.</p>
+
+<h3 class="step"><span class="n">1</span>The Addresses desk</h3>
+<p>Open <b>Sales <span class="arr">→</span> Addresses</b>. It is for looking, not editing. Four tiles sit at the top:</p>
+<table>
+  <thead><tr><th style="width:30%">Tile</th><th>What it shows</th></tr></thead>
+  <tbody>
+    <tr><td>Addresses</td><td>Every address. Click to show them all.</td></tr>
+    <tr><td>Customers</td><td>How many customers have at least one address.</td></tr>
+    <tr><td>Missing something</td><td>How many addresses lack a mobile, pincode, street or map location.</td></tr>
+    <tr><td>No map pin</td><td>Addresses saved without a map location. Click to show them.</td></tr>
+  </tbody>
+</table>
+<p>Below, the tabs <b>All</b>, <b>No pincode</b>, <b>No mobile</b>, <b>No map pin</b> and <b>Removed</b> narrow the list, and the search box finds a customer, area or pincode. Each customer is one line with their address count and a warning sign if anything is missing. Click the line to open their addresses; <b>View full profile</b> opens the customer. <b>All views</b> at the top opens the board and list.</p>
+<figure class="shot"><img src="screenshots/01-addresses-desk.png" style="max-height:82mm" alt="The Addresses desk"><figcaption>Figure 1 — The Addresses desk: the four tiles (40 addresses, 26 customers, 38 missing something, 38 with no map pin), the tabs with their counts, and one line per customer with a warning sign and a <b>View</b> button.</figcaption></figure>
+<figure class="shot"><img src="screenshots/02-addresses-desk-open.png" style="max-height:82mm" alt="A customer's line opened on the Addresses desk"><figcaption>Figure 2 — A customer's line opened: four addresses (Home, Home, Home, Work), each with its lines, mobile and a "Missing …" warning such as "Missing pincode, map location".</figcaption></figure>
+
+<h3 class="step"><span class="n">2</span>All views: board and list</h3>
+<p><b>Advanced <span class="arr">→</span> Addresses (all views)</b> shows each address as a card, laid out like a parcel label: customer, type chip, a green <b>✓ Default</b> badge, name and mobile, the address lines, and a "Missing …" warning. A card that is not the default has <b>Make default</b>. The list shows the same with a <b>Missing</b> column and a <b>Default</b> switch.</p>
+<ul class="f">
+  <li><b>Filters</b> — Default only, Missing pincode, Missing mobile, No map location, Archived.</li>
+  <li><b>Group by</b> — Customer, City or Type.</li>
+</ul>
+<figure class="shot"><img src="screenshots/03-addresses-board.png" style="max-height:80mm" alt="The addresses board"><figcaption>Figure 3 — The board: cards with Work, Home and Parents chips, green <b>✓ Default</b> badges, "Missing pincode, map location" warnings and <b>Make default</b> buttons.</figcaption></figure>
+<figure class="shot"><img src="screenshots/04-addresses-list.png" style="max-height:72mm" alt="The addresses list"><figcaption>Figure 4 — The list: Customer, Type, Delivered to, Mobile, Flat / building, City, Pincode, Missing and Default. Rows with something missing show in red.</figcaption></figure>
+
+<h3 class="step"><span class="n">3</span>A customer's Delivery addresses tab</h3>
+<p>Open <b>Sales <span class="arr">→</span> Customers</b>, open the customer, and go to <b>Delivery addresses</b>. The line at the top says how many are saved — "the default is where orders ship". Each card has <b>Edit</b>, and the cards that are not the default have <b>Make default</b>, which asks "Use this as the customer's default delivery address?".</p>
+<figure class="shot"><img src="screenshots/05-customer-addresses.png" style="max-height:80mm" alt="A customer's Delivery addresses tab"><figcaption>Figure 5 — A customer's <b>Delivery addresses</b> tab: Work (Default), Home and Parents cards, <b>Make default</b> on the two others, and "Missing pincode, map location" on the Parents address.</figcaption></figure>
+
+<h3 class="step"><span class="n">4</span>Add or fix an address for a customer</h3>
+<p>Press <b>+ Add address</b> on the Delivery addresses tab (or on the customer panel of the Customers desk), or <b>Edit</b> on a card. The form has the same boxes, in the same order, as the customer's own:</p>
+<ul class="f">
+  <li><b>Home</b>, <b>Work</b> or <b>Other</b> — the address type.</li>
+  <li><b>Country</b> — decides the phone prefix, the states and the pincode length. Beside the mobile it shows the format, for example "+91 · 10 digits".</li>
+  <li><b>Pincode</b> — for India, typing it fills in the city and state if they are empty, and shows the town, state and post-office areas below it.</li>
+  <li>The other boxes as in Part 1, Step 2. Press <b>Save address</b>.</li>
+</ul>
+<p>A new address starts with the customer's name, and their account mobile only when it belongs to the address's country. Changing the country clears a number from another country.</p>
+<figure class="shot"><img src="screenshots/06-staff-add-address.png" style="max-height:80mm" alt="The Add address window"><figcaption>Figure 6 — <b>Add address</b> for a customer: Home selected, Country India, the name filled in, an empty mobile with the hint "+91 · 10 digits", and the <b>Save address</b> and <b>Cancel</b> buttons.</figcaption></figure>
+<div class="note imp"><span class="lbl">Important:</span> If an order already went to the address you edit and you change where the parcel goes (name, phone, lines, city, pincode, state or country), the order keeps the old address and the customer carries on with a new copy. The window warns you about this. Changing only the type or the default never makes a copy.</div>
+<div class="note good"><span class="lbl">Good to know:</span> Every add, edit or default change leaves a note in the customer's history: which address, and who did it.</div>
+
+<h3 class="step"><span class="n">5</span>What the customer sees</h3>
+<p>The shop app has one address form, used in <b>Checkout</b> and in the account's <b>Delivery Address</b> page:</p>
+<ul class="f">
+  <li><b>Home / Work / Other</b> pills, and a searchable <b>Country</b> picker — type a name, a code or "+91"; likely countries are listed first under <b>Suggested</b>.</li>
+  <li>One box per line. Name and mobile come from the account.</li>
+  <li>For India, the pincode fills in the city and state and suggests post-office areas. What the customer typed is never overwritten.</li>
+  <li><b>Use my current location</b> opens the form already filled in, for the customer to add the flat number and check.</li>
+  <li>Each saved address has <b>Edit</b> and <b>Remove</b>; <b>Add a new address</b> adds another. The first address becomes the default.</li>
+</ul>
+<figure class="shot"><img src="screenshots/07-shop-address-form.png" style="max-height:82mm" alt="The shop's address form"><figcaption>Figure 7 — The shop app's <b>Delivery Address</b> form: Home selected, Country India (+91), pincode 624003 with "Dindigul, Tamil Nadu" found below it, and <b>Save address</b>.</figcaption></figure>
+<figure class="shot"><img src="screenshots/08-shop-country-picker.png" style="max-height:82mm" alt="The country picker"><figcaption>Figure 8 — The country picker: a search box, India and Oman under <b>Suggested</b>, then <b>All countries</b> with their dialling codes.</figcaption></figure>
+<figure class="shot"><img src="screenshots/09-shop-saved-address.png" style="max-height:62mm" alt="A saved address in the shop app"><figcaption>Figure 9 — A saved Home address marked <b>Default</b>, with <b>Edit</b> and <b>Remove</b>.</figcaption></figure>
+<figure class="shot"><img src="screenshots/10-shop-checkout-address.png" style="max-height:72mm" alt="Choosing an address at checkout"><figcaption>Figure 10 — Checkout, step 2 Address: the customer picks Work or Home (each with <b>Edit</b>), can <b>Add a new address</b>, then presses <b>Deliver here</b>.</figcaption></figure>
+
+<div class="part">Part 3 — Keeping It Secure &amp; In Order</div>
+
+<h3 class="step"><span class="n">1</span>Past orders keep their address</h3>
+<p>An address that an order went to — placed, delivered or cancelled — is never edited in place. A change that moves the parcel makes a fresh copy for the customer, and the old one is archived for the order. When the customer removes an address, it is archived too, never deleted, and shows on the desk under <b>Removed</b>. If the removed address was the default, the next one takes over.</p>
+<div class="note good"><span class="lbl">Good to know:</span> This protection needs the <b>369 Mart Orders</b> module, which is what knows about orders. Without it, edits are made in place.</div>
+
+<h3 class="step"><span class="n">2</span>Who can do what</h3>
+<table>
+  <thead><tr><th style="width:30%">Role</th><th>What they can do</th></tr></thead>
+  <tbody>
+    <tr><td>Customer (shop app)</td><td>Add, edit, remove and choose the default for their <b>own</b> addresses only.</td></tr>
+    <tr><td>Salesperson</td><td>Open the Addresses desk and Addresses (all views) to look and search; <b>Make default</b> on the board.</td></tr>
+    <tr><td>Website designer</td><td>Also add an address for a customer and <b>Edit</b> one.</td></tr>
+    <tr><td>Administrator (Settings)</td><td>Same as Website designer.</td></tr>
+  </tbody>
+</table>
+<div class="note imp"><span class="lbl">Important:</span> Staff can never delete a customer's address — removing one is the customer's decision. These are people's home addresses: look them up only to deliver or to answer a delivery question.</div>
+
+<h2>Status reference — addresses</h2>
+<table>
+  <thead><tr><th style="width:22%">State</th><th>Meaning</th><th style="width:32%">How to change it</th></tr></thead>
+  <tbody>
+    <tr><td>Default</td><td>The address orders ship to. One per customer.</td><td><b>Make default</b> on another address.</td></tr>
+    <tr><td>Saved</td><td>On the customer's list, not the default.</td><td><b>Make default</b>, or <b>Edit</b>.</td></tr>
+    <tr><td>Missing …</td><td>Lacks a mobile, pincode, street or map location.</td><td><b>Edit</b> and fill it in. A map location can only come from the customer using their phone's location.</td></tr>
+    <tr><td>Removed</td><td>Deleted by the customer, or replaced by an edit; kept for past orders.</td><td>Not restored from the desk; the customer adds a new one.</td></tr>
+  </tbody>
+</table>
+
+<h2>Quick tips</h2>
+<ul class="tips">
+  <li>Start the day on the desk's <b>No mobile</b> and <b>No pincode</b> tabs.</li>
+  <li>Ask customers to use "Use my current location" so the rider gets a map pin.</li>
+  <li>The phone format follows the address's country, not the customer's.</li>
+  <li>Indian pincodes fill in the city and state by themselves.</li>
+  <li>Editing an address an order used makes a copy; the order is never changed.</li>
+  <li>Staff can add and fix addresses, but never delete them.</li>
+  <li>Each change is noted in the customer's history with your name.</li>
+</ul>
+
+<h2>If something goes wrong</h2>
+<table>
+  <thead><tr><th style="width:38%">What you see</th><th>What to do</th></tr></thead>
+  <tbody>
+    <tr><td>"Enter a 10-digit mobile number for India." (or another country)</td><td>The number doesn't fit the address's <b>Country</b>. Check the country first, then the number.</td></tr>
+    <tr><td>"That looks like a landline. Enter a mobile number."</td><td>Use a mobile number; landlines are refused.</td></tr>
+    <tr><td>"Enter a 6-digit pincode."</td><td>Indian pincodes have exactly six digits.</td></tr>
+    <tr><td>"Pick a state."</td><td>The country has states; choose one in <b>State</b>.</td></tr>
+    <tr><td>"Only 369 Mart managers can change a customer's addresses."</td><td>You need the Website designer or Administrator (Settings) role to add or edit.</td></tr>
+    <tr><td>The pincode doesn't fill in the city</td><td>The lookup works for India only and needs the internet. Type the city and state yourself.</td></tr>
+    <tr><td>An edited address appears twice, one under Removed</td><td>Normal: an order used the old one, so it was kept for that order.</td></tr>
+    <tr><td>No <b>Edit</b> or <b>+ Add address</b> button</td><td>Your role can only look. Ask an Owner or administrator.</td></tr>
+  </tbody>
+</table>
+
+</body>
+</html>

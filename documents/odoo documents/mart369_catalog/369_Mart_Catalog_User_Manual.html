@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>369 Mart Catalog — User Manual</title>
+<style>
+  :root{
+    --navy:#1e2a78; --orange:#f08a24; --ink:#1f2230; --muted:#6b6f80;
+    --line:#e6e8f0; --alt:#f2f4fb; --tint:#eef2fc;
+    --tip:#2e6fb0; --good:#2e8b57; --good-bg:#e7f6ea;
+    --warn-bg:#fff3da; --warn-ink:#c0701a;
+  }
+  @page{
+    size:A4; margin:22mm 20mm 20mm 20mm;
+    @bottom-left{content:"369ai · 369 Mart Catalog"; font:8.5pt "Liberation Serif",Georgia,serif; color:#6b6f80;}
+    @bottom-right{content:"Page " counter(page); font:8.5pt "Liberation Serif",Georgia,serif; color:#6b6f80;}
+  }
+  @page:first{ margin-top:14mm; }
+  *{box-sizing:border-box}
+  html{background:#fff}
+  body{margin:0; font-family:"Liberation Serif","Times New Roman",Georgia,serif; font-size:10.5pt; line-height:1.5; color:var(--ink); background:#fff}
+  @media screen{ body{max-width:794px; margin:24px auto; padding:0 16px} }
+  p{margin:0 0 7pt}
+  b,strong{font-weight:700}
+  .k{color:var(--navy); font-weight:700}          /* navy key term */
+  code{font-family:"DejaVu Sans Mono",monospace; font-size:8.5pt; background:#f1f2f6; padding:1px 4px; border-radius:3px}
+  .arr{color:var(--navy); font-weight:700}
+
+  /* ---------- Cover ---------- */
+  .topbar{height:7px; background:var(--navy); border-bottom:3px solid var(--orange); margin:0 -8mm 10pt}
+  .cover{background:var(--navy); color:#fff; text-align:center; border-radius:9px; padding:26pt 20pt 22pt; margin-bottom:18pt}
+  .cover h1{margin:0; font-size:31pt; letter-spacing:1.5pt; font-weight:700; text-transform:uppercase}
+  .cover .sub{color:var(--orange); font-size:15pt; font-weight:700; margin:12pt 0 10pt}
+  .cover .meta{font-size:10pt; color:#d5d9ee}
+
+  /* ---------- H2 section with orange rule ---------- */
+  h2{color:var(--navy); font-size:15pt; margin:16pt 0 9pt; padding-bottom:5pt; border-bottom:1.6px solid var(--orange); page-break-after:avoid}
+
+  /* ---------- Flow cards (3–4 steps) ---------- */
+  .flow{display:flex; align-items:center; gap:6pt; margin:10pt 0 10pt}
+  .flow .card{flex:1; border:1px solid #d9dcea; border-radius:6px; padding:8pt 9pt; min-height:66pt}
+  .flow .card b{display:block; color:var(--navy); font-size:10.5pt; margin-bottom:2pt}
+  .flow .card span{font-size:8.5pt; color:var(--muted); line-height:1.35}
+  .flow .to{color:var(--orange); font-size:13pt}
+
+  /* ---------- Callouts ---------- */
+  .note{border-left:3px solid var(--orange); background:var(--tint); border-radius:0 5px 5px 0; padding:8pt 12pt; margin:10pt 0 12pt; font-size:9.5pt; page-break-inside:avoid}
+  .note .lbl{font-weight:700; text-transform:uppercase; font-size:8.5pt; letter-spacing:.3pt; margin-right:4pt}
+  .note.start .lbl{color:var(--warn-ink)}
+  .note.tip{border-color:var(--tip)}              .note.tip .lbl{color:var(--tip)}
+  .note.good{border-color:var(--good); background:var(--good-bg)} .note.good .lbl{color:var(--good)}
+  .note.imp{border-color:var(--navy)}             .note.imp .lbl{color:var(--navy)}
+  .note.warn{border-color:var(--orange); background:var(--warn-bg)} .note.warn .lbl{color:var(--warn-ink)}
+
+  /* ---------- Part banner ---------- */
+  .part{background:var(--navy); color:#fff; text-align:center; border-radius:6px; padding:12pt; margin:20pt 0 10pt; font-size:15pt; font-weight:700; letter-spacing:1.5pt; text-transform:uppercase; page-break-after:avoid}
+  .part-intro{color:var(--muted); margin-bottom:12pt}
+
+  /* ---------- Numbered step ---------- */
+  h3.step{display:flex; align-items:center; gap:9pt; color:var(--navy); font-size:13pt; margin:16pt 0 7pt; page-break-after:avoid}
+  h3.step .n{display:inline-block; min-width:17pt; height:17pt; line-height:17pt; text-align:center; background:var(--orange); color:#fff; border-radius:3px; font-family:"Liberation Sans",Arial,sans-serif; font-size:10pt; font-weight:700}
+
+  /* ---------- Field bullets (orange square markers) ---------- */
+  ul.f{list-style:none; padding:0; margin:4pt 0 8pt}
+  ul.f li{position:relative; padding-left:13pt; margin-bottom:4pt}
+  ul.f li::before{content:""; position:absolute; left:1pt; top:6.5pt; width:4pt; height:4pt; background:var(--orange)}
+  ul.f li b:first-child{color:var(--navy)}
+
+  /* ---------- Tables ---------- */
+  table{width:100%; border-collapse:collapse; margin:8pt 0 12pt; font-size:9pt}
+  thead{display:table-header-group}
+  th{background:var(--navy); color:#fff; text-align:left; padding:6pt 8pt; font-weight:700}
+  th+th{border-left:1px solid #34408a}
+  td{padding:6pt 8pt; border-bottom:1px solid var(--line); vertical-align:top}
+  tr:nth-child(even) td{background:var(--alt)}
+  td:first-child{color:var(--navy); font-weight:700}
+  tr{page-break-inside:avoid}
+
+  /* ---------- Quick tips ---------- */
+  ul.tips{margin:4pt 0 12pt; padding-left:14pt}
+  ul.tips li{margin-bottom:3pt}
+
+  /* ---------- Screenshots + glossary (added for 369 Mart manuals) ---------- */
+  figure.shot{margin:8pt 0 12pt; page-break-inside:avoid; break-inside:avoid; text-align:center}
+  figure.shot img{max-width:100%; max-height:118mm; border:1px solid var(--line); border-radius:6px; box-shadow:0 1px 4px rgba(30,42,120,.12)}
+  figure.shot.phone img{max-width:62mm}
+  figure.shot figcaption{font-size:8.5pt; color:var(--muted); margin-top:4pt; text-align:left}
+  table.gloss td:first-child{width:28%}
+  h2, h3.step, .part{break-after:avoid}
+</style>
+</head>
+<body>
+<!-- ===================== COVER ===================== -->
+<div class="topbar"></div>
+<div class="cover">
+  <h1>369 Mart Catalog</h1>
+  <div class="sub">Categories, Search Demand + Stock at a Glance</div>
+  <div class="meta">User Manual &nbsp;|&nbsp; 369ai</div>
+</div>
+
+<!-- ===================== WHAT THIS DOES ===================== -->
+<h2>What this does</h2>
+<p><span class="k">369 Mart Catalog</span> decides how your products are grouped in the shop app. You build the <span class="k">categories</span> a shopper browses — main categories and the sub-categories under them — and choose how each one looks: its <span class="k">colours</span>, its <span class="k">logo</span> and the one line printed under its title. It also answers the app's search box and <b>counts every search</b>, so you can see what customers looked for and what the shop does not stock.</p>
+<p>Three values on each product card are now real: the <b>star rating</b> comes from published customer reviews, <b>popularity</b> comes from units actually sold, and the <b>brand</b> comes from the product's Brand. A <b>Products</b> desk shows stock and sales across the whole shop, read-only.</p>
+
+<div class="flow">
+  <div class="card"><b>1. Build the groups</b><span>Main categories, with sub-categories under them</span></div><span class="to">→</span>
+  <div class="card"><b>2. Choose the look</b><span>Colours, logo and one line under the title</span></div><span class="to">→</span>
+  <div class="card"><b>3. Shoppers browse</b><span>Category pages, home tiles and the search box</span></div><span class="to">→</span>
+  <div class="card"><b>4. Read the demand</b><span>Searches that found nothing show what to stock</span></div>
+</div>
+
+<div class="note start"><span class="lbl">Before you start:</span> Setting up categories is done in the backend by an <b>Owner</b> or a <b>Manager</b>, from <b>369 Mart <span class="arr">→</span> Catalogue</b>. A category only fills up once it has <b>published products</b> in it. Packers, Accountants and Riders do not use these screens, and shoppers need nothing from you — they simply browse and search.</div>
+
+<h2>Words you'll see</h2>
+<table class="gloss">
+  <thead><tr><th>Word</th><th>What it means</th></tr></thead>
+  <tbody>
+    <tr><td>Main category</td><td>A top-level group, such as Components. It has its own page in the app and a pill in the app's top bar.</td></tr>
+    <tr><td>Sub-category</td><td>A group inside a main category, such as Processors. The app shows only these two levels.</td></tr>
+    <tr><td>App address</td><td>The short web name of a category, such as <i>/cables</i>. It is part of the link a customer sees and may save.</td></tr>
+    <tr><td>Background / Heading colour</td><td>The pale colour behind a category, and the darker colour of its title and ring.</td></tr>
+    <tr><td>Desk</td><td>A screen in the backend laid out like the staff console: tiles at the top, tabs, a search box and rows.</td></tr>
+    <tr><td>Standing empty</td><td>A category with no published product in it or under it.</td></tr>
+    <tr><td>Trending</td><td>The short list of popular searches the app suggests to shoppers.</td></tr>
+    <tr><td>Found nothing</td><td>A search that returned no products — something a customer wanted that you do not sell.</td></tr>
+  </tbody>
+</table>
+
+<h2>How the manual is arranged</h2>
+<p><b>Part 1 – Setting Up</b> builds your category tree, gives each category its look, and covers the full category form for the few things the desk does not change. <b>Part 2 – Everyday Use</b> walks through the three desks — <b>Catalog</b>, <b>Products</b> and <b>Searches</b> — and what the customer sees in the app. <b>Part 3 – Keeping It Secure &amp; In Order</b> covers who can do what, the full search list and privacy.</p>
+
+<!-- ===================== PART 1 ===================== -->
+<div class="part">Part 1 — Setting Up</div>
+<p class="part-intro">Done by an Owner or Manager. If your categories already exist and look right, skip to Part 2.</p>
+
+<h3 class="step"><span class="n">1</span>Where everything lives</h3>
+<p>Open <b>369 Mart</b> from the main menu. This module adds:</p>
+<ul class="f">
+  <li><b>Catalogue <span class="arr">→</span> Catalog</b> — the Catalog desk: your categories, how each looks, and which stand empty.</li>
+  <li><b>Catalogue <span class="arr">→</span> Products</b> — the Products desk: every product for sale, its stock, sales and storefront.</li>
+  <li><b>Catalogue <span class="arr">→</span> Searches</b> — the Searches desk: what customers typed into the app and what it found.</li>
+  <li><b>Advanced <span class="arr">→</span> Catalog (all views)</b> — the plain board, list and form for categories, including the app address and the order.</li>
+  <li><b>Advanced <span class="arr">→</span> Searches (all views)</b> — the plain list of every search term, with filters.</li>
+</ul>
+<p>The three desks are open to <b>Owners</b> and <b>Managers</b> (anyone with the Website designer right). The two <b>(all views)</b> entries are for the <b>Owner</b> only (Administrator (Settings) right).</p>
+
+<h3 class="step"><span class="n">2</span>Build your category tree</h3>
+<p>Open <b>Catalogue <span class="arr">→</span> Catalog</b> and press <b>New category</b>. The box explains itself: “A new group for the app. Its app address is made from the name.” Fill in:</p>
+<ul class="f">
+  <li><b>Name</b> — what shoppers read, e.g. <i>Keyboards</i>. Required: saving without it gives “A category needs a name.”</li>
+  <li><b>Under</b> — leave it on <b>None - a top-level category</b> for a main category, or choose the main category a sub-category goes under. Only main categories are offered, because the app shows two levels.</li>
+</ul>
+<p>The rest of the box — logo, line under the title, colours — is the look, covered in Steps 3 and 4. The right-hand panel, <b>How it looks in the app</b>, updates as you type. Press <b>Create</b>: a message says the category “is in the catalogue”, and its new row is highlighted in the list.</p>
+<figure class="shot"><img src="screenshots/01-new-category.png" alt="New category box for a main category" style="max-height:92mm"><figcaption>Figure 1 — New category with Under set to “None - a top-level category”: the preview on the right shows the category's header in the Leaf colours, with its line under the title in red.</figcaption></figure>
+<p>When you pick a main category in <b>Under</b>, the preview changes to a round tile — that is how the app draws a sub-category. Until you choose colours yourself, a new sub-category starts in its main category's colours.</p>
+<figure class="shot"><img src="screenshots/02-new-sub-category.png" alt="New category box for a sub-category under Computers" style="max-height:92mm"><figcaption>Figure 2 — The same box with Under set to Computers: the preview is now a round tile, here in the Berry colours.</figcaption></figure>
+<div class="note warn"><span class="lbl">Watch out:</span> There is no third level. A sub-category cannot have sub-categories of its own, and a main category that already has sub-categories cannot be moved under another one — the <b>Under</b> box is locked with “Has <i>N</i> sub-categories, so it stays a main category - move them first.”</div>
+<div class="note good"><span class="lbl">Good to know:</span> Each category made here also gets a matching product <b>Category</b> (the one set on each product), and the two stay in step: renaming or moving either one renames or moves the other. A product's Category puts it in the matching category in the app automatically.</div>
+
+<h3 class="step"><span class="n">3</span>Choose how each category looks</h3>
+<p>Open a category's <b>Edit</b> or <b>How it looks</b> button on the Catalog desk (or use the New category box). The look is set with:</p>
+<ul class="f">
+  <li><b>One line under the title</b> — a short description, e.g. “Farm-fresh produce, picked daily”. For a sub-category it shows under the title when that sub-category is picked.</li>
+  <li><b>Line colour</b> — the colour of that one line. Empty means the default: the app's grey, or for a sub-category its main category's line colour. <b>Back to default</b> clears your choice.</li>
+  <li><b>Colours</b> — ten ready-made pairs (Default, Steel, Sky, Leaf, Amber, Berry, Violet, Cocoa, Teal, Ink), each shown as “Aa”. One tap sets both colours below, always a pale background with a readable heading.</li>
+  <li><b>Background</b> — for a main category it fills the category's header; for a sub-category it fills the circle. Default <i>#f4f6f8</i>.</li>
+  <li><b>Heading colour</b> — for a main category it colours the All tile, and new sub-categories start with it; for a sub-category it rings the circle and colours its name. Default <i>#0b4a6e</i>.</li>
+</ul>
+<p>Each colour has a colour picker and a box where you can type the code. A colour must be written like <i>#e8f5e9</i> (a # and six letters or numbers); anything else is refused with “A colour looks like #e8f5e9. … does not.”</p>
+<figure class="shot"><img src="screenshots/03-edit-main-category.png" alt="Edit Components box" style="max-height:92mm"><figcaption>Figure 3 — Edit Components: the line under the title, Line colour at its default, the ten colour pairs with Steel chosen, and the header preview. Under is locked because Components has 8 sub-categories.</figcaption></figure>
+<div class="note tip"><span class="lbl">Tip:</span> A colour you pick for a sub-category stays its own, whatever you later set <b>Under</b> to. Only a sub-category whose colours were never chosen follows its main category.</div>
+
+<h3 class="step" style="page-break-before:always"><span class="n">4</span>Give a category a logo</h3>
+<p>The <b>Logo</b> field sits in the same box and has two tabs:</p>
+<ul class="f">
+  <li><b>Built-in</b> — drawings the app makes itself. A main category picks a small mark (Keyboard, Plug, Wi-Fi, Chip, Laptop and more) shown on its pill in the app's top bar. A sub-category picks a picture (Keyboard, Mouse, Processor, Memory and many more) that fills its tile on the home page and its circle on the category page.</li>
+  <li><b>Upload your own</b> — press <b>Choose a picture</b> (PNG, JPEG, WebP, GIF or SVG, up to 15 MB). A <b>Crop the logo</b> window opens: drag and zoom inside the square, or use <b>Show it all</b> / <b>Fill the square</b>, check the previews under “As the app will show it”, then press <b>Use this logo</b>. <b>Replace</b> and <b>Remove</b> appear once a picture is in use.</li>
+</ul>
+<figure class="shot"><img src="screenshots/04-logo-built-in.png" alt="Logo field with built-in pictures for a sub-category" style="max-height:84mm"><figcaption>Figure 4 — Edit Keyboards (a sub-category under Peripherals): the Built-in tab with the Keyboard picture chosen, shown in the round preview on the right.</figcaption></figure>
+<p>An uploaded picture always wins over a built-in one. Picking a built-in one again replaces the upload; <b>Remove</b> goes back to the built-in one.</p>
+<figure class="shot"><img src="screenshots/05-logo-crop.png" alt="Crop the logo window" style="max-height:62mm"><figcaption>Figure 5 — Crop the logo for a sub-category: the crop square on the left, the size note (“Full tile: 104 × 104 px”), a warning that a 150 × 150 picture will look soft, and the home page and category page previews.</figcaption></figure>
+<div class="note tip"><span class="lbl">Tip:</span> For a sub-category use a picture at least <b>512 × 512</b>; it is saved at that size. A main category's mark is shown tiny (18 × 18 on the top bar) — a simple, bold PNG with a transparent background reads best.</div>
+
+<h3 class="step"><span class="n">5</span>App address, order and the full form</h3>
+<p>A few things are deliberately <b>not</b> changed on the desk. Open <b>Advanced <span class="arr">→</span> Catalog (all views)</b> (Owner only), or press <b>All views</b> on the Catalog desk. It opens a board with each card in the category's own colours, and a list:</p>
+<ul class="f">
+  <li><b>List columns</b> — Category, Inside (its main category), App address, Products, Description, and an <b>In the app</b> switch. Background and Heading can be added from the optional columns.</li>
+  <li><b>Order</b> — drag the handle at the left of each row. The app lists main categories, and the sub-categories inside each, in this order.</li>
+  <li><b>Filters</b> — Top level, Sub-categories, Hidden from the app, No description; group by Inside.</li>
+</ul>
+<p>Open a category to see its form. The <b>369 Mart app</b> section holds <b>Show in the app</b> (on by default), <b>App address</b>, <b>Products in the app</b> (read-only), <b>Background</b>, <b>Heading colour</b>, <b>One-line description</b>, <b>Line colour</b>, the built-in logo for its level and <b>Uploaded logo</b>.</p>
+<div class="note imp"><span class="lbl">Important:</span> The <b>App address</b> is filled in from the name when a category is made, and a rename never changes it, because a customer may have saved the link. Change it by hand only when you must: it may use only lowercase letters, numbers and hyphens, and two categories cannot share one. Changing it breaks any link a customer has saved.</div>
+<div class="note good"><span class="lbl">Good to know:</span> The picture at the top of this form is the website shop's own category photo, not the app's logo. The app's logo is <b>Uploaded logo</b> in the 369 Mart app section, best set and cropped on the desk.</div>
+
+<h3 class="step"><span class="n">6</span>Put products in categories, and give them a brand</h3>
+<p>You file a product under a category by setting its <b>Category</b> on the product; its place in the app follows. A category's product count, and what the app lists in it, include only products that are <b>published</b>, active and not services — in the category itself or in any sub-category below it.</p>
+<ul class="f">
+  <li><b>Brand</b> — a field this module adds to products. It is printed on the product card, it is what the Brand filter on a category page groups by, and the search box matches it. Left empty, the app falls back to the pack size, so fill it in.</li>
+</ul>
+<div class="note good"><span class="lbl">Good to know:</span> On install, the five example categories of the home page sample (such as Fresh Fruits and Daily Essentials) are switched to hidden if they have no products, so they do not lead your category list. They are hidden, not deleted — press <b>Show</b> to bring one back.</div>
+
+<!-- ===================== PART 2 ===================== -->
+<div class="part" style="page-break-before:always">Part 2 — Everyday Use</div>
+<p class="part-intro">The three desks under 369 Mart → Catalogue. Each refreshes on its own every minute or two, so it can stay open on a second screen.</p>
+
+<h3 class="step"><span class="n">1</span>Your three desks</h3>
+<table>
+  <thead><tr><th style="width:24%">Desk</th><th>What it is for</th></tr></thead>
+  <tbody>
+    <tr><td>Catalog</td><td>“The groups a shopper sees in the app, and how each one looks.” Add, edit, hide and show categories.</td></tr>
+    <tr><td>Products</td><td>“Every product for sale, how many are left, and which storefront sells it.” Read-only.</td></tr>
+    <tr><td>Searches</td><td>“What customers typed into the app, and what it found them.” The one thing you change is whether a term is suggested.</td></tr>
+  </tbody>
+</table>
+<p>On every desk the tiles count the <b>whole shop</b>, never just the rows on screen, and a tile you can press is also a filter. If the desk cannot load, a line says “We could not reach the shop.” with a <b>Try again</b> link.</p>
+
+<h3 class="step"><span class="n">2</span>The Catalog desk</h3>
+<p>Open <b>Catalogue <span class="arr">→</span> Catalog</b>. At the top, four tiles: <b>In the app</b>, <b>Hidden</b>, <b>Standing empty</b> (turns amber when not zero) and <b>Products a shopper can reach</b> — each product counted once, however many groups it sits in. Below them, the tabs <b>All</b>, <b>In the app</b>, <b>Hidden</b>, <b>Standing empty</b>, and a search box that matches a category's name or its app address.</p>
+<p>Each main category is a heading in its own colours, with its sub-categories listed under it. Each row shows the logo (or “Aa” in its colours), the name, the app address, the number of products, and for a main category how many sub-categories it has. A <b>Hidden</b> pill means it is switched off in the app; <b>Nothing in it</b> means no published product.</p>
+<figure class="shot"><img src="screenshots/06-catalog-desk.png" alt="The Catalog desk" style="max-height:84mm"><figcaption>Figure 6 — The Catalog desk: the four tiles, the tabs with counts, “15 categories · 24 sub-categories”, and Accessories and Components as headings with their sub-categories under them, each with Edit, How it looks and Hide.</figcaption></figure>
+<p>Every row has three buttons:</p>
+<ul class="f">
+  <li><b>Edit</b> — everything about the category: name, <b>Under</b>, logo and look. Renaming keeps the app address, so a saved link still works.</li>
+  <li><b>How it looks</b> — only the logo, the line under the title and the colours. The name and address are not changed here.</li>
+  <li><b>Hide</b> / <b>Show</b> — takes the category out of the app, or puts it back, in one click.</li>
+</ul>
+<p>Saving shows “Saved.” If you search for a sub-category whose main category does not match, the main category still appears above it as a plain heading marked “Main category · not in this list”, so a sub-category is never shown without its home.</p>
+<figure class="shot"><img src="screenshots/07-catalog-desk-search.png" alt="Search result keeping the main category heading"><figcaption>Figure 7 — Searching for Mice: Peripherals is kept above it as a plain heading, “Main category · not in this list”.</figcaption></figure>
+<div class="note good"><span class="lbl">Good to know:</span> The staff console has a Catalog screen laid out the same way, with the same tiles, tabs and buttons. A change made on either one shows on the other.</div>
+<figure class="shot"><img src="screenshots/08-staff-console-catalog.png" alt="The staff console Catalog screen" style="max-height:90mm"><figcaption>Figure 8 — The staff console's Catalog screen: the same tiles, tabs, New category button and grouped rows.</figcaption></figure>
+
+<h3 class="step"><span class="n">3</span>The Products desk</h3>
+<p>Open <b>Catalogue <span class="arr">→</span> Products</b>. It lists every product that can be sold. Four tiles sit on top: <b>Products</b>, <b>Stock value</b> (what is in stock times the sales price), <b>Low stock</b> and <b>Out of stock</b> — the last two are buttons that filter the list.</p>
+<ul class="f">
+  <li><b>Tabs</b> — All, Low, Out of stock, Hidden (products not published in the shop).</li>
+  <li><b>Search</b> — by name or code (article ID).</li>
+  <li><b>Category</b> — All categories, or one category shown in the app (it includes its sub-categories).</li>
+  <li><b>Storefront</b> — Both storefronts, Quick or Express. A product is <b>Express</b> when it has a delivery time set, otherwise <b>Quick</b>.</li>
+  <li><b>Sort</b> — Lowest stock (the default), Best selling, Highest price, Name A-Z.</li>
+</ul>
+<p>The table shows <b>Product</b> (photo, name, unit and code), <b>Category</b>, <b>Delivery</b> (Express or Quick), <b>Price</b>, <b>Sold / 7d</b> (units on confirmed orders in the last seven days), <b>In stock</b> and <b>Live</b> (Live or Hidden). Low rows are tinted amber and out-of-stock rows red. It shows 50 at a time — press <b>Show more</b> for the rest. Click a row to open that product's own form, where price, stock and publishing are really changed.</p>
+<div class="note good"><span class="lbl">Good to know:</span> <b>In stock</b> is what is on hand and not already promised to an order — the same number the shop's product card uses. A product not counted in stock (a service, for example) shows “-”. <b>Low</b> means at or below the product's own low-stock number (the one behind “Only N left”). If stock is not tracked at all, the desk says “Inventory is not installed, so stock is not tracked.”</div>
+
+<h3 class="step"><span class="n">4</span>The Searches desk</h3>
+<p>Open <b>Catalogue <span class="arr">→</span> Searches</b>. The tiles are <b>Searches</b> (“Every search, counted”), <b>Different terms</b>, <b>Found nothing</b> (red when not zero) and <b>Not suggested</b>. When anything found nothing, a red line spells it out, e.g. “1 term found nothing, over 3 searches. That is what customers wanted and the shop does not stock.”</p>
+<figure class="shot"><img src="screenshots/09-searches-desk.png" alt="The Searches desk" style="max-height:92mm"><figcaption>Figure 9 — The Searches desk: 12 searches over 3 different terms, the red line about the one term that found nothing, and three terms — “fresh paneer” marked Found nothing.</figcaption></figure>
+<p>The tabs are <b>All</b> and <b>Most searched</b> (most searched first), <b>Found nothing</b> and <b>Not suggested</b> (most recent first). Each row shows the term, how many times it was searched, how many results it found last time and how long ago. On the right is the <b>Suggest to shoppers</b> switch:</p>
+<ul class="f">
+  <li><b>On</b> (the default) — the term may appear in the app's Trending list.</li>
+  <li><b>Off</b> — it is never suggested to shoppers, and the row shows <b>Not suggested</b>. It is still counted. Use it for anything misspelt or embarrassing.</li>
+</ul>
+<div class="note tip"><span class="lbl">Tip:</span> Read the <b>Found nothing</b> tab every week. Each row is something customers asked for — add the product, or fix the name or brand of one you already have so the search finds it.</div>
+
+<h3 class="step"><span class="n">5</span>What the customer sees</h3>
+<p>Everything above reaches the app on its own:</p>
+<ul class="f">
+  <li><b>Top bar</b> — each main category in the app is a pill, in your order, with its logo. A hidden category is not there.</li>
+  <li><b>Home page tiles</b> — a home tile linked to a category wears that category's background and heading colour, so recolouring a category recolours its tile. A tile whose picture is set to “The category's logo” shows that logo.</li>
+  <li><b>Category page</b> — a header in the category's colours with its name and one line under the title, then a circle for each sub-category in its own colours and logo, then the products, with filters for brand, price and the product's options.</li>
+  <li><b>Search box</b> — matches product name, brand, pack size and category name. As the shopper types, up to eight products appear under the box. <b>Trending</b> shows up to six of the most-searched terms that are allowed and found something.</li>
+  <li><b>Product cards</b> — the star rating from published reviews (a product with no reviews shows no stars), popularity from units sold on confirmed orders, and the Brand.</li>
+</ul>
+<figure class="shot"><img src="screenshots/10-home-tiles-colours.png" alt="Home page category tiles"><figcaption>Figure 10 — Home page tiles in their categories' colours: Processors set to orange, the others in their own pale colours.</figcaption></figure>
+<figure class="shot"><img src="screenshots/11-category-page.png" alt="The Components category page in the app" style="max-height:96mm"><figcaption>Figure 11 — The Components page in the shop: its header and line “Everything that goes inside the box”, the sub-category circles with Processors in orange, the Brand filter and the product cards.</figcaption></figure>
+<figure class="shot"><img src="screenshots/12-sub-category-logos.png" alt="Sub-category circles with logos"><figcaption>Figure 12 — Sub-category circles: Keyboards with an uploaded picture filling its tile; Mice, Headsets and Webcams with built-in pictures.</figcaption></figure>
+<div class="note good"><span class="lbl">Good to know:</span> A category that is in the app but has no products yet still opens — the page simply has nothing in it. Shoppers who are signed in also see their own <b>recent searches</b> (up to eight, newest first), on any device they use.</div>
+
+<!-- ===================== PART 3 ===================== -->
+<div class="part">Part 3 — Keeping It Secure &amp; In Order</div>
+
+<h3 class="step"><span class="n">1</span>Who can do what</h3>
+<table>
+  <thead><tr><th style="width:28%">Role</th><th>What they can do</th></tr></thead>
+  <tbody>
+    <tr><td>Owner</td><td>Everything: the three desks, plus <b>Catalog (all views)</b> and <b>Searches (all views)</b> — the app address, the order and the full category form.</td></tr>
+    <tr><td>Manager</td><td>The Catalog, Products and Searches desks (through the Website designer right): add, edit, hide and show categories; turn <b>Suggest to shoppers</b> on or off. Cannot add or delete search terms.</td></tr>
+    <tr><td>Packer, Accountant, Rider</td><td>No Catalogue menu entries from this module.</td></tr>
+    <tr><td>Internal user</td><td>May read search counts, but sees no menu for them.</td></tr>
+    <tr><td>Shopper</td><td>Browses and searches the app; sees only their own recent searches.</td></tr>
+  </tbody>
+</table>
+
+<h3 class="step"><span class="n">2</span>What cannot be changed, on purpose</h3>
+<ul class="f">
+  <li><b>Search counts</b> — the term, how often it was searched, its results and the date are records of what really happened. No screen can edit them; only <b>Suggest to shoppers</b> can be changed.</li>
+  <li><b>App address</b> — never changed by a rename, and only editable in the full form (Owner).</li>
+  <li><b>Stock</b> — the Products desk is read-only; a count typed there would soon disagree with the real stock.</li>
+  <li><b>Deleting</b> — the desks have no delete button. Hide a category instead. If a product Category is deleted, its matching app category is kept but taken out of the app, because a customer may have its link.</li>
+</ul>
+
+<h3 class="step"><span class="n">3</span>The full search list</h3>
+<p><b>Advanced <span class="arr">→</span> Searches (all views)</b> (Owner) is the plain list behind the Searches desk, for grouping, saved filters and exporting. Columns: <b>Searched for</b>, <b>Times</b>, <b>Results</b>, <b>Last searched</b> and an <b>Allow in Trending</b> switch. Rows that found nothing are red; rows blocked from Trending are greyed. Filters: <b>Found nothing</b>, <b>Blocked from Trending</b>, <b>Searched this week</b>. Terms cannot be added by hand.</p>
+<figure class="shot"><img src="screenshots/13-searches-all-views.png" alt="Searches (all views) list" style="width:100%; height:42mm; object-fit:cover; object-position:top"><figcaption>Figure 13 — Searches (all views): “cable” searched 2 times with 3 results, and “zzznothing” in red with 0 results; both allowed in Trending.</figcaption></figure>
+<p>How a search is counted: only when the shopper actually searches, not on every letter typed. Capitals and extra spaces are ignored, so “Dark  Chocolate” and “dark chocolate” count as one term. Terms shorter than 2 or longer than 64 characters are not counted.</p>
+
+<h3 class="step"><span class="n">4</span>Privacy</h3>
+<p>The search counts are <b>not linked to any customer</b> — they are a tally, not a history. Each customer's own recent searches are kept on their account, can be cleared by them in the app, and are never shown to another customer. A visitor who is not signed in has no recent searches kept. Staff desks do not show anyone's recent searches.</p>
+
+<h2>Status reference — categories</h2>
+<table>
+  <thead><tr><th style="width:22%">State</th><th>Meaning</th><th style="width:32%">How to change it</th></tr></thead>
+  <tbody>
+    <tr><td>In the app</td><td>Shown to shoppers (Show in the app on). A main category gets a pill and a page.</td><td>Press <b>Hide</b> on the Catalog desk.</td></tr>
+    <tr><td>Hidden</td><td>Kept in the backend but not shown in the app. Hiding a main category also takes its page and sub-categories out of the app.</td><td>Press <b>Show</b>.</td></tr>
+    <tr><td>Standing empty / Nothing in it</td><td>No published product in it or under it.</td><td>Publish products and set their Category.</td></tr>
+  </tbody>
+</table>
+
+<h2>Status reference — search terms</h2>
+<table>
+  <thead><tr><th style="width:22%">State</th><th>Meaning</th><th style="width:32%">How to change it</th></tr></thead>
+  <tbody>
+    <tr><td>Found nothing</td><td>The last search for it returned no products.</td><td>Stock the item, or fix a product's name or Brand.</td></tr>
+    <tr><td>Not suggested</td><td>Still counted, never offered in Trending.</td><td>Turn <b>Suggest to shoppers</b> back on.</td></tr>
+    <tr><td>Suggest to shoppers on</td><td>Allowed in Trending. Once it has found something, it can be one of the six most searched shown there.</td><td>—</td></tr>
+  </tbody>
+</table>
+
+<h2>Where each setting shows</h2>
+<table>
+  <thead><tr><th style="width:24%">Setting</th><th>Main category</th><th>Sub-category</th></tr></thead>
+  <tbody>
+    <tr><td>Background</td><td>Fills the category page header</td><td>Fills its circle</td></tr>
+    <tr><td>Heading colour</td><td>Colours the All tile; new sub-categories start with it</td><td>Rings its circle and colours its name</td></tr>
+    <tr><td>Logo</td><td>Small mark on its pill in the top bar</td><td>Fills its home page tile and its circle</td></tr>
+    <tr><td>One line under the title</td><td>Under the title on its page</td><td>Under the title when the sub-category is picked</td></tr>
+    <tr><td>Line colour (empty)</td><td>The app's grey</td><td>Its main category's line colour</td></tr>
+  </tbody>
+</table>
+
+<h2>Quick tips</h2>
+<ul class="tips">
+  <li>Two levels only: main categories, and sub-categories under them.</li>
+  <li>Pick a colour pair first, then fine-tune Background or Heading colour if needed.</li>
+  <li>Renaming a category is safe — its app address and customers' saved links stay the same.</li>
+  <li>Hide a category instead of deleting it.</li>
+  <li>Upload sub-category logos at 512 × 512 or bigger.</li>
+  <li>Fill in Brand on every product — the Brand filter and search use it.</li>
+  <li>Check the Found nothing tab on the Searches desk every week.</li>
+  <li>Switch off Suggest to shoppers for misspelt or awkward terms; they keep being counted.</li>
+</ul>
+
+<h2>If something goes wrong</h2>
+<table>
+  <thead><tr><th style="width:36%">What you see</th><th>What to do</th></tr></thead>
+  <tbody>
+    <tr><td>A category is missing from the app</td><td>On the Catalog desk check for the <b>Hidden</b> pill and press <b>Show</b>. If it is a sub-category, check its main category is not hidden too.</td></tr>
+    <tr><td>A category shows “Nothing in it”</td><td>Its products are not published, or their <b>Category</b> is set to something else. Check the products on the Products desk (Hidden tab).</td></tr>
+    <tr><td>“A colour looks like #e8f5e9…”</td><td>Type the colour as # plus six letters or numbers, or pick one of the ten colour pairs.</td></tr>
+    <tr><td>Under is locked</td><td>The main category has sub-categories. Move each of them under another main category first.</td></tr>
+    <tr><td>“Sub-categories go under a main category…”</td><td>You chose a sub-category in <b>Under</b>. Choose a main category instead.</td></tr>
+    <tr><td>Logo refused (“too big” or “has to be a PNG, JPEG, WebP or GIF”)</td><td>Crop it in the Crop the logo window, or save it as a PNG or JPEG under 5 MB and try again.</td></tr>
+    <tr><td>“Two categories cannot share the same app address”</td><td>In Catalog (all views), give one of them a different App address (lowercase letters, numbers and hyphens).</td></tr>
+    <tr><td>A wrong word shows in Trending</td><td>On the Searches desk find the term and turn <b>Suggest to shoppers</b> off.</td></tr>
+    <tr><td>“We could not reach the shop.”</td><td>Press <b>Try again</b>. If it keeps happening, reload the page or check your connection.</td></tr>
+    <tr><td>Product cards show the pack size as the brand</td><td>The product's <b>Brand</b> is empty — fill it in.</td></tr>
+  </tbody>
+</table>
+
+</body>
+</html>

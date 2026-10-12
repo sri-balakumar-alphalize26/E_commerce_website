@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>369 Mart — User Manual</title>
+<style>
+  :root{
+    --navy:#1e2a78; --orange:#f08a24; --ink:#1f2230; --muted:#6b6f80;
+    --line:#e6e8f0; --alt:#f2f4fb; --tint:#eef2fc;
+    --tip:#2e6fb0; --good:#2e8b57; --good-bg:#e7f6ea;
+    --warn-bg:#fff3da; --warn-ink:#c0701a;
+  }
+  @page{
+    size:A4; margin:22mm 20mm 20mm 20mm;
+    @bottom-left{content:"369ai · 369 Mart"; font:8.5pt "Liberation Serif",Georgia,serif; color:#6b6f80;}
+    @bottom-right{content:"Page " counter(page); font:8.5pt "Liberation Serif",Georgia,serif; color:#6b6f80;}
+  }
+  @page:first{ margin-top:14mm; }
+  *{box-sizing:border-box}
+  html{background:#fff}
+  body{margin:0; font-family:"Liberation Serif","Times New Roman",Georgia,serif; font-size:10.5pt; line-height:1.5; color:var(--ink); background:#fff}
+  @media screen{ body{max-width:794px; margin:24px auto; padding:0 16px} }
+  p{margin:0 0 7pt}
+  b,strong{font-weight:700}
+  .k{color:var(--navy); font-weight:700}          /* navy key term */
+  code{font-family:"DejaVu Sans Mono",monospace; font-size:8.5pt; background:#f1f2f6; padding:1px 4px; border-radius:3px}
+  .arr{color:var(--navy); font-weight:700}
+
+  /* ---------- Cover ---------- */
+  .topbar{height:7px; background:var(--navy); border-bottom:3px solid var(--orange); margin:0 -8mm 10pt}
+  .cover{background:var(--navy); color:#fff; text-align:center; border-radius:9px; padding:26pt 20pt 22pt; margin-bottom:18pt}
+  .cover h1{margin:0; font-size:31pt; letter-spacing:1.5pt; font-weight:700; text-transform:uppercase}
+  .cover .sub{color:var(--orange); font-size:15pt; font-weight:700; margin:12pt 0 10pt}
+  .cover .meta{font-size:10pt; color:#d5d9ee}
+
+  /* ---------- H2 section with orange rule ---------- */
+  h2{color:var(--navy); font-size:15pt; margin:16pt 0 9pt; padding-bottom:5pt; border-bottom:1.6px solid var(--orange); page-break-after:avoid}
+
+  /* ---------- Flow cards (3–4 steps) ---------- */
+  .flow{display:flex; align-items:center; gap:6pt; margin:10pt 0 10pt}
+  .flow .card{flex:1; border:1px solid #d9dcea; border-radius:6px; padding:8pt 9pt; min-height:66pt}
+  .flow .card b{display:block; color:var(--navy); font-size:10.5pt; margin-bottom:2pt}
+  .flow .card span{font-size:8.5pt; color:var(--muted); line-height:1.35}
+  .flow .to{color:var(--orange); font-size:13pt}
+
+  /* ---------- Callouts ---------- */
+  .note{border-left:3px solid var(--orange); background:var(--tint); border-radius:0 5px 5px 0; padding:8pt 12pt; margin:10pt 0 12pt; font-size:9.5pt; page-break-inside:avoid}
+  .note .lbl{font-weight:700; text-transform:uppercase; font-size:8.5pt; letter-spacing:.3pt; margin-right:4pt}
+  .note.start .lbl{color:var(--warn-ink)}
+  .note.tip{border-color:var(--tip)}              .note.tip .lbl{color:var(--tip)}
+  .note.good{border-color:var(--good); background:var(--good-bg)} .note.good .lbl{color:var(--good)}
+  .note.imp{border-color:var(--navy)}             .note.imp .lbl{color:var(--navy)}
+  .note.warn{border-color:var(--orange); background:var(--warn-bg)} .note.warn .lbl{color:var(--warn-ink)}
+
+  /* ---------- Part banner ---------- */
+  .part{background:var(--navy); color:#fff; text-align:center; border-radius:6px; padding:12pt; margin:20pt 0 10pt; font-size:15pt; font-weight:700; letter-spacing:1.5pt; text-transform:uppercase; page-break-after:avoid}
+  .part-intro{color:var(--muted); margin-bottom:12pt}
+
+  /* ---------- Numbered step ---------- */
+  h3.step{display:flex; align-items:center; gap:9pt; color:var(--navy); font-size:13pt; margin:16pt 0 7pt; page-break-after:avoid}
+  h3.step .n{display:inline-block; min-width:17pt; height:17pt; line-height:17pt; text-align:center; background:var(--orange); color:#fff; border-radius:3px; font-family:"Liberation Sans",Arial,sans-serif; font-size:10pt; font-weight:700}
+
+  /* ---------- Field bullets (orange square markers) ---------- */
+  ul.f{list-style:none; padding:0; margin:4pt 0 8pt}
+  ul.f li{position:relative; padding-left:13pt; margin-bottom:4pt}
+  ul.f li::before{content:""; position:absolute; left:1pt; top:6.5pt; width:4pt; height:4pt; background:var(--orange)}
+  ul.f li b:first-child{color:var(--navy)}
+
+  /* ---------- Tables ---------- */
+  table{width:100%; border-collapse:collapse; margin:8pt 0 12pt; font-size:9pt}
+  thead{display:table-header-group}
+  th{background:var(--navy); color:#fff; text-align:left; padding:6pt 8pt; font-weight:700}
+  th+th{border-left:1px solid #34408a}
+  td{padding:6pt 8pt; border-bottom:1px solid var(--line); vertical-align:top}
+  tr:nth-child(even) td{background:var(--alt)}
+  td:first-child{color:var(--navy); font-weight:700}
+  tr{page-break-inside:avoid}
+
+  /* ---------- Quick tips ---------- */
+  ul.tips{margin:4pt 0 12pt; padding-left:14pt}
+  ul.tips li{margin-bottom:3pt}
+  /* ---------- Screenshots + glossary (added for 369 Mart manuals) ---------- */
+  figure.shot{margin:8pt 0 12pt; page-break-inside:avoid; break-inside:avoid; text-align:center}
+  figure.shot img{max-width:100%; max-height:118mm; border:1px solid var(--line); border-radius:6px; box-shadow:0 1px 4px rgba(30,42,120,.12)}
+  figure.shot.phone img{max-width:62mm}
+  figure.shot figcaption{font-size:8.5pt; color:var(--muted); margin-top:4pt; text-align:left}
+  table.gloss td:first-child{width:28%}
+  h2, h3.step, .part{break-after:avoid}
+</style>
+</head>
+<body>
+<div class="topbar"></div>
+<div class="cover">
+  <h1>369 Mart</h1>
+  <div class="sub">The Foundation Every 369 Mart Module Builds On</div>
+  <div class="meta">User Manual &nbsp;|&nbsp; 369ai</div>
+</div>
+
+<h2>What this does</h2>
+<p><span class="k">369 Mart</span> is the base of the whole suite. On its own it shows very little: it puts the <span class="k">369 Mart menu</span> on the main menu, keeps a few <span class="k">shared settings</span> that every other 369 Mart part reads, and supplies the common pieces the other screens are built from, such as the <span class="k">logo picker</span> used for categories.</p>
+<p>Every other 369 Mart module needs this one, and each can be added or removed on its own. Because everything hangs off it, <b>removing 369 Mart removes the whole suite</b>.</p>
+<div class="flow">
+  <div class="card"><b>1. Install the base</b><span>The 369 Mart menu and its six headings appear</span></div><span class="to">→</span>
+  <div class="card"><b>2. Add the parts</b><span>Home page, catalogue, orders… each fills in its own heading</span></div><span class="to">→</span>
+  <div class="card"><b>3. Shared settings</b><span>Image address, how long answers are reused, alerts</span></div><span class="to">→</span>
+  <div class="card"><b>4. Same look everywhere</b><span>Every 369 Mart screen uses the same buttons and pickers</span></div>
+</div>
+<div class="note start"><span class="lbl">Before you start:</span> Setup is done by an administrator. The base itself has almost nothing to set: the shared settings appear on screens that belong to other 369 Mart modules, so install the parts you need first (or the <b>369 Mart Suite</b>, which installs them all). Day-to-day staff never touch this module directly.</div>
+
+<h2>Words you'll see</h2>
+<table class="gloss">
+  <thead><tr><th>Word</th><th>What it means</th></tr></thead>
+  <tbody>
+    <tr><td>Heading</td><td>One of the six groups along the top of the 369 Mart menu, such as Store or Sales.</td></tr>
+    <tr><td>Shared settings</td><td>One record of settings that all 369 Mart parts read, named "369 Mart Settings".</td></tr>
+    <tr><td>The shop app</td><td>What customers use to browse and buy: the website and the phone app.</td></tr>
+    <tr><td>Listed</td><td>A product that appears in the shop's rows, categories, search and offers.</td></tr>
+    <tr><td>Built-in logo</td><td>A ready-made icon or drawing you can pick for a category instead of uploading a picture.</td></tr>
+  </tbody>
+</table>
+
+<h2>How the manual is arranged</h2>
+<p><b>Part 1 – Setting Up</b> shows where the menu lives and where each shared setting is changed. <b>Part 2 – Everyday Use</b> covers the shared pieces staff meet on other screens: the logo picker, number boxes and the 369 Mart tab on a product. <b>Part 3 – Keeping It Secure &amp; In Order</b> explains who can change the shared settings and which products the shop lists.</p>
+
+<div class="part">Part 1 — Setting Up</div>
+<p class="part-intro">Done once by an administrator. If the other 369 Mart parts are already set up, you can skip to Part 2.</p>
+
+<h3 class="step"><span class="n">1</span>Where everything lives</h3>
+<p>Open <b>369 Mart</b> from the main menu. This module creates the menu and six headings; the other 369 Mart modules put their screens under them:</p>
+<ul class="f">
+  <li><b>Store</b> — the shop itself, for example the store settings.</li>
+  <li><b>Sales</b> — orders and customers.</li>
+  <li><b>Money</b> — payments and wallets.</li>
+  <li><b>Catalogue</b> — categories, products and searches.</li>
+  <li><b>Page building</b> — the parts behind the home page and product page builders.</li>
+  <li><b>Advanced</b> — the "all views" screens and extra settings each module adds.</li>
+</ul>
+<p>A heading only appears when you can open at least one screen inside it, so with only the base installed there is nothing to open yet.</p>
+
+<h3 class="step"><span class="n">2</span>The shared settings</h3>
+<p>The record called <b>369 Mart Settings</b> holds what every part shares. You change these fields on screens that other 369 Mart modules add:</p>
+<ul class="f">
+  <li><b>Remember for (seconds)</b> — how long the shop app may reuse the last answer it fetched before asking again. Default <b>60</b>. Set <b>0</b> while you are making changes and want to see them at once.</li>
+  <li><b>Image address</b> — leave it empty in almost every case. Fill it in (for example with your shop's web address) only when the shop app cannot load images through the backend.</li>
+  <li><b>Alert on new orders</b> — on by default. The staff console's bell and sidebar badge count orders waiting to be moved on.</li>
+  <li><b>Alert on low stock</b> — on by default. The staff console's bell says how many products are at or below the level where the shop app starts saying "Only N left".</li>
+</ul>
+<p>Where to find them:</p>
+<ul class="f">
+  <li><b>Page building <span class="arr">→</span> Home Page Settings</b> — <b>Remember for (seconds)</b> (under <b>Speed</b>) and <b>Image address</b> (under <b>For whoever sets up the app</b>). This screen comes with the 369 Mart Home Page module.</li>
+  <li><b>Store <span class="arr">→</span> Settings <span class="arr">→</span> Alerts</b> — the <b>New orders</b> and <b>Low stock</b> switches. Press <b>Save changes</b>. This screen comes with the 369 Mart Payments &amp; Wallet module.</li>
+</ul>
+<div class="note warn"><span class="lbl">Watch out:</span> Remember to put <b>Remember for (seconds)</b> back to 60 after you finish editing. Left at 0, the shop app asks the backend again on every visit, which makes it slower.</div>
+<div class="note good"><span class="lbl">Good to know:</span> The two alerts are for the staff console only. Email and SMS alerts are not set up.</div>
+
+<div class="part">Part 2 — Everyday Use</div>
+<p class="part-intro">The shared pieces staff meet on other 369 Mart screens.</p>
+
+<h3 class="step"><span class="n">1</span>Choosing a category logo</h3>
+<p>When you edit a category under <b>Catalogue <span class="arr">→</span> Catalog</b>, the <b>Logo</b> field is this module's logo picker. It has two tabs:</p>
+<ul class="f">
+  <li><b>Built-in</b> — pick a ready-made logo. A main category offers 16 simple icons; a sub-category offers 40 drawings (keyboard, laptop, apple, soap bottle and so on). Picking one replaces any uploaded picture.</li>
+  <li><b>Upload your own</b> — press <b>Choose a picture</b> (or <b>Replace</b>), or <b>Remove</b> to clear it. PNG, JPEG, WebP, GIF or SVG, up to 15 MB.</li>
+</ul>
+<table>
+  <thead><tr><th style="width:26%">Category level</th><th>How the shop app shows the logo</th><th style="width:26%">Best picture</th></tr></thead>
+  <tbody>
+    <tr><td>Main category</td><td>Small: 18 × 18 px beside the name on the top bar.</td><td>A simple, bold mark; a PNG with a see-through background. Saved as 128 × 128.</td></tr>
+    <tr><td>Sub-category</td><td>Full tile: 104 × 104 px on the home page, 88 × 88 on the category page.</td><td>At least 512 × 512. Saved as 512 × 512.</td></tr>
+  </tbody>
+</table>
+<p>Every upload opens <b>Crop the logo</b>. Drag the picture to move it, use the slider (or the <b>+</b> and <b>−</b> keys) to zoom, or press <b>Show it all</b> or <b>Fill the square</b>. The right side shows it <b>As the app will show it</b>. Press <b>Use this logo</b> to keep it, or <b>Cancel</b>.</p>
+<figure class="shot"><img src="screenshots/01-logo-cropper.png" style="max-height:52mm" alt="The Crop the logo window with a picture of a phone and power bank"><figcaption>Figure 1 — Crop the logo, for a sub-category: the crop square on the left, the "Full tile: 104 × 104 px" advice, an orange warning that the 150 × 150 picture will look soft, and previews of the tile on the home page and the category page.</figcaption></figure>
+<div class="note tip"><span class="lbl">Tip:</span> If the cropper says the picture "will look soft", find a bigger one. A sub-category picture should be 512 × 512 or larger.</div>
+
+<h3 class="step"><span class="n">2</span>Number boxes</h3>
+<p>Every number box on a 369 Mart screen accepts digits only. Letters such as "e" and the "+" and "−" signs are refused as you type. A box that counts things (a quantity or a number of days) also refuses the decimal point.</p>
+
+<h3 class="step"><span class="n">3</span>The 369 Mart tab on a product</h3>
+<p>The product form gets a <b>369 Mart</b> tab. This module adds it empty; the 369 Mart Home Page and Product Page modules fill it with their own fields. If you see the tab with nothing in it, neither of those modules is installed.</p>
+
+<div class="part">Part 3 — Keeping It Secure &amp; In Order</div>
+
+<h3 class="step"><span class="n">1</span>Which products the shop lists</h3>
+<p>Every list a shopper sees — home page rows, categories, search and offers — uses one rule: a product is listed only when it is <b>active</b>, <b>published</b> on the website, and <b>not a service</b>. So a wallet top-up, a gift card or a repair charge can be bought but never fills a "New this week" row.</p>
+<div class="note good"><span class="lbl">Good to know:</span> The rule only affects lists. A product opened directly — from the cart, a shared link or its product page — still works, so a gift card already in a basket can still be bought.</div>
+
+<h3 class="step"><span class="n">2</span>Who can do what</h3>
+<table>
+  <thead><tr><th style="width:30%">Role</th><th>What they can do with the shared settings</th></tr></thead>
+  <tbody>
+    <tr><td>Internal user</td><td>Read only. Other modules read the settings for them.</td></tr>
+    <tr><td>Website designer</td><td>Read and change the shared settings (cannot delete the record).</td></tr>
+    <tr><td>Administrator (Settings)</td><td>Full control.</td></tr>
+  </tbody>
+</table>
+<p>The headings themselves are not locked. Each screen under them is limited by the module that adds it, and a heading shows only when you can open something inside it, so most staff only see the headings they work in.</p>
+
+<h2>Reference — when a product appears in shop lists</h2>
+<table>
+  <thead><tr><th style="width:24%">State</th><th>Meaning</th><th style="width:30%">How to change it</th></tr></thead>
+  <tbody>
+    <tr><td>Listed</td><td>Active, published and not a service. Shows in rows, categories, search and offers.</td><td>—</td></tr>
+    <tr><td>Not published</td><td>Not shown in any shop list.</td><td>Publish the product on the website.</td></tr>
+    <tr><td>Service</td><td>Can be bought, but never listed.</td><td>Change the product type, if it is really goods.</td></tr>
+    <tr><td>Archived</td><td>Not shown anywhere in shop lists, even in a hand-picked row.</td><td>Restore it from the archived products.</td></tr>
+  </tbody>
+</table>
+
+<h2>Quick tips</h2>
+<ul class="tips">
+  <li>Install the 369 Mart Suite to get every part in one go.</li>
+  <li>Set Remember for (seconds) to 0 while editing, then back to 60.</li>
+  <li>Leave Image address empty unless images fail to load in the shop app.</li>
+  <li>A sub-category picture should be at least 512 × 512.</li>
+  <li>Picking a built-in logo replaces an uploaded one.</li>
+  <li>Services and unpublished products never show in shop lists.</li>
+  <li>An empty heading or tab means the module that fills it is not installed.</li>
+</ul>
+
+<h2>If something goes wrong</h2>
+<table>
+  <thead><tr><th style="width:36%">What you see</th><th>What to do</th></tr></thead>
+  <tbody>
+    <tr><td>A change doesn't show in the shop app</td><td>The app reuses answers for <b>Remember for (seconds)</b>. Wait that long, or set it to 0 under <b>Page building → Home Page Settings</b> while editing.</td></tr>
+    <tr><td>Product images don't load in the shop app</td><td>Ask whoever set up the app whether <b>Image address</b> needs filling in (Home Page Settings, under <b>For whoever sets up the app</b>).</td></tr>
+    <tr><td>A product is missing from a row or category</td><td>Check it is active, published and not a service (see the reference table above).</td></tr>
+    <tr><td>"Choose a PNG, JPEG, WebP, GIF or SVG picture."</td><td>The logo file is another type. Save it as one of those and upload again.</td></tr>
+    <tr><td>"That file is over 15 MB. Choose a smaller one."</td><td>Shrink the picture or pick a smaller file.</td></tr>
+    <tr><td>"That picture could not be cropped here."</td><td>Save the picture as a PNG or JPEG and try again.</td></tr>
+    <tr><td>The 369 Mart tab on a product is empty</td><td>Install the 369 Mart Home Page or Product Page module, which fill it.</td></tr>
+  </tbody>
+</table>
+
+</body>
+</html>

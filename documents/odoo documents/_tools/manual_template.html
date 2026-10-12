@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<!-- ============================================================
+  369ai USER MANUAL TEMPLATE  (extracted from "Signage Scan — User Manual")
+  Render:  weasyprint manual_template.html manual.pdf      (A4, auto page numbers)
+  Replace every {{PLACEHOLDER}}. Duplicate / delete blocks as needed.
+  Components: cover · h2 section · flow cards · callouts (5 kinds) ·
+              part banner · numbered step · field bullets · tables · quick tips
+============================================================ -->
+<title>{{PRODUCT_NAME}} — User Manual</title>
+<style>
+  :root{
+    --navy:#1e2a78; --orange:#f08a24; --ink:#1f2230; --muted:#6b6f80;
+    --line:#e6e8f0; --alt:#f2f4fb; --tint:#eef2fc;
+    --tip:#2e6fb0; --good:#2e8b57; --good-bg:#e7f6ea;
+    --warn-bg:#fff3da; --warn-ink:#c0701a;
+  }
+  @page{
+    size:A4; margin:22mm 20mm 20mm 20mm;
+    @bottom-left{content:"369ai · {{PRODUCT_NAME_TITLE}}"; font:8.5pt "Liberation Serif",Georgia,serif; color:#6b6f80;}
+    @bottom-right{content:"Page " counter(page); font:8.5pt "Liberation Serif",Georgia,serif; color:#6b6f80;}
+  }
+  @page:first{ margin-top:14mm; }
+  *{box-sizing:border-box}
+  html{background:#fff}
+  body{margin:0; font-family:"Liberation Serif","Times New Roman",Georgia,serif; font-size:10.5pt; line-height:1.5; color:var(--ink); background:#fff}
+  @media screen{ body{max-width:794px; margin:24px auto; padding:0 16px} }
+  p{margin:0 0 7pt}
+  b,strong{font-weight:700}
+  .k{color:var(--navy); font-weight:700}          /* navy key term */
+  code{font-family:"DejaVu Sans Mono",monospace; font-size:8.5pt; background:#f1f2f6; padding:1px 4px; border-radius:3px}
+  .arr{color:var(--navy); font-weight:700}
+
+  /* ---------- Cover ---------- */
+  .topbar{height:7px; background:var(--navy); border-bottom:3px solid var(--orange); margin:0 -8mm 10pt}
+  .cover{background:var(--navy); color:#fff; text-align:center; border-radius:9px; padding:26pt 20pt 22pt; margin-bottom:18pt}
+  .cover h1{margin:0; font-size:31pt; letter-spacing:1.5pt; font-weight:700; text-transform:uppercase}
+  .cover .sub{color:var(--orange); font-size:15pt; font-weight:700; margin:12pt 0 10pt}
+  .cover .meta{font-size:10pt; color:#d5d9ee}
+
+  /* ---------- H2 section with orange rule ---------- */
+  h2{color:var(--navy); font-size:15pt; margin:16pt 0 9pt; padding-bottom:5pt; border-bottom:1.6px solid var(--orange); page-break-after:avoid}
+
+  /* ---------- Flow cards (3–4 steps) ---------- */
+  .flow{display:flex; align-items:center; gap:6pt; margin:10pt 0 10pt}
+  .flow .card{flex:1; border:1px solid #d9dcea; border-radius:6px; padding:8pt 9pt; min-height:66pt}
+  .flow .card b{display:block; color:var(--navy); font-size:10.5pt; margin-bottom:2pt}
+  .flow .card span{font-size:8.5pt; color:var(--muted); line-height:1.35}
+  .flow .to{color:var(--orange); font-size:13pt}
+
+  /* ---------- Callouts ---------- */
+  .note{border-left:3px solid var(--orange); background:var(--tint); border-radius:0 5px 5px 0; padding:8pt 12pt; margin:10pt 0 12pt; font-size:9.5pt; page-break-inside:avoid}
+  .note .lbl{font-weight:700; text-transform:uppercase; font-size:8.5pt; letter-spacing:.3pt; margin-right:4pt}
+  .note.start .lbl{color:var(--warn-ink)}
+  .note.tip{border-color:var(--tip)}              .note.tip .lbl{color:var(--tip)}
+  .note.good{border-color:var(--good); background:var(--good-bg)} .note.good .lbl{color:var(--good)}
+  .note.imp{border-color:var(--navy)}             .note.imp .lbl{color:var(--navy)}
+  .note.warn{border-color:var(--orange); background:var(--warn-bg)} .note.warn .lbl{color:var(--warn-ink)}
+
+  /* ---------- Part banner ---------- */
+  .part{background:var(--navy); color:#fff; text-align:center; border-radius:6px; padding:12pt; margin:20pt 0 10pt; font-size:15pt; font-weight:700; letter-spacing:1.5pt; text-transform:uppercase; page-break-after:avoid}
+  .part-intro{color:var(--muted); margin-bottom:12pt}
+
+  /* ---------- Numbered step ---------- */
+  h3.step{display:flex; align-items:center; gap:9pt; color:var(--navy); font-size:13pt; margin:16pt 0 7pt; page-break-after:avoid}
+  h3.step .n{display:inline-block; min-width:17pt; height:17pt; line-height:17pt; text-align:center; background:var(--orange); color:#fff; border-radius:3px; font-family:"Liberation Sans",Arial,sans-serif; font-size:10pt; font-weight:700}
+
+  /* ---------- Field bullets (orange square markers) ---------- */
+  ul.f{list-style:none; padding:0; margin:4pt 0 8pt}
+  ul.f li{position:relative; padding-left:13pt; margin-bottom:4pt}
+  ul.f li::before{content:""; position:absolute; left:1pt; top:6.5pt; width:4pt; height:4pt; background:var(--orange)}
+  ul.f li b:first-child{color:var(--navy)}
+
+  /* ---------- Tables ---------- */
+  table{width:100%; border-collapse:collapse; margin:8pt 0 12pt; font-size:9pt}
+  thead{display:table-header-group}
+  th{background:var(--navy); color:#fff; text-align:left; padding:6pt 8pt; font-weight:700}
+  th+th{border-left:1px solid #34408a}
+  td{padding:6pt 8pt; border-bottom:1px solid var(--line); vertical-align:top}
+  tr:nth-child(even) td{background:var(--alt)}
+  td:first-child{color:var(--navy); font-weight:700}
+  tr{page-break-inside:avoid}
+
+  /* ---------- Quick tips ---------- */
+  ul.tips{margin:4pt 0 12pt; padding-left:14pt}
+  ul.tips li{margin-bottom:3pt}
+</style>
+</head>
+<body>
+
+<!-- ===================== COVER ===================== -->
+<div class="topbar"></div>
+<div class="cover">
+  <h1>{{PRODUCT_NAME}}</h1>
+  <div class="sub">{{TAGLINE — e.g. Banners + In-Store Price Checker}}</div>
+  <div class="meta">User Manual &nbsp;|&nbsp; 369ai</div>
+</div>
+
+<!-- ===================== WHAT THIS DOES ===================== -->
+<h2>What this does</h2>
+<p><span class="k">{{Product Name}}</span> {{one-paragraph plain-language summary of what the module does, with 2–3 <span class="k">key terms</span> highlighted in navy}}.</p>
+<p>{{Second paragraph: who controls it and the one safety/privacy point that matters most, with a <b>bold phrase</b>.}}</p>
+
+<div class="flow">
+  <div class="card"><b>1. {{Step}}</b><span>{{short description}}</span></div><span class="to">→</span>
+  <div class="card"><b>2. {{Step}}</b><span>{{short description}}</span></div><span class="to">→</span>
+  <div class="card"><b>3. {{Step}}</b><span>{{short description}}</span></div><span class="to">→</span>
+  <div class="card"><b>4. {{Step}}</b><span>{{short description}}</span></div>
+</div>
+
+<div class="note start"><span class="lbl">Before you start:</span> {{Who does setup, what access is needed, and what must exist first — e.g. <b>products with barcodes</b>. Say what day-to-day users do NOT need.}}</div>
+
+<h2>How the manual is arranged</h2>
+<p>{{Product}} has {{two/three}} sides, and this manual follows them. <b>Part 1 – Setting Up</b> {{…}}. <b>Part 2 – Everyday Use</b> {{…}}. <b>Part 3 – {{Title}}</b> {{…}}.</p>
+
+<!-- ===================== PART 1 ===================== -->
+<div class="part">Part 1 — Setting Up</div>
+<p class="part-intro">{{Who does this part and when they can skip it.}}</p>
+
+<h3 class="step"><span class="n">1</span>Where everything lives</h3>
+<p>Open <b>{{Menu}}</b> from the main menu. Everything for setup sits under it:</p>
+<ul class="f">
+  <li><b>{{Menu item}}</b> — {{what it is for}}.</li>
+  <li><b>{{Menu item}} <span class="arr">→</span> {{Sub item}}</b> — {{what it is for}}.</li>
+  <li><b>{{Menu item}}</b> — {{what it is for}}.</li>
+</ul>
+<p>{{Access note — who sees the menu.}}</p>
+
+<h3 class="step"><span class="n">2</span>{{Setup step title}}</h3>
+<p>Open <b>{{Screen}}</b> and press <b>New</b>. Fill in:</p>
+<ul class="f">
+  <li><b>{{Field}}</b> — {{meaning}}.</li>
+  <li><b>{{Field}}</b> — <b>{{Option A}}</b> or <b>{{Option B}}</b>. {{behaviour of each}}.</li>
+  <li><b>{{Field}}</b> — {{meaning, e.g. accepts <code>.mp4</code>}}.</li>
+</ul>
+<div class="note tip"><span class="lbl">Tip:</span> {{Helpful shortcut or the first thing to check.}}</div>
+<div class="note warn"><span class="lbl">Watch out:</span> {{A setting that causes a surprising or bad result.}}</div>
+<div class="note good"><span class="lbl">Good to know:</span> {{Clarifies a common confusion (e.g. hide vs archive).}}</div>
+<div class="note imp"><span class="lbl">Important:</span> {{Security/data rule the admin must understand.}}</div>
+
+<h3 class="step"><span class="n">3</span>{{Setup step with a mode table}}</h3>
+<p>{{Intro sentence.}}</p>
+<table>
+  <thead><tr><th style="width:30%">Mode</th><th>What it does</th></tr></thead>
+  <tbody>
+    <tr><td>{{Off (default)}}</td><td>{{behaviour}}</td></tr>
+    <tr><td>{{On}}</td><td>{{behaviour}}</td></tr>
+  </tbody>
+</table>
+
+<!-- ===================== PART 2 ===================== -->
+<div class="part">Part 2 — Everyday Use</div>
+<p class="part-intro">{{Where daily users work. Once Part 1 is done, this is all staff touch.}}</p>
+
+<h3 class="step"><span class="n">1</span>{{Daily task}}</h3>
+<p>{{What the user does and what they see.}}</p>
+
+<h3 class="step"><span class="n">2</span>{{Screens on the device}}</h3>
+<table>
+  <thead><tr><th style="width:30%">Screen</th><th>What it does</th></tr></thead>
+  <tbody>
+    <tr><td>{{Screen}}</td><td>{{purpose}}</td></tr>
+    <tr><td>{{Screen}}</td><td>{{purpose}}</td></tr>
+    <tr><td>{{Screen}}</td><td>{{purpose}}</td></tr>
+  </tbody>
+</table>
+
+<!-- ===================== PART 3 ===================== -->
+<div class="part">Part 3 — Keeping It Secure &amp; In Order</div>
+
+<h3 class="step"><span class="n">1</span>{{Security feature}}</h3>
+<p>{{Explanation.}}</p>
+
+<h3 class="step"><span class="n">2</span>Who can do what</h3>
+<table>
+  <thead><tr><th style="width:30%">Role</th><th>What they can do</th></tr></thead>
+  <tbody>
+    <tr><td>{{Internal user}}</td><td>{{rights}}</td></tr>
+    <tr><td>{{Administrator}}</td><td>{{rights}}</td></tr>
+  </tbody>
+</table>
+
+<!-- ===================== REFERENCE ===================== -->
+<h2>Status reference — {{record}}</h2>
+<table>
+  <thead><tr><th style="width:24%">State</th><th>Meaning</th><th style="width:28%">How to change it</th></tr></thead>
+  <tbody>
+    <tr><td>{{State}}</td><td>{{meaning}}</td><td>{{action}}</td></tr>
+    <tr><td>{{State}}</td><td>{{meaning}}</td><td>{{action}}</td></tr>
+    <tr><td>{{State}}</td><td>{{meaning}}</td><td>{{action}}</td></tr>
+  </tbody>
+</table>
+
+<h2>Quick tips</h2>
+<ul class="tips">
+  <li>{{One-line rule of thumb.}}</li>
+  <li>{{One-line rule of thumb.}}</li>
+  <li>{{One-line rule of thumb.}}</li>
+</ul>
+
+<h2>If something goes wrong</h2>
+<table>
+  <thead><tr><th style="width:36%">What you see</th><th>What to do</th></tr></thead>
+  <tbody>
+    <tr><td>{{Symptom}}</td><td>{{Cause and fix, naming the exact screen/field.}}</td></tr>
+    <tr><td>{{Symptom}}</td><td>{{Cause and fix.}}</td></tr>
+  </tbody>
+</table>
+
+</body>
+</html>

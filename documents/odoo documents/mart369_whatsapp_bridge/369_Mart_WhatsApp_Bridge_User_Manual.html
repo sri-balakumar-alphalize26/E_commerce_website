@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>369 Mart WhatsApp Bridge — User Manual</title>
+<style>
+  :root{
+    --navy:#1e2a78; --orange:#f08a24; --ink:#1f2230; --muted:#6b6f80;
+    --line:#e6e8f0; --alt:#f2f4fb; --tint:#eef2fc;
+    --tip:#2e6fb0; --good:#2e8b57; --good-bg:#e7f6ea;
+    --warn-bg:#fff3da; --warn-ink:#c0701a;
+  }
+  @page{
+    size:A4; margin:22mm 20mm 20mm 20mm;
+    @bottom-left{content:"369ai · 369 Mart WhatsApp Bridge"; font:8.5pt "Liberation Serif",Georgia,serif; color:#6b6f80;}
+    @bottom-right{content:"Page " counter(page); font:8.5pt "Liberation Serif",Georgia,serif; color:#6b6f80;}
+  }
+  @page:first{ margin-top:14mm; }
+  *{box-sizing:border-box}
+  html{background:#fff}
+  body{margin:0; font-family:"Liberation Serif","Times New Roman",Georgia,serif; font-size:10.5pt; line-height:1.5; color:var(--ink); background:#fff}
+  @media screen{ body{max-width:794px; margin:24px auto; padding:0 16px} }
+  p{margin:0 0 7pt}
+  b,strong{font-weight:700}
+  .k{color:var(--navy); font-weight:700}          /* navy key term */
+  code{font-family:"DejaVu Sans Mono",monospace; font-size:8.5pt; background:#f1f2f6; padding:1px 4px; border-radius:3px}
+  .arr{color:var(--navy); font-weight:700}
+
+  /* ---------- Cover ---------- */
+  .topbar{height:7px; background:var(--navy); border-bottom:3px solid var(--orange); margin:0 -8mm 10pt}
+  .cover{background:var(--navy); color:#fff; text-align:center; border-radius:9px; padding:26pt 20pt 22pt; margin-bottom:18pt}
+  .cover h1{margin:0; font-size:31pt; letter-spacing:1.5pt; font-weight:700; text-transform:uppercase}
+  .cover .sub{color:var(--orange); font-size:15pt; font-weight:700; margin:12pt 0 10pt}
+  .cover .meta{font-size:10pt; color:#d5d9ee}
+
+  /* ---------- H2 section with orange rule ---------- */
+  h2{color:var(--navy); font-size:15pt; margin:16pt 0 9pt; padding-bottom:5pt; border-bottom:1.6px solid var(--orange); page-break-after:avoid}
+
+  /* ---------- Flow cards (3–4 steps) ---------- */
+  .flow{display:flex; align-items:center; gap:6pt; margin:10pt 0 10pt}
+  .flow .card{flex:1; border:1px solid #d9dcea; border-radius:6px; padding:8pt 9pt; min-height:66pt}
+  .flow .card b{display:block; color:var(--navy); font-size:10.5pt; margin-bottom:2pt}
+  .flow .card span{font-size:8.5pt; color:var(--muted); line-height:1.35}
+  .flow .to{color:var(--orange); font-size:13pt}
+
+  /* ---------- Callouts ---------- */
+  .note{border-left:3px solid var(--orange); background:var(--tint); border-radius:0 5px 5px 0; padding:8pt 12pt; margin:10pt 0 12pt; font-size:9.5pt; page-break-inside:avoid}
+  .note .lbl{font-weight:700; text-transform:uppercase; font-size:8.5pt; letter-spacing:.3pt; margin-right:4pt}
+  .note.start .lbl{color:var(--warn-ink)}
+  .note.tip{border-color:var(--tip)}              .note.tip .lbl{color:var(--tip)}
+  .note.good{border-color:var(--good); background:var(--good-bg)} .note.good .lbl{color:var(--good)}
+  .note.imp{border-color:var(--navy)}             .note.imp .lbl{color:var(--navy)}
+  .note.warn{border-color:var(--orange); background:var(--warn-bg)} .note.warn .lbl{color:var(--warn-ink)}
+
+  /* ---------- Part banner ---------- */
+  .part{background:var(--navy); color:#fff; text-align:center; border-radius:6px; padding:12pt; margin:20pt 0 10pt; font-size:15pt; font-weight:700; letter-spacing:1.5pt; text-transform:uppercase; page-break-after:avoid}
+  .part-intro{color:var(--muted); margin-bottom:12pt}
+
+  /* ---------- Numbered step ---------- */
+  h3.step{display:flex; align-items:center; gap:9pt; color:var(--navy); font-size:13pt; margin:16pt 0 7pt; page-break-after:avoid}
+  h3.step .n{display:inline-block; min-width:17pt; height:17pt; line-height:17pt; text-align:center; background:var(--orange); color:#fff; border-radius:3px; font-family:"Liberation Sans",Arial,sans-serif; font-size:10pt; font-weight:700}
+
+  /* ---------- Field bullets (orange square markers) ---------- */
+  ul.f{list-style:none; padding:0; margin:4pt 0 8pt}
+  ul.f li{position:relative; padding-left:13pt; margin-bottom:4pt}
+  ul.f li::before{content:""; position:absolute; left:1pt; top:6.5pt; width:4pt; height:4pt; background:var(--orange)}
+  ul.f li b:first-child{color:var(--navy)}
+
+  /* ---------- Tables ---------- */
+  table{width:100%; border-collapse:collapse; margin:8pt 0 12pt; font-size:9pt}
+  thead{display:table-header-group}
+  th{background:var(--navy); color:#fff; text-align:left; padding:6pt 8pt; font-weight:700}
+  th+th{border-left:1px solid #34408a}
+  td{padding:6pt 8pt; border-bottom:1px solid var(--line); vertical-align:top}
+  tr:nth-child(even) td{background:var(--alt)}
+  td:first-child{color:var(--navy); font-weight:700}
+  tr{page-break-inside:avoid}
+
+  /* ---------- Quick tips ---------- */
+  ul.tips{margin:4pt 0 12pt; padding-left:14pt}
+  ul.tips li{margin-bottom:3pt}
+
+  /* ---------- Screenshots + glossary (added for 369 Mart manuals) ---------- */
+  figure.shot{margin:8pt 0 12pt; page-break-inside:avoid; break-inside:avoid; text-align:center}
+  figure.shot img{max-width:100%; max-height:118mm; border:1px solid var(--line); border-radius:6px; box-shadow:0 1px 4px rgba(30,42,120,.12)}
+  figure.shot.phone img{max-width:62mm}
+  figure.shot figcaption{font-size:8.5pt; color:var(--muted); margin-top:4pt; text-align:left}
+  table.gloss td:first-child{width:28%}
+  h2, h3.step, .part{break-after:avoid}
+</style>
+</head>
+<body>
+<div class="topbar"></div>
+<div class="cover">
+  <h1>369 Mart WhatsApp Bridge</h1>
+  <div class="sub">One Shop for the Website and WhatsApp Selling</div>
+  <div class="meta">User Manual &nbsp;|&nbsp; 369ai</div>
+</div>
+
+<h2>What this does</h2>
+<p>369 Mart sells through two doors: the <span class="k">website</span> (and shop app), and the <span class="k">WhatsApp selling flow</span>, where customers order in a WhatsApp chat or group. Each door could run a whole shop on its own. <span class="k">369 Mart: WhatsApp Bridge</span> joins them into one shop: one list of orders, one customer per phone number, one catalogue and one price.</p>
+<p>It also lets the shop speak on WhatsApp: order updates in your own words, the invoice, the <b>door code</b> for the rider, sign-in codes, and an alert to the Owner <b>every time a staff member signs in to the console</b>.</p>
+
+<div class="flow">
+  <div class="card"><b>1. Order comes in</b><span>From the website or from WhatsApp; each is marked with its channel</span></div><span class="to">→</span>
+  <div class="card"><b>2. One board</b><span>Both kinds of order show on the same Orders screens</span></div><span class="to">→</span>
+  <div class="card"><b>3. Rider job</b><span>The delivery job and the order move together</span></div><span class="to">→</span>
+  <div class="card"><b>4. Customer told</b><span>Updates, door code and invoice on WhatsApp</span></div>
+</div>
+
+<div class="note start"><span class="lbl">Before you start:</span> The WhatsApp selling flow and a <b>WhatsApp session</b> (the shop's connected WhatsApp number) must already be set up on the WhatsApp panel. The settings here need a <b>Manager</b> or <b>Owner</b>. Staff working orders need nothing new; they just see a channel on each order.</div>
+
+<h2>Words you'll see</h2>
+<table class="gloss">
+  <thead><tr><th>Word</th><th>What it means</th></tr></thead>
+  <tbody>
+    <tr><td>Channel</td><td>Which door an order came through: <b>Website</b> or <b>WhatsApp</b>.</td></tr>
+    <tr><td>WhatsApp session</td><td>The shop's WhatsApp number as connected on the WhatsApp panel. Messages leave from it.</td></tr>
+    <tr><td>Delivery job</td><td>The rider's task for an order, worked in the rider app or on WhatsApp.</td></tr>
+    <tr><td>Door code</td><td>A six-digit code the customer gives the rider after receiving the parcel. It proves the delivery.</td></tr>
+    <tr><td>Placeholder</td><td>A short code in a message that is replaced by the real detail when it is sent, e.g. the order number.</td></tr>
+    <tr><td>369 Wallet</td><td>The customer's money balance in the shop. Refunds are paid into it.</td></tr>
+  </tbody>
+</table>
+
+<h2>How the manual is arranged</h2>
+<p><b>Part 1 – Setting Up</b> covers the WhatsApp tab in Settings. <b>Part 2 – Everyday Use</b> covers orders from both channels and everything the shop sends on WhatsApp. <b>Part 3 – Keeping It Secure &amp; In Order</b> covers the Owner alert, who can do what, and what happens if the module is removed.</p>
+
+<!-- ===================== PART 1 ===================== -->
+<div class="part">Part 1 — Setting Up</div>
+<p class="part-intro">Done once by a Manager or Owner. Everything is switched on by default with the shop's own wording, so you only need this part to change it.</p>
+
+<h3 class="step"><span class="n">1</span>Where everything lives</h3>
+<p>The module adds no new menu. It adds to screens you already have, under <b>369 Mart</b> in the main menu:</p>
+<ul class="f">
+  <li><b>Store <span class="arr">→</span> Settings <span class="arr">→</span> WhatsApp</b> tab — which number speaks, the six update messages and the invoice switch.</li>
+  <li><b>Sales <span class="arr">→</span> Orders</b> — a <b>Channel</b> filter and a WhatsApp line on each WhatsApp order.</li>
+  <li><b>Store <span class="arr">→</span> Bot answers</b> — one extra answer, <i>Who is delivering their order</i>.</li>
+</ul>
+<p>The Settings screen needs <b>Website designer</b> or <b>Administrator (Settings)</b> rights, which Managers and Owners have.</p>
+
+<h3 class="step"><span class="n">2</span>Choose the number that sends updates</h3>
+<p>Open <b>Store <span class="arr">→</span> Settings</b> and click the <b>WhatsApp</b> tab. At the top:</p>
+<ul class="f">
+  <li><b>Send order updates from</b> — pick a WhatsApp session, or leave <b>Whichever is connected</b> (the default). A coloured label shows its state: green when connected, orange otherwise.</li>
+  <li><b>Check now</b> — asks the WhatsApp panel for the session's state right now, instead of showing the last known one.</li>
+  <li><b>Authorized number</b> — the number this shop may pair, and the number actually paired if it differs.</li>
+</ul>
+<div class="note good"><span class="lbl">Good to know:</span> The number itself is set on the WhatsApp panel, not here. Switching this shop off on the panel stops these updates too, and the panel's no-reply footer, when ticked, is added to every message.</div>
+<div class="note tip"><span class="lbl">Tip:</span> If the session is offline, messages are not lost. They wait in the queue and go out when the number is back.</div>
+
+<h3 class="step"><span class="n">3</span>The six update messages</h3>
+<p>Below the session there is one switch per order step: <b>Order placed</b>, <b>Packed</b>, <b>Shipped</b>, <b>Out for delivery</b>, <b>Delivered</b> and <b>Cancelled</b>. All are on by default. When a switch is on, a box shows the words sent. Change them as you like; empty the box to go back to the shop's own wording.</p>
+<div style="break-inside:avoid; page-break-inside:avoid"><p>Three placeholders fill in details for you. Type them exactly as shown:</p>
+<table>
+  <thead><tr><th style="width:24%">Placeholder</th><th>Replaced by</th></tr></thead>
+  <tbody>
+    <tr><td>%(ref)s</td><td>The order number, e.g. 369M-9001.</td></tr>
+    <tr><td>%(eta)s</td><td>The delivery time promised for the order.</td></tr>
+    <tr><td>%(link)s</td><td>The link to the order's tracking page.</td></tr>
+  </tbody>
+</table>
+</div>
+<p>Press <b>Save changes</b>. If a placeholder is mistyped, saving stops and names the step to fix, so a broken message is never sent.</p>
+<div class="note warn"><span class="lbl">Watch out:</span> For an order with a <b>rider job</b>, the Shipped, Out for delivery and Delivered messages come from the delivery job in its own words (the same journey a WhatsApp customer hears). Your switches still apply, but your wording for those three steps is not used.</div>
+
+<h3 class="step"><span class="n">4</span>The invoice on delivery</h3>
+<p><b>Send the invoice PDF when an order is delivered</b> is on by default. When an order is delivered, the customer also gets the invoice as a PDF, captioned <i>Your 369 Mart invoice</i>. It is sent only if the <b>Delivered</b> switch is on, the customer asked for WhatsApp updates, and the invoice has been confirmed.</p>
+
+<!-- ===================== PART 2 ===================== -->
+<div class="part">Part 2 — Everyday Use</div>
+<p class="part-intro">What staff see on the Orders screens, and what customers receive on WhatsApp.</p>
+
+<h3 class="step"><span class="n">1</span>Orders from both channels</h3>
+<p>Every order now carries a <b>Channel</b>: <b>WhatsApp</b> when it grew out of a WhatsApp chat or group, otherwise <b>Website</b>. Both kinds show on the same Orders screens.</p>
+<ul class="f">
+  <li><b>Orders desk</b> — a <b>Channel</b> picker (<b>Both channels</b>, <b>Website</b>, <b>WhatsApp</b>). A WhatsApp order's row says <i>WhatsApp</i> and its job number. Opening it shows <i>WhatsApp delivery</i> with the job, its stage, the shop, the rider and the group.</li>
+  <li><b>Orders list (all views)</b> — <b>Website</b> and <b>WhatsApp</b> filters, and <b>Channel</b> under Group By. The order form shows the <b>Channel</b> and the <b>Delivery job</b>.</li>
+</ul>
+<div class="note good"><span class="lbl">Good to know:</span> A WhatsApp order has no 369M- number. It shows under its own order name, such as <i>S00042</i>. Only confirmed WhatsApp orders appear; enquiries that never became orders stay off the board, just like unpaid website baskets.</div>
+<p>Moving an order on the Orders desk moves its delivery job, and when a rider or shop moves the job, the order follows. Website orders become rider-app jobs with the right delivery kind and the right cash to collect.</p>
+
+<h3 class="step"><span class="n">2</span>Who gets the update messages</h3>
+<p>The six messages from Part 1 go to <b>website customers</b> who ticked WhatsApp at checkout and left WhatsApp on in their account. They go to the customer's own phone (the account's number), not the delivery address's, which may belong to a neighbour.</p>
+<p>Customers who ordered <b>on WhatsApp</b> are talked to by the selling flow itself in their own chat, step by step, so they are never messaged twice.</p>
+
+<h3 class="step"><span class="n">3</span>The door code on WhatsApp</h3>
+<p>A website order already has a door code, shown in the customer's app since payment. When the rider sets off, the <b>same code</b> is sent on WhatsApp: <i>Your order is arriving. Give this code to the rider after you have the parcel…</i> If someone else is receiving the parcel, the phone on the delivery address gets it too. Whatever the rider types is checked against that one code.</p>
+<div class="note imp"><span class="lbl">Important:</span> The door code is sent even to customers who switched WhatsApp updates off, because without it there is no delivery. If WhatsApp fails, the customer can still read the code in their app.</div>
+
+<h3 class="step"><span class="n">4</span>Signing in with a WhatsApp code</h3>
+<p>When a customer signs in with their mobile number, the sign-in code arrives on WhatsApp from the shop's number: <i>Your 369 Mart code is …</i>. It expires in 10 minutes and must not be shared. The sign-in screen tells the customer honestly whether the code was sent, is waiting to send, or could not be sent.</p>
+<ul class="f">
+  <li><b>WhatsApp-only customers</b> — someone who has only ever ordered on WhatsApp can sign in with no sign-up. Their account is made on the record that already holds their orders.</li>
+  <li><b>One number, one customer</b> — once a number is proven, other WhatsApp contacts with the same number are joined into the account: their orders, address, points, wallet and chats.</li>
+  <li><b>Never joined</b> — staff, companies, riders, shops, supplier-only contacts, and anyone who already has a login.</li>
+</ul>
+
+<h3 class="step"><span class="n">5</span>Refunds on WhatsApp orders</h3>
+<p>WhatsApp orders now get money back the same way website orders do:</p>
+<ul class="f">
+  <li><b>Cancelled before payment</b> — its unpaid bill is cancelled.</li>
+  <li><b>Cancelled, returned, or refunded after payment</b> — what was paid goes into the customer's <b>369 Wallet</b>, with a credit note, exactly once.</li>
+</ul>
+<p>The customer is told in their own WhatsApp chat: <i>… has been refunded to your 369 Wallet for order … Sign in to 369 Mart with this number to use it.</i> A WhatsApp-only customer's wallet waits for the day they sign in with that number.</p>
+
+<h3 class="step"><span class="n">6</span>The WhatsApp order menu</h3>
+<p>The WhatsApp <b>NEW ORDER</b> menu lists the same categories as the website, in the same order, and shows only <b>published</b> products at the <b>website price</b>. Bargaining still works; it just starts from the price the website shows.</p>
+<p>When a vendor quotes for something out of stock, the product is still created so it can be offered, but it stays <b>unpublished</b> on the website until somebody prices and publishes it properly.</p>
+<div class="note tip"><span class="lbl">Tip:</span> To sell something on WhatsApp, publish it on the website first. An unpublished product does not appear in the WhatsApp menu.</div>
+
+<h3 class="step"><span class="n">7</span>"Who is delivering my order?"</h3>
+<p>The support bot gets one new answer, <b>Who is delivering their order</b>, under <b>Store → Bot answers</b>. When a customer asks about the rider, driver or delivery person, the bot replies for the order a rider is on. With no order on the way it says <i>You have no orders on the way right now.</i></p>
+
+<!-- ===================== PART 3 ===================== -->
+<div class="part">Part 3 — Keeping It Secure &amp; In Order</div>
+
+<h3 class="step"><span class="n">1</span>The Owner's sign-in alert</h3>
+<p>Every time a staff member signs in to the staff console, each active <b>Owner</b> with a mobile number gets a WhatsApp message: <i>369 Mart console sign-in</i>, with who signed in, how, when, from which internet address and on which device. It ends: <i>Not expected? Change their password and the console address.</i></p>
+<div class="note warn"><span class="lbl">Watch out:</span> The alert never blocks a sign-in. If WhatsApp is down, the staff member is still let in and no alert arrives. Make sure every Owner has a mobile number on their contact.</div>
+
+<h3 class="step"><span class="n">2</span>Who can do what</h3>
+<table>
+  <thead><tr><th style="width:30%">Role</th><th>What they can do</th></tr></thead>
+  <tbody>
+    <tr><td>Salesperson</td><td>Sees and works orders from both channels on the Orders screens.</td></tr>
+    <tr><td>Website designer (Manager)</td><td>The <b>Store → Settings → WhatsApp</b> tab: session, messages and invoice switch.</td></tr>
+    <tr><td>Administrator (Settings) (Owner)</td><td>Everything above. Owners also receive the sign-in alert.</td></tr>
+  </tbody>
+</table>
+
+<h3 class="step"><span class="n">3</span>Privacy</h3>
+<p>Updates go to the customer's own number, not to whoever is at the delivery address; that phone only receives the door code. Accounts are joined only after the customer has proven the number with a code, and staff, riders, shops and existing logins are never joined.</p>
+
+<h3 class="step"><span class="n">4</span>Removing the module</h3>
+<p>Uninstalling separates the two shops again. The Orders board goes back to website orders only, and nothing in either the website or the WhatsApp selling flow was changed, so both keep working on their own. Customers already joined, and refunds already paid into the 369 Wallet, stay as they are.</p>
+
+<!-- ===================== REFERENCE ===================== -->
+<h2>Reference — the shop's own update wording</h2>
+<table>
+  <thead><tr><th style="width:22%">Step</th><th>Words sent when the box is empty</th></tr></thead>
+  <tbody>
+    <tr><td>Order placed</td><td>Order #%(ref)s is confirmed. %(eta)s Track it: %(link)s</td></tr>
+    <tr><td>Packed</td><td>Order #%(ref)s is packed and waiting for a rider. %(link)s</td></tr>
+    <tr><td>Shipped</td><td>Order #%(ref)s has been shipped. %(link)s</td></tr>
+    <tr><td>Out for delivery</td><td>Order #%(ref)s is out for delivery. %(eta)s %(link)s</td></tr>
+    <tr><td>Delivered</td><td>Order #%(ref)s has been delivered. Thank you for shopping with 369 Mart.</td></tr>
+    <tr><td>Cancelled</td><td>Order #%(ref)s was cancelled. Any refund is on its way.</td></tr>
+  </tbody>
+</table>
+
+<h2>Reference — what each customer gets</h2>
+<table>
+  <thead><tr><th style="width:26%">Message</th><th>Who gets it</th><th style="width:30%">Controlled by</th></tr></thead>
+  <tbody>
+    <tr><td>Order updates</td><td>Website customers who ticked WhatsApp and left it on.</td><td>The six switches in Settings → WhatsApp.</td></tr>
+    <tr><td>Invoice PDF</td><td>The same customers, on delivery.</td><td>The invoice switch, and the Delivered switch.</td></tr>
+    <tr><td>Door code</td><td>Every website customer with a rider job, and the delivery address's phone.</td><td>Always sent.</td></tr>
+    <tr><td>Sign-in code</td><td>Anyone signing in with their mobile.</td><td>Always sent.</td></tr>
+    <tr><td>Refund notice</td><td>WhatsApp customers refunded to the 369 Wallet.</td><td>Always sent.</td></tr>
+    <tr><td>Sign-in alert</td><td>Active Owners with a mobile.</td><td>Always sent.</td></tr>
+  </tbody>
+</table>
+
+<h2>Quick tips</h2>
+<ul class="tips">
+  <li>Press <b>Check now</b> on the WhatsApp tab whenever customers say updates stopped.</li>
+  <li>Leave a message box empty to keep the shop's own wording.</li>
+  <li>Type placeholders exactly: <b>%(ref)s</b>, <b>%(eta)s</b>, <b>%(link)s</b>.</li>
+  <li>Use the <b>Channel</b> picker on the Orders desk to see only WhatsApp orders.</li>
+  <li>Publish a product on the website before expecting it in the WhatsApp menu.</li>
+  <li>Give every Owner a mobile number so the sign-in alert reaches them.</li>
+</ul>
+
+<h2>If something goes wrong</h2>
+<table>
+  <thead><tr><th style="width:36%">What you see</th><th>What to do</th></tr></thead>
+  <tbody>
+    <tr><td>No WhatsApp messages go out at all</td><td>Open <b>Store → Settings → WhatsApp</b> and press <b>Check now</b>. If the label is not green, reconnect the number on the WhatsApp panel; queued messages then go out.</td></tr>
+    <tr><td>One customer gets no order updates</td><td>They did not tick WhatsApp at checkout, switched WhatsApp off in their account, or have no phone on their account. A WhatsApp-channel order gets its updates from the selling flow instead.</td></tr>
+    <tr><td>Saving the WhatsApp tab fails</td><td>A placeholder is mistyped in the step it names. Use %(ref)s, %(eta)s and %(link)s exactly.</td></tr>
+    <tr><td>My new Shipped wording is not used</td><td>The order has a rider job, which sends its own words for Shipped, Out for delivery and Delivered.</td></tr>
+    <tr><td>No invoice arrives after delivery</td><td>Check the invoice switch and the <b>Delivered</b> switch, and that the order's invoice is confirmed.</td></tr>
+    <tr><td>A product is missing from the WhatsApp menu</td><td>It is not published on the website. Publish it, with its website price.</td></tr>
+    <tr><td>WhatsApp orders do not show on the Orders desk</td><td>Set the <b>Channel</b> picker to <b>Both channels</b>. Only confirmed WhatsApp orders appear.</td></tr>
+    <tr><td>Owners get no sign-in alerts</td><td>The Owner has no mobile number on their contact, or the WhatsApp session is offline.</td></tr>
+  </tbody>
+</table>
+
+</body>
+</html>

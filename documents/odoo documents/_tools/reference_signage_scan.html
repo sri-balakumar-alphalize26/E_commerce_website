@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Signage Scan — User Manual</title>
+<style>
+  :root{
+    --navy:#1e2a78; --orange:#f08a24; --ink:#1f2230; --muted:#6b6f80;
+    --line:#e6e8f0; --alt:#f2f4fb; --tint:#eef2fc;
+    --tip:#2e6fb0; --good:#2e8b57; --good-bg:#e7f6ea;
+    --warn-bg:#fff3da; --warn-ink:#c0701a;
+  }
+  @page{
+    size:A4; margin:22mm 20mm 20mm 20mm;
+    @bottom-left{content:"369ai · Signage Scan"; font:8.5pt "Liberation Serif",Georgia,serif; color:#6b6f80;}
+    @bottom-right{content:"Page " counter(page); font:8.5pt "Liberation Serif",Georgia,serif; color:#6b6f80;}
+  }
+  @page:first{ margin-top:14mm; }
+  *{box-sizing:border-box}
+  html{background:#fff}
+  body{margin:0; font-family:"Liberation Serif","Times New Roman",Georgia,serif; font-size:10.5pt; line-height:1.5; color:var(--ink); background:#fff}
+  @media screen{ body{max-width:794px; margin:24px auto; padding:0 16px} }
+  p{margin:0 0 7pt}
+  b,strong{font-weight:700}
+  .k{color:var(--navy); font-weight:700}          /* navy key term */
+  code{font-family:"DejaVu Sans Mono",monospace; font-size:8.5pt; background:#f1f2f6; padding:1px 4px; border-radius:3px}
+  .arr{color:var(--navy); font-weight:700}
+
+  /* ---------- Cover ---------- */
+  .topbar{height:7px; background:var(--navy); border-bottom:3px solid var(--orange); margin:0 -8mm 10pt}
+  .cover{background:var(--navy); color:#fff; text-align:center; border-radius:9px; padding:26pt 20pt 22pt; margin-bottom:18pt}
+  .cover h1{margin:0; font-size:31pt; letter-spacing:1.5pt; font-weight:700; text-transform:uppercase}
+  .cover .sub{color:var(--orange); font-size:15pt; font-weight:700; margin:12pt 0 10pt}
+  .cover .meta{font-size:10pt; color:#d5d9ee}
+
+  /* ---------- H2 section with orange rule ---------- */
+  h2{color:var(--navy); font-size:15pt; margin:16pt 0 9pt; padding-bottom:5pt; border-bottom:1.6px solid var(--orange); page-break-after:avoid}
+
+  /* ---------- Flow cards (3–4 steps) ---------- */
+  .flow{display:flex; align-items:center; gap:6pt; margin:10pt 0 10pt}
+  .flow .card{flex:1; border:1px solid #d9dcea; border-radius:6px; padding:8pt 9pt; min-height:66pt}
+  .flow .card b{display:block; color:var(--navy); font-size:10.5pt; margin-bottom:2pt}
+  .flow .card span{font-size:8.5pt; color:var(--muted); line-height:1.35}
+  .flow .to{color:var(--orange); font-size:13pt}
+
+  /* ---------- Callouts ---------- */
+  .note{border-left:3px solid var(--orange); background:var(--tint); border-radius:0 5px 5px 0; padding:8pt 12pt; margin:10pt 0 12pt; font-size:9.5pt; page-break-inside:avoid}
+  .note .lbl{font-weight:700; text-transform:uppercase; font-size:8.5pt; letter-spacing:.3pt; margin-right:4pt}
+  .note.start .lbl{color:var(--warn-ink)}
+  .note.tip{border-color:var(--tip)}              .note.tip .lbl{color:var(--tip)}
+  .note.good{border-color:var(--good); background:var(--good-bg)} .note.good .lbl{color:var(--good)}
+  .note.imp{border-color:var(--navy)}             .note.imp .lbl{color:var(--navy)}
+  .note.warn{border-color:var(--orange); background:var(--warn-bg)} .note.warn .lbl{color:var(--warn-ink)}
+
+  /* ---------- Part banner ---------- */
+  .part{background:var(--navy); color:#fff; text-align:center; border-radius:6px; padding:12pt; margin:20pt 0 10pt; font-size:15pt; font-weight:700; letter-spacing:1.5pt; text-transform:uppercase; page-break-after:avoid}
+  .part-intro{color:var(--muted); margin-bottom:12pt}
+
+  /* ---------- Numbered step ---------- */
+  h3.step{display:flex; align-items:center; gap:9pt; color:var(--navy); font-size:13pt; margin:16pt 0 7pt; page-break-after:avoid}
+  h3.step .n{display:inline-block; min-width:17pt; height:17pt; line-height:17pt; text-align:center; background:var(--orange); color:#fff; border-radius:3px; font-family:"Liberation Sans",Arial,sans-serif; font-size:10pt; font-weight:700}
+
+  /* ---------- Field bullets (orange square markers) ---------- */
+  ul.f{list-style:none; padding:0; margin:4pt 0 8pt}
+  ul.f li{position:relative; padding-left:13pt; margin-bottom:4pt}
+  ul.f li::before{content:""; position:absolute; left:1pt; top:6.5pt; width:4pt; height:4pt; background:var(--orange)}
+  ul.f li b:first-child{color:var(--navy)}
+
+  /* ---------- Tables ---------- */
+  table{width:100%; border-collapse:collapse; margin:8pt 0 12pt; font-size:9pt}
+  thead{display:table-header-group}
+  th{background:var(--navy); color:#fff; text-align:left; padding:6pt 8pt; font-weight:700}
+  th+th{border-left:1px solid #34408a}
+  td{padding:6pt 8pt; border-bottom:1px solid var(--line); vertical-align:top}
+  tr:nth-child(even) td{background:var(--alt)}
+  td:first-child{color:var(--navy); font-weight:700}
+  tr{page-break-inside:avoid}
+
+  /* ---------- Quick tips ---------- */
+  ul.tips{margin:4pt 0 12pt; padding-left:14pt}
+  ul.tips li{margin-bottom:3pt}
+</style>
+</head>
+<body>
+<div class="topbar"></div>
+<div class="cover">
+  <h1>Signage Scan</h1>
+  <div class="sub">Banners + In-Store Price Checker</div>
+  <div class="meta">User Manual &nbsp;|&nbsp; 369ai</div>
+</div>
+
+<h2>What this does</h2>
+<p><span class="k">Signage Scan</span> turns any spare screen — a wall-mounted TV, a tablet, a phone at the counter — into a full-screen display that scrolls through your <span class="k">banners</span> (images or videos) and, the moment a shopper scans a product barcode, shows that product's <span class="k">details</span> before returning to the banners. One screen does two jobs: advertising while idle, a price checker on demand.</p>
+<p>An administrator decides <b>which product fields a scan shows</b> — cost price is off by default — and the detail is filtered inside Odoo, so hidden fields never leave the server.</p>
+<div class="flow">
+  <div class="card"><b>1. Banners loop</b><span>Images and videos play full-screen, in order</span></div><span class="to">→</span>
+  <div class="card"><b>2. Shopper scans</b><span>Phone camera or USB scanner reads the barcode</span></div><span class="to">→</span>
+  <div class="card"><b>3. Details appear</b><span>Name, price and the fields you chose</span></div><span class="to">→</span>
+  <div class="card"><b>4. Back to banners</b><span>After the display time, the loop resumes</span></div>
+</div>
+<div class="note start"><span class="lbl">Before you start:</span> Setup is done once in Odoo by an administrator (Settings access). You need <b>products with barcodes</b>, at least one <b>banner</b>, and a screen signed in to the app. Day-to-day scanning at the counter needs none of this — staff just point and scan.</div>
+
+<h2>How the manual is arranged</h2>
+<p>Signage Scan has two sides, and this manual follows them. <b>Part 1 – Setting Up</b> is done once in Odoo, from the <b>Signage Scan</b> menu. <b>Part 2 – Everyday Use</b> is the screen itself and the <b>Manage</b> screens on the terminal. <b>Part 3 – Keeping It Secure &amp; In Order</b> locks the counter down and keeps the catalogue tidy.</p>
+
+<div class="part">Part 1 — Setting Up</div>
+<p class="part-intro">Done in Odoo by an administrator. If your products and banners are already in place, skip to Part 2.</p>
+
+<h3 class="step"><span class="n">1</span>Where everything lives</h3>
+<p>Open <b>Signage Scan</b> from the Odoo main menu. Everything for setup sits under it:</p>
+<ul class="f">
+  <li><b>Products</b> — the catalogue the price checker reads (name, barcode, price).</li>
+  <li><b>Banners</b> — the images and videos that loop on screen.</li>
+  <li><b>Scan Fields <span class="arr">→</span> Per Product / Same Fields for All</b> — which product details a scan shows.</li>
+  <li><b>Scanner &amp; Display</b> — how long a scanned detail stays on screen.</li>
+  <li><b>Scan History</b> — every barcode scanned, including ones that matched nothing.</li>
+  <li><b>Live Preview</b> — a phone-frame preview of the display, inside Odoo.</li>
+</ul>
+<p>The whole menu is hidden from ordinary users — only someone with <b>Settings / Administrator</b> rights sees it. (An <b>App Lock</b> entry also exists, but only in developer mode — see Part 3.)</p>
+
+<h3 class="step"><span class="n">2</span>Add your products</h3>
+<p>Open <b>Products</b> and add one row per item. The price checker needs only three things:</p>
+<ul class="f">
+  <li><b>Name</b> — what the product is called.</li>
+  <li><b>Barcode</b> — exactly what the scanner reads. This is the key the scan looks up.</li>
+  <li><b>Sales Price</b> — the price shown on scan by default.</li>
+</ul>
+<p>A category, internal reference, unit of measure, cost and image are all optional. This is the same catalogue as the app's <b>Manage <span class="arr">→</span> Products</b> screen and the full Odoo product form, so a product edited in any one of them shows the change everywhere.</p>
+<div class="note tip"><span class="lbl">Tip:</span> The barcode must match exactly what the scanner sends. If a scan shows nothing, the barcode is the first thing to check — <b>Scan History</b> will list the code as <i>Not found</i>.</div>
+
+<h3 class="step"><span class="n">3</span>Create banners</h3>
+<p>Open <b>Banners</b> and press <b>New</b>. Each banner is one image or one video shown full-screen. Fill in:</p>
+<ul class="f">
+  <li><b>Name</b> — an internal label for the banner.</li>
+  <li><b>Media Type</b> — <b>Image</b> or <b>Video</b>.</li>
+  <li><b>Image / Video</b> — the artwork. An image must be an image; a video must be a real video file (MP4, WebM, MOV, M4V…). An audio file — such as a WhatsApp <code>.ogg</code> voice note — is refused.</li>
+  <li><b>Time on Screen</b> — <b>Auto</b> or <b>Custom</b>. Auto: images use the app default and a video plays its full length. Custom: stays exactly the seconds you set.</li>
+  <li><b>Sequence</b> — the order banners play in (drag to reorder).</li>
+  <li><b>Show on display</b> — the simple on/off. Off hides it from the live screen but keeps it in your list.</li>
+  <li><b>Start / End Date</b> — an optional schedule; the banner is <i>Live</i> only inside the window.</li>
+</ul>
+<div class="note warn"><span class="lbl">Watch out:</span> For a <b>video</b>, keep <b>Time on Screen</b> on <b>Auto</b>. With <b>Custom</b>, a video longer than the seconds set is cut off at that time — it does not play faster, it just stops early.</div>
+<div class="note good"><span class="lbl">Good to know:</span> <b>Show on display</b> is not archiving. Turning it off hides the banner from the screen but keeps it in your list, ready to switch back on. <b>Archive</b> (the Active flag) is what removes a banner from the list entirely.</div>
+
+<h3 class="step"><span class="n">4</span>Choose what a scan shows — per product</h3>
+<p>Open <b>Scan Fields <span class="arr">→</span> Per Product</b>. Each product carries a master <b>Show on scan</b> toggle right in the list. Open one to choose its detail:</p>
+<ul class="f">
+  <li><b>Show on scan</b> — off means scanning this barcode shows nothing at all.</li>
+  <li><b>Scan: show image</b> — show the product photo on the detail.</li>
+  <li><b>Fields to show on scan</b> — every product field with its own on/off toggle. The name always shows; <b>Sales Price</b> and the sale description are on by default; <b>cost price is off by default</b>. Drag to reorder.</li>
+</ul>
+<p>Custom fields you add to products in Odoo appear in this list <b>automatically, switched off</b> — so a new field is never exposed on the screen by surprise.</p>
+<div class="note imp"><span class="lbl">Important:</span> A field that is off is filtered out <b>on the server</b> — its value is never sent to the screen. So cost price (off by default) can't be read even by inspecting the app.</div>
+
+<h3 class="step"><span class="n">5</span>Same fields for all products</h3>
+<p>If every product should show the <i>same</i> details, open <b>Scan Fields <span class="arr">→</span> Same Fields for All</b> and turn on <b>“Same fields for all products”</b>. Choose the shared field list once; it then applies to every scanned product and overrides the per-product lists.</p>
+<table><thead><tr><th style="width:30%">Mode</th><th>What a scan uses</th></tr></thead><tbody>
+<tr><td>Off (default)</td><td>Each product shows its own <b>Per Product</b> field list.</td></tr>
+<tr><td>On</td><td>Every product shows the one shared list you pick here, whatever its own list says.</td></tr>
+</tbody></table>
+<div class="note imp"><span class="lbl">Important:</span> While <b>Same fields for all products</b> is on, changes to a single product's own fields <b>won't appear on scan</b> until you turn it off. Odoo warns you if you edit a product's fields while Global mode is on. The master <b>Show on scan</b> per product still applies in both modes.</div>
+
+<h3 class="step"><span class="n">6</span>Scanner &amp; Display timing</h3>
+<p>Open <b>Scanner &amp; Display</b> and set <b>Detail display time</b> — how long a scanned product's details stay up before the banners come back — in seconds or minutes. It applies to every screen.</p>
+<div class="note tip"><span class="lbl">Tip:</span> The <b>scan method</b> — USB scanner or phone camera — is <i>not</i> set here. It's a per-device choice made on each terminal under <b>Manage <span class="arr">→</span> Scanner &amp; Display</b>, because it depends on that screen's hardware.</div>
+
+<div class="part">Part 2 — Everyday Use</div>
+<p class="part-intro">On the screen and the terminal at the counter. Once Part 1 is done, this is all staff touch.</p>
+
+<h3 class="step"><span class="n">1</span>The display</h3>
+<p>Signed in, the app shows your banners full-screen, in sequence, looping. Only <i>Live</i> banners appear — those with <b>Show on display</b> on and within any schedule set. There is nothing to do; it runs on its own.</p>
+
+<h3 class="step"><span class="n">2</span>Scanning a product</h3>
+<p>Point the phone camera at a barcode, or fire a USB scanner. The matching product's details slide in — name, image (if enabled) and the fields you chose — and stay up for the <b>Detail display time</b>, then the banners resume.</p>
+<p>If a barcode matches no product, or the product has <b>Show on scan</b> off, the screen simply returns to the banners. Either way the scan is recorded (see <b>Scan History</b>) so you can spot gaps.</p>
+<div class="note good"><span class="lbl">Good to know:</span> Every scan is logged, and repeats are de-duplicated — a barcode held in front of the camera for a few seconds doesn't fill the history with copies.</div>
+
+<h3 class="step"><span class="n">3</span>Manage on the terminal</h3>
+<p>A screen signed in as a manager has a <b>Manage</b> section — the same setup, on the device itself:</p>
+<table><thead><tr><th style="width:30%">Manage screen</th><th>What it does</th></tr></thead><tbody>
+<tr><td>Overview</td><td>Counts of banners (total, live, video) and products (total, on scan).</td></tr>
+<tr><td>Banners</td><td>Add, edit, reorder, turn on/off and delete banners as cards.</td></tr>
+<tr><td>Products</td><td>Create and edit products — name, barcode, price, category, image and custom fields.</td></tr>
+<tr><td>Scan Fields</td><td>The per-product and “same fields for all” field choices.</td></tr>
+<tr><td>Scanner &amp; Display</td><td>The scan method for this device, plus the detail display time.</td></tr>
+<tr><td>Scan History</td><td>Recent scans, with a <b>Clear</b> button for managers.</td></tr>
+</tbody></table>
+<p>Everything here mirrors the Odoo side: a change made on the terminal shows in Odoo, and the other way round.</p>
+
+<h3 class="step"><span class="n">4</span>Scan modes — set per device</h3>
+<p>Under <b>Manage <span class="arr">→</span> Scanner &amp; Display</b>, pick how this screen reads barcodes:</p>
+<ul class="f">
+  <li><b>USB scanner</b> — a hardware scanner plugged into a TV or box; it types the code like a keyboard.</li>
+  <li><b>Mobile camera</b> — the phone or tablet camera reads the barcode.</li>
+</ul>
+<p>The choice is stored on the device, so a counter phone and a wall-mounted TV can each use whatever suits them.</p>
+
+<h3 class="step"><span class="n">5</span>Preview before you go live</h3>
+<p>In Odoo, <b>Signage Scan <span class="arr">→</span> Live Preview</b> opens a phone-frame preview of exactly what the screen will show — videos and all — without needing a second device. Use it to check a new banner or the running order before it reaches the shop floor.</p>
+
+<div class="part">Part 3 — Keeping It Secure &amp; In Order</div>
+
+<h3 class="step"><span class="n">1</span>Lock the Manage screens (App Lock)</h3>
+<p>The screens at the counter run signed in as an administrator, so anyone holding the device could open <b>Manage</b>. A PIN sits in front of Manage — administrators included.</p>
+<p>Turn it on in Odoo under <b>Signage Scan <span class="arr">→</span> App Lock</b> (this menu shows only in developer mode). Set a <b>4-digit PIN</b> — numbers only, because the terminal enters it on a numeric keypad — and choose what it guards:</p>
+<table><thead><tr><th style="width:34%">Ask for a PIN</th><th>What it guards</th></tr></thead><tbody>
+<tr><td>No PIN</td><td>Manage opens normally.</td></tr>
+<tr><td>Whole Manage section</td><td>One PIN in front of everything.</td></tr>
+<tr><td>Selected options only</td><td>Pick which of Products, Banners, Scan Fields, Scanner &amp; Display and Scan History need it.</td></tr>
+</tbody></table>
+<p><b>Auto-lock</b> after a set number of seconds of no tapping (minimum 5) re-locks Manage on its own; every tap restarts the countdown, so it never interrupts someone mid-edit.</p>
+<div class="note warn"><span class="lbl">Watch out:</span> Locking <b>Scanner &amp; Display</b> also locks the <b>Scan mode</b> shortcut on the app's Profile screen — otherwise the lock is walked around that way. Shop staff would then need the PIN to switch between the USB scanner and the camera.</div>
+<div class="note imp"><span class="lbl">Important:</span> The PIN guards the counter; it does <b>not</b> change Odoo rights. A screen signed in as an administrator still has administrator rights on the server — the PIN just stops a bystander opening Manage. The PIN itself never leaves the server (only a hash is stored), and five wrong tries lock that device for 60 seconds. Removing the PIN opens every Manage screen again.</div>
+
+<h3 class="step"><span class="n">2</span>Scan history &amp; missing barcodes</h3>
+<p><b>Signage Scan <span class="arr">→</span> Scan History</b> lists every scan with its result. Use the <b>Missing barcodes</b> filter to find codes that matched no product — those are items to add or barcodes to fix. You can also group by result, day or user.</p>
+<table><thead><tr><th style="width:22%">Result</th><th>Meaning</th><th style="width:30%">What to do</th></tr></thead><tbody>
+<tr><td>Found</td><td>The barcode matched a product and its detail was shown.</td><td>Nothing.</td></tr>
+<tr><td>Not found</td><td>No product carries that barcode.</td><td>Add the product, or fix its barcode.</td></tr>
+<tr><td>Off for scan</td><td>A product matched, but its <b>Show on scan</b> is off.</td><td>Turn it on if it should appear.</td></tr>
+</tbody></table>
+<p>Clearing the history is a manager action — a multi-select delete in Odoo, or the <b>Clear</b> button in the app.</p>
+
+<h3 class="step"><span class="n">3</span>Who can do what</h3>
+<table><thead><tr><th style="width:30%">Role</th><th>What they can do</th></tr></thead><tbody>
+<tr><td>Internal user</td><td>Read-only. The whole Signage Scan menu is hidden; they set up nothing.</td></tr>
+<tr><td>Administrator (Settings)</td><td>Full setup in Odoo and full <b>Manage</b> on the terminal.</td></tr>
+<tr><td>Store terminal</td><td>Shows banners and records scans without a manager login; <b>Manage</b> stays gated behind the manager check (and the PIN).</td></tr>
+</tbody></table>
+
+<h3 class="step"><span class="n">4</span>Cost price &amp; privacy</h3>
+<p>Hidden fields are filtered inside Odoo <b>before anything is sent to a screen</b>. Cost price is off by default. So even a curious shopper inspecting the app sees only the fields you turned on — nothing more.</p>
+
+<h2>Status reference — banners</h2>
+<table><thead><tr><th style="width:22%">State</th><th>Meaning</th><th style="width:30%">How to change it</th></tr></thead><tbody>
+<tr><td>Live</td><td>On and within its schedule (if any). Showing on screen now.</td><td>—</td></tr>
+<tr><td>Off</td><td><b>Show on display</b> is off. Kept in the list, not shown.</td><td>Turn Show on display back on.</td></tr>
+<tr><td>Archived</td><td>Removed from the list (Active off).</td><td>Restore from the Archived filter.</td></tr>
+</tbody></table>
+
+<h2>Media &amp; timing</h2>
+<table><thead><tr><th style="width:30%">Media + Time on Screen</th><th>What happens</th></tr></thead><tbody>
+<tr><td>Image · Auto</td><td>Stays for the app default number of seconds.</td></tr>
+<tr><td>Image · Custom</td><td>Stays for exactly the seconds you set.</td></tr>
+<tr><td>Video · Auto</td><td>Plays its full length, then moves on. <b>Recommended for video.</b></td></tr>
+<tr><td>Video · Custom</td><td>Cut off at the seconds set — a longer video won't finish. Avoid.</td></tr>
+</tbody></table>
+
+<h2>Quick tips</h2>
+<ul class="tips">
+  <li>The price checker needs only a name, barcode and price on a product.</li>
+  <li>A banner video must be a real video file (MP4, WebM, MOV…); audio files are refused.</li>
+  <li>Cost price is off by default and filtered on the server — hidden fields never reach the screen.</li>
+  <li>Show on display hides a banner; Archive removes it from the list.</li>
+  <li>New custom product fields appear in the scan list switched off — nothing is exposed by surprise.</li>
+  <li>With Same fields for all products on, per-product field changes don't show until you turn it off.</li>
+  <li>The Manage PIN guards the counter, not your Odoo rights.</li>
+  <li>Scan History → Missing barcodes is the fastest way to find items that need adding.</li>
+</ul>
+
+<h2>If something goes wrong</h2>
+<table><thead><tr><th style="width:36%">What you see</th><th>What to do</th></tr></thead><tbody>
+<tr><td>A scan shows nothing</td><td>Check the product carries that exact barcode and that <b>Show on scan</b> is on. Scan History will show the code as Not found or Off for scan.</td></tr>
+<tr><td>A video won't play or won't save</td><td>It must be a real video file (MP4, WebM, MOV…). An audio file such as a <code>.ogg</code> voice note is refused — re-upload a proper video.</td></tr>
+<tr><td>A field I turned on isn't showing</td><td><b>Same fields for all products</b> is probably on; per-product changes don't show until it's off (Scan Fields → Same Fields for All).</td></tr>
+<tr><td>A video is cut off early</td><td>Time on Screen is <b>Custom</b> — switch it to <b>Auto</b> so the video plays its full length.</td></tr>
+<tr><td>Manage won't open / asks for a PIN</td><td>App Lock is on. Enter the 4-digit PIN. Five wrong tries lock the device for 60 seconds — wait, then retry.</td></tr>
+<tr><td>A banner isn't on screen</td><td>It may be Off, outside its Start/End date, or Archived. Check it reads <i>Live</i>.</td></tr>
+<tr><td>Cost price is showing</td><td>Turn it off in the product's scan fields (or the global list) — it's off by default.</td></tr>
+</tbody></table>
+
+</body>
+</html>

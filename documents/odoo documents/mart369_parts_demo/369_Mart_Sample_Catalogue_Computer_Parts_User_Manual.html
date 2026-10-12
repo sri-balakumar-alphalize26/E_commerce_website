@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>369 Mart Sample Catalogue - Computer Parts — User Manual</title>
+<style>
+  :root{
+    --navy:#1e2a78; --orange:#f08a24; --ink:#1f2230; --muted:#6b6f80;
+    --line:#e6e8f0; --alt:#f2f4fb; --tint:#eef2fc;
+    --tip:#2e6fb0; --good:#2e8b57; --good-bg:#e7f6ea;
+    --warn-bg:#fff3da; --warn-ink:#c0701a;
+  }
+  @page{
+    size:A4; margin:22mm 20mm 20mm 20mm;
+    @bottom-left{content:"369ai · 369 Mart Sample Catalogue - Computer Parts"; font:8.5pt "Liberation Serif",Georgia,serif; color:#6b6f80;}
+    @bottom-right{content:"Page " counter(page); font:8.5pt "Liberation Serif",Georgia,serif; color:#6b6f80;}
+  }
+  @page:first{ margin-top:14mm; }
+  *{box-sizing:border-box}
+  html{background:#fff}
+  body{margin:0; font-family:"Liberation Serif","Times New Roman",Georgia,serif; font-size:10.5pt; line-height:1.5; color:var(--ink); background:#fff}
+  @media screen{ body{max-width:794px; margin:24px auto; padding:0 16px} }
+  p{margin:0 0 7pt}
+  b,strong{font-weight:700}
+  .k{color:var(--navy); font-weight:700}          /* navy key term */
+  code{font-family:"DejaVu Sans Mono",monospace; font-size:8.5pt; background:#f1f2f6; padding:1px 4px; border-radius:3px}
+  .arr{color:var(--navy); font-weight:700}
+
+  /* ---------- Cover ---------- */
+  .topbar{height:7px; background:var(--navy); border-bottom:3px solid var(--orange); margin:0 -8mm 10pt}
+  .cover{background:var(--navy); color:#fff; text-align:center; border-radius:9px; padding:26pt 20pt 22pt; margin-bottom:18pt}
+  .cover h1{margin:0; font-size:31pt; letter-spacing:1.5pt; font-weight:700; text-transform:uppercase}
+  .cover .sub{color:var(--orange); font-size:15pt; font-weight:700; margin:12pt 0 10pt}
+  .cover .meta{font-size:10pt; color:#d5d9ee}
+
+  /* ---------- H2 section with orange rule ---------- */
+  h2{color:var(--navy); font-size:15pt; margin:16pt 0 9pt; padding-bottom:5pt; border-bottom:1.6px solid var(--orange); page-break-after:avoid}
+
+  /* ---------- Flow cards (3–4 steps) ---------- */
+  .flow{display:flex; align-items:center; gap:6pt; margin:10pt 0 10pt}
+  .flow .card{flex:1; border:1px solid #d9dcea; border-radius:6px; padding:8pt 9pt; min-height:66pt}
+  .flow .card b{display:block; color:var(--navy); font-size:10.5pt; margin-bottom:2pt}
+  .flow .card span{font-size:8.5pt; color:var(--muted); line-height:1.35}
+  .flow .to{color:var(--orange); font-size:13pt}
+
+  /* ---------- Callouts ---------- */
+  .note{border-left:3px solid var(--orange); background:var(--tint); border-radius:0 5px 5px 0; padding:8pt 12pt; margin:10pt 0 12pt; font-size:9.5pt; page-break-inside:avoid}
+  .note .lbl{font-weight:700; text-transform:uppercase; font-size:8.5pt; letter-spacing:.3pt; margin-right:4pt}
+  .note.start .lbl{color:var(--warn-ink)}
+  .note.tip{border-color:var(--tip)}              .note.tip .lbl{color:var(--tip)}
+  .note.good{border-color:var(--good); background:var(--good-bg)} .note.good .lbl{color:var(--good)}
+  .note.imp{border-color:var(--navy)}             .note.imp .lbl{color:var(--navy)}
+  .note.warn{border-color:var(--orange); background:var(--warn-bg)} .note.warn .lbl{color:var(--warn-ink)}
+
+  /* ---------- Part banner ---------- */
+  .part{background:var(--navy); color:#fff; text-align:center; border-radius:6px; padding:12pt; margin:20pt 0 10pt; font-size:15pt; font-weight:700; letter-spacing:1.5pt; text-transform:uppercase; page-break-after:avoid}
+  .part-intro{color:var(--muted); margin-bottom:12pt}
+
+  /* ---------- Numbered step ---------- */
+  h3.step{display:flex; align-items:center; gap:9pt; color:var(--navy); font-size:13pt; margin:16pt 0 7pt; page-break-after:avoid}
+  h3.step .n{display:inline-block; min-width:17pt; height:17pt; line-height:17pt; text-align:center; background:var(--orange); color:#fff; border-radius:3px; font-family:"Liberation Sans",Arial,sans-serif; font-size:10pt; font-weight:700}
+
+  /* ---------- Field bullets (orange square markers) ---------- */
+  ul.f{list-style:none; padding:0; margin:4pt 0 8pt}
+  ul.f li{position:relative; padding-left:13pt; margin-bottom:4pt}
+  ul.f li::before{content:""; position:absolute; left:1pt; top:6.5pt; width:4pt; height:4pt; background:var(--orange)}
+  ul.f li b:first-child{color:var(--navy)}
+
+  /* ---------- Tables ---------- */
+  table{width:100%; border-collapse:collapse; margin:8pt 0 12pt; font-size:9pt}
+  thead{display:table-header-group}
+  th{background:var(--navy); color:#fff; text-align:left; padding:6pt 8pt; font-weight:700}
+  th+th{border-left:1px solid #34408a}
+  td{padding:6pt 8pt; border-bottom:1px solid var(--line); vertical-align:top}
+  tr:nth-child(even) td{background:var(--alt)}
+  td:first-child{color:var(--navy); font-weight:700}
+  tr{page-break-inside:avoid}
+
+  /* ---------- Quick tips ---------- */
+  ul.tips{margin:4pt 0 12pt; padding-left:14pt}
+  ul.tips li{margin-bottom:3pt}
+
+  /* ---------- Screenshots + glossary (added for 369 Mart manuals) ---------- */
+  figure.shot{margin:8pt 0 12pt; page-break-inside:avoid; break-inside:avoid; text-align:center}
+  figure.shot img{max-width:100%; max-height:118mm; border:1px solid var(--line); border-radius:6px; box-shadow:0 1px 4px rgba(30,42,120,.12)}
+  figure.shot.phone img{max-width:62mm}
+  figure.shot figcaption{font-size:8.5pt; color:var(--muted); margin-top:4pt; text-align:left}
+  table.gloss td:first-child{width:28%}
+  h2, h3.step, .part{break-after:avoid}
+</style>
+</head>
+<body>
+<div class="topbar"></div>
+<div class="cover">
+  <h1>369 Mart Sample Catalogue - Computer Parts</h1>
+  <div class="sub">Sample Data for Demos and Testing</div>
+  <div class="meta">User Manual &nbsp;|&nbsp; 369ai</div>
+</div>
+
+<h2>What this does</h2>
+<p><span class="k">369 Mart Sample Catalogue - Computer Parts</span> fills the shop with a worked example of a computer parts store: <span class="k">29 categories</span> in six sections, <span class="k">92 sample products</span> with real brands and believable prices, and <span class="k">home page content</span> built around them. It gives every screen something to show when you demonstrate or test the shop app and website.</p>
+<p><b>It is not stock.</b> Nothing here is ordered, counted or priced for sale: no stock quantities are loaded, and the prices are examples. It has no screens or settings of its own; you install it, look around, and uninstall it when you are done.</p>
+
+<div class="flow">
+  <div class="card"><b>1. Install</b><span>Categories, products and home content load</span></div><span class="to">→</span>
+  <div class="card"><b>2. Grocery set aside</b><span>Old grocery categories are hidden, not deleted</span></div><span class="to">→</span>
+  <div class="card"><b>3. Demo or test</b><span>Browse the shop with a full catalogue</span></div><span class="to">→</span>
+  <div class="card"><b>4. Uninstall</b><span>Sample products go; grocery comes back</span></div>
+</div>
+
+<div class="note start"><span class="lbl">Before you start:</span> Installing and removing modules needs <b>Administrator (Settings)</b> rights (the Owner). Use it on a demo or test database, not on a shop that is taking real orders.</div>
+
+<h2>What it loads</h2>
+<table>
+  <thead><tr><th style="width:26%">What</th><th>Details</th></tr></thead>
+  <tbody>
+    <tr><td>6 sections</td><td>Components, Peripherals, Displays, Networking, Computers and Accessories.</td></tr>
+    <tr><td>23 subcategories</td><td>Processors, Motherboards, Graphics Cards, Memory, Storage, Power Supplies, Cooling, Cabinets · Keyboards, Mice, Headsets, Webcams · Monitors, Mounts and Arms · Routers, Switches, Adapters and Cards · Laptops, Desktops, Mini PCs · Cables, Chargers, UPS and Surge.</td></tr>
+    <tr><td>92 sample products</td><td>Each with a brand, a price and a pack size, published in its category. About half also show a higher "was" price, so the savings rows on the home page have something to show.</td></tr>
+    <tr><td>Home page content</td><td>Tabs, banners, category tiles and product rows for both <b>Quick</b> and <b>Express</b> (14 tabs, 8 banners, 16 tiles and 10 rows in all).</td></tr>
+  </tbody>
+</table>
+<div class="note warn"><span class="lbl">Watch out:</span> The sample products are <b>published</b>, so they appear in the shop app and on the website like real products, with their sample prices. That is why this belongs on a demo or test database only.</div>
+
+<h2>What else changes while it is installed</h2>
+<ul class="f">
+  <li><b>Seven categories are taken over</b> — if your database already has <i>Storage</i>, <i>Peripherals</i>, <i>Networking</i>, <i>Computers</i>, <i>Laptops</i>, <i>Accessories</i> or <i>Chargers</i>, the sample catalogue uses that category instead of making a second copy, so existing links keep working.</li>
+  <li><b>Grocery categories are hidden</b> — Fresh Fruits, Daily Essentials, Home &amp; Kitchen, Office &amp; Stationery, Electronics and a test category are hidden from the app. They are not deleted.</li>
+  <li><b>The grocery home content is switched off</b> — the grocery tabs, tiles, banners and rows that come with the home page are put away, so customers do not see two sets of tabs.</li>
+</ul>
+
+<h2>Where the sample home page shows</h2>
+<p>The sample tabs, banners, tiles and rows are added to the page called <b>Example - grocery layout (not shown)</b>. As its name says, customers do not see that page unless it is switched on. A new shop opens on its own page built from its catalogue instead.</p>
+<p>To show the sample home content, open <b>369 Mart <span class="arr">→</span> Page building <span class="arr">→</span> Saved Home Pages</b>, open <b>Example - grocery layout (not shown)</b> and press <b>Switch this on</b>. To go back, open your usual page and press <b>Switch this on</b> there.</p>
+<div class="note good"><span class="lbl">Good to know:</span> Even without switching the page on, the sample categories and products are in the shop and can be browsed and searched.</div>
+
+<h2>When to use it</h2>
+<ul class="tips">
+  <li>To demonstrate the shop app and website to a customer or a new team member.</li>
+  <li>To test screens, search, filters and the home page builder against a full, sensible catalogue.</li>
+  <li>To take screenshots or training material without using real products.</li>
+</ul>
+<p>Do not use it to start a real shop: the products carry no stock and sample prices only.</p>
+
+<h2>How to remove it</h2>
+<p>Uninstall the module from the backend's list of apps (Administrator (Settings) rights needed). Uninstalling:</p>
+<ul class="f">
+  <li><b>removes every sample product</b>;</li>
+  <li><b>shows the hidden grocery categories again</b>;</li>
+  <li><b>puts the grocery home content back</b> exactly as it was.</li>
+</ul>
+<div class="note warn"><span class="lbl">Watch out:</span> The categories the module created, and the seven it took over, belong to it once it is installed, so they are removed with it. If you put real products into any of them, move those products to another category first.</div>
+
+<h2>If something goes wrong</h2>
+<table>
+  <thead><tr><th style="width:36%">What you see</th><th>What to do</th></tr></thead>
+  <tbody>
+    <tr><td>The sample home tabs and banners do not show</td><td>They live on <b>Example - grocery layout (not shown)</b>. Switch that page on in <b>Page building → Saved Home Pages</b>.</td></tr>
+    <tr><td>My grocery categories disappeared from the app</td><td>They are hidden, not deleted, while the sample catalogue is installed. Uninstall it to bring them back.</td></tr>
+    <tr><td>Customers can see the sample products</td><td>The samples are published. Uninstall the module on any database that takes real orders.</td></tr>
+    <tr><td>A home page row is empty</td><td>A row with no products in its category simply does not show. Check the category still has published products.</td></tr>
+  </tbody>
+</table>
+
+</body>
+</html>

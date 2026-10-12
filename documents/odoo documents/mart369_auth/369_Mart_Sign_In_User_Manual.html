@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>369 Mart Sign In — User Manual</title>
+<style>
+  :root{
+    --navy:#1e2a78; --orange:#f08a24; --ink:#1f2230; --muted:#6b6f80;
+    --line:#e6e8f0; --alt:#f2f4fb; --tint:#eef2fc;
+    --tip:#2e6fb0; --good:#2e8b57; --good-bg:#e7f6ea;
+    --warn-bg:#fff3da; --warn-ink:#c0701a;
+  }
+  @page{
+    size:A4; margin:22mm 20mm 20mm 20mm;
+    @bottom-left{content:"369ai · 369 Mart Sign In"; font:8.5pt "Liberation Serif",Georgia,serif; color:#6b6f80;}
+    @bottom-right{content:"Page " counter(page); font:8.5pt "Liberation Serif",Georgia,serif; color:#6b6f80;}
+  }
+  @page:first{ margin-top:14mm; }
+  *{box-sizing:border-box}
+  html{background:#fff}
+  body{margin:0; font-family:"Liberation Serif","Times New Roman",Georgia,serif; font-size:10.5pt; line-height:1.5; color:var(--ink); background:#fff}
+  @media screen{ body{max-width:794px; margin:24px auto; padding:0 16px} }
+  p{margin:0 0 7pt}
+  b,strong{font-weight:700}
+  .k{color:var(--navy); font-weight:700}          /* navy key term */
+  code{font-family:"DejaVu Sans Mono",monospace; font-size:8.5pt; background:#f1f2f6; padding:1px 4px; border-radius:3px}
+  .arr{color:var(--navy); font-weight:700}
+
+  /* ---------- Cover ---------- */
+  .topbar{height:7px; background:var(--navy); border-bottom:3px solid var(--orange); margin:0 -8mm 10pt}
+  .cover{background:var(--navy); color:#fff; text-align:center; border-radius:9px; padding:26pt 20pt 22pt; margin-bottom:18pt}
+  .cover h1{margin:0; font-size:31pt; letter-spacing:1.5pt; font-weight:700; text-transform:uppercase}
+  .cover .sub{color:var(--orange); font-size:15pt; font-weight:700; margin:12pt 0 10pt}
+  .cover .meta{font-size:10pt; color:#d5d9ee}
+
+  /* ---------- H2 section with orange rule ---------- */
+  h2{color:var(--navy); font-size:15pt; margin:16pt 0 9pt; padding-bottom:5pt; border-bottom:1.6px solid var(--orange); page-break-after:avoid}
+
+  /* ---------- Flow cards (3–4 steps) ---------- */
+  .flow{display:flex; align-items:center; gap:6pt; margin:10pt 0 10pt}
+  .flow .card{flex:1; border:1px solid #d9dcea; border-radius:6px; padding:8pt 9pt; min-height:66pt}
+  .flow .card b{display:block; color:var(--navy); font-size:10.5pt; margin-bottom:2pt}
+  .flow .card span{font-size:8.5pt; color:var(--muted); line-height:1.35}
+  .flow .to{color:var(--orange); font-size:13pt}
+
+  /* ---------- Callouts ---------- */
+  .note{border-left:3px solid var(--orange); background:var(--tint); border-radius:0 5px 5px 0; padding:8pt 12pt; margin:10pt 0 12pt; font-size:9.5pt; page-break-inside:avoid}
+  .note .lbl{font-weight:700; text-transform:uppercase; font-size:8.5pt; letter-spacing:.3pt; margin-right:4pt}
+  .note.start .lbl{color:var(--warn-ink)}
+  .note.tip{border-color:var(--tip)}              .note.tip .lbl{color:var(--tip)}
+  .note.good{border-color:var(--good); background:var(--good-bg)} .note.good .lbl{color:var(--good)}
+  .note.imp{border-color:var(--navy)}             .note.imp .lbl{color:var(--navy)}
+  .note.warn{border-color:var(--orange); background:var(--warn-bg)} .note.warn .lbl{color:var(--warn-ink)}
+
+  /* ---------- Part banner ---------- */
+  .part{background:var(--navy); color:#fff; text-align:center; border-radius:6px; padding:12pt; margin:20pt 0 10pt; font-size:15pt; font-weight:700; letter-spacing:1.5pt; text-transform:uppercase; page-break-after:avoid}
+  .part-intro{color:var(--muted); margin-bottom:12pt}
+
+  /* ---------- Numbered step ---------- */
+  h3.step{display:flex; align-items:center; gap:9pt; color:var(--navy); font-size:13pt; margin:16pt 0 7pt; page-break-after:avoid}
+  h3.step .n{display:inline-block; min-width:17pt; height:17pt; line-height:17pt; text-align:center; background:var(--orange); color:#fff; border-radius:3px; font-family:"Liberation Sans",Arial,sans-serif; font-size:10pt; font-weight:700}
+
+  /* ---------- Field bullets (orange square markers) ---------- */
+  ul.f{list-style:none; padding:0; margin:4pt 0 8pt}
+  ul.f li{position:relative; padding-left:13pt; margin-bottom:4pt}
+  ul.f li::before{content:""; position:absolute; left:1pt; top:6.5pt; width:4pt; height:4pt; background:var(--orange)}
+  ul.f li b:first-child{color:var(--navy)}
+
+  /* ---------- Tables ---------- */
+  table{width:100%; border-collapse:collapse; margin:8pt 0 12pt; font-size:9pt}
+  thead{display:table-header-group}
+  th{background:var(--navy); color:#fff; text-align:left; padding:6pt 8pt; font-weight:700}
+  th+th{border-left:1px solid #34408a}
+  td{padding:6pt 8pt; border-bottom:1px solid var(--line); vertical-align:top}
+  tr:nth-child(even) td{background:var(--alt)}
+  td:first-child{color:var(--navy); font-weight:700}
+  tr{page-break-inside:avoid}
+
+  /* ---------- Quick tips ---------- */
+  ul.tips{margin:4pt 0 12pt; padding-left:14pt}
+  ul.tips li{margin-bottom:3pt}
+  /* ---------- Screenshots + glossary (added for 369 Mart manuals) ---------- */
+  figure.shot{margin:8pt 0 12pt; page-break-inside:avoid; break-inside:avoid; text-align:center}
+  figure.shot img{max-width:100%; max-height:118mm; border:1px solid var(--line); border-radius:6px; box-shadow:0 1px 4px rgba(30,42,120,.12)}
+  figure.shot.phone img{max-width:62mm}
+  figure.shot figcaption{font-size:8.5pt; color:var(--muted); margin-top:4pt; text-align:left}
+  table.gloss td:first-child{width:28%}
+  h2, h3.step, .part{break-after:avoid}
+</style>
+</head>
+<body>
+<div class="topbar"></div>
+<div class="cover">
+  <h1>369 Mart Sign In</h1>
+  <div class="sub">Customer Accounts, Sign-In and the Customers Desk</div>
+  <div class="meta">User Manual &nbsp;|&nbsp; 369ai</div>
+</div>
+
+<h2>What this does</h2>
+<p><span class="k">369 Mart Sign In</span> lets shoppers create their own <span class="k">customer account</span> in the shop app and sign in with their <b>email or full name</b> and a password. With the WhatsApp Bridge module installed, they can also sign in or sign up with their <span class="k">mobile number</span> and a six-digit code sent on WhatsApp.</p>
+<p>Staff see everyone who has signed up on the <span class="k">Customers</span> desk: what each person ordered and spent, and a <span class="k">status</span> — New, Active, Dormant or Archived — that tells you who to welcome and who to win back. Every account made this way is a <b>customer-only login</b>: it sees its own orders, addresses and details, and can never open the backend.</p>
+<div class="flow">
+  <div class="card"><b>1. Customer signs up</b><span>Name, email and password, or mobile and a WhatsApp code</span></div><span class="to">→</span>
+  <div class="card"><b>2. Shows as New</b><span>For the number of days you choose</span></div><span class="to">→</span>
+  <div class="card"><b>3. Active</b><span>Signs in and orders as usual</span></div><span class="to">→</span>
+  <div class="card"><b>4. Dormant</b><span>No sign-in for a while: time to call</span></div>
+</div>
+<div class="note start"><span class="lbl">Before you start:</span> Sign-up works the moment the module is installed; there is nothing to switch on. An administrator may want to set how long a customer counts as New and when they turn Dormant (Part 1). For "Forgot password" and reset links to send email, the backend needs an <b>outgoing mail server</b>. Codes on WhatsApp need the <b>369 Mart: WhatsApp Bridge</b> module.</div>
+
+<h2>Words you'll see</h2>
+<table class="gloss">
+  <thead><tr><th>Word</th><th>What it means</th></tr></thead>
+  <tbody>
+    <tr><td>Customer account</td><td>A login made from the shop app. It sees only its own orders, addresses and details.</td></tr>
+    <tr><td>Status</td><td>New, Active, Dormant or Archived — worked out from the sign-up date and the last sign-in.</td></tr>
+    <tr><td>Sign-in code</td><td>A six-digit number sent on WhatsApp that proves the mobile belongs to the person typing it.</td></tr>
+    <tr><td>Proven number</td><td>A mobile that has been confirmed with a code. A typed-in number alone is not proven.</td></tr>
+    <tr><td>Fingerprint</td><td>What is stored instead of a password. It cannot be turned back into the password.</td></tr>
+    <tr><td>Staff note</td><td>A note about a customer that only staff can read.</td></tr>
+  </tbody>
+</table>
+
+<h2>How the manual is arranged</h2>
+<p><b>Part 1 – Setting Up</b> covers where the screens live and the two status settings. <b>Part 2 – Everyday Use</b> is the Customers desk, the customer panel, the full profile, and what the customer sees when signing up or in. <b>Part 3 – Keeping It Secure &amp; In Order</b> covers passwords, codes, archiving and who can do what.</p>
+
+<div class="part">Part 1 — Setting Up</div>
+<p class="part-intro">Done once by an administrator. The defaults (New for 30 days, Dormant after 90) suit most shops; skip to Part 2 if you are happy with them.</p>
+
+<h3 class="step"><span class="n">1</span>Where everything lives</h3>
+<p>Open <b>369 Mart</b> from the main menu:</p>
+<ul class="f">
+  <li><b>Sales <span class="arr">→</span> Customers</b> — the Customers desk, used every day.</li>
+  <li><b>Store <span class="arr">→</span> Settings <span class="arr">→</span> Customers</b> — how long a customer is New and when they turn Dormant. This screen belongs to the 369 Mart Payments &amp; Wallet module.</li>
+  <li><b>Advanced <span class="arr">→</span> Customers (all views)</b> — the same customers as a list, a board and a full profile form, with search, filters and grouping.</li>
+</ul>
+<p>The Customers desk is shown to the <b>Website designer</b> and <b>Administrator (Settings)</b>; <b>Customers (all views)</b> to the <b>Administrator (Settings)</b> only. The user list under the main menu's <b>Settings <span class="arr">→</span> Users &amp; Companies <span class="arr">→</span> Users</b> also gains a <b>Mobile</b> column, because a mobile can now sign people in.</p>
+<div class="note good"><span class="lbl">Good to know:</span> Installing the module turns on free sign-up: anyone may create an account from the shop app. An administrator can change this in the main <b>Settings</b> under <b>Customer Account</b>.</div>
+
+<h3 class="step"><span class="n">2</span>Choose when a customer is New and when Dormant</h3>
+<p>Open <b>Store <span class="arr">→</span> Settings</b> and pick the <b>Customers</b> tab:</p>
+<ul class="f">
+  <li><b>New for</b> — a customer is New for this many days after signing up, then Active. Default <b>30 days</b>.</li>
+  <li><b>Dormant after, without a sign-in</b> — a customer who has not signed in for this many days is Dormant. Default <b>90 days</b>.</li>
+</ul>
+<p>Each list offers 15, 30, 45, 60, 90, 120 or 150 days, or <b>Custom…</b>, which asks for any whole number of days (1 or more) in a small window; press <b>Use this</b>. A saved custom number shows as, for example, "21 days (custom)". Press <b>Save changes</b> (or <b>Reset</b> to undo).</p>
+<figure class="shot"><img src="screenshots/01-settings-customers.png" style="max-height:46mm" alt="Settings, Customers tab, New for 21 days (custom), Dormant after 90 days"><figcaption>Figure 1 — Store → Settings → Customers: <b>New for</b> set to "21 days (custom)", <b>Dormant after, without a sign-in</b> at 90 days, and "Unsaved changes" beside <b>Reset</b> and <b>Save changes</b>.</figcaption></figure>
+<figure class="shot"><img src="screenshots/02-console-day-choices.png" style="max-height:62mm" alt="The staff console's Settings, Customers tab, with the New for list open"><figcaption>Figure 2 — The same Customers tab in the staff console, with the <b>New for</b> list open: 15 to 150 days and <b>Custom…</b>.</figcaption></figure>
+<figure class="shot"><img src="screenshots/03-custom-days.png" style="max-height:32mm" alt="The New for how many days window with 21 typed"><figcaption>Figure 3 — <b>Custom…</b> opens "New for how many days?": type the number and press <b>Use this</b>.</figcaption></figure>
+<div class="note good"><span class="lbl">Good to know:</span> Saving updates every customer's badge straight away. After that, statuses refresh each time a customer signs in and once a day (the scheduled job "369 Mart: refresh customer status").</div>
+
+<div class="part">Part 2 — Everyday Use</div>
+<p class="part-intro">Where staff work: the Customers desk and the customer's profile.</p>
+
+<h3 class="step"><span class="n">1</span>The Customers desk</h3>
+<p>Open <b>Sales <span class="arr">→</span> Customers</b>. Four tiles at the top count the whole shop — <b>Customers</b>, <b>Active</b>, <b>New customers</b> and <b>Dormant</b> — and clicking one switches to that tab. Searching and filtering never change the tiles; the line above the rows says how many match.</p>
+<ul class="f">
+  <li><b>All / Active / New / Dormant</b> — the tabs, each with its count.</li>
+  <li><b>Search</b> — by name, email, phone or area.</li>
+  <li><b>Area</b>, <b>Joined</b> (Any time, This month, Last 3 months, This year), <b>Wallet</b> (Any wallet, Has a balance) and <b>Tag</b> (shown once tags exist) — narrow the list.</li>
+  <li><b>Sort</b> — Newest first, Oldest first, Name A → Z, Name Z → A, or Recently active.</li>
+</ul>
+<p>Each row shows the customer, contact, area, orders, amount spent, wallet balance, last order and status badges. An <b>Addresses</b> count appears when the 369 Mart Delivery Addresses module is installed. Fifty rows show at a time; press <b>Show more</b> for the rest. The desk refreshes itself every two minutes.</p>
+<figure class="shot"><img src="screenshots/04-customers-desk.png" style="max-height:100mm" alt="The Customers desk with New customers"><figcaption>Figure 4 — The Customers desk: the four tiles, the tabs and filters, and rows whose badges read "New · 30 days left" with "Not ordered yet" or "Active · ordered 3 h ago".</figcaption></figure>
+
+<h3 class="step"><span class="n">2</span>Reading the badges</h3>
+<table>
+  <thead><tr><th style="width:34%">Badge</th><th>What it tells you</th></tr></thead>
+  <tbody>
+    <tr><td>New · 12 days left</td><td>Signed up recently; days until they count as Active. "New · last day" on the final day.</td></tr>
+    <tr><td>Not ordered yet</td><td>A New customer who has not placed an order.</td></tr>
+    <tr><td>Active · ordered 2 h ago</td><td>When they last placed an order ("no orders yet" if none).</td></tr>
+    <tr><td>Dormant · ordered 160 d ago</td><td>Quiet customer, and when they last ordered ("no orders" if never).</td></tr>
+  </tbody>
+</table>
+<p>"Placed" is what counts: a cash-on-delivery order counts as soon as it is placed, before anyone confirms it; an unpaid online order or a cancelled one does not.</p>
+<figure class="shot"><img src="screenshots/05-customers-dormant.png" style="max-height:80mm" alt="The Dormant tab with five customers"><figcaption>Figure 5 — The <b>Dormant</b> tab: five quiet customers, with badges such as "Dormant · no orders" and "Dormant · ordered 100 d ago".</figcaption></figure>
+
+<h3 class="step"><span class="n">3</span>The customer panel</h3>
+<p>Click a row to open the customer panel on the right:</p>
+<ul class="f">
+  <li><b>Call</b> and <b>WhatsApp</b> — reach the customer without copying the number (greyed out when there is no number).</li>
+  <li><b>Tags</b> — press <b>+ Add tag</b>, type, and pick a tag or <b>+ Create</b> a new one; press × on a tag to remove it. Saved at once.</li>
+  <li><b>Orders</b>, <b>Spent</b>, <b>Wallet</b>, <b>Last order</b> — the customer's figures.</li>
+  <li><b>Staff notes</b> — write a note and press <b>Add</b> (up to 1,000 characters). You can edit or delete only your own notes.</li>
+  <li><b>Recent orders</b> — the latest orders, with date, payment method and where they went.</li>
+  <li><b>Open full profile</b> — opens everything about the customer; <b>Close</b> returns to the list.</li>
+</ul>
+<p>Other 369 Mart modules add more to the panel when installed: the customer's <b>Addresses</b> with <b>+ Add address</b> (Delivery Addresses), and a risk line, a <b>Cash on delivery</b> switch and <b>+ Goodwill credit</b> (Orders).</p>
+<div class="note imp"><span class="lbl">Important:</span> Staff notes and tags are for the team only. A customer never sees them.</div>
+
+<h3 class="step"><span class="n">4</span>All views: list, board and profile</h3>
+<p><b>Advanced <span class="arr">→</span> Customers (all views)</b> shows the same customers with a numbers strip on top: <b>Customers</b> (and how many archived), <b>New customers</b> with a 14-day sign-up chart, <b>Ordered in 30 days</b>, <b>Mobile on file</b> and <b>Dormant</b>. Click a tile to filter. Switch between the list and the board with the buttons at the top right.</p>
+<figure class="shot"><img src="screenshots/06-customers-list.png" style="max-height:85mm" alt="Customers list with the numbers strip"><figcaption>Figure 6 — The list: the numbers strip, then one row per customer with email, mobile, city, signed up, last sign-in, orders, spent and a <b>New</b> status badge.</figcaption></figure>
+<p>The board groups cards under <b>New</b>, <b>Active</b> and <b>Dormant</b>. A New customer with no order gets the hint "No order yet. A welcome offer could help."; a Dormant one gets "Quiet for a long while. Call or message."</p>
+<figure class="shot"><img src="screenshots/07-customers-board.png" style="max-height:85mm" alt="Customers board grouped New, Active, Dormant"><figcaption>Figure 7 — The board: cards in the New column with orders, spent and "Seen", and the welcome-offer hint.</figcaption></figure>
+
+<h3 class="step"><span class="n">5</span>The full profile</h3>
+<p>The profile shows the customer's name, email, mobile and status, the <b>Orders</b> and <b>Total spent</b> buttons (each opens their orders), and four figures: <b>Average order</b>, <b>Last order</b>, <b>Last sign-in</b> and <b>Customer for</b>. Its tabs are:</p>
+<ul class="f">
+  <li><b>Overview</b> — <b>Full name</b>, <b>Sign-in email</b>, <b>Mobile</b> (with a green <b>Valid</b> tick once checked), <b>Location</b>, <b>Language</b>, <b>Signed up</b> and <b>Last sign-in</b>.</li>
+  <li><b>Orders</b> — every order with date, total and status.</li>
+  <li><b>Delivery addresses</b> — the customer's saved addresses.</li>
+  <li><b>Activity</b> — sign-up, recent sign-ins and orders, newest first.</li>
+  <li><b>Password &amp; access</b> — reset link, new password and archiving (Part 3).</li>
+</ul>
+<figure class="shot"><img src="screenshots/08-customer-profile.png" style="max-height:85mm" alt="A customer profile, Overview tab"><figcaption>Figure 8 — A customer profile: <b>Send reset link</b>, <b>Change password</b> and <b>Archive account</b> at the top, the four figures, and the <b>Overview</b> tab with a mobile marked <b>Valid</b>.</figcaption></figure>
+<div class="note tip"><span class="lbl">Tip:</span> A mobile typed on the profile is checked for the customer's country and saved in full international form. A landline or a number of the wrong length is refused.</div>
+
+<h3 class="step"><span class="n">6</span>What the customer sees</h3>
+<ul class="f">
+  <li><b>Sign up</b> — full name (2 characters or more), email and a password of at least 8 characters; a mobile is optional but must be valid if given. An email already in use is told to sign in instead.</li>
+  <li><b>Sign in</b> — email or full name, and the password. If two accounts share the name, the customer is asked to use their email.</li>
+  <li><b>Forgot password</b> — always answers that it worked, so nobody can learn whether an email has an account; the link arrives only if an outgoing mail server is set up.</li>
+  <li><b>Mobile and code</b> — the customer types their number and receives a six-digit code on WhatsApp. A number with no account is asked to sign up; a number that already has one is asked to sign in.</li>
+  <li><b>Add your mobile number</b> — a customer whose number has never been proven is asked to prove one before carrying on.</li>
+</ul>
+<div class="note warn"><span class="lbl">Watch out:</span> If an account's number was only ever typed and never proven, the right code is not enough: the customer must also enter their password once. This stops someone with that phone taking over an account they did not make.</div>
+
+<div class="part">Part 3 — Keeping It Secure &amp; In Order</div>
+
+<h3 class="step"><span class="n">1</span>Passwords and access</h3>
+<p>On the profile, open <b>Password &amp; access</b> (Administrator (Settings) only):</p>
+<ul class="f">
+  <li><b>Stored fingerprint</b> — what is kept instead of the password. Marked <b>Admins only</b>.</li>
+  <li><b>Send reset link</b> — emails the customer a link to choose a new password. The safe way to help.</li>
+  <li><b>Change password</b> — sets a new password, which takes effect at their next sign-in.</li>
+  <li><b>Archive</b> / <b>Restore</b> — archiving blocks sign-in and keeps their orders; restoring lets them sign in again.</li>
+</ul>
+<figure class="shot"><img src="screenshots/09-password-access.png" style="max-height:80mm" alt="The Password and access tab"><figcaption>Figure 9 — <b>Password &amp; access</b>: the note that passwords are never kept, the stored fingerprint (Admins only), and the <b>Reset link</b>, <b>Set a new password</b> and <b>Archive account</b> rows.</figcaption></figure>
+
+<h3 class="step"><span class="n">2</span>Sign-in codes</h3>
+<p>Codes are kept only as a fingerprint, so even someone who can read the backend cannot use one. Their limits:</p>
+<ul class="f">
+  <li><b>Lasts 10 minutes</b> — then the customer must ask for a new one.</li>
+  <li><b>5 tries</b> per code — then "Too many tries. Send a new code."</li>
+  <li><b>3 codes per number per hour</b> (and 10 per device or connection) — then "Too many codes. Try again in N minutes."</li>
+  <li><b>A new code cancels the old one.</b> Old codes are cleared daily by the job "369 Mart: clear old sign-in codes".</li>
+</ul>
+<p><b>Staff</b> with the Website designer right can also sign in to the staff console with their own mobile: they need the code <b>and</b> their password. A number that belongs to no staff member gets the same reply but no code, so the page cannot be used to find out who works here.</p>
+
+<h3 class="step"><span class="n">3</span>Who can do what</h3>
+<table>
+  <thead><tr><th style="width:30%">Role</th><th>What they can do</th></tr></thead>
+  <tbody>
+    <tr><td>Customer (shop app)</td><td>Sign up, sign in, and see only their own orders, addresses and details. Never the backend.</td></tr>
+    <tr><td>Website designer</td><td>The Customers desk: search, open the panel, tags and staff notes; the Customers tab in Store → Settings.</td></tr>
+    <tr><td>Administrator (Settings)</td><td>All of the above, plus Customers (all views), the <b>Password &amp; access</b> tab, <b>Change password</b> and the stored fingerprint.</td></tr>
+  </tbody>
+</table>
+<div class="note imp"><span class="lbl">Important:</span> Customer details are personal data. Use the panel's <b>Call</b> and <b>WhatsApp</b> buttons for shop business only, and keep opinions out of staff notes — they record your name and the time.</div>
+
+<h2>Status reference — customers</h2>
+<table>
+  <thead><tr><th style="width:18%">State</th><th>Meaning</th><th style="width:34%">How to change it</th></tr></thead>
+  <tbody>
+    <tr><td>New</td><td>Signed up within the <b>New for</b> days.</td><td>Changes by itself to Active when the days run out. Adjust <b>New for</b> in Store → Settings → Customers.</td></tr>
+    <tr><td>Active</td><td>Past the New days and has signed in within the <b>Dormant after</b> days.</td><td>Automatic.</td></tr>
+    <tr><td>Dormant</td><td>No sign-in for the <b>Dormant after</b> days (counted from sign-up if they never signed in).</td><td>Back to Active as soon as they sign in. Adjust <b>Dormant after</b> in settings.</td></tr>
+    <tr><td>Archived</td><td>Sign-in blocked; orders kept.</td><td><b>Restore account</b> on the profile.</td></tr>
+  </tbody>
+</table>
+
+<h2>Quick tips</h2>
+<ul class="tips">
+  <li>Use the Dormant tab as a call list; the board shows who has no mobile.</li>
+  <li>Tag customers ("VIP", "Bulk buyer") to filter them later with <b>Tag</b>.</li>
+  <li>To help a locked-out customer, send a reset link rather than setting a password.</li>
+  <li>The tiles always count the whole shop, whatever you search.</li>
+  <li>Archive, don't delete: the customer's orders stay intact.</li>
+  <li>Saving New for or Dormant after updates every badge at once.</li>
+  <li>WhatsApp codes need the WhatsApp Bridge module; email sign-in always works.</li>
+</ul>
+
+<h2>If something goes wrong</h2>
+<table>
+  <thead><tr><th style="width:36%">What you see</th><th>What to do</th></tr></thead>
+  <tbody>
+    <tr><td>A customer never gets the reset email</td><td>The backend has no outgoing mail server. Ask your administrator to set one up, then press <b>Send reset link</b> again.</td></tr>
+    <tr><td>"We can't send codes right now. Sign in with email, or try again later."</td><td>The WhatsApp Bridge module is not installed or cannot send. The customer can still sign in with email or name.</td></tr>
+    <tr><td>"Too many codes. Try again in N minutes."</td><td>Three codes went to that number within the hour. Ask the customer to wait.</td></tr>
+    <tr><td>"Several accounts use this name. Sign in with your email."</td><td>Two customers share the name. They must sign in with their email.</td></tr>
+    <tr><td>"Email or password is incorrect."</td><td>Check the spelling, or send a reset link from <b>Password &amp; access</b>.</td></tr>
+    <tr><td>A mobile won't save on the profile</td><td>It is not a valid mobile for the customer's country, or it is a landline. Check the number and the country on <b>Overview</b>.</td></tr>
+    <tr><td>Badges look out of date</td><td>They refresh at sign-in and daily. Saving the Customers tab in <b>Store → Settings</b> recomputes them all at once.</td></tr>
+    <tr><td>"We could not reach the shop."</td><td>The desk lost its connection. Press <b>Try again</b>.</td></tr>
+  </tbody>
+</table>
+
+</body>
+</html>

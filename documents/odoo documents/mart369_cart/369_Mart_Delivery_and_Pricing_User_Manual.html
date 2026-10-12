@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>369 Mart Delivery &amp; Pricing — User Manual</title>
+<style>
+  :root{
+    --navy:#1e2a78; --orange:#f08a24; --ink:#1f2230; --muted:#6b6f80;
+    --line:#e6e8f0; --alt:#f2f4fb; --tint:#eef2fc;
+    --tip:#2e6fb0; --good:#2e8b57; --good-bg:#e7f6ea;
+    --warn-bg:#fff3da; --warn-ink:#c0701a;
+  }
+  @page{
+    size:A4; margin:22mm 20mm 20mm 20mm;
+    @bottom-left{content:"369ai · 369 Mart Delivery & Pricing"; font:8.5pt "Liberation Serif",Georgia,serif; color:#6b6f80;}
+    @bottom-right{content:"Page " counter(page); font:8.5pt "Liberation Serif",Georgia,serif; color:#6b6f80;}
+  }
+  @page:first{ margin-top:14mm; }
+  *{box-sizing:border-box}
+  html{background:#fff}
+  body{margin:0; font-family:"Liberation Serif","Times New Roman",Georgia,serif; font-size:10.5pt; line-height:1.5; color:var(--ink); background:#fff}
+  @media screen{ body{max-width:794px; margin:24px auto; padding:0 16px} }
+  p{margin:0 0 7pt}
+  b,strong{font-weight:700}
+  .k{color:var(--navy); font-weight:700}          /* navy key term */
+  code{font-family:"DejaVu Sans Mono",monospace; font-size:8.5pt; background:#f1f2f6; padding:1px 4px; border-radius:3px}
+  .arr{color:var(--navy); font-weight:700}
+
+  /* ---------- Cover ---------- */
+  .topbar{height:7px; background:var(--navy); border-bottom:3px solid var(--orange); margin:0 -8mm 10pt}
+  .cover{background:var(--navy); color:#fff; text-align:center; border-radius:9px; padding:26pt 20pt 22pt; margin-bottom:18pt}
+  .cover h1{margin:0; font-size:31pt; letter-spacing:1.5pt; font-weight:700; text-transform:uppercase}
+  .cover .sub{color:var(--orange); font-size:15pt; font-weight:700; margin:12pt 0 10pt}
+  .cover .meta{font-size:10pt; color:#d5d9ee}
+
+  /* ---------- H2 section with orange rule ---------- */
+  h2{color:var(--navy); font-size:15pt; margin:16pt 0 9pt; padding-bottom:5pt; border-bottom:1.6px solid var(--orange); page-break-after:avoid}
+
+  /* ---------- Flow cards (3–4 steps) ---------- */
+  .flow{display:flex; align-items:center; gap:6pt; margin:10pt 0 10pt}
+  .flow .card{flex:1; border:1px solid #d9dcea; border-radius:6px; padding:8pt 9pt; min-height:66pt}
+  .flow .card b{display:block; color:var(--navy); font-size:10.5pt; margin-bottom:2pt}
+  .flow .card span{font-size:8.5pt; color:var(--muted); line-height:1.35}
+  .flow .to{color:var(--orange); font-size:13pt}
+
+  /* ---------- Callouts ---------- */
+  .note{border-left:3px solid var(--orange); background:var(--tint); border-radius:0 5px 5px 0; padding:8pt 12pt; margin:10pt 0 12pt; font-size:9.5pt; page-break-inside:avoid}
+  .note .lbl{font-weight:700; text-transform:uppercase; font-size:8.5pt; letter-spacing:.3pt; margin-right:4pt}
+  .note.start .lbl{color:var(--warn-ink)}
+  .note.tip{border-color:var(--tip)}              .note.tip .lbl{color:var(--tip)}
+  .note.good{border-color:var(--good); background:var(--good-bg)} .note.good .lbl{color:var(--good)}
+  .note.imp{border-color:var(--navy)}             .note.imp .lbl{color:var(--navy)}
+  .note.warn{border-color:var(--orange); background:var(--warn-bg)} .note.warn .lbl{color:var(--warn-ink)}
+
+  /* ---------- Part banner ---------- */
+  .part{background:var(--navy); color:#fff; text-align:center; border-radius:6px; padding:12pt; margin:20pt 0 10pt; font-size:15pt; font-weight:700; letter-spacing:1.5pt; text-transform:uppercase; page-break-after:avoid}
+  .part-intro{color:var(--muted); margin-bottom:12pt}
+
+  /* ---------- Numbered step ---------- */
+  h3.step{display:flex; align-items:center; gap:9pt; color:var(--navy); font-size:13pt; margin:16pt 0 7pt; page-break-after:avoid}
+  h3.step .n{display:inline-block; min-width:17pt; height:17pt; line-height:17pt; text-align:center; background:var(--orange); color:#fff; border-radius:3px; font-family:"Liberation Sans",Arial,sans-serif; font-size:10pt; font-weight:700}
+
+  /* ---------- Field bullets (orange square markers) ---------- */
+  ul.f{list-style:none; padding:0; margin:4pt 0 8pt}
+  ul.f li{position:relative; padding-left:13pt; margin-bottom:4pt}
+  ul.f li::before{content:""; position:absolute; left:1pt; top:6.5pt; width:4pt; height:4pt; background:var(--orange)}
+  ul.f li b:first-child{color:var(--navy)}
+
+  /* ---------- Tables ---------- */
+  table{width:100%; border-collapse:collapse; margin:8pt 0 12pt; font-size:9pt}
+  thead{display:table-header-group}
+  th{background:var(--navy); color:#fff; text-align:left; padding:6pt 8pt; font-weight:700}
+  th+th{border-left:1px solid #34408a}
+  td{padding:6pt 8pt; border-bottom:1px solid var(--line); vertical-align:top}
+  tr:nth-child(even) td{background:var(--alt)}
+  td:first-child{color:var(--navy); font-weight:700}
+  tr{page-break-inside:avoid}
+
+  /* ---------- Quick tips ---------- */
+  ul.tips{margin:4pt 0 12pt; padding-left:14pt}
+  ul.tips li{margin-bottom:3pt}
+
+  /* ---------- Screenshots + glossary (added for 369 Mart manuals) ---------- */
+  figure.shot{margin:8pt 0 12pt; page-break-inside:avoid; break-inside:avoid; text-align:center}
+  figure.shot img{max-width:100%; max-height:118mm; border:1px solid var(--line); border-radius:6px; box-shadow:0 1px 4px rgba(30,42,120,.12)}
+  figure.shot.phone img{max-width:62mm}
+  figure.shot figcaption{font-size:8.5pt; color:var(--muted); margin-top:4pt; text-align:left}
+  table.gloss td:first-child{width:28%}
+  h2, h3.step, .part{break-after:avoid}
+</style>
+</head>
+<body>
+<div class="topbar"></div>
+<div class="cover">
+  <h1>369 Mart Delivery &amp; Pricing</h1>
+  <div class="sub">Delivery Fees, Slots, Service Areas, Coupons + Deals</div>
+  <div class="meta">User Manual &nbsp;|&nbsp; 369ai</div>
+</div>
+
+<h2>What this does</h2>
+<p><span class="k">369 Mart Delivery &amp; Pricing</span> decides what a shopper's basket costs. It holds the <span class="k">delivery fees</span> for each storefront, the <span class="k">delivery slots</span> offered at checkout, the <span class="k">service areas</span> (pincodes) you deliver to, and which <span class="k">branches</span> can do fast Quick delivery. It also runs your two kinds of promotion: <span class="k">coupons</span>, which a customer types at the basket, and <span class="k">deals</span>, which simply make chosen products cheaper for everybody.</p>
+<p>All the sums are done <b>in the backend, not on the customer's phone</b>. The shop app and the website ask the backend for the bill, so a customer can never give themselves a discount, and a change you save is the number the next customer is charged.</p>
+<div class="flow">
+  <div class="card"><b>1. Set the rules</b><span>Fees, slots, pincodes and Quick branches on the Delivery desk</span></div><span class="to">→</span>
+  <div class="card"><b>2. Run promotions</b><span>Coupons customers type; deals that lower prices</span></div><span class="to">→</span>
+  <div class="card"><b>3. Customer shops</b><span>Picks a pincode, a slot, maybe a coupon</span></div><span class="to">→</span>
+  <div class="card"><b>4. Backend adds it up</b><span>Items, delivery fees, slot fee and discount, one total</span></div>
+</div>
+<div class="note start"><span class="lbl">Before you start:</span> The module arrives already holding sensible starting numbers: a Quick and an Express fee, six slots and three pincode areas (all listed in Part 1). Nothing changes for shoppers on the day it is installed. To change delivery you need the <b>Owner</b> or <b>Manager</b> role. Coupons and deals need the <b>Salesperson</b> right. Branches themselves are made in Inventory; this module only switches Quick on for them. A shop starts with <b>no coupons and no deals</b>.</div>
+
+<h2>Words you'll see</h2>
+<table class="gloss"><thead><tr><th>Word</th><th>What it means</th></tr></thead><tbody>
+<tr><td>Storefront</td><td>One of the two ways the shop sells. <b>Quick</b> is the fast grocery run (minutes); <b>Express</b> ships over days.</td></tr>
+<tr><td>Delivery promise</td><td>The short line a customer reads, such as "Delivery in 13 mins".</td></tr>
+<tr><td>Service area</td><td>A pincode, or the start of one, that you deliver to. "68" covers every pincode beginning with 68.</td></tr>
+<tr><td>Slot</td><td>A delivery time a customer picks at checkout, shown as a small button (a "chip"), such as "Today 6 – 8 PM".</td></tr>
+<tr><td>Branch</td><td>One of your warehouses. A branch with Quick on serves customers within its <b>reach</b> (in km) of its <b>map pin</b>.</td></tr>
+<tr><td>Coupon</td><td>A code the customer types at the basket, such as WELCOME50, that takes money off the bill.</td></tr>
+<tr><td>Deal</td><td>A price cut on chosen products for a time. The customer types nothing; the price on the product is simply lower.</td></tr>
+<tr><td>Trash</td><td>Where a removed deal waits for a while before it is deleted for good.</td></tr>
+</tbody></table>
+
+<h2>How the manual is arranged</h2>
+<p>This module has a setting-up side and a daily side, and this manual follows them. <b>Part 1 – Setting Up</b> covers the <b>Delivery</b> desk: fees, service areas, slots and Quick branches, usually set once and adjusted now and then. <b>Part 2 – Everyday Use</b> covers the <b>Deals</b> and <b>Coupons</b> desks, what the customer sees, and the full list screens. <b>Part 3 – Keeping It Secure &amp; In Order</b> covers the deals Trash, why delivery records are switched off rather than deleted, and who can do what.</p>
+
+<!-- ===================== PART 1 ===================== -->
+<div class="part">Part 1 — Setting Up</div>
+<p class="part-intro">Done by an Owner or Manager. The starting numbers already work, so change only what differs for your shop.</p>
+
+<h3 class="step"><span class="n">1</span>Where everything lives</h3>
+<p>Open <b>369 Mart</b> from the main menu. This module adds these entries:</p>
+<ul class="f">
+  <li><b>Store <span class="arr">→</span> Delivery</b> — the Delivery desk, with four tabs: <b>Fees</b>, <b>Slots</b>, <b>Service areas</b> and <b>Branches</b>.</li>
+  <li><b>Sales <span class="arr">→</span> Coupons</b> — the Coupons desk.</li>
+  <li><b>Sales <span class="arr">→</span> Deals</b> — the Deals desk, with its Trash.</li>
+  <li><b>Advanced <span class="arr">→</span> Delivery &amp; fees (all views)</b>, <b>Service areas (all views)</b>, <b>Delivery slots (all views)</b>, <b>Coupons (all views)</b> and <b>Deals (all views)</b> — plain lists of the same records, for grouping, filtering and export.</li>
+</ul>
+<p>Each desk also has an <b>All views</b> button at the top that opens its full list. The staff console has matching screens. Both read the same records, so a change made in one shows in the other.</p>
+<div class="note good"><span class="lbl">Good to know:</span> A heading such as <b>Store</b> or <b>Sales</b> only appears for someone who can open something inside it. If a member of staff cannot see <b>Delivery</b>, <b>Coupons</b> or <b>Deals</b>, check their role (Part 3).</div>
+
+<h3 class="step"><span class="n">2</span>Set the delivery fees</h3>
+<p>Open <b>Store <span class="arr">→</span> Delivery</b>. The <b>Fees</b> tab shows one card per storefront, Quick and Express. Each card has an on/off switch (press Save to apply it) and five boxes:</p>
+<ul class="f">
+  <li><b>Shown as</b> — the word the app puts on the basket, such as "Quick".</li>
+  <li><b>Delivery promise</b> — the line under the basket heading, such as "Delivery in 13 mins". A service area with its own promise overrides it.</li>
+  <li><b>Minimum order</b> — the smallest basket you accept. 0 means no minimum.</li>
+  <li><b>Free delivery above</b> — once that storefront's items reach this amount, its delivery is free. 0 means delivery is never free.</li>
+  <li><b>Delivery fee</b> — charged once per storefront when its items are below the free-delivery amount.</li>
+</ul>
+<p>Under the boxes the desk writes what the customer will see in a sentence, for example "Under 499 the basket is charged 30 — above it, nothing." When you change a box, <b>Unsaved changes</b> appears; press <b>Save Quick</b> or <b>Save Express</b> to keep it.</p>
+<figure class="shot"><img src="screenshots/01-delivery-fees-tab.png" alt="Delivery desk, Fees tab"><figcaption>Figure 1 — The Delivery desk on its Fees tab: an Express card and a Quick card, each with an on switch, the five boxes, the sentence that explains them, and its own Save button.</figcaption></figure>
+<p>The starting numbers are: <b>Quick</b> — Delivery in 13 mins, minimum 99, free above 499, fee 30. <b>Express</b> — Delivery in 2–3 days, minimum 0, free above 999, fee 49.</p>
+<div class="note imp"><span class="lbl">Important:</span> A basket that holds both Quick and Express items can pay <b>both fees</b>, each judged on its own storefront's items. The bill checks the minimum for <b>Quick</b> only: if the Quick items come to less than the Quick minimum, the basket cannot be ordered.</div>
+<div class="note warn"><span class="lbl">Watch out:</span> Turning a storefront's switch off makes the desk warn "<i>… is switched off - nothing from it can be bought.</i>" Use it only when you really mean to stop that storefront.</div>
+
+<h3 class="step"><span class="n">3</span>Mark the places you deliver (Service areas)</h3>
+<p>Open the <b>Service areas</b> tab and press <b>New area</b>, or <b>Edit</b> on a row. Fill in:</p>
+<ul class="f">
+  <li><b>Pincode</b> — digits only. A full pincode (682016) or the start of one (68). Spaces are removed for you. Each pincode can be listed only once.</li>
+  <li><b>Area</b> — a name for your own use, such as "Kochi". Customers never see it.</li>
+  <li><b>Quick delivery</b> — on: the fast grocery run reaches this area. Off: Express only.</li>
+  <li><b>Express delivery</b> — on: items that ship over days reach this area.</li>
+  <li><b>Delivery promise</b> — what a customer here is told, such as "13 mins" (the default for a new area).</li>
+</ul>
+<p>When a customer enters a pincode, the <b>most specific row wins</b>: 6820 beats 68, and an exact pincode beats both. So a city can have its own promise inside a region that already has one.</p>
+<figure class="shot"><img src="screenshots/02-service-areas-tab.png" alt="Service areas tab"><figcaption>Figure 2 — The Service areas tab with the three starting areas: 67 (Quick off, Express on, 2–3 days) and 68 and 69 (both on, 13 mins). Each shows "and everything under it" because it is the start of a pincode.</figcaption></figure>
+<div class="note warn"><span class="lbl">Watch out:</span> Switch both Quick and Express off and that pincode is told "We don't deliver to this pincode yet." With no area on the list at all, <b>every</b> pincode gets that answer, and the desk warns you.</div>
+
+<h3 class="step"><span class="n">4</span>Set up delivery slots</h3>
+<p>Open the <b>Slots</b> tab. Each row is one chip on the checkout's slot step, with its <b>Chip</b> wording, <b>Storefront</b>, <b>Kind</b>, <b>When</b>, <b>Fee</b>, <b>Cap</b> (∞ means no limit) and <b>State</b>.</p>
+<figure class="shot"><img src="screenshots/03-slots-tab.png" alt="Slots tab"><figcaption>Figure 3 — The Slots tab with the six starting slots: Standard and Priority for Express, and Now, Today 6 – 8 PM (until 5 PM), Tomorrow 8 – 10 AM and Tomorrow 6 – 8 PM for Quick. Each row has Edit and Switch off.</figcaption></figure>
+<p>Press <b>New slot</b>, or <b>Edit</b> on a row, and fill in:</p>
+<ul class="f">
+  <li><b>Heading</b> — the bold line on the chip, such as Today, Tomorrow or Priority. Required.</li>
+  <li><b>Detail</b> — the small line, such as "6 - 8 PM". For an "In a number of days" slot the date is filled in for you.</li>
+  <li><b>Confirmation line</b> — what the order says afterwards. Left empty, the shop writes it from the heading and the window.</li>
+  <li><b>Storefront</b> — <b>Quick</b> or <b>Express</b>.</li>
+  <li><b>Kind</b> — <b>Now</b> (the next rider out), <b>Time window</b> (a From–To window) or <b>In a number of days</b>.</li>
+  <li><b>Key</b> — a short name the app and every order use for this slot, such as now, eve, tm, std. Asked for only on a new slot; it <b>cannot be changed</b> afterwards.</li>
+  <li><b>Order in the list</b> — lower numbers come first (default 10).</li>
+  <li><b>From</b> / <b>To</b> — Time window only. Hours are numbers: 18 is 6 PM, 18.5 is 6:30 PM. The time is shown beside the label as you type.</li>
+  <li><b>Days ahead</b> — 0 is today, 1 is tomorrow. For an Express slot, how many days the delivery takes.</li>
+  <li><b>Stop offering after</b> — for a same-day slot, the time after which it is hidden. 17 hides it after 5 PM; 24 (the default) never hides it.</li>
+  <li><b>Extra fee</b> — added to the bill when this slot is chosen, such as 49 for Priority.</li>
+  <li><b>Orders per slot</b> — how many orders the slot takes per day. 0 means no limit. Once full, it is no longer offered for that day.</li>
+</ul>
+<figure class="shot"><img src="screenshots/04-slot-dialog.png" style="max-height:100mm" alt="Edit slot dialog"><figcaption>Figure 4 — The Edit slot dialog for the Quick "Today" slot: Detail 6 – 8 PM, Kind Time window, From 18 (6 PM) To 20 (8 PM), Days ahead 0, Stop offering after 17 (5 PM), Extra fee 0, Orders per slot 0.</figcaption></figure>
+<div class="note tip"><span class="lbl">Tip:</span> The desk warns "No slot is open for Quick or Express…" when a storefront has no slot switched on. That storefront then has nothing to offer at checkout, so fix it at once.</div>
+
+<h3 class="step"><span class="n">5</span>Turn on Quick delivery at your branches</h3>
+<p>Open the <b>Branches</b> tab. It lists every warehouse in every company, with its <b>Company</b>, <b>Map pin</b>, <b>Quick</b> state and <b>Reach</b>. <b>Quick on</b> / <b>Quick off</b> flips the switch in one click; <b>Edit</b> opens the full settings.</p>
+<figure class="shot"><img src="screenshots/05-branches-tab.png" alt="Branches tab"><figcaption>Figure 5 — The Branches tab: Ruwi Warehouse (pin set, Quick On, 5 km) and Sohar Warehouse (pin set, Quick On, 3 km); Salalah Warehouse has No pin and Quick Off. The note above the table explains the Quick rule.</figcaption></figure>
+<p>In the <b>Quick delivery from …</b> dialog, set:</p>
+<ul class="f">
+  <li><b>Quick delivery</b> — on: this branch delivers Quick near it. Off by default.</li>
+  <li><b>Reach (km)</b> — how far Quick reaches, in a straight line from the branch. 0 means nowhere. Roads are longer, so set it a little under what a rider covers in the Quick time.</li>
+  <li><b>Latitude</b> / <b>Longitude</b> — where the branch is. In Google Maps, right-click the branch and click the numbers at the top to copy them, then paste both into <b>Latitude</b>; the desk splits them for you.</li>
+</ul>
+<figure class="shot"><img src="screenshots/06-branch-dialog.png" alt="Branch Quick dialog"><figcaption>Figure 6 — The "Quick delivery from Ruwi Warehouse" dialog: Quick delivery switched on, Reach 5 km, and the branch's latitude and longitude.</figcaption></figure>
+<div style="break-inside:avoid; page-break-inside:avoid">
+<p>How the backend decides, line by line, whether an item is Quick or Express:</p>
+<table><thead><tr><th style="width:38%">Situation</th><th>Result</th></tr></thead><tbody>
+<tr><td>The product has its own delivery promise in the catalogue</td><td>Always Express.</td></tr>
+<tr><td>The address has a map pin and at least one branch is ready for Quick</td><td>Quick if a branch within reach has enough stock of that item (the size or colour picked), checking the nearest first; otherwise Express. Items not tracked in stock count as available.</td></tr>
+<tr><td>The address has no map pin, or no branch is ready</td><td>The pincode's service area decides: Quick on gives Quick, Quick off gives Express.</td></tr>
+<tr><td>No address yet, or no area covers the pincode</td><td>The product decides, as before (Quick unless it carries its own promise).</td></tr>
+</tbody></table>
+</div>
+<div class="note warn"><span class="lbl">Watch out:</span> A branch with Quick on but <b>no map pin or no reach</b> shows <b>Not ready</b>, and the desk warns that it "delivers Quick to nobody". Add the pin and a reach above 0.</div>
+<div class="note good"><span class="lbl">Good to know:</span> Until a single branch is ready, nothing changes: pincodes and products decide as they always did. Switching Quick on is not a day when every basket turns Express. The bill also tells the app how many items moved to Express and why (no Quick branch close enough, not in stock nearby, or an Express-only pincode).</div>
+
+<!-- ===================== PART 2 ===================== -->
+<div class="part">Part 2 — Everyday Use</div>
+<p class="part-intro">The Deals and Coupons desks, used by whoever runs promotions. Both live under <b>369 Mart <span class="arr">→</span> Sales</b>.</p>
+
+<h3 class="step"><span class="n">1</span>The Deals desk</h3>
+<p>Open <b>Sales <span class="arr">→</span> Deals</b>. A deal is a price cut on the products you pick, for as long as you say. Shoppers see the lower price on the product card, in the basket and on the order; they type nothing.</p>
+<table><thead><tr><th style="width:30%">Tile</th><th>What it shows</th></tr></thead><tbody>
+<tr><td>All deals</td><td>Every deal not in the Trash (the default view).</td></tr>
+<tr><td>On right now</td><td>Deals switched on and inside their dates.</td></tr>
+<tr><td>Starting later</td><td>Deals switched on, not running, with a start date.</td></tr>
+<tr><td>Switched off</td><td>Deals you have turned off.</td></tr>
+<tr><td>Products on offer</td><td>How many products a running deal lowers right now (a count only).</td></tr>
+</tbody></table>
+<p>Each card shows the deal's name and state, what it takes off, how many products, any "never below" price, its note, and up to three products with the old price struck through beside the new one. Tap a card to edit it. <b>Switch off</b> / <b>Switch on</b> pauses it; <b>Remove</b> sends it to the Trash (Part 3).</p>
+<figure class="shot"><img src="screenshots/07-deals-desk.png" alt="Deals desk"><figcaption>Figure 7 — The Deals desk: the four tiles plus Products on offer, a running 20% deal ("On now, until …") and a 15% deal waiting to start, each listing products with old and new prices.</figcaption></figure>
+
+<h3 class="step"><span class="n">2</span>Create or change a deal</h3>
+<p>Press <b>New deal</b>, or tap a card. Fill in:</p>
+<ul class="f">
+  <li><b>Name</b> — what the deal is for, such as "Diwali weekend". Staff see it; shoppers see only the lower price.</li>
+  <li><b>Note</b> — a line for whoever opens this in six months.</li>
+  <li><b>Discount</b> — <b>Percentage off</b> (the default) or <b>Amount off</b>.</li>
+  <li><b>Per cent off</b> / <b>Amount off</b> — a percentage must be between 1 and 90; an amount must be above 0.</li>
+  <li><b>Never below</b> — a price the deal will not take a product under. 0 for no floor. A deal can never make anything free.</li>
+  <li><b>Starts</b> / <b>Ends</b> — date and time. Leave them empty and the deal runs as soon as it is on, until you switch it off.</li>
+  <li><b>Products</b> — type in <b>Search the catalogue</b> (published products only) and click a result to add it; click × on a chip to take it out.</li>
+</ul>
+<p><b>Create deal</b> (or <b>Save changes</b>) works once there is a name, at least one product and an amount above 0.</p>
+<figure class="shot"><img src="screenshots/08-deal-dialog.png" style="max-height:72mm" alt="Deal dialog"><figcaption>Figure 8 — Editing the "Weekend electronics" deal: Percentage off, 20 per cent, no floor, no start date, an end date, and four products picked.</figcaption></figure>
+<div class="note good"><span class="lbl">Good to know:</span> Nothing is written to the products. The lower price is worked out whenever a card, a basket or an order is priced, so ending or switching off a deal puts every price back on its own. A product caught by two running deals takes the <b>better</b> one, never both.</div>
+
+<h3 class="step"><span class="n">3</span>The Coupons desk</h3>
+<p>Open <b>Sales <span class="arr">→</span> Coupons</b>. It answers "which codes work right now, and why the others do not". The tiles at the top are also filters:</p>
+<table><thead><tr><th style="width:30%">Tile</th><th>What it shows</th></tr></thead><tbody>
+<tr><td>All coupons</td><td>Every coupon, including switched-off ones.</td></tr>
+<tr><td>Working now</td><td>Codes a customer can use today.</td></tr>
+<tr><td>Switched off</td><td>Codes you have paused.</td></tr>
+<tr><td>Nearly used up</td><td>Working codes that have used 90% or more of their total uses.</td></tr>
+<tr><td>Times redeemed</td><td>Uses across every code, ever (a count only).</td></tr>
+</tbody></table>
+<p>Use the search box (<i>A code, a title or a note</i>) to find one. Each card shows the code, the title, a <b>Working</b> pill or the reason it is not working, what it takes off, the minimum spend, any per-customer limit, the note, a progress bar when there is a total limit, and the uses so far ("3 of 100 used"). The buttons are a <b>switch</b>, <b>Edit</b>, <b>Copy</b> (copies the code) and <b>Delete</b>.</p>
+
+<h3 class="step"><span class="n">4</span>Create or change a coupon</h3>
+<p>Press <b>New coupon</b>, or <b>Edit</b> on a card. Fill in:</p>
+<ul class="f">
+  <li><b>Code</b> — what the customer types, such as WELCOME50. Always saved in capitals; the customer's typing ignores case. Each code can exist only once.</li>
+  <li><b>Title</b> — the bold line the customer reads, such as "50 off your first order". Required.</li>
+  <li><b>Note</b> — the small line shown under the title (the full list calls it <b>Small print</b>).</li>
+  <li><b>Discount</b> — <b>Percentage off</b>, <b>Flat amount off</b> (the default) or <b>Free delivery</b>.</li>
+  <li><b>Per cent off</b> / <b>Amount off</b> — a percentage must be above 0 and at most 100; a flat amount must be above 0.</li>
+  <li><b>At most</b> — percentage only: caps the discount. 0 for no cap.</li>
+  <li><b>Only over</b> — the basket must reach this before the code works.</li>
+  <li><b>Who may use it</b> — <b>Anybody with the code</b> (the whole basket), <b>Quick items only</b> or <b>Express items only</b>. With a storefront chosen, the minimum and the percentage are measured on that storefront's items only.</li>
+  <li><b>Starts</b> / <b>Ends</b> — optional dates. The end date cannot be before the start date.</li>
+  <li><b>Times in all</b> — total uses across all customers. 0 means no limit.</li>
+  <li><b>Times per customer</b> — stored on the coupon and shown on its card. 0 means no limit.</li>
+  <li><b>Working now</b> — the on/off switch.</li>
+</ul>
+<div class="note warn"><span class="lbl">Watch out:</span> Despite its hint ("A line for whoever opens this in six months"), the coupon <b>Note is shown to shoppers</b> under the title. Write it for customers, such as "Up to 60 · Quick items above 199".</div>
+<div class="note tip"><span class="lbl">Tip:</span> <b>Save</b> stays grey until there is a code, a title and an amount above 0. For a <b>Free delivery</b> coupon the amount is not used, but enter any number above 0 so you can save.</div>
+
+<h3 class="step"><span class="n">5</span>What the customer sees</h3>
+<p>From the shop's side, this is what the backend gives the shop app and the website:</p>
+<ul class="f">
+  <li><b>Pincode check</b> — the customer enters a pincode (at least 3 digits). They are told whether you deliver, whether Quick is available, and the delivery promise, or "We don't deliver to this pincode yet."</li>
+  <li><b>The basket</b> — items, the MRP saving, each storefront's delivery fee, any coupon and the total. A customer below the Quick minimum cannot order. A product that has gone or been unpublished is listed so the app can say which line vanished.</li>
+  <li><b>Coupons</b> — working codes are listed with their title, note and minimum; for each, the basket shows what it would save or how much more to spend.</li>
+  <li><b>Slots</b> — the switched-on slots that are still open today and not full. A chosen slot's extra fee is added to the bill.</li>
+  <li><b>Deals</b> — the lower price on the card, in the basket and on the order, with nothing to type.</li>
+</ul>
+<div class="note imp"><span class="lbl">Important:</span> A discount can <b>never exceed the bill</b>: no coupon ever hands money back, and the total never goes below zero.</div>
+
+<h3 class="step"><span class="n">6</span>The full lists (all views)</h3>
+<p>The desks deliberately leave out grouping, filtering and export. For those, use <b>All views</b> on a desk, or the <b>(all views)</b> entries under <b>369 Mart <span class="arr">→</span> Advanced</b>. <b>Delivery &amp; fees (all views)</b> is edited right in the list, and has a hidden <b>Carrier</b> column for choosing which carrier actually ships an order.</p>
+<figure class="shot"><img src="screenshots/09-delivery-fees-list.png" alt="Delivery and fees list"><figcaption>Figure 9 — The Delivery &amp; fees list: one row each for Express and Quick, with Shown as, Delivery promise, Minimum order, Free above and Fee.</figcaption></figure>
+<figure class="shot"><img src="screenshots/10-coupons-list.png" alt="Coupons list"><figcaption>Figure 10 — The Coupons list with three example codes (QUICK20, WELCOME50, FREEDEL): Discount, Amount / %, Capped at, Minimum spend, Applies to, Used, and a Live switch. Rows can be dragged to reorder.</figcaption></figure>
+
+<h3 class="step"><span class="n">7</span>Deals in the full list and form</h3>
+<p><b>Deals (all views)</b> opens filtered to <b>On right now</b>. Remove the filter to see all; <b>Switched off</b> and grouping by <b>Discount</b> are in the search options. Running deals show in green. The form shows the same fields as the desk under <b>The cut</b> and <b>When</b>, an <b>On now</b> ribbon while it runs, and the products on a <b>Products</b> tab.</p>
+<figure class="shot"><img src="screenshots/11-deals-list.png" alt="Deals list"><figcaption>Figure 11 — The Deals list: two running deals in green (a percentage and an amount off) and one waiting to start, with Discount, Off, Products, Starts, Ends and On now.</figcaption></figure>
+<figure class="shot"><img src="screenshots/12-deal-form.png" alt="Deal form"><figcaption>Figure 12 — A deal's form with the green "On now" ribbon, The cut and When sections, the note that nothing is written to the products, and five products on the Products tab.</figcaption></figure>
+
+<!-- ===================== PART 3 ===================== -->
+<div class="part">Part 3 — Keeping It Secure &amp; In Order</div>
+
+<h3 class="step"><span class="n">1</span>Removing and restoring deals (the Trash)</h3>
+<p>Pressing <b>Remove</b> on a deal asks first, then moves it to the <b>Trash</b>. It stops discounting at once. Press <b>Trash</b> at the top of the Deals desk to see removed deals, with when each was removed and how many days it has left. From there:</p>
+<ul class="f">
+  <li><b>Put back</b> — returns the deal exactly as it was, switched off if it was switched off.</li>
+  <li><b>Delete for good</b> — removes it now. Orders already placed keep what they were charged.</li>
+</ul>
+<p>A removed deal waits <b>30 days</b>, then a daily clean-up deletes it. If the home page module is installed, its <b>Keep removed items for (days)</b> setting is used instead; 0 there means keep until you delete it.</p>
+<figure class="shot"><img src="screenshots/13-deals-trash.png" style="max-height:75mm" alt="Deals Trash"><figcaption>Figure 13 — The Trash panel open above the deal cards, explaining the 30-day wait and showing "Nothing removed."</figcaption></figure>
+
+<h3 class="step"><span class="n">2</span>Switch off rather than delete</h3>
+<p>Nothing on the <b>Delivery</b> desk deletes. Fees, slots and areas are referred to by orders that have already gone out, so each is <b>switched off</b> instead and can be put back. Switching off a slot asks first; orders already booked into it keep their slot. Switching off an area tells customers there that you do not deliver to them yet; orders already placed are not affected.</p>
+<p>A coupon can be deleted only if <b>nobody has used it</b>. Once used, it belongs to those orders: the desk says "This code has been used … times, so it belongs to those orders now. Switch it off instead." The <b>Used</b> count is counted from orders and cannot be edited.</p>
+
+<h3 class="step"><span class="n">3</span>Who can do what</h3>
+<table><thead><tr><th style="width:30%">Role</th><th>What they can do</th></tr></thead><tbody>
+<tr><td>Owner</td><td>Everything on the Delivery desk, plus the delivery, slot and service-area lists under Advanced. Coupons and Deals need the Salesperson right as well.</td></tr>
+<tr><td>Manager</td><td>Opens the Delivery desk: edits the fees, adds and edits slots and areas, and sets Quick on branches. Cannot add a new storefront rule. Coupons and Deals need the Salesperson right as well.</td></tr>
+<tr><td>Salesperson</td><td>Full use of the Coupons and Deals desks and their lists.</td></tr>
+<tr><td>Packer, Accountant, Rider (any Internal user)</td><td>Can read these records but has no menu here and changes nothing.</td></tr>
+</tbody></table>
+<div class="note good"><span class="lbl">Good to know:</span> A Manager counts as a Website designer, and an Owner as an Administrator (Settings). Those are the rights the Delivery menu checks.</div>
+
+<h3 class="step"><span class="n">4</span>Prices and privacy</h3>
+<p>Every total, fee and discount is worked out in the backend. The customer's phone only shows the result, so a code's discount cannot be changed from the browser. Shoppers are sent a coupon's code, title, note, storefront and minimum spend, but <b>never</b> how often it has been used or its limits. Staff screens get those numbers.</p>
+
+<!-- ===================== REFERENCE ===================== -->
+<h2>Status reference — coupons</h2>
+<table><thead><tr><th style="width:22%">State</th><th>Meaning</th><th style="width:32%">How to change it</th></tr></thead><tbody>
+<tr><td>Working</td><td>On, inside its dates and not used up.</td><td>—</td></tr>
+<tr><td>switched off</td><td>Working now is off.</td><td>Flip the switch on the card.</td></tr>
+<tr><td>starts …</td><td>On, but its start date is still ahead.</td><td>Wait, or edit <b>Starts</b>.</td></tr>
+<tr><td>ended …</td><td>On, but its end date has passed.</td><td>Edit <b>Ends</b>.</td></tr>
+<tr><td>used up</td><td>Used as many times as <b>Times in all</b> allows.</td><td>Raise <b>Times in all</b>, or set it to 0.</td></tr>
+</tbody></table>
+
+<h2>Status reference — deals</h2>
+<table><thead><tr><th style="width:22%">State</th><th>Meaning</th><th style="width:32%">How to change it</th></tr></thead><tbody>
+<tr><td>On now</td><td>Switched on and inside its dates; prices are lower ("On now, until …" when it has an end).</td><td>—</td></tr>
+<tr><td>Starts …</td><td>Switched on, waiting for its start.</td><td>Wait, or edit <b>Starts</b>.</td></tr>
+<tr><td>Finished</td><td>Switched on, but its end has passed.</td><td>Edit <b>Ends</b>, or remove it.</td></tr>
+<tr><td>Switched off</td><td>Paused by you. Prices are back to normal.</td><td><b>Switch on</b>.</td></tr>
+<tr><td>In the Trash</td><td>Removed; never discounts.</td><td><b>Put back</b> from the Trash.</td></tr>
+</tbody></table>
+
+<h2>Delivery desk pills</h2>
+<table><thead><tr><th style="width:22%">Pill</th><th>Meaning</th><th style="width:32%">How to change it</th></tr></thead><tbody>
+<tr><td>On / Off (slots, areas)</td><td>Offered to customers, or switched off.</td><td><b>Switch off</b> / <b>Put back</b>.</td></tr>
+<tr><td>On / Off (branch Quick)</td><td>The branch does, or does not, deliver Quick.</td><td><b>Quick on</b> / <b>Quick off</b>.</td></tr>
+<tr><td>Not ready</td><td>Quick is on but the branch has no map pin or no reach.</td><td><b>Edit</b>: add Latitude, Longitude and a Reach above 0.</td></tr>
+<tr><td>No pin</td><td>The branch has no map location yet.</td><td><b>Edit</b> and paste its pin.</td></tr>
+</tbody></table>
+
+<h2>Quick tips</h2>
+<ul class="tips">
+  <li>A mixed basket can pay both the Quick and the Express fee; each is waived on its own free-delivery amount.</li>
+  <li>For pincodes, the most specific row wins: 6820 beats 68.</li>
+  <li>Choose a slot's Key with care; it cannot be changed after the slot is made.</li>
+  <li>Hours are numbers: 18.5 is 6:30 PM, and a cut-off of 24 never hides the slot.</li>
+  <li>A branch needs Quick on, a map pin and a reach above 0, or it delivers Quick to nobody.</li>
+  <li>The coupon Note is shown to customers, so write it for them.</li>
+  <li>Switching a deal off puts every price back at once; nothing was written to the products.</li>
+  <li>Watch the Nearly used up tile: those codes are about to start refusing customers.</li>
+</ul>
+
+<h2>If something goes wrong</h2>
+<table><thead><tr><th style="width:36%">What you see</th><th>What to do</th></tr></thead><tbody>
+<tr><td>A customer says a coupon does not work</td><td>Open <b>Sales → Coupons</b> and read the card's pill: switched off, starts, ended or used up. Also check <b>Only over</b> and <b>Who may use it</b>: the minimum may be measured on Quick or Express items only.</td></tr>
+<tr><td>"There is already a coupon with the code …"</td><td>Codes are unique, switched-off ones included. Pick another code, or edit and switch the existing one back on.</td></tr>
+<tr><td>A coupon will not delete</td><td>It has been used, so it belongs to those orders. Switch it off instead.</td></tr>
+<tr><td>A customer is told "We don't deliver to this pincode yet"</td><td>On <b>Delivery → Service areas</b>, add the pincode (or its start), or make sure its row is on and has Quick or Express switched on.</td></tr>
+<tr><td>Every item ships Express</td><td>On <b>Delivery → Branches</b>, look for <b>Not ready</b> or <b>No pin</b>, and check the reach. The item must also be in stock at the nearby branch. A product with its own delivery promise is always Express.</td></tr>
+<tr><td>A slot is missing at checkout</td><td>It may be off, past its <b>Stop offering after</b> time for today, or full (<b>Orders per slot</b>). Check its row on <b>Delivery → Slots</b>.</td></tr>
+<tr><td>A deal's price is not showing</td><td>On <b>Sales → Deals</b>, check the pill: Starts …, Finished or Switched off. Make sure the product is in the deal. If two deals cover it, the better price wins.</td></tr>
+<tr><td>"A percentage deal has to be between 1 and 90"</td><td>Deals cannot take more than 90% off. Use a smaller number, or an <b>Amount off</b> with a <b>Never below</b> price.</td></tr>
+<tr><td>A saved fee still shows the old line in the app</td><td>The app may reuse its last answer for a short time, set by <b>Remember for (seconds)</b> in 369 Mart Settings (60 by default). The bill's total is always worked out fresh.</td></tr>
+</tbody></table>
+
+</body>
+</html>

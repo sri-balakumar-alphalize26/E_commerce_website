@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>369 Mart Home Page — User Manual</title>
+<style>
+  :root{
+    --navy:#1e2a78; --orange:#f08a24; --ink:#1f2230; --muted:#6b6f80;
+    --line:#e6e8f0; --alt:#f2f4fb; --tint:#eef2fc;
+    --tip:#2e6fb0; --good:#2e8b57; --good-bg:#e7f6ea;
+    --warn-bg:#fff3da; --warn-ink:#c0701a;
+  }
+  @page{
+    size:A4; margin:22mm 20mm 20mm 20mm;
+    @bottom-left{content:"369ai · 369 Mart Home Page"; font:8.5pt "Liberation Serif",Georgia,serif; color:#6b6f80;}
+    @bottom-right{content:"Page " counter(page); font:8.5pt "Liberation Serif",Georgia,serif; color:#6b6f80;}
+  }
+  @page:first{ margin-top:14mm; }
+  *{box-sizing:border-box}
+  html{background:#fff}
+  body{margin:0; font-family:"Liberation Serif","Times New Roman",Georgia,serif; font-size:10.5pt; line-height:1.5; color:var(--ink); background:#fff}
+  @media screen{ body{max-width:794px; margin:24px auto; padding:0 16px} }
+  p{margin:0 0 7pt}
+  b,strong{font-weight:700}
+  .k{color:var(--navy); font-weight:700}          /* navy key term */
+  code{font-family:"DejaVu Sans Mono",monospace; font-size:8.5pt; background:#f1f2f6; padding:1px 4px; border-radius:3px}
+  .arr{color:var(--navy); font-weight:700}
+
+  /* ---------- Cover ---------- */
+  .topbar{height:7px; background:var(--navy); border-bottom:3px solid var(--orange); margin:0 -8mm 10pt}
+  .cover{background:var(--navy); color:#fff; text-align:center; border-radius:9px; padding:26pt 20pt 22pt; margin-bottom:18pt}
+  .cover h1{margin:0; font-size:31pt; letter-spacing:1.5pt; font-weight:700; text-transform:uppercase}
+  .cover .sub{color:var(--orange); font-size:15pt; font-weight:700; margin:12pt 0 10pt}
+  .cover .meta{font-size:10pt; color:#d5d9ee}
+
+  /* ---------- H2 section with orange rule ---------- */
+  h2{color:var(--navy); font-size:15pt; margin:16pt 0 9pt; padding-bottom:5pt; border-bottom:1.6px solid var(--orange); page-break-after:avoid}
+
+  /* ---------- Flow cards (3–4 steps) ---------- */
+  .flow{display:flex; align-items:center; gap:6pt; margin:10pt 0 10pt}
+  .flow .card{flex:1; border:1px solid #d9dcea; border-radius:6px; padding:8pt 9pt; min-height:66pt}
+  .flow .card b{display:block; color:var(--navy); font-size:10.5pt; margin-bottom:2pt}
+  .flow .card span{font-size:8.5pt; color:var(--muted); line-height:1.35}
+  .flow .to{color:var(--orange); font-size:13pt}
+
+  /* ---------- Callouts ---------- */
+  .note{border-left:3px solid var(--orange); background:var(--tint); border-radius:0 5px 5px 0; padding:8pt 12pt; margin:10pt 0 12pt; font-size:9.5pt; page-break-inside:avoid}
+  .note .lbl{font-weight:700; text-transform:uppercase; font-size:8.5pt; letter-spacing:.3pt; margin-right:4pt}
+  .note.start .lbl{color:var(--warn-ink)}
+  .note.tip{border-color:var(--tip)}              .note.tip .lbl{color:var(--tip)}
+  .note.good{border-color:var(--good); background:var(--good-bg)} .note.good .lbl{color:var(--good)}
+  .note.imp{border-color:var(--navy)}             .note.imp .lbl{color:var(--navy)}
+  .note.warn{border-color:var(--orange); background:var(--warn-bg)} .note.warn .lbl{color:var(--warn-ink)}
+
+  /* ---------- Part banner ---------- */
+  .part{background:var(--navy); color:#fff; text-align:center; border-radius:6px; padding:12pt; margin:20pt 0 10pt; font-size:15pt; font-weight:700; letter-spacing:1.5pt; text-transform:uppercase; page-break-after:avoid}
+  .part-intro{color:var(--muted); margin-bottom:12pt}
+
+  /* ---------- Numbered step ---------- */
+  h3.step{display:flex; align-items:center; gap:9pt; color:var(--navy); font-size:13pt; margin:16pt 0 7pt; page-break-after:avoid}
+  h3.step .n{display:inline-block; min-width:17pt; height:17pt; line-height:17pt; text-align:center; background:var(--orange); color:#fff; border-radius:3px; font-family:"Liberation Sans",Arial,sans-serif; font-size:10pt; font-weight:700}
+
+  /* ---------- Field bullets (orange square markers) ---------- */
+  ul.f{list-style:none; padding:0; margin:4pt 0 8pt}
+  ul.f li{position:relative; padding-left:13pt; margin-bottom:4pt}
+  ul.f li::before{content:""; position:absolute; left:1pt; top:6.5pt; width:4pt; height:4pt; background:var(--orange)}
+  ul.f li b:first-child{color:var(--navy)}
+
+  /* ---------- Tables ---------- */
+  table{width:100%; border-collapse:collapse; margin:8pt 0 12pt; font-size:9pt}
+  thead{display:table-header-group}
+  th{background:var(--navy); color:#fff; text-align:left; padding:6pt 8pt; font-weight:700}
+  th+th{border-left:1px solid #34408a}
+  td{padding:6pt 8pt; border-bottom:1px solid var(--line); vertical-align:top}
+  tr:nth-child(even) td{background:var(--alt)}
+  td:first-child{color:var(--navy); font-weight:700}
+  tr{page-break-inside:avoid}
+
+  /* ---------- Quick tips ---------- */
+  ul.tips{margin:4pt 0 12pt; padding-left:14pt}
+  ul.tips li{margin-bottom:3pt}
+
+  /* ---------- Screenshots + glossary (added for 369 Mart manuals) ---------- */
+  figure.shot{margin:8pt 0 12pt; page-break-inside:avoid; break-inside:avoid; text-align:center}
+  figure.shot img{max-width:100%; max-height:118mm; border:1px solid var(--line); border-radius:6px; box-shadow:0 1px 4px rgba(30,42,120,.12)}
+  figure.shot.phone img{max-width:62mm}
+  figure.shot figcaption{font-size:8.5pt; color:var(--muted); margin-top:4pt; text-align:left}
+  table.gloss td:first-child{width:28%}
+  h2, h3.step, .part{break-after:avoid}
+</style>
+</head>
+<body>
+<div class="topbar"></div>
+<div class="cover">
+  <h1>369 Mart Home Page</h1>
+  <div class="sub">Banners, Tiles and Product Rows for the Shop App</div>
+  <div class="meta">User Manual &nbsp;|&nbsp; 369ai</div>
+</div>
+
+<h2>What this does</h2>
+<p><span class="k">369 Mart Home Page</span> decides what shoppers see first when they open the shop app: the row of <span class="k">tabs</span> across the top, the sliding promo <span class="k">banners</span>, the round <span class="k">category tiles</span>, and the <span class="k">rows</span> of products further down. The app has two sides, <b>Quick</b> (delivery in minutes) and <b>Express</b> (delivery in days), and each side has its own home page.</p>
+<p>The whole layout is kept as a <span class="k">saved page</span>. One saved page is the <b>everyday page</b>; another, such as a festival sale, can be given dates and take over on its own, then hand back when its time is up. You edit a page on a picture of the shop itself, and <b>every change saves on its own</b>. Nothing is ever deleted straight away: removed things wait in a <b>Trash</b> first.</p>
+<div class="flow">
+  <div class="card"><b>1. Pick a page</b><span>Open Home Page and choose the saved page to work on</span></div><span class="to">→</span>
+  <div class="card"><b>2. Edit it</b><span>Click any part of the drawn page; drag to reorder</span></div><span class="to">→</span>
+  <div class="card"><b>3. Switch on or schedule</b><span>Make it the everyday page, or give it dates</span></div><span class="to">→</span>
+  <div class="card"><b>4. Shoppers see it</b><span>The app picks up the change on its next load</span></div>
+</div>
+<div class="note start"><span class="lbl">Before you start:</span> Editing needs a <b>Manager</b> or <b>Owner</b> account (or <b>Website designer</b> rights). When the module is installed it builds a first page for you, arranged from your <b>biggest product categories</b>, so you start from something real. Products must be <b>published</b> on the shop to appear in a row. Shoppers need nothing: the app reads the page by itself.</div>
+
+<h2>Words you'll see</h2>
+<table class="gloss">
+  <thead><tr><th>Word</th><th>What it means</th></tr></thead>
+  <tbody>
+    <tr><td>Saved page</td><td>A complete home page (both Quick and Express) kept under a name, such as "Everyday" or "Festival sale".</td></tr>
+    <tr><td>Everyday page</td><td>The saved page shoppers see when nothing is scheduled. There is always exactly one.</td></tr>
+    <tr><td>Quick / Express</td><td>The two sides of the app. The settings screens call them the two <b>app modes</b>; the editor calls the one you are working on <b>This tab</b>.</td></tr>
+    <tr><td>Tabs</td><td>The row of small pills across the very top of the app, such as My Home or Offers.</td></tr>
+    <tr><td>Banner / Banner strip</td><td>A banner is a promo card that slides past near the top. A banner strip places one or more banners further down, between product rows.</td></tr>
+    <tr><td>Category tile</td><td>A rounded picture shortcut under the banners that opens a category.</td></tr>
+    <tr><td>Row</td><td>A band of products side by side, with a heading such as "New this week".</td></tr>
+    <tr><td>Hidden / Trash</td><td>Hidden means switched off but kept in place. The Trash holds things you removed, for 30 days.</td></tr>
+  </tbody>
+</table>
+
+<h2>How the manual is arranged</h2>
+<p><b>Part 1 – Setting Up</b> shows where everything lives and covers the settings and starting page you set once. <b>Part 2 – Everyday Use</b> is the work you will repeat: choosing a page, editing it, and switching pages on or scheduling them. <b>Part 3 – Keeping It Secure &amp; In Order</b> covers the Trash, the safety rules on saved pages, and who can do what. Reference tables, tips and a fix-it list follow at the end.</p>
+
+<div class="part">Part 1 — Setting Up</div>
+<p class="part-intro">Done once by a Manager or Owner. If your first page already looks right, you can go straight to Part 2.</p>
+
+<h3 class="step"><span class="n">1</span>Where everything lives</h3>
+<p>Open <b>369 Mart</b> from the main menu. The home page has a front door and a set of plain list screens:</p>
+<ul class="f">
+  <li><b>Store <span class="arr">→</span> Home Page</b>: the <b>Home pages</b> screen, where you pick a saved page and edit it. This is the screen you will use most.</li>
+  <li><b>Page building <span class="arr">→</span> Saved Home Pages</b>: every saved page as a list, with its status and dates.</li>
+  <li><b>Page building <span class="arr">→</span> Home Page Settings</b>: the shared settings (Step 2).</li>
+  <li><b>Page building <span class="arr">→</span> Home Sections</b>, <b>Banners</b>, <b>Category Tiles</b>, <b>Tabs</b>: plain lists and forms for each part of the page, for checking or fixing something by hand.</li>
+</ul>
+<p>The same <b>Home pages</b> screen is also reachable from <b>Website <span class="arr">→</span> Configuration <span class="arr">→</span> 369 Mart Home Page</b>, where a website administrator would look for it.</p>
+
+<h3 class="step"><span class="n">2</span>Home Page Settings</h3>
+<p>Open <b>Page building <span class="arr">→</span> Home Page Settings</b>. It opens the one settings form straight away:</p>
+<ul class="f">
+  <li><b>The two app modes</b>: Quick and Express, each with its <b>Name</b> (only used in the backend), <b>Mode</b>, <b>Free delivery above</b> and a <b>Show</b> switch. Turn <b>Show</b> off and that whole side disappears from the app.</li>
+  <li><b>Hide sold-out products</b>: off by default. Off: a product with no stock left still appears in a row, marked <i>Out of stock</i>. On: it never appears.</li>
+  <li><b>Remember for (seconds)</b>: how long the app may reuse the page it last fetched before asking again. Default <b>60</b>. Set <b>0</b> while you are making changes and want to see them at once.</li>
+  <li><b>The app reads from</b>: the address to give whoever sets up the app. Read only.</li>
+  <li><b>Image address</b>: leave it empty in almost every case. Only fill it in when the app cannot load pictures through the shop.</li>
+</ul>
+<p>The <b>See what the app receives</b> button opens, in a new browser tab, the exact page data the app is being sent right now.</p>
+<div class="note tip"><span class="lbl">Tip:</span> Changes reach the app within the <b>Remember for (seconds)</b> time. If you do not see an edit in the app, wait a minute before looking for a problem.</div>
+
+<h3 class="step"><span class="n">3</span>Your first page</h3>
+<p>On install, the module builds a saved page called <b>From your catalogue</b> and switches it on. It takes your biggest categories and turns them into tabs (plus <b>My Home</b> and <b>Offers</b>), up to four banners, up to eight category tiles, and rows: <b>New this week</b> on both sides, <b>Most loved</b> (best sellers) on Express, and a row for each of the biggest categories. Free delivery starts at <b>499</b> on Quick and <b>999</b> on Express.</p>
+<p>A second page, <b>Example - grocery layout (not shown)</b>, is also installed, switched off. Keep it as an example to copy from, or remove it.</p>
+<p>To start again from your catalogue later, open the page in <b>Page building <span class="arr">→</span> Saved Home Pages</b> and press <b>Rebuild from my catalogue</b>. It always makes a <b>new</b> page and switches it on; the old page stays saved, so you can switch back. Your free delivery amounts are carried over.</p>
+<div class="note good"><span class="lbl">Good to know:</span> Nothing changes the arranged page on its own afterwards. It is an ordinary saved page: rename, rearrange or remove anything in it.</div>
+
+<h3 class="step"><span class="n">4</span>How a product reads on a card</h3>
+<p>Every product in a row is drawn as a card. Open a product and look on its <b>General Information</b> page under <i>How this product reads on a card in the app</i>. Everything is optional; left empty, the app uses the product's own name, unit and photo.</p>
+<ul class="f">
+  <li><b>Pack size</b>: shown under the name, e.g. 1 kg. Empty falls back to the unit of measure.</li>
+  <li><b>Price per unit</b> and <b>Small note</b>: optional small print, e.g. "Approx 250-400 g".</li>
+  <li><b>Badge</b>: a short pill such as <i>New</i>. It replaces the discount pill, so leave it empty on discounted products.</li>
+  <li><b>Warn when stock reaches</b>: the card says "Only N left" at or below this number. <b>0</b> turns it off.</li>
+  <li><b>Express delivery time</b>: e.g. 3-5 days, shown on Express cards only.</li>
+  <li><b>Drawing</b>, <b>Drawing colour</b>, <b>Text on drawing</b>: used only when the product has no photo, so a card is never blank.</li>
+</ul>
+<p>When the separate <b>369 Mart Product Page</b> module is installed, these boxes move into its own product editor instead.</p>
+
+<div class="part">Part 2 — Everyday Use</div>
+<p class="part-intro">Everything here starts from <b>369 Mart <span class="arr">→</span> Store <span class="arr">→</span> Home Page</b>.</p>
+
+<h3 class="step"><span class="n">1</span>The Home pages screen</h3>
+<p>Each saved page is a card. The card shows the page name, its note, a coloured status pill (green for the page shoppers see now, blue for one waiting its turn), and what is on it: for <b>Quick</b> and <b>Express</b>, how many banners, tiles, tabs and rows are shown. Each card has these buttons:</p>
+<table>
+  <thead><tr><th style="width:26%">Button</th><th>What it does</th></tr></thead>
+  <tbody>
+    <tr><td>Edit page</td><td>Opens the page editor on <b>this</b> page, never another one.</td></tr>
+    <tr><td>Switch on</td><td>Makes this the everyday page. Asks first, naming the page shoppers are on now. Not shown on the current everyday page.</td></tr>
+    <tr><td>Schedule</td><td>Opens <b>Starts</b> and <b>Ends</b> dates with <b>Save dates</b> and <b>Clear dates</b> (Step 2).</td></tr>
+    <tr><td>Duplicate</td><td>Copies the page with everything on it, named "… (copy)".</td></tr>
+    <tr><td>Remove</td><td>Moves the page to the Trash. Greyed out on the everyday page.</td></tr>
+  </tbody>
+</table>
+<p>At the top, <b>New page</b> asks <i>What is this page for?</i>, takes a name and makes a copy of today's everyday page under it, so you edit something rather than build from nothing. The <b>Trash</b> button opens the list of removed pages.</p>
+
+<h3 class="step"><span class="n">2</span>Switch a page on, or schedule it</h3>
+<p>There are two ways a page reaches shoppers:</p>
+<ul class="f">
+  <li><b>Switch on</b>: the page becomes the everyday page straight away, and the old everyday page is switched off in the same step. There is never a moment with two, or with none.</li>
+  <li><b>Schedule</b>: give the page a <b>Starts</b> and <b>Ends</b> time and press <b>Save dates</b>. While the window is open it replaces the everyday page; when it closes, the everyday page comes back by itself. No one needs to be awake at midnight.</li>
+</ul>
+<div class="note good"><span class="lbl">Good to know:</span> An open window always wins over the everyday page, and if two windows overlap, the one that started most recently wins. You can leave <b>Ends</b> empty; the page then stays on until you press <b>Clear dates</b>.</div>
+<div class="note warn"><span class="lbl">Watch out:</span> <b>Switch on</b> does not stop a scheduled page whose window is open. If shoppers still see the festival page, clear that page's dates.</div>
+
+<h3 class="step"><span class="n">3</span>The page editor</h3>
+<p>Press <b>Edit page</b>. The page is drawn the way a shopper on a computer sees it, inside a browser frame, with a panel on the right. The top shows the page name and its status, with <b>All pages</b> to go back. The toolbar holds:</p>
+<ul class="f">
+  <li><b>Editing: Quick / Express</b>: which side you are working on. This is the only real switch; the Quick/Express toggle drawn inside the page does nothing.</li>
+  <li><b>Show hidden (N)</b>: brings hidden parts back into view, greyed, with a <i>Hidden</i> tag. Appears only when something is hidden.</li>
+  <li><b>+ Tab</b>, <b>+ Banner</b>, <b>+ Category tile</b>, <b>+ Row</b>: add a new one at the end and jump to it.</li>
+  <li><b>Trash</b>: what has been removed from this side, with a count.</li>
+  <li><b>More settings</b>: pictures, the products inside a row, banner strips and rules (Step 6).</li>
+  <li>A save chip: <b>Saving...</b>, <b>Saved</b> or <b>Not saved</b>.</li>
+</ul>
+<div class="note imp"><span class="lbl">Important:</span> There is no Save button. A typed change saves itself a moment after you stop typing; a switch saves at once. If the chip says <b>Not saved</b>, the change did not reach the shop: check your connection and make it again.</div>
+
+<h3 class="step"><span class="n">4</span>Edit, hide, reorder and remove</h3>
+<p><b>Click</b> any part of the page to edit it in the panel. <b>Drag the handle</b> on a part to move it within its own group (tabs among tabs, rows among rows). The <b>eye</b> hides a part from the app without deleting it. The panel offers:</p>
+<table>
+  <thead><tr><th style="width:24%">Part</th><th>Fields in the panel</th></tr></thead>
+  <tbody>
+    <tr><td>Tab</td><td><b>Label</b> (the word on the pill) and <b>Icon</b>. If the tab wears a category's logo, the app shows that logo instead; change it in Catalogue → Categories.</td></tr>
+    <tr><td>Banner</td><td><b>Kicker</b> (the small line above), <b>Headline</b>, <b>Note</b> (one line under it), <b>Colour</b> (Green, Navy, Brown, Orange, Teal, Indigo) and <b>Link</b> (where tapping it goes).</td></tr>
+    <tr><td>Category tile</td><td><b>Label</b> (under the picture) and <b>Link</b> (the category it opens).</td></tr>
+    <tr><td>Row</td><td><b>Title</b>, <b>Subtitle</b> and <b>See all link</b>. Leave the link empty and no "View all" is shown.</td></tr>
+  </tbody>
+</table>
+<p>Each panel has a <b>Shown / Hidden</b> switch and a <b>Remove</b> button. With nothing selected, the panel edits <b>This tab</b> itself: <b>Shown as</b> (the side's name, e.g. Quick), <b>Promise</b> (the line shown when a shopper switches to it), <b>Icon</b>, and <b>Free delivery above</b> (<b>0</b> for no free-delivery nudge).</p>
+<div class="note good"><span class="lbl">Good to know:</span> Hiding is a switch: the part stays where it is, ready to turn back on. <b>Remove</b> sends it to the Trash, where a 30-day clock starts (Part 3).</div>
+
+<h3 class="step"><span class="n">5</span>How a row picks its products</h3>
+<p>A new row starts as <b>Chosen automatically</b>, <b>Newest first</b>, showing up to 12 products. To change where its products come from, open <b>More settings</b>, click the row, and pick <b>Products from</b>:</p>
+<table>
+  <thead><tr><th style="width:30%">Products from</th><th>What the row shows</th></tr></thead>
+  <tbody>
+    <tr><td>A product category</td><td>Published products in the <b>Category</b> you pick. <b>Include sub-categories</b> (on by default) adds the categories under it. Keeps itself up to date.</td></tr>
+    <tr><td>Products I pick myself</td><td>Exactly the products you add with <b>Add a product</b>, in your order. Drag to rearrange.</td></tr>
+    <tr><td>Chosen automatically</td><td>A <b>Rule</b>: <b>Newest first</b>, <b>Best sellers</b> (counted from orders over <b>Count sales from the last (days)</b>, 365 by default, topped up with the newest), or <b>Biggest discount</b>.</td></tr>
+    <tr><td>A product tag</td><td>Published products carrying the <b>Tag</b> you pick.</td></tr>
+  </tbody>
+</table>
+<p><b>Show at most</b> caps the number of products (12 by default). The panel tells you the result: "Will show <b>N</b> products in the app."</p>
+<div class="note warn"><span class="lbl">Watch out:</span> A row with no products to show is <b>left out of the app</b> entirely, so shoppers never see a bare heading. The editor marks it "Nothing to show"; check that the category has published products, or that <b>Hide sold-out products</b> is not removing them all.</div>
+<p>For a hand-picked row, click a product's pencil to change its wording <b>for this row only</b>: <b>Show as</b>, <b>Size</b>, <b>Badge</b>, <b>Small note</b>, and on Express, <b>Delivery</b>. The product itself is not changed.</p>
+<figure class="shot"><img src="screenshots/01-row-settings.png" alt="More settings with the New this week row selected" style="max-height:100mm"><figcaption>Figure 1 — More settings on the Quick side: the "New this week" product row is selected, with Title, Subtitle, "View all" opens, the four Products from choices (Chosen automatically picked), Rule Newest first, Show at most 12, and "Will show 12 products in the app."</figcaption></figure>
+
+<h3 class="step"><span class="n">6</span>More settings</h3>
+<p><b>More settings</b> shows the same page as a phone. It reaches what the editor leaves out. Tap a band to edit it on the right; drag the handle to move a band; the eye hides it. Below the rows, <b>+ Product row</b> and <b>+ Banner strip</b> add new bands.</p>
+<figure class="shot"><img src="screenshots/02-more-settings-express.png" alt="More settings on the Express side with nothing selected" style="max-height:84mm"><figcaption>Figure 2 — More settings on the Express side with nothing selected: the phone shows the tabs, a banner, eight category tiles and a "Best of electronics" row reading "Nothing to show yet"; the panel says "Tap anything on the phone to edit it".</figcaption></figure>
+<ul class="f">
+  <li><b>Banners</b>: <b>Small line above</b>, <b>Headline</b>, <b>Offer line</b>, <b>Colour</b>, <b>Opens</b>, and a <b>Picture</b> (1600 × 640 works best) with <b>Upload</b> and <b>Remove picture</b>. With no picture, <b>Drawings</b> (one name per line) are drawn instead.</li>
+  <li><b>Category tiles</b>: <b>Label</b>, <b>Opens</b>, <b>Category (optional)</b>, a <b>Picture</b> upload, or a <b>Drawing</b> with <b>Text on it</b>, <b>Tile background</b> and <b>Drawing colour</b>. A tile linked to a category can wear that category's logo and colours; change those in Catalogue → Categories.</li>
+  <li><b>Tabs</b>: <b>Label</b>, <b>Icon</b>, and <b>Opens</b>: <i>The home page</i>, <i>A category page</i> (then fill in <b>Category address</b>), <i>The offers page</i> or <i>The buy-again page</i>.</li>
+  <li><b>Banner strip</b>: <b>Banners in this strip — drag to reorder</b>, and <b>Add a banner</b> to place any banner from this side. A banner is shared: edit it once and every strip using it updates.</li>
+  <li><b>Free delivery</b>: tap the delivery bar at the bottom to set <b>Free delivery above</b>.</li>
+</ul>
+
+<h3 class="step"><span class="n">7</span>What the customer sees</h3>
+<p>In the app, shoppers see the tabs across the top, the banners sliding past, the tiles under them, then each row in your order, with any banner strips between rows. Hidden parts, parts in the Trash and empty rows are simply not there. Tabs and tiles linked to a category can show that category's logo instead of an icon or drawing.</p>
+<figure class="shot"><img src="screenshots/03-tabs-row.png" alt="A row of tabs with icons"><figcaption>Figure 3 — A tabs row: My Home (selected), Peripherals, Accessories, Networking, Components, Computers, Offers and a New tab, each with a small icon.</figcaption></figure>
+<figure class="shot"><img src="screenshots/04-category-tiles.png" alt="Category tiles with pictures" style="max-height:48mm"><figcaption>Figure 4 — Category tiles: Keyboards with a photo, Mice, Headsets, Webcams, Cables, Chargers, Wi-Fi routers, UPS &amp; power and a New tile, each with a picture over a soft background.</figcaption></figure>
+
+<div class="part">Part 3 — Keeping It Secure &amp; In Order</div>
+
+<h3 class="step"><span class="n">1</span>The Trash</h3>
+<p>Removing a banner, tile, tab, row or a whole saved page puts it in the <b>Trash</b> instead of destroying it. It leaves the app at once, but waits <b>30 days</b> before it is deleted for good. A scheduled job empties anything older each day.</p>
+<ul class="f">
+  <li><b>In the editor</b>, <b>Trash</b> lists what was removed from this side, grouped as Banners, Tiles, Tabs and Rows, each <b>drawn</b> as it looked so you can tell two similar banners apart, with the days left and a <b>Put back</b> button.</li>
+  <li><b>In More settings</b>, the bin chip opens the same list with <b>Put back</b>, a cross to <b>Delete for good</b>, and <b>Empty</b> for the whole list. Both ask first and cannot be undone.</li>
+  <li><b>On the Home pages screen</b>, <b>Trash</b> lists removed pages with <b>Put back</b> and <b>Delete for good</b>.</li>
+</ul>
+<div class="note good"><span class="lbl">Good to know:</span> <b>Put back</b> returns a thing exactly as it was: a banner that was hidden when you removed it comes back hidden. Taking a product out of a row, or a banner out of a strip, is not a removal; it happens at once and the product or banner itself is untouched.</div>
+<figure class="shot"><img src="screenshots/05-trash.png" alt="The Trash panel in More settings" style="max-height:95mm"><figcaption>Figure 5 — The Trash in More settings, right after "Moved to Trash": one item, "New row" (Home section · 30 days left), with Put back, a cross to delete it for good, and Empty at the top.</figcaption></figure>
+
+<h3 class="step"><span class="n">2</span>Pages that cannot be removed</h3>
+<p>Two rules stop the app from ever being left without a home page:</p>
+<ul class="f">
+  <li>The <b>everyday page</b> cannot be removed. Switch another page on first.</li>
+  <li>The <b>last saved page</b> cannot be removed: "This is the only saved home page. There has to be one."</li>
+</ul>
+<p>A page in the Trash is never shown to shoppers, even if its dates are open.</p>
+
+<h3 class="step"><span class="n">3</span>Checking things by hand</h3>
+<p>The lists under <b>Page building</b> show what is not in the Trash by default. Use the filters <b>In the Trash</b>, <b>Not in the Trash</b> and <b>Hidden</b>, or group by <b>App mode</b>. A form for something in the Trash shows a yellow notice and a <b>Put back</b> button. A hidden banner, tile or row carries a red <i>Hidden</i> ribbon and a <b>Turn on (show in the app)</b> button.</p>
+<div class="note warn"><span class="lbl">Watch out:</span> The <b>Key</b> on a banner, tile or tab is a short internal name the app matches on. It is filled in for you; leave it alone once the app is live. Two items on the same side cannot share a key.</div>
+
+<h3 class="step"><span class="n">4</span>Who can do what</h3>
+<table style="page-break-inside:avoid; break-inside:avoid">
+  <thead><tr><th style="width:30%">Role</th><th>What they can do</th></tr></thead>
+  <tbody>
+    <tr><td>Packer, Accountant, Rider (Internal user)</td><td>Look only. Any change they try is refused.</td></tr>
+    <tr><td>Manager (Website designer)</td><td>Everything in this manual: add, edit, hide, remove and put back parts; create, switch on, schedule and remove pages; change Home Page Settings.</td></tr>
+    <tr><td>Owner (Administrator (Settings))</td><td>Everything a Manager can, with full administrator rights over the backend.</td></tr>
+  </tbody>
+</table>
+<p>The staff console's home page screens follow the same rule: only people with Website designer rights (Managers and Owners) may open them.</p>
+
+<h3 class="step"><span class="n">5</span>The page is public</h3>
+<p>The shop app reads the home page without anyone signing in, so <b>everything shown on it is public</b>. Never put internal notes in a headline, banner line or row title. A saved page's <b>Note</b> is for staff only and is not sent to the app.</p>
+
+<h2>Status reference — saved pages</h2>
+<table>
+  <thead><tr><th style="width:18%">State</th><th>Meaning (the note beside it)</th><th style="width:32%">How to change it</th></tr></thead>
+  <tbody>
+    <tr><td>Live now</td><td>Shoppers see this page: "the everyday page", or "scheduled until …" when a window is open.</td><td>Switch another page on, or clear the dates.</td></tr>
+    <tr><td>Scheduled</td><td>Its window has not started yet: "starts …".</td><td>Schedule → change or clear the dates.</td></tr>
+    <tr><td>Ended</td><td>Its window has passed: "finished …".</td><td>Give it new dates, or remove it.</td></tr>
+    <tr><td>Off</td><td>Saved, not in use: "saved, not in use". The everyday page also reads Off while a scheduled page is running.</td><td>Switch on, or Schedule.</td></tr>
+  </tbody>
+</table>
+
+<h2>Status reference — parts of a page</h2>
+<table style="page-break-inside:avoid; break-inside:avoid">
+  <thead><tr><th style="width:18%">State</th><th>Meaning</th><th style="width:32%">How to change it</th></tr></thead>
+  <tbody>
+    <tr><td>Shown</td><td>In the app (a row needs at least one product; a strip needs at least one shown banner).</td><td>The eye, or the Shown / Hidden switch.</td></tr>
+    <tr><td>Hidden</td><td>Kept in place, out of the app. Greyed with a Hidden tag under Show hidden.</td><td>Turn it back on with the eye.</td></tr>
+    <tr><td>In the Trash</td><td>Out of the app and off the page; deleted for good after 30 days.</td><td>Put back from the Trash.</td></tr>
+  </tbody>
+</table>
+
+<h2>Quick tips</h2>
+<ul class="tips">
+  <li>Build a festival page with <b>New page</b> or <b>Duplicate</b>, edit it, then <b>Schedule</b> it; nothing changes for shoppers until the window opens.</li>
+  <li>The editor only ever edits the page whose <b>Edit page</b> you pressed, so a parked page is safe to work on.</li>
+  <li>Use the eye to take something out for a while; use Remove only when you are done with it.</li>
+  <li>Set <b>Remember for (seconds)</b> to 0 while editing, and back to 60 afterwards.</li>
+  <li>A category row keeps itself current; a hand-picked row needs you to swap products.</li>
+  <li>Keep the <b>Promise</b> on each side true: it is what shoppers are told about delivery.</li>
+  <li>Banner pictures look best at 1600 × 640; without a picture the app draws one for you.</li>
+  <li>Removed by mistake? Put it back from the Trash within 30 days.</li>
+</ul>
+
+<h2>If something goes wrong</h2>
+<table>
+  <thead><tr><th style="width:34%">What you see</th><th>What to do</th></tr></thead>
+  <tbody>
+    <tr><td>An edit is not in the app yet</td><td>The app may reuse its last copy for up to <b>Remember for (seconds)</b> (Home Page Settings). Wait, or set it to 0 while editing. Also check the page you edited is the one <b>Live now</b>.</td></tr>
+    <tr><td>A row is missing from the app</td><td>It has no products to show. In More settings, check <b>Products from</b>, the category or tag, and that products are published. <b>Hide sold-out products</b> may be removing them.</td></tr>
+    <tr><td>A banner strip is missing</td><td>Every banner in it is hidden or in the Trash. Turn a banner on, or add another to the strip.</td></tr>
+    <tr><td>Remove is greyed out on a page</td><td>It is the everyday page. Switch another page on first.</td></tr>
+    <tr><td>Shoppers still see the festival page</td><td>Its window is still open. Open its card, press <b>Schedule</b>, then <b>Clear dates</b> or change <b>Ends</b>.</td></tr>
+    <tr><td>The save chip says <b>Not saved</b></td><td>The change did not reach the shop. Check the connection and make the change again.</td></tr>
+    <tr><td>"That order did not save."</td><td>A drag was not stored, and the part sprang back. Drag it again.</td></tr>
+    <tr><td>"We could not reach the shop."</td><td>The screen could not load. Press <b>Try again</b>.</td></tr>
+    <tr><td>A tab or tile shows a logo I can't change here</td><td>It wears its category's logo or colours. Change them in Catalogue → Categories, or upload a picture for the tile in More settings.</td></tr>
+    <tr><td>Something I removed is gone from the Trash</td><td>It was over 30 days old and the daily clean-up deleted it. It cannot be put back.</td></tr>
+  </tbody>
+</table>
+
+</body>
+</html>
