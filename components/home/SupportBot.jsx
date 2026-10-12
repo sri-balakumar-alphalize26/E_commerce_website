@@ -173,6 +173,8 @@ export default function SupportBot({ onNav, hidden = false, lift = 0 }) {
         setTyping(false);
         /* They asked for a person earlier; the ticket is the transcript. */
         if (g.agent && g.ticket) {
+          /* The ticket's lines carry no buttons; the greeting's stay on offer. */
+          setStart(g.chips || []);
           setAgent(true);
           const said = fromTicket(g.ticket);
           setMsgs(said.length ? said : [{ at: Date.now(), from: "bot", text: g.text }]);

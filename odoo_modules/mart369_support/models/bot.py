@@ -45,6 +45,8 @@ START_CHIPS = [
     'Track my order', 'Refund status', 'Cancel an order',
     'Payment issue', 'Delivery charges', 'Talk to an agent',
 ]
+# Under the queue line: the same topics, all but asking for a person again.
+WAITING_CHIPS = [chip for chip in START_CHIPS if chip != 'Talk to an agent']
 
 BOT_NAME = 'Mitra'
 AGENT_NAME = 'Anjali'
@@ -148,7 +150,9 @@ class Mart369Bot(models.AbstractModel):
         typed = (text or '').strip().lower()
         first = next((rule for rule in self.env['mart369.bot.rule']._mart369_rules()
                       if self._mart369_matches(rule, typed)), None)
-        return ({'text': self._mart369_agent_reply(partner, ticket, text)},
+        # The topics come with it, so "hi" in the queue is not a dead end.
+        return ({'text': self._mart369_agent_reply(partner, ticket, text),
+                 'chips': list(WAITING_CHIPS)},
                 self._mart369_is_small_talk(first))
 
     @api.model

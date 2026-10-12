@@ -93,7 +93,9 @@ html.sr-lock, html.lp-lock { overflow: hidden; }
 .sr-chip .hm-ic { color: var(--hm-muted); }
 .sr-chip:hover { border-color: var(--hm-blue); color: var(--hm-blue) !important; transform: translateY(-1px); }
 .sr-trend .hm-ic { color: var(--hm-orange); }
-.sr-picks { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+/* A thin bar you can see: the last card is cut off at the edge, so the bar
+   is what says there is more to the right. */
+.sr-picks { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px; scrollbar-width: thin; scrollbar-color: #b8c3cc transparent; }
 .sr-pick { flex: 0 0 136px; background: #fff; border: 1px solid var(--hm-line); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
 .sr-pick-img { position: relative; aspect-ratio: 1; background: linear-gradient(180deg, #f7f9fa 55%, #e9eef1); padding: 14%; }
 .sr-pick-img img, .sr-pick-img .hm-art { width: 100%; height: 100%; object-fit: contain; }

@@ -282,6 +282,17 @@ class TestMart369SupportOwnership(Mart369OrderFixtures, HttpCase):
         self.assertIn('queue', payload['reply'])
         self.assertFalse([b for b in self._unanswered_texts() if '>hi<' in b])
 
+    def test_the_queue_line_offers_the_topics_again(self):
+        """"Hi" in the queue was a dead end: the same line, nothing to tap."""
+        self.authenticate('order.tester@369mart.test', 'order-tester-369')
+        status, payload = self._post('/369mart/support/agent/say', {'text': 'hi'})
+        self.assertEqual(status, 200)
+        self.assertIsInstance(payload['reply'], str, 'the phone app reads a bare string')
+        self.assertIn('queue', payload['reply'])
+        self.assertIn('Track my order', payload['bot']['chips'])
+        self.assertNotIn('Talk to an agent', payload['bot']['chips'],
+                         'they are already waiting for a person')
+
     def test_once_the_team_has_answered_the_bot_steps_back(self):
         self.ticket.with_user(self.env.ref('base.user_admin'))._mart369_say(
             'Hello, I am looking at it', from_customer=False)
