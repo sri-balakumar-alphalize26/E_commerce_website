@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Loyalty Card — User Manual</title>
+<style>
+  :root{
+    --navy:#1e2a78; --orange:#f08a24; --ink:#1f2230; --muted:#6b6f80;
+    --line:#e6e8f0; --alt:#f2f4fb; --tint:#eef2fc;
+    --tip:#2e6fb0; --good:#2e8b57; --good-bg:#e7f6ea;
+    --warn-bg:#fff3da; --warn-ink:#c0701a;
+  }
+  @page{
+    size:A4; margin:22mm 20mm 20mm 20mm;
+    @bottom-left{content:"369ai · Loyalty Card"; font:8.5pt "Liberation Serif",Georgia,serif; color:#6b6f80;}
+    @bottom-right{content:"Page " counter(page); font:8.5pt "Liberation Serif",Georgia,serif; color:#6b6f80;}
+  }
+  @page:first{ margin-top:14mm; }
+  *{box-sizing:border-box}
+  html{background:#fff}
+  body{margin:0; font-family:"Liberation Serif","Times New Roman",Georgia,serif; font-size:10.5pt; line-height:1.5; color:var(--ink); background:#fff}
+  @media screen{ body{max-width:794px; margin:24px auto; padding:0 16px} }
+  p{margin:0 0 7pt}
+  b,strong{font-weight:700}
+  .k{color:var(--navy); font-weight:700}          /* navy key term */
+  code{font-family:"DejaVu Sans Mono",monospace; font-size:8.5pt; background:#f1f2f6; padding:1px 4px; border-radius:3px}
+  .arr{color:var(--navy); font-weight:700}
+
+  /* ---------- Cover ---------- */
+  .topbar{height:7px; background:var(--navy); border-bottom:3px solid var(--orange); margin:0 -8mm 10pt}
+  .cover{background:var(--navy); color:#fff; text-align:center; border-radius:9px; padding:26pt 20pt 22pt; margin-bottom:18pt}
+  .cover h1{margin:0; font-size:31pt; letter-spacing:1.5pt; font-weight:700; text-transform:uppercase}
+  .cover .sub{color:var(--orange); font-size:15pt; font-weight:700; margin:12pt 0 10pt}
+  .cover .meta{font-size:10pt; color:#d5d9ee}
+
+  /* ---------- H2 section with orange rule ---------- */
+  h2{color:var(--navy); font-size:15pt; margin:16pt 0 9pt; padding-bottom:5pt; border-bottom:1.6px solid var(--orange); page-break-after:avoid}
+
+  /* ---------- Flow cards (3–4 steps) ---------- */
+  .flow{display:flex; align-items:center; gap:6pt; margin:10pt 0 10pt}
+  .flow .card{flex:1; border:1px solid #d9dcea; border-radius:6px; padding:8pt 9pt; min-height:66pt}
+  .flow .card b{display:block; color:var(--navy); font-size:10.5pt; margin-bottom:2pt}
+  .flow .card span{font-size:8.5pt; color:var(--muted); line-height:1.35}
+  .flow .to{color:var(--orange); font-size:13pt}
+
+  /* ---------- Callouts ---------- */
+  .note{border-left:3px solid var(--orange); background:var(--tint); border-radius:0 5px 5px 0; padding:8pt 12pt; margin:10pt 0 12pt; font-size:9.5pt; page-break-inside:avoid}
+  .note .lbl{font-weight:700; text-transform:uppercase; font-size:8.5pt; letter-spacing:.3pt; margin-right:4pt}
+  .note.start .lbl{color:var(--warn-ink)}
+  .note.tip{border-color:var(--tip)}              .note.tip .lbl{color:var(--tip)}
+  .note.good{border-color:var(--good); background:var(--good-bg)} .note.good .lbl{color:var(--good)}
+  .note.imp{border-color:var(--navy)}             .note.imp .lbl{color:var(--navy)}
+  .note.warn{border-color:var(--orange); background:var(--warn-bg)} .note.warn .lbl{color:var(--warn-ink)}
+
+  /* ---------- Part banner ---------- */
+  .part{background:var(--navy); color:#fff; text-align:center; border-radius:6px; padding:12pt; margin:20pt 0 10pt; font-size:15pt; font-weight:700; letter-spacing:1.5pt; text-transform:uppercase; page-break-after:avoid}
+  .part-intro{color:var(--muted); margin-bottom:12pt}
+
+  /* ---------- Numbered step ---------- */
+  h3.step{display:flex; align-items:center; gap:9pt; color:var(--navy); font-size:13pt; margin:16pt 0 7pt; page-break-after:avoid}
+  h3.step .n{display:inline-block; min-width:17pt; height:17pt; line-height:17pt; text-align:center; background:var(--orange); color:#fff; border-radius:3px; font-family:"Liberation Sans",Arial,sans-serif; font-size:10pt; font-weight:700}
+
+  /* ---------- Field bullets (orange square markers) ---------- */
+  ul.f{list-style:none; padding:0; margin:4pt 0 8pt}
+  ul.f li{position:relative; padding-left:13pt; margin-bottom:4pt}
+  ul.f li::before{content:""; position:absolute; left:1pt; top:6.5pt; width:4pt; height:4pt; background:var(--orange)}
+  ul.f li b:first-child{color:var(--navy)}
+
+  /* ---------- Tables ---------- */
+  table{width:100%; border-collapse:collapse; margin:8pt 0 12pt; font-size:9pt}
+  thead{display:table-header-group}
+  th{background:var(--navy); color:#fff; text-align:left; padding:6pt 8pt; font-weight:700}
+  th+th{border-left:1px solid #34408a}
+  td{padding:6pt 8pt; border-bottom:1px solid var(--line); vertical-align:top}
+  tr:nth-child(even) td{background:var(--alt)}
+  td:first-child{color:var(--navy); font-weight:700}
+  tr{page-break-inside:avoid}
+
+  /* ---------- Quick tips ---------- */
+  ul.tips{margin:4pt 0 12pt; padding-left:14pt}
+  ul.tips li{margin-bottom:3pt}
+  /* ---------- Screenshots + glossary (added for 369 Mart manuals) ---------- */
+  figure.shot{margin:8pt 0 12pt; page-break-inside:avoid; break-inside:avoid; text-align:center}
+  figure.shot img{max-width:100%; max-height:118mm; border:1px solid var(--line); border-radius:6px; box-shadow:0 1px 4px rgba(30,42,120,.12)}
+  figure.shot.phone img{max-width:62mm}
+  figure.shot figcaption{font-size:8.5pt; color:var(--muted); margin-top:4pt; text-align:left}
+  table.gloss td:first-child{width:28%}
+  h2, h3.step, .part{break-after:avoid}
+</style>
+</head>
+<body>
+<div class="topbar"></div>
+<div class="cover">
+  <h1>Loyalty Card</h1>
+  <div class="sub">Cards, Points &amp; Rewards by Mobile Number</div>
+  <div class="meta">User Manual &nbsp;|&nbsp; 369ai</div>
+</div>
+
+<h2>What this does</h2>
+<p><span class="k">Loyalty Card</span> gives each customer a <span class="k">loyalty card</span> tied to their mobile number. Customers collect <span class="k">points</span> when they buy and can later spend those points as money off. One <span class="k">points rule</span> sets how many points a purchase earns and how much each point is worth, and every change to a card's points is kept in the <span class="k">points history</span>.</p>
+<p>This module holds the cards, the rule and the history. It does not sell anything itself: the module that takes the orders gives and takes the points. In 369 Mart that is <b>369 Mart Loyalty Points</b>. You can also <b>view, print and email</b> a card in the size and colours you choose. Nothing is deleted at once: a deleted card goes to a <b>bin</b> first, and you can bring it back from there.</p>
+<div class="flow">
+  <div class="card"><b>1. Card made</b><span>By hand, or for many customers at once, from their mobile number</span></div><span class="to">→</span>
+  <div class="card"><b>2. Points earned</b><span>Each purchase adds points under the active rule</span></div><span class="to">→</span>
+  <div class="card"><b>3. Points spent</b><span>Points become money off, once a day</span></div><span class="to">→</span>
+  <div class="card"><b>4. History kept</b><span>Every point added or taken is listed</span></div>
+</div>
+<div class="note start"><span class="lbl">Before you start:</span> An administrator with the <b>Loyalty Manager</b> role does the setup once: checking the settings, the points rule and, if cards should be emailed, the email account. Staff who look up and manage cards need the <b>Loyalty User</b> role. Customers need a <b>mobile number</b>, because the card is built from it. Point of Sale is not needed.</div>
+
+<h2>Words you'll see</h2>
+<table class="gloss">
+  <thead><tr><th>Word</th><th>What it means</th></tr></thead>
+  <tbody>
+    <tr><td>Loyalty card</td><td>A customer's membership card. It has a card number, a barcode and a points balance. Each mobile number can have only one card.</td></tr>
+    <tr><td>Points</td><td>What the customer collects by buying. They are shown as <b>Total Points</b> on the card.</td></tr>
+    <tr><td>Points rule</td><td>The rule for earning points (spend this much, earn that many) and for spending them (how many points make ₹1). Only one rule is used at a time.</td></tr>
+    <tr><td>Points Value (₹)</td><td>What the card's points are worth in rupees under the active rule. For example, 500 points at 10 points per ₹1 are worth ₹50.</td></tr>
+    <tr><td>Redeem</td><td>To spend points as money off an order.</td></tr>
+    <tr><td>Bin</td><td>Where deleted cards and customers wait. From there you can restore them or delete them for good. This manual calls the <b>Deleted Loyalty Cards</b> and <b>Deleted Customers</b> windows "the bin".</td></tr>
+    <tr><td>App Password</td><td>A special 16-character password that Gmail makes for one app. The shop uses it to send emails.</td></tr>
+  </tbody>
+</table>
+
+<h2>How the manual is arranged</h2>
+<p><b>Part 1 – Setting Up</b> shows where the screens are, then covers Loyalty Settings, the card's look, the points rule, the email account and the welcome message. <b>Part 2 – Everyday Use</b> covers making cards, the buttons on a card, the points history, how points are earned and spent, and the card images. <b>Part 3 – Keeping It Secure &amp; In Order</b> covers deleting and restoring, clearing old images, who can do what, and privacy.</p>
+
+<div class="part">Part 1 — Setting Up</div>
+<p class="part-intro">This is done once by a Loyalty Manager. The module comes with working defaults, so if the defaults below suit your shop, you can go straight to Part 2.</p>
+
+<h3 class="step"><span class="n">1</span>Where everything lives</h3>
+<p>The screens are in one of two places, depending on what is installed.</p>
+<p><b>On its own</b>, the module has its own <b>Loyalty</b> app in the main menu, in three sections:</p>
+<ul class="f">
+  <li><b>Loyalty <span class="arr">→</span> Customer Details</b> — your customers who have a mobile number, with a button that makes cards for them.</li>
+  <li><b>Loyalty <span class="arr">→</span> Loyalty Cards</b> — every card, with its points and status.</li>
+  <li><b>Loyalty <span class="arr">→</span> Points Rules</b> — the rule for earning and spending points.</li>
+  <li><b>Loyalty <span class="arr">→</span> Points History</b> — every time points were added or taken, on any card.</li>
+  <li><b>Loyalty <span class="arr">→</span> Loyalty Settings</b> — mobile number rules, the card number format, and the printed card's size, font and colours.</li>
+  <li><b>Email <span class="arr">→</span> Email Settings</b> — the email account cards are sent from, and the welcome message.</li>
+  <li><b>Images <span class="arr">→</span> Card Images</b> and <b>Download Card Images (ZIP)</b> — saved pictures of cards, and a way to download them.</li>
+</ul>
+<p><b>With 369 Mart Loyalty Points installed</b>, the Loyalty app is hidden. The same screens appear under <b>369 Mart <span class="arr">→</span> Loyalty</b> instead, as one list: Loyalty Cards, Customer Details, Points History, Points Rules, Loyalty Settings, Email Settings, Card Images and Download Card Images (ZIP). They open the same screens, so everything in this manual applies in either place.</p>
+<div class="note good"><span class="lbl">Good to know:</span> In the Loyalty app, all entries are visible to anyone with the <b>Loyalty User</b> role, but a Loyalty User can only read the rules and settings. Under 369 Mart, <b>Points Rules</b>, <b>Loyalty Settings</b> and <b>Email Settings</b> are shown only to a <b>Loyalty Manager</b>.</div>
+
+<h3 class="step"><span class="n">2</span>Check Loyalty Settings</h3>
+<p>Open <b>Loyalty Settings</b>. You see a list of settings records. A ready-made one called <b>Default</b> is already on. You can keep more than one record, for example a festival card design, but <b>only the one with Active switched on is used</b>, everywhere in loyalty. To switch, click the <b>Active</b> switch on another row and confirm with <b>Switch</b>, or open a record and press <b>Set as Active</b>. The one that was on turns off by itself.</p>
+<p>Open the active record. At the top:</p>
+<ul class="f">
+  <li><b>Name</b> — any label, e.g. <i>Diwali Card</i>.</li>
+  <li><b>Enable Loyalty (master)</b> — the main on/off switch for loyalty. Default <b>on</b>. The selling module (369 Mart Loyalty Points) gives and takes points only while it is on. While it is off, <b>Auto-Email Card</b> is hidden and the Email Settings screen is locked.</li>
+  <li><b>Auto-Email Card</b> — default <b>off</b>. When on, a card is emailed to the customer (as a picture and a PDF) when it is created already Active, or when a Draft card is first activated. Only customers with an email address get it, and it needs the email account from step 5.</li>
+</ul>
+<p>Under <b>Mobile Number (all loyalty)</b>:</p>
+<ul class="f">
+  <li><b>Country</b> — the country of your customers' mobile numbers. Default: your company's country.</li>
+  <li><b>Dial Code (+)</b> — filled in from the country (for example 91 for India). You cannot type here.</li>
+  <li><b>Mobile Number Length</b> — how many digits a local mobile number has, without the dial code. Default <b>10</b>. It is filled in when you pick a country, but you can change it.</li>
+</ul>
+<p>Mobile numbers are saved with the dial code in front. If you type <i>9876543210</i>, the card keeps <i>+919876543210</i>. On the Customer Details form, the dial code is shown as a fixed box and the number box takes only digits, up to the length set here.</p>
+<div class="note imp"><span class="lbl">Important:</span> At least one settings record must stay on. You cannot switch off the only active one. You get <i>"At least one Loyalty Settings must stay ON…"</i>. To change which one is used, turn another one on instead.</div>
+
+<h3 class="step"><span class="n">3</span>Card number and the printed card's look</h3>
+<p>On the same Loyalty Settings form, <b>Card Number Format</b> decides how new card numbers are built: <b>prefix + last digits of the mobile + a running counter</b>. A customer whose mobile ends in 90 might get <b>LC90000001</b>. A yellow <b>Card Number Format</b> box at the bottom shows each part and an <b>Example</b> as you type.</p>
+<ul class="f">
+  <li><b>Card Prefix</b> — the letters at the start. Default <b>LC</b>.</li>
+  <li><b>Include Mobile Digits</b> — default <b>on</b>. Off leaves the mobile digits out.</li>
+  <li><b>Mobile Digits Used</b> — how many digits from the end of the mobile number. Default <b>2</b>.</li>
+  <li><b>Counter Digits</b> — the length of the running number, filled with zeros. Default <b>6</b> (000001).</li>
+</ul>
+<p>The card's barcode is the card number without the prefix.</p>
+<div class="note good"><span class="lbl">Good to know:</span> A new format applies only to cards made from now on. Cards that already exist keep their number.</div>
+<p>The other groups set how a card looks when viewed, printed, emailed or saved as a picture. The <b>Preview</b> beside them shows a sample card that changes as you edit.</p>
+<ul class="f">
+  <li><b>Card Size (Print)</b> — <b>Card Width (mm)</b> 86 and <b>Card Height (mm)</b> 54 (the size of a bank card). Width must be 40–120 mm and height 25–90 mm; anything outside that is brought back into range. The printed PDF page is exactly the card's size. <b>Font Style</b> chooses the lettering (Arial by default, or Times New Roman, Georgia, Courier New, Verdana, Tahoma, Trebuchet MS, Helvetica, Comic Sans MS).</li>
+  <li><b>Colors</b> — <b>Background Color</b> (dark blue by default), <b>Text / Number Color</b>, <b>Title Color</b> (the words "LOYALTY CARD"), <b>Customer Name Color</b>, and <b>Company Color</b>, <b>Status Color</b>, <b>Since Color</b> and <b>Points Color</b> for those lines.</li>
+  <li><b>Font Sizes (mm)</b> — one size for each line: Title, Card Number, Customer Name, Company, Status, Since and Points. Sizes are in millimetres. Each one has a limit based on the card height, so text never runs off the card.</li>
+  <li><b>Card Image / WhatsApp</b> — <b>Card Company Name</b> is the shop name shown at the top of the card and in the email subject. If you leave it blank, your company name is used. <b>Card Image Retention (months)</b> is explained in Part 3, step 3.</li>
+</ul>
+<div class="note warn"><span class="lbl">Watch out:</span> <b>Reset to Default</b> asks only about "card size, fonts and colors", but it puts back more than that. It also resets the card number format, the mobile number length, the welcome message, the email server name, port and security, turns <b>Enable Loyalty (master)</b> on and turns <b>Auto-Email Card</b> off. Check those afterwards.</div>
+
+<h3 class="step"><span class="n">4</span>Set the points rule</h3>
+<p>Open <b>Points Rules</b>. A <b>Default Rule</b> is already there and on. Open it, or press <b>New</b> for another one:</p>
+<ul class="f">
+  <li><b>Rule Name</b> — any label.</li>
+  <li><b>Spend Amount</b> and <b>Points Earned</b> (under <b>Earning Rules</b>) — spend this much, earn that many points. Default: spend <b>100</b>, earn <b>10</b>.</li>
+  <li><b>Min Points to Redeem</b> — the fewest points a customer can spend at one time. Default <b>100</b>.</li>
+  <li><b>Points per ₹1</b> — how many points make ₹1 off. Default <b>10</b>, so 100 points are ₹10 off.</li>
+  <li><b>Max Redeem %</b> — the largest share of an order that points may pay for. Default <b>100</b> (the whole order).</li>
+</ul>
+<p>With the defaults, a ₹500 purchase earns 50 points. Once a customer has 100 points, they can spend them as ₹10 off.</p>
+<p>Like the settings, <b>only the Active rule is used</b>. To change rules, click the <b>Active</b> switch on another row and confirm, or press <b>Set as Active</b> on its form. The old rule turns off by itself.</p>
+<div class="note imp"><span class="lbl">Important:</span> You cannot switch off the last active rule (<i>"At least one Points Rule must stay ON…"</i>). A new rule takes effect from now on. Points already earned stay as they are, but their <b>Points Value (₹)</b> is worked out again with the new <b>Points per ₹1</b>.</div>
+
+<h3 class="step"><span class="n">5</span>Set up the email account</h3>
+<p>Open <b>Email Settings</b>. It always opens on the active Loyalty Settings record. If <b>Enable Loyalty (master)</b> is off, you see only a red box, <i>"Please enable "Enable Loyalty (master)" first."</i>, with a switch to turn it on there. Then fill in the account the shop sends cards <b>from</b>:</p>
+<ul class="f">
+  <li><b>From Name</b> — the sender name customers see, e.g. <i>MyShop Loyalty</i>. If you leave it blank, the card's company name is used.</li>
+  <li><b>From Email</b> — the sending address. For Gmail it must be the same as the Username.</li>
+  <li><b>SMTP Server</b>, <b>Port</b>, <b>Security</b> — the mail server's details. These are ready for Gmail: <i>smtp.gmail.com</i>, <b>587</b>, <b>TLS (recommended)</b>. The other choices for Security are <b>None</b> and <b>SSL</b>.</li>
+  <li><b>Username</b> — usually the same as From Email.</li>
+  <li><b>Password / App Password</b> — for Gmail, the App Password (see below). It shows as dots.</li>
+  <li><b>Email Ready</b> — switches on by itself once the account is saved.</li>
+</ul>
+<p>Press <b>Save Email Settings</b>. You need at least From Email and SMTP Server; otherwise you see <i>"Please fill at least the From Email and SMTP Server."</i> Then press <b>Send Test Email</b>. A test message goes to the From Email address. If it arrives, sending cards will work.</p>
+<p><b>Getting a Gmail App Password.</b> Gmail does not accept your normal password here. A yellow box at the bottom of the screen has links for these steps. Do this once:</p>
+<ul class="f">
+  <li>Turn on <b>2-Step Verification</b> for the Google account. App passwords only become available after that.</li>
+  <li>Create an <b>App Password</b>. Type any name for it, and Google gives you a 16-character code.</li>
+  <li>Put your full Gmail address in <b>Username</b>. Paste the code into <b>Password / App Password</b>; the spaces are optional.</li>
+</ul>
+<div class="note tip"><span class="lbl">Tip:</span> If the test fails, the message says why, for example a wrong password. Check the SMTP Server, Username and App Password, then press <b>Send Test Email</b> again.</div>
+
+<h3 class="step"><span class="n">6</span>Write the welcome message</h3>
+<p>Lower on the Email Settings screen, <b>Welcome message for new customers (Email)</b> is the text at the top of every card email, above the card picture. Choose a <b>Welcome Message Mode</b>:</p>
+<table>
+  <thead><tr><th style="width:30%">Mode</th><th>How you write it</th></tr></thead>
+  <tbody>
+    <tr><td>Simple (fill-in-the-blanks) — default</td><td>Fill in a <b>Header</b>, an <b>Intro line</b>, an <b>Instructions line</b> and a <b>Footer</b>. Then switch on or off: <b>Show greeting (Dear name)</b>, <b>Show intro line</b>, <b>Show card number</b>, <b>Show mobile</b>, <b>Show points</b>, <b>Show instructions line</b>.</td></tr>
+    <tr><td>Advanced (full template)</td><td>Write the whole message yourself in one box, using the fill-in words below.</td></tr>
+  </tbody>
+</table>
+<p>Fill-in words are replaced with each customer's own details when the email is sent. They work in Advanced mode and in the Simple text lines. Type them exactly, with the curly brackets:</p>
+<table>
+  <thead><tr><th style="width:24%">Type this</th><th>The customer sees</th></tr></thead>
+  <tbody>
+    <tr><td>{name}</td><td>Their name, e.g. <i>Priya</i>.</td></tr>
+    <tr><td>{card_number}</td><td>Their card number, e.g. <i>LC90000001</i>.</td></tr>
+    <tr><td>{phone}</td><td>Their mobile number, with the dial code.</td></tr>
+    <tr><td>{points}</td><td>Their points at the moment the email is sent.</td></tr>
+  </tbody>
+</table>
+<p>Put a word between stars to make it bold: <i>*Welcome*</i> shows as <b>Welcome</b>. The <b>Live Preview</b> underneath shows the message with sample details as you edit. <b>Reset Message to Default</b> puts back the original text.</p>
+
+<h3 class="step"><span class="n">7</span>What is prepared for you</h3>
+<p>Installing the module sets up these, and you do not need to touch them:</p>
+<table>
+  <thead><tr><th style="width:32%">Item</th><th>What it is</th></tr></thead>
+  <tbody>
+    <tr><td>Default Rule</td><td>The points rule from step 4 (100 → 10, minimum 100, 10 points per ₹1, 100%), switched on.</td></tr>
+    <tr><td>Default settings</td><td>The settings record from steps 2–3, switched on.</td></tr>
+    <tr><td>Card number counter</td><td>The running number at the end of each card number. It counts up across all cards.</td></tr>
+    <tr><td>Loyalty: Delete Old Card Images</td><td>A job that runs once a day and removes old card pictures (Part 3, step 3).</td></tr>
+  </tbody>
+</table>
+
+<div class="part">Part 2 — Everyday Use</div>
+<p class="part-intro">This is what staff use from day to day. A Loyalty User can do everything here.</p>
+
+<h3 class="step"><span class="n">1</span>Find a card</h3>
+<p>Open <b>Loyalty Cards</b>. The list shows each card's number, customer name, mobile number, <b>Total Points</b>, <b>Points Value (₹)</b>, <b>Registration Date</b> and <b>Status</b>. It opens with the <b>Active</b> filter on. Remove that filter to see Draft and Suspended cards too, or use the <b>Draft</b> and <b>Suspended</b> filters. Type in the search box and pick <b>Card/Name/Phone</b> to search all three at once. You can also group the list by <b>Status</b> or by <b>Registration Date</b> (month).</p>
+
+<h3 class="step"><span class="n">2</span>Make a card by hand</h3>
+<p>In <b>Loyalty Cards</b>, press <b>New</b> and fill in:</p>
+<ul class="f">
+  <li><b>Customer Name</b> and <b>Mobile Number</b> — both are needed.</li>
+  <li><b>Email</b> — needed only if you want to email the card.</li>
+</ul>
+<p>Save. The card number appears (until then it says <i>New</i>), along with the barcode and the registration date. The card is linked to the customer with that mobile number. If there is no such customer yet, one is created for you; it shows in the <b>Partner</b> field. A new card starts as <b>Draft</b>. Press <b>Activate</b> to make it usable.</p>
+<div class="note imp"><span class="lbl">Important:</span> One mobile number can have only one card (in each company). A second card with the same number is refused with <i>"Phone number must be unique per company! Card … already has this number."</i> Cards in the bin do not count.</div>
+
+<h3 class="step"><span class="n">3</span>Make cards from Customer Details</h3>
+<p>Open <b>Customer Details</b>. It lists people (not companies) who have a mobile number and are not in the bin: <b>Customer ID</b>, <b>Customer Name</b>, <b>Mobile Number</b>, <b>Email</b> and <b>Registered On</b>. The filters are <b>With Mobile</b> (on by default), <b>With Email</b> and <b>Not Deleted</b>, and you can group by <b>City</b> or <b>Registration Date</b>. You can also add a customer here with <b>New</b>.</p>
+<ul class="f">
+  <li><b>Generate Loyalty Cards</b> (at the top of the list) — makes cards for all customers at once. A box asks <i>"Generate loyalty cards for all customers who don't have one yet?"</i>. Press <b>Generate</b>.</li>
+  <li><b>Generate Loyalty Card</b> (inside one customer) — does the same for that customer only.</li>
+</ul>
+<p>For each customer: with no card, a new <b>Active</b> card is made. With a Draft or Suspended card, that card is made Active. With an Active card already, or with no mobile number, the customer is skipped. A message then gives the counts, e.g. <i>"3 created, 1 activated, 2 skipped (already active or no mobile number)."</i> The customer's own <b>Loyalty Cards</b> tab lists their cards.</p>
+<div class="note warn"><span class="lbl">Watch out:</span> Generating also <b>turns Suspended cards back on</b>. If you suspended a card on purpose, generating for that customer (or for everyone) makes it Active again. If <b>Auto-Email Card</b> is on, each newly made card is also emailed to customers who have an email address.</div>
+
+<h3 class="step"><span class="n">4</span>Inside a card</h3>
+<p>Click a card to open it. The left side shows the <b>Customer Information</b> (name, mobile, email). The right side shows the <b>Card Details</b>: <b>Total Points</b>, <b>Points Value (₹)</b>, <b>Barcode</b>, <b>Registration Date</b> and <b>Partner</b> (the customer the card belongs to). The <b>Points History</b> tab lists every time points were added or taken on this card, newest first. You can read it but not change it. The buttons at the top depend on the status:</p>
+<table>
+  <thead><tr><th style="width:26%">Button</th><th style="width:20%">Shown when</th><th>What it does</th></tr></thead>
+  <tbody>
+    <tr><td>Activate</td><td>Draft</td><td>Makes the card usable. If Auto-Email Card is on, the card is emailed now.</td></tr>
+    <tr><td>Suspend</td><td>Active</td><td>Puts the card on hold. A suspended card cannot be used to spend points.</td></tr>
+    <tr><td>Reactivate</td><td>Suspended</td><td>Makes the card Active again.</td></tr>
+    <tr><td>View Card</td><td>Active or Suspended</td><td>Opens the card on screen in a new browser tab, with a <b>Print Card</b> link.</td></tr>
+    <tr><td>Print Card</td><td>Active or Suspended</td><td>Makes a PDF exactly the size of the card, ready to print.</td></tr>
+    <tr><td>Email Card</td><td>Active or Suspended</td><td>Emails the card to the customer now (step 5).</td></tr>
+    <tr><td>Add 500 Test Points</td><td>Active</td><td>Adds 500 points marked <i>Test Points</i>. Only for trying things out.</td></tr>
+  </tbody>
+</table>
+<div class="note warn"><span class="lbl">Watch out:</span> <b>Add 500 Test Points</b> adds real points. At the default rule, they are worth ₹50 the customer can spend, and there is no undo button. Use it only on test cards, never on a real customer's card.</div>
+
+<h3 class="step"><span class="n">5</span>View, print and email a card</h3>
+<p>The card shows the shop name, the words <b>LOYALTY CARD</b>, the card number, the status, the customer's name, <b>SINCE</b> (the month and year it was registered), <b>POINTS</b> and a barcode. Its size, font and colours come from the active Loyalty Settings.</p>
+<ul class="f">
+  <li><b>View Card</b> — to show the card on screen to a customer, or to print from the browser.</li>
+  <li><b>Print Card</b> — one card as a card-sized PDF. To print several cards, tick them in the Loyalty Cards list and choose <b>Print <span class="arr">→</span> Loyalty Card</b>.</li>
+  <li><b>Email Card</b> — sends an email with the subject <i>"Your [shop] Loyalty Card - [card number]"</i>. The email contains the welcome message and a picture of the card, with the card attached as a picture and as a PDF. A green message confirms <i>"The loyalty card was emailed to …"</i>.</li>
+</ul>
+<div class="note tip"><span class="lbl">Tip:</span> <i>"No Email"</i> means the card has no email address; add one on the card and try again. <i>"Not Sent"</i> means the email account is not working. Open <b>Email Settings</b> and press <b>Send Test Email</b> to find out why.</div>
+
+<h3 class="step"><span class="n">6</span>The Points History screen</h3>
+<p>Open <b>Points History</b> to see every points entry on every card. It opens grouped by day, then by card. Each row shows the <b>Date</b>, <b>Card</b>, <b>Type</b> (as a coloured label), <b>Points</b>, <b>Description</b> and <b>Order Amount</b>. The search box finds a card number, customer name, phone or description. The filters are <b>Earned</b>, <b>Redeemed</b>, <b>Returned</b> and <b>Refunded (points back)</b>, and you can group by <b>Card</b>, <b>Type</b> or <b>Date</b>.</p>
+<p>A card's <b>Total Points</b> is worked out from its history: <b>Earned</b> minus <b>Redeemed</b> minus <b>Returned</b>, plus <b>Refunded</b>. The four types are explained in the reference table near the end.</p>
+
+<h3 class="step"><span class="n">7</span>How points are earned and spent</h3>
+<p>Points are added and spent by the module that takes the orders (369 Mart Loyalty Points). That module uses the <b>active Points Rule</b>. Earning goes in step with the amount spent: with the default rule, every ₹100 earns 10 points. Spending follows these rules, and a customer who breaks one is refused:</p>
+<ul class="f">
+  <li><b>The card must be Active</b> — a Draft, Suspended or deleted card cannot spend points.</li>
+  <li><b>At least the minimum</b> — the customer must spend at least <b>Min Points to Redeem</b> (default 100).</li>
+  <li><b>Enough points</b> — no more than the card's Total Points.</li>
+  <li><b>Once a day</b> — one spend per calendar day. The limit resets at midnight in your time zone. A second try gets <i>"Redemption allowed only once per day."</i>, with the time it was last used and when it can be used again.</li>
+</ul>
+<p>The money off is the points divided by <b>Points per ₹1</b>. For example, 250 points at 10 per ₹1 is ₹25 off.</p>
+
+<h3 class="step"><span class="n">8</span>Card images</h3>
+<p><b>Card Images</b> is a gallery of saved pictures of cards. Each picture records the card number, customer, phone, the points at that moment and the <b>Event</b> (<b>Card Created</b> or <b>Order</b>). It opens grouped by date and card number. Switch to the tile view to see the pictures large, and click one to zoom. You cannot add pictures here by hand.</p>
+<p>To take pictures away as files, open <b>Download Card Images (ZIP)</b> and choose under <b>Download</b>:</p>
+<table>
+  <thead><tr><th style="width:28%">Download</th><th>What you pick</th></tr></thead>
+  <tbody>
+    <tr><td>All images (default)</td><td>Nothing more. Every saved picture.</td></tr>
+    <tr><td>By card number</td><td>One <b>Loyalty Card</b>. All its pictures.</td></tr>
+    <tr><td>By date range</td><td><b>From</b> and <b>To</b> dates (both needed). The pictures saved on those days.</td></tr>
+  </tbody>
+</table>
+<p>Press <b>Download ZIP</b>. You get one zip file, with each picture named by card number and date. If nothing matches, you see <i>"No card images found for this selection."</i></p>
+<div class="note good"><span class="lbl">Good to know:</span> This module does not save pictures by itself. The gallery fills only when a connected module saves a card picture. An empty gallery just means none has been saved yet.</div>
+
+<div class="part">Part 3 — Keeping It Secure &amp; In Order</div>
+
+<h3 class="step"><span class="n">1</span>Deleting safely</h3>
+<p>In <b>Loyalty Cards</b> or <b>Customer Details</b>, tick the rows and press <b>Delete Selected</b>. Inside one customer, press <b>Delete Customer</b>. Nothing is deleted yet. A <b>Confirm Delete</b> window first shows what will happen:</p>
+<ul class="f">
+  <li><b>Deleting cards</b> — it lists the cards (number, customer, mobile, points, value) and any <b>customers who share the same mobile number</b>. Those customers are deleted too.</li>
+  <li><b>Deleting customers</b> — it lists the customers and any <b>loyalty cards that share the same mobile number</b>. Those cards are deleted too. A red line gives the <b>Total Points to be lost</b> and what they are worth.</li>
+</ul>
+<p>Press <b>Confirm Delete</b> to go ahead, or <b>Cancel</b>. Confirmed items go to the bin: deleted cards are also set to <b>Suspended</b>, and both leave the normal lists.</p>
+<div class="note imp"><span class="lbl">Important:</span> Read the second table before confirming. Deleting one card can also move the matching customer to the bin, and the other way round. This is so a mobile number never stays half in use.</div>
+
+<h3 class="step"><span class="n">2</span>The bin: restore or delete for good</h3>
+<p>At the top of <b>Loyalty Cards</b>, press <b>Deleted Loyalty Cards</b>. At the top of <b>Customer Details</b>, press <b>Deleted Customers</b>. Each opens a window listing what was deleted and when (<b>Deleted On</b>). Tick rows, or open one, and choose:</p>
+<ul class="f">
+  <li><b>Restore Selected</b> / <b>Restore Card</b> / <b>Restore Customer</b> — brings it back. A restored card comes back as <b>Active</b>, with its points history.</li>
+  <li><b>Delete Permanently</b> — removes it for good, after a warning. A card goes with all its points history. If that leaves the customer with no card, the customer moves to Deleted Customers. A customer deleted for good takes their loyalty cards with them.</li>
+</ul>
+<div class="note warn"><span class="lbl">Watch out:</span> <b>Delete Permanently cannot be undone</b>, and the points are lost. Also, restoring a card does not restore the customer that was deleted with it, so restore that customer from <b>Deleted Customers</b> as well. A card cannot be restored while another card already uses its mobile number.</div>
+
+<h3 class="step"><span class="n">3</span>Old card images are cleared</h3>
+<p>Once a day, the job <b>Loyalty: Delete Old Card Images</b> removes saved card pictures older than <b>Card Image Retention (months)</b> in the active Loyalty Settings. The default is <b>6</b> months; one month counts as 30 days. Set it to <b>0</b> to keep pictures forever. Download any pictures you want to keep (Part 2, step 8) before they reach that age. Only pictures are removed; cards and points are never touched.</p>
+
+<h3 class="step"><span class="n">4</span>Who can do what</h3>
+<table>
+  <thead><tr><th style="width:26%">Role</th><th>What they can do</th></tr></thead>
+  <tbody>
+    <tr><td>Loyalty User</td><td>Makes, edits, activates, suspends, views, prints and emails cards; generates cards; moves cards and customers to the bin and restores them; downloads card images. Can read, but not change, the points rules and Loyalty Settings. Cannot delete cards for good.</td></tr>
+    <tr><td>Loyalty Manager</td><td>Everything a Loyalty User can do, plus changing points rules, Loyalty Settings and Email Settings, and deleting cards for good. The main administrator gets this role when the module is installed.</td></tr>
+    <tr><td>Internal user</td><td>Without one of the two roles above, the loyalty screens are not shown.</td></tr>
+  </tbody>
+</table>
+<p>Give a role on the staff member's user form, under <b>Loyalty Cards</b>: choose <b>User</b> or <b>Manager</b>.</p>
+
+<h3 class="step"><span class="n">5</span>Privacy</h3>
+<p>A card holds a customer's name, mobile number and email address, and only staff with a loyalty role can see them. The email password shows as dots. Use a Gmail <b>App Password</b>, not the real password: it can be cancelled in Google at any time without changing the main one. If a customer asks to be removed, delete them, then use <b>Delete Permanently</b> in the bin.</p>
+
+<h2>Status reference — loyalty cards</h2>
+<table>
+  <thead><tr><th style="width:20%">State</th><th>Meaning</th><th style="width:34%">How to change it</th></tr></thead>
+  <tbody>
+    <tr><td>Draft</td><td>Just made by hand, not yet in use. Cannot spend points, and has no View, Print or Email buttons.</td><td>Press <b>Activate</b>, or generate a card for the customer.</td></tr>
+    <tr><td>Active</td><td>In use: earns and spends points.</td><td>Press <b>Suspend</b> to put it on hold.</td></tr>
+    <tr><td>Suspended</td><td>On hold. Keeps its points but cannot spend them.</td><td>Press <b>Reactivate</b> (generating a card also reactivates it).</td></tr>
+    <tr><td>In the bin</td><td>Deleted, set to Suspended and hidden from the lists.</td><td><b>Restore</b> (comes back Active) or <b>Delete Permanently</b> in the bin.</td></tr>
+  </tbody>
+</table>
+
+<h2>Points history types</h2>
+<table>
+  <thead><tr><th style="width:20%">Type</th><th style="width:16%">Colour</th><th>Meaning</th><th style="width:16%">Balance</th></tr></thead>
+  <tbody>
+    <tr><td>Earned</td><td>Green</td><td>Points collected on a purchase (or test points).</td><td>Adds</td></tr>
+    <tr><td>Redeemed</td><td>Red</td><td>Points spent as money off.</td><td>Takes away</td></tr>
+    <tr><td>Returned</td><td>Orange</td><td>Earned points taken back after a return or cancellation.</td><td>Takes away</td></tr>
+    <tr><td>Refunded</td><td>Blue</td><td>Spent points given back when the order they paid for came back. Filter: <b>Refunded (points back)</b>.</td><td>Adds</td></tr>
+  </tbody>
+</table>
+
+<h2>Quick tips</h2>
+<ul class="tips">
+  <li>One mobile number, one card. Cards in the bin don't count.</li>
+  <li>Only the Active points rule and the Active Loyalty Settings are used. Switch by turning another one on.</li>
+  <li>A new card number format affects new cards only.</li>
+  <li>Generate Loyalty Cards also reactivates Suspended cards, so think before running it for everyone.</li>
+  <li>Use Add 500 Test Points on test cards only. Those points can really be spent.</li>
+  <li>Press Send Test Email after any change to the email account.</li>
+  <li>Read both tables on the Confirm Delete window: a matching customer or card goes too.</li>
+  <li>Download card pictures you need before the retention period (6 months by default) clears them.</li>
+</ul>
+
+<h2>If something goes wrong</h2>
+<table>
+  <thead><tr><th style="width:36%">What you see</th><th>What to do</th></tr></thead>
+  <tbody>
+    <tr><td>"Phone number must be unique per company!"</td><td>Another card already has that mobile number. Search <b>Loyalty Cards</b> with <b>Card/Name/Phone</b> and use that card. Remove the Active filter to see Draft and Suspended cards too.</td></tr>
+    <tr><td>A customer has no card after Generate</td><td>They have no mobile number, or are in the bin. Add the mobile number on their <b>Customer Details</b> form, then press <b>Generate Loyalty Card</b>.</td></tr>
+    <tr><td>A card I suspended is Active again</td><td>Someone ran <b>Generate Loyalty Cards</b>, which reactivates suspended cards. Open the card and press <b>Suspend</b> again.</td></tr>
+    <tr><td>View, Print and Email buttons are missing</td><td>The card is still <b>Draft</b>. Press <b>Activate</b> first.</td></tr>
+    <tr><td>"Not Sent" when emailing a card</td><td>The email account is not working. Open <b>Email Settings</b>, check the SMTP Server, Username and <b>Password / App Password</b> (for Gmail, an App Password, not the normal one), press <b>Save Email Settings</b>, then <b>Send Test Email</b>.</td></tr>
+    <tr><td>Email Settings shows only a red box</td><td><b>Enable Loyalty (master)</b> is off. Switch it on in the red box or in <b>Loyalty Settings</b>.</td></tr>
+    <tr><td>"At least one … must stay ON"</td><td>You tried to switch off the only active rule or settings record. Turn another one on instead (<b>Set as Active</b>).</td></tr>
+    <tr><td>A customer can't spend points</td><td>Check that the card is <b>Active</b>, has at least <b>Min Points to Redeem</b>, and hasn't already been used today. The limit resets at midnight.</td></tr>
+    <tr><td>A deleted card is missing from the list</td><td>Open <b>Deleted Loyalty Cards</b> and press <b>Restore</b>. Restore the customer from <b>Deleted Customers</b> too, if needed.</td></tr>
+    <tr><td>Card Images is empty</td><td>No card pictures have been saved yet, or they were older than <b>Card Image Retention (months)</b> and were cleared.</td></tr>
+  </tbody>
+</table>
+
+</body>
+</html>

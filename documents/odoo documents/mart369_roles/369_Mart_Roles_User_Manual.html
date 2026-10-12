@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>369 Mart Roles — User Manual</title>
+<style>
+  :root{
+    --navy:#1e2a78; --orange:#f08a24; --ink:#1f2230; --muted:#6b6f80;
+    --line:#e6e8f0; --alt:#f2f4fb; --tint:#eef2fc;
+    --tip:#2e6fb0; --good:#2e8b57; --good-bg:#e7f6ea;
+    --warn-bg:#fff3da; --warn-ink:#c0701a;
+  }
+  @page{
+    size:A4; margin:22mm 20mm 20mm 20mm;
+    @bottom-left{content:"369ai · 369 Mart Roles"; font:8.5pt "Liberation Serif",Georgia,serif; color:#6b6f80;}
+    @bottom-right{content:"Page " counter(page); font:8.5pt "Liberation Serif",Georgia,serif; color:#6b6f80;}
+  }
+  @page:first{ margin-top:14mm; }
+  *{box-sizing:border-box}
+  html{background:#fff}
+  body{margin:0; font-family:"Liberation Serif","Times New Roman",Georgia,serif; font-size:10.5pt; line-height:1.5; color:var(--ink); background:#fff}
+  @media screen{ body{max-width:794px; margin:24px auto; padding:0 16px} }
+  p{margin:0 0 7pt}
+  b,strong{font-weight:700}
+  .k{color:var(--navy); font-weight:700}          /* navy key term */
+  code{font-family:"DejaVu Sans Mono",monospace; font-size:8.5pt; background:#f1f2f6; padding:1px 4px; border-radius:3px}
+  .arr{color:var(--navy); font-weight:700}
+
+  /* ---------- Cover ---------- */
+  .topbar{height:7px; background:var(--navy); border-bottom:3px solid var(--orange); margin:0 -8mm 10pt}
+  .cover{background:var(--navy); color:#fff; text-align:center; border-radius:9px; padding:26pt 20pt 22pt; margin-bottom:18pt}
+  .cover h1{margin:0; font-size:31pt; letter-spacing:1.5pt; font-weight:700; text-transform:uppercase}
+  .cover .sub{color:var(--orange); font-size:15pt; font-weight:700; margin:12pt 0 10pt}
+  .cover .meta{font-size:10pt; color:#d5d9ee}
+
+  /* ---------- H2 section with orange rule ---------- */
+  h2{color:var(--navy); font-size:15pt; margin:16pt 0 9pt; padding-bottom:5pt; border-bottom:1.6px solid var(--orange); page-break-after:avoid}
+
+  /* ---------- Flow cards (3–4 steps) ---------- */
+  .flow{display:flex; align-items:center; gap:6pt; margin:10pt 0 10pt}
+  .flow .card{flex:1; border:1px solid #d9dcea; border-radius:6px; padding:8pt 9pt; min-height:66pt}
+  .flow .card b{display:block; color:var(--navy); font-size:10.5pt; margin-bottom:2pt}
+  .flow .card span{font-size:8.5pt; color:var(--muted); line-height:1.35}
+  .flow .to{color:var(--orange); font-size:13pt}
+
+  /* ---------- Callouts ---------- */
+  .note{border-left:3px solid var(--orange); background:var(--tint); border-radius:0 5px 5px 0; padding:8pt 12pt; margin:10pt 0 12pt; font-size:9.5pt; page-break-inside:avoid}
+  .note .lbl{font-weight:700; text-transform:uppercase; font-size:8.5pt; letter-spacing:.3pt; margin-right:4pt}
+  .note.start .lbl{color:var(--warn-ink)}
+  .note.tip{border-color:var(--tip)}              .note.tip .lbl{color:var(--tip)}
+  .note.good{border-color:var(--good); background:var(--good-bg)} .note.good .lbl{color:var(--good)}
+  .note.imp{border-color:var(--navy)}             .note.imp .lbl{color:var(--navy)}
+  .note.warn{border-color:var(--orange); background:var(--warn-bg)} .note.warn .lbl{color:var(--warn-ink)}
+
+  /* ---------- Part banner ---------- */
+  .part{background:var(--navy); color:#fff; text-align:center; border-radius:6px; padding:12pt; margin:20pt 0 10pt; font-size:15pt; font-weight:700; letter-spacing:1.5pt; text-transform:uppercase; page-break-after:avoid}
+  .part-intro{color:var(--muted); margin-bottom:12pt}
+
+  /* ---------- Numbered step ---------- */
+  h3.step{display:flex; align-items:center; gap:9pt; color:var(--navy); font-size:13pt; margin:16pt 0 7pt; page-break-after:avoid}
+  h3.step .n{display:inline-block; min-width:17pt; height:17pt; line-height:17pt; text-align:center; background:var(--orange); color:#fff; border-radius:3px; font-family:"Liberation Sans",Arial,sans-serif; font-size:10pt; font-weight:700}
+
+  /* ---------- Field bullets (orange square markers) ---------- */
+  ul.f{list-style:none; padding:0; margin:4pt 0 8pt}
+  ul.f li{position:relative; padding-left:13pt; margin-bottom:4pt}
+  ul.f li::before{content:""; position:absolute; left:1pt; top:6.5pt; width:4pt; height:4pt; background:var(--orange)}
+  ul.f li b:first-child{color:var(--navy)}
+
+  /* ---------- Tables ---------- */
+  table{width:100%; border-collapse:collapse; margin:8pt 0 12pt; font-size:9pt}
+  thead{display:table-header-group}
+  th{background:var(--navy); color:#fff; text-align:left; padding:6pt 8pt; font-weight:700}
+  th+th{border-left:1px solid #34408a}
+  td{padding:6pt 8pt; border-bottom:1px solid var(--line); vertical-align:top}
+  tr:nth-child(even) td{background:var(--alt)}
+  td:first-child{color:var(--navy); font-weight:700}
+  tr{page-break-inside:avoid}
+
+  /* ---------- Quick tips ---------- */
+  ul.tips{margin:4pt 0 12pt; padding-left:14pt}
+  ul.tips li{margin-bottom:3pt}
+  /* ---------- Screenshots + glossary (added for 369 Mart manuals) ---------- */
+  figure.shot{margin:8pt 0 12pt; page-break-inside:avoid; break-inside:avoid; text-align:center}
+  figure.shot img{max-width:100%; max-height:118mm; border:1px solid var(--line); border-radius:6px; box-shadow:0 1px 4px rgba(30,42,120,.12)}
+  figure.shot.phone img{max-width:62mm}
+  figure.shot figcaption{font-size:8.5pt; color:var(--muted); margin-top:4pt; text-align:left}
+  table.gloss td:first-child{width:28%}
+  h2, h3.step, .part{break-after:avoid}
+</style>
+</head>
+<body>
+<div class="topbar"></div>
+<div class="cover">
+  <h1>369 Mart Roles</h1>
+  <div class="sub">Who Does What — Owner, Manager, Packer, Accountant &amp; Rider</div>
+  <div class="meta">User Manual &nbsp;|&nbsp; 369ai</div>
+</div>
+
+<h2>What this does</h2>
+<p><span class="k">369 Mart Roles</span> gives every staff member one simple <span class="k">role</span> that says what job they do: <b>User</b>, <b>Packer</b>, <b>Manager</b> or <b>Owner</b>. Two extra <span class="k">ticks</span>, <b>Accountant</b> and <b>Rider</b>, can be added on top, because one person can pack orders and also do the books. The role replaces the backend's own “User / Administrator” line at the top of each person's user form.</p>
+<p>The role says <b>what</b> someone may do; the backend's <span class="k">Allowed Companies</span> (the shops they work in) says <b>where</b>. The Owner runs the whole team from one screen, <span class="k">Staff &amp; roles</span>, where they can also invite new staff by email. <b>Only the Owner can hand out roles</b>, and the shop can never be left without an Owner.</p>
+<div class="flow">
+  <div class="card"><b>1. Invite</b><span>The Owner adds a name and email; a set-your-password email goes out</span></div><span class="to">→</span>
+  <div class="card"><b>2. Pick a role</b><span>User, Packer, Manager or Owner — one choice</span></div><span class="to">→</span>
+  <div class="card"><b>3. Add ticks</b><span>Accountant and/or Rider, if they also do that job</span></div><span class="to">→</span>
+  <div class="card"><b>4. Choose shops</b><span>Which shops (companies) they work in</span></div>
+</div>
+<div class="note start"><span class="lbl">Before you start:</span> You need the <b>Owner</b> role to use Staff &amp; roles. When the module is installed, every existing <b>Administrator (Settings)</b> becomes an Owner automatically, so the person who installed it can start straight away. Staff who simply have a role do not need to do anything; they just sign in as usual.</div>
+
+<h2>Words you'll see</h2>
+<table class="gloss">
+  <thead><tr><th>Word</th><th>What it means</th></tr></thead>
+  <tbody>
+    <tr><td>Role</td><td>The one job level a staff member has: User, Packer, Manager or Owner.</td></tr>
+    <tr><td>Includes the one before</td><td>Each role has everything the role below it has. A Manager can do what a Packer does; an Owner can do what a Manager does.</td></tr>
+    <tr><td>Tick (Also does)</td><td>An extra job added on top of the role: <b>Accountant</b> or <b>Rider</b>. Tick any, both or none.</td></tr>
+    <tr><td>Shop / Allowed Companies</td><td>The 369 Mart shop or seller company a person works in. A person can work in several.</td></tr>
+    <tr><td>Customer (portal) account</td><td>A login for shoppers or outside sellers. These people are not staff, so they have no role.</td></tr>
+    <tr><td>Invite</td><td>Adding a new staff member by email. They get an email to set their own password.</td></tr>
+  </tbody>
+</table>
+
+<h2>How the manual is arranged</h2>
+<p><b>Part 1 – Setting Up</b> shows where roles live, what happens on install, and how to set a role on the user form. <b>Part 2 – Everyday Use</b> walks the Owner through the Staff &amp; roles screen: finding someone, changing their role and inviting new staff. <b>Part 3 – Keeping It Secure &amp; In Order</b> covers who may change roles, the “always one Owner” rule and what each role is for.</p>
+
+<div class="part">Part 1 — Setting Up</div>
+<p class="part-intro">Done once by the Owner. If your team already has the right roles, skip to Part 2.</p>
+
+<h3 class="step"><span class="n">1</span>Where everything lives</h3>
+<p>Roles can be set in two places, and both always agree, because they change exactly the same rights:</p>
+<ul class="f">
+  <li><b>Settings <span class="arr">→</span> Users &amp; Companies <span class="arr">→</span> Users</b> — each person's user form, with the <b>Role</b> line and the <b>Accountant</b> and <b>Rider</b> ticks at the top. The users list also shows a <b>Role</b> column.</li>
+  <li><b>369 Mart <span class="arr">→</span> Store <span class="arr">→</span> Staff &amp; roles</b> — one screen for the whole team: roles, ticks, shops and invitations.</li>
+</ul>
+<p>The <b>Staff &amp; roles</b> menu is shown to the <b>Owner</b> only. The staff console has the same <b>Staff &amp; roles</b> page under <b>Store</b>, also for the Owner only; anyone else who opens it sees “Only the Owner can manage staff”.</p>
+
+<h3 class="step"><span class="n">2</span>What happens when you install</h3>
+<p>So that nobody loses access on the day the module goes in, roles are given out automatically:</p>
+<ul class="f">
+  <li><b>Administrators</b> — everyone with <b>Administrator (Settings)</b> rights becomes <b>Owner</b>.</li>
+  <li><b>Website designers</b> — any other staff member with <b>Website designer</b> rights becomes <b>Manager</b>.</li>
+  <li><b>Everyone else</b> — stays <b>User</b> until you give them a role.</li>
+</ul>
+<div class="note tip"><span class="lbl">Tip:</span> After installing, open <b>Staff &amp; roles</b> and look at the counts on the role cards. They show at a glance who was given which role.</div>
+
+<h3 class="step"><span class="n">3</span>Set a role on the user form</h3>
+<p>Open <b>Settings <span class="arr">→</span> Users &amp; Companies <span class="arr">→</span> Users</b> and open a staff member. At the top of the form:</p>
+<ul class="f">
+  <li><b>Role</b> — pick one: <b>User</b>, <b>Packer</b>, <b>Manager</b> or <b>Owner</b>. <b>User</b> is a plain backend login with no 369 Mart job.</li>
+  <li><b>Accountant</b> — tick if they also handle payments, wallets, invoices, refunds and reports.</li>
+  <li><b>Rider</b> — tick if they also deliver orders.</li>
+  <li><b>Allowed Companies</b> — the backend's own field on the same form: which shops they work in.</li>
+</ul>
+<p>Save the form as usual. The role, the ticks and the shops are independent: changing one never changes the others.</p>
+<div class="note warn"><span class="lbl">Watch out:</span> <b>Owner</b> also carries the full <b>Administrator (Settings)</b> right. Moving someone from Owner to any other role <b>takes their administrator rights away</b>, just as the old “User” choice did.</div>
+<div class="note good"><span class="lbl">Good to know:</span> The Role line and the ticks are hidden on customer (portal) accounts, because shoppers are not staff. Lower on the same form there is also a <b>369 Mart Seller</b> line for outside sellers; it does not open any screens yet.</div>
+
+<div class="part">Part 2 — Everyday Use</div>
+<p class="part-intro">For the Owner. Everything here is also on the staff console's Staff &amp; roles page, with the same data.</p>
+
+<h3 class="step"><span class="n">1</span>The Staff &amp; roles screen</h3>
+<p>Open <b>369 Mart <span class="arr">→</span> Store <span class="arr">→</span> Staff &amp; roles</b>. The heading reads “Who works at 369 Mart and what each person may do.” Every staff member is listed here; customers are not.</p>
+<table>
+  <thead><tr><th style="width:28%">On the screen</th><th>What it does</th></tr></thead>
+  <tbody>
+    <tr><td>Invite staff</td><td>Opens the panel to add a new person (see step 3).</td></tr>
+    <tr><td>Role cards</td><td>One card each for <b>User</b>, <b>Packer</b>, <b>Manager</b> and <b>Owner</b>: how many people have that role and a one-line description of it.</td></tr>
+    <tr><td>Search</td><td>Type in the <b>Name or email</b> box to narrow the list. A mobile number also matches. With no match the list says “Nobody matches.”</td></tr>
+    <tr><td>Name</td><td>The person's name with their sign-in email below. Your own row says <b>(you)</b>.</td></tr>
+    <tr><td>Role</td><td>A coloured label: User (grey), Packer (orange), Manager (blue), Owner (violet).</td></tr>
+    <tr><td>Also</td><td>Green <b>Accountant</b> and amber <b>Rider</b> labels for the ticks they have, or a dash for none.</td></tr>
+    <tr><td>Shops</td><td>The shops (companies) they work in.</td></tr>
+    <tr><td>Last sign-in</td><td><b>Today</b>, <b>Yesterday</b>, “<b>N days ago</b>”, or <b>Not signed in yet</b> for someone who has not used their invitation.</td></tr>
+  </tbody>
+</table>
+
+<h3 class="step"><span class="n">2</span>Change someone's role</h3>
+<p>Click a person's row. A panel opens on the right with their name and email. Fill in:</p>
+<ul class="f">
+  <li><b>Role - pick one</b> — User, Packer, Manager or Owner, each with its short description.</li>
+  <li><b>Also does - tick any</b> — <b>Accountant</b> (“Payments, wallets, invoices, refunds and reports.”) and <b>Rider</b> (“Delivers orders and closes them with the customer's code.”).</li>
+  <li><b>Works in</b> — a tick per shop. This only appears when you have more than one shop (company). Keep at least one ticked.</li>
+</ul>
+<p>Press <b>Save</b>. A message confirms it, for example “Saved: Asha is now Manager.”, and the list refreshes. Press <b>Cancel</b>, or click outside the panel, to close it without changes. If something is refused, the reason shows in red inside the panel and nothing is saved.</p>
+<div class="note tip"><span class="lbl">Tip:</span> To promote a new Owner and step down yourself, first make the other person Owner and save, then change your own row.</div>
+
+<h3 class="step"><span class="n">3</span>Invite a new staff member</h3>
+<p>Press <b>Invite staff</b>. The panel asks for:</p>
+<ul class="f">
+  <li><b>Name</b> — their full name (at least two letters).</li>
+  <li><b>Email</b> — “They sign in with this”. It must not already belong to anyone.</li>
+  <li><b>Role - pick one</b> — starts on <b>Packer</b>; change it if needed.</li>
+  <li><b>Also does - tick any</b> — Accountant and/or Rider.</li>
+</ul>
+<p>Press <b>Send invite</b>. The person is added straight away and the backend sends its own “set your password” email. The message reads “Asha added. An email to set a password is on its way.” Until they sign in, their <b>Last sign-in</b> says <b>Not signed in yet</b>.</p>
+<div class="note warn"><span class="lbl">Watch out:</span> If the backend has no outgoing mail server, the person is <b>still added</b> but no email reaches them, even though the message says one is on its way. Ask whoever looks after the backend's email to check it.</div>
+<div class="note good"><span class="lbl">Good to know:</span> The invite panel has no <b>Works in</b> list. The new person starts in your current shop; open their row afterwards to change their shops.</div>
+
+<h3 class="step"><span class="n">4</span>Riders</h3>
+<p>Only staff with the <b>Rider</b> tick appear in an order's <b>Rider</b> list, so give the tick before handing orders to someone. When <b>369 Mart WhatsApp Bridge</b> is installed, ticking <b>Rider</b> also links the person to a rider record used by the rider app. That record needs the person's <b>mobile number</b>; without one, no rider record is made yet, though orders can still be handed to them. A new rider starts <b>off duty</b>. Taking the tick away switches their rider record off; giving it back later brings back the same record with its history.</p>
+
+<div class="part">Part 3 — Keeping It Secure &amp; In Order</div>
+
+<h3 class="step"><span class="n">1</span>Only the Owner hands out roles</h3>
+<p>Roles decide who may touch money and settings, so nobody below Owner may change them. The <b>Staff &amp; roles</b> menu is hidden from everyone else, and even if someone reaches the screen another way, the backend refuses with “Only the Owner can change staff and roles.” A non-Owner also cannot see the staff list itself.</p>
+<p>When <b>369 Mart WhatsApp Bridge</b> is installed, every Owner with a mobile number also gets a WhatsApp message each time a staff member signs in to the staff console.</p>
+
+<h3 class="step"><span class="n">2</span>There is always an Owner</h3>
+<p>The last remaining Owner cannot be moved down. Staff &amp; roles refuses with: “<i>name</i> is the only Owner. Make someone else Owner first, otherwise nobody could change roles any more.” Make a second Owner first, then change the first one.</p>
+<div class="note imp"><span class="lbl">Important:</span> This guard is on the <b>Staff &amp; roles</b> screen. Change Owners there rather than on the user form, so the shop is never left without someone who can manage staff.</div>
+
+<h3 class="step"><span class="n">3</span>What each role is for</h3>
+<p>These are the jobs each role and tick is meant for, in the words the module uses:</p>
+<table>
+  <thead><tr><th style="width:22%">Role</th><th>What it is for</th></tr></thead>
+  <tbody>
+    <tr><td>User</td><td>A backend login with no 369 Mart job.</td></tr>
+    <tr><td>Packer</td><td>Sees the orders waiting to be packed, packs them and marks them packed. No prices to change, no customer lists, no settings, no money.</td></tr>
+    <tr><td>Manager</td><td>Runs the shop day to day: orders, returns, products, stock, customers, offers, delivery and support; approves sellers' products. Can look at money screens but not change payment settings or staff.</td></tr>
+    <tr><td>Owner</td><td>Everything, in 369 Mart and every seller: payment methods, the cash-on-delivery limit, reward amounts, store details, and who has which role.</td></tr>
+    <tr><td>Accountant (tick)</td><td>Payments, wallets, invoices, refunds and reports. Can look at orders but not change orders, products or settings.</td></tr>
+    <tr><td>Rider (tick)</td><td>Only their own deliveries: close each with the customer's code and record the cash collected.</td></tr>
+  </tbody>
+</table>
+
+<h3 class="step"><span class="n">4</span>Rights each role brings with it</h3>
+<p>Picking a role also gives these backend rights automatically:</p>
+<table>
+  <thead><tr><th style="width:22%">Role</th><th style="width:26%">Includes</th><th>Also gives</th></tr></thead>
+  <tbody>
+    <tr><td>User</td><td>—</td><td><b>Internal user</b> (a staff login).</td></tr>
+    <tr><td>Packer</td><td>User</td><td><b>Internal user</b>.</td></tr>
+    <tr><td>Manager</td><td>Packer</td><td><b>Website designer</b>, which the 369 Mart screens use as their staff check. With 369 Mart Loyalty Points installed, also <b>Loyalty Manager</b>.</td></tr>
+    <tr><td>Owner</td><td>Manager</td><td><b>Administrator (Settings)</b>, the backend's full settings right.</td></tr>
+    <tr><td>Accountant / Rider</td><td>—</td><td><b>Internal user</b>.</td></tr>
+  </tbody>
+</table>
+<div class="note good"><span class="lbl">Good to know:</span> Some screens belong to other 369 Mart modules and ask for their own rights as well. For example, the Orders desk needs <b>Salesperson</b> rights. Set those on the same user form; see each module's manual.</div>
+
+<h2>Last sign-in reference</h2>
+<table style="break-inside:avoid">
+  <thead><tr><th style="width:24%">Shows</th><th>Meaning</th><th style="width:30%">What to do</th></tr></thead>
+  <tbody>
+    <tr><td>Not signed in yet</td><td>Invited, but has never signed in.</td><td>Check they got the email; check the email address is right.</td></tr>
+    <tr><td>Today / Yesterday</td><td>Signed in within the last day, or one day ago.</td><td>Nothing.</td></tr>
+    <tr><td>N days ago</td><td>Last signed in that many days ago.</td><td>If they have left, set their role to <b>User</b> or remove their access.</td></tr>
+  </tbody>
+</table>
+
+<h2>Quick tips</h2>
+<ul class="tips">
+  <li>Pick one role; add Accountant or Rider as ticks on top.</li>
+  <li>Role says what someone does; Works in (Allowed Companies) says where.</li>
+  <li>Each role includes the one before: Packer, then Manager, then Owner.</li>
+  <li>Owner is also Administrator (Settings); moving someone off Owner removes it.</li>
+  <li>Always make a second Owner before stepping down.</li>
+  <li>Give the Rider tick before trying to hand orders to someone.</li>
+  <li>An invited person is added even if the email does not arrive.</li>
+  <li>The user form and Staff &amp; roles always agree; use whichever is handier.</li>
+</ul>
+
+<h2>If something goes wrong</h2>
+<table>
+  <thead><tr><th style="width:36%">What you see</th><th>What to do</th></tr></thead>
+  <tbody>
+    <tr><td>No <b>Staff &amp; roles</b> menu, or “Only the Owner can change staff and roles.”</td><td>You are not an Owner. Only an Owner may open the staff list or change a role; ask an Owner to change yours.</td></tr>
+    <tr><td>“… is the only Owner. Make someone else Owner first …”</td><td>Give another person the <b>Owner</b> role and save, then change the first person.</td></tr>
+    <tr><td>“Pick at least one shop.”</td><td>In the panel's <b>Works in</b> list, tick at least one shop before pressing <b>Save</b>.</td></tr>
+    <tr><td>“Somebody already signs in with that email.”</td><td>That email already has a login (it may be a customer or an archived user). Use another email, or find that person and set their role instead.</td></tr>
+    <tr><td>“Enter their name.” / “Enter a valid email address.”</td><td>In <b>Invite staff</b>, type a full name and a complete email address.</td></tr>
+    <tr><td>“That person is not on the staff.”, or no Role line on a user form</td><td>The account is a customer (portal) login, or has been removed. Roles are for staff only.</td></tr>
+    <tr><td>Someone is missing from an order's Rider list</td><td>Give them the <b>Rider</b> tick in Staff &amp; roles. The order screen says “… does not have the Rider role. Give it under Staff &amp; roles.”</td></tr>
+    <tr><td>A new rider does not show in the rider app</td><td>With the WhatsApp Bridge installed, the rider record needs a mobile number. Add one to their details, then take the Rider tick away and give it back.</td></tr>
+  </tbody>
+</table>
+
+</body>
+</html>

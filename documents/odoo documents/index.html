@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>369 Mart — Module Manuals</title>
+<style>
+  :root{
+    --navy:#1e2a78; --orange:#f08a24; --ink:#1f2230; --muted:#6b6f80;
+    --line:#e6e8f0; --alt:#f2f4fb; --tint:#eef2fc;
+    --tip:#2e6fb0; --good:#2e8b57; --good-bg:#e7f6ea;
+    --warn-bg:#fff3da; --warn-ink:#c0701a;
+  }
+  @page{
+    size:A4; margin:22mm 20mm 20mm 20mm;
+    @bottom-left{content:"369ai · Module Manuals"; font:8.5pt "Liberation Serif",Georgia,serif; color:#6b6f80;}
+    @bottom-right{content:"Page " counter(page); font:8.5pt "Liberation Serif",Georgia,serif; color:#6b6f80;}
+  }
+  @page:first{ margin-top:14mm; }
+  *{box-sizing:border-box}
+  html{background:#fff}
+  body{margin:0; font-family:"Liberation Serif","Times New Roman",Georgia,serif; font-size:10.5pt; line-height:1.5; color:var(--ink); background:#fff}
+  @media screen{ body{max-width:794px; margin:24px auto; padding:0 16px} }
+  p{margin:0 0 7pt}
+  b,strong{font-weight:700}
+  .k{color:var(--navy); font-weight:700}          /* navy key term */
+  code{font-family:"DejaVu Sans Mono",monospace; font-size:8.5pt; background:#f1f2f6; padding:1px 4px; border-radius:3px}
+  .arr{color:var(--navy); font-weight:700}
+
+  /* ---------- Cover ---------- */
+  .topbar{height:7px; background:var(--navy); border-bottom:3px solid var(--orange); margin:0 -8mm 10pt}
+  .cover{background:var(--navy); color:#fff; text-align:center; border-radius:9px; padding:26pt 20pt 22pt; margin-bottom:18pt}
+  .cover h1{margin:0; font-size:31pt; letter-spacing:1.5pt; font-weight:700; text-transform:uppercase}
+  .cover .sub{color:var(--orange); font-size:15pt; font-weight:700; margin:12pt 0 10pt}
+  .cover .meta{font-size:10pt; color:#d5d9ee}
+
+  /* ---------- H2 section with orange rule ---------- */
+  h2{color:var(--navy); font-size:15pt; margin:16pt 0 9pt; padding-bottom:5pt; border-bottom:1.6px solid var(--orange); page-break-after:avoid}
+
+  /* ---------- Flow cards (3–4 steps) ---------- */
+  .flow{display:flex; align-items:center; gap:6pt; margin:10pt 0 10pt}
+  .flow .card{flex:1; border:1px solid #d9dcea; border-radius:6px; padding:8pt 9pt; min-height:66pt}
+  .flow .card b{display:block; color:var(--navy); font-size:10.5pt; margin-bottom:2pt}
+  .flow .card span{font-size:8.5pt; color:var(--muted); line-height:1.35}
+  .flow .to{color:var(--orange); font-size:13pt}
+
+  /* ---------- Callouts ---------- */
+  .note{border-left:3px solid var(--orange); background:var(--tint); border-radius:0 5px 5px 0; padding:8pt 12pt; margin:10pt 0 12pt; font-size:9.5pt; page-break-inside:avoid}
+  .note .lbl{font-weight:700; text-transform:uppercase; font-size:8.5pt; letter-spacing:.3pt; margin-right:4pt}
+  .note.start .lbl{color:var(--warn-ink)}
+  .note.tip{border-color:var(--tip)}              .note.tip .lbl{color:var(--tip)}
+  .note.good{border-color:var(--good); background:var(--good-bg)} .note.good .lbl{color:var(--good)}
+  .note.imp{border-color:var(--navy)}             .note.imp .lbl{color:var(--navy)}
+  .note.warn{border-color:var(--orange); background:var(--warn-bg)} .note.warn .lbl{color:var(--warn-ink)}
+
+  /* ---------- Part banner ---------- */
+  .part{background:var(--navy); color:#fff; text-align:center; border-radius:6px; padding:12pt; margin:20pt 0 10pt; font-size:15pt; font-weight:700; letter-spacing:1.5pt; text-transform:uppercase; page-break-after:avoid}
+  .part-intro{color:var(--muted); margin-bottom:12pt}
+
+  /* ---------- Numbered step ---------- */
+  h3.step{display:flex; align-items:center; gap:9pt; color:var(--navy); font-size:13pt; margin:16pt 0 7pt; page-break-after:avoid}
+  h3.step .n{display:inline-block; min-width:17pt; height:17pt; line-height:17pt; text-align:center; background:var(--orange); color:#fff; border-radius:3px; font-family:"Liberation Sans",Arial,sans-serif; font-size:10pt; font-weight:700}
+
+  /* ---------- Field bullets (orange square markers) ---------- */
+  ul.f{list-style:none; padding:0; margin:4pt 0 8pt}
+  ul.f li{position:relative; padding-left:13pt; margin-bottom:4pt}
+  ul.f li::before{content:""; position:absolute; left:1pt; top:6.5pt; width:4pt; height:4pt; background:var(--orange)}
+  ul.f li b:first-child{color:var(--navy)}
+
+  /* ---------- Tables ---------- */
+  table{width:100%; border-collapse:collapse; margin:8pt 0 12pt; font-size:9pt}
+  thead{display:table-header-group}
+  th{background:var(--navy); color:#fff; text-align:left; padding:6pt 8pt; font-weight:700}
+  th+th{border-left:1px solid #34408a}
+  td{padding:6pt 8pt; border-bottom:1px solid var(--line); vertical-align:top}
+  tr:nth-child(even) td{background:var(--alt)}
+  td:first-child{color:var(--navy); font-weight:700}
+  tr{page-break-inside:avoid}
+
+  /* ---------- Quick tips ---------- */
+  ul.tips{margin:4pt 0 12pt; padding-left:14pt}
+  ul.tips li{margin-bottom:3pt}
+
+  td a{color:var(--navy); font-weight:700}
+</style>
+</head>
+<body>
+<div class="topbar"></div>
+<div class="cover">
+  <h1>369 Mart</h1>
+  <div class="sub">Module Manuals</div>
+  <div class="meta">User Manuals &nbsp;|&nbsp; 369ai</div>
+</div>
+<p>One manual for each part of 369 Mart. Each one explains what the part does, how an administrator sets it up, how staff use it day to day, and what to do when something goes wrong. Open the <b>PDF</b> to print or share it, or the <b>Web page</b> to read it in a browser.</p>
+<div class="note tip"><span class="lbl">Tip:</span> New to 369 Mart? Read <b>369 Mart Suite</b>, then <b>369 Mart</b> and <b>369 Mart Roles</b> first. They explain the menu and who can do what.</div>
+<h2>Start here</h2>
+<table><thead><tr><th style="width:34%">Manual</th><th>What it covers</th><th style="width:17%">Open</th></tr></thead><tbody>
+<tr><td>369 Mart Suite</td><td>Installs the whole 369 Mart suite in one go.</td><td><a href="mart369_all/369_Mart_Suite_User_Manual.pdf">PDF</a> · <a href="mart369_all/369_Mart_Suite_User_Manual.html">Web page</a></td></tr>
+<tr><td>369 Mart</td><td>The 369 Mart menu and the settings every other part shares.</td><td><a href="mart369/369_Mart_User_Manual.pdf">PDF</a> · <a href="mart369/369_Mart_User_Manual.html">Web page</a></td></tr>
+<tr><td>369 Mart Roles</td><td>Who works at 369 Mart and what each person may do.</td><td><a href="mart369_roles/369_Mart_Roles_User_Manual.pdf">PDF</a> · <a href="mart369_roles/369_Mart_Roles_User_Manual.html">Web page</a></td></tr>
+</tbody></table>
+<h2>Shop front</h2>
+<table><thead><tr><th style="width:34%">Manual</th><th>What it covers</th><th style="width:17%">Open</th></tr></thead><tbody>
+<tr><td>369 Mart Home Page</td><td>The app home page: banners, rows, tiles and tabs.</td><td><a href="mart369_home/369_Mart_Home_Page_User_Manual.pdf">PDF</a> · <a href="mart369_home/369_Mart_Home_Page_User_Manual.html">Web page</a></td></tr>
+<tr><td>369 Mart Catalog</td><td>Categories, browsing and search.</td><td><a href="mart369_catalog/369_Mart_Catalog_User_Manual.pdf">PDF</a> · <a href="mart369_catalog/369_Mart_Catalog_User_Manual.html">Web page</a></td></tr>
+<tr><td>369 Mart Product Page</td><td>What a product page shows, shop-wide or per product.</td><td><a href="mart369_product/369_Mart_Product_Page_User_Manual.pdf">PDF</a> · <a href="mart369_product/369_Mart_Product_Page_User_Manual.html">Web page</a></td></tr>
+<tr><td>369 Mart Pages</td><td>Footer pages: Terms, Privacy, About, Help, Contact.</td><td><a href="mart369_pages/369_Mart_Pages_User_Manual.pdf">PDF</a> · <a href="mart369_pages/369_Mart_Pages_User_Manual.html">Web page</a></td></tr>
+<tr><td>369 Mart Sample Catalogue - Computer Parts</td><td>A sample computer-parts catalogue for trying things out.</td><td><a href="mart369_parts_demo/369_Mart_Sample_Catalogue_Computer_Parts_User_Manual.pdf">PDF</a> · <a href="mart369_parts_demo/369_Mart_Sample_Catalogue_Computer_Parts_User_Manual.html">Web page</a></td></tr>
+</tbody></table>
+<h2>Customers</h2>
+<table><thead><tr><th style="width:34%">Manual</th><th>What it covers</th><th style="width:17%">Open</th></tr></thead><tbody>
+<tr><td>369 Mart Sign In</td><td>Customer sign-up and sign-in, and the Customers desk.</td><td><a href="mart369_auth/369_Mart_Sign_In_User_Manual.pdf">PDF</a> · <a href="mart369_auth/369_Mart_Sign_In_User_Manual.html">Web page</a></td></tr>
+<tr><td>369 Mart Delivery Addresses</td><td>Customers’ delivery addresses.</td><td><a href="mart369_address/369_Mart_Delivery_Addresses_User_Manual.pdf">PDF</a> · <a href="mart369_address/369_Mart_Delivery_Addresses_User_Manual.html">Web page</a></td></tr>
+<tr><td>369 Mart Account</td><td>Reviews, referrals, rewards and notifications.</td><td><a href="mart369_account/369_Mart_Account_User_Manual.pdf">PDF</a> · <a href="mart369_account/369_Mart_Account_User_Manual.html">Web page</a></td></tr>
+<tr><td>369 Mart Support</td><td>The support bot and real support tickets.</td><td><a href="mart369_support/369_Mart_Support_User_Manual.pdf">PDF</a> · <a href="mart369_support/369_Mart_Support_User_Manual.html">Web page</a></td></tr>
+</tbody></table>
+<h2>Orders and money</h2>
+<table><thead><tr><th style="width:34%">Manual</th><th>What it covers</th><th style="width:17%">Open</th></tr></thead><tbody>
+<tr><td>369 Mart Delivery &amp;amp; Pricing</td><td>Delivery fees, slots, service areas, coupons and deals.</td><td><a href="mart369_cart/369_Mart_Delivery_and_Pricing_User_Manual.pdf">PDF</a> · <a href="mart369_cart/369_Mart_Delivery_and_Pricing_User_Manual.html">Web page</a></td></tr>
+<tr><td>369 Mart Orders</td><td>Orders from placed to delivered, and returns.</td><td><a href="mart369_order/369_Mart_Orders_User_Manual.pdf">PDF</a> · <a href="mart369_order/369_Mart_Orders_User_Manual.html">Web page</a></td></tr>
+<tr><td>369 Mart New Orders Board</td><td>The shop counter that rings for new orders.</td><td><a href="mart369_store_board/369_Mart_New_Orders_Board_User_Manual.pdf">PDF</a> · <a href="mart369_store_board/369_Mart_New_Orders_Board_User_Manual.html">Web page</a></td></tr>
+<tr><td>369 Mart Payments &amp;amp; Wallet</td><td>Payments, the 369 Wallet and the Store Settings screen.</td><td><a href="mart369_payment/369_Mart_Payments_and_Wallet_User_Manual.pdf">PDF</a> · <a href="mart369_payment/369_Mart_Payments_and_Wallet_User_Manual.html">Web page</a></td></tr>
+<tr><td>369 Mart Loyalty Points</td><td>Loyalty points earned and spent on orders.</td><td><a href="mart369_loyalty/369_Mart_Loyalty_Points_User_Manual.pdf">PDF</a> · <a href="mart369_loyalty/369_Mart_Loyalty_Points_User_Manual.html">Web page</a></td></tr>
+<tr><td>Loyalty Card</td><td>Loyalty cards, the points rule and points history.</td><td><a href="pos_loyalty_card/Loyalty_Card_User_Manual.pdf">PDF</a> · <a href="pos_loyalty_card/Loyalty_Card_User_Manual.html">Web page</a></td></tr>
+<tr><td>369 Mart WhatsApp Bridge</td><td>One shop across the website and WhatsApp.</td><td><a href="mart369_whatsapp_bridge/369_Mart_WhatsApp_Bridge_User_Manual.pdf">PDF</a> · <a href="mart369_whatsapp_bridge/369_Mart_WhatsApp_Bridge_User_Manual.html">Web page</a></td></tr>
+</tbody></table>
+
+</body>
+</html>

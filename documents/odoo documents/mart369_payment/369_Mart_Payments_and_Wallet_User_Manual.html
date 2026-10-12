@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>369 Mart Payments &amp; Wallet — User Manual</title>
+<style>
+  :root{
+    --navy:#1e2a78; --orange:#f08a24; --ink:#1f2230; --muted:#6b6f80;
+    --line:#e6e8f0; --alt:#f2f4fb; --tint:#eef2fc;
+    --tip:#2e6fb0; --good:#2e8b57; --good-bg:#e7f6ea;
+    --warn-bg:#fff3da; --warn-ink:#c0701a;
+  }
+  @page{
+    size:A4; margin:22mm 20mm 20mm 20mm;
+    @bottom-left{content:"369ai · 369 Mart Payments & Wallet"; font:8.5pt "Liberation Serif",Georgia,serif; color:#6b6f80;}
+    @bottom-right{content:"Page " counter(page); font:8.5pt "Liberation Serif",Georgia,serif; color:#6b6f80;}
+  }
+  @page:first{ margin-top:14mm; }
+  *{box-sizing:border-box}
+  html{background:#fff}
+  body{margin:0; font-family:"Liberation Serif","Times New Roman",Georgia,serif; font-size:10.5pt; line-height:1.5; color:var(--ink); background:#fff}
+  @media screen{ body{max-width:794px; margin:24px auto; padding:0 16px} }
+  p{margin:0 0 7pt}
+  b,strong{font-weight:700}
+  .k{color:var(--navy); font-weight:700}          /* navy key term */
+  code{font-family:"DejaVu Sans Mono",monospace; font-size:8.5pt; background:#f1f2f6; padding:1px 4px; border-radius:3px}
+  .arr{color:var(--navy); font-weight:700}
+
+  /* ---------- Cover ---------- */
+  .topbar{height:7px; background:var(--navy); border-bottom:3px solid var(--orange); margin:0 -8mm 10pt}
+  .cover{background:var(--navy); color:#fff; text-align:center; border-radius:9px; padding:26pt 20pt 22pt; margin-bottom:18pt}
+  .cover h1{margin:0; font-size:31pt; letter-spacing:1.5pt; font-weight:700; text-transform:uppercase}
+  .cover .sub{color:var(--orange); font-size:15pt; font-weight:700; margin:12pt 0 10pt}
+  .cover .meta{font-size:10pt; color:#d5d9ee}
+
+  /* ---------- H2 section with orange rule ---------- */
+  h2{color:var(--navy); font-size:15pt; margin:16pt 0 9pt; padding-bottom:5pt; border-bottom:1.6px solid var(--orange); page-break-after:avoid}
+
+  /* ---------- Flow cards (3–4 steps) ---------- */
+  .flow{display:flex; align-items:center; gap:6pt; margin:10pt 0 10pt}
+  .flow .card{flex:1; border:1px solid #d9dcea; border-radius:6px; padding:8pt 9pt; min-height:66pt}
+  .flow .card b{display:block; color:var(--navy); font-size:10.5pt; margin-bottom:2pt}
+  .flow .card span{font-size:8.5pt; color:var(--muted); line-height:1.35}
+  .flow .to{color:var(--orange); font-size:13pt}
+
+  /* ---------- Callouts ---------- */
+  .note{border-left:3px solid var(--orange); background:var(--tint); border-radius:0 5px 5px 0; padding:8pt 12pt; margin:10pt 0 12pt; font-size:9.5pt; page-break-inside:avoid}
+  .note .lbl{font-weight:700; text-transform:uppercase; font-size:8.5pt; letter-spacing:.3pt; margin-right:4pt}
+  .note.start .lbl{color:var(--warn-ink)}
+  .note.tip{border-color:var(--tip)}              .note.tip .lbl{color:var(--tip)}
+  .note.good{border-color:var(--good); background:var(--good-bg)} .note.good .lbl{color:var(--good)}
+  .note.imp{border-color:var(--navy)}             .note.imp .lbl{color:var(--navy)}
+  .note.warn{border-color:var(--orange); background:var(--warn-bg)} .note.warn .lbl{color:var(--warn-ink)}
+
+  /* ---------- Part banner ---------- */
+  .part{background:var(--navy); color:#fff; text-align:center; border-radius:6px; padding:12pt; margin:20pt 0 10pt; font-size:15pt; font-weight:700; letter-spacing:1.5pt; text-transform:uppercase; page-break-after:avoid}
+  .part-intro{color:var(--muted); margin-bottom:12pt}
+
+  /* ---------- Numbered step ---------- */
+  h3.step{display:flex; align-items:center; gap:9pt; color:var(--navy); font-size:13pt; margin:16pt 0 7pt; page-break-after:avoid}
+  h3.step .n{display:inline-block; min-width:17pt; height:17pt; line-height:17pt; text-align:center; background:var(--orange); color:#fff; border-radius:3px; font-family:"Liberation Sans",Arial,sans-serif; font-size:10pt; font-weight:700}
+
+  /* ---------- Field bullets (orange square markers) ---------- */
+  ul.f{list-style:none; padding:0; margin:4pt 0 8pt}
+  ul.f li{position:relative; padding-left:13pt; margin-bottom:4pt}
+  ul.f li::before{content:""; position:absolute; left:1pt; top:6.5pt; width:4pt; height:4pt; background:var(--orange)}
+  ul.f li b:first-child{color:var(--navy)}
+
+  /* ---------- Tables ---------- */
+  table{width:100%; border-collapse:collapse; margin:8pt 0 12pt; font-size:9pt}
+  thead{display:table-header-group}
+  th{background:var(--navy); color:#fff; text-align:left; padding:6pt 8pt; font-weight:700}
+  th+th{border-left:1px solid #34408a}
+  td{padding:6pt 8pt; border-bottom:1px solid var(--line); vertical-align:top}
+  tr:nth-child(even) td{background:var(--alt)}
+  td:first-child{color:var(--navy); font-weight:700}
+  tr{page-break-inside:avoid}
+
+  /* ---------- Quick tips ---------- */
+  ul.tips{margin:4pt 0 12pt; padding-left:14pt}
+  ul.tips li{margin-bottom:3pt}
+
+  /* ---------- Screenshots + glossary (added for 369 Mart manuals) ---------- */
+  figure.shot{margin:8pt 0 12pt; page-break-inside:avoid; break-inside:avoid; text-align:center}
+  figure.shot img{max-width:100%; max-height:118mm; border:1px solid var(--line); border-radius:6px; box-shadow:0 1px 4px rgba(30,42,120,.12)}
+  figure.shot.phone img{max-width:62mm}
+  figure.shot figcaption{font-size:8.5pt; color:var(--muted); margin-top:4pt; text-align:left}
+  table.gloss td:first-child{width:28%}
+  h2, h3.step, .part{break-after:avoid}
+</style>
+</head>
+<div class="topbar"></div>
+<div class="cover">
+  <h1>369 Mart Payments &amp; Wallet</h1>
+  <div class="sub">Real Payments, Saved Methods &amp; the 369 Wallet</div>
+  <div class="meta">User Manual &nbsp;|&nbsp; 369ai</div>
+</div>
+
+<h2>What this does</h2>
+<p><span class="k">369 Mart Payments &amp; Wallet</span> handles the money side of the shop. When a customer pays in the shop app or on the website, the backend records a <span class="k">payment</span> and marks it <b>Paid</b> only when the bank or payment company confirms it. Cash on delivery stays <i>waiting</i> until the cash is actually collected at the door. It also runs the <span class="k">369 Wallet</span>: a money balance per customer, where every change leaves a line in its history, called a <span class="k">movement</span>.</p>
+<p>Staff get two read-only desks, <b>Payments</b> and <b>Wallets</b>, and the shop's <b>Settings</b> screen, where you choose which ways of paying the checkout offers. <b>No screen here can mark money as paid or change a wallet balance by hand.</b> The only button that settles money is <b>Cash collected</b>, for cash brought back from a delivery.</p>
+<div class="flow">
+  <div class="card"><b>1. Customer pays</b><span>UPI, card, net banking, cash on delivery or the 369 Wallet</span></div><span class="to">→</span>
+  <div class="card"><b>2. Confirmed</b><span>The bank confirms it, or the cash is collected at the door</span></div><span class="to">→</span>
+  <div class="card"><b>3. Paid</b><span>Shows as Paid on the Payments desk</span></div><span class="to">→</span>
+  <div class="card"><b>4. Wallet keeps track</b><span>Top-ups, spends, refunds and rewards, each with a movement</span></div>
+</div>
+<div class="note start"><span class="lbl">Before you start:</span> Setup is done once, on <b>Store <span class="arr">→</span> Settings</b>, by someone with <b>Administrator (Settings)</b> rights. Card and UPI payments need a <b>payment provider</b> whose keys an administrator has entered. Until then the shop can take only cash on delivery and the 369 Wallet. The 369 Wallet itself is <b>switched off</b> when the module is installed. Desk staff only read the two desks and press <b>Cash collected</b>.</div>
+
+<h2>Words you'll see</h2>
+<table class="gloss">
+  <thead><tr><th>Word</th><th>What it means</th></tr></thead>
+  <tbody>
+    <tr><td>Payment provider</td><td>A bank or payment company (also called a gateway) that takes card, UPI or net-banking payments for you. Cash on delivery and the 369 Wallet are listed as providers too.</td></tr>
+    <tr><td>Cash on delivery</td><td>The customer pays the rider in cash at the door. Counted as paid only once the cash is collected.</td></tr>
+    <tr><td>369 Wallet</td><td>The customer's money balance in the shop. Refunds and rewards land here, and it can pay for orders.</td></tr>
+    <tr><td>Top-up</td><td>Money the customer adds to their own wallet by paying through a provider.</td></tr>
+    <tr><td>Movement</td><td>One line in a wallet's history: <b>Added</b>, <b>Spent</b>, <b>Refunded</b> or <b>Reward</b>.</td></tr>
+    <tr><td>Out of step</td><td>A wallet whose balance does not equal what its movements add up to. That means a fault, not something the customer did.</td></tr>
+    <tr><td>Saved method</td><td>A card or UPI ID the customer chose to keep for next time. Only the last four digits of a card are kept.</td></tr>
+  </tbody>
+</table>
+
+<h2>How the manual is arranged</h2>
+<p><b>Part 1 – Setting Up</b> shows where the screens live and walks through the <b>Store</b>, <b>Payments</b> and <b>Alerts</b> tabs of the Settings screen, plus the wallet's fixed limits. <b>Part 2 – Everyday Use</b> covers the Payments desk, collecting cash, the Wallets desk, the full list views and what the customer sees. <b>Part 3 – Keeping It Secure &amp; In Order</b> explains how money and card details are protected and who can do what.</p>
+
+<div class="part">Part 1 — Setting Up</div>
+<p class="part-intro">Done once by an administrator. If the checkout already offers the right ways to pay, skip to Part 2.</p>
+
+<h3 class="step"><span class="n">1</span>Where everything lives</h3>
+<p>Open <b>369 Mart</b> from the main menu. This module adds:</p>
+<ul class="f">
+  <li><b>Money <span class="arr">→</span> Payments</b>: the Payments desk. It shows whether the money arrived, and if not, where it is.</li>
+  <li><b>Money <span class="arr">→</span> Wallets</b>: the Wallets desk, with every customer's 369 Wallet and its movements.</li>
+  <li><b>Store <span class="arr">→</span> Settings</b>: the shop's Settings screen. This module owns it. Other 369 Mart modules add their own tabs to it.</li>
+  <li><b>Advanced <span class="arr">→</span> Payments (all views)</b>: the same payments as a list, a board and a full form. The <b>Cash collected</b> button is here.</li>
+  <li><b>Advanced <span class="arr">→</span> Wallets (all views)</b>: the same wallets as a list and a form, with filters.</li>
+</ul>
+<p>The two desks and Settings are shown to the <b>Website designer</b> and the <b>Administrator (Settings)</b>. The two "all views" entries are shown to the <b>Administrator (Settings)</b> only.</p>
+
+<h3 class="step"><span class="n">2</span>Settings: the Store tab</h3>
+<p>Open <b>Store <span class="arr">→</span> Settings</b>. The screen opens on <b>Store</b>. This tab holds your company's details, so the same name and GSTIN print on your invoices.</p>
+<ul class="f">
+  <li><b>Store name</b>: required. Saving without one is refused with <i>"The store needs a name."</i></li>
+  <li><b>Phone</b> and <b>Email</b>: the shop's contact details.</li>
+  <li><b>Address</b> (door number and street), <b>Area</b>, <b>City</b> and <b>PIN code</b>.</li>
+  <li><b>GSTIN</b>: your tax number.</li>
+</ul>
+<p>Each tab is saved on its own. When you change something, <i>Unsaved changes</i> appears beside <b>Reset</b> (undo) and <b>Save changes</b>, and a <i>Settings saved</i> message confirms the save.</p>
+<div class="note good"><span class="lbl">Good to know:</span> Opening hours are not set here. The delivery slots under <b>Store <span class="arr">→</span> Delivery</b> decide when orders can be placed.</div>
+<div class="note warn"><span class="lbl">Watch out:</span> Saving the Store tab needs <b>Administrator (Settings)</b> rights. A Website designer can open the tab, but the save is refused and the screen shows the reason.</div>
+
+<h3 class="step"><span class="n">3</span>Settings: the Payments tab</h3>
+<p>Pick the <b>Payments</b> tab. The checkout offers exactly the ways of paying that are switched on here. Each row shows a provider, a coloured tag (<b>On</b>, <b>Test mode</b> or <b>Off</b>) and a short line saying what it does:</p>
+<ul class="f">
+  <li><b>Cash on delivery</b>: always listed, with a switch. Its line reads <i>"Allowed up to …"</i>, showing the current limit.</li>
+  <li><b>369 Wallet</b>: always listed, with a switch. Its line reads <i>"Balance, refunds and rewards"</i>. It is <b>Off</b> when the module is installed, so a new shop never starts taking wallet money by surprise.</li>
+  <li><b>Card and UPI gateways</b>: listed only while they are on or in test mode (<i>"Card and UPI payments through this gateway"</i>). You can switch one off here. A gateway that is off shows a note instead of a switch, because its keys must be set up first.</li>
+  <li><b>Cash on delivery limit</b>: <i>"Orders above this must be paid another way. 0 means no limit."</i> It is set to <b>5,000</b> when the module is installed. The limit is checked against the cash the rider would collect, after any wallet money is taken off. It cannot be negative.</li>
+</ul>
+<p>Under the rows, a line says how many other providers are switched off and kept out of this list. Press <b>Open payment providers</b> to go to the full provider list, where an administrator enters a gateway's keys and switches it on.</p>
+<table>
+  <thead><tr><th style="width:30%">Provider</th><th>What this screen can do</th></tr></thead>
+  <tbody>
+    <tr><td>Cash on delivery</td><td>Switch on or off, and set the limit.</td></tr>
+    <tr><td>369 Wallet</td><td>Switch on or off.</td></tr>
+    <tr><td>Card / UPI gateway</td><td>Switch off only. Switching on is refused until its keys are set up under <b>Open payment providers</b>.</td></tr>
+  </tbody>
+</table>
+<div class="note warn"><span class="lbl">Watch out:</span> If you set the cash limit to <b>0</b> (no limit), it goes back to <b>5,000</b> the next time the module is updated. Check the limit after an update.</div>
+<div class="note good"><span class="lbl">Good to know:</span> Cash on delivery is offered only when the order's delivery method allows cash. Staff can also switch it off for one customer (see the Orders manual).</div>
+
+<h3 class="step"><span class="n">4</span>Settings: the Alerts tab</h3>
+<p>Pick the <b>Alerts</b> tab. Two switches, both on by default:</p>
+<ul class="f">
+  <li><b>New orders</b>: <i>"Badge and bell when orders are waiting to be moved on"</i>.</li>
+  <li><b>Low stock</b>: <i>"Bell when products reach the level where the app says “Only N left”"</i>.</li>
+</ul>
+<p>These alerts appear in the staff console. Email and SMS alerts are not set up.</p>
+
+<h3 class="step"><span class="n">5</span>Settings: tabs from other modules</h3>
+<p>Some tabs appear only when the module that owns them is installed:</p>
+<ul class="f">
+  <li><b>Customers</b>: how long a customer counts as New, and when a quiet one turns Dormant. See the <b>369 Mart Sign In</b> manual.</li>
+  <li><b>Orders</b>: how long a customer has to answer a replacement offer. See the <b>369 Mart Orders</b> manual.</li>
+  <li><b>Reviews</b>: photo and video limits and blocked words for reviews. See the <b>369 Mart Account</b> manual.</li>
+</ul>
+
+<h3 class="step"><span class="n">6</span>The wallet's fixed limits</h3>
+<p>Two numbers are set when the module is installed. The Settings screen has no field for them:</p>
+<ul class="f">
+  <li><b>Wallet limit: 10,000</b>. This is the most a wallet may hold from money added and rewards. A refund always lands, even in a full wallet, because it is the customer's own money coming back.</li>
+  <li><b>Smallest top-up: 10</b>. A customer cannot add less than this.</li>
+</ul>
+<p>A wallet can never go below zero. A payment that asks for more than the balance is refused, and the balance is left as it was.</p>
+
+<div class="part">Part 2 — Everyday Use</div>
+<p class="part-intro">Reading the desks and collecting cash. Both desks refresh on their own: Payments every 30 seconds, Wallets every minute.</p>
+
+<h3 class="step"><span class="n">1</span>The Payments desk</h3>
+<p>Open <b>369 Mart <span class="arr">→</span> Money <span class="arr">→</span> Payments</b>. It lists the payments for orders and wallet top-ups, newest first.</p>
+<figure class="shot"><img src="screenshots/01-payments-desk.png" alt="The Payments desk" style="max-height:62mm"><figcaption>Figure 1 — The Payments desk on a shop with no payments yet: the four tiles at zero, the "Nothing here can be changed" line, the tabs All, Paid, Waiting on a bank, Cash to collect and Failed, the Orders and top-ups / Orders / Top-ups choice and the search box.</figcaption></figure>
+<table>
+  <thead><tr><th style="width:30%">On the screen</th><th>What it does</th></tr></thead>
+  <tbody>
+    <tr><td>Money in today</td><td>Money that arrived today, with how many payments that was. Orders paid entirely from wallets are left out (that money was counted when it was topped up). The line under the number says how many of those there were.</td></tr>
+    <tr><td>Settled</td><td>Of the payments started in the last 7 days that have finished, the share that went through. <i>"of N that finished"</i> tells you what it is out of. Payments still waiting are not counted.</td></tr>
+    <tr><td>Waiting on a bank</td><td>Payments still waiting for the bank to confirm. The line under it shows how long the oldest has waited. The number turns amber when it is not zero.</td></tr>
+    <tr><td>Cash to collect</td><td>Cash-on-delivery money still to be collected, and how many orders are <i>at the door</i>.</td></tr>
+    <tr><td>Tabs</td><td><b>All</b>, <b>Paid</b>, <b>Waiting on a bank</b>, <b>Cash to collect</b> and <b>Failed</b>, each with a count. Clicking a tile opens its tab.</td></tr>
+    <tr><td>Kind and search</td><td>Show <b>Orders and top-ups</b>, only <b>Orders</b> or only <b>Top-ups</b>. Search by a reference, an order number or a customer's name.</td></tr>
+    <tr><td>All views</td><td>Opens Payments (all views). See step 4.</td></tr>
+  </tbody>
+</table>
+<p>Each row shows the customer, a status tag, a blue <b>At the door</b> tag for cash still waiting, the kind (<b>Order</b>, <b>Wallet top-up</b> or <b>Saving a card</b>), the method and provider, and how long ago it was made. Below that is the payment reference, the order number (click it to open the order) and any message from the bank. On the right is the amount, plus <i>"and … from the wallet"</i> when part was paid from the wallet.</p>
+<div class="note good"><span class="lbl">Good to know:</span> Cash on delivery is <b>not</b> "waiting on a bank". It sits under <b>Cash to collect</b> until the cash is in. Refunds are not made here: they happen on the order or the return.</div>
+
+<h3 class="step"><span class="n">2</span>Collect the cash</h3>
+<p>A cash-on-delivery payment stays <b>Waiting</b> until someone confirms the cash arrived. There are two ways:</p>
+<ul class="f">
+  <li><b>The door code</b>: when the rider marks the order delivered with the customer's six-digit door code, the cash payment is marked collected at the same time (see the Orders manual).</li>
+  <li><b>Cash collected</b>: open the payment in <b>Advanced <span class="arr">→</span> Payments (all views)</b> and press <b>Cash collected</b> at the top. Press it only when you have the money in hand. The payment becomes <b>Paid</b>, and <i>"Cash collected on delivery."</i> is recorded under <b>What happened</b>.</li>
+</ul>
+<div class="note warn"><span class="lbl">Watch out:</span> <b>Cash collected</b> shows on every payment that is not yet paid, but it works only for cash on delivery. On any other payment it is refused with <i>"Only a cash-on-delivery payment can be collected."</i></div>
+
+<h3 class="step"><span class="n">3</span>The Wallets desk</h3>
+<p>Open <b>369 Mart <span class="arr">→</span> Money <span class="arr">→</span> Wallets</b>. This is money customers have already paid the shop and not spent yet. It is money the shop owes, not takings.</p>
+<figure class="shot"><img src="screenshots/02-wallets-desk.png" alt="The Wallets desk" style="max-height:66mm"><figcaption>Figure 2 — The Wallets desk: 8 wallets, 150.000 held, the largest balance belonging to Mitchell Admin, 0 out of step. Below are the tabs, and one row per wallet with its last movement ("Reward · Referral reward"), the balance held and a Movements button.</figcaption></figure>
+<table>
+  <thead><tr><th style="width:30%">On the screen</th><th>What it does</th></tr></thead>
+  <tbody>
+    <tr><td>Wallets</td><td>How many wallets exist. Click to show them all.</td></tr>
+    <tr><td>Money we hold</td><td>All balances added up: <i>"Already paid for, and still owed"</i>.</td></tr>
+    <tr><td>Largest balance</td><td>The biggest single balance and whose it is.</td></tr>
+    <tr><td>Out of step</td><td>Wallets whose balance disagrees with their own history. The number turns red when it is not zero, and a warning line appears above the list.</td></tr>
+    <tr><td>Tabs and search</td><td><b>All</b>, <b>With money</b>, <b>Empty</b>, <b>Out of step</b>. Search by customer name, email or phone.</td></tr>
+  </tbody>
+</table>
+<p>Each row shows the customer, their last movement and when it was, the number of movements, their email, and the balance <i>held</i>. A wallet with no customer attached says <i>No customer</i>. A wallet that is out of step shows a red tag with both numbers: <i>"Balance …, history …"</i>.</p>
+<p>Press <b>Movements</b> to see a wallet's history. These are the same lines the customer sees in their own app, newest first, with <b>Show older</b> for more.</p>
+<figure class="shot"><img src="screenshots/03-wallet-movements.png" alt="A wallet's movements" style="max-height:56mm"><figcaption>Figure 3 — Movements for Mitchell Admin: Balance 150.000, then one Reward line, "Referral reward — Matrix Tester … placed their first order", 2 h ago, +150.000, and the Close button.</figcaption></figure>
+<div class="note imp"><span class="lbl">Important:</span> Nothing on this desk changes a balance, and there is no "recalculate" button on purpose. An out-of-step wallet is evidence of a fault: leave it as it is and report it to your administrator.</div>
+
+<h3 class="step"><span class="n">4</span>All views: lists, board and forms</h3>
+<p><b>Advanced <span class="arr">→</span> Payments (all views)</b> shows the same payments as a list or a board grouped by status. Above both is a strip of numbers: <b>Collected today</b>, <b>Went through</b> (a percentage with a 14-day bar chart), <b>Waiting</b>, <b>Cash to collect</b> and <b>Wallet float</b> (the money held in wallets; click it to open the wallets). Clicking a number filters the list.</p>
+<ul class="f">
+  <li><b>List</b>: When, Customer, Order, Method, Provider, Amount (with a total), From wallet, Txn and status.</li>
+  <li><b>Filters</b>: <b>Paid</b>, <b>Pending</b>, <b>Failed</b>, <b>Cash on delivery</b>, <b>Wallet top-ups</b>, <b>Priced by the app</b> (amounts the shop app worked out itself, because no basket existed in the backend) and <b>Today</b>. Group by Method, Provider, Status or Day.</li>
+  <li><b>Form</b>: the amount, customer and method at the top. The <b>Payment</b> section has the reference, Transaction id, provider, kind and App order reference. The <b>369 Wallet</b> section has the wallet, Paid from wallet and Wallet movement. <b>What happened</b> holds the bank's message.</li>
+</ul>
+<p><b>Advanced <span class="arr">→</span> Wallets (all views)</b> lists Customer, Balance (with <i>Total held</i>), Ledger, Agrees and Movements. It has the filters <b>Balance disagrees with the ledger</b> and <b>Has money</b>. A wallet's form shows the balance, the ledger total, whether they agree, and a <b>Movements</b> tab (When, Kind, Title, Detail, In, Out).</p>
+
+<h3 class="step"><span class="n">5</span>What the customer sees</h3>
+<ul class="f">
+  <li><b>At checkout</b>, the customer is offered only the ways of paying that can take this basket right now. Cash on delivery drops off above the limit. The 369 Wallet is offered only when its balance covers the amount.</li>
+  <li><b>Paying with the wallet</b>: if the wallet covers the whole order, it is paid at once. The customer can also use part of the balance and pay the rest another way. If that other payment fails or is cancelled, the wallet part comes straight back as a <b>Refunded</b> movement titled <i>Payment failed</i>.</li>
+  <li><b>Adding money</b>: the customer chooses an amount (at least 10, within the limit) and pays through a provider. Nothing is added until the provider confirms it. Then one <b>Added</b> movement, <i>Money added</i>, says how it came in.</li>
+  <li><b>Saved cards and UPI IDs</b>: cards show brand, last four digits, name, expiry and bank. UPI IDs show the matching app (Google Pay, PhonePe, Paytm or BHIM). The customer can have one default card and one default UPI ID. Removing one hides it, but past payments still show it.</li>
+  <li><b>The wallet page</b> shows the balance, the limits and the same movements you see on the Wallets desk.</li>
+</ul>
+<div class="note tip"><span class="lbl">Tip:</span> Saving a UPI ID needs at least one provider switched on. Saving a card needs a card provider with its keys set up. Until then, the customer is told so.</div>
+
+<div class="part">Part 3 — Keeping It Secure &amp; In Order</div>
+
+<h3 class="step"><span class="n">1</span>Only the bank can mark a payment paid</h3>
+<p>A card, UPI or net-banking payment becomes <b>Paid</b> only when the provider confirms it to the backend, after a security check. Nothing the shop app sends can mark it paid, and the transaction number shown to the customer comes from the provider, not the app. A repeated confirmation from the bank never pays twice. A top-up is added to the wallet exactly once.</p>
+
+<h3 class="step"><span class="n">2</span>The wallet cannot drift</h3>
+<p>Each customer has one wallet. The balance can change only by writing a movement, so the balance and the history always match. Any other attempt is refused with <i>"The 369 Wallet balance can only change through a wallet movement, so that every change leaves a record the customer can see."</i> Wallet movements are never deleted, even when an order is cancelled. Payments for the same customer are handled one at a time, so two payments at once cannot overspend.</p>
+
+<h3 class="step"><span class="n">3</span>Card details are never stored</h3>
+<p>The full card number never reaches the backend. The provider takes it on its own payment form, and the shop keeps only the brand, last four digits, name, expiry and bank. Anything shaped like a card number is refused: <i>"A saved payment method must never hold a card number."</i> If the app tries to send a card number, it is turned away with <i>"Card details must be entered on the payment form, not sent to us."</i></p>
+
+<h3 class="step"><span class="n">4</span>Customers see only their own</h3>
+<p>A customer can reach only their own saved methods, wallet and payments. Asking for someone else's gets the same "not found" answer as a made-up number, so nobody can find out whether another customer's record exists.</p>
+
+<h3 class="step"><span class="n">5</span>Who can do what</h3>
+<table>
+  <thead><tr><th style="width:30%">Role</th><th>What they can do</th></tr></thead>
+  <tbody>
+    <tr><td>Website designer</td><td>Opens the Payments and Wallets desks and Store → Settings. Can read every tab, but saving the Store tab is refused.</td></tr>
+    <tr><td>Administrator (Settings)</td><td>Everything above, plus saving all Settings tabs, Payments (all views) with <b>Cash collected</b>, Wallets (all views), and entering gateway keys under <b>Open payment providers</b>.</td></tr>
+    <tr><td>Internal user</td><td>No payment or wallet menus.</td></tr>
+    <tr><td>Customer</td><td>Pays, tops up, and saves or removes their own cards and UPI IDs in the shop app. Sees only their own wallet.</td></tr>
+  </tbody>
+</table>
+
+<h2>Status reference — payments</h2>
+<table>
+  <thead><tr><th style="width:22%">State</th><th>Meaning</th><th style="width:34%">How to change it</th></tr></thead>
+  <tbody>
+    <tr><td>Never sent</td><td>Started, but the customer never submitted it. Not money in.</td><td>—</td></tr>
+    <tr><td>Waiting</td><td>Waiting for the bank, or cash still to collect (<b>At the door</b>).</td><td>The bank confirms; for cash, the door code or <b>Cash collected</b>. The customer can cancel it.</td></tr>
+    <tr><td>Held by the bank</td><td>The bank is holding the money but has not paid it over. Not money in yet.</td><td>The bank finishes it.</td></tr>
+    <tr><td>Paid</td><td>The money is in.</td><td>Final. Refunds go through the order or the return.</td></tr>
+    <tr><td>Cancelled</td><td>Given up, for example by the customer. Any wallet part was returned.</td><td>Final.</td></tr>
+    <tr><td>Failed</td><td>Declined or errored, with the bank's reason. Any wallet part was returned.</td><td>Final. The customer pays again.</td></tr>
+  </tbody>
+</table>
+
+<h2>Wallet movements</h2>
+<table>
+  <thead><tr><th style="width:22%">Kind</th><th>When it happens</th><th style="width:22%">Balance</th></tr></thead>
+  <tbody>
+    <tr><td>Added</td><td>A confirmed top-up (<i>Money added</i>).</td><td>Up, within the 10,000 limit.</td></tr>
+    <tr><td>Spent</td><td>Wallet money used on an order.</td><td>Down. Never below zero.</td></tr>
+    <tr><td>Refunded</td><td>Money given back: a failed payment's wallet part, a cancellation, a return.</td><td>Up, even past the limit.</td></tr>
+    <tr><td>Reward</td><td>A reward paid into the wallet, such as a referral reward.</td><td>Up, within the limit.</td></tr>
+  </tbody>
+</table>
+
+<h2>Quick tips</h2>
+<ul class="tips">
+  <li>Check <b>Cash to collect</b> at the end of each delivery round. It should come down as riders return.</li>
+  <li>Press <b>Cash collected</b> only with the notes in your hand.</li>
+  <li>A long <b>Waiting on a bank</b> queue usually means a provider problem, not a customer problem.</li>
+  <li><b>Money in today</b> does not count wallet-paid orders twice. That money was counted at top-up.</li>
+  <li><b>Money we hold</b> is money owed to customers, not income.</li>
+  <li><b>Out of step</b> should always read 0. If it does not, report it and change nothing.</li>
+  <li>Switch the <b>369 Wallet</b> on in Settings before customers try to pay with it.</li>
+  <li>After a module update, check the cash on delivery limit.</li>
+</ul>
+
+<h2>If something goes wrong</h2>
+<table>
+  <thead><tr><th style="width:38%">What you see</th><th>What to do</th></tr></thead>
+  <tbody>
+    <tr><td>Customer: "Cash on delivery is available on orders up to …"</td><td>The cash to collect is over the limit. Raise <b>Cash on delivery limit</b> in Store → Settings → Payments, or the customer pays online.</td></tr>
+    <tr><td>Customer: "Cash on delivery isn't available on this account. Please pay online."</td><td>Cash on delivery was switched off for this customer on their profile (see the Orders manual).</td></tr>
+    <tr><td>Customer: "The 369 Wallet is not switched on yet."</td><td>Switch on <b>369 Wallet</b> in Store → Settings → Payments and press <b>Save changes</b>.</td></tr>
+    <tr><td>Customer: "Your 369 Wallet doesn't cover this order. Choose another way to pay the remaining …"</td><td>Paying with only the wallet needs a balance that covers the whole order. The customer uses the wallet for part and pays the rest another way.</td></tr>
+    <tr><td>Customer: "No payment provider is set up yet." or "That way of paying is not available right now."</td><td>No provider that offers this method is switched on. An administrator sets one up under <b>Open payment providers</b>.</td></tr>
+    <tr><td>Customer: "Add at least …" or "You can add up to … (wallet limit …)"</td><td>The top-up is under the minimum of 10, or it would take the wallet over 10,000.</td></tr>
+    <tr><td>A gateway's switch is missing, or switching it on is refused</td><td>Its keys are not set up. Use <b>Open payment providers</b> (Administrator (Settings)).</td></tr>
+    <tr><td>"The cash-on-delivery limit cannot be negative."</td><td>Enter 0 for no limit, or a positive amount.</td></tr>
+    <tr><td>"Only a cash-on-delivery payment can be collected."</td><td><b>Cash collected</b> was pressed on a card, UPI or wallet payment. Those settle only through the bank.</td></tr>
+    <tr><td>Out of step is not 0</td><td>Open the wallet with <b>Movements</b> and note both numbers. Change nothing, and report it to your administrator.</td></tr>
+    <tr><td>"We could not reach the shop." on a desk</td><td>Press <b>Try again</b>. If it repeats, check the connection to the backend.</td></tr>
+  </tbody>
+</table>
+
+</body>
+</html>

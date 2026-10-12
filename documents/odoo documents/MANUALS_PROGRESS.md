@@ -1,100 +1,68 @@
 # 369 Mart module user manuals: progress
 
 - **Claude Code session ID:** `c31768f3-143a-4ff9-a148-5cf485215514`
-- **Stopped on:** 2026-10-12, on request. Work stopped partway; 14 of 19 manuals are written.
+- **Status (2026-10-12):** **all 19 manuals done**. Each has an HTML file and a PDF. Start from `index.html`.
 
 ## What was asked
 - One user manual for each of the 19 modules in `odoo_modules\`, saved in this folder.
 - Same UI as the "369ai User Manual Template" artifact: https://claude.ai/artifact/R661ecJXX9FPEPqsd15j4m
-- Decisions taken along the way:
-  - **PDF + HTML** for each module.
+- Decisions:
+  - **PDF + HTML** per module.
   - Short (1–2 page) manuals for the umbrella and sample-data modules.
   - Written for store admins, staff **and office employees**: plain words, with a "Words you'll see" table in each manual.
   - **Screenshots come only from each module's own `static\description\` folder.** Modules without images get text-only manuals.
-  - No test server was used.
 
 ## Status
 
-| Module | Manual | Pages | Screenshots | State |
-|---|---|---|---|---|
-| mart369 | 369_Mart_User_Manual | 5 | 1 | Done |
-| mart369_all | 369_Mart_Suite_User_Manual | 2 | 0 (module has none) | Done |
-| mart369_auth | 369_Mart_Sign_In_User_Manual | 10 | 9 | Done |
-| mart369_address | 369_Mart_Delivery_Addresses_User_Manual | 9 | 10 | Done |
-| mart369_cart | 369_Mart_Delivery_and_Pricing_User_Manual | 14 | 13 | Done |
-| mart369_catalog | 369_Mart_Catalog_User_Manual | 14 | 13 | Done |
-| mart369_product | 369_Mart_Product_Page_User_Manual | 14 | 12 | Done |
-| mart369_home | 369_Mart_Home_Page_User_Manual | 10 | 5 | Done |
-| mart369_pages | 369_Mart_Pages_User_Manual | 6 | 0 (module has none) | Done |
-| mart369_order | 369_Mart_Orders_User_Manual | 18 | 18 | Done |
-| mart369_account | 369_Mart_Account_User_Manual | 12 | 12 | Done |
-| mart369_support | 369_Mart_Support_User_Manual | 8 | 6 | Done |
-| mart369_whatsapp_bridge | 369_Mart_WhatsApp_Bridge_User_Manual | 7 | 0 (module has none) | Done |
-| mart369_parts_demo | 369_Mart_Sample_Catalogue_Computer_Parts_User_Manual | — | 0 (module has none) | HTML only: **PDF not rendered yet** |
-| mart369_loyalty | — | — | — | **Not started** |
-| mart369_payment | — | — | — | **Not started** |
-| mart369_roles | — | — | — | **Not started** |
-| mart369_store_board | — | — | — | **Not started** |
-| pos_loyalty_card | — | — | — | **Not started** |
+| Module | Manual | Pages | Screenshots |
+|---|---|---|---|
+| mart369 | 369_Mart_User_Manual | 5 | 1 |
+| mart369_all | 369_Mart_Suite_User_Manual | 2 | 0 (module has none) |
+| mart369_roles | 369_Mart_Roles_User_Manual | 6 | 0 (module has none) |
+| mart369_auth | 369_Mart_Sign_In_User_Manual | 10 | 9 |
+| mart369_address | 369_Mart_Delivery_Addresses_User_Manual | 9 | 10 |
+| mart369_cart | 369_Mart_Delivery_and_Pricing_User_Manual | 14 | 13 |
+| mart369_catalog | 369_Mart_Catalog_User_Manual | 14 | 13 |
+| mart369_product | 369_Mart_Product_Page_User_Manual | 14 | 12 |
+| mart369_home | 369_Mart_Home_Page_User_Manual | 10 | 5 |
+| mart369_pages | 369_Mart_Pages_User_Manual | 6 | 0 (module has none) |
+| mart369_parts_demo | 369_Mart_Sample_Catalogue_Computer_Parts_User_Manual | 3 | 0 (module has none) |
+| mart369_order | 369_Mart_Orders_User_Manual | 18 | 18 |
+| mart369_store_board | 369_Mart_New_Orders_Board_User_Manual | 8 | 5 |
+| mart369_payment | 369_Mart_Payments_and_Wallet_User_Manual | 10 | 3 |
+| mart369_loyalty | 369_Mart_Loyalty_Points_User_Manual | 8 | 0 (module has none) |
+| pos_loyalty_card | Loyalty_Card_User_Manual | 11 | 0 (module has none) |
+| mart369_account | 369_Mart_Account_User_Manual | 12 | 12 |
+| mart369_support | 369_Mart_Support_User_Manual | 8 | 6 |
+| mart369_whatsapp_bridge | 369_Mart_WhatsApp_Bridge_User_Manual | 7 | 0 (module has none) |
 
-**Checks on the 14 written manuals:**
-- Every file is complete.
-- No `{{placeholders}}` are left.
-- The word "Odoo" does not appear in the text.
+**Checks done:**
+- Every PDF was looked at page by page. There are no stranded headings, split tables or near-empty pages.
+- No "Odoo", web addresses or `{{placeholders}}` appear in the text.
 
-**Still to do:** a page-by-page visual review of every PDF. The writers were stopped while checking pages, so a few manuals may still have layout issues: a heading left at the foot of a page, or a large figure.
+## Things the writers found in the code (worth knowing)
+- **Cash-on-delivery limit:** it starts at 5,000. A limit of 0 ("no limit") is put back to 5,000 every time the Payments module is updated.
+- **Loyalty Card → Reset to Default:** it resets more than its confirm box says: the card number format, mobile length, welcome message and mail server settings.
+- **Loyalty Card → Generate Loyalty Cards:** it also turns Draft and Suspended cards back to Active.
+- **Loyalty Points settings:** "Points are earned when" and the on/off switches have no backend screen. They are set only in the staff console, under Settings → Loyalty.
+- **New Orders Board alarm:** its ring and pause settings are under **Delivery → Configuration → Delivery Settings** ("The Shop Counter"). If "Shop Confirms Orders" is off, the Counter stays empty.
+- **Pages module FAQ:** its seeded text says refunds go "back to where you paid from". The Orders module refunds everything to the 369 Wallet.
+- **Roles:** Packer and Accountant currently give only a plain staff login; nothing else checks for them yet. Seller opens no screens yet.
+- **Loyalty Card → Card Images:** nothing saves card pictures any more, so this gallery stays empty unless another module saves them.
 
-## What is left
-1. Render the missing PDF: `node _tools\render.js "<this folder>" mart369_parts_demo`
-2. Write the five missing manuals, following `_tools\BRIEF.md`. Notes for each:
-   - **mart369_loyalty** (no screenshots):
-     - Points are earned at a chosen step, by default **Delivered**.
-     - Points are spent at checkout within the points rule: once a day, with a minimum and a maximum share.
-     - Points are given back on cancel or return.
-     - A loyalty card is made automatically on the first order.
-     - The "Points are earned when" setting has no backend screen; it is set in the staff console.
-   - **mart369_payment** (3 screenshots):
-     - The Payments desk and the Wallets desk.
-     - The **Cash collected** button.
-     - The 369 Wallet: limit 10,000, minimum top-up 10.
-     - **Store → Settings**, which has the tabs Store, Payments, Customers, Orders, Reviews, Alerts.
-     - The cash-on-delivery limit.
-   - **mart369_roles** (no screenshots):
-     - The roles Owner, Manager and Packer, plus the Accountant and Rider ticks.
-     - The **Staff & roles** screen (Owner only) and **Invite staff**.
-     - The Seller role grants nothing yet.
-   - **mart369_store_board** (5 screenshots):
-     - The Counter (New / Quick / Express tabs, and Counter ⇄ All orders).
-     - The buttons Accept, Goods arrived, Packed - call the rider, Put back.
-     - The alarm rings until an order is accepted and has no off switch.
-   - **pos_loyalty_card** (no screenshots):
-     - Card statuses Draft / Active / Suspended.
-     - One active points rule at a time.
-     - Loyalty Settings: card format, size, colours.
-     - Email Settings.
-     - Delete and restore cards; Generate Loyalty Cards; Download Card Images (ZIP).
-     - Its menus move under 369 Mart → Loyalty when 369 Mart Loyalty Points is installed.
-3. Look at every PDF page: `py _tools\pages.py "<this folder>" <outdir> [module]`, then open the PNGs.
-4. Build the front page `index.html`, which links every manual: `node _tools\index.js "<this folder>" _tools\manual_template.html`
+## Updating a manual later
+1. Edit `<module>\<Title>_User_Manual.html`, following `_tools\BRIEF.md`.
+2. Render the PDF: `node _tools\render.js "<this folder>" <module>`
+3. Make page images and look at them: `py _tools\pages.py "<this folder>" <outdir> <module>`
+4. Rebuild the front page: `node _tools\index.js "<this folder>" _tools\manual_template.html`
 
 ## Tools in `_tools\`
 
 | File | What it is |
 |---|---|
-| BRIEF.md | The full writing rules the manuals follow: structure, wording, screenshots, checks. Its "S" scratch path now means this `_tools` folder. |
-| manual_template.html | The blank template from the artifact. Its CSS is kept unchanged; one small screenshots/glossary block is added at the end. |
+| BRIEF.md | The writing rules: structure, wording, screenshots, checks. Its "S" scratch path means this `_tools` folder. |
+| manual_template.html | The blank template from the artifact. Its CSS is unchanged; a small screenshots/glossary block is added at the end. |
 | reference_signage_scan.html | The Signage Scan reference manual, for tone and depth. |
-| render.js | Turns each `*_User_Manual.html` into an A4 PDF. It uses Chromium from 369Mart's Playwright install, pointed at the installed `chromium_headless_shell-1228`, because WeasyPrint is not installed. |
-| pages.py | Turns each PDF page into a PNG for review. Needs PyMuPDF. |
-| index.js | Builds `index.html` in the same look, with a short plain purpose line for each module. |
-
-## Folder layout
-```
-odoo documents\
-  MANUALS_PROGRESS.md        (this file)
-  _tools\                    (brief, template, scripts)
-  <module>\
-    <Title>_User_Manual.html
-    <Title>_User_Manual.pdf
-    screenshots\NN-<what>.png   (copied from that module's own static\description\)
-```
+| render.js | HTML → A4 PDF with Chromium from 369Mart's Playwright install, pointed at the installed `chromium_headless_shell-1228`. WeasyPrint is not installed. |
+| pages.py | PDF pages → PNG images for review. Needs PyMuPDF. |
+| index.js | Builds `index.html` in the same look. |

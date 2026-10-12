@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>369 Mart New Orders Board — User Manual</title>
+<style>
+  :root{
+    --navy:#1e2a78; --orange:#f08a24; --ink:#1f2230; --muted:#6b6f80;
+    --line:#e6e8f0; --alt:#f2f4fb; --tint:#eef2fc;
+    --tip:#2e6fb0; --good:#2e8b57; --good-bg:#e7f6ea;
+    --warn-bg:#fff3da; --warn-ink:#c0701a;
+  }
+  @page{
+    size:A4; margin:22mm 20mm 20mm 20mm;
+    @bottom-left{content:"369ai · 369 Mart New Orders Board"; font:8.5pt "Liberation Serif",Georgia,serif; color:#6b6f80;}
+    @bottom-right{content:"Page " counter(page); font:8.5pt "Liberation Serif",Georgia,serif; color:#6b6f80;}
+  }
+  @page:first{ margin-top:14mm; }
+  *{box-sizing:border-box}
+  html{background:#fff}
+  body{margin:0; font-family:"Liberation Serif","Times New Roman",Georgia,serif; font-size:10.5pt; line-height:1.5; color:var(--ink); background:#fff}
+  @media screen{ body{max-width:794px; margin:24px auto; padding:0 16px} }
+  p{margin:0 0 7pt}
+  b,strong{font-weight:700}
+  .k{color:var(--navy); font-weight:700}          /* navy key term */
+  code{font-family:"DejaVu Sans Mono",monospace; font-size:8.5pt; background:#f1f2f6; padding:1px 4px; border-radius:3px}
+  .arr{color:var(--navy); font-weight:700}
+
+  /* ---------- Cover ---------- */
+  .topbar{height:7px; background:var(--navy); border-bottom:3px solid var(--orange); margin:0 -8mm 10pt}
+  .cover{background:var(--navy); color:#fff; text-align:center; border-radius:9px; padding:26pt 20pt 22pt; margin-bottom:18pt}
+  .cover h1{margin:0; font-size:31pt; letter-spacing:1.5pt; font-weight:700; text-transform:uppercase}
+  .cover .sub{color:var(--orange); font-size:15pt; font-weight:700; margin:12pt 0 10pt}
+  .cover .meta{font-size:10pt; color:#d5d9ee}
+
+  /* ---------- H2 section with orange rule ---------- */
+  h2{color:var(--navy); font-size:15pt; margin:16pt 0 9pt; padding-bottom:5pt; border-bottom:1.6px solid var(--orange); page-break-after:avoid}
+
+  /* ---------- Flow cards (3–4 steps) ---------- */
+  .flow{display:flex; align-items:center; gap:6pt; margin:10pt 0 10pt}
+  .flow .card{flex:1; border:1px solid #d9dcea; border-radius:6px; padding:8pt 9pt; min-height:66pt}
+  .flow .card b{display:block; color:var(--navy); font-size:10.5pt; margin-bottom:2pt}
+  .flow .card span{font-size:8.5pt; color:var(--muted); line-height:1.35}
+  .flow .to{color:var(--orange); font-size:13pt}
+
+  /* ---------- Callouts ---------- */
+  .note{border-left:3px solid var(--orange); background:var(--tint); border-radius:0 5px 5px 0; padding:8pt 12pt; margin:10pt 0 12pt; font-size:9.5pt; page-break-inside:avoid}
+  .note .lbl{font-weight:700; text-transform:uppercase; font-size:8.5pt; letter-spacing:.3pt; margin-right:4pt}
+  .note.start .lbl{color:var(--warn-ink)}
+  .note.tip{border-color:var(--tip)}              .note.tip .lbl{color:var(--tip)}
+  .note.good{border-color:var(--good); background:var(--good-bg)} .note.good .lbl{color:var(--good)}
+  .note.imp{border-color:var(--navy)}             .note.imp .lbl{color:var(--navy)}
+  .note.warn{border-color:var(--orange); background:var(--warn-bg)} .note.warn .lbl{color:var(--warn-ink)}
+
+  /* ---------- Part banner ---------- */
+  .part{background:var(--navy); color:#fff; text-align:center; border-radius:6px; padding:12pt; margin:20pt 0 10pt; font-size:15pt; font-weight:700; letter-spacing:1.5pt; text-transform:uppercase; page-break-after:avoid}
+  .part-intro{color:var(--muted); margin-bottom:12pt}
+
+  /* ---------- Numbered step ---------- */
+  h3.step{display:flex; align-items:center; gap:9pt; color:var(--navy); font-size:13pt; margin:16pt 0 7pt; page-break-after:avoid}
+  h3.step .n{display:inline-block; min-width:17pt; height:17pt; line-height:17pt; text-align:center; background:var(--orange); color:#fff; border-radius:3px; font-family:"Liberation Sans",Arial,sans-serif; font-size:10pt; font-weight:700}
+
+  /* ---------- Field bullets (orange square markers) ---------- */
+  ul.f{list-style:none; padding:0; margin:4pt 0 8pt}
+  ul.f li{position:relative; padding-left:13pt; margin-bottom:4pt}
+  ul.f li::before{content:""; position:absolute; left:1pt; top:6.5pt; width:4pt; height:4pt; background:var(--orange)}
+  ul.f li b:first-child{color:var(--navy)}
+
+  /* ---------- Tables ---------- */
+  table{width:100%; border-collapse:collapse; margin:8pt 0 12pt; font-size:9pt}
+  thead{display:table-header-group}
+  th{background:var(--navy); color:#fff; text-align:left; padding:6pt 8pt; font-weight:700}
+  th+th{border-left:1px solid #34408a}
+  td{padding:6pt 8pt; border-bottom:1px solid var(--line); vertical-align:top}
+  tr:nth-child(even) td{background:var(--alt)}
+  td:first-child{color:var(--navy); font-weight:700}
+  tr{page-break-inside:avoid}
+
+  /* ---------- Quick tips ---------- */
+  ul.tips{margin:4pt 0 12pt; padding-left:14pt}
+  ul.tips li{margin-bottom:3pt}
+
+  /* ---------- Screenshots + glossary (added for 369 Mart manuals) ---------- */
+  figure.shot{margin:8pt 0 12pt; page-break-inside:avoid; break-inside:avoid; text-align:center}
+  figure.shot img{max-width:100%; max-height:118mm; border:1px solid var(--line); border-radius:6px; box-shadow:0 1px 4px rgba(30,42,120,.12)}
+  figure.shot.phone img{max-width:62mm}
+  figure.shot figcaption{font-size:8.5pt; color:var(--muted); margin-top:4pt; text-align:left}
+  table.gloss td:first-child{width:28%}
+  h2, h3.step, .part{break-after:avoid}
+</style>
+</head>
+<body>
+<div class="topbar"></div>
+<div class="cover">
+  <h1>369 Mart New Orders Board</h1>
+  <div class="sub">The Counter — New Orders Ring Until Accepted</div>
+  <div class="meta">User Manual &nbsp;|&nbsp; 369ai</div>
+</div>
+
+<h2>What this does</h2>
+<p><span class="k">369 Mart New Orders Board</span> puts a shop <span class="k">Counter</span> in front of your orders. Once it is installed, <b>369 Mart <span class="arr">→</span> Sales <span class="arr">→</span> Orders</b> opens the Counter first: a short list of the orders the shop is working on right now, with <b>New</b>, <b>Quick</b> and <b>Express</b> tabs. Each row says what was ordered, how it is paid and what to press next. A switch at the top takes you to <b>All orders</b> (the full Orders desk) and back.</p>
+<p>A new order sets off an <span class="k">alarm</span> that keeps ringing until somebody presses <b>Accept</b>. It rings on <b>any backend screen</b>, not only the Counter, and there is <b>no off switch</b> — the only way to quiet it is to accept the waiting orders.</p>
+<div class="flow">
+  <div class="card"><b>1. New order rings</b><span>On every screen, with a red “new orders” pill</span></div><span class="to">→</span>
+  <div class="card"><b>2. Accept</b><span>Say which stock it comes from; the alarm stops</span></div><span class="to">→</span>
+  <div class="card"><b>3. Packed</b><span>Press “Packed - call the rider”</span></div><span class="to">→</span>
+  <div class="card"><b>4. Rider collects</b><span>Read out the pickup code; the order leaves the Counter</span></div>
+</div>
+<div class="note start"><span class="lbl">Before you start:</span> This module needs <b>369 Mart Orders</b> and the separate <b>Store</b> app, which supplies the order stages, the Accept and Cancel steps and the alarm settings. Staff need <b>Salesperson</b> rights to see the Orders menu. There is nothing to fill in for the Counter itself; the only setting is the alarm's ring and pause, in the Delivery app.</div>
+
+<h2>Words you'll see</h2>
+<table class="gloss">
+  <thead><tr><th>Word</th><th>What it means</th></tr></thead>
+  <tbody>
+    <tr><td>Counter</td><td>This module's screen: the orders the shop must accept, pack or hand to a rider right now.</td></tr>
+    <tr><td>All orders</td><td>The full Orders desk from 369 Mart Orders: every order, with filters, tiles and history.</td></tr>
+    <tr><td>Accept</td><td>Saying “we have it”. This is what stops the alarm. Packing is a separate step.</td></tr>
+    <tr><td>Quick / Express</td><td>Quick is same-day delivery from stock the shop holds. Express lands on a later day, usually because something has to come in from a supplier.</td></tr>
+    <tr><td>Collect</td><td>The order is not paid yet. The rider takes this amount at the door.</td></tr>
+    <tr><td>Pickup code</td><td>A short code shown on the row once a rider is on the way. You read it out to the rider when they collect the parcel.</td></tr>
+    <tr><td>Supplier stock</td><td>Goods the shop is buying in because no shelf had them. The order waits until you press <b>Goods arrived</b>.</td></tr>
+  </tbody>
+</table>
+
+<h2>How the manual is arranged</h2>
+<p><b>Part 1 – Setting Up</b> shows where the Counter lives and how to set the alarm's ring and pause. <b>Part 2 – Everyday Use</b> walks through the Counter, each button, the switch to All orders, the alarm on other screens and the same Counter on the staff console. <b>Part 3 – Keeping It Secure &amp; In Order</b> covers who can do what and what happens if the module is removed.</p>
+
+<div class="part">Part 1 — Setting Up</div>
+<p class="part-intro">Done once by an administrator. If the Orders menu opens the Counter and the ring length suits you, skip to Part 2.</p>
+
+<h3 class="step"><span class="n">1</span>Where everything lives</h3>
+<p>Open <b>369 Mart</b> from the main menu. This module changes one entry and adds two things that show on every screen:</p>
+<ul class="f">
+  <li><b>Sales <span class="arr">→</span> Orders</b> — now opens the <b>Counter</b>. The plain Orders desk is still there: press <b>All orders</b> at the top of the Counter. There is only one Orders entry; the desk's own menu entry is switched off while this module is installed.</li>
+  <li><b>The “new orders” pill</b> — a red <b>N new orders</b> button in the top bar, on every screen, while an order is waiting to be accepted.</li>
+  <li><b>The “New orders” notice</b> — a pop-up that stays on screen with an <b>Open the Counter</b> button.</li>
+</ul>
+<p>The alarm's timing is set in another app: <b>Delivery <span class="arr">→</span> Configuration <span class="arr">→</span> Delivery Settings</b> (step 2).</p>
+
+<h3 class="step"><span class="n">2</span>Set how long the alarm rings</h3>
+<p>Open <b>Delivery <span class="arr">→</span> Configuration <span class="arr">→</span> Delivery Settings</b> and find the section <b>The Shop Counter</b>. The alarm rings for a while, rests, then rings again, until every new order is accepted.</p>
+<ul class="f">
+  <li><b>Shop Confirms Orders</b> — on by default. On means a paid order waits at the Counter until somebody accepts it and says it is packed; only then is a rider called.</li>
+  <li><b>Ring For (seconds)</b> — how long one ring lasts. Default <b>30</b>.</li>
+  <li><b>Alarm Repeats Every (s)</b> — the rest between one ring and the next. Default <b>10</b>.</li>
+</ul>
+<p>Anything below 3 seconds is treated as 3. A change reaches every open screen at its next check, within about 10 seconds; nobody needs to reload.</p>
+<div class="note warn"><span class="lbl">Watch out:</span> With <b>Shop Confirms Orders</b> off, the rider is called the moment an order is paid. Orders then never wait for Accept, so the Counter's New tab stays empty and the alarm never rings. The two ring fields are hidden while it is off.</div>
+<div class="note good"><span class="lbl">Good to know:</span> Changing these settings needs <b>Delivery Manager</b> access in the Delivery app. Counter staff do not need it.</div>
+
+<div class="part">Part 2 — Everyday Use</div>
+<p class="part-intro">This is what counter staff use all day.</p>
+
+<h3 class="step"><span class="n">1</span>The Counter</h3>
+<p>Open <b>369 Mart <span class="arr">→</span> Sales <span class="arr">→</span> Orders</b>. The heading reads <i>“New orders ring until somebody accepts them.”</i> The list updates by itself the moment an order arrives or changes; you never need to reload.</p>
+<figure class="shot"><img src="screenshots/01-counter.png" alt="The Counter with two new orders" style="max-height:92mm"><figcaption>Figure 1 — The Counter: Counter / All orders switch at the top right, New 2 · Quick 2 · Express 0 tabs, the “2 new” pill and Alarm on, two New order rows (one Website, one WhatsApp) each with an Accept button, and the red “2 new orders” pill in the top bar.</figcaption></figure>
+<table>
+  <thead><tr><th style="width:30%">On the screen</th><th>What it does</th></tr></thead>
+  <tbody>
+    <tr><td>Counter / All orders</td><td>The switch between this screen and the full Orders desk (step 4).</td></tr>
+    <tr><td>Tabs</td><td><b>New</b> — orders waiting for Accept. <b>Quick</b> and <b>Express</b> — every open order of that kind, at any stage. Each tab shows its count. The Counter opens on New.</td></tr>
+    <tr><td>N new</td><td>A red pill with the number of orders waiting for Accept. It pulses while it is not zero.</td></tr>
+    <tr><td>All shops</td><td>Shown only when more than one shop is set up. Pick a shop to see only its orders, or <b>All shops</b> for everything.</td></tr>
+    <tr><td>Turn on the alarm / Alarm on</td><td>See step 5. Once the sound is on, the button turns into a green <b>Alarm on</b> label.</td></tr>
+  </tbody>
+</table>
+<p>When a tab is empty you see <i>“No new orders. They appear here on their own, with the alarm.”</i> (New) or <i>“Nothing open for Quick delivery right now.”</i> (Quick or Express).</p>
+
+<h3 class="step"><span class="n">2</span>Read a row</h3>
+<p>Each row is one order. From top to bottom:</p>
+<ul class="f">
+  <li><b>Customer</b> — the name, their area, and any customer tags. If your shop also takes orders on WhatsApp, a <b>Website</b> or <b>WhatsApp</b> label shows where the order came from.</li>
+  <li><b>Order line</b> — the order number (#…), <b>Quick</b> or <b>Express</b>, the number of items and how long ago it was placed.</li>
+  <li><b>What to pack</b> — each item with its quantity in bold.</li>
+  <li><b>Stage</b> — a coloured tag: <b>New order</b>, <b>Packing</b>, <b>Waiting for the rider</b>, <b>Rider called</b> or <b>Rider on the way</b> (see the reference table).</li>
+  <li><b>waiting N min</b> — on a New order: how long it has waited for Accept.</li>
+  <li><b>Payment</b> — a tick with how it was paid (for example <i>Cash collected</i>), or <b>Collect</b> and the amount the rider must take at the door.</li>
+  <li><b>Rider</b> — the rider's name, once one is set.</li>
+  <li><b>Waiting for supplier stock</b> — the goods are being bought in (step 3).</li>
+  <li><b>Pickup code</b> — shown once the rider is on the way.</li>
+</ul>
+<p>On the right are the order total and the buttons for its stage. Click anywhere else on the row to open that order in <b>All orders</b>, with the order already open.</p>
+
+<h3 class="step"><span class="n">3</span>The buttons</h3>
+<table>
+  <thead><tr><th style="width:28%">Button</th><th style="width:22%">Shown when</th><th>What happens</th></tr></thead>
+  <tbody>
+    <tr><td>Accept</td><td>New order</td><td>Asks which company's stock the order comes from (below). The order moves to <b>Packing</b>, the alarm stops for it, and the customer is told the order is approved and being packed.</td></tr>
+    <tr><td>Packed - call the rider</td><td>Packing</td><td>The customer is told it is packed and a rider is called. If no rider is set on the order, it leaves the Counter to be handed out by hand in the Delivery app.</td></tr>
+    <tr><td>Put back</td><td>Packing</td><td>Returns the order to <b>New order</b> — accepted by mistake, or handed to someone else. The alarm rings for it again.</td></tr>
+    <tr><td>Goods arrived</td><td>Waiting for supplier stock</td><td>The bought-in goods are here. The order joins the normal queue and <b>Packed - call the rider</b> appears.</td></tr>
+    <tr><td>Cancel order</td><td>While the order can still be cancelled</td><td>Asks first (below), then cancels it without leaving the Counter.</td></tr>
+  </tbody>
+</table>
+<p><b>Which stock?</b> Accept opens <i>“Accept #… - from which company?”</i>. Each company is listed with how many of each item it has and needs; only a company with every item on its shelf can be picked, and the one the order is booked to now is marked <i>booked here now</i>. If no company has the goods, press <b>No stock anywhere - order from supplier</b>. In that box you tick suppliers and press <b>Ask these suppliers</b> (they get a price request on WhatsApp), then type <b>What do we pay?</b>, optionally <b>Which supplier?</b>, and <b>When will it be here?</b>, and press <b>Accept and order it in</b>. The order is accepted and shows <b>Waiting for supplier stock</b> until you press <b>Goods arrived</b>.</p>
+<div class="note good"><span class="lbl">Good to know:</span> Buying in does not change the customer's price and sends them no new message. A promised date later than today turns the order into <b>Express</b>.</div>
+<p><b>Cancelling.</b> <b>Cancel order</b> asks <i>“Cancel order #…?”</i> and warns that the customer and the rider are told straight away. If the invoice is already paid, it adds that the refund is done from the Delivery form afterwards. Press <b>Cancel the order</b>, or <b>Keep it</b> to back out.</p>
+<div class="note warn"><span class="lbl">Watch out:</span> Cancelling here does not move money. If the customer has paid, someone must still issue the refund.</div>
+
+<h3 class="step"><span class="n">4</span>Switch to All orders</h3>
+<p>Press <b>All orders</b> at the top right to open the full Orders desk in place of the Counter. The desk has the same switch: press <b>Counter</b> to come back. Use All orders for searching, filters, delivered and cancelled orders, and everything else described in the 369 Mart Orders manual.</p>
+<figure class="shot"><img src="screenshots/02-all-orders.png" alt="All orders with the Counter switch" style="max-height:80mm"><figcaption>Figure 2 — All orders: the same Counter / All orders switch at the top right, next to All views, above the To pack, Ready to send, Out for delivery, Late and Cash to collect tiles.</figcaption></figure>
+
+<h3 class="step"><span class="n">5</span>The alarm, on any screen</h3>
+<p>The alarm is not tied to the Counter. Anyone with <b>Salesperson</b> or <b>Website designer</b> rights hears it on every backend screen, and it checks for waiting orders every 10 seconds (a brand-new order is usually heard at once). It rings for the <b>Ring For</b> time, rests for the <b>Alarm Repeats Every</b> time, and repeats until the last waiting order is accepted.</p>
+<ul class="f">
+  <li><b>Turning on the sound</b> — a browser will not play sound until you have clicked or pressed a key. Until then the Counter shows <i>“No sound yet…”</i> and a <b>Turn on the alarm</b> button. Any click or key press anywhere turns it on; you only do this once per visit.</li>
+  <li><b>N new orders</b> — the red pill in the top bar. Click it to open the Counter. Before the sound is on it adds <i>· tap to hear</i>.</li>
+  <li><b>New orders</b> notice — <i>“1 order is waiting to be accepted”</i> (or <i>“N orders are…”</i>) with an <b>Open the Counter</b> button. It stays until nothing is waiting, and is not shown while the Counter is open.</li>
+</ul>
+<figure class="shot"><img src="screenshots/03-alarm-any-screen.png" alt="Alarm pill on the Contacts screen" style="max-height:58mm"><figcaption>Figure 3 — On the Contacts screen, far from the Counter, the red “2 new orders” pill still shows in the top bar.</figcaption></figure>
+<div class="note imp"><span class="lbl">Important:</span> There is no switch to mute it. The alarm counts every order waiting for Accept in every shop, whichever tab or shop you are looking at. Orders waiting for supplier stock do not ring.</div>
+<div class="note tip"><span class="lbl">Tip:</span> While the Store app's own <b>New Orders</b> screen is open, this alarm stays silent, because that screen rings for itself. You never hear two alarms at once.</div>
+
+<h3 class="step"><span class="n">6</span>The same Counter on the staff console</h3>
+<p>The staff console's <b>Orders</b> screen has the same <b>Counter / All orders</b> switch, the same tabs, rows and buttons, Cancel included. It reads the same orders: an order accepted on the console is accepted in the backend, and the other way round. The red <b>N new orders</b> pill also shows on every console page.</p>
+<figure class="shot"><img src="screenshots/04-console-counter.png" alt="The Counter on the staff console" style="max-height:62mm"><figcaption>Figure 4 — The staff console's Orders screen on Counter: New 2 tab, “2 new” and Alarm on, the same two rows with Accept, and “2 new orders” in the top bar.</figcaption></figure>
+<figure class="shot"><img src="screenshots/05-console-alarm.png" alt="Alarm pill on the console Products page" style="max-height:55mm"><figcaption>Figure 5 — On the console's Products page the “2 new orders” pill is still in the top bar.</figcaption></figure>
+
+<div class="part">Part 3 — Keeping It Secure &amp; In Order</div>
+
+<h3 class="step"><span class="n">1</span>Who can do what</h3>
+<table>
+  <thead><tr><th style="width:30%">Role</th><th>What they can do</th></tr></thead>
+  <tbody>
+    <tr><td>Salesperson</td><td>Sees <b>Sales <span class="arr">→</span> Orders</b>, works the Counter (Accept, Packed, Put back, Goods arrived, Cancel) and hears the alarm everywhere.</td></tr>
+    <tr><td>Website designer</td><td>Hears the alarm and sees the pill on every screen, and can use the Counter on the staff console.</td></tr>
+    <tr><td>Delivery Manager (Delivery app)</td><td>Changes the ring and pause in Delivery Settings.</td></tr>
+    <tr><td>Internal user</td><td>No Orders menu, no Counter and no alarm. Give Salesperson rights to work the Counter.</td></tr>
+  </tbody>
+</table>
+
+<h3 class="step"><span class="n">2</span>What the customer and rider hear</h3>
+<p>Buttons on the Counter send messages through the Store app: the customer hears when an order is accepted and when it is packed, and the customer and rider are both told about a cancellation.</p>
+
+<h3 class="step"><span class="n">3</span>Removing the module</h3>
+<p>Uninstalling <b>369 Mart: New Orders Board</b> puts the old <b>Sales <span class="arr">→</span> Orders</b> entry back exactly as it was, opening the Orders desk directly. The pill, the notice and the app-wide alarm go away with it. No orders are changed.</p>
+
+<h2>Status reference — stages on the Counter</h2>
+<table>
+  <thead><tr><th style="width:24%">Stage</th><th>Meaning</th><th style="width:32%">How to change it</th></tr></thead>
+  <tbody>
+    <tr><td>New order</td><td>Paid or cash order waiting for the shop. The alarm rings.</td><td><b>Accept</b>, or <b>Cancel order</b>.</td></tr>
+    <tr><td>Packing</td><td>Accepted; being packed. May also say <i>Waiting for supplier stock</i>.</td><td><b>Packed - call the rider</b>, <b>Put back</b>, or <b>Goods arrived</b> first if waiting for stock.</td></tr>
+    <tr><td>Waiting for the rider</td><td>Packed; a rider is still to be found.</td><td>Moves on by itself when a rider is called.</td></tr>
+    <tr><td>Rider called</td><td>A rider has been asked to collect it.</td><td>Moves on when the rider accepts.</td></tr>
+    <tr><td>Rider on the way</td><td>The rider is coming; the pickup code is on the row.</td><td>Read the code to the rider. The order leaves the Counter once collected.</td></tr>
+  </tbody>
+</table>
+
+<h2>Quick tips</h2>
+<ul class="tips">
+  <li>Click once anywhere after signing in, so the alarm can make a sound.</li>
+  <li>Accept stops the alarm; packing can come later.</li>
+  <li>The New tab is the to-do list; Quick and Express show every open order of that kind.</li>
+  <li>Click a row (not a button) to open the order in All orders.</li>
+  <li>“Collect” on a row means the rider takes cash at the door.</li>
+  <li>Put back returns an order to New if it was accepted by mistake.</li>
+  <li>Ring length and pause live in Delivery → Configuration → Delivery Settings.</li>
+  <li>A cancelled paid order still needs a refund.</li>
+</ul>
+
+<h2>If something goes wrong</h2>
+<table>
+  <thead><tr><th style="width:36%">What you see</th><th>What to do</th></tr></thead>
+  <tbody>
+    <tr><td>The pill shows but there is no sound</td><td>Click anywhere or press <b>Turn on the alarm</b> on the Counter. Check the browser tab is not muted and the volume is up.</td></tr>
+    <tr><td>No alarm on any screen</td><td>Check the user has <b>Salesperson</b> or <b>Website designer</b> rights, and that <b>Shop Confirms Orders</b> is on in Delivery Settings.</td></tr>
+    <tr><td>The alarm went quiet but orders are still new</td><td>The screen could not reach the server three times in a row, so it stopped rather than ring on old news. It keeps trying and rings again as soon as the server answers. Reload the page if it stays quiet.</td></tr>
+    <tr><td>No sound while the Store app is open</td><td>Expected: the Store app's <b>New Orders</b> screen rings on its own. Close it or use that screen's sound.</td></tr>
+    <tr><td>An order is missing from the Counter</td><td>Check the <b>All shops</b> selector, then the tab. Orders that are out for delivery, delivered or cancelled are only in <b>All orders</b>.</td></tr>
+    <tr><td>Accept will not let me pick a company</td><td>No company has every item in stock. Press <b>No stock anywhere - order from supplier</b>.</td></tr>
+    <tr><td>Rows show no total or tags</td><td>The server was not restarted after this module was updated. Ask your administrator to restart it.</td></tr>
+    <tr><td>Orders opens the old desk, not the Counter</td><td>This module is not installed, or was removed, so the menu opens the Orders desk directly. Ask your administrator to install it if you want the Counter.</td></tr>
+  </tbody>
+</table>
+
+</body>
+</html>

@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>369 Mart Loyalty Points — User Manual</title>
+<style>
+  :root{
+    --navy:#1e2a78; --orange:#f08a24; --ink:#1f2230; --muted:#6b6f80;
+    --line:#e6e8f0; --alt:#f2f4fb; --tint:#eef2fc;
+    --tip:#2e6fb0; --good:#2e8b57; --good-bg:#e7f6ea;
+    --warn-bg:#fff3da; --warn-ink:#c0701a;
+  }
+  @page{
+    size:A4; margin:22mm 20mm 20mm 20mm;
+    @bottom-left{content:"369ai · 369 Mart Loyalty Points"; font:8.5pt "Liberation Serif",Georgia,serif; color:#6b6f80;}
+    @bottom-right{content:"Page " counter(page); font:8.5pt "Liberation Serif",Georgia,serif; color:#6b6f80;}
+  }
+  @page:first{ margin-top:14mm; }
+  *{box-sizing:border-box}
+  html{background:#fff}
+  body{margin:0; font-family:"Liberation Serif","Times New Roman",Georgia,serif; font-size:10.5pt; line-height:1.5; color:var(--ink); background:#fff}
+  @media screen{ body{max-width:794px; margin:24px auto; padding:0 16px} }
+  p{margin:0 0 7pt}
+  b,strong{font-weight:700}
+  .k{color:var(--navy); font-weight:700}          /* navy key term */
+  code{font-family:"DejaVu Sans Mono",monospace; font-size:8.5pt; background:#f1f2f6; padding:1px 4px; border-radius:3px}
+  .arr{color:var(--navy); font-weight:700}
+
+  /* ---------- Cover ---------- */
+  .topbar{height:7px; background:var(--navy); border-bottom:3px solid var(--orange); margin:0 -8mm 10pt}
+  .cover{background:var(--navy); color:#fff; text-align:center; border-radius:9px; padding:26pt 20pt 22pt; margin-bottom:18pt}
+  .cover h1{margin:0; font-size:31pt; letter-spacing:1.5pt; font-weight:700; text-transform:uppercase}
+  .cover .sub{color:var(--orange); font-size:15pt; font-weight:700; margin:12pt 0 10pt}
+  .cover .meta{font-size:10pt; color:#d5d9ee}
+
+  /* ---------- H2 section with orange rule ---------- */
+  h2{color:var(--navy); font-size:15pt; margin:16pt 0 9pt; padding-bottom:5pt; border-bottom:1.6px solid var(--orange); page-break-after:avoid}
+
+  /* ---------- Flow cards (3–4 steps) ---------- */
+  .flow{display:flex; align-items:center; gap:6pt; margin:10pt 0 10pt}
+  .flow .card{flex:1; border:1px solid #d9dcea; border-radius:6px; padding:8pt 9pt; min-height:66pt}
+  .flow .card b{display:block; color:var(--navy); font-size:10.5pt; margin-bottom:2pt}
+  .flow .card span{font-size:8.5pt; color:var(--muted); line-height:1.35}
+  .flow .to{color:var(--orange); font-size:13pt}
+
+  /* ---------- Callouts ---------- */
+  .note{border-left:3px solid var(--orange); background:var(--tint); border-radius:0 5px 5px 0; padding:8pt 12pt; margin:10pt 0 12pt; font-size:9.5pt; page-break-inside:avoid}
+  .note .lbl{font-weight:700; text-transform:uppercase; font-size:8.5pt; letter-spacing:.3pt; margin-right:4pt}
+  .note.start .lbl{color:var(--warn-ink)}
+  .note.tip{border-color:var(--tip)}              .note.tip .lbl{color:var(--tip)}
+  .note.good{border-color:var(--good); background:var(--good-bg)} .note.good .lbl{color:var(--good)}
+  .note.imp{border-color:var(--navy)}             .note.imp .lbl{color:var(--navy)}
+  .note.warn{border-color:var(--orange); background:var(--warn-bg)} .note.warn .lbl{color:var(--warn-ink)}
+
+  /* ---------- Part banner ---------- */
+  .part{background:var(--navy); color:#fff; text-align:center; border-radius:6px; padding:12pt; margin:20pt 0 10pt; font-size:15pt; font-weight:700; letter-spacing:1.5pt; text-transform:uppercase; page-break-after:avoid}
+  .part-intro{color:var(--muted); margin-bottom:12pt}
+
+  /* ---------- Numbered step ---------- */
+  h3.step{display:flex; align-items:center; gap:9pt; color:var(--navy); font-size:13pt; margin:16pt 0 7pt; page-break-after:avoid}
+  h3.step .n{display:inline-block; min-width:17pt; height:17pt; line-height:17pt; text-align:center; background:var(--orange); color:#fff; border-radius:3px; font-family:"Liberation Sans",Arial,sans-serif; font-size:10pt; font-weight:700}
+
+  /* ---------- Field bullets (orange square markers) ---------- */
+  ul.f{list-style:none; padding:0; margin:4pt 0 8pt}
+  ul.f li{position:relative; padding-left:13pt; margin-bottom:4pt}
+  ul.f li::before{content:""; position:absolute; left:1pt; top:6.5pt; width:4pt; height:4pt; background:var(--orange)}
+  ul.f li b:first-child{color:var(--navy)}
+
+  /* ---------- Tables ---------- */
+  table{width:100%; border-collapse:collapse; margin:8pt 0 12pt; font-size:9pt}
+  thead{display:table-header-group}
+  th{background:var(--navy); color:#fff; text-align:left; padding:6pt 8pt; font-weight:700}
+  th+th{border-left:1px solid #34408a}
+  td{padding:6pt 8pt; border-bottom:1px solid var(--line); vertical-align:top}
+  tr:nth-child(even) td{background:var(--alt)}
+  td:first-child{color:var(--navy); font-weight:700}
+  tr{page-break-inside:avoid}
+
+  /* ---------- Quick tips ---------- */
+  ul.tips{margin:4pt 0 12pt; padding-left:14pt}
+  ul.tips li{margin-bottom:3pt}
+
+  /* ---------- Screenshots + glossary (added for 369 Mart manuals) ---------- */
+  figure.shot{margin:8pt 0 12pt; page-break-inside:avoid; break-inside:avoid; text-align:center}
+  figure.shot img{max-width:100%; max-height:118mm; border:1px solid var(--line); border-radius:6px; box-shadow:0 1px 4px rgba(30,42,120,.12)}
+  figure.shot.phone img{max-width:62mm}
+  figure.shot figcaption{font-size:8.5pt; color:var(--muted); margin-top:4pt; text-align:left}
+  table.gloss td:first-child{width:28%}
+  h2, h3.step, .part{break-after:avoid}
+</style>
+</head>
+<body>
+<div class="topbar"></div>
+<div class="cover">
+  <h1>369 Mart Loyalty Points</h1>
+  <div class="sub">Earn on Every Order, Spend at Checkout</div>
+  <div class="meta">User Manual &nbsp;|&nbsp; 369ai</div>
+</div>
+
+<h2>What this does</h2>
+<p><span class="k">369 Mart Loyalty Points</span> lets customers collect <span class="k">loyalty points</span> on the shop's <span class="k">loyalty card</span> every time they buy, from the shop app, the website or an order your team makes in <b>Sales</b>. Points are added at the moment you choose (by default when the order is <b>Delivered</b>), and the customer can take them off a later order at <span class="k">checkout</span>, as a discount on the bill.</p>
+<p>It is one card per customer, found by their <b>mobile number</b>, so points from the store counter and from online orders sit together. The card itself, the points rule and the card screens come from the <b>Loyalty Card</b> module. This module does the earning, the spending and the <b>giving back</b> when an order is cancelled or returned, and it <b>sends no messages of its own</b>.</p>
+<div class="flow">
+  <div class="card"><b>1. Customer orders</b><span>In the app, on the website or through Sales</span></div><span class="to">→</span>
+  <div class="card"><b>2. Points are earned</b><span>At the step you chose, by default on delivery</span></div><span class="to">→</span>
+  <div class="card"><b>3. Points are spent</b><span>As a discount at checkout, within the points rule</span></div><span class="to">→</span>
+  <div class="card"><b>4. Points come back</b><span>On a cancellation, return or removed item</span></div>
+</div>
+<div class="note start"><span class="lbl">Before you start:</span> Setup is done once by a <b>Manager</b> or <b>Owner</b>. You need the <b>Loyalty Card</b> module with one active <b>points rule</b>, and customers need a <b>mobile number</b> in their profile. Loyalty works only when it is switched on in <b>both</b> places described in Part 1. Day-to-day staff do nothing extra: points move on their own as orders move.</div>
+
+<h2>Words you'll see</h2>
+<table class="gloss">
+  <thead><tr><th>Word</th><th>What it means</th></tr></thead>
+  <tbody>
+    <tr><td>Loyalty card</td><td>The customer's points account. Each customer has one, keyed by their mobile number.</td></tr>
+    <tr><td>Points rule</td><td>The shop's numbers for earning and using points (for example ₹100 spent earns 10 points).</td></tr>
+    <tr><td>Earn</td><td>Points added to the card when an order reaches the step you chose.</td></tr>
+    <tr><td>Redeem / spend</td><td>Points taken off a new order at checkout, as a discount on the bill.</td></tr>
+    <tr><td>Held points</td><td>Points set aside for an order that is placed but not yet paid for.</td></tr>
+    <tr><td>Return window</td><td>The days after delivery during which a customer might still send something back.</td></tr>
+    <tr><td>Staff console</td><td>The separate web admin console your team uses alongside the backend.</td></tr>
+  </tbody>
+</table>
+
+<h2>How the manual is arranged</h2>
+<p><b>Part 1 – Setting Up</b> shows where the screens live, the two switches that turn loyalty on, when points are earned and the points rule. <b>Part 2 – Everyday Use</b> explains how a card is made, how points are earned, spent, held and given back, and how to look up a customer's points. <b>Part 3 – Keeping It Secure &amp; In Order</b> covers the automatic jobs, one card per person and who can do what. Reference tables, quick tips and a troubleshooting table follow.</p>
+
+<!-- ===================== PART 1 ===================== -->
+<div class="part">Part 1 — Setting Up</div>
+<p class="part-intro">Done once by a Manager or Owner. If loyalty is already on and the points rule suits you, skip to Part 2.</p>
+
+<h3 class="step"><span class="n">1</span>Where everything lives</h3>
+<p>Open <b>369 Mart <span class="arr">→</span> Loyalty</b> from the main menu. These screens come from the Loyalty Card module; this module moves them here, so the card no longer has a separate app of its own in the main menu:</p>
+<ul class="f">
+  <li><b>Loyalty Cards</b> — every customer's card, with its number, status and points.</li>
+  <li><b>Customer Details</b> — customers with a mobile number, and their card details.</li>
+  <li><b>Points History</b> — every points movement. This module adds an <b>Order</b> column, so you can see which order each line belongs to.</li>
+  <li><b>Points Rules</b> — the points rule (Managers only).</li>
+  <li><b>Loyalty Settings</b> — the shop-wide loyalty switch, mobile number format and card design (Managers only).</li>
+  <li><b>Email Settings</b> — the account card emails are sent from (Managers only).</li>
+  <li><b>Card Images</b> and <b>Download Card Images (ZIP)</b> — the printed card pictures.</li>
+</ul>
+<p>The online switches and the <b>Points are earned when</b> choice are <b>not</b> in the backend. There is no backend screen for them: they are set in the <b>staff console</b>, under <b>Settings <span class="arr">→</span> Loyalty</b>. (The backend's <b>Store <span class="arr">→</span> Settings</b> screen has no Loyalty tab.)</p>
+<div class="note good"><span class="lbl">Good to know:</span> This manual covers only what happens with orders. For the card screens themselves (card statuses, the card design, emails, deleting and restoring cards, card images) see the <b>Loyalty Card</b> user manual.</div>
+
+<h3 class="step"><span class="n">2</span>Switch loyalty on, in both places</h3>
+<p>Two switches must be on before anything is earned or spent.</p>
+<ul class="f">
+  <li><b>Enable Loyalty (master)</b> — in the backend, <b>369 Mart <span class="arr">→</span> Loyalty <span class="arr">→</span> Loyalty Settings</b>. The shop-wide switch for the whole loyalty card. On by default.</li>
+  <li><b>Points on orders</b> — in the staff console, <b>Settings <span class="arr">→</span> Loyalty</b>. App orders and orders made in Sales earn points on the customer's card. On by default.</li>
+  <li><b>Spend points at checkout</b> — in the same console tab. Customers can take points off an app order, within the points rule, once a day. On by default. Off: customers keep earning but cannot spend.</li>
+</ul>
+<p>Press <b>Save changes</b> at the top of the console screen after changing the Loyalty tab.</p>
+<div class="note imp"><span class="lbl">Important:</span> If <b>Enable Loyalty (master)</b> is off, nothing is earned or spent online either, whatever the console says. The console's Loyalty tab then shows a note: <i>Loyalty is switched off for the whole shop…</i>. Customers see <i>Loyalty points are resting</i>; their points are kept.</div>
+
+<h3 class="step"><span class="n">3</span>Choose when points are earned</h3>
+<p>In the staff console, <b>Settings <span class="arr">→</span> Loyalty</b>, pick one option under <b>Points are earned when</b>. Whichever you choose, a cancelled order keeps no points and a refund takes back its share.</p>
+<table>
+  <thead><tr><th style="width:30%">Option</th><th>When an app order earns</th></tr></thead>
+  <tbody>
+    <tr><td>Order placed</td><td>As soon as it is paid for, or cash on delivery is accepted. A cancellation takes the points back.</td></tr>
+    <tr><td>Packed or shipped</td><td>Once the store has packed it (a Quick order) or shipped it (an Express order).</td></tr>
+    <tr><td>Out for delivery</td><td>When it leaves with the rider.</td></tr>
+    <tr><td>Delivered (default)</td><td>When the customer has it. Cancelled orders never earn.</td></tr>
+    <tr><td>Return window closed</td><td>A set number of days after delivery, once a return is no longer likely. Returns before then simply earn less.</td></tr>
+  </tbody>
+</table>
+<ul class="f">
+  <li><b>Days after delivery</b> — shown only with <b>Return window closed</b>. A whole number from 1 to 90; default <b>7</b>. Quick picks: 3, 7, 10, 14 and 30.</li>
+</ul>
+<div class="note good"><span class="lbl">Good to know:</span> Orders made in <b>Sales</b> have no packing or rider steps. For them, <b>Order placed</b> means when the order is confirmed; every other option means when its delivery is done (all its outgoing deliveries validated).</div>
+<div class="note tip"><span class="lbl">Tip:</span> The later the step, the fewer points you take back after cancellations and returns. <b>Delivered</b> is a safe middle choice.</div>
+
+<h3 class="step"><span class="n">4</span>Check the points rule</h3>
+<p>The rule is changed in one place only: <b>369 Mart <span class="arr">→</span> Loyalty <span class="arr">→</span> Points Rules</b>. Only one rule is active at a time. The console's Loyalty tab shows it for reading, under <b>The points rule</b>. This module uses its fields like this:</p>
+<ul class="f">
+  <li><b>Spend Amount</b> and <b>Points Earned</b> — spend this much, earn that many points. Default ₹100 → 10 points.</li>
+  <li><b>Min Points to Redeem</b> — the customer needs at least this many points to use any. Default 100.</li>
+  <li><b>Points per ₹1</b> — how many points take ₹1 off. Default 10.</li>
+  <li><b>Max Redeem %</b> — the largest share of an order points may pay. Default 100. Left at 0, it counts as 100%.</li>
+</ul>
+<div class="note warn"><span class="lbl">Watch out:</span> With no points rule at all, no order earns and checkout offers no points. The console shows <i>There is no points rule yet.</i></div>
+
+<!-- ===================== PART 2 ===================== -->
+<div class="part">Part 2 — Everyday Use</div>
+<p class="part-intro">Once Part 1 is done, points move on their own as orders move. These steps explain what happens, so you can answer customers' questions.</p>
+
+<h3 class="step"><span class="n">1</span>How a customer gets a card</h3>
+<p>There is nothing to create by hand. The first time one of a customer's orders earns points, the card is found or made:</p>
+<ul class="f">
+  <li><b>Already linked</b> — a card already linked to the customer is used.</li>
+  <li><b>Same mobile number</b> — otherwise a card with the customer's mobile number is used, for example one given out at the store counter, and it is linked to them.</li>
+  <li><b>No card yet</b> — a new <b>Active</b> card is made with their name, mobile number and email. It is made quietly: <b>no welcome message</b> is sent.</li>
+</ul>
+<p>Opening a customer's profile or the points page never makes a card. Until their first order earns, the customer's points page says their card starts with their first order, on the mobile number in their profile.</p>
+<div class="note warn"><span class="lbl">Watch out:</span> A customer with <b>no mobile number</b> gets no card and earns no points. Add the number to their profile; later orders will then earn.</div>
+
+<h3 class="step"><span class="n">2</span>How points are earned</h3>
+<p>When an order reaches the step chosen in Part 1, the points are added to the card once. They are worked out on <b>what the items cost after any coupon and points discount, without the delivery charge</b>, less anything already refunded.</p>
+<p>Example, with the default rule (₹100 → 10 points): items of ₹500, a ₹20 coupon and ₹30 delivery earn on ₹480, which is <b>48 points</b>.</p>
+<p>An order earns only once, even if it later passes the same step again. An order that is cancelled, or never paid for, earns nothing. A card that is not <b>Active</b> earns nothing.</p>
+
+<h3 class="step"><span class="n">3</span>How points are spent at checkout</h3>
+<p>A signed-in customer with points sees a <b>Loyalty points</b> row at checkout, with their balance and how much they can save. When they tick it, the bill shows a <b>Loyalty points</b> line with a minus amount, just like a coupon. The points rule decides how many can be used:</p>
+<ul class="f">
+  <li><b>Minimum</b> — the card must hold at least <b>Min Points to Redeem</b>.</li>
+  <li><b>Value</b> — every <b>Points per ₹1</b> points take ₹1 off.</li>
+  <li><b>Maximum share</b> — no more than <b>Max Redeem %</b> of the order total, and never below zero.</li>
+  <li><b>Once a day</b> — one spend per card per calendar day, counting the store counter too.</li>
+</ul>
+<p>The customer does not type a number: the row offers the largest amount allowed, and they use it or not. If points cannot be used, the row says why (see the reference table). The order then shows a line named <b>Loyalty points (N)</b>, where N is the points spent.</p>
+<div class="note good"><span class="lbl">Good to know:</span> Going back to change the delivery slot is not a second spend. Only a paid order counts toward the once-a-day limit.</div>
+
+<h3 class="step"><span class="n">4</span>Points held on unpaid orders</h3>
+<p>Points used at checkout leave the card as soon as the order is placed, even before payment, so the same points cannot go on a second basket. While the order is unpaid the hold is soft:</p>
+<ul class="f">
+  <li><b>Placing again</b> — if the customer goes back and places the order again, the held points return first and are taken again.</li>
+  <li><b>Never paid</b> — an hourly automatic job gives back points held by an unpaid basket left untouched for more than <b>24 hours</b>. The line is removed, not shown as a refund.</li>
+  <li><b>Paid later after all</b> — the points are taken again when the order is placed; if fewer are left on the card, only what is left is taken.</li>
+</ul>
+
+<h3 class="step"><span class="n">5</span>Cancellations, returns and removed items</h3>
+<p>Points follow the money:</p>
+<ul class="f">
+  <li><b>Earned points</b> — any refund (a cancellation refund, a return, an item taken out of the order) takes back a <b>share</b> of the points the order earned, in proportion to the amount refunded. Taking out an item on a cash-on-delivery order refunds nothing but still lowers the points.</li>
+  <li><b>Spent points</b> — come back to the card only when the order is <b>cancelled</b> or <b>refunded in full</b>. A partial return already refunds the item at its full price, so no share of the spent points comes back.</li>
+  <li><b>Cancelled order</b> — keeps nothing it earned and loses nothing it spent.</li>
+</ul>
+<div class="note warn"><span class="lbl">Watch out:</span> The card never goes below zero. If the customer already spent the points an order earned, only what is left on the card is taken back.</div>
+
+<h3 class="step"><span class="n">6</span>Orders made in Sales</h3>
+<p>Orders your team creates in <b>Sales</b> earn on the same card, by the same rule. They earn when confirmed (with <b>Order placed</b>) or when their delivery is done (any other option, or after the return window). Cancelling the order takes its points back. Posting a <b>credit note</b> takes back a share in proportion to the amount credited. Customers spend points only at the app or website checkout, not on Sales orders.</p>
+
+<h3 class="step"><span class="n">7</span>Looking up a customer's points</h3>
+<table>
+  <thead><tr><th style="width:30%">Where</th><th>What you see</th></tr></thead>
+  <tbody>
+    <tr><td>Loyalty <span class="arr">→</span> Loyalty Cards</td><td>The card, its status and its points balance.</td></tr>
+    <tr><td>Loyalty <span class="arr">→</span> Points History</td><td>Every movement, store counter and online together, with the <b>Order</b> each belongs to. Open a line to see its order.</td></tr>
+    <tr><td>Staff console customer profile</td><td>A <b>Loyalty points</b> card with the balance, card number and the last 20 movements, beside the wallet. <i>No points yet</i> when there are none.</td></tr>
+  </tbody>
+</table>
+
+<h3 class="step"><span class="n">8</span>What the customer sees</h3>
+<ul class="f">
+  <li><b>Points page</b> — on their account: the balance, card number, how points are earned and used under your rule, and the history, with <b>All</b>, <b>Earned</b> and <b>Used</b> tabs. Unpaid baskets are not listed.</li>
+  <li><b>Checkout</b> — the <b>Loyalty points</b> row, the minus line on the bill, and <i>You'll earn N points…</i> with the step you chose.</li>
+  <li><b>Order page</b> — points used on the bill, <i>You'll earn…</i> or <i>You earned N loyalty points on this order</i>, and after a cancellation, how many points are back on the card.</li>
+</ul>
+
+<!-- ===================== PART 3 ===================== -->
+<div class="part">Part 3 — Keeping It Secure &amp; In Order</div>
+
+<h3 class="step"><span class="n">1</span>The two automatic jobs</h3>
+<table>
+  <thead><tr><th style="width:30%">Job</th><th>What it does</th></tr></thead>
+  <tbody>
+    <tr><td>Daily: return window</td><td>Only when <b>Return window closed</b> is chosen. Adds points to orders delivered at least <b>Days after delivery</b> ago; an order with an open return waits. It looks back only 30 days, so old orders are not paid out.</td></tr>
+    <tr><td>Hourly: unpaid baskets</td><td>Gives back points held by baskets left unpaid for more than 24 hours.</td></tr>
+  </tbody>
+</table>
+<p>Both run on their own. A problem with points never stops an order from moving on.</p>
+
+<h3 class="step"><span class="n">2</span>One card per person</h3>
+<p>A card is matched to a customer first, and by mobile number only if they have no card. A card that already belongs to <b>someone else</b> is never used, even when the number matches: the number may have changed hands, but the points did not. In that case the customer gets no card and earns nothing until the numbers are sorted out in <b>Loyalty Cards</b>.</p>
+<div class="note imp"><span class="lbl">Important:</span> The same points can never be spent twice at the same moment. If the balance changed in between, the customer sees <i>Your points balance has just changed. Please check the bill again.</i></div>
+
+<h3 class="step"><span class="n">3</span>Who can do what</h3>
+<table style="break-inside:avoid">
+  <thead><tr><th style="width:30%">Role</th><th>What they can do</th></tr></thead>
+  <tbody>
+    <tr><td>Loyalty User</td><td>Opens Loyalty Cards, Customer Details, Points History, Card Images and Download Card Images (ZIP).</td></tr>
+    <tr><td>Loyalty Manager</td><td>Also Points Rules, Loyalty Settings and Email Settings.</td></tr>
+    <tr><td>Manager</td><td>Gets Loyalty Manager automatically, and can change the console's <b>Settings <span class="arr">→</span> Loyalty</b> tab.</td></tr>
+    <tr><td>Owner / Administrator (Settings)</td><td>Everything.</td></tr>
+    <tr><td>Packer, Accountant, Rider, Internal user</td><td>No Loyalty menus unless given Loyalty User.</td></tr>
+  </tbody>
+</table>
+
+<h3 class="step"><span class="n">4</span>Messages and privacy</h3>
+<p>This module sends no SMS, email or WhatsApp. A card made by an order is made silently, even when card emails are switched on in Loyalty Settings. Customers see only their own card and history.</p>
+
+<!-- ===================== REFERENCE ===================== -->
+<h2>Status reference — Points History lines</h2>
+<table>
+  <thead><tr><th style="width:20%">Type</th><th>Meaning</th><th style="width:30%">How it happens</th></tr></thead>
+  <tbody>
+    <tr><td>Earned</td><td>Points added for an order (<i>Points earned</i>).</td><td>The order reached the chosen step.</td></tr>
+    <tr><td>Redeemed</td><td>Points used at checkout (<i>Points used</i>).</td><td>The customer used points on an order.</td></tr>
+    <tr><td>Returned</td><td>Earned points taken back (<i>Points taken back</i>).</td><td>A cancellation, return, removed item or credit note.</td></tr>
+    <tr><td>Refunded</td><td>Spent points put back on the card (<i>Points given back</i>).</td><td>The order was cancelled or refunded in full.</td></tr>
+  </tbody>
+</table>
+
+<h2>Why points can't be used at checkout</h2>
+<table>
+  <thead><tr><th style="width:38%">The customer sees</th><th>Reason</th></tr></thead>
+  <tbody>
+    <tr><td>Your loyalty card is paused. Ask at the store.</td><td>The card is not <b>Active</b> (for example Suspended).</td></tr>
+    <tr><td>Points can be used from N. You have M.</td><td>Below <b>Min Points to Redeem</b>.</td></tr>
+    <tr><td>This order is too small to use your points.</td><td>The <b>Max Redeem %</b> share of this order is below the minimum.</td></tr>
+    <tr><td>Points can be used once a day. Try again tomorrow.</td><td>Points were already spent today, online or at the counter.</td></tr>
+    <tr><td>No points row at all</td><td><b>Spend points at checkout</b> is off, the customer has no card or no points, or loyalty is off.</td></tr>
+  </tbody>
+</table>
+
+<h2>When each kind of order earns</h2>
+<table style="break-inside:avoid">
+  <thead><tr><th style="width:28%">Points are earned when</th><th>App or website order</th><th style="width:32%">Order made in Sales</th></tr></thead>
+  <tbody>
+    <tr><td>Order placed</td><td>Paid, or cash on delivery accepted</td><td>Confirmed</td></tr>
+    <tr><td>Packed or shipped</td><td>Packed (Quick) or shipped (Express)</td><td>Delivery done</td></tr>
+    <tr><td>Out for delivery</td><td>Leaves with the rider</td><td>Delivery done</td></tr>
+    <tr><td>Delivered</td><td>Delivered to the customer</td><td>Delivery done</td></tr>
+    <tr><td>Return window closed</td><td>Days after delivery, by the daily job</td><td>Days after the last delivery, by the daily job</td></tr>
+  </tbody>
+</table>
+
+<h2>Quick tips</h2>
+<ul class="tips">
+  <li>Loyalty works only with <b>Enable Loyalty (master)</b> and the console's <b>Points on orders</b> both on.</li>
+  <li><b>Points are earned when</b> is set only in the staff console, under Settings → Loyalty.</li>
+  <li>Change the rule in one place: Loyalty → Points Rules.</li>
+  <li>No mobile number in the profile means no card and no points.</li>
+  <li>Earned points are taken back in proportion to refunds; spent points come back only on a full cancel or refund.</li>
+  <li>Points are earned on items after discounts, never on the delivery charge.</li>
+  <li>Use the <b>Order</b> column in Points History to trace any movement.</li>
+  <li>Points on an unpaid basket return to the card within about a day.</li>
+</ul>
+
+<h2>If something goes wrong</h2>
+<table>
+  <thead><tr><th style="width:36%">What you see</th><th>What to do</th></tr></thead>
+  <tbody>
+    <tr><td>No order earns points</td><td>Check <b>Enable Loyalty (master)</b> in Loyalty → Loyalty Settings, <b>Points on orders</b> in the console's Settings → Loyalty, and that Loyalty → Points Rules has an active rule.</td></tr>
+    <tr><td>A delivered order has no points yet</td><td>Look at <b>Points are earned when</b> in the console. With <b>Return window closed</b>, points come by the daily job after the set days, and not while a return is open.</td></tr>
+    <tr><td>One customer never earns</td><td>Check their profile has a mobile number. In Loyalty Cards, check their card is Active and that no other customer's card holds the same number.</td></tr>
+    <tr><td>Customers cannot use points</td><td>Check <b>Spend points at checkout</b> in the console. The checkout row explains other reasons (minimum, once a day, order too small, card paused).</td></tr>
+    <tr><td>A customer says points are missing after a basket they didn't pay for</td><td>They return on their own within about a day (24 hours untouched, checked hourly). Points History shows the movements.</td></tr>
+    <tr><td>Fewer points taken back than earned after a return</td><td>The card never goes below zero; points already spent stay spent.</td></tr>
+    <tr><td>Checkout says <i>The loyalty points product is missing</i></td><td>The hidden <b>Loyalty points</b> product that carries the discount line was deleted. Ask your administrator to reinstall <b>369 Mart Loyalty Points</b>.</td></tr>
+    <tr><td>Checkout says <i>Your loyalty card cannot be used right now</i></td><td>The card is not Active. Open it in Loyalty Cards and check its status.</td></tr>
+  </tbody>
+</table>
+
+</body>
+</html>
