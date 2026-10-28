@@ -66,3 +66,17 @@
 | render.js | HTML → A4 PDF with Chromium from 369Mart's Playwright install, pointed at the installed `chromium_headless_shell-1228`. WeasyPrint is not installed. |
 | pages.py | PDF pages → PNG images for review. Needs PyMuPDF. |
 | index.js | Builds `index.html` in the same look. |
+
+## The combined guide (Word + PDF)
+
+`369_Mart_Complete_Setup_and_Ordering_Guide.docx` / `.pdf` (28 Oct 2026, 188 pages): every module manual in one book,
+in setup order, plus new chapters: Start here (what to install), How an order works, Your first product (worked
+example), Delivery setup and Payment methods setup (every step in order), an "In simple words" box per chapter and
+an A–Z glossary.
+
+To rebuild after a manual changes:
+1. In a scratch folder: `npm install docx@9.5.0`, then copy `_tools\guide\build.js` and `extra.js` there.
+2. `node build.js "<this folder>" guide.docx`. It reads every `<module>\*_User_Manual.html` and its screenshots.
+3. Open `guide.docx` in Word, right-click the contents and choose Update Field, then save it as .docx and as PDF here.
+
+New wording lives in `extra.js`. The module manuals stay the single source for everything else.
