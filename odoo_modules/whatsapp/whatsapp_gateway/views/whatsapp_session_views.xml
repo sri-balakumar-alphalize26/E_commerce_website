@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ============ SESSION FORM ============
+         No Connect button and no QR block. Pairing happens once on the
+         gateway; a QR here would be a second, competing source of truth.
+    -->
+    <record id="view_whatsapp_session_form" model="ir.ui.view">
+        <field name="name">whatsapp.session.form</field>
+        <field name="model">whatsapp.session</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_test_connection"
+                            string="Test Connection"
+                            type="object"
+                            class="btn-primary"/>
+                    <button name="action_fetch_config"
+                            string="Load Settings"
+                            type="object"
+                            class="btn-secondary"
+                            help="Ask the panel which number and name this database should use."/>
+                    <field name="status" widget="statusbar"
+                           statusbar_visible="disconnected,connecting,connected,wrong_number"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_messages"
+                                type="object"
+                                class="oe_stat_button"
+                                icon="fa-comments">
+                            <field name="message_count"
+                                   widget="statinfo"
+                                   string="Messages"/>
+                        </button>
+                    </div>
+                    <div class="oe_title">
+                        <label for="name"/>
+                        <h1>
+                            <field name="name"
+                                   placeholder="e.g. Company WhatsApp"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group string="Connection">
+                            <field name="is_activated" widget="boolean_toggle" readonly="1"/>
+                            <field name="gateway_api_key" password="True"
+                                   string="Setup Key" groups="base.group_system"
+                                   placeholder="wa1_... paste from the panel and save"/>
+                            <field name="gateway_url" readonly="1" groups="base.group_system"/>
+                            <field name="instance_name" readonly="1" groups="base.group_system"/>
+                            <field name="phone_number" readonly="1" groups="base.group_system"/>
+                            <field name="authorized_number" readonly="1"/>
+                            <field name="authorized_email" readonly="1"/>
+                        </group>
+                        <group string="Channels">
+                            <field name="use_whatsapp"/>
+                            <field name="use_email"/>
+                            <field name="route_odoo_mail" groups="base.group_system"/>
+                            <field name="tenant_label" readonly="1"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="active" invisible="1"/>
+                        </group>
+                    </group>
+
+                    <div invisible="status != 'wrong_number'"
+                         class="alert alert-danger mt-3" role="alert">
+                        <b>Wrong phone.</b>
+                        The QR was scanned with a phone other than
+                        <field name="authorized_number" readonly="1" nolabel="1"
+                               class="oe_inline"/>, the only number the panel
+                        allows for this database, so it was logged out again.
+                        Scan the QR in the panel with the right phone, then press
+                        <b>Test Connection</b>.
+                    </div>
+                    <div invisible="status in ('connected', 'wrong_number')"
+                         class="alert alert-warning mt-3" role="alert">
+                        <b>Not sending.</b>
+                        The gateway is unreachable, no number is assigned to this
+                        database, or the number
+                        <field name="authorized_number" readonly="1" nolabel="1"
+                               class="oe_inline"/>
+                        has not been paired. Scan its QR in the panel with that
+                        phone, then press <b>Test Connection</b>.
+                    </div>
+
+                    <div invisible="not error_message"
+                         class="alert alert-danger mt-3" role="alert">
+                        <field name="error_message" readonly="1" nolabel="1"/>
+                    </div>
+
+                    <notebook>
+                        <page string="Protecting the Number" name="policy" groups="base.group_system">
+                            <div class="alert alert-info" role="status">
+                                Shown for reference only. The gateway enforces the
+                                real limits - the daily cap, the sending rate, the
+                                opt-out list and blocked words - on the server,
+                                where no 369ai database can get around them.
+                                Change them in the WhatsApp panel.
+                            </div>
+                            <group>
+                                <group string="Limits">
+                                    <field name="send_delay_ms" readonly="1"/>
+                                    <field name="daily_cap" readonly="1"/>
+                                    <field name="dedupe_minutes" readonly="1"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="Incoming" name="incoming" groups="base.group_system">
+                            <group>
+                                <field name="webhook_url" readonly="1"
+                                       widget="CopyClipboardChar"/>
+                                <field name="webhook_secret"
+                                       groups="base.group_no_one"/>
+                                <field name="state_checked" readonly="1"
+                                       groups="base.group_no_one"/>
+                            </group>
+                            <div class="text-muted">
+                                Nothing to press. This address is sent to the panel
+                                with <b>Load Settings</b> (and every few minutes by
+                                the cron); the panel forwards every incoming message
+                                on this database's number here, with an
+                                <code>X-Odoo-Database</code> header naming this
+                                database. A number shared by several databases
+                                delivers to all of them.
+                            </div>
+                        </page>
+                        <page string="Messages" name="messages">
+                            <field name="message_ids" readonly="1">
+                                <list>
+                                    <field name="create_date" string="Time"/>
+                                    <field name="direction"/>
+                                    <field name="phone"/>
+                                    <field name="partner_id"/>
+                                    <field name="message"/>
+                                    <field name="status" widget="badge"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- ============ SESSION LIST ============ -->
+    <record id="view_whatsapp_session_list" model="ir.ui.view">
+        <field name="name">whatsapp.session.list</field>
+        <field name="model">whatsapp.session</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name"/>
+                <field name="phone_number"/>
+                <field name="instance_name"/>
+                <field name="tenant_label" optional="show"/>
+                <field name="company_id"
+                       groups="base.group_multi_company"
+                       optional="hide"/>
+                <field name="status" widget="badge"/>
+                <field name="message_count" string="Messages"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- ============ SESSION ACTION ============ -->
+    <record id="action_whatsapp_session" model="ir.actions.act_window">
+        <field name="name">WhatsApp Sessions</field>
+        <field name="res_model">whatsapp.session</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Point 369ai at your WhatsApp gateway
+            </p>
+            <p>
+                Create a session, paste the gateway URL and API key, and name
+                the instance to send through. The number itself is paired once
+                on the gateway - not here, and not per database.
+            </p>
+        </field>
+    </record>
+
+</odoo>

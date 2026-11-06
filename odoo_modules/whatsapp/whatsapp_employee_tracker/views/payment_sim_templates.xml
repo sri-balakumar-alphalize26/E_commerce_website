@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+      The dummy payment pages (wa_pay_upi, wa_pay_card, wa_pay_success) were
+      removed with the /wa/pay/<id>/confirm route they submitted to. That route
+      marked orders paid without a gateway. /wa/pay/<id> now redirects to the
+      order's portal page, which renders the real providers.
+    -->
+</odoo>

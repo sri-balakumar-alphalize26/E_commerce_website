@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Auto Reply Log: List View -->
+    <record id="view_wa_auto_reply_list" model="ir.ui.view">
+        <field name="name">wa.auto.reply.list</field>
+        <field name="model">wa.auto.reply</field>
+        <field name="arch" type="xml">
+            <list string="Auto Reply Log"
+                   decoration-danger="status == 'failed'"
+                   decoration-warning="status == 'no_match'"
+                   decoration-success="status == 'sent'">
+                <field name="create_date" string="Time"/>
+                <field name="employee_session_id"/>
+                <field name="phone"/>
+                <field name="customer_message"/>
+                <field name="reply_type"/>
+                <field name="matched_products"/>
+                <field name="selected_product_id" optional="show"/>
+                <field name="offered_price" optional="show"/>
+                <field name="order_id" optional="show"/>
+                <field name="status"/>
+                <field name="error" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Auto Reply Log: Form View -->
+    <record id="view_wa_auto_reply_form" model="ir.ui.view">
+        <field name="name">wa.auto.reply.form</field>
+        <field name="model">wa.auto.reply</field>
+        <field name="arch" type="xml">
+            <form string="Auto Reply Detail">
+                <sheet>
+                    <group>
+                        <group string="Details">
+                            <field name="create_date"/>
+                            <field name="employee_session_id"/>
+                            <field name="conversation_id"/>
+                            <field name="phone"/>
+                            <field name="reply_type"/>
+                            <field name="status"/>
+                        </group>
+                        <group string="Products &amp; Order">
+                            <field name="matched_products"/>
+                            <field name="selected_product_id"/>
+                            <field name="offered_price"/>
+                            <field name="order_id"/>
+                        </group>
+                    </group>
+                    <group>
+                        <field name="customer_message"/>
+                        <field name="reply_message"/>
+                        <field name="error" invisible="not error"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_wa_auto_reply_log" model="ir.actions.act_window">
+        <field name="name">Auto Reply Log</field>
+        <field name="res_model">wa.auto.reply</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+</odoo>

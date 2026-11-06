@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ============ MESSAGE FORM VIEW ============ -->
+    <record id="view_whatsapp_message_form" model="ir.ui.view">
+        <field name="name">whatsapp.message.form</field>
+        <field name="model">whatsapp.message</field>
+        <field name="arch" type="xml">
+            <form create="false">
+                <sheet>
+                    <group>
+                        <group string="Message Details">
+                            <field name="direction"/>
+                            <field name="phone"/>
+                            <field name="partner_id"/>
+                            <field name="status" widget="badge"/>
+                            <field name="create_date"/>
+                        </group>
+                        <group string="Session">
+                            <field name="session_id"/>
+                            <field name="wa_message_id"
+                                   groups="base.group_no_one"/>
+                            <field name="is_group"/>
+                        </group>
+                    </group>
+                    <group string="Message Content">
+                        <field name="message" nolabel="1" colspan="2"/>
+                    </group>
+                    <group string="Attachments">
+                        <field name="attachment_ids"
+                               nolabel="1" colspan="2"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- ============ MESSAGE LIST VIEW ============ -->
+    <record id="view_whatsapp_message_list" model="ir.ui.view">
+        <field name="name">whatsapp.message.list</field>
+        <field name="model">whatsapp.message</field>
+        <field name="arch" type="xml">
+            <list create="false">
+                <field name="create_date" string="Time"/>
+                <field name="channel" widget="badge"/>
+                <field name="direction"/>
+                <field name="phone" string="To"/>
+                <field name="partner_id"/>
+                <field name="message_preview" string="Message"/>
+                <field name="session_id"/>
+                <field name="status" widget="badge"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- ============ MESSAGE SEARCH ============ -->
+    <record id="view_whatsapp_message_search" model="ir.ui.view">
+        <field name="name">whatsapp.message.search</field>
+        <field name="model">whatsapp.message</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="phone" string="To"/>
+                <field name="partner_id"/>
+                <field name="message" string="Message text"/>
+                <separator/>
+                <filter name="chan_whatsapp" string="WhatsApp"
+                        domain="[('channel', '=', 'whatsapp')]"/>
+                <filter name="chan_email" string="Email"
+                        domain="[('channel', '=', 'email')]"/>
+                <separator/>
+                <filter name="st_sent" string="Sent"
+                        domain="[('status', 'in', ['sent', 'delivered', 'read'])]"/>
+                <filter name="st_pending" string="Waiting"
+                        domain="[('status', '=', 'pending')]"/>
+                <!-- Blocked sits beside failed on purpose: to anyone asking why a
+                     customer never heard from us, "we chose not to" and "it broke"
+                     are the same question. -->
+                <filter name="st_failed" string="Failed or blocked"
+                        domain="[('status', 'in', ['failed', 'blocked'])]"/>
+                <separator/>
+                <filter name="today" string="Today"
+                        domain="[('create_date', '&gt;=', context_today().strftime('%Y-%m-%d 00:00:00'))]"/>
+                <group>
+                    <filter name="g_channel" string="Channel" context="{'group_by': 'channel'}"/>
+                    <filter name="g_status" string="Status" context="{'group_by': 'status'}"/>
+                    <filter name="g_session" string="Session" context="{'group_by': 'session_id'}"/>
+                    <filter name="g_day" string="Day" context="{'group_by': 'create_date:day'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- ============ MESSAGE ACTION ============ -->
+    <record id="action_whatsapp_message" model="ir.actions.act_window">
+        <field name="name">WhatsApp and Email Activity</field>
+        <field name="res_model">whatsapp.message</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_whatsapp_message_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Nothing sent yet</p>
+            <p>Every WhatsApp message and every email this database sends
+               through the connector is listed here.</p>
+        </field>
+    </record>
+
+</odoo>

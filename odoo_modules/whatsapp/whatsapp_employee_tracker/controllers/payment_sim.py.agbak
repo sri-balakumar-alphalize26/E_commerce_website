@@ -1,0 +1,50 @@
+# -*- coding: utf-8 -*-
+import base64
+import logging
+from odoo import http
+from odoo.http import request
+
+_logger = logging.getLogger(__name__)
+
+
+class WaPaymentSim(http.Controller):
+    """Dummy TEST-mode payment pages (UPI QR + Card form). No real gateway."""
+
+    def _get_order(self, order_id, token):
+        order = request.env['sale.order'].sudo().browse(int(order_id))
+        if not order.exists() or not token or token != order.access_token:
+            return None
+        return order
+
+    @http.route('/wa/pay/<int:order_id>', type='http', auth='public', csrf=False)
+    def wa_pay(self, order_id, method='upi', token=None, **kw):
+        order = self._get_order(order_id, token)
+        if not order:
+            return request.not_found()
+        amount = order.amount_total
+        sym = order.currency_id.symbol or ''
+        if method == 'card':
+            return request.render('whatsapp_employee_tracker.wa_pay_card', {
+                'order': order, 'token': token, 'amount': amount, 'sym': sym})
+        qr_src = ''
+        try:
+            upi = "upi://pay?pa=demo@upi&pn=Demo Store&am=%.2f&cu=INR&tn=%s" % (amount, order.name)
+            png = request.env['ir.actions.report'].sudo().barcode('QR', upi, width=320, height=320)
+            qr_src = 'data:image/png;base64,' + base64.b64encode(png).decode()
+        except Exception as e:
+            _logger.warning("UPI QR gen failed: %s", e)
+        return request.render('whatsapp_employee_tracker.wa_pay_upi', {
+            'order': order, 'token': token, 'amount': amount, 'sym': sym, 'qr_src': qr_src})
+
+    @http.route('/wa/pay/<int:order_id>/confirm', type='http', auth='public',
+                methods=['POST', 'GET'], csrf=False)
+    def wa_pay_confirm(self, order_id, token=None, **kw):
+        order = self._get_order(order_id, token)
+        if not order:
+            return request.not_found()
+        try:
+            order._wa_finalize(paid=True)
+        except Exception as e:
+            _logger.error("wa_pay_confirm finalize failed: %s", e)
+        return request.render('whatsapp_employee_tracker.wa_pay_success', {
+            'order': order, 'sym': order.currency_id.symbol or ''})

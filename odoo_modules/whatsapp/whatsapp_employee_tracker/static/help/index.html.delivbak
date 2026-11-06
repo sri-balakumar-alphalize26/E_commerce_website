@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Employee Tracker &amp; Sales Agent - User Manual</title>
+<style>
+  :root{--g:#1ba784;--d:#0b3d2e;--bg:#f5f7f6;--card:#fff;--bd:#e3e8e6;}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:#1a1a1a;line-height:1.6}
+  header{background:linear-gradient(135deg,var(--g),var(--d));color:#fff;padding:28px 20px;text-align:center}
+  header h1{margin:0;font-size:25px}
+  header p{margin:6px 0 0;opacity:.9}
+  .wrap{max-width:940px;margin:0 auto;padding:20px}
+  .toc{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:16px 22px;margin:18px 0}
+  .toc a{color:var(--g);text-decoration:none;display:inline-block;margin:4px 14px 4px 0;font-weight:600}
+  .card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:20px 24px;margin:16px 0;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+  .card h2{margin-top:0;color:var(--d);border-bottom:2px solid var(--g);padding-bottom:8px;display:inline-block}
+  .step{display:flex;gap:14px;margin:12px 0;align-items:flex-start}
+  .num{flex:0 0 30px;height:30px;background:var(--g);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700}
+  .flow{background:#eef7f4;border-left:4px solid var(--g);padding:12px 16px;border-radius:8px;font-family:Consolas,monospace;white-space:pre-wrap;margin:12px 0;font-size:13px}
+  table{width:100%;border-collapse:collapse;margin:12px 0}
+  th,td{border:1px solid var(--bd);padding:9px 12px;text-align:left;vertical-align:top}
+  th{background:#eef7f4;color:var(--d)}
+  .tip{background:#fff8e6;border-left:4px solid #f0b400;padding:10px 14px;border-radius:8px;margin:12px 0}
+  .warn{background:#fdecec;border-left:4px solid #e23b3b;padding:10px 14px;border-radius:8px;margin:12px 0}
+  code{background:#eef1f0;padding:2px 6px;border-radius:4px;font-size:.92em}
+  footer{text-align:center;color:#7a857f;padding:24px;font-size:13px}
+  .two{display:flex;gap:16px;flex-wrap:wrap}
+  .two>div{flex:1;min-width:260px}
+</style>
+</head>
+<body>
+<header>
+  <h1>&#128241; Employee Tracker &amp; Sales Agent</h1>
+  <p>WhatsApp sales assistant &amp; employee monitoring &middot; User Manual</p>
+</header>
+<div class="wrap">
+
+  <div class="toc">
+    <strong>Contents:</strong><br/>
+    <a href="#what">1. Overview</a>
+    <a href="#setup">2. First-time Setup</a>
+    <a href="#auto">3. Auto-Reply Bot</a>
+    <a href="#bargain">4. Price Bargain</a>
+    <a href="#customer">5. Customer Types</a>
+    <a href="#checkout">6. Checkout Settings</a>
+    <a href="#payment">7. Payment (UPI / Card / COD)</a>
+    <a href="#invoice">8. Invoice: Automatic vs Agent-verify</a>
+    <a href="#menus">9. Where is what</a>
+    <a href="#trouble">10. Troubleshooting</a>
+  </div>
+
+  <div class="card" id="what">
+    <h2>1. Overview</h2>
+    <p>This module does two jobs: <b>(a) monitors</b> how employees use the company WhatsApp numbers, and <b>(b) acts as a sales agent</b> &mdash; when a customer messages in, the bot suggests products, negotiates price, takes the order, collects the delivery address, takes payment (UPI / Card / Cash on Delivery), and sends the invoice &mdash; all on WhatsApp.</p>
+    <p>Every step is <b>configurable per employee session</b>.</p>
+  </div>
+
+  <div class="card" id="setup">
+    <h2>2. First-time Setup</h2>
+    <div class="step"><div class="num">1</div><div><b>Connect WhatsApp:</b> WhatsApp &gt; Sessions &rarr; scan QR (status = Connected).</div></div>
+    <div class="step"><div class="num">2</div><div><b>Employee Session:</b> WA Tracker &gt; Configuration &gt; Employee Sessions &gt; New &rarr; pick Employee + WhatsApp Session + phone.</div></div>
+    <div class="step"><div class="num">3</div><div>Keep <b>Enable Monitoring</b> ON &rarr; Save.</div></div>
+    <div class="step"><div class="num">4</div><div>Turn on <b>Enable Auto-Reply</b> and set the <b>Checkout</b> options (Section 6).</div></div>
+  </div>
+
+  <div class="card" id="auto">
+    <h2>3. Auto-Reply Bot</h2>
+    <p>If the employee does not reply within the timeout, the bot answers automatically (per-employee, default OFF).</p>
+    <div class="flow">Customer: "i need charger"
+  &rarr; product list  [Product 1] [Product 2] ...
+Customer: 1   &rarr; product detail + [&#9989; Order Now] [&#128172; Negotiate] [&#128269; Search Other]
+Customer: yes &rarr; "How many units?"  [1] [2] [5]
+Customer: 2   &rarr; Order created &rarr; Delivery &rarr; Payment</div>
+    <div class="tip">Every step shows <b>buttons + text</b> &mdash; tap or type.</div>
+  </div>
+
+  <div class="card" id="bargain">
+    <h2>4. Price Bargain</h2>
+    <p>After product detail, the customer can tap <b>[&#128172; Negotiate Price]</b> or type <code>reduce</code> / <code>best price</code> / a number.</p>
+    <table>
+      <tr><th>Range</th><th>Detail</th></tr>
+      <tr><td>Ceiling</td><td><b>MRP</b> = "Retail Price (WhatsApp)"</td></tr>
+      <tr><td>Floor</td><td><b>Sale Price</b> = "Sales Price" &mdash; never below this</td></tr>
+      <tr><td>Rounds</td><td>2 offers, then final = sale price</td></tr>
+    </table>
+    <p>Accept &rarr; quantity &rarr; the order uses the negotiated price.</p>
+  </div>
+
+  <div class="card" id="customer">
+    <h2>5. Customer Types (New vs Saved / B2B)</h2>
+    <table>
+      <tr><th>Customer</th><th>Price</th><th>Bargain?</th></tr>
+      <tr><td><b>New</b> (not in Contacts)</td><td>MRP (Retail)</td><td>&#9989; MRP &rarr; Sale price</td></tr>
+      <tr><td><b>Saved / B2B</b> (in Contacts with phone)</td><td>Sale Price (B2B)</td><td>&#10060; "already our best price"</td></tr>
+    </table>
+    <p><b>Make a B2B customer:</b> Contacts &gt; New &gt; Name + Phone (with country code, e.g. <code>+91...</code>) &gt; Save.</p>
+    <div class="warn">&#9888; Bot auto-created "ghost" contacts (Internal Notes = "Auto-created from WhatsApp") are still treated as <b>new</b>. Only a manually saved contact gets the B2B price.</div>
+  </div>
+
+  <div class="card" id="checkout">
+    <h2>6. Checkout Settings (per Employee Session)</h2>
+    <p>Configuration &gt; Employee Sessions &gt; <b>Auto Reply &gt; Checkout</b> group:</p>
+    <table>
+      <tr><th>Setting</th><th>What it does</th><th>Default</th></tr>
+      <tr><td>Hide Stock Quantity</td><td>Don't show stock count to the customer</td><td>ON</td></tr>
+      <tr><td>Restrict to Available Stock</td><td>Block orders above on-hand stock (OFF = allow any qty)</td><td>OFF</td></tr>
+      <tr><td>Ask Delivery Address</td><td>Ask address after ordering (Same / type new)</td><td>ON</td></tr>
+      <tr><td>Enable Payment Step</td><td>Show payment options after ordering</td><td>ON</td></tr>
+      <tr><td>Enable Cash on Delivery</td><td>Show the COD option</td><td>ON</td></tr>
+      <tr><td><b>Automatic Invoice (off = Agent verify)</b></td><td>ON = auto invoice; OFF = agent verifies then sends (Section 8)</td><td>ON</td></tr>
+      <tr><td>Order Company</td><td>Which company the order/invoice belongs to (blank = default)</td><td>blank</td></tr>
+    </table>
+  </div>
+
+  <div class="card" id="payment">
+    <h2>7. Payment (UPI / Card / Cash on Delivery)</h2>
+    <p>After the order (and delivery address), the bot shows three options:</p>
+    <div class="flow">&#128241; UPI    &rarr; opens a UPI QR page &rarr; "I have paid" &rarr; done
+&#128179; Card   &rarr; opens a card form &rarr; "Pay" &rarr; done
+&#128690; Cash on Delivery &rarr; settled in chat</div>
+    <div class="warn">&#9888; <b>TEST / DUMMY mode.</b> The UPI QR and Card pages are simulators (no real money, no Razorpay). The "I have paid / Pay" button completes the test payment. For real UPI/Card, install &amp; configure a real provider (e.g. Razorpay) later.</div>
+    <p>Delivery address step: <b>[&#9989; Same as my address]</b> or type a new full address.</p>
+  </div>
+
+  <div class="card" id="invoice">
+    <h2>8. Invoice: Automatic vs Agent-verify</h2>
+    <p>Controlled by the <b>"Automatic Invoice"</b> toggle (Checkout).</p>
+    <div class="two">
+      <div>
+        <h3>&#9889; Automatic (toggle ON)</h3>
+        <div class="flow">Pay (UPI/Card) &rarr; invoice auto
+   create + post + PAID
+   &rarr; &#128206; paid invoice PDF
+COD &rarr; invoice posted (unpaid)
+   &rarr; &#128206; invoice PDF</div>
+      </div>
+      <div>
+        <h3>&#129489; Agent-verify (toggle OFF)</h3>
+        <div class="flow">Pay/COD &rarr; Sale Order confirmed
+   &rarr; &#128206; Order Receipt PDF
+   &rarr; "Agent will verify &amp;
+        send your invoice"
+Agent in Odoo: check payment
+   &rarr; Create Invoice &rarr; Post
+   &rarr; &#128206; invoice PDF auto-sent</div>
+      </div>
+    </div>
+    <p><b>Agent steps (Agent-verify mode):</b></p>
+    <div class="step"><div class="num">1</div><div><b>Sales &gt; Orders</b> &rarr; open the WhatsApp order (source "WhatsApp Auto-Reply").</div></div>
+    <div class="step"><div class="num">2</div><div>Verify the payment is correct.</div></div>
+    <div class="step"><div class="num">3</div><div><b>Create Invoice</b> &rarr; <b>Post</b>. On posting, the invoice PDF is <b>sent to the customer's WhatsApp automatically</b>.</div></div>
+    <div class="step"><div class="num">4</div><div>(If paid online) Register Payment as needed.</div></div>
+    <div class="tip">The invoice is sent only once (no duplicates). COD invoices are posted unpaid &mdash; collect payment on delivery.</div>
+  </div>
+
+  <div class="card" id="menus">
+    <h2>9. Where is what</h2>
+    <table>
+      <tr><th>Menu</th><th>Contains</th></tr>
+      <tr><td>Dashboard</td><td>Employee overview (kanban)</td></tr>
+      <tr><td>Monitoring</td><td>Chat View, Conversations, Communication Log, Voice, Keyword Alerts, Auto Reply Log, Tone, Response Time</td></tr>
+      <tr><td>Reporting</td><td>Tone Report</td></tr>
+      <tr><td>Configuration</td><td>Employee Sessions (Auto Reply + Checkout), Alert Rules, Quality Scores, AI/Voice, User Guide</td></tr>
+      <tr><td>Sales / Accounting</td><td>Orders &amp; Invoices created from WhatsApp</td></tr>
+    </table>
+  </div>
+
+  <div class="card" id="trouble">
+    <h2>10. Troubleshooting</h2>
+    <table>
+      <tr><th>Problem</th><th>Check</th></tr>
+      <tr><td>No cards on dashboard</td><td>Create Employee Session + Enable Monitoring ON</td></tr>
+      <tr><td>Auto-reply not firing</td><td>Enable Auto-Reply ON? Employee already replied? Past the timeout?</td></tr>
+      <tr><td>Bargain not showing</td><td>Tap Negotiate / type "reduce" at the product-detail step</td></tr>
+      <tr><td>B2B price not applied</td><td>Number saved as a real (non-ghost) contact?</td></tr>
+      <tr><td>No payment options</td><td>Enable Payment Step ON</td></tr>
+      <tr><td>Invoice not sent (Agent-verify)</td><td>Agent must Create Invoice &amp; <b>Post</b> it &mdash; posting sends the PDF</td></tr>
+      <tr><td>Invoice auto-sent unexpectedly</td><td>Turn the "Automatic Invoice" toggle OFF for agent-verify</td></tr>
+      <tr><td>Wrong company on order</td><td>Set "Order Company" in Checkout settings</td></tr>
+    </table>
+  </div>
+
+</div>
+<footer>Employee Tracker &amp; Sales Agent &middot; Alphalize Technologies &middot; Internal user manual</footer>
+</body>
+</html>

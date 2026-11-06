@@ -1,0 +1,13 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_wa_employee_session_all,wa.employee.session.all,model_wa_employee_session,,1,1,1,1
+access_wa_communication_log_all,wa.communication.log.all,model_wa_communication_log,,1,1,1,1
+access_wa_keyword_alert_rule_all,wa.keyword.alert.rule.all,model_wa_keyword_alert_rule,,1,1,1,1
+access_wa_keyword_alert_log_all,wa.keyword.alert.log.all,model_wa_keyword_alert_log,,1,1,1,1
+access_wa_conversation_all,wa.conversation.all,model_wa_conversation,,1,1,1,1
+access_wa_quality_score_all,wa.quality.score.all,model_wa_quality_score,,1,1,1,1
+access_wa_auto_reply_all,wa.auto.reply.all,model_wa_auto_reply,,1,1,1,1
+access_wa_message_tone_all,wa.message.tone.all,model_wa_message_tone,,1,1,1,1
+access_wa_voice_config_all,wa.voice.config.all,model_wa_voice_config,,1,1,1,1
+access_wa_tone_report_all,wa.tone.report.all,model_wa_tone_report,,1,1,1,1
+access_wa_response_time_stat_all,wa.response.time.stat.all,model_wa_response_time_stat,,1,0,0,0
+access_wa_response_time_summary_all,wa.response.time.summary.all,model_wa_response_time_summary,,1,0,0,0

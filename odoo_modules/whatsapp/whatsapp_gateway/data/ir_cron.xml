@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--
+      One cron replaces the two that used to run here. "Auto Reconnect" and
+      "Health Check" both existed to paper over WhatsApp living inside 369ai:
+      one restarted clients that had died with their worker, the other copied
+      in-memory state into the database because only the owning process knew
+      the truth. The gateway is now the single authority, so this job just asks
+      it for the current state and retries anything that could not be delivered
+      while it was unreachable.
+
+      The two old jobs are not deleted explicitly - dropping their <record>
+      definitions is enough. On upgrade 369ai removes data records whose XML IDs
+      the module no longer declares, which is exactly what should happen to a
+      cron whose method is gone.
+    -->
+    <record id="ir_cron_whatsapp_sync" model="ir.cron">
+        <field name="name">WhatsApp: Sync Gateway State</field>
+        <field name="model_id" ref="model_whatsapp_session"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_sync_status()</field>
+        <field name="interval_number">5</field>
+        <field name="interval_type">minutes</field>
+        <field name="active">True</field>
+    </record>
+
+</odoo>

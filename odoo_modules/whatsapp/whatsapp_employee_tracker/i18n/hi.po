@@ -1,0 +1,2757 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* whatsapp_employee_tracker
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: 369ai Server 19.0\n"
+"Report-Msgid-Bugs-To: \n"
+"Last-Translator: \n"
+"Language-Team: Hindi\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: \n"
+"Language: hi\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,help:whatsapp_employee_tracker.field_wa_message_tone__sentiment_score
+msgid "-1 = Very Negative, 0 = Neutral, 1 = Very Positive"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_employee_session_kanban
+msgid ""
+"<i class=\"fa fa-clock-o me-1\"/>\n"
+"                                Last:"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.wa_pay_card
+msgid "<span class=\"tag\">TEST MODE</span>"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.constraint,message:whatsapp_employee_tracker.constraint_wa_conversation_unique_conversation
+msgid "A conversation already exists for this employee-contact pair."
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.ui.menu,name:whatsapp_employee_tracker.menu_wa_voice_config
+msgid "AI / Voice Settings"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_voice_config_form
+msgid "AIzaSy..."
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_employee_session__active
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_keyword_alert_rule__active
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_conversation_kanban
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_conversation_list
+msgid "Active"
+msgstr "सक्रिय"
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_employee_session__alert_count
+msgid "Active Alerts"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_quality_score__period_conversations
+msgid "Active Conversations"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_conversation__is_active_today
+msgid "Active Today"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_quality_score_form
+msgid "Activity Details"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.ui.menu,name:whatsapp_employee_tracker.menu_wa_dashboard_hours
+msgid "Activity Hours"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_quality_score__volume_score
+msgid "Activity Volume Score (0-25)"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.actions.act_window,name:whatsapp_employee_tracker.action_wa_dashboard_activity_hours
+msgid "Activity by Hour"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_keyword_alert_log__display_name_custom
+msgid "Alert"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_keyword_alert_log_form
+msgid "Alert Details"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_keyword_alert_log__rule_id
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_keyword_alert_rule_form
+msgid "Alert Rule"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.actions.act_window,name:whatsapp_employee_tracker.action_wa_keyword_alert_rules
+#: model:ir.ui.menu,name:whatsapp_employee_tracker.menu_wa_alert_rules
+msgid "Alert Rules"
+msgstr "अलर्ट नियम"
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_employee_session_form
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_keyword_alert_rule_form
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_quality_score_list
+msgid "Alerts"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#. odoo-python
+#: code:addons/whatsapp_employee_tracker/models/employee_session.py:0
+#: code:addons/whatsapp_employee_tracker/models/keyword_alert.py:0
+msgid "Alerts - %s"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.actions.act_window,name:whatsapp_employee_tracker.action_wa_dashboard_alerts
+msgid "Alerts Overview"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_keyword_alert_rule__alert_count
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_quality_score__period_alerts
+msgid "Alerts Triggered"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.actions.act_window,help:whatsapp_employee_tracker.action_wa_keyword_alert_log
+msgid ""
+"Alerts will appear here when employee messages match configured keyword "
+"rules."
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#. odoo-javascript
+#: code:addons/whatsapp_employee_tracker/static/src/xml/chat_view.xml:0
+msgid "All Employees"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.actions.act_window,name:whatsapp_employee_tracker.action_wa_message_tone_all
+msgid "All Message Tones"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,help:whatsapp_employee_tracker.field_wa_employee_session__auto_reply_bargain_enabled
+msgid ""
+"Allow the assistant to negotiate price down to the sale price for new "
+"customers."
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_message_tone_form
+msgid "Analysis Result"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_employee_session__auto_reply_ask_delivery
+msgid "Ask Delivery Address"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,help:whatsapp_employee_tracker.field_wa_employee_session__auto_reply_ask_delivery
+msgid "Ask the customer for a delivery address after ordering."
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.actions.act_window,help:whatsapp_employee_tracker.action_wa_employee_session
+msgid "Assign WhatsApp sessions to employees"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_employee_session__phone_number
+msgid "Assigned Phone"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_employee_session_form
+msgid "Auto Reply"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_auto_reply_form
+msgid "Auto Reply Detail"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.actions.act_window,name:whatsapp_employee_tracker.action_wa_auto_reply_log
+#: model:ir.ui.menu,name:whatsapp_employee_tracker.menu_wa_auto_reply_log
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_auto_reply_list
+msgid "Auto Reply Log"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_auto_reply__reply_message
+msgid "Auto Reply Sent"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_employee_session__auto_reply_auto_invoice
+msgid "Automatic Invoice (off = Agent verify)"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,help:whatsapp_employee_tracker.field_wa_employee_session__auto_reply_enabled
+msgid ""
+"Automatically reply with product suggestions when employee does not respond "
+"in time."
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,help:whatsapp_employee_tracker.field_wa_conversation__avg_tone_score
+msgid ""
+"Average tone score of outgoing messages. 0=Harsh, 50=Neutral, 100=Polite."
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_response_time_summary_tree
+msgid "Avg Response"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_employee_session__avg_response_minutes
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_quality_score__avg_response_minutes
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_response_time_summary__avg_response_minutes
+msgid "Avg Response (min)"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_response_time_summary__avg_response_seconds
+msgid "Avg Response (sec)"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_conversation__avg_response_minutes
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_conversation_form
+msgid "Avg Response Time (min)"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_tone_report_list
+msgid "Avg Score %"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_conversation__avg_tone_score
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_conversation_form
+msgid "Avg Tone Score (0-100)"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_quality_score__avg_word_count
+msgid "Avg Words per Message"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_auto_reply__reply_type__await_address
+msgid "Awaiting Customer Details"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_auto_reply__reply_type__await_delivery
+msgid "Awaiting Delivery Address"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_auto_reply__reply_type__await_payment
+msgid "Awaiting Payment"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,help:whatsapp_employee_tracker.field_wa_quality_score__volume_score
+msgid "Based on message volume vs team average."
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,help:whatsapp_employee_tracker.field_wa_employee_session__auto_reply_stock_restrict
+msgid "Block orders above on-hand stock. Off = allow any quantity."
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.wa_pay_card
+msgid "CVV"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.wa_pay_card
+msgid "Card Number"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__sale_order__wa_payment_mode__cod
+msgid "Cash on Delivery"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_keyword_alert_log__category
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_keyword_alert_rule__category
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_message_tone_list
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_tone_report_list
+msgid "Category"
+msgstr "श्रेणी"
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_chat_list
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_conversation_form
+msgid "Chat Messages"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.actions.act_window,name:whatsapp_employee_tracker.action_wa_chat_view
+#: model:ir.actions.client,name:whatsapp_employee_tracker.action_wa_chat_split
+#: model:ir.ui.menu,name:whatsapp_employee_tracker.menu_wa_chat_view
+msgid "Chat View"
+msgstr "चैट व्यू"
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_conversation_list
+msgid "Chats"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#. odoo-python
+#: code:addons/whatsapp_employee_tracker/models/employee_session.py:0
+msgid "Chats - %s"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_employee_session_form
+msgid "Checkout"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_tone_report_form
+msgid "Click to see messages"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_communication_log_pivot
+msgid "Communication Analysis"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.actions.act_window,name:whatsapp_employee_tracker.action_wa_communication_log
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_message_tone__communication_log_id
+#: model:ir.ui.menu,name:whatsapp_employee_tracker.menu_wa_communication_log
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_communication_log_list
+msgid "Communication Log"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_communication_log_form
+msgid "Communication Log Entry"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model,name:whatsapp_employee_tracker.model_wa_quality_score
+msgid "Communication Quality Score"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_communication_log_graph
+msgid "Communication Stats"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,help:whatsapp_employee_tracker.field_wa_employee_session__phone_number
+msgid "Company WhatsApp number assigned to this employee."
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_keyword_alert_rule__category__competitor
+msgid "Competitor Mention"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_quality_score_list
+msgid "Compliance (25)"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_quality_score__compliance_score
+msgid "Compliance Score (0-25)"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.ui.menu,name:whatsapp_employee_tracker.menu_wa_tracker_config
+msgid "Configuration"
+msgstr "कॉन्फ़िगरेशन"
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_employee_session_kanban_config
+msgid "Connected"
+msgstr "कनेक्टेड"
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_quality_score_list
+msgid "Consistency (25)"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_quality_score__consistency_score
+msgid "Consistency Score (0-25)"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_communication_log__partner_id
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_conversation__partner_id
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_keyword_alert_log__partner_id
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_chat_list
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_voice_messages_list
+msgid "Contact"
+msgstr "संपर्क"
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_conversation_form
+msgid "Contact Info"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_conversation__contact_name
+msgid "Contact Name"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_communication_log__phone
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_conversation__phone
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_keyword_alert_log__phone
+msgid "Contact Phone"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,help:whatsapp_employee_tracker.field_whatsapp_message__push_name
+msgid "Contact push name from WhatsApp"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_employee_session_form
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_employee_session_kanban
+msgid "Contacts"
+msgstr "संपर्क"
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_keyword_alert_rule__match_type__contains
+msgid "Contains (anywhere in message)"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_auto_reply__conversation_id
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_communication_log__conversation_id
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_response_time_stat__conversation_id
+msgid "Conversation"
+msgstr "बातचीत"
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_conversation_form
+msgid "Conversation Stats"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_conversation_form
+msgid "Conversation Thread"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.actions.act_window,name:whatsapp_employee_tracker.action_wa_conversation
+#: model:ir.ui.menu,name:whatsapp_employee_tracker.menu_wa_conversations
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_employee_session_form
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_quality_score_list
+msgid "Conversations"
+msgstr "बातचीत"
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_auto_reply__create_uid
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_communication_log__create_uid
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_conversation__create_uid
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_employee_session__create_uid
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_keyword_alert_log__create_uid
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_keyword_alert_rule__create_uid
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_message_tone__create_uid
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_quality_score__create_uid
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_tone_report__create_uid
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_voice_config__create_uid
+msgid "Created by"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_auto_reply__create_date
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_communication_log__create_date
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_conversation__create_date
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_employee_session__create_date
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_keyword_alert_log__create_date
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_keyword_alert_rule__create_date
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_message_tone__create_date
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_quality_score__create_date
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_tone_report__create_date
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_voice_config__create_date
+msgid "Created on"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_keyword_alert_rule__severity__critical
+msgid "Critical"
+msgstr "गंभीर"
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_message_tone__tone_category__curt
+msgid "Curt / Dismissive"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_keyword_alert_rule__category__custom
+msgid "Custom"
+msgstr "कस्टम"
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_voice_config__gemini_model__custom
+msgid "Custom (enter below)"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_voice_config__gemini_custom_model
+msgid "Custom Model Name"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_tone_report__date_range__custom
+msgid "Custom Range"
+msgstr "कस्टम सीमा"
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_response_time_stat_tree
+msgid "Customer"
+msgstr "ग्राहक"
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_keyword_alert_rule__category__complaint
+msgid "Customer Complaint"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_auto_reply__customer_message
+msgid "Customer Message"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_response_time_stat__phone
+msgid "Customer Phone"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_response_time_stat__customer_msg_date
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_response_time_stat_tree
+msgid "Customer Sent At"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.ui.menu,name:whatsapp_employee_tracker.menu_wa_tracker_dashboard
+msgid "Dashboard"
+msgstr "डैशबोर्ड"
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_keyword_alert_rule__category__data_leak
+msgid "Data Leak Risk"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_message_tone_list
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_tone_report_list
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_voice_messages_list
+msgid "Date"
+msgstr "तारीख"
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_tone_report__date_range
+msgid "Date Range"
+msgstr "तिथि सीमा"
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_communication_log__message_date
+msgid "Date/Time"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_communication_log__day_of_week
+msgid "Day of Week"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_communication_log__status__delivered
+msgid "Delivered"
+msgstr "वितरित"
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_communication_log__department_id
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_conversation__department_id
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_employee_session__department_id
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_keyword_alert_log__department_id
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_quality_score__department_id
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_response_time_stat__department_id
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_response_time_summary__department_id
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_response_time_stat_tree
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_response_time_summary_tree
+msgid "Department"
+msgstr "विभाग"
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_communication_log__display_name_custom
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_keyword_alert_rule__description
+msgid "Description"
+msgstr "विवरण"
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_auto_reply_form
+msgid "Details"
+msgstr "विवरण"
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_communication_log__voice_language
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_whatsapp_message__voice_language
+msgid "Detected Language"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_communication_log__direction
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_keyword_alert_log__message_direction
+msgid "Direction"
+msgstr "दिशा"
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_employee_session_kanban_config
+msgid "Disconnected"
+msgstr "डिस्कनेक्टेड"
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_keyword_alert_log_form
+msgid "Dismiss"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_keyword_alert_log__status__dismissed
+msgid "Dismissed"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_account_move__display_name
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_hr_employee__display_name
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_payment_transaction__display_name
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_product_template__display_name
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_sale_order__display_name
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_auto_reply__display_name
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_communication_log__display_name
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_conversation__display_name
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_employee_session__display_name
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_keyword_alert_log__display_name
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_keyword_alert_rule__display_name
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_message_tone__display_name
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_quality_score__display_name
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_response_time_stat__display_name
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_response_time_summary__display_name
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_tone_report__display_name
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_voice_config__display_name
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_whatsapp_message__display_name
+msgid "Display Name"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_conversation__display_name_custom
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_quality_score__display_name_custom
+msgid "Display Name Custom"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,help:whatsapp_employee_tracker.field_wa_employee_session__auto_reply_hide_quantity
+msgid "Do not show stock quantity to the customer in product detail."
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.wa_pay_upi
+msgid "Dummy QR · no real money is charged."
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.wa_pay_card
+msgid "Dummy card · no real money is charged."
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.constraint,message:whatsapp_employee_tracker.constraint_wa_employee_session_session_unique
+msgid "Each WhatsApp session can only be assigned to one employee."
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.constraint,message:whatsapp_employee_tracker.constraint_wa_employee_session_employee_unique
+msgid "Each employee can only have one WhatsApp session assignment."
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model,name:whatsapp_employee_tracker.model_hr_employee
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_communication_log__employee_id
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_conversation__employee_id
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_employee_session__employee_id
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_keyword_alert_log__employee_id
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_message_tone__employee_id
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_quality_score__employee_id
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_response_time_stat__employee_id
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_response_time_summary__employee_id
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_tone_report__employee_id
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_whatsapp_message__employee_id
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_chat_list
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_communication_log_form
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_message_tone_list
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_response_time_stat_tree
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_response_time_summary_tree
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_tone_report_list
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_voice_messages_list
+msgid "Employee"
+msgstr "कर्मचारी"
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_keyword_alert_log_form
+msgid "Employee / Message"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model,name:whatsapp_employee_tracker.model_wa_communication_log
+msgid "Employee Communication Log"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.actions.act_window,name:whatsapp_employee_tracker.action_wa_tracker_dashboard
+msgid "Employee Dashboard"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_employee_session_form
+msgid "Employee Details"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.ui.menu,name:whatsapp_employee_tracker.menu_wa_dashboard_overview
+msgid "Employee Overview"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_auto_reply__employee_session_id
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_communication_log__employee_session_id
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_conversation__employee_session_id
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_keyword_alert_log__employee_session_id
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_message_tone__employee_session_id
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_quality_score__employee_session_id
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_whatsapp_message__employee_session_id
+msgid "Employee Session"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.actions.act_window,name:whatsapp_employee_tracker.action_wa_employee_session
+#: model:ir.ui.menu,name:whatsapp_employee_tracker.menu_wa_employee_sessions
+msgid "Employee Sessions"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_conversation__tone_label
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_conversation_form
+msgid "Employee Tone"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_employee_session_form
+msgid "Employee WhatsApp Session"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model,name:whatsapp_employee_tracker.model_wa_employee_session
+msgid "Employee WhatsApp Session Assignment"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_employee_session_list
+msgid "Employee WhatsApp Sessions"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_employee_session__auto_reply_enabled
+msgid "Enable Auto-Reply"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_employee_session__auto_reply_cod_enabled
+msgid "Enable Cash on Delivery"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_employee_session__monitoring_enabled
+msgid "Enable Monitoring"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_employee_session__auto_reply_payment_enabled
+msgid "Enable Payment Step"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_employee_session__auto_reply_bargain_enabled
+msgid "Enable Price Bargain"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_communication_log__voice_translation
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_whatsapp_message__voice_translation
+msgid "English Translation"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_keyword_alert_rule_form
+msgid "Enter keywords, one per line..."
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_auto_reply__error
+msgid "Error Details"
+msgstr "त्रुटि विवरण"
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_keyword_alert_log_form
+msgid "Escalate"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_keyword_alert_log__status__escalated
+msgid "Escalated"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_keyword_alert_rule__match_type__exact_word
+msgid "Exact Word Match"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.wa_pay_card
+msgid "Expiry"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_auto_reply__status__failed
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_communication_log__status__failed
+msgid "Failed"
+msgstr "विफल"
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_response_time_summary__min_response_minutes
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_response_time_summary_tree
+msgid "Fastest (min)"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_tone_report_form
+msgid "Filters"
+msgstr "फ़िल्टर"
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_conversation__first_message_date
+msgid "First Message"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_communication_log__flag_reason
+msgid "Flag Reason"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_communication_log__is_flagged
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_chat_list
+msgid "Flagged"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_communication_log_form
+msgid "Flags"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_voice_config_form
+msgid ""
+"Free tier: 2 hours of audio/day. Uses Whisper Large V3.\n"
+"                            Excellent Malayalam support. Get API key at console.groq.com"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_tone_report__date_from
+msgid "From"
+msgstr "से"
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_voice_messages_list
+msgid "Full Message"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:res.groups,comment:whatsapp_employee_tracker.group_wa_tracker_manager
+msgid "Full access to monitor all employees WhatsApp communications."
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_voice_config__openai_model__gpt-4o-mini-transcribe
+msgid "GPT-4o Mini Transcribe (fast)"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_voice_config__openai_model__gpt-4o-transcribe
+msgid "GPT-4o Transcribe (best accuracy)"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_voice_config__gemini_model__gemini-1_5-flash
+msgid "Gemini 1.5 Flash"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_voice_config__gemini_model__gemini-1_5-flash-8b
+msgid "Gemini 1.5 Flash 8B (fastest)"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_voice_config__gemini_model__gemini-1_5-pro
+msgid "Gemini 1.5 Pro"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_voice_config__gemini_model__gemini-2_0-flash
+msgid "Gemini 2.0 Flash"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_voice_config__gemini_model__gemini-2_0-flash-lite
+msgid "Gemini 2.0 Flash Lite"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_voice_config__gemini_model__gemini-2_5-flash
+msgid "Gemini 2.5 Flash (recommended)"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_voice_config__gemini_model__gemini-2_5-flash-lite
+msgid "Gemini 2.5 Flash Lite"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_voice_config__gemini_model__gemini-2_5-pro
+msgid "Gemini 2.5 Pro"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_voice_config__gemini_api_key
+msgid "Gemini API Key"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_voice_config__gemini_model
+msgid "Gemini Model"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_auto_reply__reply_type__general
+msgid "General"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_voice_config_form
+msgid "Get API key at ai.google.dev"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.actions.act_window,help:whatsapp_employee_tracker.action_wa_tracker_dashboard
+msgid ""
+"Go to Configuration → Employee Sessions to assign WhatsApp sessions to "
+"employees."
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_voice_config__transcription_provider__gemini
+msgid "Google Gemini"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_voice_config_form
+msgid "Google Gemini Settings"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_employee_session__auto_reply_greeting
+msgid "Greeting Message"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,help:whatsapp_employee_tracker.field_wa_employee_session__auto_reply_greeting
+msgid "Greeting text before product suggestions."
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_voice_config__transcription_provider__groq
+msgid "Groq (Free - 2hr/day)"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_voice_config__groq_api_key
+msgid "Groq API Key"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_voice_config__groq_model
+msgid "Groq Model"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_voice_config_form
+msgid "Groq Settings (Free)"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_communication_log__is_group_message
+msgid "Group Message"
+msgstr "समूह संदेश"
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_conversation_kanban
+msgid "Hard"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_message_tone_form
+msgid "Hard (Harsh) Keywords"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_tone_report__count_hard
+msgid "Hard / Critical"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_message_tone_list
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_tone_report_list
+msgid "Hard Keywords"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_message_tone__hard_keywords_found
+msgid "Hard Keywords Found"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_keyword_alert_rule__category__hard_language
+msgid "Hard Language (Harsh/Aggressive)"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_tone_report_list
+msgid "Harsh"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_message_tone__tone_category__harsh
+msgid "Harsh / Aggressive"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.actions.act_window,name:whatsapp_employee_tracker.action_wa_message_tone_harsh
+#: model:ir.ui.menu,name:whatsapp_employee_tracker.menu_wa_message_tone_harsh
+msgid "Harsh Messages"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,help:whatsapp_employee_tracker.field_wa_message_tone__hard_keywords_found
+msgid "Harsh/aggressive words detected in the message"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_communication_log__has_attachment
+msgid "Has Attachment"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_employee_session__auto_reply_hide_quantity
+msgid "Hide Stock Quantity"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_keyword_alert_rule__severity__high
+msgid "High"
+msgstr "उच्च"
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_communication_log__hour_of_day
+msgid "Hour of Day"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_account_move__id
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_hr_employee__id
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_payment_transaction__id
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_product_template__id
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_sale_order__id
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_auto_reply__id
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_communication_log__id
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_conversation__id
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_employee_session__id
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_keyword_alert_log__id
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_keyword_alert_rule__id
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_message_tone__id
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_quality_score__id
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_response_time_stat__id
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_response_time_summary__id
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_tone_report__id
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_voice_config__id
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_whatsapp_message__id
+msgid "ID"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,help:whatsapp_employee_tracker.field_whatsapp_message__voice_language
+msgid "ISO language code detected by Whisper e.g. en, ar, ml, hi"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,help:whatsapp_employee_tracker.field_wa_voice_config__translate_to_english
+msgid ""
+"If enabled, voice notes spoken in any language are auto-translated to "
+"English text. The detected source language is still saved on the message "
+"record for audit. Turn OFF to keep the original-language transcript."
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_communication_log__direction__incoming
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_keyword_alert_log__message_direction__incoming
+msgid "Incoming"
+msgstr "आवक"
+
+#. module: whatsapp_employee_tracker
+#: model:ir.actions.act_window,name:whatsapp_employee_tracker.action_wa_tone_report
+msgid "Individual Tone Report"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_employee_session_form
+msgid "Internal notes..."
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_message_tone__is_harsh
+msgid "Is Harsh"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_message_tone__is_polite
+msgid "Is Polite"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_employee_session__job_title
+msgid "Job Title"
+msgstr "पद"
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model,name:whatsapp_employee_tracker.model_account_move
+msgid "Journal Entry"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_keyword_alert_log_form
+msgid "Keyword Alert"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_keyword_alert_rule_list
+msgid "Keyword Alert Rules"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.actions.act_window,name:whatsapp_employee_tracker.action_wa_keyword_alert_log
+#: model:ir.ui.menu,name:whatsapp_employee_tracker.menu_wa_alerts
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_keyword_alert_log_list
+msgid "Keyword Alerts"
+msgstr "कीवर्ड अलर्ट"
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_message_tone_form
+msgid "Keyword Detection"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_keyword_alert_rule__keywords
+msgid "Keywords"
+msgstr "कीवर्ड"
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_keyword_alert_rule_form
+msgid "Keywords (one per line)"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_communication_log_list
+msgid "Lang"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_voice_messages_list
+msgid "Language"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_conversation_list
+msgid "Last Active"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_employee_session__last_activity
+msgid "Last Activity"
+msgstr "अंतिम गतिविधि"
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_conversation__last_message_date
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_conversation__last_message_preview
+msgid "Last Message"
+msgstr "अंतिम संदेश"
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_tone_report__date_range__last_month
+msgid "Last Month"
+msgstr "पिछला माह"
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_response_time_summary__last_reply_date
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_response_time_summary_tree
+msgid "Last Reply"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_auto_reply__write_uid
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_communication_log__write_uid
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_conversation__write_uid
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_employee_session__write_uid
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_keyword_alert_log__write_uid
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_keyword_alert_rule__write_uid
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_message_tone__write_uid
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_quality_score__write_uid
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_tone_report__write_uid
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_voice_config__write_uid
+msgid "Last Updated by"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_auto_reply__write_date
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_communication_log__write_date
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_conversation__write_date
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_employee_session__write_date
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_keyword_alert_log__write_date
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_keyword_alert_rule__write_date
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_message_tone__write_date
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_quality_score__write_date
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_tone_report__write_date
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_voice_config__write_date
+msgid "Last Updated on"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_message_tone_form
+msgid "Log Entry"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_keyword_alert_rule__severity__low
+msgid "Low"
+msgstr "निम्न"
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,help:whatsapp_employee_tracker.field_wa_quality_score__response_time_score
+msgid "Lower avg response time = higher score."
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_employee_session__manager_id
+msgid "Manager"
+msgstr "प्रबंधक"
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_response_time_summary__total_manual_replies
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_response_time_summary_tree
+msgid "Manual Replies"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_response_time_stat_tree
+msgid "Manual Reply Details"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model,name:whatsapp_employee_tracker.model_wa_response_time_stat
+msgid "Manual Response Time Statistics"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_keyword_alert_log_form
+msgid "Mark Reviewed"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_keyword_alert_rule__match_type
+msgid "Match Type"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_keyword_alert_log__matched_keywords
+msgid "Matched Keywords"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_auto_reply__matched_products
+msgid "Matched Products"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_employee_session__auto_reply_max_products
+msgid "Max Products to Suggest"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_keyword_alert_rule__severity__medium
+msgid "Medium"
+msgstr "मध्यम"
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_message_tone__message_text
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_chat_list
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_message_tone_list
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_tone_report_list
+msgid "Message"
+msgstr "संदेश"
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_tone_report_form
+msgid "Message Categories"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_communication_log__message_text
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_keyword_alert_log__message_text
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_communication_log_form
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_keyword_alert_log_form
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_message_tone_form
+msgid "Message Content"
+msgstr "संदेश सामग्री"
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_keyword_alert_log__message_date
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_message_tone__message_date
+msgid "Message Date"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_communication_log_form
+msgid "Message Details"
+msgstr "संदेश विवरण"
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_message_tone_form
+msgid "Message Info"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_keyword_alert_log__log_entry_id
+msgid "Message Log"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.actions.act_window,name:whatsapp_employee_tracker.action_wa_message_tone
+#: model:ir.model,name:whatsapp_employee_tracker.model_wa_message_tone
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_message_tone_form
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_message_tone_list
+msgid "Message Tone Analysis"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.actions.act_window,name:whatsapp_employee_tracker.action_wa_dashboard_volume
+#: model:ir.ui.menu,name:whatsapp_employee_tracker.menu_wa_dashboard_volume
+msgid "Message Volume"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,help:whatsapp_employee_tracker.field_wa_employee_session__auto_reply_no_match
+msgid "Message when no products match the query."
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_conversation__log_ids
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_employee_session_form
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_quality_score_list
+msgid "Messages"
+msgstr "संदेश"
+
+#. module: whatsapp_employee_tracker
+#. odoo-python
+#: code:addons/whatsapp_employee_tracker/models/employee_session.py:0
+msgid "Messages - %s"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_employee_session__total_received
+msgid "Messages Received"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_employee_session__total_sent
+msgid "Messages Sent"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#. odoo-javascript
+#: code:addons/whatsapp_employee_tracker/static/src/xml/chat_view.xml:0
+msgid "Messages are loaded from the tracker database"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.actions.act_window,help:whatsapp_employee_tracker.action_wa_communication_log
+msgid ""
+"Messages from monitored employee sessions will appear here\n"
+"                after the next sync cycle (every 5 minutes)."
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_quality_score__period_messages
+msgid "Messages in Period"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.actions.act_window,help:whatsapp_employee_tracker.action_wa_chat_view
+msgid ""
+"Messages will appear here in real-time as employees send and receive "
+"WhatsApp messages."
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#. odoo-javascript
+#: code:addons/whatsapp_employee_tracker/static/src/xml/chat_view.xml:0
+msgid "Monitor employee WhatsApp communications in real-time."
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.ui.menu,name:whatsapp_employee_tracker.menu_wa_tracker_monitoring
+msgid "Monitoring"
+msgstr "निगरानी"
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_quality_score__peak_hour
+msgid "Most Active Hour"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_conversation_list
+msgid "Msgs"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_conversation_list
+msgid "Name"
+msgstr "नाम"
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.wa_pay_card
+msgid "Name on Card"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_message_tone__sentiment_category__negative
+msgid "Negative"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_auto_reply__offered_price
+msgid "Negotiated Price"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_tone_report__count_neutral
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_message_tone__sentiment_category__neutral
+msgid "Neutral"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_message_tone__tone_category__neutral
+msgid "Neutral / Professional"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_keyword_alert_log__status__new
+msgid "New"
+msgstr "नया"
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_auto_reply__reply_type__no_match
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_auto_reply__status__no_match
+msgid "No Match"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_employee_session__auto_reply_no_match
+msgid "No Match Message"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.actions.act_window,help:whatsapp_employee_tracker.action_wa_keyword_alert_log
+msgid "No alerts triggered"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#. odoo-javascript
+#: code:addons/whatsapp_employee_tracker/static/src/xml/chat_view.xml:0
+msgid "No conversations found"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.actions.act_window,help:whatsapp_employee_tracker.action_wa_conversation
+msgid "No conversations tracked yet"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.actions.act_window,help:whatsapp_employee_tracker.action_wa_tracker_dashboard
+msgid "No employees being tracked yet"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.actions.act_window,help:whatsapp_employee_tracker.action_wa_message_tone_harsh
+msgid "No harsh messages detected."
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,help:whatsapp_employee_tracker.field_wa_quality_score__compliance_score
+msgid "No keyword alerts = full score. Alerts reduce it."
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.actions.act_window,help:whatsapp_employee_tracker.action_wa_response_time_detail
+#: model_terms:ir.actions.act_window,help:whatsapp_employee_tracker.action_wa_response_time_summary
+msgid "No manual reply data yet."
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.actions.act_window,help:whatsapp_employee_tracker.action_wa_communication_log
+msgid "No messages tracked yet"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.actions.act_window,help:whatsapp_employee_tracker.action_wa_chat_view
+msgid "No messages yet"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.actions.act_window,help:whatsapp_employee_tracker.action_wa_message_tone_all
+msgid "No tone analysis yet."
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.actions.act_window,help:whatsapp_employee_tracker.action_wa_message_tone
+msgid "No tone analysis yet. Messages will be analyzed automatically."
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.actions.act_window,help:whatsapp_employee_tracker.action_wa_tone_chart
+msgid "No tone data yet. Send some messages to start analysis."
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.actions.act_window,help:whatsapp_employee_tracker.action_wa_tone_report
+msgid ""
+"No tone records yet. Employee outgoing messages are analyzed automatically."
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.actions.act_window,help:whatsapp_employee_tracker.action_wa_voice_messages
+msgid ""
+"No voice messages yet. Voice notes sent via WhatsApp will be\n"
+"                automatically transcribed and appear here."
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_employee_session__notes
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_employee_session_form
+msgid "Notes"
+msgstr "टिप्पणियाँ"
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,help:whatsapp_employee_tracker.field_wa_employee_session__auto_reply_auto_invoice
+msgid ""
+"ON: after payment auto-create/post invoice + send PDF. OFF: send a receipt +"
+" \"agent will verify\"; agent posts the invoice in 369ai to send it."
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_voice_config_form
+msgid ""
+"ON: voice notes in any language are transcribed AS English\n"
+"                            (e.g. Tamil \"வணக்கம்\" → \"Welcome\"). The detected source\n"
+"                            language is still recorded on the message for audit.\n"
+"                            OFF: original-language transcription only."
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_employee_session_kanban
+msgid "Offline"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,help:whatsapp_employee_tracker.field_wa_keyword_alert_rule__keywords
+msgid "One keyword or phrase per line. Case-insensitive matching."
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__sale_order__wa_payment_mode__online
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_employee_session_kanban
+msgid "Online"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.constraint,message:whatsapp_employee_tracker.constraint_wa_quality_score_unique_score
+msgid "Only one quality score per employee per day."
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_employee_session_form
+msgid "Open All Conversations"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_voice_config__openai_api_key
+msgid "OpenAI API Key"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_voice_config__openai_model
+msgid "OpenAI Model"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_voice_config__transcription_provider__openai
+msgid "OpenAI Whisper"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_voice_config_form
+msgid "OpenAI Whisper Settings"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.wa_pay_success
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.wa_pay_upi
+msgid "Order"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_employee_session__auto_reply_company_id
+msgid "Order Company"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_auto_reply__reply_type__order_confirm
+msgid "Order Confirmation"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_auto_reply__reply_type__order_created
+msgid "Order Created"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_communication_log__message_id
+msgid "Original Message"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_communication_log__direction__outgoing
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_keyword_alert_log__message_direction__outgoing
+msgid "Outgoing"
+msgstr "जावक"
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_voice_config_form
+msgid "Output Language"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_employee_session_form
+msgid "Overall"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_quality_score__score
+msgid "Overall Score (0-100)"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_voice_config_form
+msgid ""
+"Paid: Whisper-1 ~$0.006/min. GPT-4o Transcribe is most accurate.\n"
+"                            Get API key at platform.openai.com"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.wa_pay_card
+msgid "Pay"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.wa_pay_upi
+msgid "Pay using any UPI app"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_employee_session__auto_reply_payment_provider_id
+msgid "Payment Provider (optional)"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.wa_pay_success
+msgid "Payment Successful"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model,name:whatsapp_employee_tracker.model_payment_transaction
+msgid "Payment Transaction"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_quality_score_list
+msgid "Peak Hour"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_communication_log__status__pending
+msgid "Pending"
+msgstr "लंबित"
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_quality_score_form
+msgid "Period Statistics"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_auto_reply__phone
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_conversation_list
+msgid "Phone"
+msgstr "फ़ोन"
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_tone_report_form
+msgid ""
+"Pick an employee and a time range. Click a\n"
+"                            category tile to drill into the individual\n"
+"                            messages."
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_keyword_alert_rule__category__policy
+msgid "Policy Violation"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_tone_report_list
+msgid "Polite"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_message_tone__tone_category__polite
+msgid "Polite / Friendly"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,help:whatsapp_employee_tracker.field_wa_message_tone__soft_keywords_found
+msgid "Polite/friendly words detected in the message"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_message_tone__sentiment_category__positive
+msgid "Positive"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_tone_report__date_range__previous_week
+msgid "Previous Week"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_auto_reply__reply_type__price_negotiate
+msgid "Price Negotiation"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,help:whatsapp_employee_tracker.field_product_product__wa_retail_price
+#: model:ir.model.fields,help:whatsapp_employee_tracker.field_product_template__wa_retail_price
+msgid ""
+"Price used for WhatsApp auto-replies when the sender is not a recognized "
+"contact."
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model,name:whatsapp_employee_tracker.model_product_template
+msgid "Product"
+msgstr "उत्पाद"
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_auto_reply__reply_type__product_detail
+msgid "Product Detail"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_auto_reply__reply_type__product_search
+msgid "Product Search"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_auto_reply_form
+msgid "Products & Order"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_keyword_alert_rule__category__profanity
+msgid "Profanity / Inappropriate"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_employee_session_form
+msgid "Quality"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_employee_session__quality_score
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_quality_score_form
+msgid "Quality Score"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_quality_score_pivot
+msgid "Quality Score Analysis"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_quality_score_graph
+msgid "Quality Score Trends"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.actions.act_window,name:whatsapp_employee_tracker.action_wa_quality_score
+#: model:ir.ui.menu,name:whatsapp_employee_tracker.menu_wa_quality_scores
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_quality_score_list
+msgid "Quality Scores"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#. odoo-python
+#: code:addons/whatsapp_employee_tracker/models/employee_session.py:0
+msgid "Quality Scores - %s"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.actions.act_window,name:whatsapp_employee_tracker.action_wa_dashboard_quality
+#: model:ir.ui.menu,name:whatsapp_employee_tracker.menu_wa_dashboard_quality
+msgid "Quality Trends"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_auto_reply__reply_type__quantity_ask
+msgid "Quantity Ask"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_communication_log__status__read
+msgid "Read"
+msgstr "पढ़ा"
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_conversation__received_count
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_communication_log__status__received
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_conversation_form
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_employee_session_kanban
+msgid "Received"
+msgstr "प्राप्त"
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_employee_session__today_received
+msgid "Received Today"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_quality_score__period_received
+msgid "Received in Period"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_conversation_list
+msgid "Recv"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_employee_session_list
+msgid "Recv Today"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#. odoo-javascript
+#: code:addons/whatsapp_employee_tracker/static/src/xml/chat_view.xml:0
+msgid "Refresh"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_conversation_form
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_employee_session_form
+msgid "Refresh Stats"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_keyword_alert_rule__match_type__regex
+msgid "Regular Expression"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,help:whatsapp_employee_tracker.field_wa_quality_score__consistency_score
+msgid "Regular activity across working hours."
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_response_time_stat__reply_text
+msgid "Reply Message"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_response_time_stat_tree
+msgid "Reply Preview"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_response_time_stat__reply_date
+msgid "Reply Sent At"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_response_time_stat_tree
+msgid "Reply Time"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_employee_session__auto_reply_timeout
+msgid "Reply Timeout (seconds)"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_auto_reply__reply_type
+msgid "Reply Type"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.ui.menu,name:whatsapp_employee_tracker.menu_wa_tracker_reporting
+msgid "Reporting"
+msgstr "रिपोर्टिंग"
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_conversation_list
+msgid "Resp Time (min)"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_quality_score_list
+msgid "Response (25)"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_response_time_stat_tree
+msgid "Response (min)"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.ui.menu,name:whatsapp_employee_tracker.menu_wa_response_time_summary
+msgid "Response Time"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_response_time_stat__response_minutes
+msgid "Response Time (min)"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_response_time_stat__response_seconds
+msgid "Response Time (sec)"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.actions.act_window,name:whatsapp_employee_tracker.action_wa_response_time_detail
+#: model:ir.ui.menu,name:whatsapp_employee_tracker.menu_wa_response_time_detail
+msgid "Response Time Detail"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_quality_score__response_time_score
+msgid "Response Time Score (0-25)"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.actions.act_window,name:whatsapp_employee_tracker.action_wa_response_time_summary
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_response_time_summary_tree
+msgid "Response Time Summary"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model,name:whatsapp_employee_tracker.model_wa_response_time_summary
+msgid "Response Time Summary per Employee"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_employee_session__auto_reply_stock_restrict
+msgid "Restrict to Available Stock"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_product_product__wa_retail_price
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_product_template__wa_retail_price
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.product_template_form_view_inherit_wa
+msgid "Retail Price (WhatsApp)"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_keyword_alert_log_form
+msgid "Review"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_keyword_alert_log__review_date
+msgid "Review Date"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_keyword_alert_log__review_notes
+msgid "Review Notes"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_keyword_alert_log__status__reviewed
+msgid "Reviewed"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_keyword_alert_log__reviewer_id
+msgid "Reviewed By"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_keyword_alert_rule__name
+msgid "Rule Name"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_auto_reply__order_id
+msgid "Sale Order"
+msgstr "बिक्री ऑर्डर"
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model,name:whatsapp_employee_tracker.model_sale_order
+msgid "Sales Order"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_voice_config_form
+msgid "Save & Apply"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.wa_pay_upi
+msgid "Scan with Google Pay / PhonePe / Paytm / BHIM"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_message_tone_list
+msgid "Score (0-100)"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_quality_score_form
+msgid "Score Breakdown (each out of 25)"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_quality_score__score_date
+msgid "Score Date"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_quality_score_form
+msgid "Score Overview"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#. odoo-javascript
+#: code:addons/whatsapp_employee_tracker/static/src/xml/chat_view.xml:0
+msgid "Search or start new chat"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,help:whatsapp_employee_tracker.field_wa_employee_session__auto_reply_timeout
+msgid ""
+"Seconds to wait for employee response before auto-replying. Default: 120 (2 "
+"minutes). Set low for testing."
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#. odoo-javascript
+#: code:addons/whatsapp_employee_tracker/static/src/xml/chat_view.xml:0
+msgid "Select a conversation from the left panel to view messages."
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_auto_reply__selected_product_id
+msgid "Selected Product"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,help:whatsapp_employee_tracker.field_wa_employee_session__auto_reply_payment_enabled
+msgid "Send a payment link + Cash on Delivery option after ordering."
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_conversation__sent_count
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_auto_reply__status__sent
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_communication_log__status__sent
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_conversation_form
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_conversation_list
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_employee_session_kanban
+msgid "Sent"
+msgstr "भेजा गया"
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_employee_session__today_sent
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_employee_session_list
+msgid "Sent Today"
+msgstr "आज भेजा"
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_quality_score__period_sent
+msgid "Sent in Period"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_message_tone__sentiment_category
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_message_tone_list
+msgid "Sentiment"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_response_time_stat__employee_session_id
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_response_time_summary__employee_session_id
+msgid "Session"
+msgstr "सत्र"
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_employee_session_form
+msgid "Settings"
+msgstr "सेटिंग्स"
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_keyword_alert_log__severity
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_keyword_alert_rule__severity
+msgid "Severity"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_response_time_summary__max_response_minutes
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_response_time_summary_tree
+msgid "Slowest (min)"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_conversation_kanban
+msgid "Soft"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_message_tone_form
+msgid "Soft (Polite) Keywords"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,help:whatsapp_employee_tracker.field_wa_conversation__tone_label
+msgid "Soft (polite), Neutral, or Hard (harsh) based on avg tone score."
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,help:whatsapp_employee_tracker.field_wa_message_tone__tone_label
+msgid "Soft / Neutral / Hard"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_tone_report__count_soft
+msgid "Soft / Polite"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_message_tone_list
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_tone_report_list
+msgid "Soft Keywords"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_message_tone__soft_keywords_found
+msgid "Soft Keywords Found"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_keyword_alert_rule__category__soft_language
+msgid "Soft Language (Polite/Friendly)"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_auto_reply__status
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_communication_log__status
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_keyword_alert_log__status
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_voice_config__status_message
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_voice_config_form
+msgid "Status"
+msgstr "स्थिति"
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_tone_report_form
+msgid "Summary"
+msgstr "सारांश"
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.wa_pay_upi
+msgid "TEST MODE"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.wa_pay_success
+msgid "TEST MODE · you can close this page."
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_voice_config_form
+msgid "Test Connection"
+msgstr "कनेक्शन जाँचें"
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.wa_pay_card
+msgid "Test User"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,help:whatsapp_employee_tracker.field_wa_employee_session__session_id
+msgid "The WhatsApp session assigned to this employee."
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_tone_report__date_range__this_month
+msgid "This Month"
+msgstr "इस माह"
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_tone_report__date_range__this_week
+msgid "This Week"
+msgstr "इस सप्ताह"
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.actions.act_window,help:whatsapp_employee_tracker.action_wa_response_time_summary
+msgid ""
+"This report shows average response time per employee for\n"
+"                <strong>manual replies only</strong> (auto-reply messages are excluded).\n"
+"                Green = under 5 min, Yellow = 5-15 min, Red = over 15 min."
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_chat_list
+msgid "Thread"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_auto_reply_list
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_chat_list
+msgid "Time"
+msgstr "समय"
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_tone_report__date_to
+msgid "To"
+msgstr "तक"
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_tone_report__date_range__today
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_employee_session_form
+msgid "Today"
+msgstr "आज"
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_message_tone__tone_label
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_conversation_list
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_message_tone_form
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_message_tone_list
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_tone_report_list
+msgid "Tone"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.ui.menu,name:whatsapp_employee_tracker.menu_wa_message_tone
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_message_tone_pivot
+msgid "Tone Analysis"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_message_tone_graph
+msgid "Tone Analysis by Employee"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_message_tone__tone_category
+msgid "Tone Category"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.actions.act_window,name:whatsapp_employee_tracker.action_wa_tone_chart
+#: model:ir.ui.menu,name:whatsapp_employee_tracker.menu_wa_tone_chart
+msgid "Tone Chart"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.actions.act_window,name:whatsapp_employee_tracker.action_wa_tone_report_wizard
+#: model:ir.ui.menu,name:whatsapp_employee_tracker.menu_wa_tone_report
+#: model:ir.ui.menu,name:whatsapp_employee_tracker.menu_wa_tone_report_wizard
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_tone_report_form
+msgid "Tone Report"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_tone_report_list
+msgid "Tone Report by Employee"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_conversation_list
+msgid "Tone Score"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_message_tone__tone_score
+msgid "Tone Score (0-100)"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_employee_session_kanban
+msgid "Total"
+msgstr "कुल"
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_tone_report__count_total
+msgid "Total Analyzed"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_conversation__total_messages
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_employee_session__total_messages
+msgid "Total Messages"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,help:whatsapp_employee_tracker.field_hr_employee__wa_monitoring
+#: model:ir.model.fields,help:whatsapp_employee_tracker.field_wa_employee_session__monitoring_enabled
+msgid "Track all messages on this session."
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_communication_log_list
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_voice_messages_list
+msgid "Transcription"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_voice_config__transcription_provider
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_voice_config_form
+msgid "Transcription Provider"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_voice_config__translate_to_english
+msgid "Translate to English"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_auto_reply__trigger_message_id
+msgid "Trigger Message"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_employee_session__unique_contacts
+msgid "Unique Contacts"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,help:whatsapp_employee_tracker.field_wa_voice_config__gemini_custom_model
+msgid ""
+"Used when \"Custom\" is selected above. Enter exact model name e.g. "
+"gemini-2.5-flash"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.actions.act_url,name:whatsapp_employee_tracker.action_wa_help_guide
+msgid "User Guide"
+msgstr "उपयोगकर्ता गाइड"
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_tone_report_list
+msgid "VADER Score"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_message_tone__sentiment_score
+msgid "VADER Score (-1 to 1)"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_message_tone__sentiment_category__very_negative
+msgid "Very Negative"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_message_tone__tone_category__very_polite
+msgid "Very Polite / Warm"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_message_tone__sentiment_category__very_positive
+msgid "Very Positive"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_conversation_form
+msgid "View All Messages"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:res.groups,comment:whatsapp_employee_tracker.group_wa_tracker_dept_head
+msgid "View WhatsApp tracking data for employees in their department only."
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_communication_log__is_voice_message
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_whatsapp_message__is_voice_message
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_communication_log_form
+msgid "Voice Message"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.actions.act_window,name:whatsapp_employee_tracker.action_wa_voice_messages
+#: model:ir.ui.menu,name:whatsapp_employee_tracker.menu_wa_voice_messages
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_voice_messages_list
+msgid "Voice Messages"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.ui.menu,name:whatsapp_employee_tracker.menu_wa_voice_test
+msgid "Voice Test"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_communication_log__voice_transcription
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_whatsapp_message__voice_transcription
+msgid "Voice Transcription"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.actions.server,name:whatsapp_employee_tracker.action_wa_voice_config
+#: model:ir.model,name:whatsapp_employee_tracker.model_wa_voice_config
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_voice_config_form
+msgid "Voice Transcription Settings"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.actions.act_url,name:whatsapp_employee_tracker.action_wa_voice_test_url
+msgid "Voice Transcription Tester"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_quality_score_list
+msgid "Volume (25)"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_sale_order__wa_conversation_id
+msgid "WA Conversation"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_sale_order__wa_employee_session_id
+msgid "WA Employee Session"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#. odoo-javascript
+#: code:addons/whatsapp_employee_tracker/static/src/xml/chat_view.xml:0
+msgid "WA Employee Tracker"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_account_bank_statement_line__wa_invoice_sent
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_account_move__wa_invoice_sent
+msgid "WA Invoice Sent"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_hr_employee__wa_monitoring
+msgid "WA Monitoring Active"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_sale_order__wa_payment_claimed
+msgid "WA Payment Claimed"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_sale_order__wa_payment_mode
+msgid "WA Payment Mode"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_hr_employee__wa_quality_score
+msgid "WA Quality Score"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_employee_session__session_status
+msgid "WA Status"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_hr_employee__wa_total_messages
+msgid "WA Total Messages"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#. odoo-javascript
+#: code:addons/whatsapp_employee_tracker/static/src/xml/chat_view.xml:0
+#: model:ir.ui.menu,name:whatsapp_employee_tracker.menu_wa_tracker_root
+msgid "WA Tracker"
+msgstr "WA ट्रैकर"
+
+#. module: whatsapp_employee_tracker
+#: model:res.groups,name:whatsapp_employee_tracker.group_wa_tracker_dept_head
+msgid "WA Tracker Department Head"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:res.groups,name:whatsapp_employee_tracker.group_wa_tracker_manager
+msgid "WA Tracker Manager"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.actions.server,name:whatsapp_employee_tracker.cron_auto_reply_check_ir_actions_server
+msgid "WA Tracker: Auto Reply Check"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.actions.server,name:whatsapp_employee_tracker.cron_compute_quality_scores_ir_actions_server
+msgid "WA Tracker: Compute Daily Quality Scores"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.actions.server,name:whatsapp_employee_tracker.cron_fix_ghost_partner_links_ir_actions_server
+msgid "WA Tracker: Fix Ghost Partner Links"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.actions.server,name:whatsapp_employee_tracker.cron_sync_communication_log_ir_actions_server
+msgid "WA Tracker: Sync Messages to Communication Log"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_employee_session_kanban
+msgid "Waiting"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_employee_session_kanban_config
+msgid "Waiting QR"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,help:whatsapp_employee_tracker.field_wa_message_tone__tone_score
+msgid "Weighted score: 0=Harshest, 50=Neutral, 100=Most Polite"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_employee_session_form
+msgid "WhatsApp Assignment"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model,name:whatsapp_employee_tracker.model_wa_auto_reply
+msgid "WhatsApp Auto Reply Log"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model,name:whatsapp_employee_tracker.model_wa_conversation
+msgid "WhatsApp Conversation Thread"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model,name:whatsapp_employee_tracker.model_wa_keyword_alert_log
+msgid "WhatsApp Keyword Alert Log"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model,name:whatsapp_employee_tracker.model_wa_keyword_alert_rule
+msgid "WhatsApp Keyword Alert Rule"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model,name:whatsapp_employee_tracker.model_whatsapp_message
+msgid "WhatsApp Message"
+msgstr "व्हाट्सएप संदेश"
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_whatsapp_message__push_name
+msgid "WhatsApp Name"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_hr_employee__wa_session_id
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_employee_session__session_id
+msgid "WhatsApp Session"
+msgstr "व्हाट्सएप सत्र"
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model,name:whatsapp_employee_tracker.model_wa_tone_report
+msgid "WhatsApp Tone Report"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_voice_config__openai_model__whisper-1
+msgid "Whisper-1 (stable)"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,field_description:whatsapp_employee_tracker.field_wa_communication_log__word_count
+msgid "Word Count"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields.selection,name:whatsapp_employee_tracker.selection__wa_tone_report__date_range__yesterday
+msgid "Yesterday"
+msgstr "कल"
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.wa_pay_success
+msgid "Your invoice has been sent to your WhatsApp. 🎉"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_employee_session_kanban
+msgid "alerts"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_voice_config_form
+msgid "e.g. gemini-3-flash-preview"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_voice_config_form
+msgid "e.g. whisper-large-v3"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_voice_config_form
+msgid "gsk_..."
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_employee_session_kanban
+msgid "min avg"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_employee_session_kanban_config
+msgid "msgs"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_employee_session_kanban
+msgid "recv today"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_employee_session_kanban
+msgid "sent today"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_voice_config_form
+msgid "sk-..."
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.model.fields,help:whatsapp_employee_tracker.field_wa_voice_config__groq_model
+msgid "whisper-large-v3 (most accurate) or whisper-large-v3-turbo (faster)"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#. odoo-javascript
+#: code:addons/whatsapp_employee_tracker/static/src/xml/chat_view.xml:0
+msgid "· Employee:"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_tone_report_form
+msgid "⚪ Neutral"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.wa_pay_upi
+msgid "✅ I have paid — Continue"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_communication_log_list
+msgid "🎤 Voice"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model:ir.ui.menu,name:whatsapp_employee_tracker.menu_wa_help_guide
+msgid "📖 User Guide"
+msgstr "📖 उपयोगकर्ता गाइड"
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_tone_report_form
+msgid "🔴 Hard / Critical"
+msgstr ""
+
+#. module: whatsapp_employee_tracker
+#: model_terms:ir.ui.view,arch_db:whatsapp_employee_tracker.view_wa_tone_report_form
+msgid "🟢 Soft / Polite"
+
+msgstr ""

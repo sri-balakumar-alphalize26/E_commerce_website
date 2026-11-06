@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--
+      Deliberately empty.
+
+      The connector is a connection, not an application: a setup key is pasted
+      once, two ticks say which channels this database may use, and nobody
+      opens it again. It had an app menu of its own, which put a technical
+      screen in front of every user and - being the thing that holds the key -
+      is the one screen that should not be casually reachable.
+
+      Its actions still exist, so the screens are there for whoever needs them:
+
+        <server>/odoo/action-whatsapp_gateway.action_whatsapp_session
+        <server>/odoo/action-whatsapp_gateway.action_whatsapp_message
+        <server>/odoo/action-whatsapp_gateway.action_whatsapp_optout
+        <server>/odoo/action-whatsapp_gateway.action_whatsapp_config
+
+      The panel prints the first of those on each database's page, next to the
+      key it is asking you to paste.
+
+      Day to day, people work in "WhatsApp and Email", which keeps its own
+      Messages and Settings.
+    -->
+
+</odoo>

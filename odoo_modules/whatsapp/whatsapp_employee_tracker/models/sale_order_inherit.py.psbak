@@ -1,0 +1,12 @@
+from odoo import models, fields
+
+
+class SaleOrder(models.Model):
+    _inherit = 'sale.order'
+
+    wa_conversation_id = fields.Many2one('wa.conversation', string='WA Conversation')
+    wa_employee_session_id = fields.Many2one('wa.employee.session', string='WA Employee Session')
+    wa_payment_mode = fields.Selection([
+        ('online', 'Online'),
+        ('cod', 'Cash on Delivery'),
+    ], string='WA Payment Mode')

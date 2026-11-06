@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- In-app User Guide (opens the static HTML manual) -->
+    <record id="action_wa_help_guide" model="ir.actions.act_url">
+        <field name="name">User Guide</field>
+        <field name="url">/whatsapp_employee_tracker/static/help/index.html?v=2</field>
+        <field name="target">new</field>
+    </record>
+
+    <menuitem id="menu_wa_help_guide"
+              name="📖 User Guide"
+              parent="menu_wa_tracker_config"
+              action="action_wa_help_guide"
+              sequence="100"/>
+</odoo>
