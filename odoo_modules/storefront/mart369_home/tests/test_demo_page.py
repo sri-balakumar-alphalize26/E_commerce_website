@@ -59,7 +59,33 @@ class TestDemoPage(TransactionCase):
             self.assertEqual(len(mode.tab_ids), 1)
             self.assertEqual(len(mode.banner_ids), 4)
             self.assertEqual(len(mode.tile_ids), 8)
-            self.assertFalse(mode.section_ids, 'No product rows on the Demo page.')
+            self.assertEqual(len(mode.section_ids), 2)
+
+    def test_an_existing_demo_gets_its_rows_once(self):
+        """A Demo page made before it had product rows gets them on upgrade."""
+        built = self.quick.section_ids.with_context(mart369_demo_build=True)
+        built.unlink()
+        self.assertFalse(self.quick.section_ids)
+        self.Version._mart369_ensure_demo()
+        self.Version._mart369_ensure_demo()
+        self.quick.invalidate_recordset()
+        self.assertEqual(len(self.quick.section_ids), 2)
+
+    def test_its_rows_are_placeholder_cards(self):
+        rows = self.quick._preview_payload()['sections']
+        self.assertEqual(len(rows), 2)
+        for row in rows:
+            self.assertEqual(len(row['items']), 6)
+            for card in row['items']:
+                self.assertTrue(card['id'].startswith('demo-'))
+                self.assertEqual(card['images'], [])
+                self.assertEqual(card['art'], '')
+
+    def test_a_copys_rows_show_real_products(self):
+        mode = self.demo.copy({'name': 'Mine'}).mode_ids.filtered(lambda m: m.key == 'quick')
+        self.assertEqual(len(mode.section_ids), 2)
+        for row in mode._preview_payload()['sections']:
+            self.assertFalse([c for c in row['items'] if str(c['id']).startswith('demo-')])
 
     def test_nothing_on_it_has_a_picture_or_a_drawing(self):
         for banner in self.quick.banner_ids:
@@ -99,7 +125,8 @@ class TestDemoPage(TransactionCase):
             self.Version.create({'name': 'Second', 'is_demo': True})
 
     def test_what_is_on_it_cannot_be_changed(self):
-        for band in (self.quick.banner_ids[:1], self.quick.tile_ids[:1], self.quick.tab_ids[:1]):
+        for band in (self.quick.banner_ids[:1], self.quick.tile_ids[:1], self.quick.tab_ids[:1],
+                     self.quick.section_ids[:1]):
             with self.assertRaises(UserError, msg=band._name):
                 band.write({'name': 'Changed'})
             with self.assertRaises(UserError, msg=band._name):
@@ -204,7 +231,7 @@ class TestRenamingAPage(HttpCase):
         super().setUp()
         self.Version = self.env['mart369.home.version'].sudo()
         self.demo = self.Version._mart369_ensure_demo()
-        self.page = self.demo.copy({'name': 'Demo (copy)'})
+        self.page = self.demo.copy({'name': 'Rename test page'})
         self.env['res.users'].create({
             'name': 'A Designer',
             'login': 'mart369_test_rename',
@@ -220,23 +247,23 @@ class TestRenamingAPage(HttpCase):
             headers={'Content-Type': 'application/json'}, method='PATCH')
 
     def test_a_copy_of_demo_can_be_renamed(self):
-        response = self._rename(self.page, 'Summer sale')
+        response = self._rename(self.page, 'Renamed test page')
         self.assertEqual(response.status_code, 200)
         self.page.invalidate_recordset()
-        self.assertEqual(self.page.name, 'Summer sale')
+        self.assertEqual(self.page.name, 'Renamed test page')
 
     def test_the_live_page_can_be_renamed(self):
         live = self.Version._mart369_live()
-        self.assertEqual(self._rename(live, 'Everyday').status_code, 200)
+        self.assertEqual(self._rename(live, 'Renamed live test page').status_code, 200)
         live.invalidate_recordset()
-        self.assertEqual(live.name, 'Everyday')
+        self.assertEqual(live.name, 'Renamed live test page')
         self.assertEqual(self.Version._mart369_live(), live)
 
     def test_an_empty_name_is_refused(self):
         for name in ('', '   '):
             self.assertNotEqual(self._rename(self.page, name).status_code, 200, repr(name))
         self.page.invalidate_recordset()
-        self.assertEqual(self.page.name, 'Demo (copy)')
+        self.assertEqual(self.page.name, 'Rename test page')
 
     def test_demo_cannot_be_renamed_through_the_console(self):
         self.assertNotEqual(self._rename(self.demo, 'Mine').status_code, 200)
@@ -304,3 +331,38 @@ class TestPageNames(HttpCase):
             headers={'Content-Type': 'application/json'}, method='PATCH')
         self.assertNotEqual(response.status_code, 200)
         self.assertIn('already exists', response.text)
+        # Refused means not saved: the check runs after the write, and a refusal
+        # is answered rather than raised, so this is what could silently go wrong.
+        self.env.invalidate_all()
+        self.assertEqual(self.second.name, 'Summer Sale')
+
+    def _as_console(self):
+        self.env['res.users'].create({
+            'name': 'A Designer', 'login': 'mart369_test_names2', 'password': 'mart369_test_names2',
+            'group_ids': [(6, 0, [self.env.ref('base.group_user').id, self.env.ref(EDITOR_GROUP).id])],
+        })
+        self.authenticate('mart369_test_names2', 'mart369_test_names2')
+
+    def test_a_refused_new_page_leaves_nothing_behind(self):
+        self._as_console()
+        before = self.Version.search_count([])
+        response = self.url_open(
+            '/369mart/admin/home/pages',
+            data=json.dumps({'from': self.first.id, 'name': 'diwali sale'}),
+            headers={'Content-Type': 'application/json'})
+        self.assertNotEqual(response.status_code, 201)
+        self.assertIn('already exists', response.text)
+        self.env.invalidate_all()
+        self.assertEqual(self.Version.search_count([]), before)
+
+    def test_a_refused_restore_stays_in_the_trash(self):
+        self.first.action_trash()
+        self.second.write({'name': 'Diwali Sale'})
+        self._as_console()
+        response = self.url_open(
+            '/369mart/admin/home/pages/%d/restore' % self.first.id, data='{}',
+            headers={'Content-Type': 'application/json'})
+        self.assertNotEqual(response.status_code, 200)
+        self.assertIn('already exists', response.text)
+        self.env.invalidate_all()
+        self.assertTrue(self.first.deleted_at)

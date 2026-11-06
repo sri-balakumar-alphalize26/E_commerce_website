@@ -44,6 +44,10 @@ class Mart369HomeAdminApi(http.Controller):
         return request.make_json_response(payload, status=status)
 
     def _fail(self, error, status=400):
+        """Refuse, and keep nothing this request already wrote. A refusal is
+        answered rather than raised, so Odoo would otherwise commit: a name
+        check runs after the write, and a refused rename would still be saved."""
+        request.env.cr.rollback()
         return self._json({'ok': False, 'error': error}, status=status)
 
     def _body(self):

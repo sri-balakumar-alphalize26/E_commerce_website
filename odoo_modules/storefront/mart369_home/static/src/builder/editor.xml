@@ -323,7 +323,8 @@
             <div class="hm-card-img">
                 <div class="hm-gal-one">
                     <img t-if="item.images and item.images.length" t-att-src="item.images[0]" alt="" loading="lazy"/>
-                    <span t-else="" class="mart-art" t-attf-style="{{ item.color ? 'color:' + item.color : '' }}">
+                    <!-- Empty art says "draw nothing": the Demo page's placeholder cards. -->
+                    <span t-elif="item.art !== ''" class="mart-art" t-attf-style="{{ item.color ? 'color:' + item.color : '' }}">
                         <t t-esc="item.label || item.art || item.name"/>
                     </span>
                 </div>

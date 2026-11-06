@@ -385,8 +385,9 @@ function Panel({ selected, vals, vocab, onField, onToggle, onRemove, busy,
             );
           }
           if (type === "switch") {
-            /* Only means something once there is a picture. */
-            if (!picture) return null;
+            /* Text on the picture only means something once there is a picture.
+               Shop now applies with or without one. */
+            if (field === "text_on_image" && !picture) return null;
             return (
               <div key={field} className="ad-field ad-span2 pe-switch-row">
                 <label className="ad-switch-lbl">

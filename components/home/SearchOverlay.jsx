@@ -172,7 +172,8 @@ export default function SearchOverlay({ open, onClose, products, picks, cart, se
   const searching = !!wanted && (wanted !== debounced || suggLoading || (!suggError && sugg?.q !== debounced));
   const matches = useMemo(() => cards(sugg?.items), [sugg]);
   useEffect(() => { if (matches.length) absorb(matches); }, [matches]);
-  const results = matches.slice(0, 8);
+  /* Under two letters nothing is being asked, so the last answer's rows go. */
+  const results = wanted ? matches.slice(0, 8) : [];
   /* Enter / "See all" → full results page (when the app provides one) */
   const submit = (t) => { remember(t); if (onSubmit) { close(); onSubmit(t); } };
 
@@ -278,7 +279,7 @@ export default function SearchOverlay({ open, onClose, products, picks, cart, se
             ) : null}
             {term && onSubmit && (
               <button className="sr-all" onClick={() => submit(term)} style={{ "--i": results.length }}>
-                <Icon n="search" size={15} />{matches.length ? `See all ${matches.length} results for “${term}”` : `Search 369 Mart for “${term}”`}<Icon n="right" size={15} />
+                <Icon n="search" size={15} />{results.length ? `See all ${results.length} results for “${term}”` : `Search 369 Mart for “${term}”`}<Icon n="right" size={15} />
               </button>
             )}
             {results.length || searching || !wanted ? null : (

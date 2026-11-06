@@ -274,16 +274,21 @@ class Mart369HomeVersion(models.Model):
         """The permanent "Demo" page: the home page's structure on its own, so
         anyone can see how a page is laid out and copy it to start their own.
 
-        Banners and category tiles with no pictures, drawings or products, so
-        there is nothing to mistake for real content. Made by code rather than
-        in the data file on purpose: a data record whose row has gone is created
-        again by every upgrade, which is how a stray grocery page reappeared.
+        Banners, category tiles and product rows with no pictures, drawings or
+        real products, so there is nothing to mistake for real content. Made by
+        code rather than in the data file on purpose: a data record whose row
+        has gone is created again by every upgrade, which is how a stray grocery
+        page reappeared.
 
-        Does nothing when the page already exists. Returns it.
+        When the page already exists it only gets what it is missing. Returns it.
         """
         Version = self.sudo().with_context(mart369_demo_build=True)
         page = Version.search([('is_demo', '=', True)], limit=1)
         if page:
+            # A Demo page made before it had product rows.
+            for mode in page.mode_ids:
+                if not mode.with_context(active_test=False).section_ids:
+                    self._mart369_demo_rows(mode)
             # Handed back without the build flag: the caller gets the locked page.
             return page.with_env(self.env)
         env = Version.env
@@ -319,7 +324,23 @@ class Mart369HomeVersion(models.Model):
                     'image_source': 'none', 'art': False,
                     'sequence': (i + 1) * 10,
                 })
+            self._mart369_demo_rows(mode)
         return page.with_env(self.env)
+
+    @api.model
+    def _mart369_demo_rows(self, mode):
+        """Two product rows. On the Demo page they draw placeholder cards (see
+        `_mart369_placeholder_row`); on a copy of it the same rows fill
+        themselves with the shop's real products."""
+        env = mode.env
+        for i, rule in enumerate(('new', 'best'), start=1):
+            env['mart369.home.section'].create({
+                'mode_id': mode.id, 'kind': 'rail', 'key': 'row-%d' % i,
+                'name': env._('Product row %s', i),
+                'subtitle': env._('A smaller line under the heading'),
+                'source': 'rule', 'rule': rule, 'limit': 12,
+                'sequence': i * 10,
+            })
 
     # ------------------------------------------------------------ the button
 

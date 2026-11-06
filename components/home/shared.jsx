@@ -315,7 +315,8 @@ export function Gallery({ p }) {
     el.scrollTo({ left: next * el.clientWidth, behavior: "smooth" });
     setIdx(next);
   };
-  if (count === 0) return <div className="hm-gal-one"><ProductArt art={p.art} color={p.color} label={p.label} /></div>;
+  /* Empty `art` says "draw nothing": the Demo page's placeholder cards. */
+  if (count === 0) return <div className="hm-gal-one">{p.art === "" ? null : <ProductArt art={p.art} color={p.color} label={p.label} />}</div>;
   /* A card is about 170px wide, so it draws the small version of each photo. */
   const small = (k) => p.thumbs?.[k] || imgs[k];
   if (count === 1) return <div className="hm-gal-one"><img src={small(0)} alt={p.name} loading="lazy" decoding="async" /></div>;

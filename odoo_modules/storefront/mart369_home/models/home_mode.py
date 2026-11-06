@@ -186,6 +186,8 @@ class Mart369HomeMode(models.Model):
         templates = Template.browse()
         for section in sections:
             templates |= section._resolve_products()
+        # Stock for the whole page too, rather than once per card.
+        self.env['mart369.serializable']._mart369_load_stock(templates)
         return self.env['mart369.serializable']._price_context_for(
             templates)
 
@@ -242,15 +244,36 @@ class Mart369HomeMode(models.Model):
                 out.append(dict(vals, rid=record.id, active=record.active))
             return out
 
+        # The Demo page is the structure on its own: placeholder cards rather
+        # than whatever the shop happens to sell.
+        demo = self.version_id.is_demo
         return {
             'tabs': rows(self.tab_ids, lambda r: r._serialize()),
             'banners': rows(self.banner_ids, lambda r: r._serialize()),
             'categories': rows(self.tile_ids, lambda r: r._serialize()),
             'sections': rows(
-                sections, lambda r: r._serialize(price_ctx),
+                sections,
+                self._mart369_placeholder_row if demo else (lambda r: r._serialize(price_ctx)),
                 stub=lambda r: {'key': r.key or 'sec%s' % r.id,
                                 'title': r.name or '', 'subtitle': r.subtitle or '',
                                 'items': [], 'empty': True}),
+        }
+
+    def _mart369_placeholder_row(self, row):
+        """A row on the Demo page as the editors draw it: six cards with no
+        pictures, drawings or real products. Empty `art` says "draw nothing"."""
+        return {
+            'key': row.key or 'sec%s' % row.id,
+            'title': row.name or '',
+            'subtitle': row.subtitle or '',
+            'items': [{
+                'id': 'demo-%d-%d' % (row.id, i),
+                'name': self.env._('Product %s', i),
+                'unit': '',
+                'price': 999,
+                'art': '',
+                'images': [],
+            } for i in range(1, 7)],
         }
 
     def _preview_payload(self):

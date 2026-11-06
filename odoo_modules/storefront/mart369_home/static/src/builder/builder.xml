@@ -215,7 +215,7 @@
                 <span class="hm-kicker" t-esc="b.kicker"/>
                 <strong t-esc="b.name"/>
                 <span class="hm-note" t-esc="b.note"/>
-                <span class="hm-shop">Shop now <Icon n="'right'" size="14"/></span>
+                <span t-if="b.show_shop_now" class="hm-shop">Shop now <Icon n="'right'" size="14"/></span>
             </div>
         </a>
     </t>
