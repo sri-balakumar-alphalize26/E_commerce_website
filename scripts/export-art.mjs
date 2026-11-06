@@ -7,7 +7,7 @@
 
      node scripts/export-art.mjs
 
-   Writes odoo_modules/mart369/static/img/art/<Name>.svg, one per entry of
+   Writes odoo_modules/storefront/mart369/static/img/art/<Name>.svg, one per entry of
    the ART map, drawn in each drawing's own default colour. */
 import { createRequire } from "node:module";
 import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
@@ -35,7 +35,7 @@ const ProductArt = mod.exports.default;
 const names = /const ART = \{([^}]*)\}/.exec(source)?.[1].split(",").map((s) => s.trim()).filter(Boolean);
 if (!names?.length) throw new Error("No ART map found in art.jsx");
 
-const out = join(root, "odoo_modules/mart369/static/img/art");
+const out = join(root, "odoo_modules/storefront/mart369/static/img/art");
 mkdirSync(out, { recursive: true });
 for (const f of readdirSync(out)) if (f.endsWith(".svg")) rmSync(join(out, f));
 for (const name of names) {

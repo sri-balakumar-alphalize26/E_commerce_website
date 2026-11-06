@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="mart369_payment.SettingsDesk">
+        <Layout display="{ controlPanel: {} }" className="'o_mart369_desk h-100'">
+            <div class="mart-builder pe st">
+
+                <header class="pe-head">
+                    <div>
+                        <h1>Settings</h1>
+                        <p>The store's details, how customers can pay, and what the console alerts you about.</p>
+                    </div>
+                </header>
+
+                <p t-if="state.loading and !state.draft" class="pe-loading st-pad">Loading settings...</p>
+
+                <t t-if="state.draft">
+                    <div class="st-card">
+                        <div class="pe-toolbar st-toolbar">
+                            <Tabs tabs="tabItems" value="state.tab" onChange="(k) => this.pickTab(k)"/>
+                            <div class="pe-toolbar-gap"/>
+                            <span t-if="dirty" class="st-dim">Unsaved changes</span>
+                            <button class="mart-btn" t-att-disabled="!dirty or state.busy"
+                                    t-on-click="() => this.reset()">Reset</button>
+                            <button class="mart-btn mart-btn-primary" t-att-disabled="!dirty or state.busy"
+                                    t-on-click="() => this.save()">
+                                <t t-if="state.busy">Saving...</t>
+                                <t t-else="">Save changes</t>
+                            </button>
+                        </div>
+
+                        <p t-if="state.error" class="pe-error st-err" role="alert" t-esc="state.error"/>
+
+                        <!-- Store: the company in 369ai. -->
+                        <div t-if="state.tab === 'store'" class="st-form">
+                            <label t-foreach="STORE_FIELDS" t-as="f" t-key="f.key"
+                                   t-attf-class="st-field {{ f.wide ? 'st-span2' : '' }}">
+                                <span t-esc="f.label"/>
+                                <input t-att-type="f.type or 'text'"
+                                       t-att-value="state.draft.store[f.key]"
+                                       t-att-placeholder="f.placeholder or ''"
+                                       t-on-input="(ev) => this.setField('store', f.key, ev.target.value)"/>
+                            </label>
+                            <p class="st-hint st-span2">
+                                <Icon n="'info'" size="14"/>
+                                <span>This is the company in 369ai - the same name and GSTIN print on invoices. When orders can be placed is set by the delivery slots, under Store › Delivery.</span>
+                            </p>
+                        </div>
+
+                        <!-- Payments: 369ai's own providers. -->
+                        <div t-if="state.tab === 'payments' and state.draft.pay" class="st-rows">
+                            <div t-foreach="state.draft.pay.providers" t-as="p" t-key="p.id" class="st-row">
+                                <span class="st-ic"><Icon n="PAY_ICON[p.kind] or 'lock'" size="18"/></span>
+                                <span class="st-txt">
+                                    <b>
+                                        <t t-esc="p.name"/>
+                                        <span t-attf-class="mart-pill mart-t-{{ payState(p)[1] }}" t-esc="payState(p)[0]"/>
+                                    </b>
+                                    <small t-esc="payHelp(p)"/>
+                                </span>
+                                <span t-if="p.state === 'disabled' and !p.canEnable" class="st-dim">In 369ai</span>
+                                <Switch t-else="" on="p.state !== 'disabled'" label="p.name"
+                                        disabled="state.busy"
+                                        onChange="(v) => this.toggleProvider(p, v)"/>
+                            </div>
+                            <div t-if="state.draft.pay.hasCod" class="st-row">
+                                <span class="st-ic"><Icon n="'lock'" size="18"/></span>
+                                <span class="st-txt">
+                                    <b>Cash on delivery limit</b>
+                                    <small>Orders above this must be paid another way. 0 means no limit.</small>
+                                </span>
+                                <span class="st-num">
+                                    <input inputmode="numeric" t-att-value="state.draft.pay.codLimit"
+                                           aria-label="Cash on delivery limit"
+                                           t-on-input="(ev) => this.setCod(ev.target.value)"/>
+                                    <em t-esc="state.draft.pay.currency and state.draft.pay.currency.symbol or ''"/>
+                                </span>
+                            </div>
+                            <p class="st-hint">
+                                <Icon n="'info'" size="14"/>
+                                <span>
+                                    These are 369ai's payment providers - the checkout offers exactly what is switched on here.
+                                    <t t-if="state.draft.pay.more"><t t-esc="state.draft.pay.more"/> more are switched off and set up in 369ai.</t>
+                                    <button class="mart-link" t-on-click="() => this.openProviders()">Open payment providers</button>
+                                </span>
+                            </p>
+                        </div>
+
+                        <!-- Customers: how long New lasts, when Dormant starts. -->
+                        <div t-if="state.tab === 'customers' and state.draft.customers" class="st-form">
+                            <div class="st-field">
+                                <span>New for</span>
+                                <Pick label="'New for'" value="dayValue('newDays')"
+                                      options="dayOptions('newDays')" disabled="state.busy"
+                                      onChange="(v) => this.pickDays('newDays', v, 'New for how many days?')"/>
+                            </div>
+                            <div class="st-field">
+                                <span>Dormant after, without a sign-in</span>
+                                <Pick label="'Dormant after'" value="dayValue('dormantDays')"
+                                      options="dayOptions('dormantDays')" disabled="state.busy"
+                                      onChange="(v) => this.pickDays('dormantDays', v, 'Dormant after how many days?')"/>
+                            </div>
+                            <p class="st-hint st-span2">
+                                <Icon n="'info'" size="14"/>
+                                <span>A customer is New for this many days after signing up, then Active. Saving updates every customer's badge straight away.</span>
+                            </p>
+                        </div>
+
+                        <!-- Reviews: what a customer may attach, and words that hold a review. -->
+                        <div t-if="state.tab === 'reviews' and state.draft.reviews" class="st-form">
+                            <div class="st-field">
+                                <span>Photos per review</span>
+                                <Pick label="'Photos per review'" value="reviewValue('maxPhotos')"
+                                      options="reviewOptions('maxPhotos')" disabled="state.busy"
+                                      onChange="(v) => this.pickReview('maxPhotos', v, 'How many photos?')"/>
+                            </div>
+                            <div class="st-field">
+                                <span>Max size per photo</span>
+                                <Pick label="'Max size per photo'" value="reviewValue('photoMb')"
+                                      options="reviewOptions('photoMb')" disabled="state.busy"
+                                      onChange="(v) => this.pickReview('photoMb', v, 'Largest photo, in MB?')"/>
+                            </div>
+                            <div class="st-field st-span2">
+                                <span>Allow one video per review</span>
+                                <Switch on="!!state.draft.reviews.video" label="'Allow a video'"
+                                        disabled="state.busy"
+                                        onChange="(v) => this.setField('reviews', 'video', v)"/>
+                            </div>
+                            <div t-if="state.draft.reviews.video" class="st-field">
+                                <span>Max video length</span>
+                                <Pick label="'Max video length'" value="reviewValue('videoSeconds')"
+                                      options="reviewOptions('videoSeconds')" disabled="state.busy"
+                                      onChange="(v) => this.pickReview('videoSeconds', v, 'Longest video, in seconds?')"/>
+                            </div>
+                            <div t-if="state.draft.reviews.video" class="st-field">
+                                <span>Max video size</span>
+                                <Pick label="'Max video size'" value="reviewValue('videoMb')"
+                                      options="reviewOptions('videoMb')" disabled="state.busy"
+                                      onChange="(v) => this.pickReview('videoMb', v, 'Largest video, in MB?')"/>
+                            </div>
+                            <label class="st-field st-span2">
+                                <span>Also hold reviews with these words - one per line, any language</span>
+                                <textarea rows="6" class="st-words" t-att-value="state.draft.reviews.blockedWords"
+                                          placeholder="e.g.&#10;idiot&#10;&#2980;&#3015;&#2997;&#2975;&#3007;&#2991;&#3006;&#10;&#1581;&#1585;&#1575;&#1605;&#1740;"
+                                          t-on-input="(ev) => this.setReviewWords(ev)"/>
+                            </label>
+                            <p class="st-hint st-span2">
+                                <Icon n="'info'" size="14"/>
+                                <span>Photos are shrunk to 1600px before saving. Limits are checked on the 369ai server, so the app cannot upload bigger files. Phone numbers, links and common abusive words (English, Tamil, Malayalam, Telugu, Urdu, Arabic) are always held; the words here are added to them. Changes apply to new reviews and uploads.</span>
+                            </p>
+                        </div>
+
+                        <!-- Orders: how long a customer has to answer a replacement. -->
+                        <div t-if="state.tab === 'orders' and state.draft.orders" class="st-form">
+                            <div class="st-field">
+                                <span>Quick orders: answer a replacement within</span>
+                                <Pick label="'Quick orders'" value="waitValue('substituteQuick')"
+                                      options="waitOptions('substituteQuick')" disabled="state.busy"
+                                      onChange="(v) => this.pickWait('substituteQuick', v, 'Quick orders: how many minutes?')"/>
+                            </div>
+                            <div class="st-field">
+                                <span>Express orders: answer a replacement within</span>
+                                <Pick label="'Express orders'" value="waitValue('substituteExpress')"
+                                      options="waitOptions('substituteExpress')" disabled="state.busy"
+                                      onChange="(v) => this.pickWait('substituteExpress', v, 'Express orders: how many minutes?')"/>
+                            </div>
+                            <p class="st-hint st-span2">
+                                <Icon n="'info'" size="14"/>
+                                <span>When an item runs out and you offer a replacement, the customer has this long to accept it. No answer: the item is refunded to their 369 Wallet. A change applies to offers made from now on.</span>
+                            </p>
+                        </div>
+
+                        <!-- Alerts: the shared settings record. -->
+                        <div t-if="state.tab === 'alerts'" class="st-rows">
+                            <div t-foreach="ALERTS" t-as="a" t-key="a.key" class="st-row">
+                                <span class="st-ic"><Icon n="'dash'" size="18"/></span>
+                                <span class="st-txt"><b t-esc="a.label"/><small t-esc="a.help"/></span>
+                                <Switch on="!!state.draft.alerts[a.key]" label="a.label"
+                                        disabled="state.busy"
+                                        onChange="(v) => this.setField('alerts', a.key, v)"/>
+                            </div>
+                            <p class="st-hint">
+                                <Icon n="'info'" size="14"/>
+                                <span>These are for the console. Email and SMS alerts are not set up.</span>
+                            </p>
+                        </div>
+                    </div>
+                </t>
+
+                <p t-elif="state.error" class="pe-error st-pad" role="alert">
+                    We could not reach the shop. <t t-esc="state.error"/>
+                    <button class="mart-link" t-on-click="() => this.load()">Try again</button>
+                </p>
+
+            </div>
+        </Layout>
+    </t>
+
+    <!-- A custom number of days for New or Dormant. -->
+    <t t-name="mart369_payment.DaysDialog">
+        <Dialog size="'sm'" title="props.title">
+            <label class="d-block">
+                <span class="form-label d-block mb-1" t-esc="unit"/>
+                <input type="text" class="form-control" inputmode="numeric" autofocus="autofocus" t-att-value="state.value"
+                       placeholder="e.g. 21"
+                       t-on-input="(ev) => this.edit(ev)"
+                       t-on-keydown="(ev) => ev.key === 'Enter' and this.save()"/>
+            </label>
+            <t t-set-slot="footer">
+                <button class="mart-btn mart-btn-primary" t-att-disabled="!canSave"
+                        t-on-click="() => this.save()">Use this</button>
+                <button class="mart-btn" t-on-click="() => this.props.close()">Cancel</button>
+            </t>
+        </Dialog>
+    </t>
+
+</templates>

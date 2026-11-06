@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <menuitem id="menu_imgsrv_root" name="Image Server" web_icon="ai369_image_server,static/description/icon.png"
+              action="action_imgsrv_files" groups="base.group_system" sequence="95"/>
+    <menuitem id="menu_imgsrv_files" name="Image Files" parent="menu_imgsrv_root" action="action_imgsrv_files" sequence="10"/>
+    <menuitem id="menu_imgsrv_migration" name="Migration" parent="menu_imgsrv_root" action="action_imgsrv_migration" sequence="20"/>
+    <menuitem id="menu_imgsrv_settings" name="Settings" parent="menu_imgsrv_root" action="action_imgsrv_settings" sequence="30"/>
+</odoo>

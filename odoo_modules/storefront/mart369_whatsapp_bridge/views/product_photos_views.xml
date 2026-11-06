@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- The Confirmation pictures tab draws the Photographs box of the 369 Mart
+         editor on the same record: one list for the website and the WhatsApp
+         page, with the first picture on the card wherever it was added. -->
+    <record id="product_template_form_photos_tab" model="ir.ui.view">
+        <field name="name">product.template.form.mart369.photos.tab</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="sales_automation_confirm.product_template_form_view_sa_pictures"/>
+        <field name="arch" type="xml">
+            <xpath expr="//page[@name='sa_confirm_pictures']" position="replace">
+                <page string="Confirmation pictures" name="sa_confirm_pictures"
+                      groups="sales_automation.group_sa_user">
+                    <p class="text-muted">
+                        The same pictures as Photographs on General Information: the website and the
+                        WhatsApp link show this list, in this order. Saved with the form's own Save.
+                    </p>
+                    <widget name="mart369_photos_box"/>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- The same box on a variant's Variant images tab, for that variant's own
+         picture and Extra Variant Media: what the website and the WhatsApp link
+         show when the customer picks it. The box needs both on the form; the
+         list stays hidden (not invisible="1", which would not load its rows). -->
+    <record id="product_product_form_photos_tab" model="ir.ui.view">
+        <field name="name">product.product.form.mart369.photos.tab</field>
+        <field name="model">product.product</field>
+        <field name="inherit_id" ref="sales_automation_confirm.product_normal_form_view_sa_media"/>
+        <field name="arch" type="xml">
+            <xpath expr="//page[@name='sa_variant_images']" position="replace">
+                <page string="Variant images" name="sa_variant_images">
+                    <p class="text-muted">
+                        Photos of this exact variant: the website and the WhatsApp link show them, in this
+                        order, when the customer picks it. Saved with the form's own Save.
+                    </p>
+                    <field name="image_variant_1920" invisible="1"/>
+                    <field name="product_variant_image_ids" mode="kanban" class="d-none" nolabel="1">
+                        <kanban>
+                            <field name="sequence"/>
+                            <field name="image_1920"/>
+                            <templates>
+                                <t t-name="card"><field name="name"/></t>
+                            </templates>
+                        </kanban>
+                    </field>
+                    <widget name="mart369_photos_box"/>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,1332 @@
+/**
+ * The product editor - photographs, the boxes, and "how it looks".
+ *
+ * One component with two hosts, so the two screens that edit a product cannot
+ * drift apart:
+ *
+ *  - the Products desk (369 Mart > Products), which keeps its own Save and
+ *    Cancel and writes through `mart369_desk_save`;
+ *  - 369ai's own product form (Inventory > Products), where the editor sits in
+ *    the 369 Mart tab and every change goes to the form's record, so 369ai's
+ *    Save and Discard are the only buttons.
+ *
+ * On the desk the editor keeps everything in its own state until Save. In the
+ * form (`embedded`) it still keeps the boxes' state, so typing never re-draws
+ * the box under the cursor, but reports each change through `onValue`, and
+ * hands photographs to `photoHost`, which changes the record and passes the
+ * gallery back down as props.
+ *
+ * The boxes themselves come from `mart369_desk_form`, which reads the field
+ * definitions and the page's hidden-box list - so both hosts ask the same
+ * questions in the same words.
+ */
+import { Component, onPatched, onWillUpdateProps, useEffect, useExternalListener, useRef, useState } from "@odoo/owl";
+import { getDataURLFromFile } from "@web/core/utils/urls";
+import { useService } from "@web/core/utils/hooks";
+import { _t } from "@web/core/l10n/translation";
+import { Icon } from "@mart369/ui/icon";
+import { Pick } from "@mart369/ui/pick";
+import { VariantsBlock, vxFrom } from "./variants_block";
+import { RichBox } from "./rich_box";
+import { ShopFrame } from "./shop_frame";
+
+/* Where each box shows up for the shopper, for the eye button's card.
+   `card` and `page` draw a mock of that screen with the box outlined; `note`
+   has no spot on either and says where it is used instead. `sample` fills an
+   empty box so the mock always has something to point at. */
+export const PREVIEW = {
+    name: { where: "card", sample: _t("USB-C Fast Charger") },
+    type: { where: "note", note: _t("Goods are counted and delivered; a service is not. Decides what 369ai does with stock and delivery.") },
+    is_storable: { where: "note", note: _t("When on, 369ai keeps a stock count - and the app can say 'Only 3 left' and stop selling at zero.") },
+    mart_on_hand: { where: "note", note: _t("Not shown as a number. The app uses it to say 'Only 3 left' and to stop selling at zero.") },
+    barcode: { where: "note", note: _t("Not shown to shoppers. Scanned at the till and in the warehouse.") },
+    categ_id: { where: "note", note: _t("Not shown to shoppers. 369ai's own category, for accounts and stock rules.") },
+    taxes_id: { where: "note", note: _t("Added to the price when a shopper pays, as your tax settings say.") },
+    supplier_taxes_id: { where: "note", note: _t("Not shown to shoppers. The tax on what you buy it for.") },
+    company_id: { where: "note", note: _t("Not shown to shoppers. Which of your companies sells it.") },
+    mart_brand: { where: "note", note: _t("The brand line on the product page, above the name. Empty falls back to the shop's brand.") },
+    default_code: { where: "note", note: _t("Not shown to shoppers. It is your own code for the product, used in search and on your records.") },
+    public_categ_ids: { where: "note", note: _t("Decides which aisles the product is listed under in the app, and which page settings apply to it.") },
+    list_price: { where: "card", sample: "12.500" },
+    compare_list_price: { where: "card", sample: "15.000" },
+    standard_price: { where: "note", note: _t("Not shown to shoppers. What the product costs you - 369ai uses it for margins and stock value.") },
+    mart_unit_text: { where: "card", sample: "250 g" },
+    mart_per_unit: { where: "card", sample: "17.25 per 250 g" },
+    mart_note: { where: "card", sample: _t("Approx 250-400 g") },
+    mart_home_tag: { where: "card", sample: _t("New") },
+    mart_low_stock_at: { where: "card", sample: "3" },
+    mart_delivery_text: { where: "card", sample: _t("3-5 days") },
+    mart_features: { where: "page", sample: _t("Fast charging\nFoldable plug") },
+    mart_in_the_box: { where: "page", sample: _t("Charger, cable") },
+    mart_material: { where: "page", sample: _t("Plastic") },
+    mart_item_height: { where: "page", sample: "12 cm" },
+    mart_item_length: { where: "page", sample: "8 cm" },
+    mart_item_width: { where: "page", sample: "6 cm" },
+    weight: { where: "page", sample: "0.25" },
+    description_ecommerce: { where: "page", sample: _t("A short paragraph about the product.") },
+};
+
+const OTHER = "__other";
+const NUMBER = /^\d+(?:\.\d+)?$/;
+const RANGE = /^\d+(?:\.\d+)?(?:\s*-\s*\d+(?:\.\d+)?)?$/;
+
+function unitIn(units, word) {
+    return units.find((u) => u.toLowerCase() === (word || "").toLowerCase());
+}
+
+/** A saved value split into the parts its boxes edit. Anything that does not
+ *  fit keeps its text in `other`, so nothing is lost on the way in. */
+export function splitValue(box, raw) {
+    if (box.numeric) {
+        // A number column kept in the first unit (weight: kg).
+        return { value: raw ? String(raw) : "", unit: box.units[0], other: null };
+    }
+    if (box.kind === "trust") {
+        // [{key, label, on, text, shop}] - the badges under the price.
+        let rows = [];
+        try {
+            rows = JSON.parse(raw || "[]");
+        } catch (e) {
+            rows = [];
+        }
+        return { rows: Array.isArray(rows) ? rows : [] };
+    }
+    const text = String(raw || "").trim();
+    if (box.kind === "points" || box.kind === "pairs") {
+        // Features are one per line; In the box is a comma list.
+        const split = box.sep ? /,/ : /\n/;
+        const list = text ? text.split(split).map((l) => l.trim()).filter(Boolean) : [];
+        return { list: list.length ? list : [""] };
+    }
+    if (box.kind === "choice") {
+        if (!text) {
+            return { choice: "", other: "" };
+        }
+        const hit = box.options.find((o) => o.toLowerCase() === text.toLowerCase());
+        return hit ? { choice: hit, other: "" } : { choice: OTHER, other: text };
+    }
+    const units = box.units || [];
+    if (box.kind === "per_unit") {
+        const m = text.match(/^(\d+(?:\.\d+)?)\s*(?:per|\/)\s*(\d+(?:\.\d+)?)?\s*(\S+)$/i);
+        if (!text) {
+            return { price: "", value: "", unit: units[0], other: null };
+        }
+        if (m && unitIn(units, m[3])) {
+            return { price: m[1], value: m[2] || "", unit: unitIn(units, m[3]), other: null };
+        }
+        return { price: "", value: "", unit: units[0], other: text };
+    }
+    // measure
+    if (!text) {
+        return { value: "", unit: units[0], other: null };
+    }
+    const m = text.match(/^(\S+?)\s*([a-zA-Z]+)$/);
+    const ok = m && (box.range ? RANGE : NUMBER).test(m[1]) && unitIn(units, m[2]);
+    return ok
+        ? { value: m[1], unit: unitIn(units, m[2]), other: null }
+        : { value: "", unit: units[0], other: text };
+}
+
+/** Product details: one "Label: value" line as its two boxes. A line saved
+ *  without a colon comes back as a value with an empty label, to be named. */
+export function pairOf(line) {
+    const at = String(line || "").indexOf(":");
+    if (at < 0) {
+        return { label: "", value: String(line || "") };
+    }
+    const rest = line.slice(at + 1);
+    return { label: line.slice(0, at), value: rest.startsWith(" ") ? rest.slice(1) : rest };
+}
+
+/** The two boxes back into the line. Spaces are kept while typing; the line
+ *  is trimmed when it is saved. */
+export function joinPair(label, value) {
+    const l = String(label || "").replace(/:/g, "");
+    return l || value ? `${l}: ${value || ""}` : "";
+}
+
+/** The parts back into the one value the column holds. */
+export function joinValue(box, p) {
+    if (box.kind === "trust") {
+        return JSON.stringify(p.rows || []);
+    }
+    if (box.kind === "points" || box.kind === "pairs") {
+        return p.list.map((l) => l.trim()).filter(Boolean).join(box.sep || "\n");
+    }
+    if (box.kind === "choice") {
+        return p.choice === OTHER ? p.other.trim() : p.choice;
+    }
+    if (box.numeric) {
+        // Back into the first unit: 250 g is saved as 0.25 kg.
+        if (!p.value) {
+            return "";
+        }
+        const n = Number(p.value);
+        return p.unit === box.units[0] ? n : n / 1000;
+    }
+    if (p.other !== null) {
+        return p.other.trim();
+    }
+    if (box.kind === "per_unit") {
+        if (!p.price) {
+            return "";
+        }
+        return `${p.price} per ${p.value ? p.value + " " : ""}${p.unit}`;
+    }
+    return p.value ? `${p.value} ${p.unit}` : "";
+}
+
+/** The shop's money shape: its decimals and symbol when known. */
+export function money(amount, currency) {
+    const decimals = currency?.decimals ?? 2;
+    const shown = Number(amount || 0).toLocaleString(currency?.locale, {
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals,
+    });
+    if (!currency?.symbol) {
+        return shown;
+    }
+    return currency.position === "after"
+        ? `${shown} ${currency.symbol}`
+        : `${currency.symbol}${shown}`;
+}
+
+/** The editor's working copy, from a `mart369_desk_form` answer. */
+function formFrom(data) {
+    const boxes = {};
+    const parts = {};
+    for (const g of data.groups) {
+        for (const b of g.boxes) {
+            boxes[b.name] = b;
+            if (b.kind) {
+                parts[b.name] = splitValue(b, data.values[b.name]);
+            }
+        }
+    }
+    return {
+        id: data.id,
+        groups: data.groups,
+        boxes,
+        parts,
+        values: { ...data.values },
+        categories: data.categories,
+        photo: data.photo,
+        photos: data.photos,
+        // The desk's own photograph bookkeeping, applied on its Save. Unused
+        // in the form, where the record keeps it.
+        add: [],
+        remove: [],
+        promoted: null,
+        demote: false,
+        demotedUrl: "",
+        // Anything touched, so Cancel knows to ask first.
+        dirty: false,
+        categQ: "",
+        // Attributes & Variants (variants_block.js), on the desk.
+        vx: vxFrom(data.variants),
+    };
+}
+
+export class ProductEditor extends Component {
+    static template = "mart369_product.DetailsEditor";
+    static components = { Icon, Pick, VariantsBlock, RichBox, ShopFrame };
+    static props = {
+        // A `mart369_desk_form` answer: groups, values, categories, photos.
+        data: Object,
+        currency: { type: [Object, { value: null }], optional: true },
+        // Inside 369ai's form rather than on the desk.
+        embedded: { type: Boolean, optional: true },
+        // Only the Photographs box (mart369_whatsapp_bridge, Confirmation
+        // pictures tab): no boxes, no "How shoppers see it".
+        photosOnly: { type: Boolean, optional: true },
+        // Each value change, as (name, value) - the form's host writes it to
+        // the record.
+        onValue: { type: Function, optional: true },
+        // In the form: { add(files), remove(item), useOnCard(item) }, each
+        // changing the record. The gallery then comes back down in `data`.
+        photoHost: { type: Object, optional: true },
+        // Handed the editor once it exists, so the desk can read its state
+        // on Save and Cancel.
+        onReady: { type: Function, optional: true },
+        // The desk's sticky bar: { name, dirty }, kept current as boxes change.
+        status: { type: Object, optional: true },
+    };
+
+    setup() {
+        this._orm = useService("orm");
+        this.state = useState({
+            form: formFrom(this.props.data),
+            // The photograph open in the popup, as an index into `photoList`.
+            viewing: null,
+            // The box lit on the "How shoppers see it" panel. Set by hovering
+            // an eye or clicking into a box, and kept until another takes over.
+            focus: null,
+            // The box pointed at just now: its spot pulses once. Cleared and
+            // set again on the next frame, so pointing twice pulses twice.
+            beat: null,
+            // Photographs being dragged over the section.
+            dragging: false,
+            // A photograph being moved inside the box: from, and over which.
+            photoDrag: null,
+            photoOver: null,
+            // "3 added, 2 left out" when more were picked than the shop shows.
+            photoNote: "",
+            // The box for pasting Image Server links, while it is open: { text }.
+            linkBox: null,
+            // Said for a preview section that is not filled here (badges, reviews).
+            pickNote: "",
+            // Save was pressed with no name.
+            nameBad: false,
+            // Ticked photographs, for "Remove selected".
+            picked: [],
+            // The category dropdown - a panel over the form, so the boxes
+            // below never jump while choosing.
+            categOpen: false,
+            // Folded groups (Website only) the person has opened.
+            unfolded: {},
+        });
+        this.props.onReady?.(this);
+
+        // In the form the gallery lives on the record; take each new copy of
+        // it as it comes down. The boxes are left alone - they are the
+        // editor's own and already up to date.
+        onWillUpdateProps((next) => {
+            if (next.embedded) {
+                this.state.form.photo = next.data.photo;
+                this.state.form.photos = next.data.photos;
+                const left = this.photoList.length;
+                if (this.state.viewing !== null && this.state.viewing >= left) {
+                    this.state.viewing = left ? left - 1 : null;
+                }
+            }
+        });
+
+        // Focus goes to the photo popup as it opens, so Escape and the arrow
+        // keys work without a click first.
+        this.viewerRef = useRef("viewer");
+        useEffect(
+            (open) => {
+                if (open) {
+                    this.viewerRef.el?.focus();
+                }
+            },
+            () => [this.state.viewing !== null]
+        );
+        // The cursor goes straight into the box for pasting links.
+        this.linkTextRef = useRef("linkText");
+        useEffect(
+            (open) => {
+                if (open) {
+                    this.linkTextRef.el?.focus();
+                }
+            },
+            () => [!!this.state.linkBox]
+        );
+        // Escape closes whichever popup is open, wherever focus happens to be.
+        // Listened for on the way down (capture): 369ai's own hotkeys take
+        // Escape on the way up, and the category panel never heard it.
+        useExternalListener(window, "keydown", (ev) => {
+            if (ev.key !== "Escape") {
+                return;
+            }
+            if (this.state.categOpen) {
+                ev.stopPropagation();
+                this.state.categOpen = false;
+            } else if (this.state.viewing !== null) {
+                ev.stopPropagation();
+                this.closePhoto();
+            }
+        }, { capture: true });
+
+        // A click outside the category panel closes it.
+        this.categRef = useRef("categ");
+        useExternalListener(document, "mousedown", (ev) => {
+            if (this.state.categOpen && !this.categRef.el?.contains(ev.target)) {
+                this.state.categOpen = false;
+            }
+        });
+
+        // A section tapped in "How shoppers see it" (the shop page in the
+        // frame, components/home/previewBridge.js): go to the box behind it.
+        // Only a message from this editor's own frame counts.
+        useExternalListener(window, "message", (ev) => {
+            if (ev.data?.type !== "mart369:preview-pick") {
+                return;
+            }
+            const frame = this.root.querySelector?.(".pdk-shop-box iframe");
+            if (!frame || ev.source !== frame.contentWindow) {
+                return;
+            }
+            this.onPreviewPick(String(ev.data.target || ""));
+        });
+
+        onPatched(() => {
+            if (this.pendingFocus) {
+                const { name, i } = this.pendingFocus;
+                this.pendingFocus = null;
+                this.root?.querySelector(
+                    `.pdk-points[data-name="${name}"] input[data-i="${i}"]`)?.focus();
+            }
+        });
+        this.rootRef = useRef("root");
+    }
+
+    get root() {
+        return this.rootRef.el || document;
+    }
+
+    // ------------------------------------- from the preview to the box
+
+    /** A tapped section of the shop page: scroll to the box that fills it and
+     *  make it pulse. A box in a folded group opens it first. A section filled
+     *  somewhere else says where. */
+    async onPreviewPick(target) {
+        const PICK = {
+            photos: ["__photos"], name: ["name"], price: ["list_price", "compare_list_price"],
+            details: ["mart_details"], about: ["mart_about_html"], showcase: ["mart_showcase_json"],
+            description: ["description_sale"], info: ["categ_id", "default_code"],
+            unit: ["mart_unit_text"], lowstock: ["mart_low_stock_at"], variants: ["__variants"],
+            trust: ["mart_trust_json"],
+        };
+        const ELSEWHERE = {
+            variants: _t("Options and variants are on the Attributes & Variants tab above."),
+            trust: _t("The badges are set in the Trust badges box - upgrade 369 Mart Product Page if you can't see it."),
+            reviews: _t("Reviews are written by customers; answer them under Reviews."),
+        };
+        const names = PICK[target] || [];
+        const find = () => {
+            for (const name of names) {
+                const el = this.root.querySelector?.(`[data-field="${name}"]`);
+                if (el) {
+                    return { el, name };
+                }
+            }
+            return null;
+        };
+        let hit = find();
+        if (!hit) {
+            // In a folded group ("Website only"): open it, then look again.
+            const group = this.state.form.groups.find((g) => g.folded && g.boxes.some((b) => names.includes(b.name)));
+            if (group && this.isFolded(group)) {
+                this.toggleFold(group.title);
+                await new Promise((done) => setTimeout(done, 80));
+                hit = find();
+            }
+        }
+        if (!hit) {
+            if (ELSEWHERE[target]) {
+                this.state.pickNote = ELSEWHERE[target];
+                clearTimeout(this.pickNoteTimer);
+                this.pickNoteTimer = setTimeout(() => { this.state.pickNote = ""; }, 5000);
+            }
+            return;
+        }
+        const box = hit.el.closest(".pdk-field") || hit.el;
+        box.scrollIntoView({ behavior: "smooth", block: "center" });
+        box.classList.remove("pdk-pick-beat");
+        void box.offsetWidth; // restart the pulse on a second tap
+        box.classList.add("pdk-pick-beat");
+        clearTimeout(box._pickTimer);
+        box._pickTimer = setTimeout(() => box.classList.remove("pdk-pick-beat"), 2000);
+        this.setFocus(hit.name);
+    }
+
+    // ------------------------------------------------------------- values
+
+    /** Every value change goes through here: kept, marked, and reported. */
+    /** Something was changed - photo or box - so Cancel asks, and the desk's
+     *  bar says "Unsaved changes". */
+    markDirty() {
+        this.state.form.dirty = true;
+        if (this.props.status) {
+            this.props.status.dirty = true;
+        }
+    }
+
+    changed(name) {
+        const form = this.state.form;
+        this.markDirty();
+        if (this.props.status) {
+            if (name === "name") {
+                this.props.status.name = form.values.name || "";
+            }
+        }
+        this.props.onValue?.(name, form.values[name]);
+    }
+
+    setField(name, value) {
+        this.state.form.values[name] = value;
+        if (name === "name" && String(value).trim()) {
+            this.state.nameBad = false;
+        }
+        this.changed(name);
+    }
+
+    /** Inside 369ai's own form, the groups 369ai already draws above are left
+     *  out (Stock, tax and company), so nothing appears twice. */
+    get shownGroups() {
+        const groups = this.state.form.groups;
+        return this.props.embedded ? groups.filter((g) => !g.deskOnly) : groups;
+    }
+
+    /** The sections in the web console's order: the product first, then its
+     *  choices and variants, and what only the website adds last - folded.
+     *  Attributes & Variants is the desk's: 369ai's product form has its own
+     *  tab for them. */
+    get sections() {
+        if (this.props.photosOnly) {
+            return [];
+        }
+        const groups = this.shownGroups;
+        const variants = !this.props.embedded && this.state.form.vx ? ["variants"] : [];
+        return [...groups.filter((g) => !g.folded), ...variants, ...groups.filter((g) => g.folded)];
+    }
+
+    isFolded(group) {
+        return !!group.folded && !this.state.unfolded[group.title];
+    }
+
+    toggleFold(title) {
+        this.state.unfolded[title] = !this.state.unfolded[title];
+    }
+
+    /** A box that only makes sense once another is on - On hand, once the
+     *  product is counted at all. */
+    shownBoxes(group) {
+        const values = this.state.form.values;
+        return group.boxes.filter((b) => !b.showIf || values[b.showIf]);
+    }
+
+    /** A select box's value, as the string its options are keyed by. */
+    selectValue(box) {
+        const v = this.state.form.values[box.name];
+        return v === undefined || v === null || v === false ? "" : String(v);
+    }
+
+    // Several of a list (taxes): chips for the chosen, a dropdown to add.
+
+    chosenTags(box) {
+        const ids = this.state.form.values[box.name] || [];
+        return box.options.filter(([id]) => ids.includes(id));
+    }
+
+    tagChoices(box) {
+        const ids = this.state.form.values[box.name] || [];
+        return [["", _t("Add...")], ...box.options
+            .filter(([id]) => !ids.includes(id))
+            .map(([id, label]) => [String(id), label])];
+    }
+
+    addTag(name, value) {
+        if (!value) {
+            return;
+        }
+        const ids = this.state.form.values[name] || [];
+        this.setFocus(name);
+        this.setField(name, [...ids, Number(value)]);
+    }
+
+    dropTag(name, id) {
+        const ids = this.state.form.values[name] || [];
+        this.setFocus(name);
+        this.setField(name, ids.filter((x) => x !== id));
+    }
+
+    /** One part changed: keep it, and write the joined value back. */
+    setPart(name, key, value) {
+        const form = this.state.form;
+        form.parts[name][key] = value;
+        form.values[name] = joinValue(form.boxes[name], form.parts[name]);
+        this.changed(name);
+    }
+
+    /** The old price below the price is not a discount - said under the box
+     *  rather than refused, since the person may be mid-way through typing. */
+    get mrpWarning() {
+        const v = this.state.form.values;
+        const mrp = Number(v.compare_list_price || 0);
+        const price = Number(v.list_price || 0);
+        return mrp > 0 && price > 0 && mrp <= price;
+    }
+
+    /** A dropdown choice: light the box, then keep the value. */
+    pickField(name, value) {
+        this.setFocus(name);
+        this.setField(name, value);
+    }
+
+    pickPart(name, value) {
+        this.setFocus(name);
+        this.setPart(name, "choice", value);
+    }
+
+    toggleCateg(name) {
+        this.setFocus(name);
+        this.state.categOpen = !this.state.categOpen;
+    }
+
+    get chosenNames() {
+        const ids = this.state.form.values.public_categ_ids || [];
+        return this.state.form.categories.filter((c) => ids.includes(c.id)).map((c) => c.name).join(", ");
+    }
+
+    setCategQ(q) {
+        this.state.form.categQ = q;
+    }
+
+    /** The category chips, narrowed by the filter box; chosen ones first. */
+    get shownCategories() {
+        const form = this.state.form;
+        const q = form.categQ.trim().toLowerCase();
+        const hits = form.categories.filter((c) => !q || c.name.toLowerCase().includes(q));
+        return [
+            ...hits.filter((c) => this.isChosen(c.id)),
+            ...hits.filter((c) => !this.isChosen(c.id)),
+        ];
+    }
+
+    /** Categories are a checklist rather than a picker: the four layers key
+     *  off them, so which ones a product is in decides what the rest of this
+     *  form even asks for. */
+    toggleCategory(id) {
+        const chosen = this.state.form.values.public_categ_ids || [];
+        this.state.form.values.public_categ_ids = chosen.includes(id)
+            ? chosen.filter((c) => c !== id)
+            : [...chosen, id];
+        this.changed("public_categ_ids");
+    }
+
+    isChosen(id) {
+        return (this.state.form.values.public_categ_ids || []).includes(id);
+    }
+
+    /** Numbers only, as typed: digits and one point, plus one dash where a
+     *  range is allowed. Anything else never reaches the box. */
+    onNumber(ev, name, key, range = false) {
+        const oneDot = (s) => {
+            const [a, ...rest] = s.split(".");
+            return rest.length ? `${a}.${rest.join("")}` : a;
+        };
+        const raw = ev.target.value.replace(range ? /[^\d.\-]/g : /[^\d.]/g, "");
+        const [from, ...to] = raw.split("-");
+        const v = to.length ? `${oneDot(from)}-${oneDot(to.join(""))}` : oneDot(from);
+        ev.target.value = v;
+        this.setPart(name, key, v);
+    }
+
+    /** The plain number boxes - price, MRP, cost, on hand, the stock warning.
+     *  Not the browser's number box, which lets "e", "+" and "-" through;
+     *  digits and one point only, and digits alone where it counts whole
+     *  things. */
+    onPlainNumber(ev, name, whole = false) {
+        let v = ev.target.value.replace(whole ? /[^\d]/g : /[^\d.]/g, "");
+        const [a, ...rest] = v.split(".");
+        v = rest.length ? `${a}.${rest.join("")}` : a;
+        ev.target.value = v;
+        this.setField(name, v);
+    }
+
+    /** Leave a text that did not fit, for the number and unit boxes. */
+    useBoxes(name) {
+        this.setPart(name, "other", null);
+    }
+
+    unitOptions(box) {
+        return box.units.map((u) => [u, u]);
+    }
+
+    choiceOptions(box) {
+        return [["", _t("None")], ...box.options.map((o) => [o, o]), [OTHER, _t("Other...")]];
+    }
+
+    // Key features and In the box, one box per point.
+
+    setPoint(name, i, value) {
+        const list = [...this.state.form.parts[name].list];
+        list[i] = value;
+        this.setPart(name, "list", list);
+    }
+
+    /** Enter starts the next point; Backspace in an empty one removes it. */
+    onPointKey(ev, name, i) {
+        const list = this.state.form.parts[name].list;
+        if (ev.key === "Enter") {
+            ev.preventDefault();
+            this.setPart(name, "list", [...list.slice(0, i + 1), "", ...list.slice(i + 1)]);
+            this.focusPoint(name, i + 1);
+        } else if (ev.key === "Backspace" && !ev.target.value && list.length > 1) {
+            ev.preventDefault();
+            this.setPart(name, "list", list.filter((_, j) => j !== i));
+            this.focusPoint(name, Math.max(0, i - 1));
+        }
+    }
+
+    // Trust badges: on or off, and this product's own words.
+
+    setTrust(name, i, change) {
+        const rows = this.state.form.parts[name].rows.map((r, j) => (j === i ? { ...r, ...change } : r));
+        this.setFocus(name);
+        this.setPart(name, "rows", rows);
+    }
+
+    // Product details: Label and Value per line.
+
+    pairOf(line) {
+        return pairOf(line);
+    }
+
+    setPair(name, i, key, value) {
+        const now = pairOf(this.state.form.parts[name].list[i]);
+        now[key] = value;
+        this.setPoint(name, i, joinPair(now.label, now.value));
+    }
+
+    /** Enter in a Value starts the next line; Backspace in an empty line removes it. */
+    onPairKey(ev, name, i) {
+        const list = this.state.form.parts[name].list;
+        if (ev.key === "Enter") {
+            ev.preventDefault();
+            this.setPart(name, "list", [...list.slice(0, i + 1), "", ...list.slice(i + 1)]);
+            this.focusPoint(name, i + 1);
+        } else if (ev.key === "Backspace" && !(list[i] || "").replace(/[:\s]/g, "") && list.length > 1) {
+            ev.preventDefault();
+            this.setPart(name, "list", list.filter((_, j) => j !== i));
+            this.focusPoint(name, Math.max(0, i - 1));
+        }
+    }
+
+    addPoint(name) {
+        const list = this.state.form.parts[name].list;
+        this.setPart(name, "list", [...list, ""]);
+        this.focusPoint(name, list.length);
+    }
+
+    removePoint(name, i) {
+        const list = this.state.form.parts[name].list;
+        this.setPart(name, "list", list.length > 1 ? list.filter((_, j) => j !== i) : [""]);
+    }
+
+    /** Focused once the render that draws it has happened (see onPatched in
+     *  setup) - a timer alone fires before OWL has drawn the new box. */
+    focusPoint(name, i) {
+        this.pendingFocus = { name, i };
+    }
+
+    // ------------------------------------------- "How shoppers see it" panel
+
+    /** Light a box on the panel. Hovering its eye or clicking into it does
+     *  this; it stays lit until another box takes over, as on the web admin. */
+    setFocus(name) {
+        this.state.focus = name;
+    }
+
+    /** Point at a box from its ⓘ: light it, and pulse its spot. */
+    point(name) {
+        this.setFocus(name);
+        this.state.beat = null;
+        requestAnimationFrame(() => {
+            this.state.beat = name;
+        });
+    }
+
+    hasPreview(name) {
+        return !!PREVIEW[name];
+    }
+
+    /** What the panel prints for a box: what is typed, or the grey sample. */
+    pv(name) {
+        const typed = this.state.form.values[name];
+        const has = typed !== undefined && typed !== null && typed !== "" && typed !== 0;
+        return { text: has ? String(typed) : (PREVIEW[name]?.sample || ""), sample: !has };
+    }
+
+    pvLines(name) {
+        return this.pv(name).text.split("\n").filter(Boolean);
+    }
+
+    /** Classes for a spot on the panel: grey when only a sample, outlined
+     *  when it is the box being looked at. */
+    cls(name) {
+        return (this.pv(name).sample ? " pdk-sample" : "") + this.lit(name);
+    }
+
+    lit(name) {
+        if (this.state.focus !== name) {
+            return "";
+        }
+        return " pdk-lit" + (this.state.beat === name ? " pdk-beat" : "");
+    }
+
+    /** A spot is drawn once it has a value - or while it is being looked at,
+     *  with its sample, so the outline always has something to sit on. */
+    show(name) {
+        return !this.pv(name).sample || this.state.focus === name;
+    }
+
+    /** The line under the panel. */
+    get panelNote() {
+        const f = this.state.focus;
+        const box = f && this.state.form.boxes[f];
+        if (f && PREVIEW[f]?.where === "note") {
+            return { label: box ? box.label : f, text: PREVIEW[f].note };
+        }
+        if (box) {
+            return { outlined: true, label: "Outlined", text: box.label };
+        }
+        return null;
+    }
+
+    /** A box shoppers never see has no spot to pulse, so its note line does. */
+    get noteBeats() {
+        const f = this.state.focus;
+        return !!f && this.state.beat === f && PREVIEW[f]?.where === "note";
+    }
+
+    /** The page rows the panel's "Product information" table can show. */
+    get infoRows() {
+        return [["mart_in_the_box", _t("In the box")], ["mart_material", _t("Material")],
+            ["mart_item_height", _t("Item height")], ["mart_item_length", _t("Item length")],
+            ["mart_item_width", _t("Item width")], ["weight", _t("Net weight")]]
+            .filter(([k]) => this.state.form.boxes[k] && this.show(k));
+    }
+
+    isMoney(box) {
+        return ["list_price", "compare_list_price", "standard_price"].includes(box.name);
+    }
+
+    get currencySymbol() {
+        return this.props.currency?.symbol || "";
+    }
+
+    get chosenCount() {
+        return (this.state.form.values.public_categ_ids || []).length;
+    }
+
+    /** Digits only (the barcode): 0-9 as typed or pasted, nothing else, and
+     *  leading zeros kept - which a number box would drop. */
+    onDigits(ev, name, max) {
+        let v = ev.target.value.replace(/\D/g, "");
+        if (max) {
+            v = v.slice(0, max);
+        }
+        ev.target.value = v;
+        this.setField(name, v);
+    }
+
+    isDigits(value) {
+        return !value || /^\d+$/.test(String(value));
+    }
+
+    money(amount) {
+        return money(amount, this.props.currency);
+    }
+
+    // -------------------------------------------------------- photographs
+
+    /** One box takes one picture or many. With no card photograph yet the
+     *  first one chosen becomes it, and the rest join the gallery. */
+    async onPhotos(ev) {
+        const files = [...(ev.target.files || [])];
+        ev.target.value = "";
+        return this.addFiles(files);
+    }
+
+    onDragOver(ev) {
+        ev.preventDefault();
+        // A photograph being moved inside the box is not a file arriving.
+        if (this.state.photoDrag === null) {
+            this.state.dragging = true;
+        }
+    }
+
+    onDragLeave(ev) {
+        if (!ev.currentTarget.contains(ev.relatedTarget)) {
+            this.state.dragging = false;
+        }
+    }
+
+    onDrop(ev) {
+        ev.preventDefault();
+        this.state.dragging = false;
+        if (this.state.photoDrag !== null) {
+            this.endPhotoDrag();
+            return;
+        }
+        return this.addFiles([...(ev.dataTransfer?.files || [])]);
+    }
+
+    // Drag a photograph to another place (the form only - the desk keeps one).
+
+    get canMovePhotos() {
+        return !!this.props.photoHost?.move;
+    }
+
+    onPhotoDragStart(ev, i) {
+        if (!this.canMovePhotos) {
+            return;
+        }
+        this.state.photoDrag = i;
+        ev.dataTransfer.effectAllowed = "move";
+        ev.dataTransfer.setData("application/x-mart369-photo", String(i));
+    }
+
+    onPhotoDragOver(ev, i) {
+        if (this.state.photoDrag === null) {
+            return;
+        }
+        ev.preventDefault();
+        ev.stopPropagation();
+        ev.dataTransfer.dropEffect = "move";
+        this.state.photoOver = i;
+    }
+
+    async onPhotoDrop(ev, i) {
+        if (this.state.photoDrag === null) {
+            return;
+        }
+        ev.preventDefault();
+        ev.stopPropagation();
+        const from = this.state.photoDrag;
+        this.endPhotoDrag();
+        if (from !== i) {
+            this.markDirty();
+            await this.props.photoHost.move(from, i);
+        }
+    }
+
+    endPhotoDrag() {
+        this.state.photoDrag = null;
+        this.state.photoOver = null;
+    }
+
+    /** Where a drop would put the dragged photograph, for the line drawn there. */
+    photoDropClass(i) {
+        const from = this.state.photoDrag;
+        if (from === null || this.state.photoOver !== i || from === i) {
+            return "";
+        }
+        return from > i ? "pdk-drop-before" : "pdk-drop-after";
+    }
+
+    /** The shop shows the card picture and 12 more (mart369 MAX_EXTRA_IMAGES). */
+    get photoMax() {
+        return 13;
+    }
+
+    get photosFull() {
+        return !!this.props.embedded && this.photoList.length >= this.photoMax;
+    }
+
+    /** Pictures from the + tile or dropped on the section; anything that is
+     *  not a picture is left out. */
+    /** The product's page on the shop, once it has been saved. */
+    get shopUrl() {
+        const d = this.props.data || {};
+        return d.id && d.siteUrl ? d.siteUrl + "/product/" + d.id : "";
+    }
+
+    // ------------------------------------------- Product details helpers
+
+    /** A line without "Label: value" never reaches the shop: say so. */
+    detailWarning(b) {
+        const list = this.state.form.parts[b.name]?.list || [];
+        const bad = list.map((line, i) => (line.trim() && !line.includes(":") ? i + 1 : 0)).filter(Boolean);
+        if (!bad.length) {
+            return "";
+        }
+        const which = bad.length === 1 ? `Line ${bad[0]} won't` : `Lines ${bad.join(", ")} won't`;
+        return `${which} show on the shop - write it as Label: value (e.g. Brand: Apple).`;
+    }
+
+    /** The labels a product of this category usually has, added as
+     *  "Label: " lines ready to fill; a label already there is skipped. */
+    async addUsualDetails(b) {
+        const categ = this.state.form.values.categ_id || null;
+        const answer = await this._orm.call("product.template", "mart369_detail_labels", [], {
+            categ_id: categ ? Number(categ) : null,
+        });
+        const list = (this.state.form.parts[b.name]?.list || []).filter((line) => line.trim());
+        const have = new Set(list.map((line) => line.split(":")[0].trim().toLowerCase()));
+        const added = (answer.labels || []).filter((label) => !have.has(label.toLowerCase()));
+        if (!added.length) {
+            return;
+        }
+        this.setFocus(b.name);
+        this.setPart(b.name, "list", [...list, ...added.map((label) => label + ": ")]);
+    }
+
+    // ------------------------------------------- From the manufacturer
+
+    /** The picture blocks as the box holds them: [{id?, url, data?, caption, width}]. */
+    showcaseList(b) {
+        const list = this.state.form.values[b.name];
+        return Array.isArray(list) ? list : [];
+    }
+
+    setShowcase(b, list) {
+        this.setField(b.name, list);
+    }
+
+    async addShowcase(b, ev) {
+        const files = [...(ev.target.files || [])].filter((f) => (f.type || "").startsWith("image/"));
+        ev.target.value = "";
+        const added = [];
+        for (const file of files) {
+            const url = await getDataURLFromFile(file);
+            const px = await new Promise((done) => {
+                const img = new Image();
+                img.onload = () => done(img.naturalWidth);
+                img.onerror = () => done(0);
+                img.src = url;
+            });
+            added.push({ url, data: url.split(",")[1], caption: "", width: "full", px });
+        }
+        if (added.length) {
+            this.setFocus(b.name);
+            this.setShowcase(b, [...this.showcaseList(b), ...added]);
+        }
+    }
+
+    /** A picture added this visit that is too narrow for its width. */
+    showcaseWarning(blk) {
+        if (!blk.px) {
+            return "";
+        }
+        if (blk.width === "half") {
+            return blk.px < 600 ? `Small for half width (${blk.px} px wide; 800 works best).` : "";
+        }
+        return blk.px < 1200 ? `Small for full width (${blk.px} px wide; 1600 works best).` : "";
+    }
+
+    editShowcase(b, index, change) {
+        this.setShowcase(b, this.showcaseList(b).map((blk, i) => (i === index ? { ...blk, ...change } : blk)));
+    }
+
+    moveShowcase(b, index, by) {
+        const list = [...this.showcaseList(b)];
+        const to = index + by;
+        if (to < 0 || to >= list.length) {
+            return;
+        }
+        [list[index], list[to]] = [list[to], list[index]];
+        this.setShowcase(b, list);
+    }
+
+    dropShowcase(b, index) {
+        this.setShowcase(b, this.showcaseList(b).filter((_blk, i) => i !== index));
+    }
+
+    /** The Link tile opens the box for pasting links, and closes it again. */
+    onPhotoLink() {
+        this.state.photoNote = "";
+        this.state.linkBox = this.state.linkBox || this.photosFull ? null : { text: "" };
+    }
+
+    /** The links in pasted text, whatever separates them, and where each one is. */
+    linkTokens(text) {
+        const tokens = [];
+        for (const match of (text || "").matchAll(/[^\s,]+/g)) {
+            const url = match[0].split("#")[0];
+            if (/^https?:\/\//i.test(url)) {
+                tokens.push({
+                    url,
+                    start: match.index,
+                    end: match.index + match[0].length,
+                    line: text.slice(0, match.index).split("\n").length,
+                });
+            }
+        }
+        return tokens;
+    }
+
+    linkUrls(text) {
+        return this.linkTokens(text).map((token) => token.url);
+    }
+
+    /** The links in the box typed twice, or already in the photos and not saved
+     *  yet. Add waits for these; "Add anyway" keeps them. */
+    get linkRepeats() {
+        const have = new Set(this.photoList.map((p) => p.url));
+        const firstLine = new Map();
+        const repeats = [];
+        for (const token of this.linkTokens(this.state.linkBox?.text)) {
+            if (firstLine.has(token.url)) {
+                repeats.push({ ...token, message: `Line ${token.line} is the same as line ${firstLine.get(token.url)}` });
+            } else if (have.has(token.url)) {
+                repeats.push({ ...token, message: `Line ${token.line} is already in the photos above` });
+            }
+            if (!firstLine.has(token.url)) {
+                firstLine.set(token.url, token.line);
+            }
+        }
+        return repeats;
+    }
+
+    /** Go to line N: the cursor on that link, selected, and in view. */
+    goToLink(repeat) {
+        const box = this.linkTextRef.el;
+        if (!box) {
+            return;
+        }
+        box.focus();
+        box.setSelectionRange(repeat.start, repeat.end);
+        const lineHeight = parseFloat(getComputedStyle(box).lineHeight) || 20;
+        box.scrollTop = Math.max(0, (repeat.line - 2) * lineHeight);
+    }
+
+    /** The box's Add and Add anyway buttons. */
+    async onLinkBoxAdd(anyway = false) {
+        const text = this.state.linkBox?.text;
+        if (!this.linkUrls(text).length) {
+            this.state.photoNote = "No links found. Paste the full address, starting with https://";
+            return;
+        }
+        if (!anyway && this.linkRepeats.length) {
+            return;
+        }
+        this.state.linkBox = null;
+        await this.addLinks(text);
+    }
+
+    /** Ctrl+V on the Photographs box. Pasting into a box stays normal. */
+    onPhotoPaste(ev) {
+        const target = ev.target;
+        if (!this.props.data.imageLink || target.closest?.("input, textarea, [contenteditable]")) {
+            return;
+        }
+        const text = ev.clipboardData?.getData("text");
+        if (this.linkUrls(text).length) {
+            ev.preventDefault();
+            // A repeat opens the box with the links in it, to show the error.
+            this.state.linkBox = { text };
+            if (!this.linkRepeats.length) {
+                this.state.linkBox = null;
+                this.addLinks(text);
+            }
+        }
+    }
+
+    /** Add links: what fits goes in, the rest is named, as for files. */
+    async addLinks(text) {
+        this.state.photoNote = "";
+        let urls = this.linkUrls(text);
+        const room = Math.max(0, this.photoMax - this.photoList.length);
+        if (urls.length > room) {
+            const left = urls.length - room;
+            this.state.photoNote = room
+                ? `${room} added. ${left} left out - the shop shows at most ${this.photoMax} pictures.`
+                : `Not added - the shop shows at most ${this.photoMax} pictures. Remove one to add another.`;
+            urls = urls.slice(0, room);
+        }
+        if (!urls.length) {
+            return;
+        }
+        this.markDirty();
+        await this.props.photoHost.addLinks(urls, (bad) => {
+            const names = bad.map((url) => url.split("?")[0].split("/").pop()).join(", ");
+            const note = `${bad.length} ${bad.length === 1 ? "link was" : "links were"} wrong and not added: ${names}`;
+            this.state.photoNote = this.state.photoNote ? `${this.state.photoNote} ${note}` : note;
+        });
+    }
+
+    async addFiles(all) {
+        let files = all.filter((f) => (f.type || "").startsWith("image/"));
+        this.state.photoNote = "";
+        if (this.props.photoHost) {
+            // No more than the shop shows: what fits goes in, the rest is named.
+            const room = Math.max(0, this.photoMax - this.photoList.length);
+            if (files.length > room) {
+                const left = files.length - room;
+                this.state.photoNote = room
+                    ? `${room} added. ${left} left out - the shop shows at most ${this.photoMax} pictures.`
+                    : `Not added - the shop shows at most ${this.photoMax} pictures. Remove one to add another.`;
+                files = files.slice(0, room);
+            }
+        }
+        if (!files.length) {
+            return;
+        }
+        const read = [];
+        for (const file of files) {
+            const url = await getDataURLFromFile(file);
+            read.push({ name: file.name, data: url.split(",")[1], url });
+        }
+        const form = this.state.form;
+        this.markDirty();
+        if (this.props.photoHost) {
+            return this.props.photoHost.add(read);
+        }
+        // The desk keeps one picture for the product (the setup guide's
+        // "general product photo"), as the web console does; more photos go
+        // on each variant, under Variants. A new picture replaces the one there.
+        const ph = read[0];
+        form.values.image_1920 = ph.data;
+        form.photo = ph.url;
+        form.promoted = null;
+        form.demote = false;
+    }
+
+    /** Every photograph in the order the shopper swipes them: the card's
+     *  first, then the gallery. In the form each gallery item may carry
+     *  `pending` - added since the last Save. */
+    get photoList() {
+        const form = this.state.form;
+        const list = [];
+        if (form.photo) {
+            list.push({ kind: "main", url: form.photo });
+        }
+        // The old card picture, moving to the gallery once saved (desk).
+        if (form.demote && form.demotedUrl) {
+            list.push({ kind: "demoted", url: form.demotedUrl });
+        }
+        for (const ph of form.photos) {
+            list.push({ kind: ph.pending ? "new" : "saved", url: ph.url, photo: ph });
+        }
+        for (const ph of form.add) {
+            list.push({ kind: "new", url: ph.url, photo: ph });
+        }
+        return list;
+    }
+
+    /** A saved photograph is marked for removal rather than removed, so
+     *  nothing is lost until Save; one added this visit simply leaves. */
+    dropPhoto(item) {
+        const form = this.state.form;
+        this.markDirty();
+        if (this.props.photoHost) {
+            this.props.photoHost.remove(item);
+        } else if (item.kind === "main") {
+            // '' rather than leaving it out: the server reads the difference
+            // as "take it away" versus "was not mentioned".
+            form.values.image_1920 = "";
+            form.photo = "";
+            if (form.promoted) {
+                // A gallery picture picked for the card, then removed.
+                form.remove.push(form.promoted.id);
+                form.promoted = null;
+            }
+        } else if (item.kind === "demoted") {
+            // The old card picture, dropped instead of kept in the gallery.
+            form.demote = false;
+            form.demotedUrl = "";
+        } else if (item.kind === "saved") {
+            form.remove.push(item.photo.id);
+            form.photos = form.photos.filter((p) => p.id !== item.photo.id);
+        } else {
+            form.add = form.add.filter((p) => p !== item.photo);
+        }
+        const left = this.photoList.length;
+        if (!left) {
+            this.state.viewing = null;
+        } else if (this.state.viewing >= left) {
+            this.state.viewing = left - 1;
+        }
+    }
+
+    // Ticked photographs, kept by kind and address rather than position, so
+    // removing one does not tick its neighbour.
+
+    photoKey(ph) {
+        return `${ph.kind}:${ph.url.slice(-48)}`;
+    }
+
+    isPicked(ph) {
+        return this.state.picked.includes(this.photoKey(ph));
+    }
+
+    togglePick(ph) {
+        const key = this.photoKey(ph);
+        this.state.picked = this.isPicked(ph)
+            ? this.state.picked.filter((k) => k !== key)
+            : [...this.state.picked, key];
+    }
+
+    pickAll() {
+        this.state.picked = this.photoList.map((ph) => this.photoKey(ph));
+    }
+
+    clearPicked() {
+        this.state.picked = [];
+    }
+
+    /** Remove every ticked photograph. Collected first: removing one changes
+     *  the list the rest are found in. */
+    async dropPicked() {
+        const items = this.photoList.filter((ph) => this.isPicked(ph));
+        this.state.picked = [];
+        for (const item of items) {
+            await this.dropPhoto(item);
+        }
+        this.state.viewing = null;
+    }
+
+    /** "Use on the card": this picture goes on the card and the current card
+     *  picture steps back into the gallery. Nothing is lost, and nothing is
+     *  written until Save. */
+    useOnCard(item) {
+        const f = this.state.form;
+        if (item.kind === "main") {
+            return;
+        }
+        this.markDirty();
+        this.state.viewing = 0;
+        if (this.props.photoHost) {
+            return this.props.photoHost.useOnCard(item);
+        }
+        if (f.photo) {
+            if (f.promoted) {
+                f.photos = [f.promoted, ...f.photos];
+            } else if (f.values.image_1920) {
+                f.add = [{ name: "photo", data: f.values.image_1920, url: f.photo }, ...f.add];
+            } else if (!f.demote) {
+                f.demote = true;
+                f.demotedUrl = f.photo;
+            }
+        }
+        f.promoted = null;
+        if (item.kind === "new") {
+            f.values.image_1920 = item.photo.data;
+            f.add = f.add.filter((p) => p !== item.photo);
+        } else if (item.kind === "saved") {
+            f.promoted = item.photo;
+            f.photos = f.photos.filter((p) => p.id !== item.photo.id);
+            delete f.values.image_1920;
+        } else if (item.kind === "demoted") {
+            f.demote = false;
+            f.demotedUrl = "";
+            delete f.values.image_1920;
+        }
+        f.photo = item.url;
+    }
+
+    // ------------------------------------------------------ the photo popup
+
+    viewPhoto(index) {
+        this.state.viewing = index;
+    }
+
+    closePhoto() {
+        this.state.viewing = null;
+    }
+
+    stepPhoto(by) {
+        const n = this.photoList.length;
+        if (n) {
+            this.state.viewing = (this.state.viewing + by + n) % n;
+        }
+    }
+
+    get viewed() {
+        return this.state.viewing === null ? null : this.photoList[this.state.viewing] || null;
+    }
+
+    onPopupKey(ev) {
+        if (ev.key === "Escape") {
+            this.closePhoto();
+        } else if (ev.key === "ArrowRight") {
+            this.stepPhoto(1);
+        } else if (ev.key === "ArrowLeft") {
+            this.stepPhoto(-1);
+        }
+    }
+}

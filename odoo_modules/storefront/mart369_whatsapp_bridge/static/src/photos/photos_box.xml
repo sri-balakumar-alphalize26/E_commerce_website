@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="mart369_whatsapp_bridge.PhotosBox">
+        <div class="o_mart369_desk o_mart369_photos_box">
+            <p t-if="state.error" class="alert alert-warning" role="alert" t-esc="state.error"/>
+            <ProductEditor t-if="state.data" t-key="state.key"
+                           data="state.data" embedded="true" photosOnly="true"
+                           onValue.bind="onValue" photoHost="photoHost"/>
+        </div>
+    </t>
+</templates>

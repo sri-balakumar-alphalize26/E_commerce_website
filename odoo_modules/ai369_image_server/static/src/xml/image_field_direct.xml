@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-inherit="web.ImageField" t-inherit-mode="extension">
+        <xpath expr="//div[hasclass('opacity-trigger-hover')]" position="attributes">
+            <attribute name="t-on-dragover">imgsrvDragOver</attribute>
+            <attribute name="t-on-dragleave">imgsrvDragLeave</attribute>
+            <attribute name="t-on-drop">imgsrvDrop</attribute>
+            <attribute name="t-att-class">{'o_imgsrv_drag': imgsrv.drag}</attribute>
+        </xpath>
+        <xpath expr="//button[hasclass('o_select_file_button')]" position="before">
+            <button t-if="fieldType === 'binary'" class="o_imgsrv_paste btn btn-light border-0 rounded-circle m-1 p-1"
+                    data-tooltip="Paste image-server link" aria-label="Paste image-server link" t-on-click.stop.prevent="imgsrvPasteLink">
+                <i class="fa fa-link fa-fw"/>
+            </button>
+        </xpath>
+        <xpath expr="//div[hasclass('opacity-trigger-hover')]" position="inside">
+            <div t-if="imgsrvShowLink and (imgsrv.url or imgsrv.staged or ['pending', 'error', 'private'].includes(imgsrv.status))"
+                 class="o_imgsrv_link">
+                <t t-if="imgsrv.url or imgsrv.staged">
+                    <a href="#" t-att-title="(imgsrv.url or imgsrv.staged) + ' — click to copy'" t-on-click.prevent="imgsrvCopy">
+                        <i t-att-class="imgsrv.copied ? 'fa fa-check' : 'fa fa-link'"/>
+                        <span t-esc="imgsrv.copied ? ' Copied' : (imgsrv.staged ? ' Ready — save' : ' Copy link')"/>
+                    </a>
+                    <a t-if="imgsrv.url" t-att-href="imgsrv.url" target="_blank" rel="noopener" title="Open image" class="ms-1">
+                        <i class="fa fa-external-link"/>
+                    </a>
+                </t>
+                <span t-elif="imgsrv.status === 'private'" class="text-muted" title="Stored privately on the image server — no public link, opens only inside the ERP">
+                    <i class="fa fa-lock"/> Private
+                </span>
+                <span t-elif="imgsrv.status === 'pending'" class="text-warning" title="Image server not reachable — retried automatically">
+                    <i class="fa fa-clock-o"/> Waiting to upload
+                </span>
+                <span t-else="" class="text-danger" title="See Image Server › Image Files"><i class="fa fa-warning"/> Upload failed</span>
+            </div>
+        </xpath>
+    </t>
+    <t t-inherit="web.ContactImageField" t-inherit-mode="extension">
+        <xpath expr="//div[hasclass('opacity-trigger-hover')]" position="attributes">
+            <attribute name="t-on-dragover">imgsrvDragOver</attribute>
+            <attribute name="t-on-dragleave">imgsrvDragLeave</attribute>
+            <attribute name="t-on-drop">imgsrvDrop</attribute>
+            <attribute name="t-att-class">{'o_imgsrv_drag': imgsrv.drag}</attribute>
+        </xpath>
+        <xpath expr="//button[hasclass('o_select_file_button')]" position="before">
+            <button t-if="fieldType === 'binary'" class="o_imgsrv_paste btn btn-light border-0 rounded-circle m-1 p-1"
+                    data-tooltip="Paste image-server link" aria-label="Paste image-server link" t-on-click.stop.prevent="imgsrvPasteLink">
+                <i class="fa fa-link fa-fw"/>
+            </button>
+        </xpath>
+        <xpath expr="//div[hasclass('opacity-trigger-hover')]" position="inside">
+            <div t-if="imgsrvShowLink and (imgsrv.url or imgsrv.staged or ['pending', 'error', 'private'].includes(imgsrv.status))"
+                 class="o_imgsrv_link">
+                <t t-if="imgsrv.url or imgsrv.staged">
+                    <a href="#" t-att-title="(imgsrv.url or imgsrv.staged) + ' — click to copy'" t-on-click.prevent="imgsrvCopy">
+                        <i t-att-class="imgsrv.copied ? 'fa fa-check' : 'fa fa-link'"/>
+                        <span t-esc="imgsrv.copied ? ' Copied' : (imgsrv.staged ? ' Ready — save' : ' Copy link')"/>
+                    </a>
+                    <a t-if="imgsrv.url" t-att-href="imgsrv.url" target="_blank" rel="noopener" title="Open image" class="ms-1">
+                        <i class="fa fa-external-link"/>
+                    </a>
+                </t>
+                <span t-elif="imgsrv.status === 'private'" class="text-muted" title="Stored privately on the image server — no public link, opens only inside the ERP">
+                    <i class="fa fa-lock"/> Private
+                </span>
+                <span t-elif="imgsrv.status === 'pending'" class="text-warning" title="Image server not reachable — retried automatically">
+                    <i class="fa fa-clock-o"/> Waiting to upload
+                </span>
+                <span t-else="" class="text-danger" title="See Image Server › Image Files"><i class="fa fa-warning"/> Upload failed</span>
+            </div>
+        </xpath>
+    </t>
+</templates>

@@ -1,0 +1,14 @@
+.o_imgsrv_drag {
+    outline: 2px dashed #F08A24;
+    outline-offset: 2px;
+    background: rgba(240, 138, 36, 0.08);
+}
+.o_imgsrv_link {
+    font-size: 11px;
+    line-height: 1.4;
+    margin-top: 2px;
+    white-space: nowrap;
+    a { color: #1E2A78; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .fa { font-size: 11px; }
+}

@@ -1,0 +1,68 @@
+{
+    'name': '369 Mart Catalog',
+    'version': '19.0.1.5.0',
+    'category': 'Website',
+    'summary': 'Categories, browsing and search for the 369 Mart app.',
+    'description': """
+369 Mart Catalog
+================
+
+The app's category pages and its search box.
+
+369ai already knows the products; this module decides how they are grouped for
+the app - which categories exist, what they are called, the colour behind each
+one, and which products sit under them. It also answers the search box, and
+remembers what people looked for so "Trending" is real rather than a guess.
+
+Three values the app used to invent for itself now come from 369ai: a product's
+rating, how popular it is, and its brand. The app was deriving all three from
+a hash of the product id, which meant "sort by customer rating" sorted by
+nothing at all.
+
+The app reads it from ``/369mart/catalog``, ``/369mart/browse/<category>`` and
+``/369mart/search``.
+""",
+    'author': '369 Mart',
+    'license': 'LGPL-3',
+    'depends': [
+        'mart369','mart369_product'],
+    'data': [
+        'security/ir.model.access.csv',
+        # Seeds once and guards itself, so it is safe on every upgrade - see
+        # the file's own comment.
+        'views/category_views.xml',
+        'views/search_views.xml',
+        'views/search_desk_views.xml',
+        'views/stock_desk_views.xml',
+        # Was missing, so the Catalog desk and its menu were never loaded and
+        # the screen could not be reached at all - the file has been sitting
+        # here unused. Listed after category_views.xml, whose action it does
+        # not need but whose models it draws.
+        'views/catalog_desk_views.xml',
+    ],
+    'assets': {
+        'web.assets_backend': [
+            # The shared chrome (.mart-builder, .mart-btn, the error bar and
+            # the loading line) comes from mart369's builder.scss, which is
+            # already in the bundle because mart369 is a dependency. Never
+            # @import it: one local @import breaks the whole backend bundle.
+            'mart369_catalog/static/src/desk/**/*',
+        ],
+    },
+    'images': [
+        'static/description/catalog_board.png',
+        'static/description/catalog_list.png',
+        'static/description/category_form.png',
+        # The searches desk: the demand list, with what found nothing marked.
+        'static/description/search_desk.png',
+        'static/description/searches.png',
+        # A category's logo: picked or uploaded in the desk, cropped to the
+        # size the app draws it.
+        'static/description/category_logo_desk.png',
+        'static/description/category_logo_desk_crop.png',
+    ],
+    'post_init_hook': 'post_init_hook',
+    'installable': True,
+    'application': False,
+    'auto_install': False,
+}

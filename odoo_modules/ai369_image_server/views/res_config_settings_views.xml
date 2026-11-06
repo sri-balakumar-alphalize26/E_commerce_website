@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="res_config_settings_view_form_imgsrv" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.inherit.ai369_image_server</field>
+        <field name="model">res.config.settings</field>
+        <field name="priority" eval="90"/>
+        <field name="inherit_id" ref="base.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="inside">
+                <app data-string="Image Server" string="Image Server" name="ai369_image_server" groups="base.group_system">
+                    <block title="Connection" name="imgsrv_connection">
+                        <setting id="imgsrv_enabled" help="Images are saved on the image server; the ERP keeps only the link.">
+                            <field name="imgsrv_enabled"/>
+                        </setting>
+                        <setting id="imgsrv_credentials" string="Server &amp; API key" help="Image server address and the API key given by your administrator">
+                            <div class="content-group">
+                                <div class="row mt8">
+                                    <label for="imgsrv_url" class="col-lg-4 o_light_label"/>
+                                    <field name="imgsrv_url" placeholder="https://images.369ai.biz"/>
+                                </div>
+                                <div class="row">
+                                    <label for="imgsrv_api_key_masked" class="col-lg-4 o_light_label"/>
+                                    <field name="imgsrv_api_key_masked" readonly="1"/>
+                                </div>
+                                <div class="row">
+                                    <label for="imgsrv_api_key" string="Enter / change key" class="col-lg-4 o_light_label"/>
+                                    <field name="imgsrv_api_key" password="True" placeholder="paste API key here"/>
+                                </div>
+                                <div class="mt8">
+                                    <button name="action_imgsrv_test" type="object" string="Test connection" icon="fa-plug" class="btn-link"/>
+                                </div>
+                            </div>
+                        </setting>
+                    </block>
+                    <block title="What to store" name="imgsrv_scope">
+                        <setting id="imgsrv_scope" string="What to store" help="Files of every module are handled automatically, also modules installed later.">
+                            <div class="content-group">
+                                <field name="imgsrv_scope" widget="radio"/>
+                                <div invisible="imgsrv_scope != 'selected'" class="mt8">
+                                    <field name="imgsrv_models" placeholder="product.template,hr.employee,res.partner"/>
+                                </div>
+                            </div>
+                        </setting>
+                        <setting id="imgsrv_public" string="Public or private" help="Images of these models get a public link. Everything else — cheques, documents, attachments, custom modules — is private: no public link, opened only inside the ERP.">
+                            <div class="content-group mt8">
+                                <field name="imgsrv_public_models" placeholder="product.template,product.product,res.partner"/>
+                            </div>
+                        </setting>
+                        <setting id="imgsrv_folders" string="Product folders" help="Products are saved as Category / Brand / Internal Reference.">
+                            <div class="content-group">
+                                <div class="row mt8">
+                                    <label for="imgsrv_similar" class="col-lg-4 o_light_label"/>
+                                    <field name="imgsrv_similar"/>
+                                </div>
+                                <div class="row">
+                                    <label for="imgsrv_brand_field" class="col-lg-4 o_light_label"/>
+                                    <field name="imgsrv_brand_field"/>
+                                </div>
+                            </div>
+                        </setting>
+                        <setting id="imgsrv_upload_mode" string="Upload pictures" help="Screens always show the permanent image link.">
+                            <field name="imgsrv_upload_mode" widget="radio"/>
+                        </setting>
+                        <setting id="imgsrv_migration" string="Existing images" help="Move images already stored in the ERP to the image server (or bring them back).">
+                            <button name="action_imgsrv_migration" type="object" string="Open migration" icon="fa-exchange" class="btn-link"/>
+                        </setting>
+                    </block>
+                </app>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="action_imgsrv_settings" model="ir.actions.act_window">
+        <field name="name">Settings</field>
+        <field name="path">image-server-settings</field>
+        <field name="res_model">res.config.settings</field>
+        <field name="view_mode">form</field>
+        <field name="target">current</field>
+        <field name="context">{'module': 'ai369_image_server', 'bin_size': False}</field>
+    </record>
+</odoo>

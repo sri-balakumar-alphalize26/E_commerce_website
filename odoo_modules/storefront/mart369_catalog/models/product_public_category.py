@@ -1,0 +1,456 @@
+"""A 369 Mart category.
+
+No new model: the app's categories are Odoo's own ``product.public.category``,
+which already has a parent, a sequence and a product list. What Odoo has no
+opinion about is how the app *draws* a category - the pale background behind
+the tiles, the ink colour of its heading, the one-line blurb under the title -
+so those are added here.
+
+The storefront addresses categories by slug ("fruits-vegetables"), not by id,
+because the slug is in the URL the customer sees. Every category therefore gets
+one, derived from its name unless an operator sets it, and it has to be unique.
+
+A category with no children is still a category: the app shows "Launching soon"
+for Fashion and Books, which have no products yet.
+"""
+
+import base64
+import binascii
+import re
+
+from odoo import api, fields, models
+from odoo.exceptions import UserError, ValidationError
+from odoo.tools.mimetypes import guess_mimetype
+
+from odoo.addons.mart369.models.serializers import (
+    ART_CHOICES, ICON_CHOICES, slugify)
+
+# A cropped logo is 512px at most, a few hundred KB. Anything far past that is
+# a photo sent uncropped, and it would ride every catalogue response.
+LOGO_MAX_BYTES = 5 * 1024 * 1024
+LOGO_TYPES = ('image/png', 'image/jpeg', 'image/webp', 'image/gif')
+
+class ProductPublicCategory(models.Model):
+    _inherit = 'product.public.category'
+
+    mart_slug = fields.Char(
+        string='App address', index=True, copy=False,
+        help="How the app addresses this category in a URL, e.g. "
+             "fruits-vegetables. Filled in from the name if left empty. "
+             "Changing it breaks any link a customer has saved.")
+    mart_in_app = fields.Boolean(
+        string='Show in the app', default=True,
+        help="Off: 369ai keeps the category, the 369 Mart app does not show it.")
+    mart_tone = fields.Char(
+        string='Background', default='#f4f6f8',
+        help="The pale colour behind this category's page, e.g. #e8f5e9.")
+    mart_accent = fields.Char(
+        string='Heading colour', default='#0b4a6e',
+        help="The ink colour for the category's title, e.g. #1f7a4c.")
+    mart_blurb = fields.Char(
+        string='One-line description',
+        help="Sits under the title on the category page, e.g. "
+             "Farm-fresh produce, picked daily.")
+    mart_blurb_color = fields.Char(
+        string='Line colour',
+        help="The colour of the one line under the title, e.g. #4a5a66. Empty: "
+             "the app's grey - or, for a sub-category, its main category's.")
+
+    # The logo. A main category's is the small mark on its pill in the top
+    # bar; a sub-category's fills its tile. Either is one the app draws itself
+    # (below) or an uploaded picture (`mart_logo`), and an upload wins. Both
+    # built-in fields are kept because Under can change: a sub-category moved
+    # to the top keeps the drawing it had.
+    #
+    # The upload is its own field, not the category's image_1920: that one is
+    # the website shop's category photo (Odoo's demo fills several with stock
+    # photos), which at 18px on a pill would be noise - and the website still
+    # wants it.
+    mart_logo = fields.Image(
+        string='Uploaded logo', max_width=512, max_height=512,
+        help="Cropped square in the 369 Mart consoles. Used instead of the "
+             "built-in logo; remove it to go back to the built-in one.")
+    mart_icon = fields.Selection(
+        ICON_CHOICES, string='Built-in logo (category)',
+        help="The small mark beside a main category's name in the app's top "
+             "bar. An uploaded picture is used instead when there is one.")
+    mart_art = fields.Selection(
+        ART_CHOICES, string='Built-in logo (sub-category)',
+        help="The drawing that fills a sub-category's tile. An uploaded "
+             "picture is used instead when there is one.")
+
+    mart_product_count = fields.Integer(
+        string='Products in the app', compute='_compute_mart_product_count',
+        help="Published products in this category and everything under it.")
+
+    # Odoo 19 dropped _sql_constraints; a list here is ignored with only a
+    # warning in the log, so the constraint would never reach Postgres.
+    _mart_slug_uniq = models.Constraint(
+        'unique (mart_slug)',
+        'Two categories cannot share the same app address.',
+    )
+
+    # ------------------------------------------------------------- the slug
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            if not vals.get('mart_slug') and vals.get('name'):
+                vals['mart_slug'] = self._mart369_free_slug(vals['name'])
+        return super().create(vals_list)
+
+    def write(self, vals):
+        res = super().write(vals)
+        # Renaming a category that never had a slug gives it one; a category
+        # that already has one keeps it, because customers may have the link.
+        for category in self:
+            if not category.mart_slug and category.name:
+                category.mart_slug = category._mart369_free_slug(category.name)
+        # A twin renamed or moved here renames or moves its Product Category
+        # (product_category.py), so a name is typed once.
+        if not self.env.context.get('mart369_mirror_sync'):
+            for category in self:
+                source = category._mart369_source()
+                source_vals = source and category._mart369_source_vals(vals)
+                if source_vals:
+                    source.sudo().with_context(mart369_mirror_sync=True).write(source_vals)
+        return res
+
+    # ----------------------------------------------- the Product Category twin
+
+    def _mart369_source(self):
+        """The Product Category this is the website twin of, or an empty one."""
+        self.ensure_one()
+        return self.env['product.category'].sudo().search(
+            [('mart_mirror_id', '=', self.id)], limit=1)
+
+    def _mart369_source_vals(self, vals):
+        """The Product Category's share of a write on its twin."""
+        self.ensure_one()
+        out = {}
+        if 'name' in vals:
+            out['name'] = self.name
+        if 'parent_id' in vals:
+            out['parent_id'] = (self.parent_id._mart369_source().id or False
+                                if self.parent_id else False)
+        return out
+
+    @api.model
+    def _mart369_free_slug(self, name, ignore=None):
+        """'Fresh Fruits' -> 'fresh-fruits', or 'fresh-fruits-2' if taken."""
+        base = slugify(name) or 'category'
+        candidate, n = base, 1
+        while True:
+            domain = [('mart_slug', '=', candidate)]
+            if ignore:
+                domain.append(('id', '!=', ignore))
+            if not self.sudo().with_context(active_test=False).search_count(domain):
+                return candidate
+            n += 1
+            candidate = '%s-%d' % (base, n)
+
+    @api.constrains('mart_slug')
+    def _check_mart_slug(self):
+        for category in self:
+            if category.mart_slug and slugify(category.mart_slug) != category.mart_slug:
+                raise ValidationError(self.env._(
+                    "An app address may only use lowercase letters, numbers and "
+                    "hyphens. '%s' does not.", category.mart_slug))
+
+    def _compute_mart_product_count(self):
+        for category in self:
+            category.mart_product_count = self.env['product.template'].sudo().search_count(
+                category._mart369_product_domain())
+
+    # -------------------------------------------------------------- reading
+
+    def _mart369_product_domain(self):
+        """Listed products in this category or any category beneath it."""
+        self.ensure_one()
+        return self.env['product.template']._mart369_listed_domain() + [
+            ('public_categ_ids', 'child_of', self.id),
+        ]
+
+    def _mart369_children(self):
+        """The sub-categories the app should list, in the operator's order."""
+        self.ensure_one()
+        return self.child_id.filtered('mart_in_app').sorted(
+            key=lambda c: (c.sequence, c.id))
+
+    def _mart369_serialize(self, with_subs=True):
+        """One node of the tree the app draws.
+
+        Matches the shape of CATALOG in components/home/catalog.js: slug,
+        name, tone, accent, blurb and an ordered list of subs. No Quick or
+        Express: that is decided per item, by the customer's distance to the
+        branch holding the stock, not by the category.
+        """
+        self.ensure_one()
+        node = {
+            'slug': self.mart_slug or '',
+            'name': self.name or '',
+            'tone': self.mart_tone or '',
+            'accent': self.mart_accent or '',
+            'blurb': self.mart_blurb or '',
+            'blurbColor': self.mart_blurb_color or '',
+            **self._mart369_logo(),
+        }
+        if with_subs:
+            node['subs'] = [child._mart369_serialize(with_subs=False)
+                            for child in self._mart369_children()]
+        return node
+
+    def _mart369_logo(self):
+        """{icon, art, image}: the two built-in marks, and the uploaded
+        picture's address or ''. The app draws the picture when there is one.
+
+        `unique` changes with every save, so a new upload is not hidden behind
+        the browser's copy of the old one.
+        """
+        self.ensure_one()
+        image = ''
+        if self.mart_logo:
+            image = self.env['mart369.serializable']._image_url(
+                'mart_logo', '512x512', record=self)
+        return {
+            'icon': self.mart_icon or '',
+            'art': self.mart_art or '',
+            'image': image,
+        }
+
+    # ------------------------------------------------------- the staff screen
+
+    ADMIN_TABS = ('all', 'live', 'hidden', 'empty')
+
+    # What either screen may write, and nothing else. Name and `mart_slug` are
+    # not here on purpose: the slug is a URL a customer may have saved, and the
+    # name is Odoo's own field that the catalogue, the product pages and the
+    # reports all lean on. Both belong in the Odoo form, which is still one
+    # click away under "Catalog (all views)".
+    ADMIN_FIELDS = ('mart_in_app', 'mart_blurb', 'mart_tone', 'mart_accent',
+                    'mart_blurb_color', 'mart_icon', 'mart_art', 'mart_logo')
+
+    @api.model
+    def mart369_admin_list(self, tab='all', mode='', q='', limit=300):
+        """The rows and the tiles in one call, filtered on the server.
+
+        Read by both the app console (over /369mart/admin/categories) and the
+        backend desk (over the ORM), so the two cannot drift. `mode` is still
+        accepted, and ignored: categories no longer have a storefront.
+        """
+        domain = []
+        if tab == 'live':
+            domain = [('mart_in_app', '=', True)]
+        elif tab == 'hidden':
+            domain = [('mart_in_app', '=', False)]
+        q = (q or '').strip()
+        if q:
+            domain = domain + ['|', ('name', 'ilike', q), ('mart_slug', 'ilike', q)]
+
+        rows = self.search(domain, limit=limit)
+        if tab == 'empty':
+            rows = rows.filtered(lambda c: not c.mart_product_count)
+
+        everything = self.search([])
+        live = everything.filtered('mart_in_app')
+        empty = everything.filtered(lambda c: not c.mart_product_count)
+        return {
+            'rows': [row._mart369_admin_row() for row in rows],
+            'counts': {
+                'all': len(everything),
+                'live': len(live),
+                'hidden': len(everything) - len(live),
+                'empty': len(empty),
+            },
+            'tiles': {
+                'live': len(live),
+                'hidden': len(everything) - len(live),
+                'empty': len(empty),
+                # Products a shopper can actually reach, counted once: summing
+                # every category's own count would count a product in three
+                # categories three times.
+                'products': self.env['product.template'].sudo().search_count(
+                    self.env['product.template']._mart369_listed_domain() + [
+                        ('public_categ_ids', 'in', live.ids),
+                    ]) if live else 0,
+            },
+        }
+
+    def _mart369_admin_row(self):
+        self.ensure_one()
+        return {
+            'id': self.id,
+            'name': self.name or '',
+            'slug': self.mart_slug or '',
+            'parent': self.parent_id.name or '',
+            'parentId': self.parent_id.id or False,
+            # A sub-category is drawn in its main category's colours, so the
+            # dialog's preview needs them.
+            'parentTone': self.parent_id.mart_tone or '',
+            'parentAccent': self.parent_id.mart_accent or '',
+            'parentBlurbColor': self.parent_id.mart_blurb_color or '',
+            'topLevel': not self.parent_id,
+            'tone': self.mart_tone or '',
+            'accent': self.mart_accent or '',
+            'blurb': self.mart_blurb or '',
+            'blurbColor': self.mart_blurb_color or '',
+            'products': self.mart_product_count,
+            'children': len(self.child_id),
+            'inApp': self.mart_in_app,
+            **self._mart369_logo(),
+            'hasImage': bool(self.mart_logo),
+        }
+
+    def mart369_admin_write(self, values):
+        """Change how the app draws this category.
+
+        Allow-listed to `ADMIN_FIELDS`. Not sudo'd: core grants the website
+        designer write on `product.public.category`, so Odoo's own rules do
+        the refusing.
+        """
+        self.ensure_one()
+        clean = self._mart369_admin_clean(values)
+        if not clean:
+            raise UserError(self.env._("There is nothing here to change."))
+        self.write(clean)
+        return self._mart369_admin_row()
+
+    def mart369_admin_edit(self, values):
+        """Everything about a category, from the desk's Edit button: how it
+        looks, and also its name and where it sits.
+
+        The name is safe to change here because the app address is not: a
+        renamed category keeps its slug, so a saved link still works. The
+        address itself stays in the Odoo form. `mart369_admin_write` - the
+        route the web console uses - still refuses both.
+        """
+        self.ensure_one()
+        values = values or {}
+        vals = self._mart369_admin_clean(values)
+        if 'name' in values:
+            name = (values.get('name') or '').strip()
+            if not name:
+                raise UserError(self.env._("A category needs a name."))
+            vals['name'] = name
+        if 'parent_id' in values:
+            parent_id = self._mart369_admin_parent(values.get('parent_id'))
+            if parent_id == self.id:
+                raise UserError(self.env._("A category cannot go under itself."))
+            if parent_id and self.child_id:
+                # Its sub-categories would become a third level.
+                raise UserError(self.env._(
+                    "\"%(name)s\" has sub-categories, so it stays a main "
+                    "category. Move them first.", name=self.name))
+            vals['parent_id'] = parent_id
+        if not vals:
+            raise UserError(self.env._("There is nothing here to change."))
+        self.write(vals)
+        return self._mart369_admin_row()
+
+    @api.model
+    def _mart369_admin_parent(self, parent):
+        """The id a category may go under - a main category - or False."""
+        if not parent:
+            return False
+        parent_rec = self.browse(int(parent)).exists()
+        if not parent_rec:
+            raise UserError(self.env._("That parent category no longer exists."))
+        if parent_rec.parent_id:
+            # The app draws two levels: a category and its sub-categories.
+            # A third level would have no pill and no page of its own.
+            raise UserError(self.env._(
+                "Sub-categories go under a main category. \"%(name)s\" is "
+                "already under \"%(parent)s\".",
+                name=parent_rec.name, parent=parent_rec.parent_id.name))
+        return parent_rec.id
+
+    @api.model
+    def mart369_admin_create(self, values):
+        """A new category from the Catalogue desk.
+
+        The name is the one thing required; a parent makes it a sub-category.
+        Everything else goes through the same allowlist and checks as an edit,
+        and the app address is filled in from the name, as for any category.
+        """
+        values = values or {}
+        name = (values.get('name') or '').strip()
+        if not name:
+            raise UserError(self.env._("A category needs a name."))
+        vals = self._mart369_admin_clean(values)
+        vals['name'] = name
+        parent_id = self._mart369_admin_parent(values.get('parent_id'))
+        parent_rec = self.browse(parent_id)
+        if parent_id:
+            vals['parent_id'] = parent_id
+            # A sub-category's circle is drawn in its own colours; one sent
+            # without them starts in its main category's, not the defaults.
+            vals.setdefault('mart_tone', parent_rec.mart_tone)
+            vals.setdefault('mart_accent', parent_rec.mart_accent)
+        category = self.create(vals)
+        # Its Product Category, so products can be filed under it and
+        # WhatsApp's NEW ORDER lists it (product_category.py): everything the
+        # two keep in step, read off the new twin.
+        source_vals = category._mart369_source_vals(
+            dict.fromkeys(('name', 'parent_id', 'sequence', 'mart_in_app')))
+        self.env['product.category'].sudo().with_context(mart369_mirror_sync=True).create(
+            dict(source_vals, mart_mirror_id=category.id))
+        return category._mart369_admin_row()
+
+    @api.model
+    def _mart369_admin_clean(self, values):
+        """`values` cut down to ADMIN_FIELDS and checked."""
+        clean = {k: v for k, v in (values or {}).items() if k in self.ADMIN_FIELDS}
+        for key in ('mart_tone', 'mart_accent', 'mart_blurb_color'):
+            if key in clean:
+                clean[key] = self._mart369_check_colour(clean[key])
+        if 'mart_in_app' in clean:
+            clean['mart_in_app'] = bool(clean['mart_in_app'])
+        for key, choices in (('mart_icon', ICON_CHOICES), ('mart_art', ART_CHOICES)):
+            if key in clean:
+                clean[key] = clean[key] or False
+                if clean[key] and clean[key] not in dict(choices):
+                    raise UserError(self.env._(
+                        "'%s' is not one of the app's built-in logos.", clean[key]))
+        if 'mart_logo' in clean:
+            clean['mart_logo'] = self._mart369_check_logo(clean['mart_logo'])
+        return clean
+
+    @api.model
+    def _mart369_check_logo(self, value):
+        """An uploaded logo as Odoo stores it (base64), or False to remove it.
+
+        A data: URL is accepted too - it is what a browser's canvas hands over.
+        """
+        if not value:
+            return False
+        if not isinstance(value, str):
+            raise UserError(self.env._("That is not a picture."))
+        if value.startswith('data:'):
+            value = value.partition(',')[2]
+        try:
+            raw = base64.b64decode(value, validate=True)
+        except (binascii.Error, ValueError):
+            raise UserError(self.env._("That is not a picture."))
+        if len(raw) > LOGO_MAX_BYTES:
+            raise UserError(self.env._(
+                "That picture is too big. Crop it, or use one under 5 MB."))
+        if guess_mimetype(raw) not in LOGO_TYPES:
+            raise UserError(self.env._(
+                "A logo has to be a PNG, JPEG, WebP or GIF picture."))
+        return value
+
+    @api.model
+    def _mart369_check_colour(self, value):
+        """A colour the app can actually paint with.
+
+        The storefront drops these straight into CSS, so anything that is not
+        a hex colour is a silently broken category page rather than an error
+        anybody sees.
+        """
+        value = (value or '').strip()
+        if not value:
+            return ''
+        if not re.fullmatch(r'#[0-9a-fA-F]{6}', value):
+            raise UserError(self.env._(
+                "A colour looks like #e8f5e9. '%s' does not.", value))
+        return value.lower()

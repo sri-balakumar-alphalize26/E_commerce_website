@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="imgsrv_migration_form" model="ir.ui.view">
+        <field name="name">ai369.imgsrv.migration.form</field>
+        <field name="model">ai369.imgsrv.migration</field>
+        <field name="arch" type="xml">
+            <form string="Image Server migration">
+                <div class="alert alert-info" role="alert" invisible="not running">
+                    <field name="running" readonly="1"/> … runs every few minutes in the background. Press Refresh to see progress.
+                </div>
+                <group>
+                    <group string="Images">
+                        <field name="local_count"/>
+                        <field name="local_mb"/>
+                        <field name="remote_count"/>
+                    </group>
+                    <group string="Problems">
+                        <field name="pending_count"/>
+                        <field name="error_count"/>
+                    </group>
+                </group>
+                <p class="text-muted">
+                    Moving keeps every image visible: each file is uploaded first, then the ERP copy is released.
+                    Bring back copies all images into the ERP again and turns the connector off.
+                </p>
+                <footer>
+                    <button name="action_move_all" type="object" string="Move all (background)" class="btn-primary" invisible="running"/>
+                    <button name="action_move_batch" type="object" string="Move 50 now" class="btn-secondary" invisible="running"/>
+                    <button name="action_retry_failed" type="object" string="Retry failed" class="btn-secondary" invisible="not pending_count and not error_count"/>
+                    <button name="action_stop" type="object" string="Stop" class="btn-warning" invisible="not running"/>
+                    <button name="action_refresh" type="object" string="Refresh" class="btn-secondary"/>
+                    <button name="action_bring_back" type="object" string="Bring all back" class="btn-link text-danger"
+                            confirm="Copy every image back into the ERP and switch the image server off?" invisible="running"/>
+                    <button special="cancel" string="Close" class="btn-link"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_imgsrv_migration" model="ir.actions.act_window">
+        <field name="name">Image Server migration</field>
+        <field name="path">image-server-migration</field>
+        <field name="res_model">ai369.imgsrv.migration</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+</odoo>
