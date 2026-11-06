@@ -13,6 +13,7 @@
             <button t-else="" class="mart-select" type="button" t-att-aria-label="props.label"
                     t-att-disabled="props.disabled or false"
                     t-on-keydown="onKeydown">
+                <Icon t-if="props.withIcons and props.value" n="props.value" size="16"/>
                 <span t-esc="current"/>
                 <Icon n="'chev'" size="14"/>
             </button>
@@ -20,7 +21,7 @@
                 <DropdownItem t-foreach="props.options" t-as="opt" t-key="opt[0]"
                               class="opt[0] === props.value ? 'mart-select-on' : ''"
                               onSelected="() => this.choose(opt[0])">
-                    <Icon n="'check'" size="14"/>
+                    <Icon n="props.withIcons ? opt[0] : 'check'" size="14"/>
                     <t t-esc="opt[1]"/>
                 </DropdownItem>
             </t>

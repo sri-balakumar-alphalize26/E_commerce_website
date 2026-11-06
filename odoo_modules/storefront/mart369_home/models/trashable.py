@@ -1,3 +1,4 @@
+import re
 from datetime import timedelta
 
 from odoo import _, api, fields, models
@@ -32,6 +33,8 @@ class Mart369Trashable(models.AbstractModel):
 
     # What this is called in the Trash list. Overridden per model.
     _trash_what = 'Item'
+    # Fields holding a link. Overridden per model; see `_mart369_clean_links`.
+    _mart369_link_fields = ()
 
     deleted_at = fields.Datetime(
         string='Moved to Trash', index=True, copy=False,
@@ -85,11 +88,19 @@ class Mart369Trashable(models.AbstractModel):
             modes = self.env['mart369.home.mode'].browse(
                 {vals['mode_id'] for vals in vals_list if vals.get('mode_id')})
             modes._mart369_check_not_demo()
-        return super().create(vals_list)
+        return super().create([self._mart369_clean_links(vals) for vals in vals_list])
 
     def write(self, vals):
         self._mart369_check_not_demo()
-        return super().write(vals)
+        return super().write(self._mart369_clean_links(vals))
+
+    def _mart369_clean_links(self, vals):
+        """No spaces or Tabs in a link. One copied from a table can carry a Tab
+        nobody can see, and the shop then looks for a category that has one."""
+        fields_here = [f for f in self._mart369_link_fields if isinstance(vals.get(f), str)]
+        if not fields_here:
+            return vals
+        return dict(vals, **{f: re.sub(r'\s+', '', vals[f]) for f in fields_here})
 
     def unlink(self):
         self._mart369_check_not_demo()

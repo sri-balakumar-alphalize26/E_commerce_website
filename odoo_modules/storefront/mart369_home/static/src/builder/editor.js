@@ -68,7 +68,7 @@ const KINDS = {
             ["name", "Headline", "The big line"],
             ["note", "Note", "One line under it"],
             ["tone", "Colour", "", "tones"],
-            ["href", "Link", "Where tapping it goes"],
+            ["href", "Link", "Where tapping it goes", "links"],
         ],
     },
     tile: {
@@ -77,7 +77,7 @@ const KINDS = {
         picture: "512 x 512 px, square",
         fields: [
             ["name", "Label", "What it is called under the picture"],
-            ["route", "Link", "The category slug it opens"],
+            ["route", "Link", "The category it opens", "routes"],
         ],
     },
     section: {
@@ -86,7 +86,7 @@ const KINDS = {
         fields: [
             ["name", "Title", "The heading above the row"],
             ["subtitle", "Subtitle", "One line under the heading"],
-            ["view_all_route", "See all link", "The category it opens"],
+            ["view_all_route", "See all link", "The category it opens", "routes"],
         ],
     },
 };
@@ -393,6 +393,26 @@ export class PageEditor extends Component {
      *  string as the value - nothing ever showed as chosen. */
     vocabOptions(key) {
         return (this.d.vocab?.[key] || []).map(([value, label]) => [String(value), label]);
+    }
+
+    /** A field's drop-down. A link also offers No link, and shows a saved one
+     *  that is not on the list rather than hiding it, so a broken link can be
+     *  seen and fixed. A link to another website is not called broken. */
+    fieldOptions(key, current) {
+        const options = this.vocabOptions(key);
+        if (key !== "links" && key !== "routes") {
+            return options;
+        }
+        // The name to choose by, and the address beside it for reference.
+        const shown = (value) => (key === "routes" ? `/category/${value}` : value);
+        const list = [["", _t("No link")],
+            ...options.map(([value, label]) => [value, `${label}   ${shown(value)}`])];
+        if (current && !options.some(([value]) => value === current)) {
+            list.push([current, /^https?:\/\//i.test(current)
+                ? current
+                : _t("⚠ %s - not found, pick one", current.trim())]);
+        }
+        return list;
     }
 
     /** The eye. Writes at once - see save_queue's `now`. */

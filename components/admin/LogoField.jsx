@@ -34,6 +34,7 @@ export const LOGO_ICONS = [
   ["laptop", "Laptop"], ["monitor", "Monitor"], ["ticket", "Ticket"], ["grid", "Grid"],
   ["bolt", "Lightning"], ["bag", "Bag"], ["basket", "Basket"], ["leaf", "Leaf"],
   ["pot", "Pot"], ["pen", "Pen"], ["shirt", "Shirt"], ["book", "Book"],
+  ["fan", "Fan"], ["speaker", "Speaker"], ["cable", "Cable"], ["connector", "Connector"],
 ];
 export const LOGO_ART = [
   ["Keyboard", "Keyboard"], ["Mouse", "Mouse"], ["Headphones", "Headphones"], ["Webcam", "Webcam"],

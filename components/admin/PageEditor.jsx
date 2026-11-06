@@ -37,9 +37,9 @@ import { useAction, useResource } from "@/lib/useFetch";
 import {
   Banner, CategoryStrip, ModeSwitchOverlay, Tabs as StoreTabs, useModeSwitch,
 } from "@/components/home/Home";
-import { Rail } from "@/components/home/shared";
+import { Icon as ShopIcon, Rail } from "@/components/home/shared";
 import "@/components/home/home.css";
-import { Confirm, Drawer, Empty, Icon, useToast } from "./AdminUI";
+import { Confirm, Drawer, Empty, Icon, Select, useToast } from "./AdminUI";
 import BannerPicture, { pictureAddress } from "./BannerPicture";
 import { RenamePrompt } from "./HomeSection";
 import RowProductPicker from "./RowProductPicker";
@@ -295,10 +295,9 @@ function ModePanel({ mode, modeKey, vocab, onModeField, onRemove }) {
           <label key={field} className="ad-field ad-span2">
             <span>{label}</span>
             {vocabKey ? (
-              <select value={mode?.[field] || ""}
-                onChange={(e) => onModeField(field, e.target.value)}>
-                {(vocab?.[vocabKey] || []).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-              </select>
+              <Select value={mode?.[field] || ""} label={label} options={vocab?.[vocabKey] || []}
+                iconOf={(v) => <ShopIcon n={v} size={16} />}
+                onChange={(v) => onModeField(field, v)} />
             ) : (
               <input value={mode?.[field] ?? ""} placeholder={hint} aria-label={label}
                 inputMode={field === "free_delivery_at" ? "decimal" : undefined}
@@ -406,12 +405,16 @@ function Panel({ selected, vals, vocab, onField, onToggle, onRemove, busy,
           return (
           <label key={field} className="ad-field ad-span2">
             <span>{label}</span>
-            {vocabKey ? (
+            {vocabKey === "icons" ? (
+              <Select value={current} label={label} options={options} onChange={set}
+                iconOf={(v) => <ShopIcon n={v} size={16} />} />
+            ) : vocabKey ? (
               <select value={current} className={unknown ? "pe-bad" : ""}
                 onChange={(e) => set(e.target.value)}>
                 {isLink && <option value="">No link</option>}
                 {unknown && <option value={current}>⚠ {current} - not found, pick one</option>}
-                {options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                {/* A link: the name to choose by, and its address for reference. */}
+                {options.map(([v, l]) => <option key={v} value={v}>{isLink ? `${l}   ${vocabKey === "routes" ? `/category/${v}` : v}` : l}</option>)}
               </select>
             ) : (
               <input value={vals[field] ?? ""} placeholder={hint} aria-label={label}

@@ -22,6 +22,7 @@ class Mart369HomeSection(models.Model):
     _inherit = ['mart369.serializable', 'mart369.home.trashable']
     _order = 'sequence, id'
     _trash_what = 'Home section'
+    _mart369_link_fields = ('view_all_route',)
 
     mode_id = fields.Many2one(
         'mart369.home.mode', string='App Mode',

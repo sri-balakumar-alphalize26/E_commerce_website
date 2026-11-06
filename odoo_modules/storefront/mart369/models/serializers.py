@@ -97,6 +97,10 @@ ICON_CHOICES = [
     ('keyboard', 'Keyboard (peripherals)'),
     ('wifi', 'Wi-Fi (networking)'),
     ('laptop', 'Laptop (computers)'),
+    ('fan', 'Fan (cooling)'),
+    ('speaker', 'Speaker (sound)'),
+    ('cable', 'Cable'),
+    ('connector', 'Connector (jacks, ports)'),
 ]
 
 # Banner background gradients.

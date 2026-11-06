@@ -20,6 +20,7 @@ class Mart369HomeBanner(models.Model):
                 'mart369.home.trashable']
     _order = 'sequence, id'
     _trash_what = 'Banner'
+    _mart369_link_fields = ('href',)
 
     mode_id = fields.Many2one(
         'mart369.home.mode', string='App Mode',

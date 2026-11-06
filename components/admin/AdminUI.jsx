@@ -80,7 +80,9 @@ export function Tabs({ tabs, value, onChange }) {
    beyond a highlight. The API is unchanged, so every caller upgrades at once.
 
    Same API as before: options are [value, label] pairs. */
-export function Select({ value, onChange, options, label }) {
+/* `iconOf` draws each option's own icon in place of the tick, for a list of
+   icons: the name alone does not say what "Grid" looks like. */
+export function Select({ value, onChange, options, label, iconOf }) {
   const [open, setOpen] = useState(false);
   const wrap = useRef(null);
   const current = options.find(([v]) => v === value);
@@ -149,6 +151,7 @@ export function Select({ value, onChange, options, label }) {
       <button type="button" className="ad-select-btn" aria-label={label}
         aria-haspopup="listbox" aria-expanded={open}
         onClick={toggle}>
+        {iconOf && value ? iconOf(value) : null}
         <span>{current ? current[1] : ""}</span>
         <Icon n="chev" size={15} />
       </button>
@@ -159,7 +162,7 @@ export function Select({ value, onChange, options, label }) {
               <button type="button" role="option" aria-selected={v === value}
                 className={v === value ? "ad-select-on" : ""}
                 onClick={() => choose(v)}>
-                <Icon n="check" size={14} />
+                {iconOf ? iconOf(v) : <Icon n="check" size={14} />}
                 {l}
               </button>
             </li>

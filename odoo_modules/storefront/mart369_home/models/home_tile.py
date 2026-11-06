@@ -14,6 +14,7 @@ class Mart369HomeTile(models.Model):
                 'mart369.home.trashable']
     _order = 'sequence, id'
     _trash_what = 'Category tile'
+    _mart369_link_fields = ('route',)
 
     mode_id = fields.Many2one(
         'mart369.home.mode', string='App Mode',

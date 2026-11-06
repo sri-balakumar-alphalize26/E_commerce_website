@@ -40,6 +40,9 @@ export class Pick extends Component {
            It wears a dot while anything but the first option is chosen, so a
            changed order is never invisible. */
         icon: { type: String, optional: true },
+        /* Optional: the options are icons, so each row draws its own icon in
+           place of the tick. The name alone does not say what "Grid" looks like. */
+        withIcons: { type: Boolean, optional: true },
         onChange: { type: Function },
     };
 

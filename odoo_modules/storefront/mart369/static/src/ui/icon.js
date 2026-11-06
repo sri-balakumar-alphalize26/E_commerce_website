@@ -18,6 +18,10 @@ const ICONS = {
     plug: '<path d="M9 3v5M15 3v5M6 8h12v3a6 6 0 0 1-12 0z"/><path d="M12 17v4"/>',
     pot: '<path d="M4 10h16v6a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4z"/><path d="M2 10h2M20 10h2M9 6c0-1 1-2 3-2s3 1 3 2"/>',
     pen: '<path d="m4 20 1-4L16 5l3 3L8 19z"/><path d="m14 7 3 3"/>',
+    fan: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="1.5"/><path d="M12 10.5C10 8 11 5 13.5 5.5c2 .4 2 3-.5 5M13.4 12.7c3-.6 5 1.7 3.5 3.8-1.2 1.6-3.6.6-4.5-2.7M10.6 12.8c-1.2 2.9-4.2 3.5-5.1 1.2-.8-1.9 1.4-3.3 4.6-2.6"/>',
+    speaker: '<path d="M4 9.5v5h3.5l4.5 4v-13l-4.5 4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/>',
+    cable: '<path d="M5 3v4M9 3v4M4 7h6v3a3 3 0 0 1-6 0zM7 13v3a4 4 0 0 0 4 4h2a4 4 0 0 0 4-4V8"/><path d="M14 3h6v5h-6z"/>',
+    connector: '<rect x="4" y="8" width="12" height="8" rx="1.5"/><path d="M16 10h4M16 14h4M8 12h.01M12 12h.01"/>',
     // The computer-parts pills. Missing here until the category logos, so
     // the builders drew Peripherals, Networking and friends with no icon.
     cpu: '<rect x="7" y="7" width="10" height="10" rx="1.5"/><path d="M10 3v4M14 3v4M10 17v4M14 17v4M3 10h4M3 14h4M17 10h4M17 14h4"/>',

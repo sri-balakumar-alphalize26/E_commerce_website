@@ -17,6 +17,10 @@ export const SEARCH_WORDS = ["RTX 4060", "Mechanical keyboard", "1TB SSD", "Wi-F
 
 /* ---------- icons ---------- */
 const P = {
+  fan: <><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="1.5" /><path d="M12 10.5C10 8 11 5 13.5 5.5c2 .4 2 3-.5 5M13.4 12.7c3-.6 5 1.7 3.5 3.8-1.2 1.6-3.6.6-4.5-2.7M10.6 12.8c-1.2 2.9-4.2 3.5-5.1 1.2-.8-1.9 1.4-3.3 4.6-2.6" /></>,
+  speaker: <><path d="M4 9.5v5h3.5l4.5 4v-13l-4.5 4z" /><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" /></>,
+  cable: <><path d="M5 3v4M9 3v4M4 7h6v3a3 3 0 0 1-6 0zM7 13v3a4 4 0 0 0 4 4h2a4 4 0 0 0 4-4V8" /><path d="M14 3h6v5h-6z" /></>,
+  connector: <><rect x="4" y="8" width="12" height="8" rx="1.5" /><path d="M16 10h4M16 14h4M8 12h.01M12 12h.01" /></>,
   bag: <><path d="M5 8h14l-1 12H6z" /><path d="M9 8V6a3 3 0 0 1 6 0v2" /></>,
   basket: <><path d="M4 10h16l-1.6 9a2 2 0 0 1-2 1.6H7.6a2 2 0 0 1-2-1.6z" /><path d="m9 10 3-6 3 6" /></>,
   leaf: <><path d="M5 19c0-8 5-14 15-14 0 10-6 15-14 15" /><path d="M5 19l8-8" /></>,
