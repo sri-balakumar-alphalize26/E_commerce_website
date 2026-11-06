@@ -11,7 +11,7 @@ and adds its own - the app modes, the row length, the trash window - so the
 settings screen simply shows more fields when the home page is installed.
 """
 
-from odoo import api, fields, models
+from odoo import api, fields, models, tools
 
 
 class Mart369Config(models.Model):
@@ -40,3 +40,16 @@ class Mart369Config(models.Model):
         if not rec:
             rec = self.create({})
         return rec
+
+    @api.model
+    @tools.ormcache()
+    def _image_base(self):
+        """The Image address setting. Every picture address on every card asks
+        for it, so it is read once rather than once per picture."""
+        return self._get().image_base_url or ''
+
+    def write(self, vals):
+        result = super().write(vals)
+        if 'image_base_url' in vals:
+            self.env.registry.clear_cache()
+        return result

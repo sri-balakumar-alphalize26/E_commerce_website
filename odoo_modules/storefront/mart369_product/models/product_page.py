@@ -80,8 +80,9 @@ class Mart369ProductPage(models.AbstractModel):
             # setup's facts - its photos, its specs table - and the page
             # shows them, with the Sales Description, as for any variant.
             single = product.sudo().product_variant_id
-            main = dict(own, images=helper._mart369_variant_images(single) or own['images'])
             media = helper._mart369_variant_media(single)
+            images, thumbs = helper._mart369_media_pictures(media)
+            main = dict(own, images=images, thumbs=thumbs) if images else dict(own)
             if media:
                 main['media'] = media
             specs = helper._mart369_variant_specs(single)

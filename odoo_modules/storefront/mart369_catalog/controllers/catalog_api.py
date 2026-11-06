@@ -25,6 +25,10 @@ SUGGEST_LIMIT = 8
 # A category page is long but finite; the app filters client-side from here.
 BROWSE_LIMIT = 240
 SEARCH_LIMIT = 120
+# How many matches are ranked before cutting down to one of the limits above.
+SEARCH_POOL = 400
+# Enough for any real search, and a bound on how long the query can get.
+SEARCH_MAX_WORDS = 6
 
 # /369mart/search counts what was searched for, so it cannot run on Odoo's
 # read-only cursor the way the rest of these routes do. Everything else about it
@@ -76,6 +80,7 @@ class Mart369CatalogApi(http.Controller):
         mixin = request.env['mart369.serializable'].sudo()
         templates = templates.sudo()
         price_ctx = mixin._price_context_for(templates)
+        mixin._mart369_load_stock(templates)
         return [mixin._serialize_product(
                     t, None, price_ctx,
                     ('all' if t.mart_delivery_text else 'quick') if mode_key == 'own' else mode_key)
@@ -144,21 +149,52 @@ class Mart369CatalogApi(http.Controller):
     # ---------------------------------------------------------- the search
 
     def _search_domain(self, q):
-        """Name, brand, pack size or category - what a shopper would type."""
-        return request.env['product.template'].sudo()._mart369_listed_domain() + [
-            '|', '|', '|',
-            ('name', 'ilike', q),
-            ('mart_brand', 'ilike', q),
-            ('mart_unit_text', 'ilike', q),
-            ('public_categ_ids.name', 'ilike', q),
-        ]
+        """Name, brand, pack size or category - what a shopper would type.
+
+        Every word has to match, in any order and in any of those places, so
+        "switch tp-link" finds "TP-Link 8-Port Switch"."""
+        domain = request.env['product.template'].sudo()._mart369_listed_domain()
+        for word in q.split()[:SEARCH_MAX_WORDS]:
+            domain = domain + [
+                '|', '|', '|',
+                ('name', 'ilike', word),
+                ('mart_brand', 'ilike', word),
+                ('mart_unit_text', 'ilike', word),
+                ('public_categ_ids.name', 'ilike', word),
+            ]
+        return domain
+
+    def _search_rank(self, template, q):
+        """Lower is better: the name starts with what was typed, then a word in
+        the name does, then it is somewhere in the name, then the match was on
+        the brand, pack size or category."""
+        name = (template.name or '').lower()
+        if name.startswith(q):
+            return 0
+        if ' ' + q in ' ' + name:
+            return 1
+        if all(word in name for word in q.split()):
+            return 2
+        return 3
 
     def _search(self, q, limit):
-        q = (q or '').strip()
+        q = ' '.join((q or '').lower().split())
         if not q:
             return request.env['product.template'].browse()
-        return request.env['product.template'].sudo().search(
-            self._search_domain(q), limit=limit)
+        # Ranked from a wider pool than is shown: the limit alone would keep the
+        # first names alphabetically and only then put the best ones first.
+        found = request.env['product.template'].sudo().search_fetch(
+            self._search_domain(q), ['name'], limit=max(limit, SEARCH_POOL))
+        # sorted() keeps Odoo's own order among products that rank the same.
+        return found.sorted(key=lambda t: self._search_rank(t, q))[:limit]
+
+    def _suggestions(self, templates):
+        """The rows under the search box, priced in one pass."""
+        mixin = request.env['mart369.serializable'].sudo()
+        templates = templates.sudo()
+        price_ctx = mixin.with_context(mart369_prices_only=True)._price_context_for(templates)
+        mixin._mart369_load_stock(templates)
+        return [mixin._serialize_suggestion(t, price_ctx) for t in templates]
 
     @http.route('/369mart/search', **_PUBLIC_COUNTING)
     def search(self, q=None, **kwargs):
@@ -179,7 +215,7 @@ class Mart369CatalogApi(http.Controller):
         """
         templates = self._search(q, SUGGEST_LIMIT)
         return self._cached({'q': (q or '').strip(),
-                             'items': self._cards(templates)})
+                             'items': self._suggestions(templates)})
 
     @http.route('/369mart/search/trending', **_PUBLIC_JSON)
     def trending(self, **kwargs):

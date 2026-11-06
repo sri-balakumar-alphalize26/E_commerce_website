@@ -17,11 +17,15 @@ drawing, run `node scripts/export-art.mjs`.
 
 import logging
 import re
+from itertools import islice
 
 from odoo import api, fields, models
 from odoo.tools import html2plaintext, html_sanitize
 
 _logger = logging.getLogger(__name__)
+
+# imgsrv:m:media/shop/x.jpg?v=abc123#512 -> abc123
+IMAGE_VERSION = re.compile(r'\?v=([^#&]+)')
 
 # Drawn artwork, used when no photo is uploaded. Names must match ART exactly.
 # How many gallery photos beyond the main one reach the app. It was 3, which
@@ -141,11 +145,62 @@ class Mart369Serializable(models.AbstractModel):
     def _api_base(self):
         """Prefix for image URLs. Empty means relative, which is what you
         want whenever the app can proxy /web/image to Odoo."""
-        return self.env['mart369.config'].sudo()._get().image_base_url or ''
+        return self.env['mart369.config'].sudo()._image_base()
+
+    def _mart369_image_server_link(self, record, field):
+        """The picture's direct Image Server address, or None.
+
+        None whenever the picture is not there: the connector is not installed,
+        the picture is still kept in Odoo, or the file is private. The caller
+        then sends the usual /web/image address, which still works.
+
+        A page of products asks once per model and field rather than once per
+        picture. Remembered only on a read-only cursor: nothing can change the
+        pictures there, whereas a screen that saves a picture and then redraws
+        the card has to see the new one.
+        """
+        Attachment = self.env['ir.attachment'].sudo()
+        if 'imgsrv_url' not in Attachment._fields:
+            return None
+        # A variant keeps its own picture under image_variant_*. One without
+        # its own finds nothing here and gets the usual address.
+        name = field
+        if record._name == 'product.product' and field.startswith('image_') \
+                and not field.startswith('image_variant_'):
+            name = field.replace('image_', 'image_variant_', 1)
+        cr = self.env.cr
+        links = cr.cache.setdefault('mart369_image_links', {}).setdefault(
+            (record._name, name), {}) if cr.readonly else {}
+        if record.id not in links:
+            ids = {record.id}
+            if cr.readonly:
+                ids.update(i for i in islice(record._prefetch_ids, 1000)
+                           if isinstance(i, int) and i not in links)
+            links.update(dict.fromkeys(ids))
+            for attachment in Attachment.search([
+                    ('res_model', '=', record._name),
+                    ('res_id', 'in', list(ids)),
+                    ('res_field', '=', name),
+                    ('store_fname', '=like', 'imgsrv:%')]):
+                if attachment.imgsrv_url:
+                    # The version sits in the file name and not in the address.
+                    # A replaced picture often keeps its path, and the Image
+                    # Server's copies are kept for 30 days.
+                    version = IMAGE_VERSION.search(attachment.store_fname)
+                    links[attachment.res_id] = (
+                        '%s%sv=%s' % (attachment.imgsrv_url,
+                                      '&' if '?' in attachment.imgsrv_url else '?',
+                                      version.group(1))
+                        if version else attachment.imgsrv_url)
+        return links.get(record.id)
 
     def _image_url(self, field='image_512', size='256x256', record=None):
-        """A /web/image URL the phone app can load without logging in.
+        """The address the shop and the phone app load a picture from.
 
+        A picture on the Image Server gets its direct address, so the browser
+        goes straight there with no stop at the shop or at Odoo.
+
+        Anything else gets a /web/image URL they can load without logging in.
         Its save time rides on the end. Without it Odoo answers every
         picture "no-cache", so a phone asks again for all of them on every
         screen; with it the answer is "keep for a year", and a replaced
@@ -153,6 +208,9 @@ class Mart369Serializable(models.AbstractModel):
         """
         record = record if record is not None else self
         record.ensure_one()
+        direct = self._mart369_image_server_link(record, field)
+        if direct:
+            return direct
         stamp = int(record.write_date.timestamp()) if record.write_date else 0
         return '%s/web/image/%s/%s/%s/%s?unique=%d' % (
             self._api_base(), record._name, record.id, field, size, stamp)
@@ -228,12 +286,14 @@ class Mart369Serializable(models.AbstractModel):
         # 404s is not the same as no address: it renders as an empty frame,
         # and the drawing never gets its turn. A product without a photograph
         # must therefore send no photograph at all.
-        images = []
+        images, thumbs = [], []
         if self._mart369_has_picture(product):
             images.append(self._image_url('image_512', '512x512', record=product))
+            thumbs.append(self._mart369_thumb_url(product))
         for extra in product.product_template_image_ids[:MAX_EXTRA_IMAGES]:
             if self._mart369_has_picture(extra):
                 images.append(self._image_url('image_512', '512x512', record=extra))
+                thumbs.append(self._mart369_thumb_url(extra))
 
         def pick(field, fallback):
             """A line override beats the product's own value."""
@@ -243,6 +303,8 @@ class Mart369Serializable(models.AbstractModel):
         vals = {
             'id': str(product.id),
             'images': images,
+            # Same order as `images`, for anything drawn small.
+            'thumbs': thumbs,
             'name': pick('name_override', product.name),
             'unit': pick('unit_override', product.mart_unit_text or self._mart369_real_unit(product)),
             'price': round(price or 0.0, 2),
@@ -384,12 +446,19 @@ class Mart369Serializable(models.AbstractModel):
         return bool(record.with_context(bin_size=True)[field])
 
     @api.model
+    def _mart369_thumb_url(self, record):
+        """The small version of a picture, for cards, thumbnails and search
+        rows. On the Image Server this is its ready-made thumbnail."""
+        return self._image_url('image_256', '256x256', record=record)
+
+    @api.model
     def _mart369_gallery_item(self, image):
         """One `product.image` (Odoo's Extra Product / Variant Media) as a
         gallery entry: a photo, or a video with its picture as the poster.
         None for a row with neither."""
-        poster = (self._image_url('image_512', '512x512', record=image)
-                  if self._mart369_has_picture(image) else None)
+        has_picture = self._mart369_has_picture(image)
+        poster = self._image_url('image_512', '512x512', record=image) if has_picture else None
+        small = {'thumb': self._mart369_thumb_url(image)} if has_picture else {}
         if image.video_url:
             embed = None
             try:
@@ -399,9 +468,9 @@ class Mart369Serializable(models.AbstractModel):
                 embed = None
             if embed:
                 src = 'https:' + embed if embed.startswith('//') else embed
-                return dict({'type': 'video', 'src': src}, **({'poster': poster} if poster else {}))
+                return dict({'type': 'video', 'src': src}, **({'poster': poster} if poster else {}), **small)
         if poster:
-            return {'type': 'photo', 'src': poster}
+            return dict({'type': 'photo', 'src': poster}, **small)
         return None
 
     @api.model
@@ -418,7 +487,8 @@ class Mart369Serializable(models.AbstractModel):
         own = []
         if self._mart369_has_picture(variant, 'image_variant_1920'):
             own.append({'type': 'photo',
-                        'src': self._image_url('image_512', '512x512', record=variant)})
+                        'src': self._image_url('image_512', '512x512', record=variant),
+                        'thumb': self._mart369_thumb_url(variant)})
         if 'product_variant_image_ids' in variant._fields:
             for image in variant.product_variant_image_ids.sorted(
                     lambda i: (i.sequence, i.id))[:MAX_EXTRA_IMAGES]:
@@ -430,7 +500,8 @@ class Mart369Serializable(models.AbstractModel):
         shared = []
         if self._mart369_has_picture(tmpl):
             shared.append({'type': 'photo',
-                           'src': self._image_url('image_512', '512x512', record=tmpl)})
+                           'src': self._image_url('image_512', '512x512', record=tmpl),
+                           'thumb': self._mart369_thumb_url(tmpl)})
         for image in tmpl.product_template_image_ids.sorted(
                 lambda i: (i.sequence, i.id))[:MAX_EXTRA_IMAGES]:
             item = self._mart369_gallery_item(image)
@@ -442,9 +513,14 @@ class Mart369Serializable(models.AbstractModel):
     def _mart369_variant_images(self, variant):
         """The photos of that gallery, as plain URLs - what cards and the
         basket draw. A video counts by its poster picture."""
-        return [item.get('poster') if item['type'] == 'video' else item['src']
-                for item in self._mart369_variant_media(variant)
-                if item['type'] == 'photo' or item.get('poster')]
+        return self._mart369_media_pictures(self._mart369_variant_media(variant))[0]
+
+    @api.model
+    def _mart369_media_pictures(self, media):
+        """A gallery's pictures as two lists in the same order: (full, small)."""
+        pictures = [item for item in media if item['type'] == 'photo' or item.get('poster')]
+        full = [item.get('poster') if item['type'] == 'video' else item['src'] for item in pictures]
+        return full, [item.get('thumb') or url for item, url in zip(pictures, full)]
 
     @api.model
     def _mart369_description(self, tmpl):
@@ -581,6 +657,8 @@ class Mart369Serializable(models.AbstractModel):
         vals = dict(base) if base is not None else self._serialize_product(
             tmpl, None, price_ctx, mode_key)
         entry = variant_ctx.get(variant.id) or {}
+        media = self._mart369_variant_media(variant)
+        images, thumbs = self._mart369_media_pictures(media)
 
         size = ' · '.join(variant.product_template_attribute_value_ids.sorted(
             lambda x: (x.attribute_id.sequence, x.attribute_id.id)).mapped('name'))
@@ -591,8 +669,9 @@ class Mart369Serializable(models.AbstractModel):
             # listing shows the product once, not once per colour.
             'hidden': True,
             'combo': self._mart369_combo(variant),
-            'images': self._mart369_variant_images(variant),
-            'media': self._mart369_variant_media(variant),
+            'images': images,
+            'thumbs': thumbs,
+            'media': media,
             'price': round(entry.get('price', vals['price']) or 0.0, 2),
         })
         vals.pop('hasVariants', None)
@@ -671,6 +750,13 @@ class Mart369Serializable(models.AbstractModel):
         # sudo: free stock is what the shop shows everyone, but reading it walks
         # stock.move, which a website designer without stock rights may not.
         return sum(product.sudo().product_variant_ids.mapped('free_qty'))
+
+    @api.model
+    def _mart369_load_stock(self, templates):
+        """Count stock for a whole page in one go, so that _mart369_free_qty
+        finds the answer already there rather than asking once per product."""
+        if 'free_qty' in self.env['product.product']._fields:
+            templates.sudo().product_variant_ids.mapped('free_qty')
 
     def _price_context_for(self, templates):
         """{template_id: {'price': x, 'mrp': y or None}} for these

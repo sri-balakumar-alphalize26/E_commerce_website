@@ -6,3 +6,4 @@ from . import test_home_tile_colours
 from . import test_category_logo
 from . import test_category_mirror
 from . import test_listed
+from . import test_fast_pictures_search

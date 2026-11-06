@@ -22,7 +22,7 @@ class Mart369Serializable(models.AbstractModel):
     def _price_context_for(self, templates):
         """The prices, plus the three values the app used to fake."""
         ctx = super()._price_context_for(templates)
-        if not templates:
+        if not templates or self.env.context.get('mart369_prices_only'):
             return ctx
         signals = templates._mart369_signal_map()
         for tmpl in templates:
@@ -58,6 +58,45 @@ class Mart369Serializable(models.AbstractModel):
         facets = self._mart369_facets(product)
         if facets:
             vals['facets'] = facets
+        return vals
+
+    def _serialize_suggestion(self, product, price_ctx):
+        """One row under the search box: only what that row draws and what its
+        add button needs. It answers on every pause in typing, so it skips the
+        ratings, sales totals, attribute values and photo gallery of a full
+        card. The app merges this into any full card it already holds, so the
+        keys left out here are not lost.
+
+        `image` and `thumb` rather than `images` and `thumbs`: those lists would
+        overwrite a full card's gallery with one picture."""
+        prices = price_ctx.get(product.id) or {}
+        price = prices.get('price')
+        if price is None:
+            price = product.list_price
+        vals = {
+            'id': str(product.id),
+            'name': product.name,
+            'unit': product.mart_unit_text or self._mart369_real_unit(product),
+            'price': round(price or 0.0, 2),
+            'art': product.mart_art or 'Pack',
+        }
+        if self._mart369_has_picture(product):
+            vals['image'] = self._image_url('image_512', '512x512', record=product)
+            vals['thumb'] = self._mart369_thumb_url(product)
+        if prices.get('mrp'):
+            vals['mrp'] = round(prices['mrp'], 2)
+        if product.mart_color:
+            vals['color'] = product.mart_color
+        if product.mart_badge:
+            vals['label'] = product.mart_badge
+        if product.mart_delivery_text:
+            vals['delivery'] = product.mart_delivery_text
+        qty = self._mart369_free_qty(product)
+        if qty is not None and qty <= 0:
+            vals['stock'] = 0
+        if self._mart369_has_variants(product):
+            vals['variantGroup'] = str(product.id)
+            vals['hasVariants'] = True
         return vals
 
     def _mart369_facets(self, product):
