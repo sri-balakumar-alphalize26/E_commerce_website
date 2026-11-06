@@ -58,7 +58,8 @@ const KINDS = {
     picture: { w: 1600, h: 640, shape: "5 : 2, wide" },
     fields: [
       ["image_1920", "Picture", "", null, "picture"],
-      ["text_on_image", "Show text on the picture", "Off: just your picture - for a design that already has its own words. On: the lines below and Shop now are drawn over it.", null, "switch"],
+      ["text_on_image", "Show text on the picture", "Off: just your picture - for a design that already has its own words. On: the lines below are drawn over it.", null, "switch"],
+      ["show_shop_now", "Show Shop now button", "Turn it off if your picture already has its own button.", null, "switch"],
       ["kicker", "Kicker", "The small line above the headline"],
       ["name", "Headline", ""],
       ["note", "Note", "The line underneath"],
@@ -591,7 +592,7 @@ export default function PageEditor({ pageId }) {
      edit touches both. */
   const PREVIEW_FIELD = {
     banner: { name: "title", kicker: "kicker", note: "note", tone: "tone", href: "href",
-      image_1920: "image", text_on_image: "textOnImage" },
+      image_1920: "image", text_on_image: "textOnImage", show_shop_now: "showShop" },
     tile: { name: "label", route: "route", image_1920: "image" },
     tab: { name: "label", icon: "icon" },
     section: { name: "title", subtitle: "subtitle", view_all_route: "route" },

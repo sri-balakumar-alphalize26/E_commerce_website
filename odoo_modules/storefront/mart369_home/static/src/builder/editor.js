@@ -473,6 +473,20 @@ export class PageEditor extends Component {
      * NEW_BAND in admin_api.py uses, on purpose: one made here and one made
      * from the console have to be the same kind of thing, or "it looks
      * different depending on where you made it" becomes a bug nobody can
+    /** Same again, for the Shop now button. */
+    toggleShopNow(rid) {
+        const record = this.recordFor("banner", rid);
+        if (!record) {
+            return;
+        }
+        const next = !record.show_shop_now;
+        this.save.edit(M.banner, record, "show_shop_now", next, { now: true });
+        const row = (this.d.preview?.banners || []).find((r) => r.rid === rid);
+        if (row) {
+            row.showShop = next;
+        }
+    }
+
      * reproduce.
      */
     newBandVals(kind) {

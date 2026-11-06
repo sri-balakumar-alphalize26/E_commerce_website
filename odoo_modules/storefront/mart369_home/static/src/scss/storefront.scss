@@ -161,6 +161,7 @@
 .hm-tone-teal   { background: linear-gradient(120deg, #0e5a63, #1c8c8f); }
 .hm-tone-indigo { background: linear-gradient(120deg, #26306b, #4a5bb0); }
 .hm-banner-copy { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; max-width: 58%; }
+.hm-banner-copy.hm-banner-copy-shop { position: absolute; left: 20px; bottom: 16px; max-width: none; }
 .hm-kicker { font-size: 11.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.85; }
 .hm-banner strong { font-size: #{"clamp(20px, 2.1cqw, 27px)"}; line-height: 1.12; font-weight: 800; letter-spacing: -0.03em; text-wrap: balance; margin-top: 4px; }
 .hm-note { font-size: 14.5px; font-weight: 600; opacity: 0.92; margin-top: 2px; }

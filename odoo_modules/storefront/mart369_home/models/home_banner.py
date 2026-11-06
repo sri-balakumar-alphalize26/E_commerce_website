@@ -64,8 +64,13 @@ class Mart369HomeBanner(models.Model):
     text_on_image = fields.Boolean(
         string='Show text on the picture', default=False,
         help='Off: an uploaded picture is shown on its own - for a designed '
-             'banner that already carries its words and button. On: the small '
-             'line, headline, offer line and Shop now are drawn over it.')
+             'banner that already carries its words. On: the small line, '
+             'headline and offer line are drawn over it.')
+    show_shop_now = fields.Boolean(
+        string='Show Shop now button', default=True,
+        help='On: the Shop now button is drawn on the banner, with or without a '
+             'picture. Turn it off for a designed picture that already has its '
+             'own button.')
 
     usage_count = fields.Integer(
         string='Used in strips', compute='_compute_usage_count',
@@ -156,6 +161,7 @@ class Mart369HomeBanner(models.Model):
             'note': self.note or '',
             'tone': self.tone,
             'art': self._lines_to_list(self.art_lines),
+            'showShop': self.show_shop_now,
         }
         if self.image_1920:
             vals['image'] = self._mart369_picture_url()
@@ -246,5 +252,6 @@ class Mart369HomeBanner(models.Model):
             'has_image': bool(self.image_1920),
             'image_url': self._mart369_picture_url(),
             'text_on_image': self.text_on_image,
+            'show_shop_now': self.show_shop_now,
             'write_date': fields.Datetime.to_string(self.write_date),
         }

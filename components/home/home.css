@@ -157,6 +157,8 @@
 /* Words drawn over a photo: a soft shade on the left keeps them readable. */
 .hm-banner.hm-banner-pic.hm-banner-words { padding: 22px 24px; }
 .hm-banner-words::after { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(90deg, rgba(8, 18, 26, 0.62), rgba(8, 18, 26, 0.18) 60%, transparent); }
+/* Only the Shop now button on a picture: in the corner, with no shade over it. */
+.hm-banner-copy.hm-banner-copy-shop { position: absolute; left: 20px; bottom: 16px; max-width: none; }
 
 .hm-inline-banners { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .hm-inline-banners .hm-banner { min-height: 150px; }

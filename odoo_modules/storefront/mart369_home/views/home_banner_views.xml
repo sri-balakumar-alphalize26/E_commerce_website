@@ -83,6 +83,7 @@
                             <field name="name" placeholder="e.g. Fruits picked this morning"/>
                             <field name="note" placeholder="e.g. Up to 30% off"/>
                             <field name="href" placeholder="e.g. /category/fruits-vegetables"/>
+                            <field name="show_shop_now" widget="boolean_toggle"/>
                         </group>
                         <group string="Where it belongs">
                             <field name="mode_id"/>

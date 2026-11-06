@@ -78,7 +78,7 @@ class Mart369HomeAdminApi(http.Controller):
     # the app matches on, or `sequence` for a band on another page.
     BAND_FIELDS = {
         'banner': ('kicker', 'name', 'note', 'tone', 'href', 'active',
-                   'image_1920', 'text_on_image'),
+                   'image_1920', 'text_on_image', 'show_shop_now'),
         'tab': ('name', 'icon', 'active'),
         'tile': ('name', 'route', 'active', 'image_1920'),
         'section': ('name', 'subtitle', 'view_all_route', 'active'),
@@ -109,7 +109,7 @@ class Mart369HomeAdminApi(http.Controller):
                 # The address, never the picture's bytes.
                 out['image_url'] = band._mart369_picture_url()
                 continue
-            if field == 'text_on_image':
+            if field in ('text_on_image', 'show_shop_now'):
                 out[field] = bool(band[field])
                 continue
             value = band[field]
@@ -509,7 +509,7 @@ class Mart369HomeAdminApi(http.Controller):
                 if field not in body:
                     continue
                 value = body[field]
-                if field in ('active', 'text_on_image'):
+                if field in ('active', 'text_on_image', 'show_shop_now'):
                     values[field] = bool(value)
                 elif field == 'image_1920':
                     # An uploaded picture: checked, then stored as Odoo stores

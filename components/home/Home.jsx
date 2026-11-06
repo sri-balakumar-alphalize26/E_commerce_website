@@ -154,14 +154,17 @@ export function Tabs({ tabs, active, onChange }) {
 
 /* ---------- banners ---------- */
 /* A banner is the shop's colour with drawings, or a picture the shop uploaded.
-   An uploaded picture is usually a finished design with its own words and
-   button, so it shows on its own; `textOnImage` (a switch on each banner)
-   draws the small line, headline and Shop now over it instead.
+   An uploaded picture is usually a finished design with its own words, so it
+   shows on its own; `textOnImage` (a switch on each banner) draws the small
+   line and headline over it instead. `showShop`, another switch, decides the
+   Shop now button by itself. A server that does not send it yet gets the old
+   rule: the button comes with the words.
    Tapping it opens its link - a page of this shop, or another site. */
 export function Banner({ b, i }) {
   const nav = useContext(NavContext);
   const pic = !!b.image;
   const words = !pic || !!b.textOnImage;
+  const shop = b.showShop ?? words;
   const open = (e) => {
     e.preventDefault();
     if (!b.href) return;
@@ -177,12 +180,12 @@ export function Banner({ b, i }) {
     <a className={"hm-banner hm-tone-" + b.tone + (pic ? " hm-banner-pic" : "") + (pic && words ? " hm-banner-words" : "")}
       href={b.href || "#"} onClick={open} style={{ "--i": i }} aria-label={pic && !words ? b.title || "Offer" : undefined}>
       {pic && <img className="hm-banner-img" src={b.image} alt="" draggable="false" />}
-      {words && (
-        <div className="hm-banner-copy">
-          {b.kicker && <span className="hm-kicker">{b.kicker}</span>}
-          {b.title && <strong>{b.title}</strong>}
-          {b.note && <span className="hm-note">{b.note}</span>}
-          <span className="hm-shop">Shop now <Icon n="right" size={14} /></span>
+      {(words || shop) && (
+        <div className={"hm-banner-copy" + (words ? "" : " hm-banner-copy-shop")}>
+          {words && b.kicker && <span className="hm-kicker">{b.kicker}</span>}
+          {words && b.title && <strong>{b.title}</strong>}
+          {words && b.note && <span className="hm-note">{b.note}</span>}
+          {shop && <span className="hm-shop">Shop now <Icon n="right" size={14} /></span>}
         </div>
       )}
       {!pic && (

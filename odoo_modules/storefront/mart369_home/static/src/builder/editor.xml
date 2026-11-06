@@ -232,11 +232,14 @@
     <t t-name="mart369_home.PeBanner">
         <div t-attf-class="hm-banner hm-tone-{{ row.tone }}"
              t-attf-style="{{ row.image ? 'background-image:url(' + row.image + ');background-size:cover;' : '' }}">
-            <div t-if="!row.image or row.textOnImage" class="hm-banner-copy">
-                <span class="hm-kicker" t-esc="row.kicker"/>
-                <strong t-esc="row.title"/>
-                <span class="hm-note" t-esc="row.note"/>
-                <span class="hm-shop">Shop now <Icon n="'right'" size="14"/></span>
+            <div t-if="!row.image or row.textOnImage or row.showShop"
+                 t-attf-class="hm-banner-copy {{ row.image and !row.textOnImage ? 'hm-banner-copy-shop' : '' }}">
+                <t t-if="!row.image or row.textOnImage">
+                    <span class="hm-kicker" t-esc="row.kicker"/>
+                    <strong t-esc="row.title"/>
+                    <span class="hm-note" t-esc="row.note"/>
+                </t>
+                <span t-if="row.showShop !== false" class="hm-shop">Shop now <Icon n="'right'" size="14"/></span>
             </div>
         </div>
     </t>
@@ -406,6 +409,11 @@
                     <em t-if="f[0] === 'icon' and selected.record.logo_from" class="pe-hint">
                         The app shows <t t-esc="selected.record.logo_from"/>'s logo instead. Change it in Catalogue → Categories.
                     </em>
+                <label t-if="selected.kind === 'banner'" class="pe-switch-lbl">
+                    <Switch on="selected.record.show_shop_now" label="'Show Shop now button'"
+                            onChange="() => this.toggleShopNow(selected.record.id)"/>
+                    <span>Show Shop now button</span>
+                </label>
                 </label>
             </t>
         </div>
