@@ -528,6 +528,17 @@ export default function Home({
   }, [feed]);
   const products = useMemo(() => listable(byId), [byId]);
 
+  /* A refresh lands at the top of the page it is on, not wherever the last visit
+     had scrolled to. Only a reload: Back and Forward keep their place, because
+     the browser's own scroll memory goes back on once the page has settled. */
+  useEffect(() => {
+    if (performance.getEntriesByType?.("navigation")?.[0]?.type !== "reload") return undefined;
+    history.scrollRestoration = "manual";
+    window.scrollTo(0, 0);
+    const settled = setTimeout(() => { history.scrollRestoration = "auto"; }, 1500);
+    return () => clearTimeout(settled);
+  }, []);
+
   /* ---- navigation ---- */
   const nav = useCallback((v, param = null, opts = {}) => {
     if (v === "cart" && onViewCart) return onViewCart(); /* separate /cart route */

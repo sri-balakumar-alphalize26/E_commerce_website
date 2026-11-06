@@ -24,9 +24,9 @@ _logger = logging.getLogger(__name__)
 SUGGEST_LIMIT = 8
 # A category page is long but finite; the app filters client-side from here.
 BROWSE_LIMIT = 240
-SEARCH_LIMIT = 120
+SEARCH_LIMIT = 500
 # How many matches are ranked before cutting down to one of the limits above.
-SEARCH_POOL = 400
+SEARCH_POOL = 500
 # Enough for any real search, and a bound on how long the query can get.
 SEARCH_MAX_WORDS = 6
 
@@ -214,7 +214,10 @@ class Mart369CatalogApi(http.Controller):
         "coff" as trending as "coffee".
         """
         templates = self._search(q, SUGGEST_LIMIT)
-        return self._cached({'q': (q or '').strip(),
+        # How many there are in all, for the "See all" line above the rows.
+        total = request.env['product.template'].sudo().search_count(
+            self._search_domain(' '.join(q.lower().split()))) if templates else 0
+        return self._cached({'q': (q or '').strip(), 'total': total,
                              'items': self._suggestions(templates)})
 
     @http.route('/369mart/search/trending', **_PUBLIC_JSON)

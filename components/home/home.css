@@ -37,6 +37,9 @@
   transition: padding-bottom 300ms var(--hm-ease);
 }
 .hm-page.hm-has-cart { padding-bottom: 96px; }
+/* The footer runs to the very bottom and makes its own room for the basket bar
+   (.ft-bottom), so this space would only be a white strip under it. */
+.hm-page:has(.ft), .hm-page.hm-has-cart:has(.ft) { padding-bottom: 0; }
 .hm-page[data-mode="all"] {
   --hm-accent: #0a78ab;
   --hm-accent-2: #0b4a6e;

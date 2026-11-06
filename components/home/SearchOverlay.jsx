@@ -174,6 +174,8 @@ export default function SearchOverlay({ open, onClose, products, picks, cart, se
   useEffect(() => { if (matches.length) absorb(matches); }, [matches]);
   /* Under two letters nothing is being asked, so the last answer's rows go. */
   const results = wanted ? matches.slice(0, 8) : [];
+  /* How many there are in all; these rows are only the first few. */
+  const total = Math.max(sugg?.total || 0, results.length);
   /* Enter / "See all" → full results page (when the app provides one) */
   const submit = (t) => { remember(t); if (onSubmit) { close(); onSubmit(t); } };
 
@@ -254,7 +256,14 @@ export default function SearchOverlay({ open, onClose, products, picks, cart, se
           </div>
         ) : (
           <div className="sr-body" key="live">
-            <p className="sr-count" aria-live="polite">{results.length ? `${results.length} ${results.length === 1 ? "product" : "products"} for “${term}”` : searching ? "Searching…" : ""}</p>
+            <p className="sr-count" aria-live="polite">{results.length ? `${total} ${total === 1 ? "product" : "products"} for “${term}”` : searching ? "Searching…" : ""}</p>
+            {/* First, not under the rows: the way to every result, as the big
+                shops have it. The rows are only the first few. */}
+            {term && onSubmit && (
+              <button className="sr-all" onClick={() => submit(term)} style={{ "--i": 0 }}>
+                <Icon n="search" size={15} />{results.length ? `See all ${total} results for “${term}”` : `Search 369 Mart for “${term}”`}<Icon n="right" size={15} />
+              </button>
+            )}
             {results.length ? (
               /* No key on the list: a row still in the answer stays where it is
                  rather than replaying its entrance on every letter. */
@@ -277,11 +286,6 @@ export default function SearchOverlay({ open, onClose, products, picks, cart, se
                 ))}
               </ul>
             ) : null}
-            {term && onSubmit && (
-              <button className="sr-all" onClick={() => submit(term)} style={{ "--i": results.length }}>
-                <Icon n="search" size={15} />{results.length ? `See all ${results.length} results for “${term}”` : `Search 369 Mart for “${term}”`}<Icon n="right" size={15} />
-              </button>
-            )}
             {results.length || searching || !wanted ? null : (
               <div className="sr-empty">
                 <Icon n="search" size={28} />

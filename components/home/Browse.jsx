@@ -1005,7 +1005,7 @@ export function SiteFooter() {
   const { data: catalog } = useResource("/catalog");
   /* Everything else is set in Odoo (369 Mart > Page building > Footer and
      Info pages): the categories it lists, its pages, the tagline, the app
-     links, the "We accept" chips. Until that answers - or if it can't - the
+     links. Until that answers - or if it can't - the
      footer below is the one the shop always had, with every page linked. */
   const { data: ft } = useResource("/footer");
   const set = ft && ft.ok !== false ? ft : null;
@@ -1026,7 +1026,6 @@ export function SiteFooter() {
   const cols = [["Shop", shop.concat([["Offers", () => nav("offers")]])], ...pageCols];
   const tagline = set ? set.tagline : "Computer parts and gear. In minutes, or in days.";
   const apps = set ? set.apps : null;
-  const payments = set ? set.payments : ["UPI", "Credit & debit cards", "Net banking", "Cash on delivery", "369 Wallet"];
   return (
     <footer className={"ft" + (inView ? " ft-in" : "")} ref={setRef}>
       <div className="hm-wrap">
@@ -1049,12 +1048,6 @@ export function SiteFooter() {
             </nav>
           ))}
         </div>
-        {payments.length > 0 && (
-          <div className="ft-pay">
-            <span>We accept</span>
-            {payments.map((x, k) => <em key={x} style={{ "--k": k }}>{x}</em>)}
-          </div>
-        )}
         <div className="ft-bottom">
           <span>© {new Date().getFullYear()} 369 Mart. All rights reserved.<BuildTag /></span>
           <button className="ft-top-btn" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}><Icon n="chev" size={16} />Back to top</button>

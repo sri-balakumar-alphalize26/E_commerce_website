@@ -377,10 +377,6 @@ html.ls-lock { overflow: hidden; }
 .ft-col a::after { content: ""; position: absolute; left: 0; right: 0; bottom: -2px; height: 1.5px; background: var(--hm-orange); transform: scaleX(0); transform-origin: left; transition: transform 260ms var(--hm-ease); }
 .ft-col a:hover { color: #fff !important; }
 .ft-col a:hover::after { transform: scaleX(1); }
-.ft-pay { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 16px 0; border-top: 1px solid rgba(255, 255, 255, 0.1); }
-.ft-pay > span { margin-right: 4px; font-size: 13px; color: #8ea2b0; }
-.ft-pay em { font-style: normal; font-size: 12.5px; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: rgba(255, 255, 255, 0.08); color: #e3ebf0; opacity: 0; transform: scale(0.7); transition: opacity 360ms, transform 420ms var(--hm-spring); transition-delay: calc(var(--k) * 50ms + 420ms); }
-.ft-in .ft-pay em { opacity: 1; transform: none; }
 .ft-bottom { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 0 22px; border-top: 1px solid rgba(255, 255, 255, 0.1); font-size: 13px; color: #8ea2b0; }
 .hm-has-cart .ft-bottom { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 92px); }
 /* Which build is live: quiet, and on its own line when the row is narrow. */
@@ -700,6 +696,6 @@ html.ls-lock { overflow: hidden; }
 @keyframes pd-roll { from { opacity: 0; transform: translateY(55%); } to { opacity: 1; transform: none; } }
 
 @media (prefers-reduced-motion: reduce) {
-  .ft-col, .ft-pay em { opacity: 1 !important; transform: none !important; }
+  .ft-col { opacity: 1 !important; transform: none !important; }
   .sk { animation: none !important; }
 }
