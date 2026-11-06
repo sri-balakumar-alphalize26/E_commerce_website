@@ -22,7 +22,9 @@ was not running at the time.
 """
 
 from odoo import _, api, fields, models
-from odoo.exceptions import UserError
+from odoo.exceptions import UserError, ValidationError
+
+from .trashable import refuse_demo
 
 
 class Mart369HomeVersion(models.Model):
@@ -43,6 +45,11 @@ class Mart369HomeVersion(models.Model):
         'mart369.config', string='Settings',
         required=True, ondelete='cascade', index=True,
         default=lambda self: self.env['mart369.config'].sudo()._get())
+
+    # The template showing how a home page is laid out (`_mart369_ensure_demo`).
+    # It is never served and cannot be changed or removed. Not copied, so a
+    # duplicate of it is an ordinary page to edit.
+    is_demo = fields.Boolean(string='Demo template', readonly=True, copy=False)
 
     is_current = fields.Boolean(
         string='Everyday page', copy=False,
@@ -72,6 +79,49 @@ class Mart369HomeVersion(models.Model):
              'must never be ambiguous.')
     state_note = fields.Char(string='Because', compute='_compute_state')
 
+    # ------------------------------------------------------------ the names
+
+    @api.constrains('name', 'deleted_at')
+    def _check_name_is_free(self):
+        """Two pages with one name cannot be told apart on the pages screen.
+        Upper and lower case count as the same. A page in the Trash does not
+        hold its name; it asks for it back when it is restored.
+
+        Not while a module loads its data, and not for the Demo page itself: a
+        shop's own page already called that must not be able to stop an upgrade.
+        """
+        if self.env.context.get('install_mode') or self.env.context.get('mart369_demo_build'):
+            return
+        kept = self.sudo().search([('deleted_at', '=', False)])
+        for rec in self.filtered(lambda r: not r.deleted_at):
+            name = (rec.name or '').strip().casefold()
+            if any((other.name or '').strip().casefold() == name for other in kept - rec):
+                raise ValidationError(self.env._(
+                    'A page called "%s" already exists. Please choose another name.',
+                    (rec.name or '').strip()))
+
+    @api.model
+    def _mart369_free_name(self, wanted):
+        """`wanted`, or "wanted 2", "wanted 3"... if a kept page has it. For
+        names the shop makes up itself, which must never be refused."""
+        taken = {(n or '').strip().casefold()
+                 for n in self.sudo().search([('deleted_at', '=', False)]).mapped('name')}
+        name, number = wanted, 1
+        while name.casefold() in taken:
+            number += 1
+            name = '%s %d' % (wanted, number)
+        return name
+
+    def copy_data(self, default=None):
+        """A copy nobody named gets a name nobody has: "Demo (copy)", then
+        "Demo (copy) 2". A name somebody typed is theirs, and is checked."""
+        default = dict(default or {})
+        vals_list = super().copy_data(default)
+        if not default.get('name'):
+            for rec, vals in zip(self, vals_list):
+                vals['name'] = self._mart369_free_name(self.env._('%s (copy)', rec.name))
+        return vals_list
+
     # -------------------------------------------------------------- the bin
 
     def _live(self):
@@ -91,13 +141,16 @@ class Mart369HomeVersion(models.Model):
         Counted over *kept* pages rather than all of them. Counting the
         trashed ones too would mean the nightly purge could never empty the
         Trash - it would hit "this is the only saved home page" and log an
-        error every night instead.
+        error every night instead. The Demo page does not count either: it is
+        never served, so it could not take over from the last real page.
         """
+        if any(rec.is_demo for rec in self):
+            refuse_demo(self.env)
         if any(rec.is_current for rec in self):
             raise UserError(self.env._(
                 'That is the everyday home page. Switch another one on first, '
                 'or the app would be left with no home page at all.'))
-        kept = self.sudo().search_count([('deleted_at', '=', False)])
+        kept = self.sudo().search_count([('deleted_at', '=', False), ('is_demo', '=', False)])
         if kept <= len(self._kept()):
             raise UserError(self.env._(
                 'This is the only saved home page. There has to be one.'))
@@ -120,8 +173,8 @@ class Mart369HomeVersion(models.Model):
         now = fields.Datetime.now()
         # A page in the Trash is never served. This is the method that decides
         # what shoppers actually get, so the filter belongs here and not only
-        # on the screens that list pages.
-        kept = [('deleted_at', '=', False)]
+        # on the screens that list pages. The Demo page is never served either.
+        kept = [('deleted_at', '=', False), ('is_demo', '=', False)]
         scheduled = self.sudo().search(kept + [
             '|', ('starts_on', '=', False), ('starts_on', '<=', now),
             '|', ('ends_on', '=', False), ('ends_on', '>=', now),
@@ -132,12 +185,15 @@ class Mart369HomeVersion(models.Model):
         return (self.sudo().search(kept + [('is_current', '=', True)], limit=1)
                 or self.sudo().search(kept, limit=1))
 
-    @api.depends('is_current', 'starts_on', 'ends_on')
+    @api.depends('is_current', 'starts_on', 'ends_on', 'is_demo')
     def _compute_state(self):
         now = fields.Datetime.now()
         live = self._mart369_live()
         for rec in self:
-            if rec == live:
+            if rec.is_demo:
+                rec.state = 'off'
+                rec.state_note = _('template - duplicate it to use it')
+            elif rec == live:
                 rec.state = 'live'
                 rec.state_note = (
                     _('scheduled until %s', rec.ends_on) if rec.ends_on
@@ -162,18 +218,24 @@ class Mart369HomeVersion(models.Model):
             (current - current[0]).with_context(
                 mart369_settling=True).write({'is_current': False})
         elif not current:
-            first = self.sudo().search([('deleted_at', '=', False)], limit=1)
+            first = self.sudo().search(
+                [('deleted_at', '=', False), ('is_demo', '=', False)], limit=1)
             if first:
                 first.with_context(
                     mart369_settling=True).write({'is_current': True})
 
     @api.model_create_multi
     def create(self, vals_list):
+        if any(vals.get('is_demo') for vals in vals_list) and not self.env.context.get('mart369_demo_build'):
+            refuse_demo(self.env)
         records = super().create(vals_list)
         records._mart369_keep_one_current()
         return records
 
     def write(self, vals):
+        if not self.env.context.get('mart369_demo_build') and (
+                'is_demo' in vals or any(self.sudo().mapped('is_demo'))):
+            refuse_demo(self.env)
         result = super().write(vals)
         if 'is_current' in vals and not self.env.context.get('mart369_settling'):
             if vals.get('is_current'):
@@ -210,6 +272,7 @@ class Mart369HomeVersion(models.Model):
             'name': self.name or '',
             'note': self.note or '',
             'isCurrent': self.is_current,
+            'isDemo': self.is_demo,
             'state': self.state,
             'stateNote': self.state_note or '',
             'startsOn': self.starts_on.isoformat() if self.starts_on else None,
@@ -235,7 +298,8 @@ class Mart369HomeVersion(models.Model):
         Kept pages and trashed ones come back apart, so neither screen has to
         remember to filter - the same split the builder does for bands.
         """
-        pages = self.search([], order='is_current desc, name')
+        # The live page first, then Demo where it is easy to find.
+        pages = self.search([], order='is_current desc, is_demo desc, name')
         return {
             'pages': [p._serialize_card() for p in pages._kept()],
             'trash': [p._serialize_card()
@@ -260,7 +324,7 @@ class Mart369HomeVersion(models.Model):
         this is a whole working home page, not an empty one.
         """
         self.ensure_one()
-        copied = self.copy({'name': self.env._('%s (copy)', self.name)})
+        copied = self.copy()
         return {
             'type': 'ir.actions.act_window',
             'res_model': self._name,

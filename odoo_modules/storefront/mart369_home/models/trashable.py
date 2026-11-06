@@ -1,8 +1,17 @@
 from datetime import timedelta
 
 from odoo import _, api, fields, models
+from odoo.exceptions import UserError
 
 DEFAULT_TRASH_DAYS = 30
+
+
+def refuse_demo(env):
+    """The one thing anybody is told when they try to change the Demo page."""
+    raise UserError(env._(
+        'This is the Demo page, the template that shows how a home page is '
+        'laid out. It cannot be changed or removed. Duplicate it, then edit '
+        'the copy.'))
 
 
 class Mart369Trashable(models.AbstractModel):
@@ -56,6 +65,35 @@ class Mart369Trashable(models.AbstractModel):
 
     def _trashed(self):
         return self.filtered(lambda r: r.deleted_at)
+
+    # ------------------------------------------------------------ the Demo page
+
+    def _mart369_check_not_demo(self):
+        """Refuse a change to anything on the Demo page. Checked here, on the
+        records, so the Odoo screens and the staff console cannot differ.
+
+        Only for what sits on a page, which is what has a `mode_id`. A saved
+        page has its own rules, and other models share this mixin."""
+        if self.env.context.get('mart369_demo_build') or 'mode_id' not in self._fields:
+            return
+        if any(self.sudo().mapped('mode_id.version_id.is_demo')):
+            refuse_demo(self.env)
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        if 'mode_id' in self._fields:
+            modes = self.env['mart369.home.mode'].browse(
+                {vals['mode_id'] for vals in vals_list if vals.get('mode_id')})
+            modes._mart369_check_not_demo()
+        return super().create(vals_list)
+
+    def write(self, vals):
+        self._mart369_check_not_demo()
+        return super().write(vals)
+
+    def unlink(self):
+        self._mart369_check_not_demo()
+        return super().unlink()
 
     # --------------------------------------------------------------- actions
 

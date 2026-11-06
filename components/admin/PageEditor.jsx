@@ -33,7 +33,7 @@ import { CSS } from "@dnd-kit/utilities";
 
 import { api } from "@/lib/api";
 import { consolePath } from "@/lib/consolePath";
-import { useResource } from "@/lib/useFetch";
+import { useAction, useResource } from "@/lib/useFetch";
 import {
   Banner, CategoryStrip, ModeSwitchOverlay, Tabs as StoreTabs, useModeSwitch,
 } from "@/components/home/Home";
@@ -41,6 +41,7 @@ import { Rail } from "@/components/home/shared";
 import "@/components/home/home.css";
 import { Confirm, Drawer, Empty, Icon, useToast } from "./AdminUI";
 import BannerPicture, { pictureAddress } from "./BannerPicture";
+import { RenamePrompt } from "./HomeSection";
 import RowProductPicker from "./RowProductPicker";
 import "./editor.css";
 
@@ -807,8 +808,27 @@ export default function PageEditor({ pageId }) {
   const bannerById = useMemo(
     () => Object.fromEntries((groups.banners || []).map((b) => [b.id, b])), [groups.banners]);
 
+  /* The Demo page can only be looked at and copied; the shop refuses anything
+     else. The copy opens here, ready to edit. */
+  const locked = !!page?.isDemo;
+  const [renaming, setRenaming] = useState(false);
+  /* A refusal goes through to the name box, which shows it in red. */
+  const renamePage = async (name) => {
+    await api(`/admin/home/pages/${page.id}`, { method: "PATCH", body: { name } });
+    setRenaming(false);
+    api.invalidate("/admin/home");
+    reload();
+  };
+  const copying = useAction();
+  const copyDemo = async () => {
+    const r = await copying.run(() => api("/admin/home/pages", { method: "POST", body: { from: page.id } }));
+    if (!r) return;
+    api.invalidate("/admin/home");
+    router.push(consolePath(`/home/${r.page.id}`));
+  };
+
   return (
-    <div className="pe">
+    <div className={"pe" + (locked ? " pe-locked" : "")}>
       <header className="pe-head">
         <button className="ad-btn" onClick={() => router.push(consolePath("/home"))}>
           <Icon n="left" size={15} />All pages
@@ -817,7 +837,14 @@ export default function PageEditor({ pageId }) {
           <h1>{page?.name || "Home page"}</h1>
           <small>{page?.stateNote || ""}</small>
         </div>
+        {page && !locked && (
+          <button className="ad-btn ad-sm" onClick={() => setRenaming(true)}>
+            <Icon n="edit" size={13} />Rename
+          </button>
+        )}
       </header>
+
+      {renaming && <RenamePrompt page={page} onCancel={() => setRenaming(false)} onConfirm={renamePage} />}
 
       {/* Every control in one strip, rather than three of them loose in the
           top-right corner. */}
@@ -846,25 +873,40 @@ export default function PageEditor({ pageId }) {
         {/* On the page that is open, not on whichever one happens to be live.
             Odoo's own builder always edits the live page, so adding a banner
             while a festival page was on screen put it on the everyday one. */}
-        <span className="pe-adds">
-          {["banner", "tile", "tab", "section"].map((kind) => (
-            <button key={kind} className="ad-btn ad-sm" disabled={!!busy}
-              onClick={() => onAdd(kind)}>
-              <Icon n="plus" size={13} />{KINDS[kind].short}
+        {!locked && (
+          <>
+            <span className="pe-adds">
+              {["banner", "tile", "tab", "section"].map((kind) => (
+                <button key={kind} className="ad-btn ad-sm" disabled={!!busy}
+                  onClick={() => onAdd(kind)}>
+                  <Icon n="plus" size={13} />{KINDS[kind].short}
+                </button>
+              ))}
+            </span>
+            <button className="ad-btn ad-sm pe-trash-btn" onClick={() => setTrashOpen(true)}>
+              <Icon n="trash" size={13} />Trash{trash.length ? <em>{trash.length}</em> : null}
             </button>
-          ))}
-        </span>
-        <button className="ad-btn ad-sm pe-trash-btn" onClick={() => setTrashOpen(true)}>
-          <Icon n="trash" size={13} />Trash{trash.length ? <em>{trash.length}</em> : null}
-        </button>
-        <SaveChip status={save.status} error={save.error} />
+            <SaveChip status={save.status} error={save.error} />
+          </>
+        )}
       </div>
 
-      <p className="pe-hintbar">
-        <Icon n="edit" size={14} />
-        Click any part of the page to edit it. Drag the handle to reorder, or
-        use the eye to hide it from the shop.
-      </p>
+      {locked ? (
+        <div className="pe-demo-note" role="status">
+          <span>
+            <b>This is the Demo template.</b> It shows how a home page is laid out
+            and cannot be changed. Duplicate it to start your own.
+            {copying.error && <em className="pe-bad-hint"> {copying.error.message}</em>}
+          </span>
+          <button className="ad-btn ad-primary ad-sm" disabled={copying.busy} onClick={copyDemo}>Duplicate</button>
+        </div>
+      ) : (
+        <p className="pe-hintbar">
+          <Icon n="edit" size={14} />
+          Click any part of the page to edit it. Drag the handle to reorder, or
+          use the eye to hide it from the shop.
+        </p>
+      )}
 
       {error && (
         <p className="ad-hint pe-error" role="alert">

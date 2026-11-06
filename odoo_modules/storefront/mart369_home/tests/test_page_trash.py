@@ -46,7 +46,7 @@ class TestPageTrash(TransactionCase):
     def test_the_last_kept_page_cannot_be_trashed(self):
         """Trashing refuses what unlinking refuses - otherwise the shop is
         left with nothing to serve and only the Trash to serve it from."""
-        others = self.Version.search([('id', '!=', self.everyday.id)])
+        others = self.Version.search([('id', '!=', self.everyday.id), ('is_demo', '=', False)])
         others.action_trash()
         with self.assertRaises(UserError):
             self.everyday.action_trash()
@@ -129,11 +129,11 @@ class TestPageTrash(TransactionCase):
         against whatever database it is pointed at, and a shop that has been
         used has more pages than a fresh one.
         """
-        spares = self.Version.search([('id', '!=', self.everyday.id)])
+        spares = self.Version.search([('id', '!=', self.everyday.id), ('is_demo', '=', False)])
         spares.action_trash()
         spares.deleted_at = fields.Datetime.now() - timedelta(days=31)
         self.assertEqual(
-            self.Version.search_count([('deleted_at', '=', False)]), 1,
+            self.Version.search_count([('deleted_at', '=', False), ('is_demo', '=', False)]), 1,
             'only the everyday page is left out of the Trash')
 
         self.env['mart369.config']._cron_purge_trash()

@@ -33,8 +33,10 @@ import { Icon } from "@mart369/ui/icon";
 import { Switch } from "@mart369/ui/switch";
 import { Pick } from "@mart369/ui/pick";
 import { useSaveQueue } from "./save_queue";
+import { NamePrompt, renameProps } from "./pages";
 
 const M = {
+    version: "mart369.home.version",
     mode: "mart369.home.mode",
     banner: "mart369.home.banner",
     tile: "mart369.home.tile",
@@ -189,6 +191,39 @@ export class PageEditor extends Component {
 
     get page() {
         return this.d?.page || null;
+    }
+
+    /** The Demo page can only be looked at and copied. */
+    get locked() {
+        return !!this.page?.isDemo;
+    }
+
+    /** The heading at the top of this screen: the page's own name. */
+    renamePage() {
+        // A refusal is the box's to show, in red, so it is not caught here.
+        this.dialog.add(NamePrompt, renameProps(this.page, async (name) => {
+            await this.orm.write(M.version, [parseInt(this.page.id, 10)], { name });
+            await this.load();
+        }));
+    }
+
+    /** Copy the Demo page and open the copy, ready to edit. */
+    async copyDemo() {
+        try {
+            // No name sent: the shop picks one nobody has ("Demo (copy) 2").
+            const made = await this.orm.call(M.version, "copy", [parseInt(this.page.id, 10)]);
+            this.action.doAction("mart369_home.action_mart369_home_editor", {
+                additionalContext: {
+                    mart369_page_id: Array.isArray(made) ? made[0] : made,
+                    mart369_mode: this.state.modeKey,
+                },
+            });
+        } catch (err) {
+            this.notification.add(
+                err?.data?.message || err?.message || _t("That did not work."),
+                { type: "danger" }
+            );
+        }
     }
 
     async load() {
@@ -438,6 +473,20 @@ export class PageEditor extends Component {
         }
     }
 
+    /** Same again, for the Shop now button. */
+    toggleShopNow(rid) {
+        const record = this.recordFor("banner", rid);
+        if (!record) {
+            return;
+        }
+        const next = !record.show_shop_now;
+        this.save.edit(M.banner, record, "show_shop_now", next, { now: true });
+        const row = (this.d.preview?.banners || []).find((r) => r.rid === rid);
+        if (row) {
+            row.showShop = next;
+        }
+    }
+
     /** The tab's own settings - the panel when nothing is selected. */
     onModeField(field, ev) {
         this.setModeField(field, this.save.valueFrom(ev));
@@ -473,20 +522,6 @@ export class PageEditor extends Component {
      * NEW_BAND in admin_api.py uses, on purpose: one made here and one made
      * from the console have to be the same kind of thing, or "it looks
      * different depending on where you made it" becomes a bug nobody can
-    /** Same again, for the Shop now button. */
-    toggleShopNow(rid) {
-        const record = this.recordFor("banner", rid);
-        if (!record) {
-            return;
-        }
-        const next = !record.show_shop_now;
-        this.save.edit(M.banner, record, "show_shop_now", next, { now: true });
-        const row = (this.d.preview?.banners || []).find((r) => r.rid === rid);
-        if (row) {
-            row.showShop = next;
-        }
-    }
-
      * reproduce.
      */
     newBandVals(kind) {

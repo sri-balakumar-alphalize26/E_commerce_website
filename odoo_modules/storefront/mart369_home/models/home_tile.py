@@ -49,6 +49,7 @@ class Mart369HomeTile(models.Model):
         ('category', "The category's logo"),
         ('url', 'A picture elsewhere on the web'),
         ('art', 'A drawing (no picture)'),
+        ('none', 'Just a colour'),
     ], string='Picture', required=True, default='upload',
         help='Where the tile gets its picture. Choose "a drawing" and the app '
              'draws one itself - useful before you have photos.')
@@ -188,7 +189,8 @@ class Mart369HomeTile(models.Model):
             'key': self.key,
             'image': self.image_path or '',
             'label': self.name,
-            'art': self.art or 'Pack',
+            # Empty says "draw nothing": the colour block on its own.
+            'art': '' if self.image_source == 'none' else self.art or 'Pack',
             'bg': bg,
         }
         # Optional keys are left out entirely, never sent as null.
@@ -223,7 +225,7 @@ class Mart369HomeTile(models.Model):
             'image_source': self.image_source,
             'image_url': self.image_url or '',
             'image_path': self.image_path or '',
-            'art': self.art or 'Pack',
+            'art': '' if self.image_source == 'none' else self.art or 'Pack',
             'color': self.color or '',
             'badge': self.badge or '',
             'bg': self.bg or '#f1f4f6',

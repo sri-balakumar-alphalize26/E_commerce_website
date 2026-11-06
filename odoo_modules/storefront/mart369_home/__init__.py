@@ -10,3 +10,5 @@ def post_init_hook(env):
     see first. See models/home_starter.py.
     """
     env['mart369.home.version'].sudo()._mart369_build_starter()
+    # After the real page, so the shop always has something else to serve.
+    env['mart369.home.version'].sudo()._mart369_ensure_demo()

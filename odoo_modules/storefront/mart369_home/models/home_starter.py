@@ -161,7 +161,7 @@ class Mart369HomeVersion(models.Model):
         # over from the page that was live, so rebuilding moves nothing else.
         old = {m.key: m for m in self.sudo()._mart369_live().mode_ids}
         page = self.sudo().create({
-            'name': name or self.env._('From your catalogue'),
+            'name': name or self._mart369_free_name(self.env._('From your catalogue')),
             'note': self.env._(
                 'Arranged automatically from your biggest categories on %s. '
                 'Rearrange it freely - nothing changes it on its own.', today),
@@ -266,6 +266,60 @@ class Mart369HomeVersion(models.Model):
                 'source': 'category', 'public_categ_id': categ.id,
                 'limit': 12, 'sequence': i * 10,
             })
+
+    # ---------------------------------------------------------- the Demo page
+
+    @api.model
+    def _mart369_ensure_demo(self):
+        """The permanent "Demo" page: the home page's structure on its own, so
+        anyone can see how a page is laid out and copy it to start their own.
+
+        Banners and category tiles with no pictures, drawings or products, so
+        there is nothing to mistake for real content. Made by code rather than
+        in the data file on purpose: a data record whose row has gone is created
+        again by every upgrade, which is how a stray grocery page reappeared.
+
+        Does nothing when the page already exists. Returns it.
+        """
+        Version = self.sudo().with_context(mart369_demo_build=True)
+        page = Version.search([('is_demo', '=', True)], limit=1)
+        if page:
+            # Handed back without the build flag: the caller gets the locked page.
+            return page.with_env(self.env)
+        env = Version.env
+        config = env['mart369.config']._get()
+        page = Version.create({
+            'name': 'Demo',
+            'note': env._('How a home page is laid out. Duplicate it to start your own.'),
+            'config_id': config.id,
+            'is_demo': True,
+        })
+        for seq, (key, label) in enumerate([('quick', 'Quick'), ('all', 'Express')], start=1):
+            mode = env['mart369.home.mode'].create({
+                'config_id': config.id, 'version_id': page.id,
+                'key': key, 'name': label, 'sequence': seq * 10,
+            })
+            env['mart369.home.tab'].create({
+                'mode_id': mode.id, 'key': 'home', 'name': env._('My Home'),
+                'icon': 'grid', 'route_view': 'home', 'sequence': 10,
+            })
+            for i in range(4):
+                env['mart369.home.banner'].create({
+                    'mode_id': mode.id, 'key': 'b%d' % (i + 1),
+                    'kicker': env._('Small line'),
+                    'name': env._('Banner %s', i + 1),
+                    'note': env._('Offer line'),
+                    'tone': TONES[i % len(TONES)],
+                    'sequence': (i + 1) * 10,
+                })
+            for i in range(8):
+                env['mart369.home.tile'].create({
+                    'mode_id': mode.id, 'key': 'category-%d' % (i + 1),
+                    'name': env._('Category %s', i + 1),
+                    'image_source': 'none', 'art': False,
+                    'sequence': (i + 1) * 10,
+                })
+        return page.with_env(self.env)
 
     # ------------------------------------------------------------ the button
 

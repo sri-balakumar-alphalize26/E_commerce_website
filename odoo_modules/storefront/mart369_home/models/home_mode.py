@@ -3,6 +3,8 @@ from odoo.exceptions import UserError
 
 from odoo.addons.mart369.models.serializers import ART_CHOICES, ICON_CHOICES, TONE_CHOICES
 
+from .trashable import refuse_demo
+
 
 class Mart369HomeMode(models.Model):
     """One app mode - Quick or Express - and everything shown inside it."""
@@ -80,6 +82,32 @@ class Mart369HomeMode(models.Model):
     _key_uniq = models.Constraint(
         'unique (version_id, key)',
         'A saved home page can only have one setup per app mode.')
+
+    # ------------------------------------------------------------ the Demo page
+
+    def _mart369_check_not_demo(self):
+        """Quick and Express on the Demo page are locked with everything in
+        them (see mart369.home.trashable)."""
+        if self.env.context.get('mart369_demo_build'):
+            return
+        if any(self.sudo().mapped('version_id.is_demo')):
+            refuse_demo(self.env)
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        pages = self.env['mart369.home.version'].sudo().browse(
+            {vals['version_id'] for vals in vals_list if vals.get('version_id')})
+        if any(pages.mapped('is_demo')) and not self.env.context.get('mart369_demo_build'):
+            refuse_demo(self.env)
+        return super().create(vals_list)
+
+    def write(self, vals):
+        self._mart369_check_not_demo()
+        return super().write(vals)
+
+    def unlink(self):
+        self._mart369_check_not_demo()
+        return super().unlink()
 
     @api.model
     def _get(self, key, version=None):

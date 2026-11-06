@@ -113,7 +113,7 @@ class TestMart369HomeVersion(TransactionCase):
             self.everyday.unlink()
 
     def test_the_last_page_cannot_be_deleted(self):
-        others = self.Version.search([('id', '!=', self.everyday.id)])
+        others = self.Version.search([('id', '!=', self.everyday.id), ('is_demo', '=', False)])
         others.unlink()
         with self.assertRaises(UserError):
             self.everyday.unlink()

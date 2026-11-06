@@ -36,6 +36,9 @@ export class NamePrompt extends Component {
     static props = {
         title: String,
         placeholder: { type: String, optional: true },
+        // The name already there, when renaming rather than naming a new page.
+        value: { type: String, optional: true },
+        hint: { type: String, optional: true },
         confirmLabel: String,
         onConfirm: Function,
         close: Function,
@@ -44,19 +47,29 @@ export class NamePrompt extends Component {
     setup() {
         this.inputRef = useRef("name");
         useAutofocus({ refName: "name" });
+        this.state = useState({ error: "", busy: false });
     }
 
     get value() {
         return (this.inputRef.el?.value || "").trim();
     }
 
-    confirm() {
+    /** Stays open until the shop has accepted the name. A refusal, such as a
+        name already in use, shows in red here, where it can be corrected. */
+    async confirm() {
         const name = this.value;
-        if (!name) {
+        if (!name || this.state.busy) {
             return;
         }
-        this.props.close();
-        this.props.onConfirm(name);
+        this.state.busy = true;
+        this.state.error = "";
+        try {
+            await this.props.onConfirm(name);
+            this.props.close();
+        } catch (err) {
+            this.state.error = err?.data?.message || err?.message || _t("That did not work.");
+            this.state.busy = false;
+        }
     }
 
     onKeydown(ev) {
@@ -66,6 +79,15 @@ export class NamePrompt extends Component {
         }
     }
 }
+
+/** The Rename box, the same on the pages list and in the editor. */
+export const renameProps = (page, onConfirm) => ({
+    title: _t("Rename this page"),
+    value: page.name,
+    hint: _t("This name is for you and your team. Shoppers don't see it."),
+    confirmLabel: _t("Save name"),
+    onConfirm,
+});
 
 /** An 369ai datetime ("2026-09-21 18:30:00") <-> a datetime-local input. */
 const toInput = (v) => (v ? v.slice(0, 16).replace(" ", "T") : "");
@@ -182,12 +204,19 @@ export class HomePages extends Component {
     }
 
     duplicate(page) {
-        this.run(async () => {
-            const copy = await this.orm.call(M.version, "copy", [parseInt(page.id, 10)], {
-                default: { name: _t("%s (copy)", page.name) },
-            });
-            return copy;
-        }, _t("Copied. Edit it, then switch it on when you are ready."));
+        // No name sent: the shop picks one nobody has ("Demo (copy) 2").
+        this.run(
+            () => this.orm.call(M.version, "copy", [parseInt(page.id, 10)]),
+            _t("Copied. Edit it, then switch it on when you are ready.")
+        );
+    }
+
+    rename(page) {
+        this.dialog.add(NamePrompt, renameProps(page, async (name) => {
+            await this.orm.write(M.version, [parseInt(page.id, 10)], { name });
+            await this.load();
+            this.notification.add(_t('Renamed to "%s".', name), { type: "success" });
+        }));
     }
 
     newPage() {
@@ -206,13 +235,14 @@ export class HomePages extends Component {
             title: _t("What is this page for?"),
             placeholder: _t("Festival sale"),
             confirmLabel: _t("Create page"),
-            onConfirm: (name) =>
-                this.run(
-                    () => this.orm.call(M.version, "copy", [parseInt(from.id, 10)],
-                                        { default: { name } }),
-                    _t('"%s" created. Edit it, then switch it on when you are ready.',
-                       name)
-                ),
+            onConfirm: async (name) => {
+                await this.orm.call(M.version, "copy", [parseInt(from.id, 10)], { default: { name } });
+                await this.load();
+                this.notification.add(
+                    _t('"%s" created. Edit it, then switch it on when you are ready.', name),
+                    { type: "success" }
+                );
+            },
         });
     }
 

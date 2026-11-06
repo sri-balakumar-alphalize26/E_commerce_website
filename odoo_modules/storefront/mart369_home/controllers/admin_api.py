@@ -145,11 +145,14 @@ class Mart369HomeAdminApi(http.Controller):
             source = self._pages().search([('is_current', '=', True)], limit=1)
         if not source:
             return self._fail('There is no page to copy.', status=404)
+        name = (body.get('name') or '').strip()
         try:
-            page = source.copy({'name': (body.get('name') or '').strip()
-                                or request.env._('%s (copy)', source.name)})
+            # No name typed: the model picks one nobody has.
+            page = source.copy({'name': name} if name else None)
         except AccessError:
             return self._fail('You do not have access to this.', status=403)
+        except UserError as exc:
+            return self._fail(str(exc))
         return self._json({'ok': True, 'page': self._serialize(page)},
                           status=201)
 

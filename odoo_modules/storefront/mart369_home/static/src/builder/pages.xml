@@ -120,16 +120,21 @@
 
             <div class="mart-pagecard-actions">
                 <button class="mart-btn mart-btn-primary" t-on-click="() => this.edit(page)">
-                    Edit page
+                    <t t-esc="page.isDemo ? 'View page' : 'Edit page'"/>
                 </button>
-                <button t-if="!page.isCurrent" class="mart-btn"
+                <!-- The Demo page is never live and never removed: it is only copied. -->
+                <button t-if="!page.isCurrent and !page.isDemo" class="mart-btn"
                         t-att-disabled="state.busy"
                         t-on-click="() => this.switchOn(page)">
                     Switch on
                 </button>
-                <button class="mart-btn" t-att-disabled="state.busy"
+                <button t-if="!page.isDemo" class="mart-btn" t-att-disabled="state.busy"
                         t-on-click="() => this.openSchedule(page)">
                     Schedule
+                </button>
+                <button t-if="!page.isDemo" class="mart-btn" t-att-disabled="state.busy"
+                        t-on-click="() => this.rename(page)">
+                    Rename
                 </button>
                 <button class="mart-btn" t-att-disabled="state.busy"
                         t-on-click="() => this.duplicate(page)">
@@ -138,7 +143,7 @@
                 <!-- The model refuses to remove the live page and the last one.
                      Say so here too, rather than letting someone click and be
                      told no. It goes to the Trash, not away. -->
-                <button class="mart-btn mart-btn-danger"
+                <button t-if="!page.isDemo" class="mart-btn mart-btn-danger"
                         t-att-disabled="state.busy or page.isCurrent"
                         t-att-title="page.isCurrent ? 'This is the everyday page. Switch another one on first.' : ''"
                         t-on-click="() => this.remove(page)">
@@ -183,9 +188,11 @@
             <label class="mart-field">
                 <span>Name</span>
                 <input type="text" t-ref="name" t-att-placeholder="props.placeholder"
-                       t-on-keydown="onKeydown"/>
+                       t-att-value="props.value" t-on-keydown="onKeydown"/>
             </label>
-            <p class="mart-hint">
+            <p t-if="state.error" class="mart-prompt-error" role="alert" t-esc="state.error"/>
+            <p t-if="props.hint" class="mart-hint" t-esc="props.hint"/>
+            <p t-else="" class="mart-hint">
                 It starts as a copy of the page that is on today, so you are
                 editing something rather than building from nothing.
             </p>

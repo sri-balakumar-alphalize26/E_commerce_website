@@ -229,7 +229,7 @@ export function CategoryStrip({ cats, onPick }) {
         <a key={c.key} href={c.route || TILE_TO_ROUTE[c.key] ? "/category/" + (c.route || TILE_TO_ROUTE[c.key]) : "#"} onClick={(e) => { e.preventDefault(); onPick?.(c); }} className="hm-cat" style={{ "--i": i }}>
           {/* `fill`: a sub-category's uploaded logo, cropped square to fill
               the whole tile rather than sit inside it like a drawing. */}
-          <span className={"hm-cat-img" + (c.fill && c.image ? " hm-cat-fill" : "")} style={{ background: c.bg }}>{c.image ? <img src={c.image} alt="" loading="lazy" /> : <ProductArt art={c.art} color={c.color} label={c.t} />}</span>
+          <span className={"hm-cat-img" + (c.fill && c.image ? " hm-cat-fill" : "")} style={{ background: c.bg }}>{c.image ? <img src={c.image} alt="" loading="lazy" /> : c.art === "" ? null : <ProductArt art={c.art} color={c.color} label={c.t} />}</span>
           <span>{c.label}</span>
         </a>
       ))}

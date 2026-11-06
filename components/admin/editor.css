@@ -202,6 +202,17 @@
 }
 .pe-hintbar .hm-ic { flex: none; }
 
+/* The Demo page: it can be looked at and scrolled, but nothing on it responds
+   and there is no side panel to edit in. */
+.pe-locked .pe-cols { grid-template-columns: minmax(0, 1fr); }
+.pe-locked .pe-panel { display: none; }
+.pe-locked .pe-body { pointer-events: none; }
+.pe-demo-note {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 14px; font-size: 13px; line-height: 1.5; color: #2c6b86;
+  background: #eef6fa; border: 1px solid #cfe4ee; border-radius: 10px;
+}
+
 /* ------------------------------------------------------------- the panel */
 
 .pe-panel {

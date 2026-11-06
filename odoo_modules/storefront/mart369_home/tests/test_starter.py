@@ -189,7 +189,7 @@ class TestMart369HomeStarter(TransactionCase):
     def _grocery_live(self):
         grocery = self.env.ref('mart369_home.home_version_everyday')
         # Nothing scheduled may outrank it for this test.
-        self.Version.search([('id', '!=', grocery.id)]).write(
+        self.Version.search([('id', '!=', grocery.id), ('is_demo', '=', False)]).write(
             {'starts_on': False, 'ends_on': False})
         grocery.write({'is_current': True, 'deleted_at': False})
         # As installed - this database's copy may have been played with.

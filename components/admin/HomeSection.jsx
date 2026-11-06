@@ -32,13 +32,30 @@ const toIso = (v) => (v ? v.replace("T", " ") + ":00" : false);
 /* "What shall we call it?"
    A page called "Everyday (copy)" that somebody meant to call "Diwali" is a
    page nobody renames until they go looking for it six months later. */
-function NamePrompt({ onCancel, onConfirm }) {
-  const [name, setName] = useState("");
-  const go = () => { if (name.trim()) onConfirm(name.trim()); };
+export function NamePrompt({
+  onCancel, onConfirm, initial = "", title = "What is this page for?", confirmLabel = "Create page",
+  hint = "It starts as a copy of the page that is on today, so you are editing something rather than building from nothing.",
+}) {
+  const [name, setName] = useState(initial);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  /* Stays open until the shop has accepted the name. A refusal, such as a name
+     already in use, shows in red here, where it can be corrected. */
+  const go = async () => {
+    if (!name.trim() || busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      await onConfirm(name.trim());
+    } catch (e) {
+      setError(e?.message || "That did not work.");
+      setBusy(false);
+    }
+  };
   return (
     <Confirm
-      title="What is this page for?"
-      confirmLabel="Create page"
+      title={title}
+      confirmLabel={confirmLabel}
       onCancel={onCancel}
       onConfirm={go}
       text={
@@ -46,13 +63,23 @@ function NamePrompt({ onCancel, onConfirm }) {
           <label className="ad-field ad-name-field">
             <span>Name</span>
             <input autoFocus value={name} placeholder="Diwali"
-              onChange={(e) => setName(e.target.value)}
+              aria-invalid={!!error}
+              onChange={(e) => { setName(e.target.value); setError(""); }}
               onKeyDown={(e) => { if (e.key === "Enter") go(); }} />
           </label>
-          It starts as a copy of the page that is on today, so you are editing
-          something rather than building from nothing.
+          {error && <span className="ad-name-error" role="alert">{error}</span>}
+          {hint}
         </>
       } />
+  );
+}
+
+/* The Rename box, the same on the pages list and in the editor. */
+export function RenamePrompt({ page, onCancel, onConfirm }) {
+  return (
+    <NamePrompt initial={page.name} title="Rename this page" confirmLabel="Save name"
+      hint="This name is for you and your team. Shoppers don't see it."
+      onCancel={onCancel} onConfirm={onConfirm} />
   );
 }
 
@@ -97,7 +124,7 @@ function TrashDrawer({ rows, days, busy, onRestore, onForget, onClose }) {
   );
 }
 
-function PageCard({ page, i, busy, onSwitch, onSchedule, onDuplicate, onDelete, onEdit }) {
+function PageCard({ page, i, busy, onSwitch, onSchedule, onRename, onDuplicate, onDelete, onEdit }) {
   const [open, setOpen] = useState(false);
   const [from, setFrom] = useState(toInput(page.startsOn));
   const [until, setUntil] = useState(toInput(page.endsOn));
@@ -111,7 +138,7 @@ function PageCard({ page, i, busy, onSwitch, onSchedule, onDuplicate, onDelete, 
           <h2>{page.name}</h2>
           <p>{page.stateNote}</p>
         </div>
-        <span className={"ad-pill ad-t-" + state.tone}><i />{state.label}</span>
+        <span className={"ad-pill ad-t-" + (page.isDemo ? "blue" : state.tone)}><i />{page.isDemo ? "Template" : state.label}</span>
       </header>
 
       <p className="ad-page-bands">
@@ -121,20 +148,28 @@ function PageCard({ page, i, busy, onSwitch, onSchedule, onDuplicate, onDelete, 
 
       <div className="ad-page-act">
         <button className="ad-btn ad-primary" onClick={() => onEdit(page)}>
-          <Icon n="layers" size={15} />Edit page
+          <Icon n="layers" size={15} />{page.isDemo ? "View page" : "Edit page"}
         </button>
-        <button className="ad-btn" disabled={page.isCurrent || busy}
-          onClick={() => onSwitch(page)}
-          title={page.isCurrent ? "This is the everyday page" : "Make this the everyday page"}>
-          {page.isCurrent ? "Everyday page" : "Switch on"}
-        </button>
-        <button className="ad-btn" onClick={() => setOpen((v) => !v)}>
-          {page.startsOn || page.endsOn ? "Change dates" : "Schedule"}
-        </button>
+        {/* The Demo page is never live and never removed: it is only copied. */}
+        {!page.isDemo && (
+          <>
+            <button className="ad-btn" disabled={page.isCurrent || busy}
+              onClick={() => onSwitch(page)}
+              title={page.isCurrent ? "This is the everyday page" : "Make this the everyday page"}>
+              {page.isCurrent ? "Everyday page" : "Switch on"}
+            </button>
+            <button className="ad-btn" onClick={() => setOpen((v) => !v)}>
+              {page.startsOn || page.endsOn ? "Change dates" : "Schedule"}
+            </button>
+          </>
+        )}
         <span className="ad-page-more">
+          {!page.isDemo && <button className="ad-link" onClick={() => onRename(page)} disabled={busy}>Rename</button>}
           <button className="ad-link" onClick={() => onDuplicate(page)} disabled={busy}>Duplicate</button>
-          <button className="ad-link ad-danger-link" onClick={() => onDelete(page)}
-            disabled={busy || page.isCurrent}>Remove</button>
+          {!page.isDemo && (
+            <button className="ad-link ad-danger-link" onClick={() => onDelete(page)}
+              disabled={busy || page.isCurrent}>Remove</button>
+          )}
         </span>
       </div>
 
@@ -173,6 +208,7 @@ export default function HomeSection({ flash }) {
   const [confirm, setConfirm] = useState(null);
   const [switching, setSwitching] = useState(null);
   const [naming, setNaming] = useState(false);
+  const [renaming, setRenaming] = useState(null);
   const [forget, setForget] = useState(null);
   const [trashOpen, setTrashOpen] = useState(false);
   const pages = data?.pages || [];
@@ -203,12 +239,27 @@ export default function HomeSection({ flash }) {
       method: "PATCH", body: { startsOn: toIso(from), endsOn: toIso(until) },
     }), from || until ? `“${page.name}” is scheduled` : "Dates cleared");
 
-  const onDuplicate = (page, name) =>
-    run(() => api("/admin/home/pages", {
-      method: "POST", body: { from: page.id, ...(name ? { name } : {}) },
-    }), name
-      ? `“${name}” created. Edit it, then switch it on when you are ready.`
-      : "Copied. Edit it, then switch it on when you are ready.");
+  /* These two let a refusal through to the name box, which shows it in red. */
+  const onRename = async (page, name) => {
+    await api(`/admin/home/pages/${page.id}`, { method: "PATCH", body: { name } });
+    setRenaming(null);
+    api.invalidate("/admin/home");
+    await reload();
+    flash?.(`Renamed to “${name}”`);
+  };
+
+  const onCreate = async (name) => {
+    const from = pages.find((p) => p.isCurrent) || pages[0];
+    await api("/admin/home/pages", { method: "POST", body: { from: from.id, name } });
+    setNaming(false);
+    api.invalidate("/admin/home");
+    await reload();
+    flash?.(`“${name}” created. Edit it, then switch it on when you are ready.`);
+  };
+
+  const onDuplicate = (page) =>
+    run(() => api("/admin/home/pages", { method: "POST", body: { from: page.id } }),
+      "Copied. Edit it, then switch it on when you are ready.");
 
   /* A new page laid out from the shop's biggest categories, switched on. The
      one that was live stays here, so switching back is one tap. */
@@ -277,7 +328,7 @@ export default function HomeSection({ flash }) {
         {pages.map((p, i) => (
           <PageCard key={p.id} page={p} i={i} busy={act.busy}
             onSwitch={(page) => setSwitching(page)}
-            onSchedule={onSchedule} onDuplicate={onDuplicate}
+            onSchedule={onSchedule} onDuplicate={onDuplicate} onRename={(page) => setRenaming(page)}
             onDelete={(page) => setConfirm(page)}
             onEdit={(page) => router.push(consolePath(`/home/${page.id}`))} />
         ))}
@@ -318,10 +369,13 @@ export default function HomeSection({ flash }) {
       {naming && (
         <NamePrompt
           onCancel={() => setNaming(false)}
-          onConfirm={(name) => {
-            setNaming(false);
-            onDuplicate(pages.find((p) => p.isCurrent) || pages[0], name);
-          }} />
+          onConfirm={onCreate} />
+      )}
+
+      {renaming && (
+        <RenamePrompt page={renaming}
+          onCancel={() => setRenaming(null)}
+          onConfirm={(name) => onRename(renaming, name)} />
       )}
 
       {forget && (

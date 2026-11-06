@@ -5,3 +5,4 @@ from . import test_admin_api
 from . import test_page_trash
 from . import test_starter
 from . import test_row_picker
+from . import test_demo_page

@@ -4,7 +4,7 @@
     <!-- ==================================================== the whole screen -->
     <t t-name="mart369_home.PageEditor">
         <Layout display="{ controlPanel: {} }" className="'o_mart369_editor h-100'">
-            <div class="mart-builder pe">
+            <div t-attf-class="mart-builder pe {{ locked ? 'pe-locked' : '' }}">
 
                 <header class="pe-head">
                     <button class="mart-btn pe-back" t-on-click="() => this.back()">
@@ -14,6 +14,10 @@
                         <h1 t-esc="page ? page.name : 'The live home page'"/>
                         <small t-if="page" t-esc="page.stateNote"/>
                     </div>
+                    <button t-if="page and !locked" class="mart-btn mart-btn-sm"
+                            t-on-click="() => this.renamePage()">
+                        Rename
+                    </button>
                 </header>
 
                 <!-- One strip. Two of these, disagreeing about which tab you
@@ -40,31 +44,42 @@
 
                     <span class="pe-toolbar-gap"/>
 
-                    <span class="pe-adds">
-                        <t t-foreach="GROUPS" t-as="kind" t-key="kind">
-                            <button class="mart-btn mart-btn-sm"
-                                    t-att-disabled="state.status === 'saving'"
-                                    t-on-click="() => this.add(kind)">
-                                <Icon n="'plus'" size="12"/> <t t-esc="KINDS[kind].title"/>
-                            </button>
-                        </t>
-                    </span>
+                    <t t-if="!locked">
+                        <span class="pe-adds">
+                            <t t-foreach="GROUPS" t-as="kind" t-key="kind">
+                                <button class="mart-btn mart-btn-sm"
+                                        t-att-disabled="state.status === 'saving'"
+                                        t-on-click="() => this.add(kind)">
+                                    <Icon n="'plus'" size="12"/> <t t-esc="KINDS[kind].title"/>
+                                </button>
+                            </t>
+                        </span>
 
-                    <button class="mart-btn mart-btn-sm pe-trash-btn"
-                            t-on-click="() => state.trashOpen = !state.trashOpen">
-                        <Icon n="'trash'" size="13"/> Trash
-                        <em t-if="d and d.trash.length" t-esc="d.trash.length"/>
-                    </button>
+                        <button class="mart-btn mart-btn-sm pe-trash-btn"
+                                t-on-click="() => state.trashOpen = !state.trashOpen">
+                            <Icon n="'trash'" size="13"/> Trash
+                            <em t-if="d and d.trash.length" t-esc="d.trash.length"/>
+                        </button>
 
-                    <button class="mart-btn mart-btn-sm" t-on-click="() => this.moreSettings()"
-                            title="Images, the products in a row, banner lines and rules">
-                        More settings
-                    </button>
+                        <button class="mart-btn mart-btn-sm" t-on-click="() => this.moreSettings()"
+                                title="Images, the products in a row, banner lines and rules">
+                            More settings
+                        </button>
 
-                    <t t-call="mart369_home.SaveChip"/>
+                        <t t-call="mart369_home.SaveChip"/>
+                    </t>
                 </div>
 
-                <p class="pe-hintbar">
+                <div t-if="locked" class="pe-demo-note" role="status">
+                    <span>
+                        <b>This is the Demo template.</b> It shows how a home page is laid
+                        out and cannot be changed. Duplicate it to start your own.
+                    </span>
+                    <button class="mart-btn mart-btn-primary mart-btn-sm" t-on-click="() => this.copyDemo()">
+                        Duplicate
+                    </button>
+                </div>
+                <p t-else="" class="pe-hintbar">
                     Click any part of the page to edit it. Drag the handle to reorder.
                     The eye takes something out of the app without deleting it.
                 </p>
@@ -251,7 +266,7 @@
                 <!-- The app draws an SVG placeholder here. The builder names
                      it instead, the way the phone builder does - a label is
                      more use than a picture you cannot change from here. -->
-                <span t-else="" class="mart-art" t-attf-style="{{ row.color ? 'color:' + row.color : '' }}">
+                <span t-elif="row.t || row.art" class="mart-art" t-attf-style="{{ row.color ? 'color:' + row.color : '' }}">
                     <t t-esc="row.t || row.art"/>
                 </span>
             </span>
@@ -394,6 +409,11 @@
                             onChange="() => this.toggleTextOnImage(selected.record.id)"/>
                     <span>Show text on the picture</span>
                 </label>
+                <label t-if="selected.kind === 'banner'" class="pe-switch-lbl">
+                    <Switch on="selected.record.show_shop_now" label="'Show Shop now button'"
+                            onChange="() => this.toggleShopNow(selected.record.id)"/>
+                    <span>Show Shop now button</span>
+                </label>
             </div>
             <t t-foreach="selected.spec.fields" t-as="f" t-key="f[0]">
                 <label class="mart-field">
@@ -409,11 +429,6 @@
                     <em t-if="f[0] === 'icon' and selected.record.logo_from" class="pe-hint">
                         The app shows <t t-esc="selected.record.logo_from"/>'s logo instead. Change it in Catalogue → Categories.
                     </em>
-                <label t-if="selected.kind === 'banner'" class="pe-switch-lbl">
-                    <Switch on="selected.record.show_shop_now" label="'Show Shop now button'"
-                            onChange="() => this.toggleShopNow(selected.record.id)"/>
-                    <span>Show Shop now button</span>
-                </label>
                 </label>
             </t>
         </div>

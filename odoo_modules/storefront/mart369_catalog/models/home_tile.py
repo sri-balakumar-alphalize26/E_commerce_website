@@ -84,7 +84,7 @@ class Mart369HomeTile(models.Model):
         vals = super()._builder_vals()
         logo = self._mart369_logo()
         # What the tile actually draws, for the builders' previews.
-        vals['paint_art'] = (logo.get('art') if logo and not logo['image'] else '') \
-            or self.art or 'Pack'
+        vals['paint_art'] = '' if self.image_source == 'none' else (
+            (logo.get('art') if logo and not logo['image'] else '') or self.art or 'Pack')
         vals['logo_from'] = self.public_categ_id.name if logo else ''
         return vals
