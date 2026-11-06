@@ -232,7 +232,7 @@
     <t t-name="mart369_home.PeBanner">
         <div t-attf-class="hm-banner hm-tone-{{ row.tone }}"
              t-attf-style="{{ row.image ? 'background-image:url(' + row.image + ');background-size:cover;' : '' }}">
-            <div class="hm-banner-copy">
+            <div t-if="!row.image or row.textOnImage" class="hm-banner-copy">
                 <span class="hm-kicker" t-esc="row.kicker"/>
                 <strong t-esc="row.title"/>
                 <span class="hm-note" t-esc="row.note"/>
@@ -352,6 +352,46 @@
         </header>
 
         <div class="mart-panel-body pe-form">
+            <div t-if="selected.spec.picture" class="mart-field pe-picture">
+                <span>Picture</span>
+                <img t-if="panelPicture" class="pe-picture-img" t-att-src="panelPicture" alt=""/>
+                <p t-else="" class="pe-picture-none">No picture yet</p>
+                <div class="pe-picture-btns">
+                    <label class="mart-btn mart-btn-sm" t-att-class="{ 'disabled': state.status === 'saving' }">
+                        <t t-esc="selected.record.has_image ? 'Replace' : 'Upload'"/>
+                        <input type="file" class="d-none" accept=".jpg,.jpeg,.png,.webp"
+                               t-att-disabled="state.status === 'saving'"
+                               t-on-change="(ev) => this.onPicture(selected.kind, selected.record.id, ev)"/>
+                    </label>
+                    <button t-if="d.image_link" type="button" class="mart-btn mart-btn-sm"
+                            title="Paste an Image Server link"
+                            t-att-disabled="state.status === 'saving'"
+                            t-on-click="() => this.state.pictureLink = this.state.pictureLink === null ? '' : null">
+                        <i class="fa fa-link" aria-hidden="true"/> Link
+                    </button>
+                    <button t-if="selected.record.has_image" type="button" class="mart-btn mart-btn-sm"
+                            t-att-disabled="state.status === 'saving'"
+                            t-on-click="() => this.setPicture(selected.kind, selected.record.id, false)">
+                        Remove picture
+                    </button>
+                </div>
+                <div t-if="d.image_link and state.pictureLink !== null" class="pe-picture-link">
+                    <input type="text" aria-label="Image Server link"
+                           placeholder="https://images.369ai.biz/.../picture.webp"
+                           t-model="state.pictureLink"/>
+                    <button type="button" class="mart-btn mart-btn-sm"
+                            t-att-disabled="state.status === 'saving' or !state.pictureLink.trim()"
+                            t-on-click="() => this.onPictureLink(selected.kind, selected.record.id)">
+                        Use this link
+                    </button>
+                </div>
+                <em class="pe-hint">Best size: <t t-esc="selected.spec.picture"/>. JPG, PNG or WebP, under 5 MB.</em>
+                <label t-if="selected.kind === 'banner' and selected.record.has_image" class="pe-switch-lbl">
+                    <Switch on="selected.record.text_on_image" label="'Show text on the picture'"
+                            onChange="() => this.toggleTextOnImage(selected.record.id)"/>
+                    <span>Show text on the picture</span>
+                </label>
+            </div>
             <t t-foreach="selected.spec.fields" t-as="f" t-key="f[0]">
                 <label class="mart-field">
                     <span t-esc="f[1]"/>
@@ -377,7 +417,7 @@
                 <Icon n="'trash'" size="13"/> Remove
             </button>
             <p class="pe-panel-note">
-                Removing puts it in the Trash. Images, the products inside a row,
+                Removing puts it in the Trash. The products inside a row
                 and the Trash itself are on "More settings".
             </p>
         </div>

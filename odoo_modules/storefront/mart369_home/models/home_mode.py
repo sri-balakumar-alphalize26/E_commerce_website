@@ -339,6 +339,8 @@ class Mart369HomeMode(models.Model):
         data['preview'] = mode._preview_payload()
         data['trash_preview'] = mode._trash_preview_map()
         data['page'] = mode.version_id._serialize_card() if mode.version_id else None
+        # Whether the side panel's Picture box offers an Image Server link.
+        data['image_link'] = self.env['mart369.home.banner']._mart369_image_link_on()
         # The Trash list names Odoo models; the screens speak in kinds. Say
         # both, so a screen does not keep its own copy of the mapping and
         # drift from this one.

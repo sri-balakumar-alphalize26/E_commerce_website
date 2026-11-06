@@ -40,7 +40,7 @@ import {
 import { Rail } from "@/components/home/shared";
 import "@/components/home/home.css";
 import { Confirm, Drawer, Empty, Icon, useToast } from "./AdminUI";
-import BannerPicture from "./BannerPicture";
+import BannerPicture, { pictureAddress } from "./BannerPicture";
 import RowProductPicker from "./RowProductPicker";
 import "./editor.css";
 
@@ -332,7 +332,7 @@ function rowSource(v) {
 }
 
 function Panel({ selected, vals, vocab, onField, onToggle, onRemove, busy,
-  mode, modeKey, onModeField, onChooseProducts }) {
+  mode, modeKey, onModeField, onChooseProducts, imageLink }) {
   if (!selected) {
     return (
       <ModePanel mode={mode} modeKey={modeKey} vocab={vocab}
@@ -374,10 +374,10 @@ function Panel({ selected, vals, vocab, onField, onToggle, onRemove, busy,
               <div key={field} className="ad-field ad-span2">
                 <span>{label}</span>
                 {selected.kind === "tile" ? (
-                  <BannerPicture url={picture} out={spec.picture} square onPick={set} onRemove={() => set(false)}
+                  <BannerPicture url={picture} out={spec.picture} square linkOn={imageLink} onPick={set} onRemove={() => set(false)}
                     note={vals.logo_from ? `Shows ${vals.logo_from}'s logo. Upload one to use your own here.` : "No picture yet - the tile shows its drawing."} />
                 ) : (
-                  <BannerPicture url={picture} out={spec.picture} tone={vals.tone} onPick={set} onRemove={() => set(false)} />
+                  <BannerPicture url={picture} out={spec.picture} tone={vals.tone} linkOn={imageLink} onPick={set} onRemove={() => set(false)} />
                 )}
               </div>
             );
@@ -637,7 +637,7 @@ export default function PageEditor({ pageId }) {
   const onField = (kind, id, field, value) => {
     setVals((v) => ({ ...v, [uid(kind, id)]: { ...v[uid(kind, id)], [field]: value } }));
     const mapped = PREVIEW_FIELD[kind]?.[field];
-    if (mapped) patchPreview(kind, id, { [mapped]: value || (field === "image_1920" ? "" : value),
+    if (mapped) patchPreview(kind, id, { [mapped]: pictureAddress(value) || (field === "image_1920" ? "" : value),
       /* An uploaded tile picture fills the tile edge to edge, as on the shop. */
       ...(kind === "tile" && field === "image_1920" && value ? { fill: true } : {}) });
     /* A picture is saved at once, not after the typing pause: it is one
@@ -957,7 +957,7 @@ export default function PageEditor({ pageId }) {
             vocab={data?.vocab} onField={onField} onToggle={onToggle}
             onRemove={onRemove} busy={busy}
             mode={modeVals} modeKey={mode} onModeField={onModeField}
-            onChooseProducts={openPicker} />
+            onChooseProducts={openPicker} imageLink={data?.image_link} />
         </aside>
       </div>
 

@@ -110,6 +110,7 @@
                             <t t-esc="photoMax"/> is the most the shop shows - remove one to add another.
                         </p>
                         <p t-if="state.photoNote and !photosFull" class="pdk-photo-full" role="status" t-esc="state.photoNote"/>
+                        <p class="pdk-hint"><b>Best size: 1000 x 1000 px, square.</b></p>
                         <p t-if="props.embedded" class="pdk-hint">
                             Tap Add, or drop pictures here<t t-if="props.data.imageLink">. To use Image Server links, tap Link, or click here and press Ctrl+V - paste as many as you like</t>. Drag a picture to move it - the
                             first is the picture on the card; the rest become the gallery

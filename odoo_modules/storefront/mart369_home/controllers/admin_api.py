@@ -513,8 +513,9 @@ class Mart369HomeAdminApi(http.Controller):
                     values[field] = bool(value)
                 elif field == 'image_1920':
                     # An uploaded picture: checked, then stored as Odoo stores
-                    # any picture; false takes it off.
-                    values[field] = band._mart369_check_picture(value)
+                    # any picture; false takes it off. An Image Server link
+                    # arrives as its marker (`_mart369_panel_picture`).
+                    values[field] = request.env['mart369.home.banner']._mart369_panel_picture(value)
                     if kind == 'tile':
                         # Its own picture now; taken off, a tile linked to a
                         # category wears that category's logo again.
@@ -531,6 +532,21 @@ class Mart369HomeAdminApi(http.Controller):
         except (AccessError, UserError, ValueError) as exc:
             return self._fail(str(exc))
         return self._json({'ok': True, 'band': self._serialize_band(kind, band)})
+
+    @http.route('/369mart/admin/home/picture-link', **_POST)
+    def picture_link(self, **kwargs):
+        """Is this an image on the Image Server? The console's Link button asks
+        here, because the storefront only reaches /369mart routes. The check
+        itself is the connector's own."""
+        if not self._may_edit():
+            return self._fail('You do not have access to this.', status=403)
+        if not request.env['mart369.home.banner']._mart369_image_link_on():
+            return self._fail('The Image Server is not switched on.')
+        from odoo.addons.ai369_image_server.controllers.main import ImgSrvController
+        answer = ImgSrvController().check_link(self._body().get('url') or '')
+        if not answer.get('ok'):
+            return self._fail(answer.get('error') or 'That link could not be checked.')
+        return self._json({'ok': True, 'url': answer['url']})
 
     @http.route('/369mart/admin/home/bands/section/<int:band_id>/products', **_PUT)
     def set_row_products(self, band_id, **kwargs):

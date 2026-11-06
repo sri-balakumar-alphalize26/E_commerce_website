@@ -623,7 +623,7 @@
                                   onChange="(v) => this.editId('mart369.home.tile', tl, 'public_categ_id', v)"/>
                         </div>
                         <div class="mart-field">
-                            <label>Picture</label>
+                            <label>Picture (512 × 512, square, works best)</label>
                             <div class="mart-upload">
                                 <span class="mart-upload-prev" t-att-style="tl.image_path ? 'background-image:url(' + tl.image_path + ')' : tileStyle(tl)"/>
                                 <label class="mart-btn mart-btn-sm">Upload<input type="file" accept="image/*" t-on-change="(ev) => this.onUpload('mart369.home.tile', tl, ev)"/></label>

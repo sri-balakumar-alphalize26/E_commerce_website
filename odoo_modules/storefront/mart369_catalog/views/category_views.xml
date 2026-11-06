@@ -29,7 +29,8 @@
                     <group>
                         <field name="mart_icon" invisible="parent_id"/>
                         <field name="mart_art" invisible="not parent_id"/>
-                        <field name="mart_logo" widget="image" options="{'size': [64, 64]}"/>
+                        <field name="mart_logo" widget="image" options="{'size': [64, 64]}"
+                               help="Best size, square: 128 x 128 px for a main category, 512 x 512 px for a sub-category."/>
                     </group>
                 </group>
             </sheet>

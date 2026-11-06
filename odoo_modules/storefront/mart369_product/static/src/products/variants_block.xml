@@ -91,6 +91,7 @@
                                     <button t-if="s.image" type="button" class="mart-btn ad-sm pdk-danger-ghost"
                                             t-on-click="() => this.dropImage(row)">Remove</button>
                                 </div>
+                                <small>Best size: 1000 x 1000 px, square.</small>
                             </div>
 
                             <div t-if="vx.media" class="pdk-field">
@@ -116,7 +117,7 @@
                                         <input type="file" accept="image/*" multiple="" hidden="" t-on-change="(ev) => this.addPictures(ev, row)"/>
                                     </label>
                                 </div>
-                                <small>Front, back, ports… The first is the main picture when the variant has no image of its own.</small>
+                                <small>Best size: 1000 x 1000 px, square. Front, back, ports… The first is the main picture when the variant has no image of its own.</small>
                             </div>
 
                             <div t-if="vx.media" class="pdk-field">

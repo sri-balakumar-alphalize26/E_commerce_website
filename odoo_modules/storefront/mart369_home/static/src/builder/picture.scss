@@ -1,0 +1,48 @@
+// The Picture box in the page editor's side panel (editor.xml, PePanel).
+.pe-picture {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.pe-picture-img {
+    display: block;
+    width: 100%;
+    max-height: 140px;
+    object-fit: contain;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    border-radius: 8px;
+    background: #f5f6f7;
+}
+
+.pe-picture-none {
+    margin: 0;
+    padding: 18px 8px;
+    text-align: center;
+    font-size: 12px;
+    opacity: 0.7;
+    border: 1px dashed rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+}
+
+.pe-picture-link {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+
+    input {
+        width: 100%;
+    }
+}
+
+.pe-picture-btns {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+
+    label {
+        margin: 0;
+        cursor: pointer;
+    }
+}

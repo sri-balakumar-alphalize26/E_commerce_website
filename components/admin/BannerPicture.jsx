@@ -2,19 +2,34 @@
 /* A banner's or a category tile's own picture, for the home page editor's
    side panel.
 
-   Upload, Replace, Remove. A home banner is 5:2 (1600 x 640), a tile square
+   Upload, Replace, Link, Remove. A home banner is 5:2 (1600 x 640), a tile square
    (512 x 512): a picture already that shape goes straight in, shrunk to size;
    any other shape opens "Position your picture" - drag to move it, the slider to zoom, and
    what is inside the frame is what the shop shows. It is saved as a JPEG, so
    a phone photo of several MB arrives as a few hundred KB.
 
-   The server checks it again (mart369_home `_mart369_check_picture`). */
+   The server checks it again (mart369_home `_mart369_check_picture`).
+
+   Link (only when the Image Server is on) uses a picture already there: nothing
+   is uploaded, and it is saved as the small marker the connector understands. */
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { api } from "@/lib/api";
 import { Icon } from "./AdminUI";
 
 const TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_FILE = 15 * 1024 * 1024;
+
+/* base64 of "<!--imgsrv-linked:URL-->". */
+const LINK_MARK = btoa("<!--imgsrv-linked:").slice(0, 16);
+
+/* What to draw for a picture value: a link's marker is not an address until it
+   is opened up; everything else already is one. */
+export function pictureAddress(value) {
+  if (typeof value !== "string" || !value.startsWith(LINK_MARK)) return value;
+  const found = /^<!--imgsrv-linked:(.*)-->$/.exec(atob(value));
+  return found ? found[1] : "";
+}
 
 function loadImage(file) {
   return new Promise((ok, bad) => {
@@ -114,12 +129,28 @@ function Cropper({ img, out, onCancel, onDone }) {
 /* `out` is the saved size: a banner's 1600 x 640 unless told otherwise (a
    tile passes 512 x 512). `note` replaces the line under an empty preview. */
 export default function BannerPicture({ url, tone = "green", onPick, onRemove,
-  out = { w: 1600, h: 640 }, note = "No picture yet - the banner shows its colour and drawings.", square = false }) {
+  out = { w: 1600, h: 640 }, note = "No picture yet - the banner shows its colour and drawings.", square = false, linkOn = false }) {
   const input = useRef(null);
   const RATIO = out.w / out.h;
   const [crop, setCrop] = useState(null); /* {img, url} */
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [link, setLink] = useState(null); /* the link box's text; null when shut */
+  const shown = pictureAddress(url);
+
+  const applyLink = async () => {
+    setError("");
+    setBusy(true);
+    try {
+      const res = await api("/admin/home/picture-link", { method: "POST", body: { url: link.trim() } });
+      onPick(btoa(`<!--imgsrv-linked:${res.url}-->`));
+      setLink(null);
+    } catch (e) {
+      setError(e.message || "That link could not be checked.");
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const pick = async (file) => {
     setError("");
@@ -148,15 +179,23 @@ export default function BannerPicture({ url, tone = "green", onPick, onRemove,
   return (
     <div className="bp">
       <div className={"bp-preview hm-tone-" + tone + (square ? " bp-square" : "")}>
-        {url ? <img src={url} alt="The picture" /> : <span>{note}</span>}
+        {shown ? <img src={shown} alt="The picture" /> : <span>{note}</span>}
       </div>
       <div className="bp-actions">
         <button type="button" className="ad-btn" disabled={busy} onClick={() => input.current?.click()}>
           <Icon n="camera" size={14} />{busy ? "Opening…" : url ? "Replace picture" : "Upload picture"}
         </button>
+        {linkOn && <button type="button" className="ad-btn" disabled={busy} onClick={() => setLink(link === null ? "" : null)}>Link</button>}
         {url && <button type="button" className="ad-btn" onClick={onRemove}>Remove picture</button>}
         <input ref={input} type="file" accept={TYPES.join(",")} hidden onChange={(e) => { pick(e.target.files?.[0]); e.target.value = ""; }} />
       </div>
+      {linkOn && link !== null && (
+        <div className="bp-actions">
+          <input type="text" aria-label="Image Server link" placeholder="https://images.369ai.biz/.../picture.webp"
+            style={{ flex: "1 1 100%" }} value={link} onChange={(e) => setLink(e.target.value)} />
+          <button type="button" className="ad-btn" disabled={busy || !link.trim()} onClick={applyLink}>Use this link</button>
+        </div>
+      )}
       <em className="pe-hint">Best size {out.w} × {out.h}. Any picture works - you can position it after picking.</em>
       {error && <em className="pe-hint bp-error" role="alert">{error}</em>}
       {crop && <Cropper img={crop.img} out={out} onCancel={close} onDone={(dataUrl) => { close(); onPick(dataUrl); }} />}

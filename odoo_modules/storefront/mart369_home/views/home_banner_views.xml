@@ -92,7 +92,7 @@
                             <field name="active" invisible="1"/>
                         </group>
                     </group>
-                    <group string="Picture (recommended 1200 x 480)">
+                    <group string="Picture (best size 1600 x 640 px, wide)">
                         <field name="image_1920" widget="image" nolabel="1" colspan="2"
                                options="{'size': [0, 220]}"/>
                     </group>

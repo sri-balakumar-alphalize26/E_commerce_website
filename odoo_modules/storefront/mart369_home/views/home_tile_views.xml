@@ -81,7 +81,7 @@
                                    placeholder="e.g. fruits-vegetables/fresh-fruits"/>
                         </group>
                     </group>
-                    <group string="Picture">
+                    <group string="Picture (best size 512 x 512 px, square)">
                         <field name="image_source" widget="radio"/>
                         <field name="image_1920" widget="image"
                                invisible="image_source != 'upload'"

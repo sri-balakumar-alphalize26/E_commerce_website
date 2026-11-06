@@ -416,7 +416,7 @@ function VariantsBlock({ vx, setVx, currency, flash }) {
                             ))}
                             <label className="pdk-vx-pic pdk-photo-add"><Icon n="plus" size={18} /><span>Add</span><input type="file" accept="image/*" multiple hidden onChange={(e) => { addPictures(row.id, e.target.files); e.target.value = ""; }} /></label>
                           </div>
-                          <small>Front, back, ports… The first is the main picture when the variant has no image of its own.</small>
+                          <small>Best size: 1000 x 1000 px, square. Front, back, ports… The first is the main picture when the variant has no image of its own.</small>
                         </div>
                       )}
 
@@ -1051,7 +1051,7 @@ export default function ProductEditor({ productId, currency, onClose, onSaved, f
                 <input type="file" accept="image/*" hidden onChange={(e) => { addFiles(e.target.files || []); e.target.value = ""; }} />
               </label>
             </div>
-            <p className="pdk-hint">The general product photo, used when a variant has no picture of its own. More photos - front, back, each colour - go on each variant under Variants.</p>
+            <p className="pdk-hint"><b>Best size: 1000 x 1000 px, square.</b> The general product photo, used when a variant has no picture of its own. More photos - front, back, each colour - go on each variant under Variants.</p>
           </section>
 
           {/* The product first, then its choices and variants, and what only

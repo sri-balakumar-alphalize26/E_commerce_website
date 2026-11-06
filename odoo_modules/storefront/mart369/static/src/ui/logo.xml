@@ -37,6 +37,7 @@
                 </span>
                 <div class="mart-logo-up-body">
                     <p class="mart-logo-size"><b t-esc="size.title"/><t t-esc="size.hint"/></p>
+                    <p class="mart-logo-size">Best size: <b t-esc="size.out + ' x ' + size.out + ' px, square'"/></p>
                     <div class="mart-logo-btns">
                         <button type="button" class="mart-btn mart-btn-sm" t-on-click="choose">
                             <Icon n="'up'" size="13"/> <t t-esc="props.value.image ? 'Replace' : 'Choose a picture'"/>

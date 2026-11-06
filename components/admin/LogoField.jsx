@@ -134,6 +134,7 @@ export function LogoField({ level, value, name, tone, accent, onChange }) {
           </span>
           <div className="lf-up-body">
             <p className="lf-size"><b>{level === "main" ? "Small: 18 × 18 px" : "Full tile: 104 × 104 px"}</b>{size.hint}</p>
+            <p className="lf-size">Best size: <b>{level === "main" ? "128 x 128 px, square" : "512 x 512 px, square"}</b></p>
             <div className="lf-up-btns">
               <button type="button" className="ad-btn ad-sm" onClick={() => input.current?.click()}>
                 <Icon n="up" size={13} />{value.image ? "Replace" : "Choose a picture"}
@@ -288,6 +289,7 @@ export function LogoCropper({ src, level, name, tone, accent, onCancel, onDone }
 
           <div className="lf-crop-right">
             <p className="lf-size"><b>{level === "main" ? "Small: 18 × 18 px" : "Full tile: 104 × 104 px"}</b>{size.hint}</p>
+            <p className="lf-size">Best size: <b>{level === "main" ? "128 x 128 px, square" : "512 x 512 px, square"}</b></p>
             {img && <p className={"lf-src" + (small ? " lf-warn" : "")}>
               <Icon n={small ? "info" : "check"} size={13} />
               {small

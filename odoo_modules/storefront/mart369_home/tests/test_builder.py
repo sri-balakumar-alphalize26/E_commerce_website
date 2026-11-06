@@ -1,3 +1,4 @@
+import base64
 from datetime import timedelta
 
 from odoo import fields
@@ -10,12 +11,16 @@ BUILDER_KEYS = {'mode', 'modes', 'vocab', 'bands', 'banners', 'tiles', 'tabs',
                 # same for everything in the Trash, and the saved page itself.
                 # The REST console used to add these on top of builder_load;
                 # they live here now so both builders draw the same thing.
-                'preview', 'trash_preview', 'page'}
+                'preview', 'trash_preview', 'page',
+                # Whether the side panel offers an Image Server link.
+                'image_link'}
 BAND_KEYS = {'id', 'kind', 'active', 'sequence', 'name', 'key', 'subtitle',
              'view_all_route', 'source', 'public_categ_id', 'public_categ_name',
              'include_child_categs', 'product_tag_id', 'product_tag_name',
              'rule', 'rule_days', 'limit', 'product_count', 'picked', 'lines',
              'preview'}
+# A 1 x 1 PNG.
+PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
 
 
 @tagged('post_install', '-at_install')
@@ -109,6 +114,53 @@ class TestBuilderLoad(TransactionCase):
         from odoo.exceptions import UserError
         with self.assertRaises(UserError):
             self.Mode.builder_load('nope')
+
+    def test_side_panel_sets_and_removes_a_banner_picture(self):
+        banner = self.env['mart369.home.banner'].create({
+            'mode_id': self.mode.id, 'key': 'zz_picture', 'name': 'Picture test'})
+        banner.mart369_set_picture(PNG)
+        self.assertTrue(banner.image_1920)
+        vals = banner._builder_vals()
+        self.assertTrue(vals['has_image'])
+        self.assertTrue(vals['image_url'])
+        banner.mart369_set_picture(False)
+        self.assertFalse(banner.image_1920)
+        self.assertFalse(banner._builder_vals()['image_url'])
+
+    def test_side_panel_tile_picture_decides_its_source(self):
+        categ = self.env['product.public.category'].create({'name': 'Zz Picture Shelf'})
+        tile = self.env['mart369.home.tile'].create({
+            'mode_id': self.mode.id, 'key': 'zz_picture', 'name': 'Picture test',
+            'public_categ_id': categ.id, 'image_source': 'art'})
+        tile.mart369_set_picture(PNG)
+        self.assertEqual(tile.image_source, 'upload')
+        self.assertTrue(tile.image_path)
+        tile.mart369_set_picture(False)
+        self.assertFalse(tile.image_1920)
+        self.assertEqual(tile.image_source, 'category', 'back to the category logo')
+
+    def test_side_panel_refuses_what_is_not_a_picture(self):
+        from odoo.exceptions import UserError
+        banner = self.env['mart369.home.banner'].create({
+            'mode_id': self.mode.id, 'key': 'zz_picture', 'name': 'Picture test'})
+        with self.assertRaises(UserError):
+            banner.mart369_set_picture('bm90IGEgcGljdHVyZQ==')
+        self.assertFalse(banner.image_1920)
+
+    def test_side_panel_accepts_a_link_only_when_the_image_server_is_on(self):
+        from unittest.mock import patch
+
+        from odoo.exceptions import UserError
+        Banner = self.env['mart369.home.banner']
+        marker = base64.b64encode(b'<!--imgsrv-linked:https://images.369ai.biz/a.webp-->').decode()
+        staged = base64.b64encode(b'<!--imgsrv-staged:abc-->').decode()
+        with patch.object(type(Banner), '_mart369_image_link_on', return_value=True):
+            self.assertEqual(Banner._mart369_panel_picture(marker), marker)
+            with self.assertRaises(UserError):
+                Banner._mart369_panel_picture(staged)
+        with patch.object(type(Banner), '_mart369_image_link_on', return_value=False):
+            with self.assertRaises(UserError):
+                Banner._mart369_panel_picture(marker)
 
     def test_website_designer_can_use_the_builder(self):
         """An operator who is not an admin can load and edit."""

@@ -21,7 +21,9 @@
  */
 import { Component, onWillStart, useEffect, useRef, useState } from "@odoo/owl";
 import { registry } from "@web/core/registry";
+import { rpc } from "@web/core/network/rpc";
 import { useService } from "@web/core/utils/hooks";
+import { getDataURLFromFile } from "@web/core/utils/urls";
 import { useSortable } from "@web/core/utils/sortable_owl";
 import { _t } from "@web/core/l10n/translation";
 import { Confirm } from "@mart369/ui/confirm";
@@ -58,6 +60,7 @@ const KINDS = {
     banner: {
         title: "Banner", short: "banner",
         group: "banners", src: "banners", model: M.banner,
+        picture: "1600 x 640 px, wide",
         fields: [
             ["kicker", "Kicker", "The small line above the headline"],
             ["name", "Headline", "The big line"],
@@ -69,6 +72,7 @@ const KINDS = {
     tile: {
         title: "Category tile", short: "tile",
         group: "categories", src: "tiles", model: M.tile,
+        picture: "512 x 512 px, square",
         fields: [
             ["name", "Label", "What it is called under the picture"],
             ["route", "Link", "The category slug it opens"],
@@ -86,6 +90,11 @@ const KINDS = {
 };
 
 const GROUPS = ["tab", "banner", "tile", "section"];
+
+// The same limits the server checks (`_mart369_check_picture`). Asked here too
+// so a wrong file says why at once, before a large upload.
+const PICTURE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const PICTURE_MAX_BYTES = 5 * 1024 * 1024;
 
 /**
  * A field is called one thing in 369ai and another in the payload the app
@@ -130,6 +139,7 @@ export class PageEditor extends Component {
             trashOpen: false,
             landed: null,         // a band to scroll to and flash
             switching: null,      // the Quick/Express curtain
+            pictureLink: null,    // the side panel's link box: its text, or null when shut
         });
 
         this.save = useSaveQueue({
@@ -232,6 +242,7 @@ export class PageEditor extends Component {
 
     select(kind, id) {
         this.state.sel = uid(kind, id);
+        this.state.pictureLink = null;
     }
 
     isSelected(kind, id) {
@@ -360,6 +371,70 @@ export class PageEditor extends Component {
         const row = (this.d.preview?.[KINDS[kind].group] || []).find((r) => r.rid === rid);
         if (row) {
             row.active = next;
+        }
+    }
+
+    /** What the selected band wears now. A tile may be wearing its category's
+     *  logo, which is why it reads `image_path` and a banner its own picture. */
+    get panelPicture() {
+        const { kind, record } = this.selected;
+        return kind === "banner" ? record.image_url : record.image_path;
+    }
+
+    async onPicture(kind, rid, ev) {
+        const file = ev.target.files[0];
+        // Cleared so picking the same file again still fires a change.
+        ev.target.value = "";
+        if (!file) {
+            return;
+        }
+        if (!PICTURE_TYPES.includes(file.type)) {
+            this.notification.add(_t("Please use a JPG, PNG or WebP picture."), { type: "danger" });
+            return;
+        }
+        if (file.size > PICTURE_MAX_BYTES) {
+            this.notification.add(_t("That picture is too big. Please use one under 5 MB."), {
+                type: "danger",
+            });
+            return;
+        }
+        const url = await getDataURLFromFile(file);
+        await this.setPicture(kind, rid, url.split(",")[1]);
+    }
+
+    setPicture(kind, rid, value) {
+        return this.save.run(() =>
+            this.orm.call(KINDS[kind].model, "mart369_set_picture", [[rid], value])
+        );
+    }
+
+    /** An Image Server link, checked there and saved as the small marker the
+     *  connector turns into the linked picture - nothing is uploaded again. */
+    async onPictureLink(kind, rid) {
+        const url = (this.state.pictureLink || "").trim();
+        if (!url) {
+            return;
+        }
+        const res = await rpc("/ai369_image_server/check_link", { url });
+        if (!res.ok) {
+            this.notification.add(res.error, { type: "warning" });
+            return;
+        }
+        this.state.pictureLink = null;
+        await this.setPicture(kind, rid, btoa(`<!--imgsrv-linked:${res.url}-->`));
+    }
+
+    /** A switch, so it writes at once - see save_queue's `now`. */
+    toggleTextOnImage(rid) {
+        const record = this.recordFor("banner", rid);
+        if (!record) {
+            return;
+        }
+        const next = !record.text_on_image;
+        this.save.edit(M.banner, record, "text_on_image", next, { now: true });
+        const row = (this.d.preview?.banners || []).find((r) => r.rid === rid);
+        if (row) {
+            row.textOnImage = next;
         }
     }
 

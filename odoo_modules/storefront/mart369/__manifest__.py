@@ -1,6 +1,6 @@
 {
     'name': '369 Mart',
-    'version': '19.0.2.0.6',
+    'version': '19.0.2.0.7',
     'category': 'Website',
     'summary': 'The foundation every 369 Mart module is built on.',
     'description': """

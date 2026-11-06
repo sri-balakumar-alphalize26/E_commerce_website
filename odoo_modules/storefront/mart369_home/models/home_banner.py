@@ -191,6 +191,35 @@ class Mart369HomeBanner(models.Model):
             raise UserError(self.env._('Please use a JPG, PNG or WebP picture.'))
         return value
 
+    @api.model
+    def _mart369_image_link_on(self):
+        """ai369_image_server is optional: links work only when it is installed
+        and switched on - the same test as the product editor's Link tile."""
+        return ('imgsrv_image_url' in self.env['product.template']._fields
+                and self.env['ir.config_parameter'].sudo().get_param(
+                    'ai369_image_server.enabled') == 'True')
+
+    @api.model
+    def _mart369_panel_picture(self, value):
+        """What the side panel sends, as it is stored: an Image Server link's
+        marker (base64 of "<!--imgsrv-linked:URL-->", which the connector turns
+        into the linked picture), else an upload, checked as usual."""
+        if isinstance(value, str) and self._mart369_image_link_on():
+            try:
+                decoded = base64.b64decode(value, validate=True)
+            except (binascii.Error, ValueError):
+                decoded = b''
+            if decoded.startswith(b'<!--imgsrv-linked:') and decoded.endswith(b'-->'):
+                return value
+        return self._mart369_check_picture(value)
+
+    def mart369_set_picture(self, value):
+        """Upload, Link and Remove in the page editor's side panel. False takes
+        the picture off."""
+        self.ensure_one()
+        self.image_1920 = self._mart369_panel_picture(value)
+        return True
+
     def _can_return_content(self, field_name=None, access_token=None):
         """Let the app load banner pictures without logging in. Only the
         picture - the record itself stays private."""

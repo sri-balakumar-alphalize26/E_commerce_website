@@ -160,6 +160,19 @@ class Mart369HomeTile(models.Model):
         """An upload from the console, checked the way a banner's is."""
         return self.env['mart369.home.banner']._mart369_check_picture(value)
 
+    def mart369_set_picture(self, value):
+        """Upload, Link and Remove in the page editor's side panel. Its own
+        picture now; taken off, a tile linked to a category wears that
+        category's logo again - the same rule as the console
+        (controllers/admin_api.py)."""
+        self.ensure_one()
+        picture = self.env['mart369.home.banner']._mart369_panel_picture(value)
+        self.write({
+            'image_1920': picture,
+            'image_source': 'upload' if picture or not self.public_categ_id else 'category',
+        })
+        return True
+
     def _mart369_picture_url(self):
         """This tile's own uploaded picture (not a category's logo), with its
         save time on the end so a replaced one is not served from cache."""
