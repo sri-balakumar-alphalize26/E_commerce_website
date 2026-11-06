@@ -162,13 +162,13 @@ class Mart369HomeAdminApi(http.Controller):
 
     @http.route('/369mart/admin/home/pages/starter', **_POST)
     def build_starter(self, **kwargs):
-        """"Rebuild from my catalogue": a new page arranged from the shop's
-        biggest categories, switched on. The one that was live stays saved,
-        so switching back is one click (models/home_starter.py)."""
+        """"Create from my products": a new page arranged from the shop's
+        biggest categories, not switched on, so it can be looked over first
+        (models/home_starter.py)."""
         if not self._may_edit():
             return self._fail('You do not have access to this.', status=403)
         try:
-            page = self._pages()._mart369_build_starter()
+            page = self._pages()._mart369_create_from_products()
         except (AccessError, UserError) as exc:
             return self._fail(str(exc))
         return self._json({

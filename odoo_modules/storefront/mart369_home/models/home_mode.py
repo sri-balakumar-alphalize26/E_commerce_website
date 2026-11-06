@@ -270,7 +270,7 @@ class Mart369HomeMode(models.Model):
                 'id': 'demo-%d-%d' % (row.id, i),
                 'name': self.env._('Product %s', i),
                 'unit': '',
-                'price': 999,
+                'price': 10,
                 'art': '',
                 'images': [],
             } for i in range(1, 7)],
@@ -313,6 +313,10 @@ class Mart369HomeMode(models.Model):
         sub-categories directly under it (the storefront opens two levels),
         path as the starter writes it (`_mart369_category_path`).
         `links`: the same as /category/<path>, plus the shop's other pages."""
+        # Here, not at the top: importing that file there would load its model
+        # ahead of the one it extends.
+        from .home_starter import _nice
+
         Category = self.env['product.public.category'].sudo()
         top_domain = [('parent_id', '=', False)]
         if 'mart_in_app' in Category._fields:
@@ -320,9 +324,11 @@ class Mart369HomeMode(models.Model):
         path_of = self.env['mart369.home.version']._mart369_category_path
         routes = []
         for top in Category.search(top_domain, order='sequence, name'):
-            routes.append([path_of(top), top.name])
+            # Readable names: "laptop-fan" reads as "Laptop Fan". The editors show
+            # the address beside it for reference.
+            routes.append([path_of(top), _nice(top.name)])
             for sub in top.child_id.sorted(lambda c: (c.sequence, c.name or '')):
-                routes.append([path_of(sub), '%s › %s' % (top.name, sub.name)])
+                routes.append([path_of(sub), '%s › %s' % (_nice(top.name), _nice(sub.name))])
         routes = [r for r in routes if r[0]]
         links = [['/categories', _('All categories')], ['/offers', _('Offers')],
                  ['/buy-again', _('Buy again')]]

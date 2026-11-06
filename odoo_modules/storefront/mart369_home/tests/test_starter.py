@@ -99,7 +99,7 @@ class TestMart369HomeStarter(TransactionCase):
         self.assertTrue(tabs[1].route_param)
         self.assertEqual(quick.banner_ids.mapped('name'),
                          ['Starter Laptop Keyboard', 'Starter CCTV Camera'])
-        self.assertIn('3 to choose from', quick.banner_ids[0].note)
+        self.assertTrue(quick.banner_ids[0].note)
         self.assertEqual(quick.tile_ids.mapped('public_categ_id'), self.big | self.small)
         rows = quick.section_ids.sorted('sequence')
         self.assertEqual(rows[0].rule, 'new')

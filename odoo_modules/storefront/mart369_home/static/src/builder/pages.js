@@ -219,6 +219,26 @@ export class HomePages extends Component {
         }));
     }
 
+    /** A new page from what the shop sells, opened to look over. Not switched
+        on, so nothing shoppers see changes until somebody presses Switch on. */
+    async createFromProducts() {
+        if (this.state.busy) {
+            return;
+        }
+        this.state.busy = true;
+        try {
+            const id = await this.orm.call(M.version, "mart369_create_from_products", []);
+            this.edit({ id });
+        } catch (err) {
+            this.notification.add(
+                err?.data?.message || err?.message || _t("That did not work."),
+                { type: "danger" }
+            );
+        } finally {
+            this.state.busy = false;
+        }
+    }
+
     newPage() {
         const from = this.state.pages.find((p) => p.isCurrent) || this.state.pages[0];
         if (!from) {

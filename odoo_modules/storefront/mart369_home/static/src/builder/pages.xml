@@ -22,6 +22,11 @@
                                 <Icon n="'trash'" size="14"/> Trash<em
                                     t-if="state.trash.length" t-esc="state.trash.length"/>
                             </button>
+                            <button class="mart-btn" t-att-disabled="state.busy"
+                                    title="Makes a new page from your published products. It stays off until you switch it on."
+                                    t-on-click="() => this.createFromProducts()">
+                                <Icon n="'bolt'" size="14"/> Create from my products
+                            </button>
                             <button class="mart-btn mart-btn-primary" t-on-click="() => this.newPage()"
                                     t-att-disabled="state.busy">
                                 <Icon n="'plus'" size="14"/> New page

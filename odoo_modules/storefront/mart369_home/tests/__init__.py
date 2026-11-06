@@ -6,3 +6,4 @@ from . import test_page_trash
 from . import test_starter
 from . import test_row_picker
 from . import test_demo_page
+from . import test_create_from_products

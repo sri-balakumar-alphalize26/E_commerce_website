@@ -261,12 +261,12 @@ export default function HomeSection({ flash }) {
     run(() => api("/admin/home/pages", { method: "POST", body: { from: page.id } }),
       "Copied. Edit it, then switch it on when you are ready.");
 
-  /* A new page laid out from the shop's biggest categories, switched on. The
-     one that was live stays here, so switching back is one tap. */
-  const onRebuild = () => {
-    if (!window.confirm("Make a new home page arranged from your biggest categories, and switch it on? Your current page stays saved, so you can switch back.")) return;
-    run(() => api("/admin/home/pages/starter", { method: "POST" }),
-      "New page arranged from your catalogue and switched on. Rearrange anything you like.");
+  /* A new page laid out from the shop's biggest categories, opened to look over.
+     It stays off until somebody switches it on, so there is nothing to confirm. */
+  const onCreateFromProducts = async () => {
+    const r = await run(() => api("/admin/home/pages/starter", { method: "POST" }),
+      "New page made from your products. It stays off until you switch it on.");
+    if (r?.page) router.push(consolePath(`/home/${r.page.id}`));
   };
 
   const onDelete = (page) =>
@@ -297,9 +297,9 @@ export default function HomeSection({ flash }) {
               onClick={() => setTrashOpen(true)}>
               <Icon n="trash" size={15} />Trash{trash.length ? <em>{trash.length}</em> : null}
             </button>
-            <button className="ad-btn" disabled={act.busy} onClick={onRebuild}
-              title="A new page laid out from your biggest categories">
-              <Icon n="grid" size={15} />Arrange from my catalogue
+            <button className="ad-btn" disabled={act.busy} onClick={onCreateFromProducts}
+              title="Makes a new page from your published products. It stays off until you switch it on.">
+              <Icon n="grid" size={15} />Create from my products
             </button>
             <button className="ad-btn ad-primary" disabled={act.busy || !pages.length}
               onClick={() => setNaming(true)}>

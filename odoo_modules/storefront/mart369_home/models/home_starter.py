@@ -18,6 +18,7 @@ never overwritten.
 import re
 
 from odoo import api, fields, models
+from odoo.exceptions import UserError
 
 from odoo.addons.mart369.models.serializers import slugify
 
@@ -37,6 +38,11 @@ LOOKS = [
     (r'tools?\b|accessor', 'Mouse', 'keyboard'),
     (r'printers? &|consumables', 'Box', 'pen'),
     (r'cctv &|security|surveillance', 'Webcam', 'wifi'),
+    # Parts, ahead of the wider words below: a display cable is a cable.
+    (r'cable', 'Cable', 'cable'),
+    (r'jack|connector', 'Adapter', 'connector'),
+    (r'\bfans?\b|cooler', 'Cooler', 'fan'),
+    (r'speaker|audio|sound|amplifier', 'Speaker', 'speaker'),
     (r'keyboard', 'Keyboard', 'keyboard'),
     (r'mouse', 'Mouse', 'keyboard'),
     (r'laptop|notebook', 'Laptop', 'laptop'),
@@ -58,8 +64,19 @@ LOOKS = [
 
 
 def _nice(name):
-    """'LAPTOP KEYBOARD' -> 'Laptop Keyboard', keeping CCTV, LED, DC..."""
+    """'LAPTOP KEYBOARD' -> 'Laptop Keyboard', keeping CCTV, LED, DC...
+
+    A name typed like an address reads the same way: 'laptop-dc-jack' ->
+    'Laptop DC Jack'. Only the words on the page; the category keeps its name."""
     name = ' '.join((name or '').split())
+    if re.fullmatch(r'[\w -]+', name) and re.search(r'[^\W_][-_][^\W_]', name) \
+            and 'wi-fi' not in name.lower():
+        words = re.sub(r'[-_]', ' ', name).split()
+        return ' '.join(
+            word.upper() if word.upper() in KEEP_UPPER
+            else word.capitalize() if word.islower() or word.isupper()
+            else word
+            for word in words)
     if not name.isupper():
         return name
     words = []
@@ -72,9 +89,13 @@ def _nice(name):
 
 def _look(name):
     low = (name or '').lower()
-    for pattern, art, icon in LOOKS:
-        if re.search(pattern, low):
-            return art, icon
+    # In a parts shop "laptop" says little: "laptop-fan" is a fan. What is left
+    # without it decides first, and only then the whole name.
+    rest = re.sub(r'\b(laptop|notebook)\b', ' ', low)
+    for text in (rest, low):
+        for pattern, art, icon in LOOKS:
+            if re.search(pattern, text):
+                return art, icon
     return 'Box', 'grid'
 
 
@@ -161,7 +182,7 @@ class Mart369HomeVersion(models.Model):
         # over from the page that was live, so rebuilding moves nothing else.
         old = {m.key: m for m in self.sudo()._mart369_live().mode_ids}
         page = self.sudo().create({
-            'name': name or self._mart369_free_name(self.env._('From your catalogue')),
+            'name': name or self._mart369_free_name(self.env._('From your products')),
             'note': self.env._(
                 'Arranged automatically from your biggest categories on %s. '
                 'Rearrange it freely - nothing changes it on its own.', today),
@@ -177,6 +198,10 @@ class Mart369HomeVersion(models.Model):
                 'name': was.name if was else label,
                 'sequence': seq * 10,
                 'free_delivery_at': was.free_delivery_at if was else free_at,
+                # What shoppers are told this tab is belongs to the shop too.
+                'label': was.label if was else False,
+                'tagline': was.tagline if was else False,
+                'icon': was.icon if was else False,
             })
             self._mart369_fill_mode(mode, top, groups)
         if make_current:
@@ -197,7 +222,9 @@ class Mart369HomeVersion(models.Model):
         # tiles always from the detailed categories (never a group twice).
         bands = groups or top
         group_ids = {g.id for g, __ in groups or []}
-        tiles = [(c, n) for c, n in top if c.id not in group_ids]
+        # A shop with no categories under its groups would get no tiles at all,
+        # so the groups serve as tiles too.
+        tiles = [(c, n) for c, n in top if c.id not in group_ids] or list(bands)
         path = {categ.id: self._mart369_category_path(categ) for categ, __ in bands + tiles}
 
         # Tabs: home, the five biggest groups or categories, offers.
@@ -221,7 +248,8 @@ class Mart369HomeVersion(models.Model):
                 'kicker': [self.env._('Biggest range'), self.env._('Popular'),
                            self.env._('Top category'), self.env._('Shop by category')][i],
                 'name': _nice(categ.name),
-                'note': self.env._('%s to choose from', count),
+                # Not the count: this is saved, and a number would go out of date.
+                'note': self.env._('See the full range'),
                 'tone': TONES[i % len(TONES)],
                 'art_lines': _look(categ.name)[0],
                 'href': '/category/%s' % path[categ.id],
@@ -250,7 +278,8 @@ class Mart369HomeVersion(models.Model):
             'name': self.env._('New this week'), 'subtitle': self.env._('Just landed in store'),
             'source': 'rule', 'rule': 'new', 'limit': 12, 'sequence': 10,
         })
-        if express:
+        # A best sellers row in a shop with no sales would only ever be empty.
+        if express and self._mart369_has_sales():
             Section.create({
                 'mode_id': mode.id, 'kind': 'rail', 'key': 'best',
                 'name': self.env._('Most loved'), 'subtitle': self.env._('What customers buy most'),
@@ -344,10 +373,33 @@ class Mart369HomeVersion(models.Model):
 
     # ------------------------------------------------------------ the button
 
+    @api.model
+    def _mart369_has_sales(self):
+        """Has the shop sold anything yet?"""
+        if 'sale.order.line' not in self.env:
+            return False
+        return bool(self.env['sale.order.line'].sudo().search_count(
+            [('state', '=', 'sale')], limit=1))
+
+    @api.model
+    def _mart369_create_from_products(self):
+        """What the Create from my products buttons do: a new page from what the
+        shop sells, not switched on, to look over first. Nothing shoppers see
+        changes until somebody presses Switch on."""
+        if not self._mart369_top_categories(limit=1):
+            raise UserError(self.env._(
+                'There is nothing to build a page from yet. Publish some products '
+                'and put them in a shop category first.'))
+        return self._mart369_build_starter(make_current=False)
+
+    @api.model
+    def mart369_create_from_products(self):
+        """The same, for Odoo's pages screen. Returns the new page's id."""
+        return self._mart369_create_from_products().id
+
     def action_mart369_build_starter(self):
-        """"Rebuild from my catalogue": a new page, switched on. The one that
-        was live stays saved, so switching back is one click."""
-        page = self._mart369_build_starter()
+        """The button on the Saved home pages form: a new page, not switched on."""
+        page = self._mart369_create_from_products()
         return {
             'type': 'ir.actions.act_window',
             'res_model': 'mart369.home.version',
