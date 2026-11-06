@@ -28,10 +28,13 @@ import { STAR_WORDS, fmtDate, useRemote } from "./accountStore";
 import Lightbox, { ReviewMedia } from "./Lightbox";
 import { addressText } from "@/lib/address";
 import { api } from "@/lib/api";
+import { galleryOf, preload, whenIdle } from "@/lib/images";
 import { toSafeHtml } from "@/lib/safeHtml";
 import { startPreviewBridge } from "./previewBridge";
 
 const ZOOM = 2.6;
+/* A limit on the download for a product with a very long list of variants. */
+const PRELOAD_VARIANTS = 12;
 
 /* ---------------- gallery with thumbnails, scrolling, hover zoom ---------------- */
 /* `p.media` is the variant's own gallery from the shop - photos and videos, its
@@ -39,13 +42,15 @@ const ZOOM = 2.6;
    it is drawn from its photo list as before. A video is its poster until it is
    the slide on show, then the player. */
 const posterOf = (it) => (it ? (it.type === "video" ? it.poster || null : it.src) : null);
+/* The strip's buttons are 58-80px: the small version when the shop sent one. */
+const smallOf = (it) => it?.thumb || posterOf(it);
 
 function DetailGallery({ p, fromRect }) {
   const items = useMemo(() => {
     if (p.media?.length) return p.media;
     const photos = p.images?.length ? p.images : p.image ? [p.image] : [null];
-    return photos.map((src) => ({ type: "photo", src }));
-  }, [p.media, p.images, p.image]);
+    return photos.map((src, k) => ({ type: "photo", src, thumb: p.thumbs?.[k] || (k === 0 ? p.thumb : undefined) }));
+  }, [p.media, p.images, p.image, p.thumbs, p.thumb]);
   const imgs = items; /* kept for the counts and dots below */
   const [idx, setIdx] = useState(0);
   /* Many pictures: five thumbnails, then a sixth reading "+4" that opens them
@@ -55,8 +60,8 @@ function DetailGallery({ p, fromRect }) {
   const strip = more ? items.slice(0, SHOWN - 1) : items;
   const [viewer, setViewer] = useState(null); /* index to open at, or null */
   const viewItems = useMemo(() => items.filter((it) => it && (it.src || it.poster)).map((it) => (it.type === "video"
-    ? { kind: "embed", src: it.src, thumb: it.poster || null, label: `${p.name} video` }
-    : { kind: "photo", src: it.src, thumb: it.src, label: p.name })), [items, p.name]);
+    ? { kind: "embed", src: it.src, thumb: smallOf(it), label: `${p.name} video` }
+    : { kind: "photo", src: it.src, thumb: smallOf(it), label: p.name })), [items, p.name]);
   const [zoom, setZoom] = useState(null); // {x, y} in 0..1
   const track = useRef(null);
   const thumbs = useRef(null);
@@ -79,10 +84,32 @@ function DetailGallery({ p, fromRect }) {
 
   /* Another variant picked (a different colour): start again at its first photo. */
   const firstSrc = items[0]?.src;
-  useEffect(() => {
+  /* Before the browser paints and with the slide fade off, so the new picture
+     simply replaces the old one. */
+  useLayoutEffect(() => {
+    const el = track.current;
     setIdx(0);
-    track.current?.scrollTo?.({ left: 0 });
+    if (!el) return undefined;
+    el.classList.add("pd-instant");
+    el.scrollTo?.({ left: 0 });
+    let second = 0;
+    const first = requestAnimationFrame(() => { second = requestAnimationFrame(() => el.classList.remove("pd-instant")); });
+    return () => { cancelAnimationFrame(first); cancelAnimationFrame(second); };
   }, [firstSrc]);
+
+  /* A picture that was not fetched ahead of time: the browser keeps the old one
+     up until the new one arrives, and this line says something is coming. It
+     stays hidden for quick answers, where it would only be a flicker. */
+  const [waiting, setWaiting] = useState(false);
+  const firstPicture = posterOf(items[0]);
+  useEffect(() => {
+    if (!firstPicture) return undefined;
+    const img = new Image();
+    const slow = setTimeout(() => setWaiting(true), 150);
+    img.onload = img.onerror = () => { clearTimeout(slow); setWaiting(false); };
+    img.src = firstPicture;
+    return () => { clearTimeout(slow); img.onload = img.onerror = null; setWaiting(false); };
+  }, [firstPicture]);
 
   const goTo = (n) => {
     const el = track.current;
@@ -135,14 +162,14 @@ function DetailGallery({ p, fromRect }) {
           {strip.map((it, k) => (
             <button key={k} role="tab" aria-selected={k === idx} className={"pd-thumb" + (k === idx ? " pd-on" : "") + (it?.type === "video" ? " pd-thumb-video" : "")}
               style={{ "--k": k }} onClick={() => goTo(k)} onMouseEnter={() => canZoom && goTo(k)} aria-label={it?.type === "video" ? `Video ${k + 1}` : `Image ${k + 1}`}>
-              {posterOf(it) ? <img src={posterOf(it)} alt="" /> : <ProductArt art={p.art} color={p.color} label={p.label} />}
+              {smallOf(it) ? <img src={smallOf(it)} alt="" decoding="async" /> : <ProductArt art={p.art} color={p.color} label={p.label} />}
               {it?.type === "video" && <span className="pd-play" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg></span>}
             </button>
           ))}
           {more > 0 && (
             <button className={"pd-thumb pd-thumb-more" + (idx >= SHOWN - 1 ? " pd-on" : "")} style={{ "--k": SHOWN - 1 }}
               onClick={() => setViewer(SHOWN - 1)} aria-label={`See all ${items.length} pictures`}>
-              {posterOf(items[SHOWN - 1]) ? <img src={posterOf(items[SHOWN - 1])} alt="" /> : null}
+              {smallOf(items[SHOWN - 1]) ? <img src={smallOf(items[SHOWN - 1])} alt="" decoding="async" /> : null}
               <span>+{more}</span>
             </button>
           )}
@@ -151,6 +178,7 @@ function DetailGallery({ p, fromRect }) {
       </div>
 
       <div className="pd-stage" ref={stage}>
+        {waiting && <span className="pd-wait" aria-hidden="true" />}
         <div className="pd-track" ref={track} onScroll={onScroll} tabIndex={0} aria-roledescription="carousel"
           onKeyDown={(e) => { if (e.key === "ArrowRight") goTo(idx + 1); if (e.key === "ArrowLeft") goTo(idx - 1); }}>
           {items.map((it, k) => (
@@ -162,7 +190,9 @@ function DetailGallery({ p, fromRect }) {
                   allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
               ) : posterOf(it) ? (
                 <>
-                  <img src={posterOf(it)} alt={k === 0 ? p.name : ""} draggable="false" />
+                  {/* The first picture goes first; the rest wait until they are near. */}
+                  <img src={posterOf(it)} alt={k === 0 ? p.name : ""} draggable="false" decoding="async"
+                    loading={k === 0 ? "eager" : "lazy"} fetchPriority={k === 0 ? "high" : "auto"} />
                   {it.type === "video" && <span className="pd-play pd-play-big" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg></span>}
                 </>
               ) : <ProductArt art={p.art} color={p.color} label={p.label} />}
@@ -298,6 +328,7 @@ function PackSizes({ p, variants, cart, onVariant }) {
           return (
             <button key={v.id} role="radio" aria-checked={v.id === p.id} style={{ "--k": k }}
               className={"pd-size" + (v.id === p.id ? " pd-on" : "") + (v.stock === 0 ? " pd-size-oos" : "")}
+              onPointerEnter={() => preload(galleryOf(v))}
               onClick={() => v.id !== p.id && onVariant?.(v)}>
               <b>{v.size}</b>
               <span className="pd-size-price">{money(v.price)}{v.mrp ? <s>{money(v.mrp)}</s> : null}</span>
@@ -366,15 +397,21 @@ function isLight(hex) {
 
 function VariantPicker({ p, variants, attrs, cart, onVariant }) {
   const combo = p.combo || {};
-  const pick = (attrId, valueId) => {
-    if (combo[attrId] === valueId) return;
+  /* Which variant a choice leads to: the exact combination, else the nearest. */
+  const target = (attrId, valueId) => {
     const want = { ...combo, [attrId]: valueId };
     const same = (v) => Object.entries(want).every(([a, val]) => v.combo?.[a] === val);
     const score = (v) => Object.entries(want).filter(([a, val]) => v.combo?.[a] === val).length;
-    const next = variants.find(same)
+    return variants.find(same)
       || variants.filter((v) => v.combo?.[attrId] === valueId).sort((a, b) => score(b) - score(a))[0];
+  };
+  const pick = (attrId, valueId) => {
+    if (combo[attrId] === valueId) return;
+    const next = target(attrId, valueId);
     if (next && next.id !== p.id) onVariant?.(next);
   };
+  /* A finger or pointer on an option: fetch all that variant's photos now. */
+  const ahead = (attrId, valueId) => { const next = target(attrId, valueId); if (next) preload(galleryOf(next)); };
   const exists = (attrId, valueId) => variants.some((v) => v.combo?.[attrId] === valueId
     && Object.entries(combo).every(([a, val]) => a === attrId || v.combo?.[a] === val));
   const stockOf = (attrId, valueId) => variants.find((v) => v.combo?.[attrId] === valueId
@@ -404,13 +441,14 @@ function VariantPicker({ p, variants, attrs, cart, onVariant }) {
                 if (cards) {
                   /* Amazon's colour cards: that colour's own picture and price. */
                   const shown = match || variants.find((x) => x.combo?.[a.id] === v.id);
-                  const pic = shown?.images?.[0];
+                  const pic = shown?.thumbs?.[0] || shown?.images?.[0];
                   return (
                     <button key={v.id} role="radio" aria-checked={on} title={tip}
                       className={"pd-var-card" + (on ? " pd-on" : "") + (!there ? " pd-var-none" : "") + (oos ? " pd-size-oos" : "")}
+                      onPointerEnter={() => ahead(a.id, v.id)}
                       onClick={() => pick(a.id, v.id)}>
                       <span className="pd-var-card-img">
-                        {pic ? <img src={pic} alt="" loading="lazy" />
+                        {pic ? <img src={pic} alt="" loading="lazy" decoding="async" />
                           : <i className="pd-swatch-dot" style={{ background: v.color || "#e8edf1" }} aria-hidden="true" />}
                       </span>
                       <span className="pd-var-card-name">{v.name}</span>
@@ -423,6 +461,7 @@ function VariantPicker({ p, variants, attrs, cart, onVariant }) {
                   <button key={v.id} role="radio" aria-checked={on} aria-label={swatch ? tip : undefined}
                     className={"pd-var-opt" + (on ? " pd-on" : "") + (!there ? " pd-var-none" : "") + (oos ? " pd-size-oos" : "") + (swatch ? " pd-var-swatch" + (isLight(v.color) ? " pd-swatch-light" : "") : "")}
                     title={tip}
+                    onPointerEnter={() => ahead(a.id, v.id)}
                     onClick={() => pick(a.id, v.id)}>
                     {swatch ? <i className="pd-swatch-dot" style={{ background: v.color }} aria-hidden="true" /> : <span>{v.name}</span>}
                     {on && cart[p.id] ? <i className="pd-size-in" aria-label={`${cart[p.id]} in cart`}>{cart[p.id]}</i> : null}
@@ -606,6 +645,12 @@ export default function ProductDetail({
   optionsFailed = false, onRetryOptions, reviewInfo, info, about = [], aboutHtml = "", details = [], showcase = [],
   onBuyNow, trust = [], compare = [],
 }) {
+  /* Each other variant's first picture, fetched once the page has settled, so
+     picking that variant shows its picture straight away. */
+  useEffect(() => whenIdle(() => preload(
+    variants.filter((v) => v.id !== p.id).slice(0, PRELOAD_VARIANTS).map((v) => galleryOf(v)[0]),
+  )), [variants]); // eslint-disable-line
+
   /* Every product shows what its setup holds, as the WhatsApp confirmation
      page does: its photos, the Variant specs table and the Sales Description
      (PRODUCT_SETUP_FLOW.md) - plus the website's own real reviews. Nothing is

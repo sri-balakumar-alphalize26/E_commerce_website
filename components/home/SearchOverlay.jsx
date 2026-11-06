@@ -16,6 +16,7 @@ import { absorb, cards } from "@/lib/products";
 /* Recent searches live on the shopper's account when there is one. This key
    is the signed-out fallback: a search box is no place for a 401. */
 const STORE_KEY = "369mart.searches";
+const MIN_CHARS = 2;
 /* A signed-out shopper has no account history, and asking again every time
    the search box opens just fills the log with 401s. Ask once. */
 let accountHistory = true;
@@ -158,10 +159,17 @@ export default function SearchOverlay({ open, onClose, products, picks, cart, se
   /* Eight rows, matched by the shop rather than by whatever the browser has
      already seen - which could only ever suggest what was already on screen. */
   const [debounced, setDebounced] = useState("");
-  useEffect(() => { const t = setTimeout(() => setDebounced(term), 220); return () => clearTimeout(t); }, [term]);
-  const { data: sugg } = useResource(debounced ? `/search/suggest?q=${encodeURIComponent(debounced)}` : null, { enabled: !!debounced, deps: [debounced] });
-  const { data: trend } = useResource("/search/trending");
+  /* One letter matches half the shop and tells it nothing. Lower case, so
+     "Milk" and "milk" share one answer rather than asking twice. */
+  const wanted = term.length >= MIN_CHARS ? term.toLowerCase() : "";
+  useEffect(() => { const t = setTimeout(() => setDebounced(wanted), 150); return () => clearTimeout(t); }, [wanted]);
+  const { data: sugg, loading: suggLoading, error: suggError } = useResource(debounced ? `/search/suggest?q=${encodeURIComponent(debounced)}` : null, { enabled: !!debounced, deps: [debounced], abortable: true });
+  /* Only once the box is opened: the overlay is mounted on every page. */
+  const { data: trend } = useResource("/search/trending", { enabled: phase !== "closed" });
   const TRENDING = useMemo(() => (trend?.trending || []).slice(0, 6), [trend]);
+  /* Still waiting for an answer about what is in the box right now. Until this
+     is false, "nothing matches" is not something we know. */
+  const searching = !!wanted && (wanted !== debounced || suggLoading || (!suggError && sugg?.q !== debounced));
   const matches = useMemo(() => cards(sugg?.items), [sugg]);
   useEffect(() => { if (matches.length) absorb(matches); }, [matches]);
   const results = matches.slice(0, 8);
@@ -245,9 +253,11 @@ export default function SearchOverlay({ open, onClose, products, picks, cart, se
           </div>
         ) : (
           <div className="sr-body" key="live">
-            <p className="sr-count" aria-live="polite">{results.length ? `${results.length} ${results.length === 1 ? "product" : "products"} for “${term}”` : ""}</p>
+            <p className="sr-count" aria-live="polite">{results.length ? `${results.length} ${results.length === 1 ? "product" : "products"} for “${term}”` : searching ? "Searching…" : ""}</p>
             {results.length ? (
-              <ul className="sr-results" key={term}>
+              /* No key on the list: a row still in the answer stays where it is
+                 rather than replaying its entrance on every letter. */
+              <ul className="sr-results">
                 {results.map((p, i) => (
                   <li key={p.id} className="sr-row" style={{ "--i": i }} data-open=""
                     onClick={(e) => {
@@ -271,11 +281,11 @@ export default function SearchOverlay({ open, onClose, products, picks, cart, se
                 <Icon n="search" size={15} />{matches.length ? `See all ${matches.length} results for “${term}”` : `Search 369 Mart for “${term}”`}<Icon n="right" size={15} />
               </button>
             )}
-            {results.length ? null : (
+            {results.length || searching || !wanted ? null : (
               <div className="sr-empty">
                 <Icon n="search" size={28} />
-                <b>Nothing matches “{term}”</b>
-                <span>Try “ssd”, “keyboard” or “router”.</span>
+                <b>{suggError ? "Couldn't search just now" : <>Nothing matches “{term}”</>}</b>
+                <span>{suggError ? "Check your connection and try again." : "Try “ssd”, “keyboard” or “router”."}</span>
               </div>
             )}
           </div>

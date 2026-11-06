@@ -30,6 +30,13 @@
 .pd-slide { position: relative; flex: 0 0 100%; height: 100%; scroll-snap-align: center; padding: 8%; display: grid; place-items: center; cursor: crosshair; }
 .pd-slide img, .pd-slide .hm-art { width: 100%; height: 100%; object-fit: contain; user-select: none; -webkit-user-drag: none; transition: transform 500ms var(--hm-ease), opacity 360ms; }
 .pd-slide:not(.pd-cur) img, .pd-slide:not(.pd-cur) .hm-art { opacity: 0.5; transform: scale(0.92); }
+/* Another variant picked: the new picture replaces the old one, with no fade. */
+.pd-instant .pd-slide img, .pd-instant .pd-slide .hm-art { transition: none; }
+/* A picture on its way: a thin moving line along the top of the stage. */
+.pd-wait { position: absolute; z-index: 3; top: 0; left: 16px; right: 16px; height: 2px; overflow: hidden; pointer-events: none; }
+.pd-wait::after { content: ""; display: block; width: 35%; height: 100%; border-radius: 2px; background: var(--hm-orange); animation: pd-wait 900ms ease-in-out infinite; }
+@keyframes pd-wait { from { transform: translateX(-100%); } to { transform: translateX(300%); } }
+@media (prefers-reduced-motion: reduce) { .pd-wait::after { animation: none; width: 100%; opacity: 0.5; } }
 /* A video in the gallery: its poster with a play badge, the player once it is on show. */
 .pd-thumb { position: relative; }
 .pd-play { position: absolute; left: 50%; top: 50%; width: 26px; height: 26px; margin: -13px 0 0 -13px; border-radius: 50%; display: grid; place-items: center; background: rgba(13, 25, 34, 0.72); color: #fff; pointer-events: none; }

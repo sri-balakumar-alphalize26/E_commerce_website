@@ -703,7 +703,6 @@ export function SearchResults({ q, cart, setQty, mode = "quick" }) {
 
   const [shown, setShown] = useState(PAGE);
   const [loading, setLoading] = useState(true);
-  const [more, setMore] = useState(false);
   const [drawer, setDrawer] = useState(false);
   useEffect(() => { setShown(PAGE); }, [F.pulse, F.sig]);
   useEffect(() => { setLoading(fetching); }, [fetching, F.sig]);
@@ -721,7 +720,8 @@ export function SearchResults({ q, cart, setQty, mode = "quick" }) {
     setScope(s);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
-  const showMore = () => { setMore(true); setTimeout(() => { setShown((n) => n + PAGE); setMore(false); }, 480); };
+  /* These rows are already in the browser, so there is nothing to wait for. */
+  const showMore = () => setShown((n) => n + PAGE);
 
   const vocab = useMemo(() => [...new Set(all.flatMap((p) => `${p.name} ${p.brand} ${p.subName || ""}`.toLowerCase().split(/[^a-z]+/)).filter((w) => w.length > 3))], [all]);
   const suggestion = useMemo(() => {
@@ -737,6 +737,15 @@ export function SearchResults({ q, cart, setQty, mode = "quick" }) {
     return Object.values(m).slice(0, 6);
   }, [found]);
   const total = found.quick.length + found.express.length;
+
+  /* No rows yet is not "no results" until the shop has answered for this term. */
+  if (term && !total && !searchError && (fetching || data?.q !== term)) {
+    return (
+      <div className="sp-page">
+        <div className="ls-grid sp-grid">{Array.from({ length: 10 }, (_, k) => <SkeletonCard key={k} i={k} />)}</div>
+      </div>
+    );
+  }
 
   if (!term || !total) {
     return (
@@ -793,7 +802,7 @@ export function SearchResults({ q, cart, setQty, mode = "quick" }) {
             <p>No {SCOPES[scope].label} results for <q>{q}</q>.</p>
             <button className="ls-primary" onClick={() => switchScope(other)}>See {found[other].length} results in {SCOPES[other].label}</button>
           </div>
-        ) : loading ? (
+        ) : loading && !F.results.length ? (
           <div className="ls-grid sp-grid">{Array.from({ length: 10 }, (_, k) => <SkeletonCard key={k} i={k} />)}</div>
         ) : !F.results.length ? (
           <div className="ls-empty">
@@ -806,11 +815,10 @@ export function SearchResults({ q, cart, setQty, mode = "quick" }) {
           <>
             <div className="ls-grid sp-grid" key={F.pulse}>
               {F.results.slice(0, shown).map((p, i) => <ProductCard key={p.id} p={p} i={i % PAGE} qty={cart[p.id] || 0} setQty={setQty} />)}
-              {more && Array.from({ length: 5 }, (_, k) => <SkeletonCard key={"m" + k} i={k} />)}
             </div>
             {shown < F.results.length ? (
-              <button className={"sp-more" + (more ? " sp-busy" : "")} onClick={showMore} disabled={more}>
-                {more ? <i className="sp-spin" aria-hidden="true" /> : null}Show more results from <ScopeWord scope={scope} /><small>{F.results.length - shown} more</small>
+              <button className="sp-more" onClick={showMore}>
+                Show more results from <ScopeWord scope={scope} /><small>{F.results.length - shown} more</small>
               </button>
             ) : F.results.length > PAGE ? (
               <p className="ls-end"><Icon n="check" size={14} />That's all {F.results.length} {SCOPES[scope].label} results</p>

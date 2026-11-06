@@ -286,9 +286,11 @@ export function QtyControl({ qty, onChange, name, id }) {
 
 /* first photo of an item, or its drawn placeholder */
 export const firstImage = (p) => (p.images && p.images[0]) || p.image || null;
+/* the same photo for anything drawn small: a fraction of the download */
+export const smallImage = (p) => p.thumbs?.[0] || p.thumb || firstImage(p);
 export function Thumb({ p }) {
-  const src = firstImage(p);
-  return src ? <img src={src} alt="" loading="lazy" /> : <ProductArt art={p.art} color={p.color} label={p.label} />;
+  const src = smallImage(p);
+  return src ? <img src={src} alt="" loading="lazy" decoding="async" /> : <ProductArt art={p.art} color={p.color} label={p.label} />;
 }
 
 /* multi-image view: swipe / arrows / dots. Single image → plain image, no controls. */
@@ -314,14 +316,16 @@ export function Gallery({ p }) {
     setIdx(next);
   };
   if (count === 0) return <div className="hm-gal-one"><ProductArt art={p.art} color={p.color} label={p.label} /></div>;
-  if (count === 1) return <div className="hm-gal-one"><img src={imgs[0]} alt={p.name} loading="lazy" /></div>;
+  /* A card is about 170px wide, so it draws the small version of each photo. */
+  const small = (k) => p.thumbs?.[k] || imgs[k];
+  if (count === 1) return <div className="hm-gal-one"><img src={small(0)} alt={p.name} loading="lazy" decoding="async" /></div>;
   return (
     <div className="hm-gal" data-count={count}
       onKeyDown={(e) => { if (e.key === "ArrowRight") go(idx + 1, e); if (e.key === "ArrowLeft") go(idx - 1, e); }}>
       <div className="hm-gal-track" ref={track} onScroll={onScroll} tabIndex={0} aria-roledescription="carousel" aria-label={`${p.name} images`}>
         {imgs.map((src, k) => (
           <div className={"hm-gal-slide" + (k === idx ? " hm-cur" : "")} key={src + k} aria-roledescription="slide" aria-label={`${k + 1} of ${count}`}>
-            <img src={src} alt={k === 0 ? p.name : ""} loading={k === 0 ? "eager" : "lazy"} draggable="false" />
+            <img src={small(k)} alt={k === 0 ? p.name : ""} loading="lazy" decoding="async" draggable="false" />
           </div>
         ))}
       </div>

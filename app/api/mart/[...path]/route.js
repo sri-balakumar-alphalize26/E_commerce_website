@@ -129,7 +129,9 @@ async function handle(req, ctx) {
 
   const method = req.method;
   const body = method === "POST" || method === "PATCH" || method === "PUT" ? await req.json().catch(() => undefined) : undefined;
-  const { status, data, session: rotated, location } = await odooFetch(target, { method, body, session });
+  /* Reads only: a save must finish even if the shopper has left the page. */
+  const signal = method === "GET" ? req.signal : undefined;
+  const { status, data, session: rotated, location } = await odooFetch(target, { method, body, session, signal });
   const out = outward(status, location);
   const keep = keepable(method, path);
 
