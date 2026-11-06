@@ -120,15 +120,21 @@ button.ot-mini { cursor: pointer; }
 .ot-map-addr { position: absolute; left: 12px; top: 12px; display: inline-flex; align-items: center; gap: 5px; padding: 6px 10px; border-radius: 999px; background: rgba(255, 255, 255, 0.92); font-size: 12.5px; font-weight: 700; box-shadow: 0 6px 14px -10px rgba(0, 0, 0, 0.5); }
 
 /* ---------- live map (LiveTrackCard) ----------
-   Leaflet draws the tiles; everything on top is ours, in the page's colours:
-   the shop is the orange "369" pin, home is navy, the rider is the orange
-   scooter with the same pulse the drawn map uses. */
+   MapLibre draws the map (Leaflet is the backup); the pins on top are ours, in
+   the page's colours: the shop is the orange "369" pin, home is navy. MapLibre
+   draws the rider's scooter itself. On the backup the rider is the orange
+   round pin with the same pulse the drawn map uses. */
 .ot-live { position: relative; }
 .ot-live-stage { position: relative; }
 .ot-live-map { height: 320px; background: #eef2ee; z-index: 0; }
 .ot-live .leaflet-container { font: inherit; }
 .ot-live .leaflet-control-attribution { font-size: 10.5px; background: rgba(255, 255, 255, 0.8); }
 .ot-live .leaflet-control-zoom a { color: var(--hm-ink); }
+.ot-live .maplibregl-map { font: inherit; }
+.ot-live .maplibregl-ctrl-attrib { font-size: 10.5px; background: rgba(255, 255, 255, 0.8); }
+/* The pins' margins below are for Leaflet's way of placing a pin; MapLibre
+   centres the pin itself. A drag on a pin still moves the map. */
+.maplibregl-marker.ot-lm { margin: 0 !important; pointer-events: none; }
 .ot-lm { display: grid; place-items: center; border-radius: 50%; }
 .ot-lm svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
 .ot-lm-shop { width: 32px !important; height: 32px !important; margin: -16px 0 0 -16px !important; background: var(--hm-orange); border: 3px solid #fff; color: #fff; box-shadow: 0 6px 12px -6px rgba(0, 0, 0, 0.45); }
@@ -148,7 +154,7 @@ button.ot-mini { cursor: pointer; }
 .ot-live-stale .ot-live-pill { background: #fdecea; color: var(--hm-red); }
 .ot-live-recentre { right: 12px; top: 12px; padding: 6px 11px; border: 0; color: var(--hm-blue); cursor: pointer; font-family: inherit; }
 .ot-live-recentre:hover { color: var(--hm-blue-d); }
-.ot-live-approx { left: 12px; bottom: 10px; padding: 4px 9px; font-size: 11px; font-weight: 600; color: var(--hm-muted); }
+.ot-live-approx { left: 12px; bottom: 30px; padding: 4px 9px; font-size: 11px; font-weight: 600; color: var(--hm-muted); }
 .ot-live-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 18px; border-top: 1px solid #eef2f5; }
 .ot-live-bar > span { display: flex; flex-direction: column; min-width: 0; }
 .ot-live-bar b { font-size: 15px; }

@@ -227,3 +227,47 @@ No change to the API. It uses the same `GET /369mart/orders/<ref>/track` fields 
 2. On **401** from "who am I" (or any signed-in call), drop the saved session and open sign-in with a short "you were signed out" message, then come back to where the customer was.
 3. On **503**, keep the session and show "can't reach the shop".
 4. Don't list service items in any list the app builds itself (`type == 'service'`). The server's lists already leave them out.
+
+---
+
+## 4. Live map: a free map, and the rider's scooter moving along the road (2026-11-06)
+
+### For the customer
+
+- The live map on the order page is now OpenFreeMap's Liberty map, which is free and allowed for commercial use. Its credits, including OpenStreetMap, stay written out on the map.
+- The rider is their top-view scooter, not a round dot. It glides from one position to the next, follows the road, and turns with it.
+- The road line now shows on servers with the newer delivery stack. It was being lost on the way to the page, so customers saw a dashed straight line instead.
+- If a phone can't draw the new map, the old map still shows, with the round dot.
+- WhatsApp customers get the same map and moving scooter on their "Follow it live" page (`/wa/track/<id>`). That page's credits now show too.
+
+### Files touched
+
+**Website**
+- `components/home/LiveMapGL.jsx` (new): the new map and the scooter
+- `components/home/riderPath.mjs` (new): how the scooter moves, tested by `tests/unit/riderPath.test.mjs` (`npm run test:unit`)
+- `components/home/LiveMapLeaflet.jsx` (new): the old map's code, moved here as the backup
+- `components/home/LiveTrackCard.jsx`: keeps the words and buttons, and chooses the map
+- `components/home/mapProvider.js`, `components/home/track.css`: the map's address, its pins and styles
+- `public/images/rider-top.png` (new): the rider app's scooter picture
+- `package.json`: added `maplibre-gl`
+
+**Odoo** (`odoo_modules/storefront/mart369_whatsapp_bridge`, version 19.0.1.6.1; needs a restart)
+- `models/sale_order_track.py`: `_decode_polyline()`, so `route` comes back filled
+- `tests/test_order_track.py`: 3 new tests
+
+**Odoo** (`odoo_modules/sales_automation/sales_automation_delivery`, version 19.0.29.0.2; needs `-u sales_automation_delivery`)
+- `views/delivery_track_templates.xml`: the WhatsApp page loads the new map and keeps Leaflet as its backup
+- `static/src/track_map.js` (new): the page's map, with the same movement rules as `riderPath.mjs`; `tests/unit/trackMapWa.test.mjs` checks the two agree
+- `static/src/img/rider-top.png` (new): the scooter picture
+
+### API
+
+`GET /369mart/orders/<ref>/track` has no new fields. On the newer delivery stack, `route` is now a list of `[lat, lng]` points where it used to be `null`, and `route_approx` says whether to trust it as the real road. A line of only 2 points with `route_approx: true` is a straight line, so label it as approximate.
+
+### What the app must copy
+
+1. Use the map style `https://tiles.openfreemap.org/styles/liberty` and keep its credits visible.
+2. Draw the rider's scooter turned to the direction of travel, only when `show_rider` is true.
+3. Glide between positions for the gap between `fix_on` values, kept to 3-20 seconds (6 seconds until a gap is known).
+4. When both positions are within 60 m of `route` and the rider is moving forward along it, follow the line. Otherwise move in a straight line.
+5. Ignore movements under 5 m, so GPS wander doesn't move or spin the scooter.
