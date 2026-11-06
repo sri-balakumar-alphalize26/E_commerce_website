@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+
+    <!-- The line the delivery fee is written on. -->
+    <!-- Its own category: a database whose default product category was
+         deleted has no fallback, and categ_id is required. -->
+    <record id="categ_qe_delivery" model="product.category">
+        <field name="name">Delivery Fees</field>
+    </record>
+    <record id="product_qe_delivery" model="product.product">
+        <field name="name">Delivery</field>
+        <field name="categ_id" ref="categ_qe_delivery"/>
+        <field name="type">service</field>
+        <field name="list_price">0</field>
+        <field name="sale_ok" eval="False"/>
+        <field name="purchase_ok" eval="False"/>
+        <field name="taxes_id" eval="[(6, 0, [])]"/>
+        <field name="supplier_taxes_id" eval="[(6, 0, [])]"/>
+    </record>
+
+    <!-- Starting values are 369 Mart's; change them on screen. -->
+    <record id="rule_quick" model="sa.qe.delivery.rule">
+        <field name="mode">quick</field>
+        <field name="label">Quick</field>
+        <field name="eta">Delivery in 13 mins</field>
+        <field name="min_order">99</field>
+        <field name="free_above">499</field>
+        <field name="fee">30</field>
+    </record>
+    <record id="rule_express" model="sa.qe.delivery.rule">
+        <field name="mode">express</field>
+        <field name="label">Express</field>
+        <field name="eta">Delivery in 2-3 days</field>
+        <field name="min_order">0</field>
+        <field name="free_above">999</field>
+        <field name="fee">49</field>
+    </record>
+
+    <record id="slot_quick_now" model="sa.qe.delivery.slot">
+        <field name="sequence">1</field>
+        <field name="mode">quick</field>
+        <field name="kind">now</field>
+        <field name="name">Now (10-20 min)</field>
+    </record>
+    <record id="slot_quick_eve" model="sa.qe.delivery.slot">
+        <field name="sequence">2</field>
+        <field name="mode">quick</field>
+        <field name="kind">window</field>
+        <field name="name">Today 6 - 8 PM</field>
+        <field name="from_hour">18</field>
+        <field name="to_hour">20</field>
+        <field name="day_offset">0</field>
+        <field name="order_before">17</field>
+    </record>
+    <record id="slot_quick_tm" model="sa.qe.delivery.slot">
+        <field name="sequence">3</field>
+        <field name="mode">quick</field>
+        <field name="kind">window</field>
+        <field name="name">Tomorrow 8 - 10 AM</field>
+        <field name="from_hour">8</field>
+        <field name="to_hour">10</field>
+        <field name="day_offset">1</field>
+    </record>
+    <record id="slot_quick_te" model="sa.qe.delivery.slot">
+        <field name="sequence">4</field>
+        <field name="mode">quick</field>
+        <field name="kind">window</field>
+        <field name="name">Tomorrow 6 - 8 PM</field>
+        <field name="from_hour">18</field>
+        <field name="to_hour">20</field>
+        <field name="day_offset">1</field>
+    </record>
+    <record id="slot_express_std" model="sa.qe.delivery.slot">
+        <field name="sequence">1</field>
+        <field name="mode">express</field>
+        <field name="kind">days</field>
+        <field name="name">Standard (3 days)</field>
+        <field name="day_offset">3</field>
+    </record>
+    <record id="slot_express_pri" model="sa.qe.delivery.slot">
+        <field name="sequence">2</field>
+        <field name="mode">express</field>
+        <field name="kind">days</field>
+        <field name="name">Priority (1 day)</field>
+        <field name="day_offset">1</field>
+        <field name="fee">49</field>
+    </record>
+
+</odoo>

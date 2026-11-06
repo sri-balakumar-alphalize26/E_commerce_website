@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--
+        The Vendors field, on the category form people already use.
+
+        Anchored on the <sheet> rather than on a named group: this form is
+        touched by stock, account and purchase depending on what is installed,
+        and an xpath onto one of their groups breaks the whole form on a
+        database that does not have that module.
+    -->
+    <record id="view_product_category_form_sa_vendors" model="ir.ui.view">
+        <field name="name">product.category.form.sa.vendors</field>
+        <field name="model">product.category</field>
+        <field name="inherit_id" ref="product.product_category_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet" position="inside">
+                <group string="WhatsApp Sourcing"
+                       groups="sales_automation.group_sa_user">
+                    <field name="sa_vendor_ids" nolabel="1" colspan="2"
+                           widget="many2many_tags"
+                           options="{'no_create': True}"
+                           placeholder="Which suppliers should be asked to quote for this category?"/>
+                    <div class="text-muted" colspan="2">
+                        Each vendor listed here is messaged privately when a
+                        customer asks for a product in this category, and the
+                        cheapest reply is quoted back. Sub-categories inherit
+                        this list unless they name vendors of their own.
+                    </div>
+                    <field name="sa_vendor_group_ids" nolabel="1" colspan="2"
+                           options="{'no_create': True}">
+                        <list>
+                            <field name="name"/>
+                            <field name="group_type"/>
+                            <field name="session_id" string="Session"/>
+                            <field name="enabled" string="Active"/>
+                        </list>
+                    </field>
+                    <div class="text-muted" colspan="2">
+                        A group is one post instead of a message each - for
+                        the groups where several suppliers sit together. Every
+                        group is listed here; attaching one marks it as a
+                        <b>Vendor Group</b>, which means replies in it are
+                        read as prices and no longer as customer enquiries.
+                        Vendors named above are still messaged privately as
+                        well.
+                    </div>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_product_category_list_sa_vendors" model="ir.ui.view">
+        <field name="name">product.category.list.sa.vendors</field>
+        <field name="model">product.category</field>
+        <field name="inherit_id" ref="product.product_category_list_view"/>
+        <field name="arch" type="xml">
+            <field name="display_name" position="after">
+                <field name="sa_vendor_ids" widget="many2many_tags"
+                       string="Vendors" optional="show"
+                       groups="sales_automation.group_sa_user"/>
+            </field>
+        </field>
+    </record>
+
+</odoo>

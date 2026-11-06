@@ -1,0 +1,11 @@
+.sa_store.sa_enq {
+    .sa_sect_wechat { display: flex; align-items: center; gap: 10px; }
+    .sa_wx_status { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 10px; }
+    .sa_wx_up { background: #dcfce7; color: #166534; }
+    .sa_wx_down { background: #fee2e2; color: #991b1b; }
+    .sa_card_wx { border-left: 4px solid #07c160; }
+    .sa_wx_to { margin: 6px 0 4px; font-size: 13px; }
+    .sa_wx_text { white-space: pre-wrap; font-size: 12px; background: rgba(0, 0, 0, 0.04);
+                  border-radius: 6px; padding: 8px; max-height: 160px; overflow: auto; margin: 0 0 8px; }
+    .sa_card_actions { display: flex; gap: 6px; flex-wrap: wrap; }
+}

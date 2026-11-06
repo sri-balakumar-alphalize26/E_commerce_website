@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Sales & Purchase tab, Purchase column: a proper label/field grid, so
+         the ticks and the remark get their own rows. The header row beside
+         the phone squeezed everything onto one line. -->
+    <record id="view_partner_form_wechat" model="ir.ui.view">
+        <field name="name">res.partner.form.wechat</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="priority">40</field>
+        <field name="arch" type="xml">
+            <xpath expr="//group[@name='purchase']" position="inside">
+                <div name="sa_channels" colspan="2" class="o_checkbox_optional_field">
+                    <div class="o_cell o_wrap_label text-break text-900">
+                        <label for="sa_via_whatsapp" string="Price checks via"/>
+                    </div>
+                    <div class="o_cell o_wrap_input text-break d-flex gap-4">
+                        <span class="d-inline-flex align-items-center gap-1"><field name="sa_via_whatsapp" nolabel="1"/>WhatsApp</span>
+                        <span class="d-inline-flex align-items-center gap-1"><field name="sa_via_wechat" nolabel="1"/>WeChat</span>
+                    </div>
+                </div>
+                <field name="sa_wechat_name" string="WeChat remark" invisible="not sa_via_wechat" required="sa_via_wechat"
+                       placeholder="exact contact remark in the shop WeChat"/>
+                <field name="sa_channel" invisible="1"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

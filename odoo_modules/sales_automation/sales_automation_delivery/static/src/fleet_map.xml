@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+<t t-name="sales_automation_delivery.FleetMap">
+  <div class="sa_fm">
+    <div class="sa_fm_bar">
+      <span class="sa_fm_title">Live Map<t t-if="state.shopName"> · <t t-esc="state.shopName"/></t></span>
+      <span class="sa_fm_counts">
+        <t t-esc="state.counts.riders"/> rider<t t-if="state.counts.riders !== 1">s</t>
+        · <t t-esc="state.counts.waiting"/> order<t t-if="state.counts.waiting !== 1">s</t> waiting
+        · refreshes every 15 s
+      </span>
+      <select class="sa_fm_shop" t-on-change="onShopChange" t-if="state.shops.length > 1 or state.shopId">
+        <option value="0">All shops</option>
+        <t t-foreach="state.shops" t-as="shop" t-key="shop.id">
+          <option t-att-value="shop.id" t-att-selected="shop.id === state.shopId"><t t-esc="shop.name"/></option>
+        </t>
+      </select>
+      <span class="sa_fm_legend">
+        <i class="sos"></i> SOS <i class="free"></i> Free <i class="run"></i> On a run <i class="no_signal"></i> No signal <i class="waiting"></i> Waiting order
+      </span>
+    </div>
+    <div class="sa_fm_warn" t-if="state.error"><t t-esc="state.error"/></div>
+
+    <div class="sa_fm_body">
+      <div class="sa_fm_side">
+        <h3>Riders</h3>
+        <div class="sa_fm_empty" t-if="!state.loading and !state.riders.length">Nobody is on duty.</div>
+        <div t-foreach="state.riders" t-as="r" t-key="r.id"
+             t-attf-class="sa_fm_rider #{r.state} #{state.selected === r.id ? 'sel' : ''}"
+             t-on-click="() => this.select(r)">
+          <div class="sa_fm_rider_top">
+            <i t-attf-class="sa_fm_dot #{r.state}"></i>
+            <b t-esc="r.name"/>
+            <span class="sa_fm_state" t-esc="stateLabel(r)"/>
+          </div>
+          <div class="sa_fm_sub">
+            <t t-if="r.where"><t t-esc="r.where"/> · </t><t t-esc="age(r)"/>
+            <t t-if="r.vehicle"> · <t t-esc="r.vehicle"/></t>
+          </div>
+          <ol class="sa_fm_stops" t-if="r.stops.length">
+            <li t-foreach="r.stops" t-as="s" t-key="s.job_id" t-on-click.stop="() => this.openJob(s.job_id)"
+                t-attf-class="#{s.current ? 'cur' : ''}">
+              <span class="n" t-esc="s.stop_no"/>
+              <span class="who">#<t t-esc="s.ref"/> · <t t-esc="s.customer"/></span>
+              <span class="km" t-esc="stopLine(s)"/>
+            </li>
+          </ol>
+          <a class="sa_fm_link" t-on-click.stop="() => this.openRider(r.id)">Open rider</a>
+        </div>
+
+        <h3 t-if="state.waiting.length">Waiting for a rider</h3>
+        <div t-foreach="state.waiting" t-as="w" t-key="w.job_id" class="sa_fm_wait">
+          <div class="sa_fm_rider_top">
+            <i class="sa_fm_dot waiting"></i>
+            <b>#<t t-esc="w.ref"/></b>
+            <span class="sa_fm_state"><t t-esc="w.customer"/><t t-if="w.km !== null"> · <t t-esc="w.km"/> km from the shop</t></span>
+          </div>
+          <div class="sa_fm_sub">
+            <t t-if="w.state === 'offered'">Offered to <t t-esc="w.offered_to"/> …</t>
+            <t t-elif="w.missed_by">Missed by <t t-esc="w.missed_by"/></t>
+            <t t-else="">Waiting <t t-esc="w.waiting_min"/> min</t>
+            <t t-if="w.shop and !state.shopId"> · <t t-esc="w.shop"/></t>
+          </div>
+          <div class="sa_fm_actions">
+            <button class="btn btn-sm btn-primary" t-if="w.state !== 'offered'" t-on-click="() => this.callRider(w)">Call rider</button>
+            <a class="sa_fm_link" t-on-click="() => this.openJob(w.job_id)">Open job</a>
+          </div>
+        </div>
+      </div>
+      <div class="sa_fm_map" t-ref="map"></div>
+    </div>
+  </div>
+</t>
+
+</templates>

@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--
+        Standalone, like the rider's job page: a shopkeeper opens this on a
+        phone, often with a supplier still on the line. No menus, no cookie
+        banner, no asset bundle to fetch on a weak signal.
+    -->
+    <!-- The 369 Mart look (6 Oct 2026): one layout for every link page,
+         sales_automation.sa_brand_layout. The old name stays for the pages. -->
+    <template id="sa_quote_layout" name="Price Entry Layout">
+        <t t-call="sales_automation.sa_brand_layout">
+            <t t-set="head_title" t-value="head_title or 'Enter a price'"/>
+            <t t-set="brand_badge" t-value="'Price request'"/>
+            <t t-out="0"/>
+        </t>
+    </template>
+
+    <!-- Step 1: type it -->
+    <template id="sa_quote_entry_page" name="Enter a Price">
+        <t t-call="sales_automation.sa_quote_layout">
+            <t t-set="head_title">Price for #<t t-esc="enquiry.ref_code"/></t>
+            <div class="card">
+                <h1><t t-esc="name"/></h1>
+                <div class="muted">
+                    <t t-esc="enquiry.requester_name or enquiry.requester_phone"/>
+                    <t t-if="enquiry.qty"> &#183; <t t-esc="int(enquiry.qty)"/> needed</t>
+                </div>
+                <div class="code">Ref <t t-esc="enquiry.ref_code"/></div>
+
+                <div class="err" t-if="error"><t t-esc="error"/></div>
+
+                <div class="muted" style="margin:10px 0;">
+                    <div t-if="said_yes">&#9989; Said YES, no price yet:
+                        <b><t t-esc="', '.join(said_yes)"/></b></div>
+                    <div t-if="said_no">&#10060; Said NO:
+                        <t t-esc="', '.join(said_no)"/></div>
+                    <div t-if="silent">&#128263; Silent:
+                        <t t-esc="', '.join(silent)"/></div>
+                    <div t-if="hint_price" style="margin-top:6px;">
+                        &#128161; Price list says <b><t t-esc="'%.2f' % hint_price"/></b>
+                        (<t t-esc="hint_vendor"/>) &#8212; check before using
+                    </div>
+                </div>
+
+                <form t-attf-action="/wa/quote/#{enquiry.id}/confirm" method="post">
+                    <input type="hidden" name="token" t-att-value="token"/>
+
+                    <label for="cost">Supplier's price</label>
+                    <!-- Prefilled with the price-list hint, if there is one:
+                         one tap confirms it. Still a person confirming. -->
+                    <input type="number" step="0.001" min="0" name="cost" id="cost"
+                           inputmode="decimal" autofocus="autofocus"
+                           t-att-value="('%.2f' % hint_price) if hint_price else None"
+                           placeholder="500"/>
+                    <div class="muted">
+                        What the supplier charges you. Our margin is added on
+                        top before the customer sees it.
+                    </div>
+
+                    <label for="vendor_id">Which supplier <span class="muted">(optional)</span></label>
+                    <select name="vendor_id" id="vendor_id">
+                        <option value="">Not saying</option>
+                        <t t-foreach="vendors" t-as="v">
+                            <option t-att-value="v.id"><t t-esc="v.name"/></option>
+                        </t>
+                    </select>
+
+                    <label for="days">Days to deliver <span class="muted">(optional)</span></label>
+                    <input type="number" step="1" min="0" name="days" id="days"
+                           inputmode="numeric" placeholder="0 = ready stock"/>
+
+                    <button class="btn" type="submit">Check it</button>
+                </form>
+            </div>
+        </t>
+    </template>
+
+    <!-- Step 2: verify, then apply -->
+    <template id="sa_quote_confirm_page" name="Confirm the Price">
+        <t t-call="sales_automation.sa_quote_layout">
+            <t t-set="head_title">Confirm #<t t-esc="enquiry.ref_code"/></t>
+            <div class="card">
+                <h1>Is this right?</h1>
+                <div class="muted"><t t-esc="name"/></div>
+
+                <div class="row">
+                    <span>Supplier's price</span>
+                    <b><t t-esc="'%.2f' % cost"/> <t t-esc="currency"/></b>
+                </div>
+                <div class="row">
+                    <span>Margin</span>
+                    <b><t t-esc="'%.0f' % margin"/>%</b>
+                </div>
+                <div class="row">
+                    <span>Customer is quoted</span>
+                    <span class="big"><t t-esc="'%.2f' % sell"/></span>
+                </div>
+                <div class="row">
+                    <span>Supplier</span>
+                    <b><t t-esc="vendor.name or 'not saying'"/></b>
+                </div>
+                <div class="row" t-if="days">
+                    <span>Delivery</span>
+                    <b><t t-esc="days"/> day(s)</b>
+                </div>
+
+                <form t-attf-action="/wa/quote/#{enquiry.id}/apply" method="post">
+                    <input type="hidden" name="token" t-att-value="token"/>
+                    <input type="hidden" name="cost" t-att-value="cost"/>
+                    <input type="hidden" name="days" t-att-value="days"/>
+                    <input type="hidden" name="vendor_id" t-att-value="vendor.id or ''"/>
+                    <button class="btn" type="submit">
+                        Yes - quote the customer
+                    </button>
+                </form>
+                <a class="btn grey"
+                   t-attf-href="/wa/quote/#{enquiry.id}?token=#{token}">
+                    Change it
+                </a>
+            </div>
+        </t>
+    </template>
+
+    <!-- Step 3: done -->
+    <template id="sa_quote_done_page" name="Price Sent">
+        <t t-call="sales_automation.sa_quote_layout">
+            <t t-set="head_title">Sent</t>
+            <div class="card">
+                <div class="ok">
+                    <b>Quoted.</b> The customer has been told
+                    <t t-esc="'%.2f' % (enquiry.quoted_price or 0.0)"/>
+                    <t t-esc="currency"/> for <t t-esc="name"/>.
+                </div>
+                <div class="muted" style="margin-top:12px;">
+                    Ref <t t-esc="enquiry.ref_code"/>. Nothing more to do here.
+                </div>
+            </div>
+        </t>
+    </template>
+
+</odoo>

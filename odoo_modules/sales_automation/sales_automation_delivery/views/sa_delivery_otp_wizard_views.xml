@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Delivery ▸ Create OTP -->
+    <record id="view_sa_delivery_otp_wizard_form" model="ir.ui.view">
+        <field name="name">sa.delivery.otp.wizard.form</field>
+        <field name="model">sa.delivery.otp.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Create OTP">
+                <field name="state" invisible="1"/>
+                <group invisible="state == 'done'">
+                    <field name="picking_id" options="{'no_create': True}"/>
+                    <field name="kind" widget="radio"/>
+                    <field name="send_to" widget="radio"/>
+                </group>
+                <div invisible="state != 'done'" class="text-center py-3">
+                    <div class="text-muted">Job <field name="ref" readonly="1" class="oe_inline fw-bold"/></div>
+                    <div style="font-size:48px;font-weight:700;letter-spacing:10px;font-family:monospace;margin:12px 0"
+                         class="text-primary">
+                        <field name="code" readonly="1" widget="CopyClipboardChar"/>
+                    </div>
+                    <div class="text-muted">
+                        <field name="message" readonly="1" class="oe_inline"/>
+                        <span invisible="not sent_to"> · sent to <field name="sent_to" readonly="1" class="oe_inline"/></span>
+                        <span> · valid until <field name="expires_on" readonly="1" class="oe_inline"/></span>
+                    </div>
+                    <p class="text-muted mt-3">
+                        Pickup: the rider shows this code at the counter and the shop presses <b>Pickup</b> on the job and types it.
+                        Delivery: the customer gives it to the rider after receiving the parcel; press <b>Delivered</b> on the job and type it.
+                    </p>
+                </div>
+                <footer>
+                    <button name="action_generate" type="object" string="Generate" class="btn-primary"
+                            invisible="state == 'done'"/>
+                    <button string="Close" special="cancel" class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_sa_delivery_otp_wizard" model="ir.actions.act_window">
+        <field name="name">Create OTP</field>
+        <field name="res_model">sa.delivery.otp.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <menuitem id="menu_sa_delivery_create_otp"
+              name="Create OTP"
+              parent="menu_sa_delivery_ops"
+              action="action_sa_delivery_otp_wizard"
+              sequence="3"/>
+
+    <!-- job ▸ Pickup / Delivered: type the code -->
+    <record id="view_sa_delivery_otp_entry_form" model="ir.ui.view">
+        <field name="name">sa.delivery.otp.entry.form</field>
+        <field name="model">sa.delivery.otp.entry</field>
+        <field name="arch" type="xml">
+            <form string="Enter the code">
+                <field name="picking_id" invisible="1"/>
+                <field name="kind" invisible="1"/>
+                <field name="has_rider" invisible="1"/>
+                <div class="text-muted mb-2"><field name="hint" readonly="1" nolabel="1"/></div>
+                <group>
+                    <field name="rider_id" invisible="kind != 'pickup'" required="kind == 'pickup'"
+                           placeholder="Choose the rider taking the parcel..."
+                           options="{'no_create': True}"/>
+                    <field name="code" placeholder="6 digits"
+                           style="font-size:28px;letter-spacing:8px;font-family:monospace"/>
+                </group>
+                <footer>
+                    <button name="action_verify" type="object" string="Confirm" class="btn-primary"/>
+                    <button string="Cancel" special="cancel" class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- job ▸ Failed -->
+    <record id="view_sa_delivery_fail_wizard_form" model="ir.ui.view">
+        <field name="name">sa.delivery.fail.wizard.form</field>
+        <field name="model">sa.delivery.fail.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Delivery failed">
+                <field name="picking_id" invisible="1"/>
+                <group>
+                    <field name="reason" widget="radio"/>
+                    <field name="note" placeholder="what happened (optional)"/>
+                </group>
+                <footer>
+                    <button name="action_fail" type="object" string="Mark as failed" class="btn-danger"/>
+                    <button string="Cancel" special="cancel" class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+    <record id="view_sa_delivery_call_wizard_form" model="ir.ui.view">
+        <field name="name">sa.delivery.call.wizard.form</field>
+        <field name="model">sa.delivery.call.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Call a Rider">
+                <field name="picking_id" invisible="1"/>
+                <div class="text-muted mb-2">One rider is called at a time, never all. No answer within the time limit = the next candidate is called.</div>
+                <field name="call_mode" invisible="1"/>
+                <group>
+                    <field name="mode" widget="radio" invisible="call_mode == 'manual'"/>
+                    <field name="available_rider_ids" invisible="1"/>
+                    <field name="rider_ids" widget="many2many_checkboxes" invisible="mode != 'pick'"/>
+                </group>
+                <field name="candidates_html" nolabel="1" readonly="1"/>
+                <footer>
+                    <button name="action_call" type="object" string="Call" class="btn-primary"/>
+                    <button string="Cancel" special="cancel" class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

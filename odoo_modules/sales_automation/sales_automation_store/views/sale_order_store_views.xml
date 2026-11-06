@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- The delivery's stage on the ordinary Sales list, so somebody looking
+         at orders can see which are still on the shop's counter without
+         opening each one or learning a second menu. -->
+    <record id="view_sa_store_sale_order_list" model="ir.ui.view">
+        <field name="name">sale.order.list.sa.store</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_tree"/>
+        <field name="arch" type="xml">
+            <field name="state" position="before">
+                <field name="sa_ref_code" string="Job" optional="hide"/>
+                <field name="sa_delivery_state" string="Delivery" optional="show"
+                       widget="badge"
+                       decoration-danger="sa_delivery_state == 'awaiting_shop'"
+                       decoration-warning="sa_delivery_state in ['preparing', 'offered', 'accepted']"
+                       decoration-info="sa_delivery_state in ['ready', 'picked', 'dispatched', 'out_for_delivery']"
+                       decoration-success="sa_delivery_state == 'delivered'"/>
+                <field name="sa_shop_id" string="Shop" optional="hide"/>
+                <field name="sa_delivery_partner_id" string="Rider" optional="hide"/>
+            </field>
+        </field>
+    </record>
+
+    <!-- The same on the quotation form, next to the delivery smart button. -->
+    <record id="view_sa_store_sale_order_form" model="ir.ui.view">
+        <field name="name">sale.order.form.sa.store</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//group[@name='sale_shipping']" position="after">
+                <group string="Delivery" name="sa_store_delivery"
+                       invisible="not sa_delivery_state">
+                    <field name="sa_ref_code" readonly="1"/>
+                    <field name="sa_delivery_state" readonly="1"/>
+                    <field name="sa_shop_id" readonly="1"/>
+                    <field name="sa_delivery_partner_id" readonly="1"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Find the orders the shop has not touched yet. -->
+    <record id="view_sa_store_sale_order_search" model="ir.ui.view">
+        <field name="name">sale.order.search.sa.store</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.sale_order_view_search_inherit_sale"/>
+        <field name="arch" type="xml">
+            <filter name="my_sale_orders_filter" position="after">
+                <separator/>
+                <filter name="sa_waiting_shop" string="Waiting for the Shop"
+                        domain="[('sa_delivery_state','=','awaiting_shop')]"/>
+                <filter name="sa_being_packed" string="Being Packed"
+                        domain="[('sa_delivery_state','=','preparing')]"/>
+            </filter>
+        </field>
+    </record>
+
+</odoo>

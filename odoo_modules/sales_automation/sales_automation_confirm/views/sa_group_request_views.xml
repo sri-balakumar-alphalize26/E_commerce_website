@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_sa_group_request_form_confirm" model="ir.ui.view">
+        <field name="name">sa.group.request.form.confirm</field>
+        <field name="model">sa.group.request</field>
+        <field name="inherit_id" ref="sales_automation.view_sa_group_request_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="after">
+                <group string="Confirmation links" invisible="not sa_confirm_link_ids">
+                    <field name="sa_variant_id" readonly="1"/>
+                    <field name="sa_confirm_accepted_on" readonly="1"/>
+                    <field name="sa_confirm_link_ids" nolabel="1" readonly="1" colspan="2">
+                        <list>
+                            <field name="kind"/>
+                            <field name="channel"/>
+                            <field name="identity" string="Sent to"/>
+                            <field name="sent_on"/>
+                            <field name="opened_on"/>
+                            <field name="open_count" string="Opens"/>
+                            <field name="decided"/>
+                            <field name="decided_on"/>
+                            <field name="decided_ip"/>
+                        </list>
+                    </field>
+                </group>
+            </xpath>
+        </field>
+    </record>
+    <record id="view_product_category_form_sa_menu" model="ir.ui.view">
+        <field name="name">product.category.form.sa.menu</field>
+        <field name="model">product.category</field>
+        <field name="inherit_id" ref="product.product_category_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='parent_id']" position="after">
+                <field name="sa_menu_sequence"/>
+                <field name="sa_menu_hide"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

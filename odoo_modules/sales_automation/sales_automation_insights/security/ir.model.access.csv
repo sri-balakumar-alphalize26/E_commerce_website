@@ -1,0 +1,7 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_sa_insight_entity_user,sa.insight.entity.user,model_sa_insight_entity,sales_automation.group_sa_user,1,0,0,0
+access_sa_insight_entity_manager,sa.insight.entity.manager,model_sa_insight_entity,sales_automation.group_sa_manager,1,1,1,1
+access_sa_insight_alias_user,sa.insight.alias.user,model_sa_insight_alias,sales_automation.group_sa_user,1,0,0,0
+access_sa_insight_alias_manager,sa.insight.alias.manager,model_sa_insight_alias,sales_automation.group_sa_manager,1,1,1,1
+access_sa_conduct_remark_user,sa.conduct.remark.user,model_sa_conduct_remark,sales_automation.group_sa_user,1,0,0,0
+access_sa_conduct_remark_manager,sa.conduct.remark.manager,model_sa_conduct_remark,sales_automation.group_sa_manager,1,1,1,1

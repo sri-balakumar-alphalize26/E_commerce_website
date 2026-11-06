@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+<t t-name="sales_automation_insights.EnquiryThread">
+    <div class="sai_thread">
+        <div t-if="state.error" class="sai_tag sai_tag_bad"><t t-esc="state.error"/></div>
+        <div t-elif="!state.detail" class="sai_loading">loading thread…</div>
+        <t t-else="">
+            <div class="sai_sub mono" style="margin-bottom:8px">
+                <t t-esc="state.detail.asked_text"/>
+                <t t-if="state.detail.quoted_price"> · quoted <t t-esc="state.detail.quoted_price.toFixed(2)"/></t>
+                <t t-if="state.detail.agreed_price"> · agreed <t t-esc="state.detail.agreed_price.toFixed(2)"/></t>
+            </div>
+
+            <t t-if="state.detail.vendors and state.detail.vendors.length">
+                <div class="sai_sect" style="padding:6px 0">What the suppliers said</div>
+                <table class="sai_tbl sai_vend_tbl">
+                    <thead><tr><th>Supplier</th><th>Reply</th><th>Price</th><th>Days</th><th>Took</th><th>Said</th></tr></thead>
+                    <tbody>
+                        <tr t-foreach="state.detail.vendors" t-as="v" t-key="v.id">
+                            <td><t t-esc="v.name"/></td>
+                            <td><span class="sai_tag" t-att-class="v.replied ? 'sai_tag_ok' : 'sai_tag_replied'"><t t-esc="v.replied ? 'replied' : 'silent'"/></span></td>
+                            <td t-att-class="{ sai_best: v.is_best }"><t t-if="v.replied" t-esc="v.price.toFixed(2)"/></td>
+                            <td><t t-if="v.replied" t-esc="v.delay_days"/></td>
+                            <td><t t-if="v.replied"><t t-esc="v.minutes"/> min</t></td>
+                            <td class="muted"><t t-esc="v.text"/></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </t>
+
+            <div class="sai_sect" style="padding:10px 0 6px">With the customer</div>
+            <div class="sai_msgs">
+                <div t-foreach="state.detail.messages" t-as="m" t-key="m_index"
+                     class="sai_msg" t-att-class="'sai_msg_' + m.who">
+                    <div class="sai_msg_meta"><t t-esc="m.name"/> · <t t-esc="clock(m.at)"/> · <t t-esc="m.status"/></div>
+                    <t t-esc="m.text"/>
+                </div>
+                <div t-if="!state.detail.messages.length" class="muted mono">no messages recorded</div>
+            </div>
+
+            <t t-if="state.detail.vendor_messages and state.detail.vendor_messages.length">
+                <div class="sai_sect" style="padding:10px 0 6px">With the suppliers</div>
+                <div class="sai_msgs">
+                    <div t-foreach="state.detail.vendor_messages" t-as="m" t-key="m_index"
+                         class="sai_msg" t-att-class="'sai_msg_' + m.who">
+                        <div class="sai_msg_meta"><t t-esc="m.name"/> · <t t-esc="clock(m.at)"/></div>
+                        <t t-esc="m.text"/>
+                    </div>
+                </div>
+            </t>
+        </t>
+    </div>
+</t>
+
+</templates>

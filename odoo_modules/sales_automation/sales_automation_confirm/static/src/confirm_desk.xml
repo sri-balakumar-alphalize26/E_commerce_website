@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="sales_automation_confirm.TrackDialogConfirm"
+       t-inherit="sales_automation_store.TrackDialog" t-inherit-mode="extension">
+        <xpath expr="//h5[contains(text(), 'With the suppliers')]" position="before">
+            <h5>Confirmation page</h5>
+            <div class="sa_track_msgs" t-if="state.detail.confirmations and state.detail.confirmations.length">
+                <div t-foreach="state.detail.confirmations" t-as="c" t-key="c.id" class="sa_msg sa_msg_us">
+                    <div class="sa_msg_meta">
+                        <b><t t-esc="c.kind === 'customer' ? 'Customer' : 'Vendor'"/> · <t t-esc="c.who"/></b>
+                        <t t-if="c.channel === 'wechat'"> (WeChat)</t>
+                        - sent <t t-esc="c.sent ? when(c.sent) : 'not yet'"/>
+                    </div>
+                    <div class="sa_msg_body">
+                        <t t-if="c.decided === 'accept'">&#10004; ACCEPTED <t t-esc="when(c.decided_on)"/> from <t t-esc="c.ip || 'unknown address'"/></t>
+                        <t t-elif="c.decided === 'reject'">&#10008; REJECTED <t t-esc="when(c.decided_on)"/> from <t t-esc="c.ip || 'unknown address'"/></t>
+                        <t t-elif="c.opened">Opened <t t-esc="when(c.opened)"/> (<t t-esc="c.opens"/>x) - not answered yet</t>
+                        <t t-else="">Not opened yet</t>
+                        <span class="text-muted"> · picture: <t t-esc="c.picture"/></span>
+                    </div>
+                </div>
+            </div>
+            <div class="muted" t-if="!state.detail.confirmations or !state.detail.confirmations.length">
+                No confirmation link on this enquiry.
+            </div>
+        </xpath>
+    </t>
+
+</templates>

@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <menuitem id="menu_sa_root"
+              name="Sales Automation"
+              web_icon="sales_automation,static/description/icon.png"
+              groups="sales_automation.group_sa_user"
+              sequence="86"/>
+
+    <menuitem id="menu_sa_operations"
+              name="Enquiries"
+              parent="menu_sa_root"
+              sequence="1"/>
+
+    <menuitem id="menu_sa_group_request_open"
+              name="Open Enquiries"
+              parent="menu_sa_operations"
+              action="action_sa_group_request_open"
+              sequence="1"/>
+
+    <menuitem id="menu_sa_group_request_all"
+              name="All Enquiries"
+              parent="menu_sa_operations"
+              action="action_sa_group_request"
+              sequence="2"/>
+
+    <menuitem id="menu_sa_vendor_quote"
+              name="Vendor Quotes"
+              parent="menu_sa_operations"
+              action="action_sa_vendor_quote"
+              sequence="3"/>
+
+    <menuitem id="menu_sa_config"
+              name="Configuration"
+              parent="menu_sa_root"
+              groups="sales_automation.group_sa_manager"
+              sequence="10"/>
+
+    <menuitem id="menu_sa_customer_group"
+              name="Customer Groups"
+              parent="menu_sa_config"
+              action="action_sa_customer_group"
+              sequence="1"/>
+
+    <menuitem id="menu_sa_sales_group"
+              name="WhatsApp Groups"
+              parent="menu_sa_config"
+              action="action_sa_sales_group"
+              sequence="3"/>
+
+    <menuitem id="menu_sa_ai_settings"
+              name="AI Settings"
+              parent="menu_sa_config"
+              action="action_sa_ai_settings_open"
+              sequence="4"/>
+
+</odoo>

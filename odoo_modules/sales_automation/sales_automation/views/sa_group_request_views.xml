@@ -1,0 +1,254 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_sa_group_request_list" model="ir.ui.view">
+        <field name="name">sa.group.request.list</field>
+        <field name="model">sa.group.request</field>
+        <field name="arch" type="xml">
+            <list string="Group Enquiries" create="false"
+                  decoration-muted="state == 'dropped'"
+                  decoration-success="state == 'order_created'">
+                <field name="create_date" string="Received"/>
+                <field name="group_id"/>
+                <field name="requester_name" optional="show"/>
+                <field name="requester_phone" optional="show"/>
+                <field name="raw_text" string="Message"/>
+                <field name="ai_search_term" optional="hide"/>
+                <field name="product_id"/>
+                <field name="stock_status" optional="show"/>
+                <field name="quoted_price" optional="show"/>
+                <field name="agreed_price" optional="show"/>
+                <field name="currency_id" column_invisible="1"/>
+                <field name="vendor_id" optional="hide"/>
+                <field name="order_id" optional="show"/>
+                <field name="quote_count" string="Quotes" optional="show"/>
+                <field name="sourcing_group_id" optional="hide"/>
+                <field name="state" widget="badge"
+                       decoration-success="state in ('order_created', 'quoted')"
+                       decoration-info="state in ('answered', 'handed_off', 'sourcing', 'awaiting_confirm', 'negotiating', 'awaiting_qty', 'awaiting_order_confirm')"
+                       decoration-muted="state == 'dropped'"/>
+                <field name="shop_pick_deadline" string="Shop Must Reply By"
+                       optional="show"/>
+                <field name="customer_deadline" string="Customer Must Reply By"
+                       optional="show"/>
+                <field name="customer_asked_on" string="Last Asked"
+                       optional="hide"/>
+                <field name="shop_pick_done_on" string="Shop Replied At"
+                       optional="hide"/>
+                <field name="shop_pick_user_id" string="Chosen By"
+                       optional="show"/>
+                <field name="shop_pick_auto" string="Auto-sent"
+                       optional="show"/>
+                <field name="shop_pick_no_categ" string="No Category"
+                       optional="hide"/>
+                <field name="drop_reason" optional="show"/>
+                <field name="ai_source" optional="hide"/>
+                <field name="ai_confidence" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_sa_group_request_form" model="ir.ui.view">
+        <field name="name">sa.group.request.form</field>
+        <field name="model">sa.group.request</field>
+        <field name="arch" type="xml">
+            <form string="Group Enquiry" create="false">
+                <header>
+                    <button name="action_view_order" type="object"
+                            string="Sale Order" class="btn-primary"
+                            invisible="not order_id"/>
+                    <button name="action_view_conversation" type="object"
+                            string="Private Chat" class="btn-secondary"
+                            invisible="not conversation_id"/>
+                    <button name="action_close_sourcing_now" type="object"
+                            string="Quote Now" class="btn-secondary"
+                            invisible="state != 'sourcing'"
+                            help="Stop waiting for vendors and quote from whatever has arrived."/>
+                    <field name="state" widget="statusbar"
+                           statusbar_visible="new,awaiting_confirm,finding,sourcing,quoted,negotiating,awaiting_qty,awaiting_order_confirm,order_created"/>
+                </header>
+                <sheet>
+                    <widget name="web_ribbon" title="Dropped" bg_color="text-bg-secondary"
+                            invisible="state != 'dropped'"/>
+                    <div class="oe_title">
+                        <h1><field name="display_name_custom" readonly="1"/></h1>
+                    </div>
+                    <group>
+                        <group string="Where">
+                            <field name="group_id"/>
+                            <field name="session_id"/>
+                            <field name="employee_session_id"/>
+                            <field name="message_id"/>
+                        </group>
+                        <group string="Who">
+                            <field name="requester_name"/>
+                            <field name="requester_phone"/>
+                            <field name="requester_is_lid"/>
+                            <field name="requester_partner_id"/>
+                            <field name="conversation_id"/>
+                        </group>
+                    </group>
+                    <group string="What They Asked">
+                        <field name="raw_text" readonly="1" nolabel="1" colspan="2"/>
+                    </group>
+                    <group>
+                        <group string="Classification">
+                            <field name="ai_is_product"/>
+                            <field name="ai_search_term"/>
+                            <field name="ai_confidence"/>
+                            <field name="ai_source"/>
+                        </group>
+                        <group string="Match">
+                            <field name="product_id"/>
+                            <field name="qty"/>
+                            <field name="stock_status"/>
+                            <field name="available_qty"/>
+                        </group>
+                        <group string="Sourcing"
+                               invisible="not sourcing_group_id">
+                            <field name="sourcing_group_id"/>
+                            <field name="sourcing_deadline"/>
+                            <field name="best_quote_id"/>
+                            <field name="broadcast_wa_message_id"/>
+                        </group>
+                        <group string="Suppliers Who Have It"
+                               invisible="not sa_vendor_yes_ids">
+                            <field name="sa_vendor_yes_ids" nolabel="1"
+                                   widget="many2many_tags" readonly="1"/>
+                        </group>
+                        <group string="Suppliers Without It"
+                               invisible="not sa_vendor_no_ids">
+                            <field name="sa_vendor_no_ids" nolabel="1"
+                                   widget="many2many_tags" readonly="1"/>
+                        </group>
+                        <group string="Cost" invisible="stock_status != 'on_order'">
+                            <field name="vendor_id"/>
+                            <field name="supplierinfo_id"/>
+                            <field name="vendor_price"/>
+                            <field name="vendor_delay"/>
+                        </group>
+                        <group string="Outcome">
+                            <field name="currency_id" invisible="1"/>
+                            <field name="quoted_price"/>
+                            <field name="agreed_price"/>
+                            <field name="order_id"/>
+                            <field name="drop_reason"/>
+                        </group>
+                    </group>
+                    <notebook invisible="not quote_ids and not finder_step">
+                        <page string="Guided Finder" name="finder"
+                              invisible="not finder_step">
+                            <group>
+                                <group>
+                                    <field name="finder_step"/>
+                                    <field name="finder_seed"/>
+                                    <field name="finder_type"/>
+                                    <field name="finder_brand"/>
+                                    <field name="finder_model"/>
+                                </group>
+                                <group>
+                                    <field name="finder_kind"/>
+                                    <field name="finder_company_id"/>
+                                    <field name="finder_locked"/>
+                                    <field name="reply_in_dm"/>
+                                    <field name="finder_asked_on"/>
+                                </group>
+                            </group>
+                            <field name="finder_options" readonly="1"
+                                   widget="text" class="font-monospace"/>
+                        </page>
+                        <page string="Vendor Quotes" name="quotes"
+                              invisible="not quote_ids">
+                            <field name="quote_ids" nolabel="1" readonly="1">
+                                <list decoration-success="is_best"
+                                      decoration-warning="matched_by == 'newest_open'">
+                                    <field name="create_date" string="Received"/>
+                                    <field name="vendor_name"/>
+                                    <field name="vendor_phone"/>
+                                    <field name="price"/>
+                                    <field name="delay_days" string="Days"/>
+                                    <field name="response_minutes" string="After (min)"/>
+                                    <field name="currency_id" column_invisible="1"/>
+                                    <field name="matched_by" widget="badge"/>
+                                    <field name="is_best" string="Winner"/>
+                                    <field name="raw_text"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                    <group string="Error" invisible="not error">
+                        <field name="error" readonly="1" nolabel="1" colspan="2"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_sa_group_request_search" model="ir.ui.view">
+        <field name="name">sa.group.request.search</field>
+        <field name="model">sa.group.request</field>
+        <field name="arch" type="xml">
+            <search string="Group Enquiries">
+                <field name="raw_text"/>
+                <field name="requester_phone"/>
+                <field name="requester_name"/>
+                <field name="product_id"/>
+                <field name="group_id"/>
+                <filter name="filter_negotiating" string="Bargaining"
+                        domain="[('state', 'in', ('negotiating', 'awaiting_qty', 'awaiting_order_confirm'))]"/>
+                <filter name="filter_sourcing" string="Asking Vendors"
+                        domain="[('state', '=', 'sourcing')]"/>
+                <filter name="filter_awaiting" string="Awaiting Confirmation"
+                        domain="[('state', '=', 'awaiting_confirm')]"/>
+                <filter name="filter_answered" string="Answered"
+                        domain="[('state', 'in', ('quoted', 'answered', 'handed_off'))]"/>
+                <filter name="filter_ordered" string="Became an Order"
+                        domain="[('order_id', '!=', False)]"/>
+                <filter name="filter_dropped" string="Dropped"
+                        domain="[('state', '=', 'dropped')]"/>
+                <separator/>
+                <filter name="filter_on_order" string="Out of Stock"
+                        domain="[('stock_status', '=', 'on_order')]"/>
+                <separator/>
+                <filter name="filter_today" string="Today"
+                        domain="[('create_date', '>=', datetime.datetime.combine(context_today(), datetime.time(0,0,0)))]"/>
+                <group>
+                    <filter name="group_by_group" string="WhatsApp Group"
+                            context="{'group_by': 'group_id'}"/>
+                    <filter name="group_by_state" string="Status"
+                            context="{'group_by': 'state'}"/>
+                    <filter name="group_by_reason" string="Drop Reason"
+                            context="{'group_by': 'drop_reason'}"/>
+                    <filter name="group_by_product" string="Product"
+                            context="{'group_by': 'product_id'}"/>
+                    <filter name="group_by_date" string="Date"
+                            context="{'group_by': 'create_date:day'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_sa_group_request" model="ir.actions.act_window">
+        <field name="name">Group Enquiries</field>
+        <field name="res_model">sa.group.request</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_sa_group_request_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Nothing has come in yet</p>
+            <p>
+                Every message posted in a ticked group lands here - the ones
+                that became orders and the ones that were ignored, with the
+                reason they were ignored.
+            </p>
+        </field>
+    </record>
+
+    <record id="action_sa_group_request_open" model="ir.actions.act_window">
+        <field name="name">Open Enquiries</field>
+        <field name="res_model">sa.group.request</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('state', 'in', ('awaiting_confirm', 'sourcing', 'quoted', 'negotiating', 'awaiting_qty', 'awaiting_order_confirm', 'answered', 'handed_off'))]</field>
+        <field name="search_view_id" ref="view_sa_group_request_search"/>
+    </record>
+
+</odoo>

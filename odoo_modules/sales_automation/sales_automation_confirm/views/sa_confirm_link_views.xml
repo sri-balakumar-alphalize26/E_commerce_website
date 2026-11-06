@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_sa_confirm_link_list" model="ir.ui.view">
+        <field name="name">sa.confirm.link.list</field>
+        <field name="model">sa.confirm.link</field>
+        <field name="arch" type="xml">
+            <list decoration-success="decided == 'accept'" decoration-danger="decided == 'reject'">
+                <field name="ref_code" string="Ref"/>
+                <field name="kind"/>
+                <field name="channel"/>
+                <field name="identity" string="Sent to"/>
+                <field name="product_id"/>
+                <field name="sent_on"/>
+                <field name="opened_on"/>
+                <field name="open_count" string="Opens"/>
+                <field name="decided"/>
+                <field name="decided_on"/>
+                <field name="decided_ip" optional="hide"/>
+                <field name="image_source" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_sa_confirm_link_form" model="ir.ui.view">
+        <field name="name">sa.confirm.link.form</field>
+        <field name="model">sa.confirm.link</field>
+        <field name="arch" type="xml">
+            <form string="Confirmation link">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="request_id"/>
+                            <field name="product_id"/>
+                            <field name="kind"/>
+                            <field name="channel"/>
+                            <field name="identity"/>
+                            <field name="partner_id"/>
+                            <field name="image_source"/>
+                        </group>
+                        <group>
+                            <field name="sent_on"/>
+                            <field name="reminded_on"/>
+                            <field name="opened_on"/>
+                            <field name="open_count"/>
+                            <field name="decided"/>
+                            <field name="decided_on"/>
+                            <field name="decided_ip"/>
+                            <field name="decided_ua"/>
+                        </group>
+                    </group>
+                    <field name="click_ids" readonly="1">
+                        <list>
+                            <field name="at"/>
+                            <field name="action"/>
+                            <field name="identity"/>
+                            <field name="ip"/>
+                            <field name="user_agent"/>
+                        </list>
+                    </field>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_sa_confirm_link_search" model="ir.ui.view">
+        <field name="name">sa.confirm.link.search</field>
+        <field name="model">sa.confirm.link</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="identity"/>
+                <field name="ref_code"/>
+                <field name="partner_id"/>
+                <filter name="customers" string="Customers" domain="[('kind', '=', 'customer')]"/>
+                <filter name="vendors" string="Vendors" domain="[('kind', '=', 'vendor')]"/>
+                <separator/>
+                <filter name="undecided" string="Waiting" domain="[('decided', '=', False)]"/>
+                <filter name="accepted" string="Accepted" domain="[('decided', '=', 'accept')]"/>
+                <filter name="rejected" string="Rejected" domain="[('decided', '=', 'reject')]"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_sa_confirm_link" model="ir.actions.act_window">
+        <field name="name">Confirmation Links</field>
+        <field name="res_model">sa.confirm.link</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <record id="view_sa_link_click_list" model="ir.ui.view">
+        <field name="name">sa.link.click.list</field>
+        <field name="model">sa.link.click</field>
+        <field name="arch" type="xml">
+            <list create="false" edit="false">
+                <field name="at"/>
+                <field name="ref_code" string="Ref"/>
+                <field name="kind"/>
+                <field name="channel"/>
+                <field name="identity" string="Account"/>
+                <field name="action"/>
+                <field name="ip"/>
+                <field name="user_agent" optional="hide"/>
+                <field name="link_id" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_sa_link_click_search" model="ir.ui.view">
+        <field name="name">sa.link.click.search</field>
+        <field name="model">sa.link.click</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="identity"/>
+                <field name="ref_code"/>
+                <field name="ip"/>
+                <filter name="accepts" string="Accepted" domain="[('action', '=', 'accept')]"/>
+                <filter name="rejects" string="Rejected" domain="[('action', '=', 'reject')]"/>
+                <filter name="opens" string="Opened" domain="[('action', '=', 'open')]"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_sa_link_click" model="ir.actions.act_window">
+        <field name="name">Link Clicks</field>
+        <field name="res_model">sa.link.click</field>
+        <field name="view_mode">list</field>
+    </record>
+
+    <menuitem id="menu_sa_confirm_links" name="Confirmation Links"
+              parent="sales_automation.menu_sa_operations" action="action_sa_confirm_link" sequence="60"/>
+    <menuitem id="menu_sa_link_clicks" name="Link Clicks"
+              parent="sales_automation.menu_sa_operations" action="action_sa_link_click" sequence="61"/>
+</odoo>

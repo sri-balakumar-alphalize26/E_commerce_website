@@ -1,0 +1,100 @@
+// Popup for the parcel photos on the delivery job form (photo_lightbox.js).
+a.o_sa_photo {
+    cursor: zoom-in;
+}
+
+.o_sa_lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: rgba(15, 23, 42, 0.88);
+    user-select: none;
+    touch-action: none;     // pinch and drag are handled by the script
+
+    .o_sa_lb_figure {
+        margin: 0;
+        max-width: 90vw;
+        text-align: center;
+    }
+    .o_sa_lb_img {
+        max-width: 90vw;
+        max-height: 82vh;
+        object-fit: contain;
+        border-radius: 6px;
+        background: #fff;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        transform-origin: center center;
+        transition: transform 0.08s ease-out;
+        cursor: zoom-in;
+    }
+    &.o_sa_lb_zoomed .o_sa_lb_caption {
+        visibility: hidden;
+    }
+    .o_sa_lb_caption {
+        margin-top: 10px;
+        color: #e2e8f0;
+        font-size: 13px;
+    }
+    button {
+        border: 0;
+        background: rgba(255, 255, 255, 0.12);
+        color: #fff;
+        border-radius: 50%;
+        line-height: 1;
+        cursor: pointer;
+        &:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+    }
+    > button,
+    .o_sa_lb_zoom {
+        position: absolute;
+        z-index: 2;
+    }
+    .o_sa_lb_close {
+        top: 14px;
+        right: 16px;
+        width: 42px;
+        height: 42px;
+        font-size: 28px;
+    }
+    .o_sa_lb_nav {
+        top: 50%;
+        transform: translateY(-50%);
+        width: 48px;
+        height: 48px;
+        font-size: 34px;
+    }
+    .o_sa_lb_prev {
+        left: 16px;
+    }
+    .o_sa_lb_next {
+        right: 16px;
+    }
+    .o_sa_lb_zoom {
+        top: 14px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 8px;
+        border-radius: 22px;
+        background: rgba(15, 23, 42, 0.7);
+        button {
+            width: 34px;
+            height: 34px;
+            font-size: 20px;
+        }
+    }
+    .o_sa_lb_pct {
+        min-width: 46px;
+        color: #e2e8f0;
+        font-size: 13px;
+        text-align: center;
+    }
+}

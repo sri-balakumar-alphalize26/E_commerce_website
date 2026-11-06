@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_sa_delivery_shop_list" model="ir.ui.view">
+        <field name="name">sa.delivery.shop.list</field>
+        <field name="model">sa.delivery.shop</field>
+        <field name="arch" type="xml">
+            <list string="Shops">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="warehouse_id"/>
+                <field name="service_areas"/>
+                <field name="open_count" string="Open"/>
+                <field name="delivery_count" string="Total"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_sa_delivery_shop_form" model="ir.ui.view">
+        <field name="name">sa.delivery.shop.form</field>
+        <field name="model">sa.delivery.shop</field>
+        <field name="arch" type="xml">
+            <form string="Shop">
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_open_deliveries" type="object"
+                                class="oe_stat_button" icon="fa-truck">
+                            <field name="delivery_count" widget="statinfo"
+                                   string="Deliveries"/>
+                        </button>
+                    </div>
+                    <widget name="web_ribbon" title="Archived" bg_color="text-bg-danger"
+                            invisible="active"/>
+                    <div class="oe_title">
+                        <label for="name"/>
+                        <h1><field name="name" placeholder="Muscat Branch"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="warehouse_id"/>
+                            <field name="partner_id"/>
+                            <field name="sequence"/>
+                            <field name="active" invisible="1"/>
+                        </group>
+                        <group string="Map pin (riders are ranked by distance from here)">
+                            <field name="latitude"/>
+                            <field name="longitude"/>
+                            <field name="address_short"/>
+                            <button name="action_sa_locate" type="object" string="Locate from address"
+                                    class="btn-secondary" colspan="2"
+                                    help="Finds the pin from the address contact (OpenStreetMap, or Google with a key). Check it on a map; type the numbers by hand if it is off."/>
+                        </group>
+                        <group>
+                            <field name="service_areas"
+                                   placeholder="muscat, ruwi, qurum, azaiba"/>
+                        </group>
+                    </group>
+                    <div class="alert alert-info" role="alert">
+                        A delivery goes to the shop whose <b>service area</b>
+                        appears in the customer's address. If no area matches,
+                        the nearest shop by map position is used; if neither can
+                        be worked out, the first shop in the list.
+                    </div>
+                    <notebook>
+                        <page string="Riders and Couriers" name="riders">
+                            <field name="delivery_partner_ids">
+                                <list>
+                                    <field name="name"/>
+                                    <field name="kind"/>
+                                    <field name="phone"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_sa_delivery_shop" model="ir.actions.act_window">
+        <field name="name">Shops</field>
+        <field name="res_model">sa.delivery.shop</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Add your first shop</p>
+            <p>A shop is a branch that deliveries leave from. Give it the areas
+               it covers so the nearest one is chosen automatically.</p>
+        </field>
+    </record>
+
+</odoo>

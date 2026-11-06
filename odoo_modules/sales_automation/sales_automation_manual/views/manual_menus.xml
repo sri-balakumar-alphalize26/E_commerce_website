@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- One "User Manual" entry under every module's root menu, each opening
+         the chapter of that module in a new tab. -->
+    <record id="action_sa_manual" model="ir.actions.act_url">
+        <field name="name">User Manual</field>
+        <field name="url">/sa/manual</field>
+        <field name="target">new</field>
+    </record>
+    <record id="action_sa_manual_store" model="ir.actions.act_url">
+        <field name="name">User Manual - Store</field>
+        <field name="url">/sa/manual#store</field>
+        <field name="target">new</field>
+    </record>
+    <record id="action_sa_manual_delivery" model="ir.actions.act_url">
+        <field name="name">User Manual - Delivery</field>
+        <field name="url">/sa/manual#delivery</field>
+        <field name="target">new</field>
+    </record>
+    <record id="action_sa_manual_insights" model="ir.actions.act_url">
+        <field name="name">User Manual - Insights</field>
+        <field name="url">/sa/manual#insights</field>
+        <field name="target">new</field>
+    </record>
+
+    <menuitem id="menu_sa_manual" name="📖 User Manual"
+              parent="sales_automation.menu_sa_root" action="action_sa_manual" sequence="99"/>
+    <menuitem id="menu_sa_manual_store" name="📖 User Manual"
+              parent="sales_automation_store.menu_sa_store_root" action="action_sa_manual_store" sequence="99"/>
+    <menuitem id="menu_sa_manual_delivery" name="📖 User Manual"
+              parent="sales_automation_delivery.menu_sa_delivery_root" action="action_sa_manual_delivery" sequence="99"/>
+    <menuitem id="menu_sa_manual_insights" name="📖 User Manual"
+              parent="sales_automation_insights.menu_sa_insights_root" action="action_sa_manual_insights" sequence="99"/>
+</odoo>

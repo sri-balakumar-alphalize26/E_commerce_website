@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_sa_connections_form" model="ir.ui.view">
+        <field name="name">sa.settings.connections.form</field>
+        <field name="model">sa.ai.settings</field>
+        <field name="priority">50</field>
+        <field name="arch" type="xml">
+            <form string="Connections" create="false" delete="false">
+                <header>
+                    <button name="action_refresh_connections" type="object" string="Refresh now" class="btn-primary"/>
+                    <field name="conn_checked_on" readonly="1" class="ms-3"/>
+                </header>
+                <sheet>
+                    <h2>WhatsApp</h2>
+                    <field name="conn_whatsapp_html" nolabel="1" readonly="1"/>
+                    <h2 class="mt-4">WeChat</h2>
+                    <field name="conn_wechat_html" nolabel="1" readonly="1"/>
+                    <div class="text-muted mt-4">
+                        <b>WhatsApp</b> shows the gateway sessions: CONNECTED means the shop number is
+                        linked and the gateway answers. <b>WeChat</b> shows the bridge PC: ALIVE means
+                        it sent a heartbeat within the last few minutes; DOWN means the PC, WeChat or
+                        the tunnel address needs attention (the counter screen then offers relay by hand).
+                        <b>Refresh now</b> asks the WhatsApp gateway for its live state; the WeChat
+                        heartbeat updates by itself every few seconds while the bridge runs.
+                    </div>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_sa_connections" model="ir.actions.server">
+        <field name="name">Connections</field>
+        <field name="model_id" ref="sales_automation.model_sa_ai_settings"/>
+        <field name="state">code</field>
+        <field name="code">
+action = {'type': 'ir.actions.act_window', 'name': 'Connections', 'res_model': 'sa.ai.settings',
+          'res_id': model.get_settings().id, 'view_mode': 'form', 'target': 'current',
+          'views': [[env.ref('sales_automation_wechat.view_sa_connections_form').id, 'form']]}
+        </field>
+    </record>
+
+    <menuitem id="menu_sa_connections" name="Connections (WhatsApp &amp; WeChat)"
+              parent="sales_automation.menu_sa_config" action="action_sa_connections" sequence="30"/>
+</odoo>

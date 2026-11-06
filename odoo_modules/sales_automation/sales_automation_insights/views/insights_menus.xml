@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- One screen, two doors. The action's context says which. -->
+    <record id="action_sa_insights_customers" model="ir.actions.client">
+        <field name="name">Customer Dashboard</field>
+        <field name="tag">sales_automation_insights.customers</field>
+        <field name="context">{'kind': 'customer'}</field>
+    </record>
+
+    <record id="action_sa_insights_vendors" model="ir.actions.client">
+        <field name="name">Vendor Dashboard</field>
+        <field name="tag">sales_automation_insights.vendors</field>
+        <field name="context">{'kind': 'vendor'}</field>
+    </record>
+
+    <menuitem id="menu_sa_insights_root"
+              name="Insights"
+              sequence="17"
+              groups="sales_automation.group_sa_user"/>
+
+    <menuitem id="menu_sa_insights_customers"
+              name="Customer Dashboard"
+              parent="menu_sa_insights_root"
+              action="action_sa_insights_customers"
+              sequence="1"/>
+
+    <menuitem id="menu_sa_insights_vendors"
+              name="Vendor Dashboard"
+              parent="menu_sa_insights_root"
+              action="action_sa_insights_vendors"
+              sequence="2"/>
+
+    <menuitem id="menu_sa_insights_config"
+              name="Configuration"
+              parent="menu_sa_insights_root"
+              sequence="10"
+              groups="sales_automation.group_sa_manager"/>
+
+    <menuitem id="menu_sa_insights_entities"
+              name="Rated Rows"
+              parent="menu_sa_insights_config"
+              action="action_sa_insight_entities"
+              sequence="1"/>
+
+    <menuitem id="menu_sa_insights_remarks"
+              name="Remarks"
+              parent="menu_sa_insights_config"
+              action="action_sa_conduct_remarks"
+              sequence="2"/>
+
+</odoo>

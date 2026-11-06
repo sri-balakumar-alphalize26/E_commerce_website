@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_sa_group_picker_form" model="ir.ui.view">
+        <field name="name">sa.group.picker.form</field>
+        <field name="model">sa.group.picker</field>
+        <field name="arch" type="xml">
+            <form string="Add WhatsApp Groups">
+                <!--
+                    Laid out like the Lead Finder's group screen on purpose:
+                    session, then a Load Groups button, then the list. It is the
+                    flow people here already know, and a second dialect of the
+                    same idea is a thing to relearn for no gain.
+                -->
+                <group string="WhatsApp Group">
+                    <field name="session_id" options="{'no_create': True}"/>
+                </group>
+                <div class="mb-3">
+                    <button name="action_refresh" type="object"
+                            string="Load Groups" class="btn-secondary"
+                            icon="fa-refresh"/>
+                    <span class="text-muted ms-2">
+                        Fetches the groups this number has joined. The list below
+                        already shows everything from the last load.
+                    </span>
+                </div>
+
+                <group>
+                    <field name="enable_now"/>
+                </group>
+
+                <div class="alert alert-warning" role="status"
+                     invisible="not fetch_error">
+                    Could not reach WhatsApp, so this is the list from the last
+                    sync. <field name="fetch_error" nolabel="1" readonly="1"
+                                 class="d-inline"/>
+                </div>
+
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <button name="action_select_all" type="object"
+                            string="Select all new" class="btn-link"/>
+                    <button name="action_clear" type="object"
+                            string="Clear" class="btn-link"/>
+                    <span class="ms-auto text-muted">
+                        <field name="selected_count" nolabel="1" readonly="1"
+                               class="d-inline"/> selected
+                    </span>
+                </div>
+
+                <field name="line_ids" nolabel="1">
+                    <list editable="bottom" create="false" delete="false"
+                          decoration-muted="linked_type">
+                        <field name="selected" widget="boolean_toggle"/>
+                        <field name="name" readonly="1"/>
+                        <field name="member_count" readonly="1"/>
+                        <field name="linked_type" readonly="1"/>
+                        <field name="is_enabled" readonly="1" string="On"/>
+                        <field name="group_jid" readonly="1" optional="hide"/>
+                    </list>
+                </field>
+                <div class="text-muted mt-2">
+                    Groups already added are greyed out - tick one to move it to
+                    the type above, or to re-apply these settings to it.
+                </div>
+
+                <footer>
+                    <button name="action_add" type="object" string="Add Selected"
+                            class="btn-primary"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_sa_group_picker_customer" model="ir.actions.act_window">
+        <field name="name">Add Customer Groups</field>
+        <field name="res_model">sa.group.picker</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="context">{'default_group_type': 'customer'}</field>
+    </record>
+
+    <record id="action_sa_group_picker_vendor" model="ir.actions.act_window">
+        <field name="name">Add Vendor Groups</field>
+        <field name="res_model">sa.group.picker</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="context">{'default_group_type': 'vendor'}</field>
+    </record>
+
+    <!-- ============ The two lists the menus point at ============ -->
+    <record id="action_sa_customer_group" model="ir.actions.act_window">
+        <field name="name">Customer Groups</field>
+        <field name="res_model">sa.sales.group</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('group_type', '=', 'customer')]</field>
+        <field name="context">{'default_group_type': 'customer'}</field>
+        <field name="search_view_id" ref="view_sa_sales_group_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No customer groups yet</p>
+            <p>
+                Press <b>Add Groups</b> to choose from the groups this WhatsApp
+                number has joined. Enquiries posted in the ones you pick are
+                answered automatically.
+            </p>
+        </field>
+    </record>
+
+    <record id="action_sa_vendor_group" model="ir.actions.act_window">
+        <field name="name">Vendor Groups</field>
+        <field name="res_model">sa.sales.group</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('group_type', '=', 'vendor')]</field>
+        <field name="context">{'default_group_type': 'vendor'}</field>
+        <field name="search_view_id" ref="view_sa_sales_group_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No vendor groups yet</p>
+            <p>
+                Press <b>Add Groups</b> to pick the groups your suppliers are
+                in, and say which product categories each one can price. An
+                out-of-stock enquiry is posted to the group covering its
+                category.
+            </p>
+        </field>
+    </record>
+
+    <!--
+        The New button.
+
+        `display="always"` is the whole trick. Without it a list `<header>`
+        button is a *selection* action: web/.../list_controller.xml renders it
+        under `t-if="hasSelectedRecords"`, so it appears only once rows are
+        ticked - and on an empty list, never. Only `display="always"` puts it
+        in the control panel beside New.
+
+        The header is also kept as the first child of `<list>` rather than
+        appended with `position="inside"`.
+
+        One button, not one per type: it calls a method that reads the type
+        from the action's context, so the two lists share it.
+    -->
+    <record id="view_sa_sales_group_list_picker" model="ir.ui.view">
+        <field name="name">sa.sales.group.list.picker</field>
+        <field name="model">sa.sales.group</field>
+        <field name="inherit_id" ref="view_sa_sales_group_list"/>
+        <field name="arch" type="xml">
+            <xpath expr="//list/field[1]" position="before">
+                <header>
+                    <button name="action_open_picker" type="object"
+                            string="New" class="btn-primary"
+                            display="always"/>
+                </header>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

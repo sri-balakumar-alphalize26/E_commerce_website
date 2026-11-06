@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="0">
+
+        <!--
+            Enquiries are processed the moment the webhook delivers them, so
+            there is no polling cron here. This one only tidies up: the tracker
+            restores conversation context for 15 minutes, so an enquiry nobody
+            came back to within a day is not a live lead and should stop
+            reading as one.
+        -->
+        <record id="cron_sa_expire_stale_requests" model="ir.cron">
+            <field name="name">Sales Automation: Close Abandoned Enquiries</field>
+            <field name="model_id" ref="model_sa_group_request"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_expire_stale()</field>
+            <field name="interval_number">6</field>
+            <field name="interval_type">hours</field>
+            <field name="active">True</field>
+            <field name="priority">30</field>
+        </record>
+
+
+        <!--
+            Vendor prices arrive over minutes, not milliseconds, so the quote
+            to the customer is sent by a cron rather than by whichever vendor
+            happened to reply last. Every minute: any request whose window has
+            passed is closed on the cheapest price received.
+        -->
+        <record id="cron_sa_close_sourcing" model="ir.cron">
+            <field name="name">Sales Automation: Close Vendor Quote Windows</field>
+            <field name="model_id" ref="model_sa_group_request"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_close_sourcing()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">minutes</field>
+            <field name="active">True</field>
+            <field name="priority">10</field>
+        </record>
+
+        <!--
+            A question the customer never answers. Every minute, because the
+            timeout is configured in minutes and a sweep slower than the
+            setting would make the number a lie.
+        -->
+        <record id="cron_sa_expire_customer" model="ir.cron">
+            <field name="name">Sales Automation: Close Enquiries the Customer Dropped</field>
+            <field name="model_id" ref="model_sa_group_request"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_expire_customer()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">minutes</field>
+            <field name="active">True</field>
+            <field name="priority">20</field>
+        </record>
+
+        <!-- The finder's cached AI answers live a week; this sweeps the dead ones. -->
+        <record id="cron_sa_purge_suggestions" model="ir.cron">
+            <field name="name">Sales Automation: Purge Expired AI Suggestions</field>
+            <field name="model_id" ref="model_sa_ai_suggestion"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_purge()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+            <field name="active">True</field>
+            <field name="priority">50</field>
+        </record>
+
+    
+        <!-- A shopkeeper's hold ran out with a customer message unanswered:
+             hand the last one to the assistant. -->
+        <record id="cron_sa_answer_held" model="ir.cron">
+            <field name="name">Sales Automation: answer messages held for the shopkeeper</field>
+            <field name="model_id" ref="model_sa_human_hold"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_answer_held()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">minutes</field>
+            <field name="active">True</field>
+        </record>
+
+        <!-- A pay link went out and nothing came back: remind in the group. -->
+        <record id="cron_sa_pay_remind" model="ir.cron">
+            <field name="name">Sales Automation: remind unpaid group orders</field>
+            <field name="model_id" ref="model_sa_group_request"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_pay_remind()</field>
+            <field name="interval_number">10</field>
+            <field name="interval_type">minutes</field>
+            <field name="active">True</field>
+        </record>
+</data>
+    <record id="cron_sa_auto_source" model="ir.cron">
+        <field name="name">Sales Automation: Ask Vendors the Shop Did Not Pick</field>
+        <field name="model_id" ref="model_sa_group_request"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_auto_source()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">minutes</field>
+        <field name="active">True</field>
+        <field name="priority">10</field>
+    </record>
+
+</odoo>

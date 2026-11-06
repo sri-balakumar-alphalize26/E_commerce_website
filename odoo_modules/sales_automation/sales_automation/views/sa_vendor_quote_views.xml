@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_sa_vendor_quote_list" model="ir.ui.view">
+        <field name="name">sa.vendor.quote.list</field>
+        <field name="model">sa.vendor.quote</field>
+        <field name="arch" type="xml">
+            <list string="Vendor Quotes" create="false"
+                  decoration-success="is_best"
+                  decoration-warning="matched_by == 'newest_open'">
+                <field name="create_date" string="Received"/>
+                <field name="group_id"/>
+                <field name="vendor_name"/>
+                <field name="vendor_phone" optional="show"/>
+                <field name="product_id" optional="show"/>
+                <field name="price"/>
+                <field name="delay_days" string="Days"/>
+                <field name="response_minutes" string="Replied after" optional="show"/>
+                <field name="currency_id" column_invisible="1"/>
+                <field name="matched_by" widget="badge"
+                       decoration-success="matched_by == 'reply_quote'"
+                       decoration-warning="matched_by == 'newest_open'"/>
+                <!-- Readonly on purpose: toggling it here wrote the flag without
+                     calling _apply_winning_quote, so the customer was never
+                     re-quoted and best_quote_id/vendor_price went stale.
+                     "Use This Price" on the form does it properly. -->
+                <field name="is_best" readonly="1" widget="boolean_toggle" string="Winner"/>
+                <field name="raw_text" optional="hide"/>
+                <field name="request_id" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_sa_vendor_quote_form" model="ir.ui.view">
+        <field name="name">sa.vendor.quote.form</field>
+        <field name="model">sa.vendor.quote</field>
+        <field name="arch" type="xml">
+            <form string="Vendor Quote" create="false">
+                <header>
+                    <button name="action_make_best" type="object"
+                            string="Use This Price" class="btn-primary"
+                            invisible="is_best"
+                            confirm="Quote the customer from this price instead?"/>
+                </header>
+                <sheet>
+                    <widget name="web_ribbon" title="Winner" invisible="not is_best"/>
+                    <div class="alert alert-warning" role="status"
+                         invisible="matched_by != 'newest_open'">
+                        This vendor did not reply to our message, so it was tied
+                        to the newest open request in the group - a guess. Check
+                        it is priced against the right product.
+                    </div>
+                    <group>
+                        <group string="Vendor">
+                            <field name="vendor_name"/>
+                            <field name="vendor_phone"/>
+                            <field name="partner_id"/>
+                            <field name="group_id"/>
+                        </group>
+                        <group string="Quote">
+                            <field name="currency_id" invisible="1"/>
+                            <field name="price"/>
+                            <field name="delay_days"/>
+                            <field name="response_minutes"/>
+                            <field name="matched_by"/>
+                            <field name="is_best"/>
+                            <field name="request_id"/>
+                            <field name="product_id"/>
+                        </group>
+                    </group>
+                    <group string="What the vendor typed">
+                        <field name="raw_text" nolabel="1" colspan="2" readonly="1"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_sa_vendor_quote_search" model="ir.ui.view">
+        <field name="name">sa.vendor.quote.search</field>
+        <field name="model">sa.vendor.quote</field>
+        <field name="arch" type="xml">
+            <search string="Vendor Quotes">
+                <field name="vendor_name"/>
+                <field name="vendor_phone"/>
+                <field name="product_id"/>
+                <field name="group_id"/>
+                <filter name="filter_best" string="Winning Quotes"
+                        domain="[('is_best', '=', True)]"/>
+                <filter name="filter_guessed" string="Matched by Guess"
+                        domain="[('matched_by', '=', 'newest_open')]"/>
+                <group>
+                    <filter name="group_by_group" string="Vendor Group"
+                            context="{'group_by': 'group_id'}"/>
+                    <filter name="group_by_vendor" string="Vendor"
+                            context="{'group_by': 'vendor_name'}"/>
+                    <filter name="group_by_product" string="Product"
+                            context="{'group_by': 'product_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_sa_vendor_quote" model="ir.actions.act_window">
+        <field name="name">Vendor Quotes</field>
+        <field name="res_model">sa.vendor.quote</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_sa_vendor_quote_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No vendor prices yet</p>
+            <p>
+                When an out-of-stock enquiry is posted to a vendor group, every
+                price a vendor replies with is recorded here.
+            </p>
+        </field>
+    </record>
+
+</odoo>

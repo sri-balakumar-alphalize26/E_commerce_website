@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Next to the two queues these rules fill. -->
+    <menuitem id="menu_sa_qe_root"
+              name="Delivery Rules"
+              parent="sales_automation_store.menu_sa_store_root"
+              sequence="6"/>
+
+    <menuitem id="menu_sa_qe_fees"
+              name="Fees"
+              parent="menu_sa_qe_root"
+              action="action_sa_qe_delivery_rule"
+              sequence="1"/>
+
+    <menuitem id="menu_sa_qe_slots"
+              name="Slots"
+              parent="menu_sa_qe_root"
+              action="action_sa_qe_delivery_slot"
+              sequence="2"/>
+
+    <menuitem id="menu_sa_qe_areas"
+              name="Service Areas"
+              parent="menu_sa_qe_root"
+              action="action_sa_qe_service_area"
+              sequence="3"/>
+
+    <menuitem id="menu_sa_qe_reach"
+              name="Shop Reach"
+              parent="menu_sa_qe_root"
+              action="action_sa_qe_shop_reach"
+              sequence="4"/>
+
+</odoo>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+<t t-name="sales_automation_insights.Heatmap">
+    <div class="sai_heat">
+        <span class="sai_heat_lbl"></span>
+        <span t-foreach="hours" t-as="h" t-key="h" class="sai_heat_h"><t t-if="h % 3 === 0" t-esc="h"/></span>
+        <t t-foreach="days" t-as="day" t-key="day_index">
+            <span class="sai_heat_lbl"><t t-esc="day"/></span>
+            <span t-foreach="hours" t-as="h" t-key="h" class="sai_heat_cell"
+                  t-att-class="shade(props.heatmap.buckets[day_index][h])"
+                  t-att-title="day + ' ' + h + ':00 - ' + props.heatmap.buckets[day_index][h]"/>
+        </t>
+    </div>
+    <div class="sai_sub mono" style="margin-top:8px">activity by weekday and hour · <t t-esc="props.heatmap.tz"/></div>
+</t>
+
+</templates>

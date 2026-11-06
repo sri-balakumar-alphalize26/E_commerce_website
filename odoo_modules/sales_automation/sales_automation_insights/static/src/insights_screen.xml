@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+<t t-name="sales_automation_insights.Screen">
+    <div class="sa_insights" t-att-class="{ sai_day: state.theme === 'day' }">
+        <div class="sai_top">
+            <button class="sai_theme" t-on-click="toggleTheme"
+                    t-att-title="state.theme === 'day' ? 'Switch to night mode' : 'Switch to day mode'">
+                <t t-if="state.theme === 'day'">☾</t><t t-else="">☀</t>
+            </button>
+            <div class="sai_brand"><span class="sai_mark"/> <t t-esc="title"/></div>
+            <t t-if="state.board">
+                <div class="sai_kpi sai_kpi_accent">
+                    <span class="sai_kpi_label"><t t-esc="state.board.kpis.live_revenue_label"/></span>
+                    <span class="sai_kpi_value"><t t-esc="state.board.currency"/><t t-esc="state.board.kpis.live_revenue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})"/></span>
+                </div>
+                <div class="sai_kpi">
+                    <span class="sai_kpi_label">AVG RESPONSE</span>
+                    <span class="sai_kpi_value"><t t-esc="state.board.kpis.avg_response_min"/>m</span>
+                </div>
+                <div class="sai_kpi">
+                    <span class="sai_kpi_label"><t t-esc="state.board.kpis.orders_transit_label"/></span>
+                    <span class="sai_kpi_value"><t t-esc="state.board.kpis.orders_transit"/></span>
+                </div>
+                <div class="sai_kpi">
+                    <span class="sai_kpi_label"><t t-esc="state.board.kpis.open_threads_label"/></span>
+                    <span class="sai_kpi_value"><t t-esc="state.board.kpis.open_threads"/></span>
+                </div>
+                <div class="sai_kpi">
+                    <span class="sai_kpi_label">RATED</span>
+                    <span class="sai_kpi_value"><t t-esc="state.board.kpis.scored_count"/> / <t t-esc="state.board.kpis.entity_count"/></span>
+                </div>
+            </t>
+            <div class="sai_status">
+                <span class="sai_dot"/>
+                <span t-if="state.board and state.board.scored_on">SCORED <t t-esc="new Date(state.board.scored_on).toLocaleString()"/></span>
+                <span t-else="">NOT YET SCORED</span>
+            </div>
+        </div>
+
+        <div t-if="state.loading" class="sai_loading">loading…</div>
+
+        <Leaderboard t-if="!state.loading and state.view === 'board'"
+                     kind="kind" board="state.board" selected="state.selected"
+                     search="state.search" busy="state.busy" tier="state.tier" aspect="state.aspect"
+                     onTier.bind="onTier" onAspect.bind="onAspect"
+                     onSearch.bind="onSearch" onOpen.bind="onOpen"
+                     onToggle.bind="onToggle" onCompare.bind="onCompare"
+                     onRecompute.bind="onRecompute"/>
+
+        <Profile t-if="state.view === 'profile' and state.profile"
+                 kind="kind" profile="state.profile" theme="state.theme" onBack.bind="onBack"/>
+
+        <Compare t-if="state.view === 'compare' and state.compare"
+                 kind="kind" compare="state.compare" theme="state.theme" onBack.bind="onBack"
+                 onOpen.bind="onOpenFromCompare"/>
+    </div>
+</t>
+
+</templates>

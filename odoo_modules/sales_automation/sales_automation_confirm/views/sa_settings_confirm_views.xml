@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_sa_settings_confirm_form" model="ir.ui.view">
+        <field name="name">sa.settings.confirm.form</field>
+        <field name="model">sa.ai.settings</field>
+        <field name="priority">49</field>
+        <field name="arch" type="xml">
+            <form string="Product Confirmation">
+                <sheet>
+                    <group>
+                        <group string="Who confirms on the page">
+                            <field name="confirm_enabled"/>
+                            <field name="confirm_vendor_enabled"/>
+                            <field name="confirm_remind_minutes"/>
+                        </group>
+                        <group string="Pictures">
+                            <field name="confirm_fetch_images"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group string="So far">
+                            <field name="confirm_link_count" readonly="1" string="Links sent"/>
+                            <field name="confirm_click_count" readonly="1" string="Clicks logged"/>
+                        </group>
+                    </group>
+                    <group>
+                        <div class="text-muted">
+                            <b>How it works.</b> When a product is identified for a customer, they
+                            get its picture and a private link. The link opens one page with the
+                            picture, every property in a table, and two buttons: ACCEPT / REJECT.
+                            The first press is final; the buttons are disabled afterwards. Only after
+                            ACCEPT is the price found (stock or vendors). A YES typed in the chat is
+                            answered with "please press ACCEPT on the page". Vendors on WhatsApp and
+                            WeChat get the same page with their price check: ACCEPT means "I have this
+                            exact product" and the price is asked; REJECT means "don't have it".
+                            <br/><br/>
+                            <b>Pictures.</b> The product's own pictures are used, the same ones the
+                            shop shows, up to 13. Pictures are never searched for on the internet. When
+                            there is no picture, an AI reference picture is drawn with the Gemini key
+                            from AI Settings, if switched on above.
+                            <br/><br/>
+                            <b>Click log.</b> Every open and every press is recorded with the account
+                            the link was sent to, the time, the IP address and the browser:
+                            Reporting ▸ Link Clicks, on each enquiry, on the counter screen's enquiry
+                            detail, and on the Insights profiles.
+                        </div>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_sa_settings_confirm" model="ir.actions.server">
+        <field name="name">Product Confirmation</field>
+        <field name="model_id" ref="sales_automation.model_sa_ai_settings"/>
+        <field name="state">code</field>
+        <field name="code">
+action = {'type': 'ir.actions.act_window', 'name': 'Product Confirmation', 'res_model': 'sa.ai.settings',
+          'res_id': model.get_settings().id, 'view_mode': 'form', 'target': 'current',
+          'views': [[env.ref('sales_automation_confirm.view_sa_settings_confirm_form').id, 'form']]}
+        </field>
+    </record>
+
+    <menuitem id="menu_sa_settings_confirm" name="Product Confirmation"
+              parent="sales_automation.menu_sa_config" action="action_sa_settings_confirm" sequence="41"/>
+</odoo>

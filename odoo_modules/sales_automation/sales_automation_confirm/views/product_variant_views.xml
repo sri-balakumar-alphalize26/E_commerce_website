@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Variant form: two tabs the owner asked for (30 Sep 2026) - the
+         variant's own pictures and an editable specs table filled from
+         the attributes. Both feed the WhatsApp confirmation page. -->
+    <record id="product_normal_form_view_sa_media" model="ir.ui.view">
+        <field name="name">product.product.form.sa.variant.media</field>
+        <field name="model">product.product</field>
+        <field name="inherit_id" ref="product.product_normal_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//page[@name='general_information']" position="after">
+                <page string="Variant images" name="sa_variant_images">
+                    <p class="text-muted">
+                        Photos of this exact variant. The first is the main picture on the WhatsApp
+                        confirmation page when the variant has no image of its own; the next ones fill
+                        the picture strip (up to 13 in total).
+                    </p>
+                    <field name="sa_variant_picture_ids" mode="kanban" context="{'default_product_id': id}">
+                        <kanban>
+                            <field name="id"/>
+                            <field name="sequence" widget="handle"/>
+                            <templates>
+                                <t t-name="card" class="p-2 text-center" style="width: 160px;">
+                                    <field name="image" widget="image" class="o_kanban_image" options="{'size': [140, 140]}"/>
+                                    <div class="mt-1"><field name="name" placeholder="Caption"/></div>
+                                </t>
+                            </templates>
+                        </kanban>
+                        <form string="Variant picture">
+                            <group>
+                                <field name="image" widget="image" options="{'size': [300, 300]}"/>
+                                <field name="name" placeholder="Caption (optional)"/>
+                                <field name="sequence"/>
+                            </group>
+                        </form>
+                    </field>
+                </page>
+                <page string="Variant specs" name="sa_variant_specs">
+                    <div class="mb-2">
+                        <button name="action_sa_fill_specs" type="object" string="Fill from attributes"
+                                class="btn btn-secondary" icon="fa-magic"
+                                help="Adds one line per attribute of this variant that is not in the table yet. Your edited lines stay."/>
+                        <span class="text-muted ms-2">
+                            Shown on the WhatsApp confirmation page under the picture. Edit values, add lines, drag to reorder.
+                        </span>
+                    </div>
+                    <field name="sa_spec_ids" context="{'default_product_id': id}">
+                        <list editable="bottom">
+                            <field name="sequence" widget="handle"/>
+                            <field name="name"/>
+                            <field name="value"/>
+                            <field name="attribute_id" readonly="1" optional="hide"/>
+                        </list>
+                    </field>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Product form: extra pictures for the confirmation page strip. With
+         369 Mart, mart369_whatsapp_bridge replaces this tab with the Photographs
+         box, so the shop and the page share one list. -->
+    <record id="product_template_form_view_sa_pictures" model="ir.ui.view">
+        <field name="name">product.template.form.sa.confirm.pictures</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="inside">
+                <page string="Confirmation pictures" name="sa_confirm_pictures"
+                      groups="sales_automation.group_sa_user">
+                    <p class="text-muted">
+                        Extra pictures for the WhatsApp confirmation page. They are used only when the shop's
+                        Extra Product Media is not available. Pictures marked "internet" came from an old search
+                        and are no longer shown.
+                    </p>
+                    <field name="sa_extra_picture_ids" mode="kanban">
+                        <kanban>
+                            <field name="id"/>
+                            <field name="sequence" widget="handle"/>
+                            <templates>
+                                <t t-name="card" class="p-2 text-center" style="width: 160px;">
+                                    <field name="image" widget="image" class="o_kanban_image" options="{'size': [140, 140]}"/>
+                                    <div class="mt-1 text-muted small"><field name="source"/></div>
+                                </t>
+                            </templates>
+                        </kanban>
+                        <form string="Confirmation picture">
+                            <group>
+                                <field name="image" widget="image" options="{'size': [300, 300]}"/>
+                                <field name="sequence"/>
+                                <field name="source" readonly="1"/>
+                            </group>
+                        </form>
+                    </field>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>

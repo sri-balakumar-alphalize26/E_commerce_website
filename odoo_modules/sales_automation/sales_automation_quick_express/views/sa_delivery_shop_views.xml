@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_sa_delivery_shop_form_qe" model="ir.ui.view">
+        <field name="name">sa.delivery.shop.form.qe</field>
+        <field name="model">sa.delivery.shop</field>
+        <field name="inherit_id" ref="sales_automation_delivery.view_sa_delivery_shop_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='service_areas']/.." position="after">
+                <group string="Quick delivery reach">
+                    <field name="qe_quick"/>
+                    <field name="qe_quick_km" invisible="not qe_quick"/>
+                    <field name="qe_ready" invisible="not qe_quick"/>
+                    <div class="text-muted" colspan="2" invisible="not qe_quick or qe_ready">
+                        Not ready yet: Quick needs a reach above 0 km and a map pin.
+                    </div>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Reach of every shop on one screen. Its own list (priority 99) so the
+         ordinary Shops list is left alone. -->
+    <record id="view_sa_delivery_shop_list_qe" model="ir.ui.view">
+        <field name="name">sa.delivery.shop.list.qe</field>
+        <field name="model">sa.delivery.shop</field>
+        <field name="priority">99</field>
+        <field name="arch" type="xml">
+            <list string="Shop reach" editable="bottom" create="0" delete="0">
+                <field name="name" readonly="1"/>
+                <field name="warehouse_id" readonly="1"/>
+                <field name="qe_quick" widget="boolean_toggle"/>
+                <field name="qe_quick_km"/>
+                <field name="latitude"/>
+                <field name="longitude"/>
+                <field name="qe_ready" string="Ready"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_sa_qe_shop_reach" model="ir.actions.act_window">
+        <field name="name">Shop Reach</field>
+        <field name="res_model">sa.delivery.shop</field>
+        <field name="view_mode">list,form</field>
+        <field name="view_id" ref="view_sa_delivery_shop_list_qe"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No shop yet</p>
+            <p>Add shops under Delivery &gt; Configuration &gt; Shops, then
+               switch Quick on here and give each a reach in km and a map pin.</p>
+        </field>
+    </record>
+
+</odoo>

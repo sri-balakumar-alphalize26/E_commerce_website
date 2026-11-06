@@ -1,0 +1,428 @@
+// The Insights console. Everything is scoped under .sa_insights and nothing
+// here is shared with the store or enquiry screens - those are light, this is
+// deliberately dark, and the two must not bleed into each other.
+
+.sa_insights {
+    --sai-bg: #0b0b0b;
+    --sai-panel: #141414;
+    --sai-panel-2: #1b1b1b;
+    --sai-line: #262626;
+    --sai-accent: #ff7a1a;
+    --sai-accent-dim: #7a3a0e;
+    --sai-text: #e6e6e6;
+    --sai-muted: #8a8a8a;
+    --sai-ok: #22c55e;
+    --sai-warn: #f59e0b;
+    --sai-bad: #ef4444;
+    --sai-mono: "JetBrains Mono", "Fira Mono", Consolas, "Courier New", monospace;
+
+    background: var(--sai-bg);
+    color: var(--sai-text);
+    min-height: 100%;
+    padding: 0 0 40px;
+    font-size: 14px;
+
+    a { color: var(--sai-accent); }
+    .muted { color: var(--sai-muted); }
+    .mono { font-family: var(--sai-mono); }
+
+    // ---- top bar: brand + KPI strip ----
+    .sai_top {
+        display: flex;
+        align-items: center;
+        gap: 28px;
+        padding: 14px 20px;
+        border-bottom: 1px solid var(--sai-line);
+        background: #0e0e0e;
+        flex-wrap: wrap;
+    }
+    .sai_brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 800;
+        letter-spacing: .04em;
+        .sai_mark {
+            width: 26px; height: 26px; border-radius: 5px;
+            background: var(--sai-accent);
+            display: inline-block;
+            position: relative;
+            &::after {
+                content: ""; position: absolute; inset: 7px;
+                border: 2px solid #0b0b0b; border-radius: 2px;
+            }
+        }
+    }
+    .sai_kpi {
+        display: flex; flex-direction: column; gap: 2px;
+        .sai_kpi_label {
+            font-family: var(--sai-mono);
+            font-size: 10px; letter-spacing: .18em; text-transform: uppercase;
+            color: var(--sai-muted);
+        }
+        .sai_kpi_value {
+            font-family: var(--sai-mono);
+            font-size: 20px; font-weight: 700;
+        }
+        &.sai_kpi_accent .sai_kpi_label,
+        &.sai_kpi_accent .sai_kpi_value { color: var(--sai-accent); }
+    }
+    .sai_status {
+        margin-left: auto;
+        display: flex; align-items: center; gap: 8px;
+        font-family: var(--sai-mono); font-size: 11px; letter-spacing: .12em;
+        color: var(--sai-muted);
+        .sai_dot { width: 8px; height: 8px; border-radius: 50%; background: var(--sai-ok); }
+    }
+
+    // ---- section headings ----
+    .sai_sect {
+        font-family: var(--sai-mono);
+        font-size: 11px; letter-spacing: .2em; text-transform: uppercase;
+        color: var(--sai-muted);
+        padding: 18px 20px 8px;
+        display: flex; align-items: center; gap: 12px;
+        .sai_count {
+            background: var(--sai-accent); color: #000;
+            padding: 2px 8px; border-radius: 3px; font-weight: 700;
+        }
+        .sai_spacer { flex: 1; }
+    }
+
+    // ---- controls ----
+    .sai_toolbar {
+        display: flex; gap: 10px; align-items: center; padding: 0 20px 8px;
+        flex-wrap: wrap;
+    }
+    .sai_search {
+        background: var(--sai-panel); border: 1px solid var(--sai-line);
+        color: var(--sai-text); padding: 8px 12px; border-radius: 6px;
+        min-width: 260px; font-family: var(--sai-mono); font-size: 13px;
+        &:focus { outline: none; border-color: var(--sai-accent); }
+    }
+    .sai_btn {
+        background: var(--sai-panel-2); border: 1px solid var(--sai-line);
+        color: var(--sai-text); padding: 8px 14px; border-radius: 6px;
+        font-weight: 600; cursor: pointer;
+        &:hover { border-color: var(--sai-accent); }
+        &:disabled { opacity: .4; cursor: not-allowed; }
+        &.sai_btn_accent {
+            background: var(--sai-accent); color: #000; border-color: var(--sai-accent);
+            &:hover { filter: brightness(1.1); }
+        }
+        &.sai_btn_link { background: none; border: none; color: var(--sai-accent); padding: 4px 6px; }
+    }
+
+    // ---- leaderboard ----
+    .sai_board { width: 100%; border-collapse: collapse; }
+    .sai_board th {
+        font-family: var(--sai-mono); font-size: 10px; letter-spacing: .16em;
+        text-transform: uppercase; color: var(--sai-muted);
+        text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--sai-line);
+        white-space: nowrap;
+    }
+    .sai_board td {
+        padding: 12px 14px; border-bottom: 1px solid var(--sai-line);
+        vertical-align: middle;
+    }
+    .sai_board tr.sai_row { cursor: pointer; }
+    .sai_board tr.sai_row:hover td { background: var(--sai-panel); }
+    .sai_board tr.sai_row_on td { background: #1a1208; }
+    .sai_board tr.sai_row_off td { color: var(--sai-muted); }
+    .sai_board .sai_num { font-family: var(--sai-mono); text-align: right; }
+    .sai_name { font-weight: 700; }
+    .sai_sub { color: var(--sai-muted); font-size: 12px; margin-top: 2px; }
+    .sai_check { accent-color: var(--sai-accent); width: 16px; height: 16px; }
+
+    // ---- stars ----
+    .sai_stars {
+        font-family: var(--sai-mono); white-space: nowrap;
+        .sai_star_on { color: var(--sai-accent); }
+        .sai_star_off { color: #3a3a3a; }
+        .sai_star_num { margin-left: 6px; font-weight: 700; }
+        &.sai_stars_none { color: var(--sai-muted); font-size: 12px; }
+    }
+
+    // ---- tags ----
+    .sai_tag {
+        font-family: var(--sai-mono); font-size: 10px; letter-spacing: .14em;
+        text-transform: uppercase; font-weight: 700;
+        padding: 3px 8px; border-radius: 3px; white-space: nowrap;
+        &.sai_tag_overdue { color: var(--sai-accent); border: 1px solid var(--sai-accent-dim); }
+        &.sai_tag_awaited { color: var(--sai-warn); border: 1px solid #5a3d07; }
+        &.sai_tag_replied { color: var(--sai-muted); border: 1px solid var(--sai-line); }
+        &.sai_tag_ok { color: var(--sai-ok); border: 1px solid #14532d; }
+        &.sai_tag_bad { color: var(--sai-bad); border: 1px solid #7f1d1d; }
+        &.sai_tag_flagged { color: #fff; background: var(--sai-bad); border: 1px solid var(--sai-bad); }
+    }
+    .sai_chip_bad {
+        display: inline-block; min-width: 22px; text-align: center;
+        background: var(--sai-bad); color: #fff; font-family: var(--sai-mono);
+        font-weight: 700; font-size: 12px; padding: 2px 7px; border-radius: 11px;
+        &.sai_chip_wide { font-size: 11px; letter-spacing: .12em; }
+    }
+    .sai_count_bad { background: var(--sai-bad) !important; color: #fff !important; }
+
+    // ---- verdict tiers: badge + filter chips ----
+    --sai-tier-best: #22c55e;
+    --sai-tier-better: #2dd4bf;
+    --sai-tier-normal: #9ca3af;
+    --sai-tier-poor: #ef4444;
+    --sai-tier-new: #6b7280;
+    .sai_tier {
+        display: inline-block; margin-left: 10px; vertical-align: middle;
+        font-family: var(--sai-mono); font-size: 10px; letter-spacing: .14em; font-weight: 700;
+        padding: 2px 7px; border-radius: 3px; border: 1px solid currentColor;
+        &.sai_tier_best { color: var(--sai-tier-best); }
+        &.sai_tier_better { color: var(--sai-tier-better); }
+        &.sai_tier_normal { color: var(--sai-tier-normal); }
+        &.sai_tier_poor { color: var(--sai-tier-poor); }
+        &.sai_tier_new { color: var(--sai-tier-new); border-style: dashed; }
+        &.sai_tier_big { font-size: 12px; padding: 4px 10px; margin-left: 0; }
+    }
+    .sai_chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 4px 20px 12px; align-items: center; }
+    .sai_chips_aspect { padding-top: 0; }
+    .sai_chips_label { font-family: var(--sai-mono); font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--sai-muted); margin-right: 4px; }
+    .sai_chip_small { padding: 4px 10px; font-size: 12px; }
+    .sai_chip {
+        background: var(--sai-panel); border: 1px solid var(--sai-line); color: var(--sai-text);
+        padding: 6px 12px; border-radius: 16px; cursor: pointer; font-size: 13px; font-weight: 600;
+        .sai_chip_n { font-family: var(--sai-mono); color: var(--sai-muted); margin-left: 4px; }
+        &:hover { border-color: var(--sai-accent); }
+        &.sai_chip_on { background: var(--sai-accent); border-color: var(--sai-accent); color: #000;
+                        .sai_chip_n { color: #000; } }
+        &.sai_chip_best:not(.sai_chip_on) { border-color: var(--sai-tier-best); }
+        &.sai_chip_poor:not(.sai_chip_on) { border-color: var(--sai-tier-poor); }
+        &.sai_chip_flagged:not(.sai_chip_on) { border-color: var(--sai-bad); }
+    }
+    .sai_remark_text { max-width: 420px; white-space: pre-wrap; }
+    .sai_lvl_remark { color: var(--sai-bad); }
+
+    // ---- panels ----
+    .sai_grid {
+        display: grid; gap: 16px; padding: 0 20px;
+        grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    }
+    .sai_panel {
+        background: var(--sai-panel); border: 1px solid var(--sai-line);
+        border-radius: 8px; padding: 16px;
+    }
+    .sai_panel_wide { grid-column: 1 / -1; }
+
+    // ---- profile header ----
+    .sai_head {
+        display: flex; align-items: center; gap: 18px; padding: 18px 20px;
+        border-bottom: 1px solid var(--sai-line); flex-wrap: wrap;
+        .sai_avatar {
+            width: 52px; height: 52px; border-radius: 50%;
+            background: var(--sai-panel-2); border: 2px solid var(--sai-line);
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 800; font-size: 18px; color: var(--sai-accent);
+        }
+        .sai_head_name { font-size: 22px; font-weight: 800; }
+        .sai_head_sub { color: var(--sai-muted); font-size: 13px; margin-top: 2px; }
+        .sai_head_right { margin-left: auto; display: flex; gap: 10px; align-items: center; }
+    }
+    .sai_dupes {
+        margin-left: 16px; font-size: 12px; color: var(--sai-warn);
+    }
+
+    // ---- lifetime value ----
+    .sai_ltv_label {
+        font-family: var(--sai-mono); font-size: 10px; letter-spacing: .18em;
+        text-transform: uppercase; color: var(--sai-muted);
+    }
+    .sai_ltv_value { font-family: var(--sai-mono); font-size: 30px; font-weight: 800; margin: 4px 0 10px; }
+    .sai_bar { height: 6px; background: var(--sai-line); border-radius: 3px; overflow: hidden; }
+    .sai_bar_fill { height: 100%; background: var(--sai-accent); }
+
+    // ---- score breakdown ----
+    .sai_score_row {
+        display: grid; grid-template-columns: 150px 1fr 70px 110px; gap: 10px;
+        align-items: center; padding: 6px 0; border-bottom: 1px dashed var(--sai-line);
+        font-size: 13px;
+        .sai_score_bar { height: 8px; background: var(--sai-line); border-radius: 4px; overflow: hidden; }
+        .sai_score_fill { height: 100%; background: var(--sai-accent); }
+        .sai_score_nosample .sai_score_fill { background: #333; }
+        .sai_raw { color: var(--sai-muted); font-family: var(--sai-mono); font-size: 12px; text-align: right; }
+    }
+    .sai_ring_wrap { display: flex; align-items: center; gap: 18px; }
+    .sai_ring { position: relative; width: 120px; height: 120px; }
+    .sai_ring_num {
+        position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+        font-family: var(--sai-mono); font-weight: 800; font-size: 26px;
+        flex-direction: column;
+        small { font-size: 10px; letter-spacing: .14em; color: var(--sai-muted); }
+    }
+
+    // ---- orders / tracking table ----
+    .sai_tbl { width: 100%; border-collapse: collapse; font-family: var(--sai-mono); font-size: 13px; }
+    .sai_tbl th {
+        text-align: left; font-size: 10px; letter-spacing: .16em; text-transform: uppercase;
+        color: var(--sai-muted); padding: 8px 10px; border-bottom: 1px solid var(--sai-line);
+        font-weight: 600;
+    }
+    .sai_tbl td { padding: 10px; border-bottom: 1px solid var(--sai-line); vertical-align: middle; }
+    .sai_tbl tr.sai_clickable { cursor: pointer; }
+    .sai_tbl tr.sai_clickable:hover td { background: var(--sai-panel-2); }
+    .sai_progress { display: inline-flex; gap: 3px; vertical-align: middle; margin-left: 8px; }
+    .sai_progress span { width: 22px; height: 5px; background: var(--sai-line); border-radius: 2px; }
+    .sai_progress span.on { background: var(--sai-accent); }
+    .sai_progress.sai_progress_done span.on { background: var(--sai-ok); }
+    .sai_state_transit { color: var(--sai-accent); }
+    .sai_state_done { color: var(--sai-ok); }
+    .sai_state_bad { color: var(--sai-bad); }
+    .sai_state_wait { color: var(--sai-warn); }
+
+    // ---- logs ----
+    .sai_logs { font-family: var(--sai-mono); font-size: 12px; }
+
+    /* WhatsApp chat log: one day, bubbles left (customer) / right (shop). */
+    .sai_chat_bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+    .sai_chat_day { background: var(--sai-bg); color: var(--sai-text); border: 1px solid var(--sai-line);
+                    border-radius: 6px; padding: 4px 8px; font-family: var(--sai-mono); font-size: 12px; }
+    .sai_chat_count { margin-left: auto; font-size: 12px; }
+    .sai_chat_rows { display: flex; flex-direction: column; gap: 8px; max-height: 520px; overflow-y: auto; padding-right: 4px; }
+    .sai_chat_row { max-width: 78%; border-radius: 10px; padding: 8px 10px; border: 1px solid var(--sai-line); background: var(--sai-bg); }
+    .sai_chat_in { align-self: flex-start; }
+    .sai_chat_out { align-self: flex-end; border-color: var(--sai-accent-dim); background: color-mix(in srgb, var(--sai-accent) 12%, var(--sai-panel)); }
+    .sai_chat_meta { display: flex; gap: 8px; flex-wrap: wrap; font-family: var(--sai-mono); font-size: 11px; color: var(--sai-muted); margin-bottom: 4px; }
+    .sai_chat_who { color: var(--sai-text); font-weight: 600; }
+    .sai_chat_ref { color: var(--sai-accent); }
+    .sai_chat_text { white-space: pre-wrap; word-break: break-word; font-size: 13px; line-height: 1.4; }
+    .sai_log { display: flex; gap: 12px; padding: 4px 0; }
+    .sai_log_at { color: var(--sai-muted); width: 62px; flex: none; }
+    .sai_log_lvl { width: 92px; flex: none; font-weight: 700; }
+    .sai_lvl_enquiry { color: #60a5fa; }
+    .sai_lvl_quote { color: var(--sai-warn); }
+    .sai_lvl_order { color: var(--sai-ok); }
+    .sai_lvl_delivery { color: var(--sai-accent); }
+    .sai_lvl_message { color: #a78bfa; }
+    .sai_lvl_supply { color: #f472b6; }
+
+    // ---- activity feed ----
+    .sai_feed { position: relative; padding-left: 18px; }
+    .sai_feed::before {
+        content: ""; position: absolute; left: 5px; top: 6px; bottom: 6px;
+        width: 1px; background: var(--sai-line);
+    }
+    .sai_feed_item { position: relative; padding: 0 0 14px; }
+    .sai_feed_item::before {
+        content: ""; position: absolute; left: -17px; top: 4px;
+        width: 9px; height: 9px; border-radius: 50%; background: #3a3a3a;
+    }
+    .sai_feed_item.sai_feed_hot::before { background: var(--sai-accent); }
+    .sai_feed_title {
+        font-family: var(--sai-mono); font-size: 11px; letter-spacing: .14em;
+        text-transform: uppercase; font-weight: 700;
+    }
+    .sai_feed_hot .sai_feed_title { color: var(--sai-accent); }
+    .sai_feed_body { color: #cfcfcf; font-style: italic; margin: 2px 0; }
+    .sai_feed_at { color: var(--sai-muted); font-family: var(--sai-mono); font-size: 11px; }
+
+    // ---- heatmap (weekday x hour) ----
+    .sai_heat {
+        display: grid; grid-template-columns: 34px repeat(24, 1fr); gap: 3px;
+        align-items: center;
+    }
+    .sai_heat_lbl { font-family: var(--sai-mono); font-size: 10px; color: var(--sai-muted); }
+    .sai_heat_h { font-family: var(--sai-mono); font-size: 9px; color: var(--sai-muted); text-align: center; }
+    .sai_heat_cell {
+        aspect-ratio: 1; border-radius: 3px; background: #1a1a1a;
+        &.h1 { background: #3b2408; }
+        &.h2 { background: #6b3b0c; }
+        &.h3 { background: #a85a12; }
+        &.h4 { background: var(--sai-accent); }
+    }
+
+    // ---- enquiries with threads ----
+    .sai_enq { border-bottom: 1px solid var(--sai-line); }
+    .sai_enq_head {
+        display: flex; align-items: center; gap: 12px; padding: 10px 6px; cursor: pointer;
+        &:hover { background: var(--sai-panel-2); }
+        .sai_ref { font-family: var(--sai-mono); font-weight: 700; color: var(--sai-accent); }
+        .sai_enq_prod { font-weight: 600; }
+        .sai_enq_meta { color: var(--sai-muted); font-size: 12px; margin-left: auto; font-family: var(--sai-mono); }
+    }
+    .sai_thread { padding: 6px 6px 14px 28px; }
+    .sai_msgs { display: flex; flex-direction: column; gap: 6px; max-height: 360px; overflow: auto; }
+    .sai_msg {
+        max-width: 78%; padding: 8px 12px; border-radius: 10px; font-size: 13px;
+        background: var(--sai-panel-2); border: 1px solid var(--sai-line);
+        white-space: pre-wrap;
+        .sai_msg_meta { font-family: var(--sai-mono); font-size: 10px; color: var(--sai-muted); margin-bottom: 3px; }
+    }
+    .sai_msg_customer, .sai_msg_vendor { align-self: flex-start; border-left: 3px solid #60a5fa; }
+    .sai_msg_vendor { border-left-color: var(--sai-warn); }
+    .sai_msg_us { align-self: flex-end; border-right: 3px solid var(--sai-accent); }
+    .sai_vend_tbl td.sai_best { color: var(--sai-ok); font-weight: 700; }
+
+    // ---- compare ----
+    .sai_cmp { width: 100%; border-collapse: collapse; font-family: var(--sai-mono); font-size: 13px; }
+    .sai_cmp th, .sai_cmp td { padding: 10px 12px; border-bottom: 1px solid var(--sai-line); text-align: right; }
+    .sai_cmp th:first-child, .sai_cmp td:first-child {
+        text-align: left; color: var(--sai-muted); font-size: 11px; letter-spacing: .12em; text-transform: uppercase;
+    }
+    .sai_cmp th { font-size: 14px; }
+    .sai_cmp td.sai_best { color: var(--sai-ok); font-weight: 700; }
+    .sai_radar { max-width: 520px; margin: 0 auto; }
+
+    .sai_empty { padding: 40px 20px; color: var(--sai-muted); text-align: center; font-family: var(--sai-mono); }
+    .sai_loading { padding: 40px; text-align: center; color: var(--sai-muted); font-family: var(--sai-mono); }
+}
+
+// ---- Day mode ----
+// The same console with the tokens flipped. Everything above reads its
+// colour from a --sai-* property, so day mode is mostly a token swap; the
+// few literal darks that were fine at night are overridden here by name.
+.sa_insights.sai_day {
+    --sai-bg: #f5f5f4;
+    --sai-panel: #ffffff;
+    --sai-panel-2: #f0efee;
+    --sai-line: #e2e0dd;
+    --sai-accent: #e8600f;
+    --sai-accent-dim: #f5c8a8;
+    --sai-text: #1a1a1a;
+    --sai-muted: #6b6b6b;
+    --sai-ok: #15803d;
+    --sai-warn: #b45309;
+    --sai-bad: #b91c1c;
+    --sai-tier-best: #15803d;
+    --sai-tier-better: #0f766e;
+    --sai-tier-normal: #6b7280;
+    --sai-tier-poor: #b91c1c;
+    --sai-tier-new: #9ca3af;
+
+    .sai_top { background: #ffffff; }
+    .sai_board tr.sai_row_on td { background: #fff3e8; }
+    .sai_stars .sai_star_off { color: #d6d3d1; }
+    .sai_feed_item::before { background: #c9c6c2; }
+    .sai_feed_body { color: #3f3f3f; }
+    .sai_score_row .sai_score_nosample .sai_score_fill { background: #d6d3d1; }
+    .sai_heat_cell {
+        background: #ecebe9;
+        &.h1 { background: #ffe2c7; }
+        &.h2 { background: #ffbf85; }
+        &.h3 { background: #ff9a3d; }
+        &.h4 { background: var(--sai-accent); }
+    }
+    .sai_tag.sai_tag_awaited { border-color: #f5c8a8; }
+    .sai_tag.sai_tag_ok { border-color: #bbf7d0; }
+    .sai_tag.sai_tag_bad { border-color: #fecaca; }
+    .sai_brand .sai_mark::after { border-color: #ffffff; }
+    .sai_lvl_enquiry, .sai_msg_customer { color: #1d4ed8; }
+    .sai_msg_customer { color: inherit; border-left-color: #1d4ed8; }
+    .sai_lvl_message { color: #6d28d9; }
+    .sai_lvl_supply { color: #be185d; }
+}
+
+// The toggle itself, in both modes.
+.sa_insights .sai_theme {
+    background: var(--sai-panel-2);
+    border: 1px solid var(--sai-line);
+    color: var(--sai-text);
+    width: 36px; height: 36px; border-radius: 8px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 18px; cursor: pointer; line-height: 1;
+    &:hover { border-color: var(--sai-accent); }
+}

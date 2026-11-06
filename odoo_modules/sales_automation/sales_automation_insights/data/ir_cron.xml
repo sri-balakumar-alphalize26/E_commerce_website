@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="0">
+        <!--
+            Nightly, from scratch. The ratings are derived, never stored
+            opinions, so rebuilding them wholesale is the cheapest way to keep
+            them honest - and at a few hundred enquiries it takes seconds.
+        -->
+        <record id="cron_sa_insight_recompute" model="ir.cron">
+            <field name="name">Insights: Recompute Customer and Supplier Ratings</field>
+            <field name="model_id" ref="model_sa_insight_entity"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_recompute()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+            <field name="active">True</field>
+            <field name="priority">60</field>
+        </record>
+    </data>
+</odoo>

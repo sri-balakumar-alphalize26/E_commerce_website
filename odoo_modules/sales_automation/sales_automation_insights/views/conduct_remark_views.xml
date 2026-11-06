@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_sa_conduct_remark_list" model="ir.ui.view">
+        <field name="name">sa.conduct.remark.list</field>
+        <field name="model">sa.conduct.remark</field>
+        <field name="arch" type="xml">
+            <list default_order="remarked_on desc">
+                <field name="remarked_on"/>
+                <field name="kind" widget="badge"/>
+                <field name="phone"/>
+                <field name="partner_id" optional="show"/>
+                <field name="entity_id" optional="show"/>
+                <field name="chat_label"/>
+                <field name="hit_type" widget="badge"/>
+                <field name="decided_by" optional="show"/>
+                <field name="confidence" optional="show"/>
+                <field name="matched_words"/>
+                <field name="text" optional="hide"/>
+                <field name="severity" optional="show"/>
+                <field name="deleted" widget="boolean_toggle" readonly="1"/>
+                <field name="warned" widget="boolean_toggle" readonly="1" optional="show"/>
+                <field name="source" optional="show"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_sa_conduct_remark_form" model="ir.ui.view">
+        <field name="name">sa.conduct.remark.form</field>
+        <field name="model">sa.conduct.remark</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_delete_again" type="object"
+                            string="Delete in WhatsApp again" class="btn-secondary"
+                            invisible="deleted or not wa_message_id"
+                            groups="sales_automation.group_sa_manager"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group string="Who">
+                            <field name="kind"/>
+                            <field name="phone"/>
+                            <field name="lid" readonly="1"/>
+                            <field name="partner_id"/>
+                            <field name="entity_id" readonly="1"/>
+                        </group>
+                        <group string="Where">
+                            <field name="remarked_on"/>
+                            <field name="chat_label" readonly="1"/>
+                            <field name="group_jid" readonly="1"/>
+                            <field name="session_id" readonly="1"/>
+                            <field name="source" readonly="1"/>
+                        </group>
+                    </group>
+                    <group string="What">
+                        <field name="text" nolabel="1" colspan="2"
+                               placeholder="What they wrote"/>
+                        <field name="hit_type"/>
+                        <field name="decided_by"/>
+                        <field name="confidence"/>
+                        <field name="reason"/>
+                        <field name="matched_words"/>
+                        <field name="severity"/>
+                        <field name="note"/>
+                    </group>
+                    <group string="Done">
+                        <field name="deleted" readonly="1"/>
+                        <field name="delete_error" readonly="1" invisible="not delete_error"/>
+                        <field name="warned" readonly="1"/>
+                        <field name="wa_message_id" readonly="1"/>
+                        <field name="message_id" readonly="1"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_sa_conduct_remark_search" model="ir.ui.view">
+        <field name="name">sa.conduct.remark.search</field>
+        <field name="model">sa.conduct.remark</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="phone"/>
+                <field name="matched_words"/>
+                <field name="text"/>
+                <filter name="f_customers" string="Customers" domain="[('kind','=','customer')]"/>
+                <filter name="f_vendors" string="Suppliers" domain="[('kind','=','vendor')]"/>
+                <filter name="f_not_deleted" string="Not deleted" domain="[('deleted','=',False)]"/>
+                <group>
+                    <filter name="g_kind" string="Kind" context="{'group_by': 'kind'}"/>
+                    <filter name="g_phone" string="Phone" context="{'group_by': 'phone'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_sa_conduct_remarks" model="ir.actions.act_window">
+        <field name="name">Remarks</field>
+        <field name="res_model">sa.conduct.remark</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_sa_conduct_remark_search"/>
+        <field name="context">{'default_source': 'manual', 'default_hit_type': 'manual', 'default_decided_by': 'manual'}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No remarks yet</p>
+            <p>A message removed for its language lands here, against the
+               person who sent it. You can also add one by hand.</p>
+        </field>
+    </record>
+
+</odoo>

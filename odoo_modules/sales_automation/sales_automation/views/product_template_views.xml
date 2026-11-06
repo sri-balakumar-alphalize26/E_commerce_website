@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_product_template_form_sa_qty_bargain" model="ir.ui.view">
+        <field name="name">product.template.form.sa.qty.bargain</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="sale.product_template_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//group[@name='upsell']" position="after">
+                <group name="sa_qty_bargain" string="WhatsApp Bargaining">
+                    <field name="sa_qty_bargain"/>
+                    <field name="sa_qty_bargain_ids" invisible="not sa_qty_bargain" nolabel="1" colspan="2">
+                        <list editable="bottom">
+                            <field name="qty_min"/>
+                            <field name="qty_max"/>
+                            <field name="percent"/>
+                        </list>
+                    </field>
+                    <div class="text-muted" colspan="2" invisible="not sa_qty_bargain">
+                        On WhatsApp, BETTER PRICE is offered only when the customer's
+                        quantity falls inside one of these ranges, and it gives that
+                        range's discount once. Leave "To" at 0 for no upper limit.
+                        The flat bargaining step in AI Settings does not apply to this
+                        product.
+                    </div>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

@@ -1,0 +1,231 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+<t t-name="sales_automation_insights.Profile">
+    <div class="sai_head">
+        <button class="sai_btn" t-on-click="() => props.onBack()">← Board</button>
+        <div class="sai_avatar"><t t-esc="initials"/></div>
+        <div>
+            <div class="sai_head_name"><t t-esc="h.name"/></div>
+            <div class="sai_head_sub mono">
+                <t t-esc="h.phone"/>
+                <t t-if="h.aliases.length"> · also <t t-esc="h.aliases.join(', ')"/></t>
+                <t t-if="h.first_seen_on"> · since <t t-esc="when(h.first_seen_on)"/></t>
+            </div>
+            <div t-if="h.duplicates.length" class="sai_dupes">
+                Possible duplicate<t t-if="h.duplicates.length > 1">s</t>:
+                <t t-foreach="h.duplicates" t-as="d" t-key="d.id"><t t-esc="d.name"/> (<t t-esc="d.phone"/>) </t>
+                — merge from Insights › Configuration › Rated Rows
+            </div>
+        </div>
+        <div class="sai_head_right">
+            <span class="sai_tier sai_tier_big" t-att-class="'sai_tier_' + (h.tier || 'new')"><t t-esc="(h.tier || 'new').toUpperCase()"/></span>
+            <span t-if="h.remarks_count" class="sai_chip_bad sai_chip_wide"><t t-esc="h.remarks_count"/> REMARK<t t-if="h.remarks_count > 1">S</t></span>
+            <span class="sai_tag" t-att-class="'sai_tag_' + h.badge.toLowerCase()"><t t-esc="h.badge"/></span>
+            <span t-if="h.enough_data" class="sai_stars">
+                <span class="sai_star_on"><t t-esc="stars().on"/></span><span class="sai_star_off"><t t-esc="stars().off"/></span>
+                <span class="sai_star_num"><t t-esc="h.stars.toFixed(1)"/></span>
+            </span>
+            <span t-else="" class="sai_stars sai_stars_none">not enough data (<t t-esc="h.sample_size"/>)</span>
+            <button t-if="h.partner_id" class="sai_btn" t-on-click="() => this.openRecord('res.partner', h.partner_id)">Contact</button>
+        </div>
+    </div>
+
+    <div class="sai_grid" style="margin-top:16px">
+        <div class="sai_panel">
+            <div class="sai_ltv_label"><t t-esc="h.lifetime_label"/></div>
+            <div class="sai_ltv_value"><t t-esc="money(h.lifetime_value)"/></div>
+            <div class="sai_bar"><div class="sai_bar_fill" t-attf-style="width: {{ltvPct}}%"/></div>
+            <div class="sai_sub mono" style="margin-top:6px"><t t-esc="ltvPct"/>% of the highest on this board</div>
+        </div>
+
+        <div class="sai_panel">
+            <div class="sai_ring_wrap">
+                <ScoreRing stars="h.stars" enough="h.enough_data" data="props.profile.score" theme="props.theme"/>
+                <div style="flex:1">
+                    <div t-foreach="props.profile.score.components" t-as="c" t-key="c.code"
+                         class="sai_score_row" t-att-class="{ sai_score_nosample: c.score === null }">
+                        <span><t t-esc="c.label"/></span>
+                        <div class="sai_score_bar"><div class="sai_score_fill" t-attf-style="width: {{pct(c.score)}}%"/></div>
+                        <span class="mono"><t t-if="c.score !== null"><t t-esc="pct(c.score)"/>%</t><t t-else="">—</t></span>
+                        <span class="sai_raw"><t t-esc="c.raw_label"/></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="sai_sect">
+        <t t-if="props.kind === 'vendor'">Bought in from this supplier</t>
+        <t t-else="">Active order tracking</t>
+        <span class="sai_count"><t t-esc="rows.length"/></span>
+    </div>
+    <div class="sai_grid"><div class="sai_panel sai_panel_wide">
+        <div t-if="!rows.length" class="muted mono">nothing yet</div>
+        <table t-else="" class="sai_tbl">
+            <thead>
+                <tr>
+                    <th>Order</th><th>Product</th><th>Status</th>
+                    <th t-if="props.kind === 'vendor'">We pay</th>
+                    <th t-else="">Collect</th>
+                    <th>Promised</th>
+                    <th t-if="props.kind === 'vendor'">Arrived</th>
+                    <th t-else="">Delivered</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr t-foreach="rows" t-as="o" t-key="o.picking_id" class="sai_clickable"
+                    t-on-click="() => this.openRecord('stock.picking', o.picking_id)">
+                    <td>#<t t-esc="o.ref"/><div class="sai_sub"><t t-esc="o.order_name"/></div></td>
+                    <td><t t-esc="o.product"/></td>
+                    <td>
+                        <span t-att-class="'sai_state_' + o.bucket"><t t-esc="o.delivery_label.toUpperCase()"/></span>
+                        <span class="sai_progress" t-att-class="{ sai_progress_done: o.bucket === 'done' }">
+                            <span t-foreach="segments(o.progress)" t-as="on" t-key="on_index" t-att-class="{ on: on }"/>
+                        </span>
+                        <span t-if="o.overdue" class="sai_tag sai_tag_overdue" style="margin-left:8px">OVERDUE</span>
+                    </td>
+                    <td t-if="props.kind === 'vendor'"><t t-esc="money(o.cost)"/></td>
+                    <td t-else=""><t t-if="o.cod" t-esc="money(o.cod)"/></td>
+                    <td><t t-esc="when(o.promised_on)"/></td>
+                    <td t-if="props.kind === 'vendor'">
+                        <t t-esc="when(o.arrived_on)"/>
+                        <span t-if="o.arrived_on" class="sai_tag" t-att-class="o.on_time ? 'sai_tag_ok' : 'sai_tag_bad'" style="margin-left:6px"><t t-esc="o.on_time ? 'on time' : 'late'"/></span>
+                    </td>
+                    <td t-else=""><t t-esc="when(o.delivered_on)"/></td>
+                </tr>
+            </tbody>
+        </table>
+    </div></div>
+
+    <div class="sai_sect">
+        <t t-if="props.kind === 'vendor'">Price checks</t><t t-else="">Enquiries</t>
+        <span class="sai_count"><t t-esc="enquiries.length"/></span>
+        <span class="muted" style="text-transform:none;letter-spacing:0">click one for the whole conversation</span>
+    </div>
+    <div class="sai_grid"><div class="sai_panel sai_panel_wide">
+        <div t-if="!enquiries.length" class="muted mono">nothing yet</div>
+
+        <t t-if="props.kind !== 'vendor'">
+            <div t-foreach="enquiries" t-as="e" t-key="e.id" class="sai_enq">
+                <div class="sai_enq_head" t-on-click="() => this.toggle(e.id)">
+                    <span class="sai_ref">#<t t-esc="e.ref"/></span>
+                    <span class="sai_enq_prod"><t t-esc="e.product"/></span>
+                    <span class="sai_tag" t-att-class="'sai_tag_' + (e.tag === 'ORDERED' ? 'ok' : e.tag === 'DROPPED' ? 'bad' : e.tag.toLowerCase())"><t t-esc="e.tag"/></span>
+                    <span t-if="e.drop_reason" class="muted"><t t-esc="e.drop_reason"/></span>
+                    <span class="sai_enq_meta">
+                        <t t-if="e.quoted_price"><t t-esc="money(e.quoted_price)"/></t>
+                        <t t-if="e.agreed_price and e.agreed_price !== e.quoted_price"> → <t t-esc="money(e.agreed_price)"/></t>
+                        <t t-if="e.bargain_count"> · <t t-esc="e.bargain_count"/>× bargained</t>
+                        · <t t-esc="when(e.created_on)"/>
+                    </span>
+                </div>
+                <EnquiryThread t-if="state.open[e.id]" entityId="h.id" requestId="e.id"/>
+            </div>
+        </t>
+
+        <t t-else="">
+            <div t-foreach="enquiries" t-as="e" t-key="e.request_id" class="sai_enq">
+                <div class="sai_enq_head" t-on-click="() => this.toggle(e.request_id)">
+                    <span class="sai_ref">#<t t-esc="e.ref"/></span>
+                    <span class="sai_enq_prod"><t t-esc="e.product"/></span>
+                    <span t-if="e.said_no" class="sai_tag sai_tag_bad">SAID NO</span>
+                    <span t-elif="e.replied" class="sai_tag" t-att-class="e.is_best ? 'sai_tag_ok' : 'sai_tag_replied'"><t t-esc="e.is_best ? 'CHEAPEST' : 'REPLIED'"/></span>
+                    <span t-else="" class="sai_tag sai_tag_awaited">SILENT</span>
+                    <span class="sai_enq_meta">
+                        <t t-if="e.replied"><t t-esc="money(e.price)"/> · <t t-esc="e.response_minutes"/> min · </t>
+                        <t t-esc="when(e.asked_on)"/>
+                    </span>
+                </div>
+                <EnquiryThread t-if="state.open[e.request_id]" entityId="h.id" requestId="e.request_id"/>
+            </div>
+        </t>
+    </div></div>
+
+    <div class="sai_sect" t-if="props.profile.remarks.length">
+        Remarks <span class="sai_count sai_count_bad"><t t-esc="props.profile.remarks.length"/></span>
+        <span class="muted" style="text-transform:none;letter-spacing:0">messages removed for their language</span>
+    </div>
+    <div class="sai_grid" t-if="props.profile.remarks.length"><div class="sai_panel sai_panel_wide">
+        <table class="sai_tbl">
+            <thead>
+                <tr><th>When</th><th>Chat</th><th>Words</th><th>Message</th><th>Deleted</th><th>Warned</th></tr>
+            </thead>
+            <tbody>
+                <tr t-foreach="props.profile.remarks" t-as="m" t-key="m.id">
+                    <td><t t-esc="when(m.at)"/></td>
+                    <td><t t-esc="m.chat"/></td>
+                    <td><span class="sai_tag sai_tag_bad"><t t-esc="m.words"/></span></td>
+                    <td class="sai_remark_text"><t t-esc="m.text"/></td>
+                    <td>
+                        <span t-if="m.deleted" class="sai_tag sai_tag_ok">YES</span>
+                        <span t-else="" class="sai_tag sai_tag_awaited" t-att-title="m.error">NO</span>
+                    </td>
+                    <td><t t-esc="m.warned ? 'yes' : (m.source === 'manual' ? 'manual' : 'no')"/></td>
+                </tr>
+            </tbody>
+        </table>
+    </div></div>
+
+    <div class="sai_sect">WhatsApp chat log</div>
+    <div class="sai_grid">
+        <div class="sai_panel sai_panel_wide sai_chat">
+            <div class="sai_chat_bar">
+                <button class="sai_btn" t-on-click="() => this.shiftDay(-1)" title="Previous day">&#9664;</button>
+                <input type="date" class="sai_chat_day" t-att-value="state.chat.day" t-on-change="onDayChange"/>
+                <button class="sai_btn" t-on-click="() => this.shiftDay(1)" t-att-disabled="chatIsToday" title="Next day">&#9654;</button>
+                <button class="sai_btn" t-on-click="() => this.loadChat()" t-att-disabled="chatIsToday">Today</button>
+                <span class="muted sai_chat_count">
+                    <t t-if="state.chat.loading">loading…</t>
+                    <t t-else=""><t t-esc="state.chat.count"/> message<t t-if="state.chat.count !== 1">s</t> · times in <t t-esc="state.chat.tz"/></t>
+                </span>
+            </div>
+            <div class="sai_chat_rows">
+                <div t-foreach="state.chat.rows" t-as="m" t-key="m.id"
+                     class="sai_chat_row" t-att-class="m.direction === 'in' ? 'sai_chat_in' : 'sai_chat_out'">
+                    <div class="sai_chat_meta">
+                        <span class="sai_chat_at"><t t-esc="clock(m.at)"/></span>
+                        <span class="sai_chat_who"><t t-esc="m.direction === 'in' ? h.name : 'Shop'"/></span>
+                        <span class="sai_chat_where"><t t-esc="m.chat"/></span>
+                        <span t-if="m.ref" class="sai_chat_ref">Ref <t t-esc="m.ref"/></span>
+                        <span t-if="m.media" class="sai_chat_media">&#128206; <t t-esc="m.media"/></span>
+                        <span t-if="m.status === 'blocked'" class="sai_tag sai_tag_flagged">REMOVED</span>
+                    </div>
+                    <div class="sai_chat_text"><t t-esc="m.text"/></div>
+                </div>
+                <div t-if="!state.chat.loading and !state.chat.rows.length" class="muted">no messages on this day</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="sai_sect">System logs</div>
+    <div class="sai_grid">
+        <div class="sai_panel sai_logs">
+            <div t-foreach="props.profile.logs" t-as="l" t-key="l_index" class="sai_log">
+                <span class="sai_log_at"><t t-esc="clock(l.at)"/></span>
+                <span class="sai_log_lvl" t-att-class="'sai_lvl_' + l.level.toLowerCase()">[<t t-esc="l.level"/>]</span>
+                <span><t t-esc="l.text"/></span>
+            </div>
+            <div t-if="!props.profile.logs.length" class="muted">no activity recorded</div>
+        </div>
+
+        <div class="sai_panel">
+            <div class="sai_ltv_label" style="margin-bottom:12px">Recent activity feed</div>
+            <div class="sai_feed">
+                <div t-foreach="props.profile.timeline" t-as="t" t-key="t_index"
+                     class="sai_feed_item" t-att-class="{ sai_feed_hot: t_index === 0 }">
+                    <div class="sai_feed_title"><t t-esc="t.kind"/></div>
+                    <div class="sai_feed_body"><t t-esc="t.text"/></div>
+                    <div class="sai_feed_at"><t t-esc="when(t.at)"/></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="sai_panel sai_panel_wide">
+            <div class="sai_ltv_label" style="margin-bottom:12px">Activity heatmap</div>
+            <Heatmap heatmap="props.profile.heatmap"/>
+        </div>
+    </div>
+</t>
+
+</templates>

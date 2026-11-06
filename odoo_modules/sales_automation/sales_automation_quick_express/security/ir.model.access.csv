@@ -1,0 +1,7 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_sa_qe_service_area_user,sa.qe.service.area.user,model_sa_qe_service_area,base.group_user,1,0,0,0
+access_sa_qe_service_area_manager,sa.qe.service.area.manager,model_sa_qe_service_area,sales_automation_delivery.group_sa_delivery_manager,1,1,1,1
+access_sa_qe_delivery_rule_user,sa.qe.delivery.rule.user,model_sa_qe_delivery_rule,base.group_user,1,0,0,0
+access_sa_qe_delivery_rule_manager,sa.qe.delivery.rule.manager,model_sa_qe_delivery_rule,sales_automation_delivery.group_sa_delivery_manager,1,1,1,1
+access_sa_qe_delivery_slot_user,sa.qe.delivery.slot.user,model_sa_qe_delivery_slot,base.group_user,1,0,0,0
+access_sa_qe_delivery_slot_manager,sa.qe.delivery.slot.manager,model_sa_qe_delivery_slot,sales_automation_delivery.group_sa_delivery_manager,1,1,1,1

@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_sa_delivery_report_list" model="ir.ui.view">
+        <field name="name">sa.delivery.report.list</field>
+        <field name="model">sa.delivery.report</field>
+        <field name="arch" type="xml">
+            <list string="Delivery Analysis" create="false">
+                <field name="ref_code" string="Job"/>
+                <field name="offered_on"/>
+                <field name="partner_id"/>
+                <field name="city" optional="show"/>
+                <field name="country_id" optional="hide"/>
+                <field name="shop_id"/>
+                <field name="rider_id"/>
+                <field name="kind" optional="show"/>
+                <field name="minutes_to_accept" string="Mins to Accept" avg="Average"/>
+                <field name="minutes_to_deliver" string="Mins to Deliver" avg="Average"/>
+                <field name="cod_amount" sum="Collected"/>
+                <field name="amount_total" sum="Order Total" optional="hide"/>
+                <field name="delivery_state" widget="badge"
+                       decoration-success="delivery_state == 'delivered'"
+                       decoration-danger="delivery_state == 'failed'"
+                       decoration-warning="delivery_state == 'to_assign'"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_sa_delivery_report_pivot" model="ir.ui.view">
+        <field name="name">sa.delivery.report.pivot</field>
+        <field name="model">sa.delivery.report</field>
+        <field name="arch" type="xml">
+            <pivot string="Delivery Analysis" sample="1">
+                <field name="rider_id" type="row"/>
+                <field name="delivery_state" type="col"/>
+                <field name="job_count" type="measure"/>
+                <field name="minutes_to_deliver" type="measure"/>
+                <field name="cod_amount" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="view_sa_delivery_report_graph" model="ir.ui.view">
+        <field name="name">sa.delivery.report.graph</field>
+        <field name="model">sa.delivery.report</field>
+        <field name="arch" type="xml">
+            <graph string="Delivery Analysis" type="bar" sample="1">
+                <field name="shop_id"/>
+                <field name="job_count" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="view_sa_delivery_report_search" model="ir.ui.view">
+        <field name="name">sa.delivery.report.search</field>
+        <field name="model">sa.delivery.report</field>
+        <field name="arch" type="xml">
+            <search string="Delivery Analysis">
+                <field name="ref_code"/>
+                <field name="partner_id"/>
+                <field name="rider_id"/>
+                <field name="shop_id"/>
+                <filter name="r_delivered" string="Delivered"
+                        domain="[('delivery_state','=','delivered')]"/>
+                <filter name="r_open" string="Still Open"
+                        domain="[('delivery_state','in',['to_assign','offered','accepted','picked'])]"/>
+                <filter name="r_failed" string="Failed"
+                        domain="[('delivery_state','=','failed')]"/>
+                <separator/>
+                <filter name="r_own" string="Own Riders"
+                        domain="[('kind','=','own')]"/>
+                <filter name="r_third" string="Delivery Partners"
+                        domain="[('kind','=','third_party')]"/>
+                <separator/>
+                <filter name="r_month" string="This Month"
+                        domain="[('offered_on','&gt;=', context_today().strftime('%Y-%m-01'))]"/>
+                <group>
+                    <filter name="g_state" string="Status"
+                            context="{'group_by': 'delivery_state'}"/>
+                    <filter name="g_rider" string="Rider / Courier"
+                            context="{'group_by': 'rider_id'}"/>
+                    <filter name="g_kind" string="Carrier Kind"
+                            context="{'group_by': 'kind'}"/>
+                    <filter name="g_shop" string="Shop"
+                            context="{'group_by': 'shop_id'}"/>
+                    <filter name="g_city" string="City"
+                            context="{'group_by': 'city'}"/>
+                    <filter name="g_day" string="Offered On"
+                            context="{'group_by': 'offered_on:day'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_sa_delivery_report" model="ir.actions.act_window">
+        <field name="name">Delivery Analysis</field>
+        <field name="res_model">sa.delivery.report</field>
+        <field name="view_mode">list,pivot,graph</field>
+        <field name="search_view_id" ref="view_sa_delivery_report_search"/>
+        <field name="context">{'search_default_g_state': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Nothing to report yet</p>
+            <p>Every delivery job appears here, with how long it took to be
+               accepted and delivered, and how much cash came back.</p>
+        </field>
+    </record>
+
+</odoo>

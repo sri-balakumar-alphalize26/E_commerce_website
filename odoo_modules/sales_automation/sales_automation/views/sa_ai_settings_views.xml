@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- AI Settings proper: the provider and nothing else. Every other
+         heading that used to live on this page is its own entry under
+         Configuration (sa_settings_section_views.xml) - same record,
+         one section per form. -->
+    <record id="view_sa_ai_settings_form" model="ir.ui.view">
+        <field name="name">sa.ai.settings.form</field>
+        <field name="model">sa.ai.settings</field>
+        <field name="arch" type="xml">
+            <form string="AI Settings">
+                <header>
+                    <button name="action_test_classifier" type="object"
+                            string="Test Classifier" class="btn-primary"/>
+                </header>
+                <sheet>
+                    <div class="alert alert-info" role="status"
+                         invisible="provider == 'sinorouter'">
+                        The API key is reused from
+                        <b>WA Tracker &gt; Configuration &gt; AI / Voice Settings</b>
+                        unless you set one here. The model below must be a
+                        <b>text</b> model - the one saved over there transcribes
+                        audio and cannot classify a sentence.
+                    </div>
+                    <div class="alert alert-warning" role="status"
+                         invisible="provider != 'sinorouter'">
+                        SinoRouter has no key stored in the tracker, so the
+                        <b>API Key</b> must be entered here. It is called as an
+                        OpenAI-compatible endpoint - set <b>Chat Model</b> to a
+                        model your account actually serves, and correct the
+                        <b>Base URL</b> if your account uses a different path.
+                    </div>
+                    <group>
+                        <group string="Provider">
+                            <field name="active" widget="boolean_toggle" string="Enabled"/>
+                            <field name="provider"/>
+                            <field name="model_name" placeholder="leave empty for the provider default"/>
+                            <field name="api_base_url" placeholder="leave empty for the provider's standard URL"
+                                   invisible="provider == 'gemini'"/>
+                            <field name="timeout_seconds"/>
+                        </group>
+                        <group string="Credentials">
+                            <field name="api_key" password="True"
+                                   placeholder="empty = reuse the tracker's key"
+                                   required="provider == 'sinorouter'"/>
+                            <field name="status_message" readonly="1"/>
+                        </group>
+                    </group>
+                    <div class="text-muted">
+                        With the AI disabled or unreachable, enquiries are still
+                        detected - catalog keyword matching stands in, and the
+                        assistant simply misses phrasings that do not contain a
+                        product name.
+                        <br/><br/>
+                        The shop counter, vendors, delivery address, small talk,
+                        bargaining, the guided finder and the conduct filter each
+                        have their own page under <b>Configuration</b>.
+                    </div>
+
+                    <separator string="Try a message"/>
+                    <group>
+                        <field name="test_message" nolabel="1" colspan="2"
+                               placeholder="Type a message the way a group member would - then press Test Classifier above."/>
+                    </group>
+                    <field name="test_result" nolabel="1" readonly="1"
+                           widget="text"
+                           class="p-3 bg-100 border rounded font-monospace"
+                           invisible="not test_result"/>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_sa_ai_settings" model="ir.actions.act_window">
+        <field name="name">AI Settings</field>
+        <field name="res_model">sa.ai.settings</field>
+        <field name="view_mode">form</field>
+        <field name="target">current</field>
+        <field name="context">{'form_view_initial_mode': 'edit'}</field>
+    </record>
+
+    <record id="action_sa_ai_settings_open" model="ir.actions.server">
+        <field name="name">AI Settings</field>
+        <field name="model_id" ref="model_sa_ai_settings"/>
+        <field name="state">code</field>
+        <field name="code">
+settings = model.get_settings()
+action = {
+    'type': 'ir.actions.act_window',
+    'name': 'AI Settings',
+    'res_model': 'sa.ai.settings',
+    'res_id': settings.id,
+    'view_mode': 'form',
+    'views': [[env.ref('sales_automation.view_sa_ai_settings_form').id, 'form']],
+    'target': 'current',
+}
+        </field>
+    </record>
+
+</odoo>

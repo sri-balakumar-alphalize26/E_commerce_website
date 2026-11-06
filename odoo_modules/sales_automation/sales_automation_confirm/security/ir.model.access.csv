@@ -1,0 +1,9 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_sa_confirm_link_user,sa.confirm.link.user,model_sa_confirm_link,sales_automation.group_sa_user,1,1,1,0
+access_sa_confirm_link_manager,sa.confirm.link.manager,model_sa_confirm_link,sales_automation.group_sa_manager,1,1,1,1
+access_sa_link_click_user,sa.link.click.user,model_sa_link_click,sales_automation.group_sa_user,1,0,1,0
+access_sa_link_click_manager,sa.link.click.manager,model_sa_link_click,sales_automation.group_sa_manager,1,0,1,1
+access_sa_confirm_picture_user,sa.confirm.picture.user,model_sa_confirm_picture,sales_automation.group_sa_user,1,1,1,1
+access_sa_confirm_picture_manager,sa.confirm.picture.manager,model_sa_confirm_picture,sales_automation.group_sa_manager,1,1,1,1
+access_sa_variant_spec_user,sa.variant.spec.user,model_sa_variant_spec,base.group_user,1,1,1,1
+access_sa_variant_spec_portal,sa.variant.spec.public,model_sa_variant_spec,base.group_public,1,0,0,0

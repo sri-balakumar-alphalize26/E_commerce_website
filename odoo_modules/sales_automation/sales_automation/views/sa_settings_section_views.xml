@@ -1,0 +1,408 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- One page per heading. All of them edit the same sa.ai.settings
+         record; only the form differs. The opener actions resolve the
+         singleton and pin the section's form view. -->
+
+    <!-- ============ The Shop Counter ============ -->
+    <record id="view_sa_settings_counter_form" model="ir.ui.view">
+        <field name="name">sa.settings.counter.form</field>
+        <field name="model">sa.ai.settings</field>
+        <field name="priority">40</field>
+        <field name="arch" type="xml">
+            <form string="The Shop Counter">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="shop_picks_vendors"/>
+                            <field name="shop_pick_window_minutes"
+                                   invisible="not shop_picks_vendors"/>
+                            <field name="shop_pick_customer_text"
+                                   invisible="not shop_picks_vendors"
+                                   placeholder="Our shopkeeper is checking {product} and will come back"/>
+                        </group>
+                        <group>
+                            <div class="text-muted">
+                                On, an out-of-stock enquiry waits on the
+                                <b>Store &gt; Enquiries</b> screen with an
+                                alarm, so somebody who knows the trade picks
+                                which suppliers to ask. Nobody is messaged
+                                until they do.
+                                <br/><br/>
+                                With nobody at the counter for the number of
+                                minutes above, every vendor of that product's
+                                category is asked automatically - an
+                                unattended shop still answers the customer.
+                                <br/><br/>
+                                The message uses
+                                <code>{product}</code>, <code>{ref}</code>,
+                                <code>{customer}</code> and
+                                <code>{shop}</code>. Keep one of them in it:
+                                WhatsApp drops a message identical to one sent
+                                to the same chat minutes earlier, so text with
+                                nothing varying in it arrives as silence.
+                                <br/><br/>
+                                How long the alarm sounds is set under
+                                <b>Delivery Settings &gt; The Enquiry Desk</b>.
+                            </div>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- ============ Vendors ============ -->
+    <record id="view_sa_settings_vendor_form" model="ir.ui.view">
+        <field name="name">sa.settings.vendor.form</field>
+        <field name="model">sa.ai.settings</field>
+        <field name="priority">41</field>
+        <field name="arch" type="xml">
+            <form string="Vendors &amp; Customer Replies">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="sourcing_window_minutes"/>
+                            <field name="customer_reply_minutes"/>
+                            <field name="price_escalation_phone"
+                                   placeholder="968 7712 3456"/>
+                            <field name="price_approval_enabled"/>
+                            <field name="price_approval_tolerance_percent"
+                                   invisible="not price_approval_enabled"/>
+                            <field name="margin_percent"/>
+                            <field name="unlisted_vendor_ids"
+                                   widget="many2many_tags"
+                                   options="{'no_create': True}"
+                                   placeholder="Who to ask for something not in the catalog"/>
+                            <field name="new_product_category_id"
+                                   options="{'no_create': True}"/>
+                            <field name="pay_remind_minutes"/>
+                            <field name="pay_remind_max"/>
+                        </group>
+                        <group>
+                            <div class="text-muted">
+                                Vendors are set on each <b>Product Category</b>,
+                                under WhatsApp Sourcing. Every vendor listed
+                                there is messaged privately for a price, and the
+                                cheapest reply plus this margin is what the
+                                customer is quoted.
+                            </div>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- ============ Delivery Address ============ -->
+    <record id="view_sa_settings_address_form" model="ir.ui.view">
+        <field name="name">sa.settings.address.form</field>
+        <field name="model">sa.ai.settings</field>
+        <field name="priority">42</field>
+        <field name="arch" type="xml">
+            <form string="Delivery Address">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="pincode_country_id"
+                                   options="{'no_create': True}"/>
+                            <field name="pincode_prefixes"
+                                   placeholder="e.g. 691,690,682"/>
+                            <field name="stale_after_minutes"/>
+                            <field name="max_order_quantity"/>
+                        </group>
+                        <group>
+                            <div class="text-muted">
+                                The postcode is checked against the customer's
+                                own country - six digits for India, three for
+                                Oman, letters and digits for the UK - falling
+                                back to the country above. Countries that issue
+                                no postcode are not asked for one. Repeated
+                                digits and straight runs like <b>111111</b> or
+                                <b>123456</b> are always refused. To check a
+                                postcode really exists, list the areas you
+                                deliver to.
+                            </div>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- ============ Messages That Are Not Enquiries ============ -->
+    <record id="view_sa_settings_chatter_form" model="ir.ui.view">
+        <field name="name">sa.settings.chatter.form</field>
+        <field name="model">sa.ai.settings</field>
+        <field name="priority">43</field>
+        <field name="arch" type="xml">
+            <form string="Messages That Are Not Enquiries">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="chatter_action"/>
+                            <field name="chatter_reply_text"
+                                   invisible="chatter_action != 'reply'"/>
+                            <field name="media_action"/>
+                            <field name="media_reply_text"
+                                   invisible="media_action != 'reply'"/>
+                        </group>
+                        <group>
+                            <div class="text-muted">
+                                A sales group is mostly members talking to each
+                                other, so both of these say nothing by default.
+                                Turn them on for a quiet group, where silence
+                                reads as the assistant being broken.
+                                <br/><br/>
+                                Either reply is sent at most
+                                <b>once per person per minute</b>, so a burst
+                                of chat or a shared photo album cannot become a
+                                burst of replies.
+                                <br/><br/>
+                                <b>Keep no record of it</b> stops photos and
+                                video being stored in 369ai. Abusive messages are
+                                handled by the <b>Conduct Filter</b> page.
+                            </div>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- ============ Bargaining ============ -->
+    <record id="view_sa_settings_bargain_form" model="ir.ui.view">
+        <field name="name">sa.settings.bargain.form</field>
+        <field name="model">sa.ai.settings</field>
+        <field name="priority">44</field>
+        <field name="arch" type="xml">
+            <form string="Bargaining">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="margin_percent"/>
+                            <field name="bargain_enabled"/>
+                            <field name="bargain_step_percent"
+                                   invisible="not bargain_enabled"/>
+                            <field name="bargain_max_steps"
+                                   invisible="not bargain_enabled"/>
+                            <field name="min_margin_percent"
+                                   invisible="not bargain_enabled"/>
+                        </group>
+                        <group>
+                            <field name="bargain_hint" nolabel="1"
+                                   readonly="1" class="text-muted"/>
+                            <div class="text-muted">
+                                The customer is quoted cost plus the
+                                <b>Margin</b> above. Each time they push back
+                                the price drops by one step, and it stops at
+                                <b>Lowest Margin</b> - so bargaining only ever
+                                spends the difference between the two.
+                                <br/><br/>
+                                Products bargaining by <b>quantity range</b>
+                                (below, or on the product form) ignore this
+                                flat step: BETTER PRICE appears only when the
+                                customer's quantity is inside a range, and gives
+                                that range's discount once.
+                            </div>
+                        </group>
+                    </group>
+                    <group string="Quantity Ranges" invisible="not bargain_enabled">
+                        <group>
+                            <field name="qty_bargain_all"/>
+                            <field name="qty_bargain_ids" nolabel="1" colspan="2">
+                                <list editable="bottom">
+                                    <field name="qty_min"/>
+                                    <field name="qty_max"/>
+                                    <field name="percent"/>
+                                </list>
+                            </field>
+                        </group>
+                        <group>
+                            <div class="text-muted">
+                                Shop-wide ranges: <b>From</b> and <b>To</b>
+                                pieces, and the discount for that quantity.
+                                Leave <b>To</b> at 0 for no upper limit. Ranges
+                                must not overlap.
+                                <br/><br/>
+                                They apply to every product ticked
+                                <b>Quantity bargaining on WhatsApp</b> on its
+                                form that has no ranges of its own - or to
+                                <b>every</b> product when the switch above is
+                                on. A product's own table always wins.
+                            </div>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- ============ Guided Finder ============ -->
+    <record id="view_sa_settings_finder_form" model="ir.ui.view">
+        <field name="name">sa.settings.finder.form</field>
+        <field name="model">sa.ai.settings</field>
+        <field name="priority">45</field>
+        <field name="arch" type="xml">
+            <form string="Guided Finder">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="finder_enabled"/>
+                            <field name="finder_max_options"
+                                   invisible="not finder_enabled"/>
+                            <field name="finder_cache_days"
+                                   invisible="not finder_enabled"/>
+                        </group>
+                        <group>
+                            <field name="finder_image_model"
+                                   invisible="not finder_enabled"/>
+                            <field name="finder_image_fallback_model"
+                                   invisible="not finder_enabled"/>
+                            <div class="text-muted" colspan="2">
+                                A generic word opens a tap-only finder in the
+                                customer's private chat - kind, brand, model,
+                                picture, confirm. Every question is a poll, so
+                                it works on WhatsApp Web as well as the phone.
+                            </div>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- ============ Openers: the singleton, one form each ============ -->
+    <record id="action_sa_settings_counter" model="ir.actions.server">
+        <field name="name">The Shop Counter</field>
+        <field name="model_id" ref="model_sa_ai_settings"/>
+        <field name="state">code</field>
+        <field name="code">
+action = {'type': 'ir.actions.act_window', 'name': 'The Shop Counter', 'res_model': 'sa.ai.settings',
+          'res_id': model.get_settings().id, 'view_mode': 'form', 'target': 'current',
+          'views': [[env.ref('sales_automation.view_sa_settings_counter_form').id, 'form']]}
+        </field>
+    </record>
+    <record id="action_sa_settings_vendor" model="ir.actions.server">
+        <field name="name">Vendors &amp; Customer Replies</field>
+        <field name="model_id" ref="model_sa_ai_settings"/>
+        <field name="state">code</field>
+        <field name="code">
+action = {'type': 'ir.actions.act_window', 'name': 'Vendors &amp; Customer Replies', 'res_model': 'sa.ai.settings',
+          'res_id': model.get_settings().id, 'view_mode': 'form', 'target': 'current',
+          'views': [[env.ref('sales_automation.view_sa_settings_vendor_form').id, 'form']]}
+        </field>
+    </record>
+    <record id="action_sa_settings_address" model="ir.actions.server">
+        <field name="name">Delivery Address</field>
+        <field name="model_id" ref="model_sa_ai_settings"/>
+        <field name="state">code</field>
+        <field name="code">
+action = {'type': 'ir.actions.act_window', 'name': 'Delivery Address', 'res_model': 'sa.ai.settings',
+          'res_id': model.get_settings().id, 'view_mode': 'form', 'target': 'current',
+          'views': [[env.ref('sales_automation.view_sa_settings_address_form').id, 'form']]}
+        </field>
+    </record>
+    <record id="action_sa_settings_chatter" model="ir.actions.server">
+        <field name="name">Messages That Are Not Enquiries</field>
+        <field name="model_id" ref="model_sa_ai_settings"/>
+        <field name="state">code</field>
+        <field name="code">
+action = {'type': 'ir.actions.act_window', 'name': 'Messages That Are Not Enquiries', 'res_model': 'sa.ai.settings',
+          'res_id': model.get_settings().id, 'view_mode': 'form', 'target': 'current',
+          'views': [[env.ref('sales_automation.view_sa_settings_chatter_form').id, 'form']]}
+        </field>
+    </record>
+    <record id="action_sa_settings_bargain" model="ir.actions.server">
+        <field name="name">Bargaining</field>
+        <field name="model_id" ref="model_sa_ai_settings"/>
+        <field name="state">code</field>
+        <field name="code">
+action = {'type': 'ir.actions.act_window', 'name': 'Bargaining', 'res_model': 'sa.ai.settings',
+          'res_id': model.get_settings().id, 'view_mode': 'form', 'target': 'current',
+          'views': [[env.ref('sales_automation.view_sa_settings_bargain_form').id, 'form']]}
+        </field>
+    </record>
+    <record id="action_sa_settings_finder" model="ir.actions.server">
+        <field name="name">Guided Finder</field>
+        <field name="model_id" ref="model_sa_ai_settings"/>
+        <field name="state">code</field>
+        <field name="code">
+action = {'type': 'ir.actions.act_window', 'name': 'Guided Finder', 'res_model': 'sa.ai.settings',
+          'res_id': model.get_settings().id, 'view_mode': 'form', 'target': 'current',
+          'views': [[env.ref('sales_automation.view_sa_settings_finder_form').id, 'form']]}
+        </field>
+    </record>
+
+    <!-- ============ Menus, after AI Settings ============ -->
+    <menuitem id="menu_sa_settings_counter" name="The Shop Counter"
+              parent="menu_sa_config" action="action_sa_settings_counter" sequence="31"/>
+    <menuitem id="menu_sa_settings_vendor" name="Vendors &amp; Customer Replies"
+              parent="menu_sa_config" action="action_sa_settings_vendor" sequence="32"/>
+    <menuitem id="menu_sa_settings_address" name="Delivery Address"
+              parent="menu_sa_config" action="action_sa_settings_address" sequence="33"/>
+    <menuitem id="menu_sa_settings_chatter" name="Messages That Are Not Enquiries"
+              parent="menu_sa_config" action="action_sa_settings_chatter" sequence="34"/>
+    <menuitem id="menu_sa_settings_bargain" name="Bargaining"
+              parent="menu_sa_config" action="action_sa_settings_bargain" sequence="35"/>
+    <menuitem id="menu_sa_settings_finder" name="Guided Finder"
+              parent="menu_sa_config" action="action_sa_settings_finder" sequence="36"/>
+
+    <!-- ============ Human Takeover ============ -->
+    <record id="view_sa_settings_takeover_form" model="ir.ui.view">
+        <field name="name">sa.settings.takeover.form</field>
+        <field name="model">sa.ai.settings</field>
+        <field name="priority">47</field>
+        <field name="arch" type="xml">
+            <form string="Human Takeover">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="takeover_enabled"/>
+                            <field name="takeover_minutes" invisible="not takeover_enabled"/>
+                            <field name="takeover_numbers" invisible="not takeover_enabled"
+                                   widget="text" placeholder="919876543210&#10;96877123456"/>
+                        </group>
+                        <group>
+                            <div class="text-muted" colspan="2">
+                                When a shopkeeper writes in a chat, the assistant
+                                stops answering there. Every shopkeeper message
+                                restarts the clock; once they have been quiet for
+                                the minutes set here, the next customer message is
+                                answered by the assistant again.
+                                <br/><br/>
+                                The shop phone itself counts too: anything typed on
+                                it that the assistant did not send is treated as the
+                                shopkeeper. Other staff numbers go in the list.
+                                <br/><br/>
+                                In a group the whole group pauses. In a private chat
+                                only the assistant's conversation pauses - a
+                                supplier's price and a customer's coded reply still
+                                get through.
+                            </div>
+                        </group>
+                    </group>
+                    <separator string="Right now"/>
+                    <field name="takeover_status" nolabel="1" readonly="1" widget="text"
+                           class="font-monospace"/>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_sa_settings_takeover" model="ir.actions.server">
+        <field name="name">Human Takeover</field>
+        <field name="model_id" ref="model_sa_ai_settings"/>
+        <field name="state">code</field>
+        <field name="code">
+action = {'type': 'ir.actions.act_window', 'name': 'Human Takeover', 'res_model': 'sa.ai.settings',
+          'res_id': model.get_settings().id, 'view_mode': 'form', 'target': 'current',
+          'views': [[env.ref('sales_automation.view_sa_settings_takeover_form').id, 'form']]}
+        </field>
+    </record>
+
+    <menuitem id="menu_sa_settings_takeover" name="Human Takeover"
+              parent="menu_sa_config" action="action_sa_settings_takeover" sequence="38"/>
+
+</odoo>

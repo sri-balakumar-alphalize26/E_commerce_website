@@ -1,0 +1,236 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Codes: read-only everywhere. The digits are never stored, only a
+         salted hash, so there is nothing here to read out by mistake. -->
+    <record id="view_sa_delivery_otp_list" model="ir.ui.view">
+        <field name="name">sa.delivery.otp.list</field>
+        <field name="model">sa.delivery.otp</field>
+        <field name="arch" type="xml">
+            <list string="Delivery Codes" create="false" edit="false">
+                <field name="picking_id"/>
+                <field name="kind"/>
+                <field name="sent_to"/>
+                <field name="create_date" string="Issued"/>
+                <field name="expires_on"/>
+                <field name="attempts"/>
+                <field name="used_on"/>
+                <field name="state" widget="badge"
+                       decoration-success="state == 'used'"
+                       decoration-warning="state == 'open'"
+                       decoration-danger="state in ('locked', 'expired')"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_sa_delivery_otp" model="ir.actions.act_window">
+        <field name="name">Delivery Codes</field>
+        <field name="res_model">sa.delivery.otp</field>
+        <field name="view_mode">list</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No codes yet</p>
+            <p>Pickup codes go to the shop, delivery codes to the customer.
+               Only a hash is stored, so the digits cannot be read back here.</p>
+        </field>
+    </record>
+
+    <!-- App sessions, so a lost phone can be cut off. -->
+    <record id="view_sa_delivery_token_list" model="ir.ui.view">
+        <field name="name">sa.delivery.token.list</field>
+        <field name="model">sa.delivery.token</field>
+        <field name="arch" type="xml">
+            <list string="App Sessions" create="false"
+                  decoration-muted="revoked">
+                <field name="partner_id"/>
+                <field name="device"/>
+                <field name="create_date" string="Signed In"/>
+                <field name="last_seen"/>
+                <field name="expires_on"/>
+                <field name="revoked" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_sa_delivery_token" model="ir.actions.act_window">
+        <field name="name">App Sessions</field>
+        <field name="res_model">sa.delivery.token</field>
+        <field name="view_mode">list</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Nobody signed in yet</p>
+            <p>Tick <b>Revoked</b> to sign a lost phone out immediately.</p>
+        </field>
+    </record>
+
+    <!-- Delivery settings: how soon we promise. -->
+    <record id="view_sa_delivery_settings_form" model="ir.ui.view">
+        <field name="name">sa.delivery.settings.form</field>
+        <field name="model">sa.delivery.settings</field>
+        <field name="arch" type="xml">
+            <form string="Delivery Settings">
+                <sheet>
+                    <div class="oe_title">
+                        <h1>Delivery Settings</h1>
+                    </div>
+                    <group>
+                        <group string="Order flow" colspan="2">
+                            <field name="flow_end" widget="radio"/>
+                            <div colspan="2" class="text-muted">
+                                Every WhatsApp order runs <b>order signed &#8594; invoice &#8594; payment &#8594; delivery</b>.
+                                Pick the last step the shop does by itself. Before <b>Delivered</b>,
+                                no delivery job is raised and the delivery order is validated by hand in Inventory.
+                            </div>
+                        </group>
+                        <group string="Order flow API (shop / admin app)" colspan="2">
+                            <field name="ops_api_key" widget="CopyClipboardChar" readonly="1"/>
+                            <button name="action_ops_new_key" type="object" string="New key"
+                                    class="btn-secondary" colspan="2"
+                                    help="Makes a new key; the old one stops working at once. Headers: X-SA-Key and X-Odoo-Database. Routes: /api/sa/ping, /orders, /orders/{id}, /updates?since=, /jobs/{id}/{action}, /riders, /shops, /settings."/>
+                        </group>
+                        <group string="Quick - the shop has it">
+                            <field name="quick_enabled"/>
+                            <field name="quick_hours"
+                                   invisible="not quick_enabled"/>
+                            <field name="cutoff_hour"
+                                   invisible="not quick_enabled"/>
+                        </group>
+                        <group string="Express - it has to be sourced">
+                            <field name="express_days"/>
+                            <field name="promise_customer"/>
+                        </group>
+                        <group string="Calling a rider (after Packed)" colspan="2">
+                            <field name="call_rider_mode" widget="radio"/>
+                            <field name="dispatch_radius_km"/>
+                            <field name="auto_call_rider_on_packed" invisible="call_rider_mode == 'manual'"/>
+                            <field name="position_max_age_minutes"/>
+                            <field name="offer_timeout_seconds"/>
+                            <field name="max_offer_rounds"/>
+                            <div colspan="2" class="text-muted">
+                                One rider at a time, never all. Priority: the rider the counter picks &#8594;
+                                the nearest free rider to the shop (longest idle on a near tie, random on an
+                                exact tie) &#8594; no answer in time: the next one. Shops need a map pin
+                                (Delivery &#9656; Configuration &#9656; Shops).
+                            </div>
+                        </group>
+                        <group string="Pickup at the branch" colspan="2">
+                            <field name="pickup_handover" widget="radio"/>
+                            <field name="hide_customer_until_pickup"/>
+                            <div colspan="2" class="text-muted">
+                                Branch dispatches: the rider presses "I have arrived" in the app, the counter
+                                presses <b>Dispatch</b>, a 6-digit code pops up on the counter's screen, the staff
+                                tell the rider, the rider types it. Only then does the rider get the customer's
+                                street address, map pin and phone (before that: city, pincode and distance).
+                            </div>
+                        </group>
+                        <group string="Near the customer" colspan="2">
+                            <field name="auto_near_customer"/>
+                            <field name="near_radius_m" invisible="not auto_near_customer"/>
+                            <field name="near_dwell_seconds" invisible="not auto_near_customer"/>
+                            <field name="near_hits_needed" invisible="not auto_near_customer"/>
+                            <div colspan="2" class="text-muted">
+                                The rider app sends its position every few seconds. When a collected job's rider
+                                stays this close to the customer's map pin for this long, the job becomes
+                                <b>Rider Near Customer</b> by itself and the customer gets the "rider is near" message.
+                                The door step (Reached, which sends the customer's code) always stays a button.
+                            </div>
+                        </group>
+                        <group string="When the rider reports a problem" colspan="2">
+                            <field name="absent_wait_minutes"/>
+                            <field name="relay_enabled"/>
+                            <div colspan="2" class="text-muted">
+                                Customer not there, wrong address, cannot reach: the customer gets a WhatsApp message and
+                                the rider waits this long before Return to shop is allowed. Refused, would not pay,
+                                damaged: the return is allowed at once. Vehicle problem with the parcel on board: the
+                                nearest free rider collects it from the first rider with a handover code.
+                            </div>
+                        </group>
+                        <group string="SOS alerts" colspan="2">
+                            <field name="sos_phone"/>
+                            <div colspan="2" class="text-muted">
+                                A rider holds the red SOS button in the app: the alert is stored under the rider
+                                (Delivery &#9656; Fleet &#9656; SOS Alerts), the delivery managers get a notification,
+                                this number gets a WhatsApp with name, phone, job and a map link, and the shop's card
+                                turns red until someone presses Handled. Empty: the job's shop phone, else the company phone.
+                            </div>
+                        </group>
+                        <group string="Customer tracking page" colspan="2">
+                            <field name="route_provider"/>
+                            <field name="track_stale_seconds"/>
+                            <div colspan="2" class="text-muted">
+                                Quick orders show the rider live from pickup. Express orders (a rider with several
+                                parcels) show only the route until this customer is the next stop. When the rider must
+                                not be shown, no position is sent at all.
+                            </div>
+                        </group>
+                        <group string="Payment and the customer's code" colspan="2">
+                            <field name="packed_wait_payment_seconds"/>
+                            <field name="code_resend_limit"/>
+                            <field name="code_resend_cooldown"/>
+                        </group>
+                        <group string="Parcel photos" colspan="2">
+                            <field name="proof_photos_min"/>
+                            <field name="proof_photos_max"/>
+                            <div colspan="2" class="text-muted">
+                                The rider app takes photos of the parcel after the pickup code at the shop and again
+                                after the customer's code at the door. They show on the delivery job in two groups.
+                                A job is marked <b>Photos missing</b> when an end has fewer than the number needed.
+                            </div>
+                        </group>
+                        <group string="Riders - pay" colspan="2">
+                            <field name="third_party_enabled"/>
+                            <div colspan="2" class="text-muted">
+                                Own riders are on salary: the app shows them how many they delivered today,
+                                this week and this month. Delivery Partners (kind <b>Delivery Partner</b> on the
+                                rider) are paid per trip by the rates below, shown as "You earn" on the offer.
+                                Switched off, Delivery Partners get no new jobs.
+                            </div>
+                            <field name="rider_fee_base" string="Base fee per trip" invisible="not third_party_enabled"/>
+                            <field name="rider_fee_free_km" string="Free km included" invisible="not third_party_enabled"/>
+                            <field name="rider_fee_per_km" string="Per km after that" invisible="not third_party_enabled"/>
+                            <field name="rider_fee_express_bonus" string="Express bonus" invisible="not third_party_enabled"/>
+                        </group>
+                        <group string="Rider positions - address lookup">
+                            <field name="geocode_provider"/>
+                            <field name="geocode_google_key" invisible="geocode_provider != 'google'" password="True"/>
+                        </group>
+                        <group string="Push to the rider app (Firebase)">
+                            <field name="fcm_project"/>
+                            <field name="fcm_last_error"/>
+                            <field name="fcm_service_account_json" widget="text" groups="base.group_system"
+                                   placeholder="Paste the service-account JSON from Firebase > Project settings > Service accounts"/>
+                        </group>
+                        <group string="Testing" colspan="2">
+                            <field name="otp_test_mode"/>
+                        </group>
+                    </group>
+                    <div class="alert alert-danger" role="alert"
+                         invisible="not otp_test_mode">
+                        <b>OTP test mode is on.</b> Pickup, delivery and login
+                        codes are being returned in the API response, so anyone
+                        with a rider's token can read the code that proves a
+                        customer received their parcel. This is for driving the
+                        flow from Postman while no WhatsApp session is
+                        connected &#8212; turn it off before anyone real uses
+                        this.
+                    </div>
+                    <div class="alert alert-info" role="alert">
+                        When an order is confirmed, every line is checked
+                        against what the chosen shop can actually give away
+                        today. If the shelf covers it the delivery is
+                        <b>Quick</b> and promised within the hours above;
+                        otherwise it is <b>Express</b> and promised in days.
+                        The date is written on the delivery, shown to the
+                        rider, and sent to the customer.
+                    </div>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_sa_delivery_settings" model="ir.actions.server">
+        <field name="name">Delivery Settings</field>
+        <field name="model_id" ref="model_sa_delivery_settings"/>
+        <field name="state">code</field>
+        <field name="code">action = model.get_settings().action_open()</field>
+    </record>
+
+</odoo>

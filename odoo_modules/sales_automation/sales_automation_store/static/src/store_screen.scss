@@ -1,0 +1,315 @@
+// The shop counter screen.
+//
+// Read at arm's length by somebody holding a parcel, so: big type, big
+// targets, and the one thing that matters - a new order - loud enough to
+// notice from across the room.
+
+.sa_store {
+    padding: 12px 16px 32px;
+    background: #f6f7f9;
+    min-height: 100%;
+
+    .sa_store_bar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+        padding-bottom: 12px;
+    }
+
+    .sa_store_counts { display: flex; gap: 8px; }
+
+    .sa_pill {
+        font-weight: 600;
+        font-size: 15px;
+        padding: 6px 14px;
+        border-radius: 999px;
+        background: #e4e7ec;
+        color: #344054;
+    }
+    .sa_pill_new { background: #fee4e2; color: #b42318; }
+    .sa_pill_pack { background: #fef0c7; color: #b54708; }
+
+    // Only while something is actually waiting - a badge that always pulses
+    // is one nobody looks at.
+    .sa_pulse { animation: sa_pulse 1.1s ease-in-out infinite; }
+
+    .sa_store_shop { margin-left: auto; padding: 6px 10px; border-radius: 6px; }
+    .sa_sound_on { color: #067647; font-weight: 600; }
+
+    .sa_store_warn {
+        background: #fef0c7;
+        border-left: 4px solid #b54708;
+        color: #7a2e0e;
+        padding: 10px 14px;
+        border-radius: 0 6px 6px 0;
+        margin-bottom: 14px;
+        max-width: 70ch;
+    }
+
+    .sa_store_empty {
+        text-align: center;
+        color: #667085;
+        padding: 64px 0;
+        .sa_store_empty_mark { font-size: 44px; color: #12b76a; }
+    }
+
+    .sa_store_grid {
+        display: grid;
+        gap: 14px;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    }
+
+    .sa_card {
+        background: #fff;
+        border: 1px solid #e4e7ec;
+        border-left: 5px solid #98a2b3;
+        border-radius: 8px;
+        padding: 14px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        box-shadow: 0 1px 2px rgba(16, 24, 40, .06);
+    }
+    // The stage is the stripe. Colour first, words second - it is read at a
+    // glance far more often than it is read properly.
+    .sa_card_awaiting_shop { border-left-color: #d92d20; }
+    .sa_card_preparing     { border-left-color: #f79009; }
+    .sa_card_ready         { border-left-color: #12b76a; }
+
+    .sa_card_top {
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+    }
+    .sa_ref { font-weight: 700; font-size: 18px; }
+    .sa_stage { color: #667085; font-size: 13px; }
+    .sa_wait { margin-left: auto; color: #b42318; font-size: 13px; font-weight: 600; }
+
+    .sa_cust { font-weight: 600; }
+    .sa_company {
+        font-size: 11.5px; color: #175cd3; background: #eff8ff;
+        padding: 1px 8px; border-radius: 999px; font-weight: 600;
+    }
+    .sa_addr { color: #667085; font-size: 13px; }
+
+    .sa_lines {
+        list-style: none;
+        margin: 0;
+        padding: 8px 0;
+        border-top: 1px solid #f2f4f7;
+        border-bottom: 1px solid #f2f4f7;
+        li { display: flex; gap: 10px; padding: 2px 0; }
+        .sa_qty {
+            min-width: 30px;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+        }
+    }
+
+    .sa_docs {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 4px 12px;
+        font-size: 12.5px;
+    }
+    .sa_doc { color: #175cd3; text-decoration: none; font-weight: 600; }
+    .sa_doc:hover { text-decoration: underline; }
+    .sa_doc_print { color: #344054; }
+    .sa_cancel { color: #b42318; font-size: 12.5px; padding: 0; margin-left: auto; }
+
+    .sa_money { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+    .sa_paid { color: #067647; font-weight: 600; }
+    .sa_cod { color: #b54708; font-weight: 600; }
+    .sa_rider { margin-left: auto; color: #667085; font-size: 13px; }
+
+    // the live line: rider · stop x of y · km · min, freshness, Live map
+    .sa_live {
+        display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+        font-size: 13px; margin: 6px 0 2px; padding: 6px 10px; border-radius: 8px;
+        background: #e6f1f8; color: #0b4a6e;
+        .sa_live_main b { font-weight: 700; }
+        .sa_live_fresh { margin-left: auto; color: #1a7f3c; font-size: 12px; white-space: nowrap; }
+        .sa_live_stale { color: #8a96a0; }
+        .sa_live_map { color: #0a78ab; font-weight: 600; cursor: pointer; white-space: nowrap; }
+        &.sa_live_missed { background: #fff4e5; color: #8a4a00; }
+    }
+    .sa_live_map_btn { white-space: nowrap; }
+    .sa_wait_pay { opacity: .75; }
+    .sa_force_call { font-size: 13px; color: #b54708; }
+
+    .sa_actions { display: flex; align-items: center; gap: 8px; }
+
+    .sa_card_offered  { border-left-color: #2e90fa; }
+    .sa_card_accepted { border-left-color: #7a5af8; }
+
+    .sa_pickup {
+        background: #f4f3ff;
+        border: 1px dashed #7a5af8;
+        border-radius: 8px;
+        padding: 10px 12px;
+        text-align: center;
+    }
+    .sa_pickup_label { color: #5925dc; font-size: 13px; }
+    // Read from across a counter, to a rider who is typing it.
+    .sa_pickup_code {
+        font-size: 40px;
+        font-weight: 800;
+        letter-spacing: 6px;
+        font-variant-numeric: tabular-nums;
+        color: #3e1c96;
+        margin-top: 4px;
+    }
+    // Pressed with one hand, in a hurry, sometimes wearing gloves.
+    .sa_big { flex: 1; padding: 12px; font-size: 16px; font-weight: 600; }
+    .sa_undo { color: #667085; }
+    .sa_waiting_rider { color: #12b76a; font-weight: 600; }
+}
+
+// The company picker, shown on Accept.
+.sa_cd_lead { color: #475467; font-size: 14px; margin-bottom: 12px; }
+.sa_cd_list { display: grid; gap: 10px; }
+.sa_cd_option {
+    text-align: left; width: 100%; background: #fff; cursor: pointer;
+    border: 1px solid #d0d5dd; border-left-width: 5px; border-radius: 8px;
+    padding: 10px 14px; font: inherit;
+}
+.sa_cd_option:hover:not([disabled]) { border-color: #175cd3; }
+.sa_cd_ok { border-left-color: #12b76a; }
+.sa_cd_no { border-left-color: #d0d5dd; opacity: .6; cursor: not-allowed; }
+.sa_cd_current { background: #f5faff; }
+.sa_cd_head { display: flex; gap: 10px; align-items: baseline; }
+.sa_cd_name { font-weight: 700; font-size: 16px; }
+.sa_cd_wh { color: #667085; font-size: 13px; }
+.sa_cd_tag { margin-left: auto; font-size: 11px; color: #175cd3; font-weight: 600; }
+.sa_cd_lines { list-style: none; margin: 6px 0 0; padding: 0; font-size: 13px; }
+.sa_cd_lines li { display: flex; justify-content: space-between; gap: 12px; padding: 2px 0; }
+.sa_cd_lines b { color: #067647; font-weight: 600; }
+.sa_cd_short b { color: #b42318; }
+
+@keyframes sa_pulse {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.08); }
+}
+
+// Somebody may well have this open on a phone behind the counter.
+@media (max-width: 480px) {
+    .sa_store .sa_store_grid { grid-template-columns: 1fr; }
+}
+
+
+// ---- Bought in from a supplier, not here yet ----
+// Amber, like the enquiry desk's stalled cards: nothing is broken, but
+// nothing moves until the goods land.
+.sa_supply_line {
+    margin: 6px 0 2px;
+    padding: 6px 10px;
+    background: #fffbeb;
+    border-left: 4px solid #b45309;
+    border-radius: 4px;
+    font-size: .9rem;
+    color: #7c2d12;
+}
+
+.sa_supply_badge {
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: .75rem;
+    letter-spacing: .03em;
+}
+
+.sa_supply_none { color: #b45309; font-style: italic; }
+
+.sa_cd_supply { margin-right: auto; }
+
+.sa_supply_dlg {
+    .sa_lbl {
+        display: block;
+        margin: 14px 0 4px;
+        font-weight: 600;
+    }
+
+    .sa_supply_vendor {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        text-align: left;
+    }
+
+    .sa_supply_on { background: #ecfdf5; border-color: #059669; }
+
+    .sa_supply_ask { margin-top: 8px; }
+
+    // Big enough to type into on a phone at a counter.
+    .sa_supply_cost {
+        font-size: 1.5rem;
+        font-weight: 700;
+        padding: 8px 12px;
+    }
+
+    .sa_supply_when {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .sa_supply_kind {
+        font-weight: 700;
+        color: #b45309;
+        white-space: nowrap;
+    }
+
+    .sa_supply_note {
+        margin-top: 14px;
+        color: #64748b;
+        font-size: .85rem;
+    }
+}
+
+.sa_info { font-size: 12px; opacity: .8; margin-left: 4px; cursor: help; }
+.sa_stage_text { font-size: 13px; color: #1d4ed8; background: #eff6ff; border-radius: 6px; padding: 4px 8px; margin: 6px 0; }
+.sa_cand_meta { display: block; font-size: 12px; opacity: .85; margin-top: 2px; font-weight: 400; }
+.sa_track_link { display: inline-block; margin: 2px 0 6px; font-weight: 600; font-size: 13px; }
+
+.sa_cand_table { width: 100%; border-collapse: collapse; font-size: 13px;
+  th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: #64748b;
+       border-bottom: 2px solid #e2e8f0; padding: 6px 8px; }
+  td { padding: 8px; border-bottom: 1px solid #eef2f7; vertical-align: middle; }
+  tbody tr { cursor: pointer; }
+  tbody tr:hover { background: #f8fafc; }
+  tr.sa_cand_sel { background: #eff6ff; box-shadow: inset 3px 0 0 #2563eb; }
+  tr.sa_cand_dim td { color: #94a3b8; }
+  .sa_cand_chk { width: 34px; text-align: center; input { width: 17px; height: 17px; } }
+  .sa_cand_sub { font-size: 11px; color: #94a3b8; font-weight: 400; }
+}
+.sa_badge { display: inline-block; border-radius: 999px; padding: 1px 9px; font-size: 11px; font-weight: 600; }
+.sa_cand_tabs { display: flex; gap: 6px; margin-bottom: 10px; border-bottom: 2px solid #e2e8f0; }
+.sa_cand_tab { border: 0; background: none; padding: 8px 14px; font-size: 14px; font-weight: 600; color: #64748b;
+    border-bottom: 3px solid transparent; margin-bottom: -2px; cursor: pointer; }
+.sa_cand_tab_on { color: #1d4ed8; border-bottom-color: #2563eb; }
+.sa_cand_readonly tr { cursor: default; }
+.sa_badge_off { background: #e2e8f0; color: #475569; }
+.sa_badge_free { background: #dcfce7; color: #166534; }
+.sa_badge_busy { background: #fef3c7; color: #92400e; }
+.sa_badge_miss { background: #fee2e2; color: #991b1b; }
+.sa_arrived { background: #ecfdf5; border: 1px solid #6ee7b7; border-radius: 8px; padding: 6px 10px;
+    margin: 6px 0; font-size: 15px; }
+.sa_code_big { display: flex; justify-content: center; gap: 10px; margin: 14px 0 6px;
+    span { display: inline-block; min-width: 54px; padding: 10px 0; text-align: center; font-size: 46px;
+        font-weight: 700; font-family: monospace; background: #f1f5f9; border: 2px solid #334155;
+        border-radius: 10px; color: #0f172a; } }
+.sa_code_left { text-align: center; color: #64748b; }
+.sa_code_done { text-align: center; font-size: 22px; font-weight: 600; color: #047857; padding: 24px 0; }
+.sa_waiting_pay { display: inline-block; background: #fef9c3; color: #713f12; border: 1px solid #fde047;
+    border-radius: 999px; padding: 3px 12px; font-size: 13px; font-weight: 600; }
+.sa_issue_photos { display: flex; align-items: center; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+.sa_issue_photo img { width: 54px; height: 54px; object-fit: cover; border-radius: 6px; border: 2px solid #f59e0b; display: block; }
+.sa_issue_photo_count { font-size: 12px; font-weight: 700; color: #b45309; }
+.sa_issue_note { font-style: italic; font-weight: 400; margin-top: 2px; color: #7f1d1d; }
+.sa_issue.sa_sos { background: #b42318; color: #fff; border-color: #7a271a; font-size: 14px;
+  a { color: #fff; text-decoration: underline; } .sa_issue_note { color: #fde68a; } }
+.sa_issue { display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  background: #fee2e2; color: #7f1d1d; border: 1px solid #f87171; border-radius: 8px;
+  padding: 6px 10px; margin: 6px 0; font-size: 13px; }

@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- The conduct filter's own page under Sales Automation > Configuration.
+         Same sa.ai.settings record as the other pages, its own form. -->
+    <record id="view_sa_settings_conduct_form" model="ir.ui.view">
+        <field name="name">sa.settings.conduct.form</field>
+        <field name="model">sa.ai.settings</field>
+        <field name="priority">46</field>
+        <field name="arch" type="xml">
+            <form string="Conduct Filter">
+                <sheet>
+                    <group>
+                        <group string="Switches">
+                            <field name="conduct_enabled"/>
+                            <field name="conduct_links" invisible="not conduct_enabled"/>
+                            <field name="conduct_media" invisible="not conduct_enabled"/>
+                            <field name="conduct_model_mode" invisible="not conduct_enabled"/>
+                            <field name="conduct_doubt_action" invisible="not conduct_enabled"/>
+                            <field name="conduct_model_timeout" invisible="not conduct_enabled"/>
+                            <field name="conduct_doubt_min" invisible="not conduct_enabled or conduct_model_mode == 'all'"/>
+                            <field name="conduct_llm_min_confidence" invisible="not conduct_enabled"/>
+                            <field name="conduct_warn" invisible="not conduct_enabled"/>
+                            <field name="conduct_warn_text" invisible="not conduct_enabled or conduct_warn == 'off'"/>
+                        </group>
+                        <group>
+                            <div class="text-muted" colspan="2">
+                                Local list first: a listed word, phrase or adult
+                                link is removed at once, no model involved. Only a
+                                doubtful message (a near-miss or sound-alike of a
+                                listed word, or a "doubtful word") is shown to the
+                                AI model, which answers with a confidence; at or
+                                above the auto-delete confidence it is removed.
+                                If the model cannot be reached, a doubtful message
+                                is removed anyway. Photos and videos always go to
+                                the model. The shop number must be a group admin
+                                for the delete to work in WhatsApp.
+                                <br/><br/>
+                                Every removal is a remark on the person under
+                                <b>Insights</b>, and lowers their rating.
+                            </div>
+                        </group>
+                    </group>
+                    <notebook invisible="not conduct_enabled">
+                        <page string="Words">
+                            <field name="conduct_words" nolabel="1" widget="text"
+                                   placeholder="one word per line"/>
+                        </page>
+                        <page string="Phrases">
+                            <field name="conduct_phrases" nolabel="1" widget="text"
+                                   placeholder="one phrase per line"/>
+                        </page>
+                        <page string="Doubtful Words">
+                            <div class="text-muted mb-2">Rude only sometimes: the model decides from context.</div>
+                            <field name="conduct_doubtful_words" nolabel="1" widget="text"/>
+                        </page>
+                        <page string="Never Doubtful">
+                            <div class="text-muted mb-2">Ordinary words that must never be read as a near miss of a listed word.</div>
+                            <field name="conduct_safe_words" nolabel="1" widget="text"/>
+                        </page>
+                        <page string="Adult Links" invisible="not conduct_links">
+                            <field name="conduct_link_words" nolabel="1" widget="text"
+                                   placeholder="one fragment per line"/>
+                        </page>
+                        <page string="Model Prompts">
+                            <group>
+                                <field name="conduct_text_prompt" widget="text"/>
+                                <field name="conduct_media_prompt" widget="text"/>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_sa_settings_conduct" model="ir.actions.server">
+        <field name="name">Conduct Filter</field>
+        <field name="model_id" ref="sales_automation.model_sa_ai_settings"/>
+        <field name="state">code</field>
+        <field name="code">
+action = {'type': 'ir.actions.act_window', 'name': 'Conduct Filter', 'res_model': 'sa.ai.settings',
+          'res_id': model.get_settings().id, 'view_mode': 'form', 'target': 'current',
+          'views': [[env.ref('sales_automation_insights.view_sa_settings_conduct_form').id, 'form']]}
+        </field>
+    </record>
+
+    <menuitem id="menu_sa_settings_conduct" name="Conduct Filter"
+              parent="sales_automation.menu_sa_config" action="action_sa_settings_conduct" sequence="37"/>
+
+</odoo>

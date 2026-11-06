@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- The screen itself. A client action rather than a list view: it has to
+         listen, redraw on its own and make a noise, none of which a list does. -->
+    <record id="action_sa_store_screen" model="ir.actions.client">
+        <field name="name">New Orders</field>
+        <field name="tag">sales_automation_store.screen</field>
+    </record>
+
+    <!-- Its own root menu. The shop counter is a different job from Sales and
+         a different person from Delivery, and burying it two levels down is
+         how a screen that has to be watched stops being watched. -->
+    <menuitem id="menu_sa_store_root"
+              name="Store"
+              sequence="16"/>
+
+    <menuitem id="menu_sa_store_screen"
+              name="New Orders"
+              parent="menu_sa_store_root"
+              action="action_sa_store_screen"
+              sequence="1"/>
+
+    <!-- Out-of-stock enquiries waiting for somebody to choose suppliers.
+         Its own screen because it is its own job: the packing screen says
+         "bag this", this one asks "who do we ask?". -->
+    <record id="action_sa_enquiry_screen" model="ir.actions.client">
+        <field name="name">Enquiries</field>
+        <field name="tag">sales_automation_store.enquiries</field>
+    </record>
+
+    <menuitem id="menu_sa_store_enquiries"
+              name="Enquiries"
+              parent="menu_sa_store_root"
+              action="action_sa_enquiry_screen"
+              sequence="3"/>
+
+    <!-- The same work as an ordinary list, for anyone who would rather filter
+         and sort than watch. -->
+    <record id="action_sa_store_jobs" model="ir.actions.act_window">
+        <field name="name">Shop Queue</field>
+        <field name="res_model">stock.picking</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('sa_delivery_state','in',['awaiting_shop','preparing','ready'])]</field>
+        <field name="context">{'search_default_group_state': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Nothing waiting</p>
+            <p>Paid orders appear here until the shop has packed them.</p>
+        </field>
+    </record>
+
+    <menuitem id="menu_sa_store_jobs"
+              name="Shop Queue"
+              parent="menu_sa_store_root"
+              action="action_sa_store_jobs"
+              sequence="2"/>
+
+    <!-- The same two queues the dispatcher sees, for the shopkeeper who
+         set the date in the first place. One action, two ways in. -->
+    <menuitem id="menu_sa_store_same_day"
+              name="Quick Delivery"
+              parent="menu_sa_store_root"
+              action="sales_automation_delivery.action_sa_delivery_same_day"
+              sequence="4"/>
+
+    <menuitem id="menu_sa_store_express"
+              name="Express Delivery"
+              parent="menu_sa_store_root"
+              action="sales_automation_delivery.action_sa_delivery_express"
+              sequence="5"/>
+
+</odoo>

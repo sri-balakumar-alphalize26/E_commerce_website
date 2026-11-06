@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--
+        Deliberately standalone rather than website.layout: a rider opens this
+        on a phone with one hand, often outdoors. No menus, no cookie banner,
+        no assets bundle to download on a weak signal.
+    -->
+    <!-- The 369 Mart look (6 Oct 2026): sales_automation.sa_brand_layout,
+         shared with the price pages, the confirm page and the tracking page. -->
+    <template id="delivery_job_layout" name="Delivery Job Layout">
+        <t t-call="sales_automation.sa_brand_layout">
+            <t t-set="head_title" t-value="head_title or 'Delivery'"/>
+            <t t-set="brand_badge" t-value="'Delivery job'"/>
+            <t t-out="0"/>
+        </t>
+    </template>
+
+    <template id="delivery_job_page" name="Delivery Job">
+        <t t-call="sales_automation_delivery.delivery_job_layout">
+            <t t-set="head_title">Delivery #<t t-esc="picking.sa_ref_code"/></t>
+
+            <div class="card">
+                <div class="code">Delivery #<t t-esc="picking.sa_ref_code"/> <span t-attf-class="pill #{picking.sa_delivery_kind or 'quick'}" t-esc="picking.sa_delivery_kind == 'express' and 'Express' or 'Quick'"/></div>
+                <h1 t-esc="partner.name or 'Customer'"/>
+
+                <div class="steps">
+                    <div t-attf-class="step #{picking.sa_delivery_state in ('offered','accepted','picked','delivered') and 'on' or ''}">Offered</div>
+                    <div t-attf-class="step #{picking.sa_delivery_state in ('accepted','picked','delivered') and 'on' or ''}">Accepted</div>
+                    <div t-attf-class="step #{picking.sa_delivery_state in ('picked','delivered') and 'on' or ''}">Picked up</div>
+                    <div t-attf-class="step #{picking.sa_delivery_state == 'delivered' and 'on' or ''}">Delivered</div>
+                </div>
+
+                <div class="row" t-if="picking.sa_shop_id">
+                    <span class="lbl">Collect from</span>
+                    <span class="val" t-esc="picking.sa_shop_id.name"/>
+                </div>
+                <div class="row" t-if="where">
+                    <span class="lbl">Deliver to</span>
+                    <span class="val"><t t-esc="where"/><t t-if="locked"> &#8212; full address after pickup</t></span>
+                </div>
+                <div class="row" t-if="partner.phone and not locked">
+                    <span class="lbl">Phone</span>
+                    <span class="val"><a t-attf-href="tel:#{partner.phone}" t-esc="partner.phone"/></span>
+                </div>
+                <div class="row" t-foreach="picking.move_ids" t-as="move">
+                    <span class="lbl" t-esc="'%g' % move.product_uom_qty"/>
+                    <span class="val" t-esc="move.product_id.name"/>
+                </div>
+
+                <div t-if="picking.sa_cod_amount" class="cod">
+                    Collect <b t-esc="'%.3f' % picking.sa_cod_amount"/>
+                    <t t-esc="picking.sa_currency_id.name"/> on delivery.
+                </div>
+                <div t-else="" class="cod paid">
+                    Already paid &#8212; nothing to collect.
+                </div>
+
+                <a t-if="map_url" t-att-href="map_url" class="btn map" target="_blank">Open in Maps</a>
+                <div t-if="error" style="background:#fee2e2;color:#991b1b;padding:8px 10px;border-radius:8px;margin:8px 0">
+                    <t t-esc="error"/>
+                </div>
+
+                <t t-if="next_action == 'accepted'">
+                    <a class="btn go" t-attf-href="/wa/delivery/#{picking.id}/accepted?token=#{token}">Accept this job</a>
+                </t>
+                <t t-elif="picking.sa_delivery_state in ('accepted', 'ready', 'to_assign', 'awaiting_shop', 'preparing', 'picked')">
+                    <form method="post" t-attf-action="/wa/delivery/#{picking.id}/picked?token=#{token}">
+                        <p class="muted">Step 1 - Collect: type the pickup code (the shop or your WhatsApp has it)</p>
+                        <input name="otp" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="6-digit code"
+                               style="font-size:26px;letter-spacing:8px;text-align:center;width:100%;padding:8px;margin-bottom:8px"/>
+                        <button class="btn go" type="submit">I have picked it up</button>
+                    </form>
+                </t>
+                <t t-elif="picking.sa_delivery_state == 'dispatched'">
+                    <p class="muted">Step 2 - when you are close, tell the customer to be ready</p>
+                    <a class="btn go" t-attf-href="/wa/delivery/#{picking.id}/start?token=#{token}">I am near the customer</a>
+                </t>
+                <t t-elif="picking.sa_delivery_state == 'out_for_delivery' and not picking.sa_arrived_customer_on">
+                    <p class="muted">Step 3 - at the door: this sends the customer a 6-digit code</p>
+                    <a class="btn go" t-attf-href="/wa/delivery/#{picking.id}/reached?token=#{token}">Reached the customer - send the code</a>
+                </t>
+                <t t-elif="picking.sa_delivery_state == 'out_for_delivery'">
+                    <form method="post" t-attf-action="/wa/delivery/#{picking.id}/delivered?token=#{token}">
+                        <p class="muted">Step 4 - hand over the parcel, then type the code the customer gives you</p>
+                        <input name="otp" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="6-digit code"
+                               style="font-size:26px;letter-spacing:8px;text-align:center;width:100%;padding:8px;margin-bottom:8px"/>
+                        <button class="btn go" type="submit">Delivered</button>
+                    </form>
+                </t>
+                <t t-elif="picking.sa_delivery_state == 'delivered'">
+                    <div class="done">Delivered &#8212; thank you.</div>
+                </t>
+                <t t-else="">
+                    <p class="muted">This job is not open for you right now.</p>
+                </t>
+            </div>
+
+            <p class="muted" id="sa_geo_note"
+               t-if="picking.sa_delivery_state in ('accepted', 'picked')">
+                This page sends your position to the customer while it stays open.
+            </p>
+            <t t-if="picking.sa_delivery_state in ('accepted', 'picked')"
+               t-call="sales_automation_delivery.delivery_job_tracker"/>
+            <p class="muted">Reference <t t-esc="picking.name"/></p>
+        </t>
+    </template>
+
+    <!--
+      The `delivery_rider_page` template was removed with the untokened
+      /wa/rider/<rider_id> route that rendered it. It printed each job's
+      sa_access_token into an href, so anyone who guessed a rider id received
+      customer addresses and working action tokens. The authenticated rider
+      app in controllers/delivery_api.py replaces it.
+    -->
+
+</odoo>

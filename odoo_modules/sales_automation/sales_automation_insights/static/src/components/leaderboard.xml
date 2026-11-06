@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+<t t-name="sales_automation_insights.Leaderboard">
+    <div class="sai_sect">
+        <t t-if="props.kind === 'vendor'">Suppliers</t><t t-else="">Customers</t>
+        <span class="sai_count"><t t-esc="rows.length"/></span>
+        <span class="sai_spacer"/>
+        <button class="sai_btn sai_btn_link" t-att-disabled="props.busy"
+                t-on-click="() => props.onRecompute()">Recompute now</button>
+    </div>
+    <div class="sai_toolbar">
+        <input class="sai_search" type="text" placeholder="Search name or phone, then Enter"
+               t-att-value="props.search" t-on-keydown="onSearchInput"/>
+        <button class="sai_btn sai_btn_accent" t-att-disabled="selectedCount &lt; 2 or props.busy"
+                t-on-click="() => props.onCompare()">
+            Compare <t t-if="selectedCount"><t t-esc="selectedCount"/></t>
+        </button>
+    </div>
+
+    <div class="sai_chips">
+        <button t-foreach="chips" t-as="c" t-key="c.code" class="sai_chip"
+                t-att-class="(c.on ? 'sai_chip_on ' : '') + 'sai_chip_' + c.code"
+                t-on-click="() => this.onChip(c.code)">
+            <t t-esc="c.label"/> <span class="sai_chip_n"><t t-esc="c.count"/></span>
+        </button>
+    </div>
+
+    <div class="sai_chips sai_chips_aspect">
+        <span class="sai_chips_label">Focus</span>
+        <button t-foreach="aspects" t-as="a" t-key="a.code" class="sai_chip sai_chip_small"
+                t-att-class="(a.on ? 'sai_chip_on ' : '') + 'sai_aspect_' + a.code"
+                t-on-click="() => this.onAspectChip(a.code)">
+            <t t-esc="a.label"/> <span class="sai_chip_n"><t t-esc="a.count"/></span>
+        </button>
+    </div>
+
+    <div t-if="!rows.length" class="sai_empty">
+        <t t-if="allRows.length">Nobody in this group - pick another chip.</t>
+        <t t-else="">Nothing rated yet - press Recompute now, or wait for tonight's run.</t>
+    </div>
+
+    <table t-else="" class="sai_board">
+        <thead>
+            <tr>
+                <th></th>
+                <th>Name</th>
+                <th>Rating</th>
+                <th class="sai_num"><t t-if="props.kind === 'vendor'">Asks</t><t t-else="">Enquiries</t></th>
+                <th class="sai_num"><t t-if="props.kind === 'vendor'">Quotes</t><t t-else="">Orders</t></th>
+                <th class="sai_num"><t t-if="props.kind === 'vendor'">On time</t><t t-else="">Delivered</t></th>
+                <th class="sai_num"><t t-if="props.kind === 'vendor'">Said no</t><t t-else="">Cancelled</t></th>
+                <th class="sai_num"><t t-if="props.kind === 'vendor'">Spend</t><t t-else="">Revenue</t></th>
+                <th class="sai_num">Remarks</th>
+                <th>Last seen</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr t-foreach="rows" t-as="row" t-key="row.id" class="sai_row"
+                t-att-class="{ sai_row_on: props.selected[row.id], sai_row_off: !row.enough_data }"
+                t-on-click="() => props.onOpen(row.id)">
+                <td><input type="checkbox" class="sai_check" t-att-checked="props.selected[row.id]"
+                           t-on-click="(ev) => this.onTick(ev, row)"/></td>
+                <td>
+                    <div class="sai_name"><t t-esc="row.name"/></div>
+                    <div class="sai_sub mono"><t t-esc="row.phone"/></div>
+                </td>
+                <td>
+                    <span t-if="row.enough_data" class="sai_stars">
+                        <span class="sai_star_on"><t t-esc="stars(row).on"/></span><span class="sai_star_off"><t t-esc="stars(row).off"/></span>
+                        <span class="sai_star_num"><t t-esc="row.stars.toFixed(1)"/></span>
+                    </span>
+                    <span t-else="" class="sai_stars sai_stars_none">not enough data (<t t-esc="row.sample_size"/>)</span>
+                    <span class="sai_tier" t-att-class="'sai_tier_' + (row.tier || 'new')"><t t-esc="tierLabel(row)"/></span>
+                </td>
+                <td class="sai_num"><t t-esc="row.enquiry_count"/></td>
+                <td class="sai_num"><t t-esc="row.order_count"/></td>
+                <td class="sai_num"><t t-esc="row.delivered_count"/></td>
+                <td class="sai_num"><t t-esc="row.cancelled_count"/></td>
+                <td class="sai_num"><t t-esc="money(row.revenue_total)"/></td>
+                <td class="sai_num"><span t-if="row.remarks_count" class="sai_chip_bad"><t t-esc="row.remarks_count"/></span><span t-else="" class="muted">-</span></td>
+                <td class="mono muted"><t t-esc="when(row.last_seen_on)"/></td>
+                <td><span class="sai_tag" t-att-class="'sai_tag_' + row.badge.toLowerCase()"><t t-esc="row.badge"/></span></td>
+            </tr>
+        </tbody>
+    </table>
+</t>
+
+</templates>

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="sales_automation_wechat.EnquiryScreenRelay"
+       t-inherit="sales_automation_store.EnquiryScreen" t-inherit-mode="extension">
+        <xpath expr="//h4[hasclass('sa_sect_stall')]" position="before">
+            <h4 class="sa_sect sa_sect_wechat" t-if="state.wechat and state.wechat.rows.length">
+                WeChat - relay by hand
+                <span class="sa_wx_status" t-att-class="state.wechat.alive ? 'sa_wx_up' : 'sa_wx_down'">
+                    <t t-if="state.wechat.alive">bridge up</t><t t-else="">bridge down</t>
+                </span>
+            </h4>
+            <div class="sa_store_grid" t-if="state.wechat and state.wechat.rows.length">
+                <div class="sa_card sa_card_wx" t-foreach="state.wechat.rows" t-as="row" t-key="row.id">
+                    <div class="sa_card_top">
+                        <span class="sa_ref">#<t t-esc="row.ref"/></span>
+                        <span class="sa_stage">
+                            <t t-if="row.state === 'failed'">Send failed: <t t-esc="row.error"/></t>
+                            <t t-else="">Waiting <t t-esc="row.minutes"/> min - bridge down</t>
+                        </span>
+                    </div>
+                    <div class="sa_prod">
+                        <t t-esc="row.product"/>
+                        <span class="sa_qty" t-if="row.qty"> x <t t-esc="row.qty"/></span>
+                    </div>
+                    <div class="sa_wx_to">To: <b><t t-esc="row.remark"/></b> (<t t-esc="row.vendor"/>)</div>
+                    <div class="sa_wx_to text-muted"><t t-if="row.step === 'ask'">Step 1: do they have it?</t><t t-elif="row.step === 'price'">Step 2: their price</t><t t-elif="row.step === 'days'">Step 3: delivery time</t><t t-else="">Reply</t></div>
+                    <pre class="sa_wx_text"><t t-esc="row.text"/></pre>
+                    <div class="sa_card_actions">
+                        <button class="btn btn-secondary btn-sm" t-on-click="() => this.wechatCopy(row)">Copy message</button>
+                        <button class="btn btn-secondary btn-sm" t-on-click="() => this.wechatSentByHand(row)">Sent by hand</button>
+                        <button class="btn btn-primary btn-sm" t-on-click="() => this.wechatPrice(row)">Type the price</button>
+                    </div>
+                </div>
+            </div>
+        </xpath>
+    </t>
+
+</templates>

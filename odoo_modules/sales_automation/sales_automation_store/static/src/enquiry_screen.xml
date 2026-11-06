@@ -1,0 +1,467 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="sales_automation_store.EnquiryScreen">
+        <div class="sa_store sa_enq">
+
+            <div class="sa_store_bar">
+                <span class="sa_chip sa_chip_new"
+                      t-att-class="{ 'sa_pulse': state.ringing }">
+                    <t t-esc="state.ringing"/> to choose
+                </span>
+                <span class="sa_chip">
+                    <t t-esc="state.tracking.length"/> with vendors
+                </span>
+                <span class="sa_chip sa_chip_stall"
+                      t-if="state.stalled.length"
+                      t-att-class="{ 'sa_pulse': state.stalledRinging }">
+                    <t t-esc="state.stalled.length"/> need a price
+                </span>
+
+                <span class="sa_spacer"/>
+
+                <button class="btn btn-warning sa_store_sound"
+                        t-if="state.soundBlocked" t-on-click="onEnableSound">
+                    Turn on the alarm
+                </button>
+                <t t-else="">
+                    <span class="sa_sound_on">Alarm on</span>
+                    <button class="btn btn-secondary btn-sm sa_test_sound"
+                            t-on-click="onTestSound" title="Play the alarm once">
+                        Test sound
+                    </button>
+                </t>
+            </div>
+
+            <div class="alert alert-warning sa_no_sound" t-if="state.soundBlocked">
+                This browser blocked the sound - tap "Turn on the alarm" once.
+            </div>
+
+            <!-- ============ waiting for the shop ============ -->
+            <h4 class="sa_sect" t-if="state.rows.length">Choose the vendors</h4>
+
+            <div class="sa_empty"
+                 t-if="!state.loading and !state.rows.length and !state.tracking.length">
+                <p>Nothing waiting.</p>
+                <p class="muted">
+                    Out-of-stock enquiries appear here so somebody can choose
+                    which suppliers to ask.
+                </p>
+            </div>
+
+            <div class="sa_store_grid" t-if="state.rows.length">
+                <div class="sa_card sa_card_enq" t-foreach="state.rows"
+                     t-as="row" t-key="row.id">
+                    <div class="sa_card_top">
+                        <span class="sa_ref">#<t t-esc="row.ref"/></span>
+                        <span class="sa_stage">Choose a vendor</span>
+                        <span class="sa_wait"><t t-esc="row.waiting"/> min</span>
+                    </div>
+
+                    <div class="sa_prod">
+                        <t t-esc="row.product"/>
+                        <span class="sa_qty" t-if="row.qty"> x <t t-esc="row.qty"/></span>
+                    </div>
+
+                    <div class="sa_who">
+                        <div><t t-esc="row.customer"/></div>
+                        <div class="muted"><t t-esc="row.group"/></div>
+                    </div>
+
+                    <div class="sa_categ" t-if="!row.no_categ and row.category">
+                        <t t-esc="row.category"/>
+                    </div>
+                    <div class="sa_categ sa_categ_missing" t-if="row.no_categ">
+                        No category on this product - vendors cannot be routed,
+                        so every supplier is offered. Worth fixing.
+                    </div>
+
+                    <div class="sa_auto">
+                        Asking everyone in <b><t t-esc="countdown(row)"/></b>
+                    </div>
+
+                    <div class="sa_actions">
+                        <button class="btn btn-primary sa_big"
+                                t-att-disabled="state.busy === row.id"
+                                t-on-click="() => this.onPick(row)">
+                            Choose vendors (<t t-esc="row.vendors.length"/>)
+                        </button>
+                        <button class="btn btn-secondary"
+                                t-att-disabled="state.busy === row.id"
+                                t-on-click="() => this.act(row, 'send_all')">
+                            Ask all
+                        </button>
+                        <button class="btn btn-link sa_undo"
+                                t-att-disabled="state.busy === row.id"
+                                t-on-click="() => this.act(row, 'skip')">
+                            Skip
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ======== nobody answered: a person has to price it ======== -->
+            <h4 class="sa_sect sa_sect_stall" t-if="state.stalled.length">
+                Needs a price
+            </h4>
+
+            <div class="sa_store_grid" t-if="state.stalled.length">
+                <div class="sa_card sa_card_stall" t-foreach="state.stalled"
+                     t-as="row" t-key="row.id">
+                    <div class="sa_card_top">
+                        <span class="sa_ref">#<t t-esc="row.ref"/></span>
+                        <span class="sa_stage">Call the supplier</span>
+                        <span class="sa_wait">
+                            <t t-esc="row.waiting"/> min waiting
+                        </span>
+                    </div>
+
+                    <div class="sa_prod">
+                        <t t-esc="row.product"/>
+                        <span class="sa_qty" t-if="row.qty">
+                            x <t t-esc="row.qty"/>
+                        </span>
+                    </div>
+
+                    <div class="sa_who">
+                        <div><t t-esc="row.customer"/></div>
+                        <div class="muted"><t t-esc="row.group"/></div>
+                    </div>
+
+                    <div class="sa_pending sa_yes" t-if="row.said_yes.length">
+                        &#9989; said yes, no price yet:
+                        <t t-esc="row.said_yes.join(', ')"/>
+                    </div>
+                    <div class="sa_pending" t-if="row.said_no.length">
+                        &#10060; said no:
+                        <t t-esc="row.said_no.join(', ')"/>
+                    </div>
+                    <div class="sa_pending" t-if="row.silent.length">
+                        &#128263; silent:
+                        <t t-esc="row.silent.join(', ')"/>
+                    </div>
+                    <div class="sa_pending" t-if="row.no_vendors">
+                        &#9888; no vendor with a WhatsApp/WeChat tick on
+                        <b><t t-esc="row.categ || 'this category'"/></b>
+                        - add one on the category, or type the price
+                    </div>
+                    <div class="sa_hint" t-if="row.hint_cost and !row.choice">
+                        &#128161; price list says <b><t t-esc="row.hint_cost"/></b>
+                        (<t t-esc="row.hint_vendor"/>) - check before using
+                    </div>
+
+                    <div class="sa_choice" t-if="row.choice">
+                        <div class="sa_choice_title">&#9878; Two prices - approve one</div>
+                        <div>&#127991; Product page: <b><t t-esc="row.choice.page.toFixed(2)"/> <t t-esc="row.currency"/></b></div>
+                        <div>&#128666; Vendor <t t-esc="row.choice.vendor_name"/>:
+                            <t t-esc="row.choice.cost.toFixed(2)"/> + <t t-esc="row.margin"/>% =
+                            <b><t t-esc="row.choice.vendor.toFixed(2)"/> <t t-esc="row.currency"/></b></div>
+                    </div>
+
+                    <div class="sa_auto">
+                        The customer has been told we are still checking.
+                    </div>
+
+                    <div class="sa_actions" t-if="row.choice">
+                        <button class="btn btn-primary sa_big"
+                                t-att-disabled="state.busy === row.id"
+                                t-on-click="() => this.onApprovePrice(row, 'page')">
+                            Use page price <t t-esc="row.choice.page.toFixed(2)"/>
+                        </button>
+                        <button class="btn btn-outline-primary sa_big"
+                                t-att-disabled="state.busy === row.id"
+                                t-on-click="() => this.onApprovePrice(row, 'vendor')">
+                            Use vendor price <t t-esc="row.choice.vendor.toFixed(2)"/>
+                        </button>
+                        <button class="btn btn-secondary"
+                                t-att-disabled="state.busy === row.id"
+                                t-on-click="() => this.onApprovePrice(row, 'typed')">
+                            Type another
+                        </button>
+                        <button class="btn btn-link sa_undo"
+                                t-att-disabled="state.busy === row.id"
+                                t-on-click="() => this.onTrack(row)">
+                            History
+                        </button>
+                    </div>
+                    <div class="sa_actions" t-if="!row.choice">
+                        <button class="btn btn-primary sa_big"
+                                t-att-disabled="state.busy === row.id"
+                                t-on-click="() => this.onSetPrice(row)">
+                            Type the price
+                        </button>
+                        <button class="btn btn-link sa_undo"
+                                t-att-disabled="state.busy === row.id"
+                                t-on-click="() => this.onTrack(row)">
+                            History
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============ waiting for the vendors ============ -->
+            <h4 class="sa_sect" t-if="state.tracking.length">
+                Asked - waiting for suppliers
+            </h4>
+
+            <div class="sa_store_grid" t-if="state.tracking.length">
+                <div class="sa_card sa_card_track" t-foreach="state.tracking"
+                     t-as="row" t-key="row.id"
+                     t-on-click="() => this.onTrack(row)">
+                    <div class="sa_card_top">
+                        <span class="sa_ref">#<t t-esc="row.ref"/></span>
+                        <span class="sa_stage"><t t-esc="row.state"/></span>
+                        <span class="sa_wait" t-if="!row.closed">
+                            closes in <t t-esc="countdown(row)"/>
+                        </span>
+                        <span class="sa_wait sa_closed" t-else="">closed</span>
+                    </div>
+
+                    <div class="sa_prod"><t t-esc="row.product"/></div>
+                    <div class="sa_who"><t t-esc="row.customer"/></div>
+
+                    <div class="sa_replies">
+                        <span class="sa_pill"
+                              t-att-class="{ sa_pill_ok: row.replied }">
+                            <t t-esc="row.replied"/> of <t t-esc="row.asked"/> replied
+                        </span>
+                        <span class="sa_best" t-if="row.best_price">
+                            best <t t-esc="row.best_price"/>
+                            <t t-esc="row.currency"/>
+                            <t t-if="row.best_vendor">
+                                - <t t-esc="row.best_vendor"/>
+                            </t>
+                        </span>
+                    </div>
+
+                    <div class="sa_pending" t-if="row.waiting_on.length">
+                        still silent:
+                        <t t-esc="row.waiting_on.join(', ')"/>
+                    </div>
+
+                    <div class="sa_openhint">Click to see every reply</div>
+                </div>
+            </div>
+        </div>
+    </t>
+
+    <!-- ============ type a price in ============ -->
+    <t t-name="sales_automation_store.PriceDialog">
+        <Dialog title="'Type the price'" size="'md'">
+            <div class="sa_price_dlg">
+                <div class="sa_dlg_head">
+                    #<t t-esc="props.row.ref"/> -
+                    <b><t t-esc="props.row.product"/></b>
+                    for <t t-esc="props.row.customer"/>
+                </div>
+
+                <div class="alert alert-danger" t-if="state.error">
+                    <t t-esc="state.error"/>
+                </div>
+
+                <label class="sa_lbl" t-if="props.sellMode">What should the customer pay?</label>
+                <label class="sa_lbl" t-else="">What does the supplier charge?</label>
+                <input type="text" inputmode="decimal"
+                       class="form-control sa_cost"
+                       placeholder="500"
+                       t-model="state.cost"/>
+
+                <div class="sa_calc" t-if="cost > 0 and props.sellMode">
+                    Customer pays <b class="sa_sell"><t t-esc="money(sell)"/></b>
+                    (vendor cost <t t-esc="money(props.row.choice ? props.row.choice.cost : 0)"/>)
+                </div>
+                <div class="sa_calc" t-if="cost > 0 and !props.sellMode">
+                    Cost <b><t t-esc="money(cost)"/></b>
+                    + <t t-esc="props.row.margin"/>% margin =
+                    customer pays
+                    <b class="sa_sell"><t t-esc="money(sell)"/></b>
+                </div>
+
+                <label class="sa_lbl" t-if="!props.sellMode">Which supplier? (optional)</label>
+                <select class="form-select sa_vendor" t-model="state.vendor" t-if="!props.sellMode">
+                    <option value="">Not saying</option>
+                    <option t-foreach="props.row.vendors" t-as="v"
+                            t-key="v.id" t-att-value="v.id">
+                        <t t-esc="v.name"/>
+                    </option>
+                </select>
+
+                <label class="sa_lbl" t-if="!props.sellMode">Days to deliver (optional)</label>
+                <input type="number" min="0" class="form-control sa_days"
+                       placeholder="0" t-model="state.days" t-if="!props.sellMode"/>
+
+                <div class="sa_dlg_note" t-if="props.row.link">
+                    The same form is on the link sent to the counter, so this
+                    can also be finished from a phone.
+                </div>
+            </div>
+
+            <t t-set-slot="footer">
+                <button class="btn btn-primary" t-on-click="apply">
+                    <t t-if="props.sellMode">Next</t>
+                    <t t-else="">Quote the customer</t>
+                    <t t-if="cost > 0"> <t t-esc="money(sell)"/></t>
+                </button>
+                <button class="btn btn-secondary" t-on-click="() => props.close()">
+                    Cancel
+                </button>
+            </t>
+        </Dialog>
+    </t>
+
+    <!-- ============ the vendor picker ============ -->
+    <t t-name="sales_automation_store.VendorDialog">
+        <Dialog title="'Who should we ask?'" size="'md'">
+            <div class="sa_cd">
+                <p class="muted">
+                    <t t-esc="props.row.product"/>
+                    <t t-if="props.row.category"> - <t t-esc="props.row.category"/></t>
+                </p>
+                <div class="alert alert-warning" t-if="props.row.no_categ">
+                    This product has no category, so this is every supplier
+                    rather than the right ones.
+                </div>
+                <div class="sa_cd_option" t-foreach="props.row.vendors"
+                     t-as="vendor" t-key="vendor.id"
+                     t-att-class="{ sa_cd_off: !vendor.ok }"
+                     t-on-click="() => this.toggle(vendor)">
+                    <input type="checkbox" t-att-checked="isPicked(vendor)"
+                           t-att-disabled="!vendor.ok"/>
+                    <span class="sa_cd_name"><t t-esc="vendor.name"/></span>
+                    <span class="sa_cd_phone" t-if="vendor.ok">
+                        <t t-esc="vendor.phone"/>
+                    </span>
+                    <span class="sa_cd_phone sa_cd_nophone" t-else="">
+                        no phone number
+                    </span>
+                </div>
+            </div>
+            <t t-set-slot="footer">
+                <button class="btn btn-primary" t-att-disabled="!chosen.length"
+                        t-on-click="send">
+                    Ask <t t-esc="chosen.length"/> vendor(s)
+                </button>
+                <button class="btn btn-secondary" t-on-click="() => props.close()">
+                    Cancel
+                </button>
+            </t>
+        </Dialog>
+    </t>
+
+    <!-- ============ the full history ============ -->
+    <t t-name="sales_automation_store.TrackDialog">
+        <Dialog title="'Enquiry history'" size="'lg'">
+            <div t-if="state.loading">Loading...</div>
+            <div class="sa_track" t-else="">
+                <div class="sa_track_head">
+                    <div>
+                        <span class="sa_ref">#<t t-esc="state.detail.ref"/></span>
+                        <span class="sa_track_prod"><t t-esc="state.detail.product"/></span>
+                    </div>
+                    <div class="muted">
+                        <t t-esc="state.detail.customer"/>
+                        <t t-if="state.detail.group"> - <t t-esc="state.detail.group"/></t>
+                    </div>
+                    <div class="sa_track_clocks">
+                        <span class="sa_pill">
+                            open <b><t t-esc="clock(state.detail.elapsed_seconds)"/></b>
+                        </span>
+                        <span class="sa_pill" t-if="state.detail.seconds_left">
+                            closes in <b><t t-esc="clock(state.detail.seconds_left)"/></b>
+                        </span>
+                        <span class="sa_pill sa_pill_ok">
+                            <t t-esc="replied"/> of
+                            <t t-esc="state.detail.vendors.length"/> replied
+                        </span>
+                        <span class="sa_pill" t-if="state.detail.auto_sent">
+                            sent automatically
+                        </span>
+                        <span class="sa_pill" t-if="state.detail.chosen_by">
+                            chosen by <t t-esc="state.detail.chosen_by"/>
+                        </span>
+                    </div>
+                </div>
+
+                <h5>What the suppliers said</h5>
+                <table class="table table-sm sa_track_tbl">
+                    <thead>
+                        <tr>
+                            <th>Vendor</th><th>Reply</th><th class="text-end">Price</th>
+                            <th>Days</th><th>Took</th><th>Their message</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr t-foreach="state.detail.vendors" t-as="v" t-key="v.id"
+                            t-att-class="{ sa_row_best: v.is_best, sa_row_quiet: !v.replied }">
+                            <td>
+                                <t t-esc="v.name"/>
+                                <span class="sa_badge" t-if="v.is_best">best</span>
+                            </td>
+                            <td>
+                                <span t-if="v.replied" class="sa_yes">
+                                    replied <t t-esc="when(v.at)"/>
+                                </span>
+                                <span t-else="" class="sa_no">no reply yet</span>
+                            </td>
+                            <td class="text-end">
+                                <t t-if="v.replied">
+                                    <t t-esc="v.price"/> <t t-esc="state.detail.currency"/>
+                                </t>
+                            </td>
+                            <td><t t-if="v.delay_days !== null"><t t-esc="v.delay_days"/></t></td>
+                            <td><t t-if="v.minutes !== null"><t t-esc="v.minutes"/> min</t></td>
+                            <td class="sa_track_raw"><t t-esc="v.text"/></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h5>With the customer</h5>
+                <div class="sa_track_msgs">
+                    <div t-foreach="state.detail.messages" t-as="m"
+                         t-key="m_index"
+                         t-att-class="'sa_msg sa_msg_' + m.who">
+                        <div class="sa_msg_meta">
+                            <b><t t-esc="m.who === 'customer' ? state.detail.customer : 'Us'"/></b>
+                            - <t t-esc="when(m.at)"/>
+                            <t t-if="m.status"> (<t t-esc="m.status"/>)</t>
+                        </div>
+                        <div class="sa_msg_body"><t t-esc="m.text"/></div>
+                    </div>
+                    <div class="muted" t-if="!state.detail.messages.length">
+                        Nothing recorded for this enquiry yet.
+                    </div>
+                </div>
+
+                <h5>With the suppliers</h5>
+                <div class="sa_track_msgs">
+                    <div t-foreach="state.detail.vendor_messages" t-as="m"
+                         t-key="m_index"
+                         t-att-class="'sa_msg sa_msg_' + m.who">
+                        <div class="sa_msg_meta">
+                            <b>
+                                <t t-if="m.who === 'vendor'">
+                                    <t t-esc="m.name or m.phone"/>
+                                </t>
+                                <t t-else="">
+                                    Us &#8594; <t t-esc="m.name or m.phone"/>
+                                </t>
+                            </b>
+                            - <t t-esc="when(m.at)"/>
+                            <t t-if="m.status"> (<t t-esc="m.status"/>)</t>
+                        </div>
+                        <div class="sa_msg_body"><t t-esc="m.text"/></div>
+                    </div>
+                    <div class="muted" t-if="!state.detail.vendor_messages.length">
+                        No supplier has been messaged on this enquiry yet.
+                    </div>
+                </div>
+            </div>
+            <t t-set-slot="footer">
+                <button class="btn btn-secondary" t-on-click="() => props.close()">
+                    Close
+                </button>
+            </t>
+        </Dialog>
+    </t>
+
+</templates>

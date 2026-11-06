@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_sa_settings_wechat_form" model="ir.ui.view">
+        <field name="name">sa.settings.wechat.form</field>
+        <field name="model">sa.ai.settings</field>
+        <field name="priority">49</field>
+        <field name="arch" type="xml">
+            <form string="WeChat Bridge">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="wechat_enabled"/>
+                            <field name="wechat_api_key" password="True" readonly="1"/>
+                            <button name="action_wechat_new_key" type="object" string="New key"
+                                    class="btn-secondary" colspan="2"
+                                    confirm="A new key replaces the old one at once. The bridge PC must get the new key in its config.json before it can talk to 369ai again. Continue?"/>
+                            <field name="wechat_public_url" readonly="1" string="369ai URL for config.json"/>
+                            <field name="wechat_stale_minutes"/>
+                            <field name="wechat_manual_when_down"/>
+                        </group>
+                        <group string="Bridge status">
+                            <field name="wechat_bridge_alive" widget="boolean" readonly="1" string="Bridge alive"/>
+                            <field name="wechat_last_seen" readonly="1"/>
+                            <field name="wechat_bridge_id" readonly="1"/>
+                            <field name="wechat_queued_count" readonly="1" string="Waiting to send"/>
+                        </group>
+                    </group>
+                    <group>
+                        <div class="text-muted">
+                            <b>How it works.</b> Every vendor card has two ticks under
+                            the phone: <b>WhatsApp</b> and <b>WeChat</b>. A vendor whose
+                            address is in China is ticked WeChat by default, everyone
+                            else WhatsApp; tick both to ask on both. WeChat vendors
+                            need the exact WeChat remark and are asked through a small
+                            program on the WeChat PC. That
+                            program polls this server every few seconds, sends the
+                            price checks in WeChat and posts the replies back; the
+                            replies become vendor quotes and the cheapest one wins,
+                            exactly as with WhatsApp. 369ai never calls the PC, so no
+                            VPN is needed here.
+                            <br/><br/>
+                            <b>On the WeChat PC.</b> Copy the <code>wechat_bridge</code>
+                            folder there. Install Python 3.11 and run
+                            <code>pip install -r requirements.txt</code>. Install
+                            WeChat for Windows <b>3.9.x</b>, switch its auto-update
+                            off, and log in with the shop account. Save every vendor
+                            in that WeChat with a remark equal to the vendor's
+                            <b>WeChat contact remark</b> in 369ai. Put this page's URL
+                            and key into <code>config.json</code>, then run
+                            <code>start_wechat_bridge.bat</code> (and drop a shortcut
+                            to it in the Startup folder). The PC must stay logged in
+                            and awake.
+                            <br/><br/>
+                            <b>When the bridge is down</b> for longer than the minutes
+                            above, the counter screen shows the waiting messages with
+                            Copy / Sent by hand / Type the price, so a person can relay
+                            them.
+                        </div>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_sa_settings_wechat" model="ir.actions.server">
+        <field name="name">WeChat Bridge</field>
+        <field name="model_id" ref="sales_automation.model_sa_ai_settings"/>
+        <field name="state">code</field>
+        <field name="code">
+action = {'type': 'ir.actions.act_window', 'name': 'WeChat Bridge', 'res_model': 'sa.ai.settings',
+          'res_id': model.get_settings().id, 'view_mode': 'form', 'target': 'current',
+          'views': [[env.ref('sales_automation_wechat.view_sa_settings_wechat_form').id, 'form']]}
+        </field>
+    </record>
+
+    <menuitem id="menu_sa_settings_wechat" name="WeChat Bridge"
+              parent="sales_automation.menu_sa_config" action="action_sa_settings_wechat" sequence="39"/>
+</odoo>

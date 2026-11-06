@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Its own root menu, not a branch of Sales Automation: dispatching is a
+         different job done by different people. -->
+    <menuitem id="menu_sa_delivery_root"
+              name="Delivery"
+              groups="group_sa_delivery_user"
+              sequence="87"/>
+
+    <menuitem id="menu_sa_delivery_ops"
+              name="Deliveries"
+              parent="menu_sa_delivery_root"
+              sequence="1"/>
+
+    <menuitem id="menu_sa_delivery_to_dispatch"
+              name="To Dispatch"
+              parent="menu_sa_delivery_ops"
+              action="action_sa_delivery_to_dispatch"
+              sequence="1"/>
+
+    <menuitem id="menu_sa_delivery_in_progress"
+              name="In Progress"
+              parent="menu_sa_delivery_ops"
+              action="action_sa_delivery_in_progress"
+              sequence="2"/>
+
+    <menuitem id="menu_sa_delivery_same_day"
+              name="Quick Delivery"
+              parent="menu_sa_delivery_ops"
+              action="action_sa_delivery_same_day"
+              sequence="20"/>
+
+    <menuitem id="menu_sa_delivery_express"
+              name="Express Delivery"
+              parent="menu_sa_delivery_ops"
+              action="action_sa_delivery_express"
+              sequence="21"/>
+
+    <menuitem id="menu_sa_delivery_delivered"
+              name="Delivered"
+              parent="menu_sa_delivery_ops"
+              action="action_sa_delivery_delivered"
+              sequence="3"/>
+
+    <menuitem id="menu_sa_delivery_failed"
+              name="Failed"
+              parent="menu_sa_delivery_ops"
+              action="action_sa_delivery_failed"
+              sequence="4"/>
+
+    <menuitem id="menu_sa_delivery_all"
+              name="All Deliveries"
+              parent="menu_sa_delivery_ops"
+              action="action_sa_delivery_all"
+              sequence="5"/>
+
+    <menuitem id="menu_sa_delivery_reporting"
+              name="Reporting"
+              parent="menu_sa_delivery_root"
+              sequence="5"/>
+
+    <menuitem id="menu_sa_delivery_report"
+              name="Delivery Analysis"
+              parent="menu_sa_delivery_reporting"
+              action="action_sa_delivery_report"
+              sequence="1"/>
+
+    <menuitem id="menu_sa_delivery_config"
+              name="Configuration"
+              parent="menu_sa_delivery_root"
+              groups="group_sa_delivery_manager"
+              sequence="10"/>
+
+    <menuitem id="menu_sa_delivery_shop"
+              name="Shops"
+              parent="menu_sa_delivery_config"
+              action="action_sa_delivery_shop"
+              sequence="1"/>
+
+    <menuitem id="menu_sa_delivery_partner"
+              name="Riders &amp; Couriers"
+              parent="menu_sa_delivery_config"
+              action="action_sa_delivery_partner"
+              sequence="2"/>
+
+    <menuitem id="menu_sa_delivery_settings"
+              name="Delivery Settings"
+              parent="menu_sa_delivery_config"
+              action="action_sa_delivery_settings"
+              sequence="3"/>
+
+    <menuitem id="menu_sa_delivery_otp"
+              name="Delivery Codes"
+              parent="menu_sa_delivery_config"
+              action="action_sa_delivery_otp"
+              sequence="4"/>
+
+    <menuitem id="menu_sa_delivery_token"
+              name="App Sessions"
+              parent="menu_sa_delivery_config"
+              action="action_sa_delivery_token"
+              sequence="5"/>
+
+</odoo>

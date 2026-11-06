@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_order_form_qe" model="ir.ui.view">
+        <field name="name">sale.order.form.qe</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='order_line']/list//field[@name='product_uom_qty']" position="after">
+                <field name="qe_mode" optional="show" widget="badge"
+                       decoration-success="qe_mode == 'quick'"
+                       decoration-warning="qe_mode == 'express'"/>
+            </xpath>
+            <xpath expr="//notebook" position="inside">
+                <page string="Quick or Express" name="qe_page">
+                    <div class="mb-3">
+                        <button name="action_qe_decide" type="object"
+                                string="Check Quick / Express" class="btn-primary me-2"/>
+                        <button name="action_qe_apply_fee" type="object"
+                                string="Add delivery fee" class="btn-secondary"
+                                invisible="state == 'cancel' or locked"/>
+                    </div>
+                    <div class="alert alert-warning" role="alert" invisible="not qe_blocked">
+                        This order is below the Quick minimum.
+                    </div>
+                    <group>
+                        <group string="Decision">
+                            <field name="qe_decided" invisible="1"/>
+                            <field name="qe_mode" widget="badge"
+                                   decoration-success="qe_mode == 'quick'"
+                                   decoration-warning="qe_mode == 'express'"/>
+                            <field name="qe_reason" invisible="not qe_reason"/>
+                            <field name="qe_shop_id" invisible="not qe_shop_id"/>
+                            <field name="qe_blocked" invisible="1"/>
+                        </group>
+                        <group string="Slot and fee">
+                            <field name="qe_slot_id" options="{'no_create': True}"
+                                   readonly="not qe_mode or state == 'cancel'"/>
+                            <field name="qe_slot_day" invisible="not qe_slot_id"/>
+                            <field name="qe_fee"/>
+                            <field name="qe_due_at" invisible="not qe_due_at"/>
+                        </group>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

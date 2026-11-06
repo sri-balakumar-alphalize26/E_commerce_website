@@ -1,0 +1,270 @@
+// The enquiry desk. Shares the counter look of the packing screen; the
+// differences are the ones that matter at a glance - an amber stripe rather
+// than the packing colours, and the countdown to the automatic send.
+
+.sa_store.sa_enq {
+
+    .sa_card_enq {
+        border-left: 6px solid #f0a30a;
+    }
+
+    .sa_prod {
+        font-size: 20px;
+        font-weight: 600;
+        margin: 6px 0 2px;
+    }
+
+    .sa_qty {
+        font-weight: 400;
+        color: #666;
+    }
+
+    .sa_categ {
+        font-size: 13px;
+        color: #555;
+        margin: 4px 0;
+    }
+
+    .sa_categ_missing {
+        color: #9a3412;
+        background: #fff4e5;
+        border-radius: 4px;
+        padding: 6px 8px;
+    }
+
+    .sa_auto {
+        margin: 8px 0 4px;
+        font-size: 14px;
+        color: #444;
+    }
+
+    .sa_actions {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-top: 8px;
+    }
+}
+
+// The vendor picker.
+.sa_cd {
+
+    .sa_cd_option {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        margin-bottom: 6px;
+        cursor: pointer;
+
+        &:hover {
+            background: #f6f8fa;
+        }
+    }
+
+    .sa_cd_off {
+        opacity: 0.55;
+        cursor: not-allowed;
+    }
+
+    .sa_cd_name {
+        font-weight: 600;
+        flex: 1;
+    }
+
+    .sa_cd_phone {
+        color: #666;
+        font-size: 13px;
+    }
+
+    .sa_cd_nophone {
+        color: #9a3412;
+        font-style: italic;
+    }
+}
+
+// ---- the history panel ----------------------------------------------------
+.sa_track {
+
+    .sa_track_head {
+        margin-bottom: 14px;
+    }
+
+    .sa_track_prod {
+        font-size: 19px;
+        font-weight: 600;
+        margin-left: 8px;
+    }
+
+    .sa_track_clocks {
+        margin-top: 8px;
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .sa_track_tbl {
+        font-size: 13px;
+
+        .sa_track_raw {
+            color: #555;
+            max-width: 260px;
+        }
+    }
+
+    .sa_row_best {
+        background: #eefaf0;
+    }
+
+    .sa_row_quiet {
+        opacity: 0.6;
+    }
+
+    .sa_badge {
+        background: #198754;
+        color: #fff;
+        border-radius: 3px;
+        font-size: 11px;
+        padding: 1px 5px;
+        margin-left: 6px;
+    }
+
+    .sa_yes { color: #198754; }
+    .sa_no  { color: #9a3412; }
+
+    .sa_track_msgs {
+        max-height: 220px;
+        overflow-y: auto;
+        border: 1px solid #e6e8eb;
+        border-radius: 6px;
+        padding: 8px;
+        margin-bottom: 14px;
+        background: #fbfcfd;
+    }
+
+    .sa_msg {
+        padding: 6px 8px;
+        border-radius: 6px;
+        margin-bottom: 6px;
+        max-width: 85%;
+    }
+
+    .sa_msg_customer { background: #eef3fb; }
+    .sa_msg_vendor   { background: #fdf3e6; }
+    .sa_msg_us       { background: #eef7ee; margin-left: auto; }
+
+    .sa_msg_meta {
+        font-size: 11px;
+        color: #667;
+        margin-bottom: 2px;
+    }
+
+    .sa_msg_body {
+        white-space: pre-wrap;
+        font-size: 13px;
+    }
+}
+
+// ---- the tracking cards ---------------------------------------------------
+.sa_store.sa_enq {
+
+    .sa_sect {
+        margin: 16px 0 8px;
+        font-size: 15px;
+        color: #444;
+    }
+
+    .sa_card_track {
+        border-left: 6px solid #6c8ebf;
+        cursor: pointer;
+
+        &:hover { box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12); }
+    }
+
+    .sa_replies {
+        margin: 6px 0;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .sa_pill {
+        background: #eceff3;
+        border-radius: 12px;
+        padding: 2px 10px;
+        font-size: 12px;
+    }
+
+    .sa_pill_ok { background: #d8f0dd; }
+
+    .sa_best { font-size: 13px; font-weight: 600; }
+
+    .sa_pending {
+        font-size: 12px;
+        color: #9a3412;
+    }
+
+    .sa_openhint {
+        margin-top: 6px;
+        font-size: 11px;
+        color: #7a8699;
+    }
+
+    .sa_closed { color: #9a3412; }
+}
+
+
+// ---- "no vendor replied": the section that needs a human ----
+// Amber, not red: nothing is broken, but nothing moves until somebody
+// picks up a phone.
+.sa_enq {
+    .sa_chip_stall { background: #b45309; color: #fff; }
+
+    .sa_sect_stall { color: #b45309; }
+
+    .sa_card_stall {
+        border-left: 6px solid #b45309;
+        background: #fffbeb;
+    }
+
+    .sa_card_stall .sa_stage { background: #b45309; color: #fff; }
+}
+
+.sa_price_dlg {
+    .sa_dlg_head { margin-bottom: 12px; }
+
+    .sa_lbl {
+        display: block;
+        margin: 12px 0 4px;
+        font-weight: 600;
+    }
+
+    // Big enough to type into on a phone at a counter.
+    .sa_cost {
+        font-size: 1.6rem;
+        font-weight: 700;
+        padding: 10px 12px;
+    }
+
+    .sa_calc {
+        margin-top: 10px;
+        padding: 10px 12px;
+        background: #f1f5f9;
+        border-radius: 6px;
+    }
+
+    .sa_sell { font-size: 1.2rem; }
+
+    .sa_dlg_note {
+        margin-top: 14px;
+        color: #64748b;
+        font-size: .85rem;
+    }
+}
+
+.sa_choice { margin: 6px 0; padding: 6px 8px; border-left: 3px solid #b45309; background: #fffbeb; }
+.sa_choice_title { font-weight: 600; color: #b45309; margin-bottom: 2px; }

@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Fees -->
+    <record id="view_sa_qe_delivery_rule_list" model="ir.ui.view">
+        <field name="name">sa.qe.delivery.rule.list</field>
+        <field name="model">sa.qe.delivery.rule</field>
+        <field name="arch" type="xml">
+            <list string="Delivery fees" editable="bottom">
+                <field name="mode"/>
+                <field name="label"/>
+                <field name="eta"/>
+                <field name="min_order"/>
+                <field name="fee"/>
+                <field name="free_above"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_sa_qe_delivery_rule" model="ir.actions.act_window">
+        <field name="name">Delivery Fees</field>
+        <field name="res_model">sa.qe.delivery.rule</field>
+        <field name="view_mode">list</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No delivery fee yet</p>
+            <p>One line for Quick and one for Express: the promise, the
+               minimum order, the fee and the amount above which delivery is free.</p>
+        </field>
+    </record>
+
+    <!-- Slots -->
+    <record id="view_sa_qe_delivery_slot_list" model="ir.ui.view">
+        <field name="name">sa.qe.delivery.slot.list</field>
+        <field name="model">sa.qe.delivery.slot</field>
+        <field name="arch" type="xml">
+            <list string="Delivery slots" editable="bottom">
+                <field name="sequence" widget="handle"/>
+                <field name="mode"/>
+                <field name="name"/>
+                <field name="kind"/>
+                <field name="day_offset"/>
+                <field name="from_hour" widget="float_time"/>
+                <field name="to_hour" widget="float_time"/>
+                <field name="order_before" widget="float_time"/>
+                <field name="fee"/>
+                <field name="capacity"/>
+                <field name="qe_open" widget="boolean_toggle" readonly="1"/>
+                <field name="active" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_sa_qe_delivery_slot_search" model="ir.ui.view">
+        <field name="name">sa.qe.delivery.slot.search</field>
+        <field name="model">sa.qe.delivery.slot</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <filter name="f_quick" string="Quick" domain="[('mode','=','quick')]"/>
+                <filter name="f_express" string="Express" domain="[('mode','=','express')]"/>
+                <separator/>
+                <filter name="f_archived" string="Archived" domain="[('active','=',False)]"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_sa_qe_delivery_slot" model="ir.actions.act_window">
+        <field name="name">Delivery Slots</field>
+        <field name="res_model">sa.qe.delivery.slot</field>
+        <field name="view_mode">list</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No delivery slot yet</p>
+            <p>A slot is a delivery window with an order-before time, an extra
+               fee and a number of orders it can take in a day.</p>
+        </field>
+    </record>
+
+    <!-- Service areas -->
+    <record id="view_sa_qe_service_area_list" model="ir.ui.view">
+        <field name="name">sa.qe.service.area.list</field>
+        <field name="model">sa.qe.service.area</field>
+        <field name="arch" type="xml">
+            <list string="Service areas" editable="bottom">
+                <field name="pincode"/>
+                <field name="name"/>
+                <field name="quick" widget="boolean_toggle"/>
+                <field name="express" widget="boolean_toggle"/>
+                <field name="eta"/>
+                <field name="active" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_sa_qe_service_area" model="ir.actions.act_window">
+        <field name="name">Service Areas</field>
+        <field name="res_model">sa.qe.service.area</field>
+        <field name="view_mode">list</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No service area yet</p>
+            <p>A pincode, or the first digits of one, and whether it gets Quick.
+               Used for customers without a map pin, and while no shop has
+               Quick switched on. The longest match wins.</p>
+        </field>
+    </record>
+
+</odoo>

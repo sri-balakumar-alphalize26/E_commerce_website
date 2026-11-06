@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_sa_delivery_settings_form_qe" model="ir.ui.view">
+        <field name="name">sa.delivery.settings.form.qe</field>
+        <field name="model">sa.delivery.settings</field>
+        <field name="inherit_id" ref="sales_automation_delivery.view_sa_delivery_settings_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='express_days']/.." position="after">
+                <group string="Quick or Express - reach, stock and area" colspan="2">
+                    <field name="qe_enabled"/>
+                    <field name="qe_auto_fee" invisible="not qe_enabled"/>
+                    <field name="qe_enforce_minimum" invisible="not qe_enabled"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

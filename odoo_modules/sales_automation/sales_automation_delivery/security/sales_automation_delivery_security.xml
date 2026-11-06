@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="0">
+
+        <!--
+            369ai 19 carries the category on res.groups.privilege, not on
+            res.groups - setting category_id on a group raises
+            "Invalid field 'category_id' in 'res.groups'" during install.
+        -->
+        <record id="res_groups_privilege_sa_delivery" model="res.groups.privilege">
+            <field name="name">WhatsApp Delivery</field>
+            <field name="sequence">46</field>
+            <field name="category_id"
+                   ref="sales_automation.module_category_sales_automation"/>
+        </record>
+
+        <record id="group_sa_delivery_user" model="res.groups">
+            <field name="name">Dispatcher</field>
+            <field name="sequence">10</field>
+            <field name="privilege_id" ref="res_groups_privilege_sa_delivery"/>
+            <field name="comment">See delivery jobs, assign them and move them along.</field>
+        </record>
+
+        <record id="group_sa_delivery_manager" model="res.groups">
+            <field name="name">Delivery Manager</field>
+            <field name="sequence">20</field>
+            <field name="privilege_id" ref="res_groups_privilege_sa_delivery"/>
+            <field name="implied_ids" eval="[(4, ref('group_sa_delivery_user'))]"/>
+            <field name="comment">Set up shops, service areas, riders and couriers.</field>
+        </record>
+
+        <!--
+            Anyone already trusted to run the sales automation is trusted to
+            dispatch, so an existing manager does not have to be re-granted
+            anything for the new menu to appear.
+        -->
+        <record id="sales_automation.group_sa_manager" model="res.groups">
+            <field name="implied_ids" eval="[(4, ref('group_sa_delivery_manager'))]"/>
+        </record>
+
+    
+    <!-- Administration > Settings gets these menus without a hand-tick on
+         every new database: the admin group implies the module's manager group. -->
+    <record id="base.group_system" model="res.groups">
+        <field name="implied_ids" eval="[(4, ref('group_sa_delivery_manager'))]"/>
+    </record>
+</data>
+</odoo>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+<t t-name="sales_automation_insights.ScoreRing">
+    <div class="sai_ring">
+        <canvas t-ref="canvas" width="120" height="120"/>
+        <div class="sai_ring_num">
+            <t t-if="props.enough"><t t-esc="props.stars.toFixed(1)"/><small>STARS</small></t>
+            <t t-else="">—<small>NO DATA</small></t>
+        </div>
+    </div>
+</t>
+
+<t t-name="sales_automation_insights.Radar">
+    <div class="sai_radar"><canvas t-ref="canvas" width="520" height="380"/></div>
+</t>
+
+</templates>

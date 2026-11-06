@@ -1,0 +1,590 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_sa_delivery_list" model="ir.ui.view">
+        <field name="name">stock.picking.sa.delivery.list</field>
+        <field name="model">stock.picking</field>
+        <field name="arch" type="xml">
+            <list string="Deliveries" decoration-danger="sa_delivery_state == 'failed'"
+                  decoration-muted="sa_delivery_state == 'delivered'"
+                  decoration-bf="sa_delivery_state == 'to_assign'">
+                <field name="sa_ref_code" string="Job"/>
+                <field name="name" string="Picking"/>
+                <field name="partner_id" string="Customer"/>
+                <field name="sa_shop_id"/>
+                <field name="sa_delivery_partner_id"/>
+                <field name="sa_partner_kind" optional="show"/>
+                <field name="sa_cod_amount" sum="To Collect"/>
+                <field name="sa_currency_id" column_invisible="1"/>
+                <field name="sa_delivery_kind" optional="show"/>
+                <field name="sa_promised_on" optional="show"/>
+                <field name="sa_offered_on" optional="hide"/>
+                <field name="sa_delivered_on" optional="hide"/>
+                <field name="sa_ride_minutes" string="Pickup to Delivered (min)" optional="show"
+                       invisible="not sa_delivered_on" avg="Average"/>
+                <field name="sa_last_error" optional="hide"/>
+                <field name="sa_delivery_state" widget="badge"
+                       decoration-info="sa_delivery_state in ('offered','accepted')"
+                       decoration-warning="sa_delivery_state == 'to_assign'"
+                       decoration-success="sa_delivery_state == 'delivered'"
+                       decoration-danger="sa_delivery_state == 'failed'"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_sa_delivery_search" model="ir.ui.view">
+        <field name="name">stock.picking.sa.delivery.search</field>
+        <field name="model">stock.picking</field>
+        <field name="arch" type="xml">
+            <search string="Deliveries">
+                <field name="sa_ref_code" string="Job Code"/>
+                <field name="partner_id"/>
+                <field name="sa_delivery_partner_id"/>
+                <field name="sa_shop_id"/>
+
+                <filter name="f_to_assign" string="To Dispatch"
+                        domain="[('sa_delivery_state','=','to_assign')]"/>
+                <filter name="f_offered" string="Offered"
+                        domain="[('sa_delivery_state','=','offered')]"/>
+                <filter name="f_accepted" string="Accepted"
+                        domain="[('sa_delivery_state','=','accepted')]"/>
+                <filter name="f_picked" string="Picked Up"
+                        domain="[('sa_delivery_state','=','picked')]"/>
+                <filter name="f_delivered" string="Delivered"
+                        domain="[('sa_delivery_state','=','delivered')]"/>
+                <filter name="f_failed" string="Failed"
+                        domain="[('sa_delivery_state','=','failed')]"/>
+                <filter name="f_returning" string="Coming Back"
+                        domain="[('sa_delivery_state','=','returning')]"/>
+                <filter name="f_returned" string="Returned"
+                        domain="[('sa_delivery_state','=','returned')]"/>
+                <filter name="f_cancelled" string="Cancelled"
+                        domain="[('sa_delivery_state','=','cancelled')]"/>
+                <separator/>
+                <filter name="f_quick" string="Quick"
+                        domain="[('sa_delivery_kind','=','quick')]"/>
+                <filter name="f_express" string="Express"
+                        domain="[('sa_delivery_kind','=','express')]"/>
+                <filter name="f_late" string="Past the Promise"
+                        domain="[('sa_promised_on','&lt;', context_today().strftime('%Y-%m-%d %H:%M:%S')), ('sa_delivery_state','in',['to_assign','offered','accepted','picked','dispatched','out_for_delivery'])]"/>
+                <separator/>
+                <filter name="f_open" string="Still Open"
+                        domain="[('sa_delivery_state','in',['to_assign','offered','accepted','picked'])]"/>
+                <filter name="f_cod" string="Cash to Collect"
+                        domain="[('sa_cod_amount','&gt;',0)]"/>
+                <separator/>
+                <filter name="f_own" string="Own Riders"
+                        domain="[('sa_partner_kind','=','own')]"/>
+                <filter name="f_third" string="Delivery Partners"
+                        domain="[('sa_partner_kind','=','third_party')]"/>
+                <separator/>
+                <filter name="f_today" string="Offered Today"
+                        domain="[('sa_offered_on','&gt;=', datetime.datetime.combine(context_today(), datetime.time(0,0,0)))]"/>
+
+                <group>
+                    <filter name="group_delivery_state" string="Status"
+                            context="{'group_by': 'sa_delivery_state'}"/>
+                    <filter name="group_rider" string="Rider / Courier"
+                            context="{'group_by': 'sa_delivery_partner_id'}"/>
+                    <filter name="group_shop" string="Shop"
+                            context="{'group_by': 'sa_shop_id'}"/>
+                    <filter name="group_offered" string="Offered On"
+                            context="{'group_by': 'sa_offered_on:day'}"/>
+                    <filter name="group_promised" string="Delivery Day"
+                            context="{'group_by': 'sa_promised_on:day'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_sa_delivery_kanban" model="ir.ui.view">
+        <field name="name">stock.picking.sa.delivery.kanban</field>
+        <field name="model">stock.picking</field>
+        <field name="arch" type="xml">
+            <kanban default_group_by="sa_delivery_state" quick_create="false"
+                    group_create="false" records_draggable="false">
+                <field name="sa_delivery_state"/>
+                <templates>
+                    <t t-name="card">
+                        <div class="o_kanban_record_top">
+                            <strong class="o_kanban_record_title">
+                                #<field name="sa_ref_code"/> &#8212; <field name="partner_id"/>
+                            </strong>
+                        </div>
+                        <div><field name="sa_shop_id"/></div>
+                        <div><field name="sa_delivery_partner_id"/></div>
+                        <div t-if="record.sa_cod_amount.raw_value">
+                            Collect <field name="sa_cod_amount"/>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <!--
+        The card the two queues open on. No `default_group_by`: these actions
+        group by the day promised, and a hard-coded group-by on the view wins
+        arguments with the search context.
+    -->
+    <record id="view_sa_delivery_queue_kanban" model="ir.ui.view">
+        <field name="name">stock.picking.sa.delivery.queue.kanban</field>
+        <field name="model">stock.picking</field>
+        <field name="arch" type="xml">
+            <kanban quick_create="false" group_create="false"
+                    records_draggable="false"
+                    default_order="sa_promised_on desc, id desc">
+                <field name="sa_delivery_state"/>
+                <field name="sa_delivery_kind"/>
+                <field name="sa_cod_amount"/>
+                <field name="sa_promised_on"/>
+                <field name="sale_id"/>
+                <field name="sa_is_paid"/>
+                <field name="sa_pay_text"/>
+                <field name="sa_stage_text"/>
+                <templates>
+                    <t t-name="card">
+                        <div class="o_kanban_record_top mb-1">
+                            <strong class="o_kanban_record_title">
+                                #<field name="sa_ref_code"/>
+                                <span t-if="record.sale_id.raw_value" class="text-muted fw-normal ms-1">
+                                    &#183; <field name="sale_id"/>
+                                </span>
+                            </strong>
+                            <span class="badge rounded-pill text-bg-warning ms-auto"
+                                  t-if="record.sa_delivery_kind.raw_value == 'express'">
+                                Express
+                            </span>
+                            <span class="badge rounded-pill text-bg-success ms-auto"
+                                  t-else="">Same day</span>
+                        </div>
+
+                        <div class="fw-bold">
+                            <field name="product_id"/>
+                        </div>
+                        <div class="text-muted">
+                            <field name="partner_id"/>
+                        </div>
+
+                        <div class="mt-1 d-flex align-items-center gap-1"
+                             t-if="record.sa_promised_on.raw_value">
+                            <i class="fa fa-clock-o" title="Promised"/>
+                            <field name="sa_promised_on"/>
+                        </div>
+
+                        <div class="mt-1">
+                            <field name="sa_delivery_state" widget="badge"/>
+                        </div>
+
+                        <div class="mt-1" t-if="record.sale_id.raw_value">
+                            <span t-if="record.sa_is_paid.raw_value"
+                                  class="badge rounded-pill text-bg-success">Paid</span>
+                            <span t-else="" class="badge rounded-pill text-bg-danger">
+                                <field name="sa_pay_text"/>
+                            </span>
+                        </div>
+                        <div class="text-muted small mt-1"
+                             t-if="record.sa_stage_text.raw_value">
+                            <field name="sa_stage_text"/>
+                        </div>
+
+                        <div class="text-muted small" t-if="record.sa_shop_id.raw_value">
+                            <field name="sa_shop_id"/>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <record id="view_sa_delivery_form" model="ir.ui.view">
+        <field name="name">stock.picking.sa.delivery.form</field>
+        <field name="model">stock.picking</field>
+        <field name="inherit_id" ref="stock.view_picking_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                    <!-- The five steps, one or two buttons at a time, each with
+                         a hover help (owner, 1 Oct 2026). -->
+                    <button name="action_sa_open_live_tracking" type="object"
+                            string="Live Tracking" class="btn-secondary" icon="fa-map-marker"
+                            help="Opens this order's live tracking page: the rider's position on the map (from the rider app, from Accept until Delivered) and the timeline the customer sees."
+                            invisible="sa_delivery_state in ('none', False)"/>
+                    <button name="action_sa_open_call_rider" type="object"
+                            string="Call a Rider" class="btn-primary"
+                            help="Calls ONE rider: pick one yourself, or Auto picks the nearest free rider to the shop (longest idle on a near tie, random on an exact tie). No answer in time = the next rider is called."
+                            invisible="sa_delivery_state not in ('ready', 'to_assign')"/>
+                    <button name="sa_action_next_rider" type="object"
+                            string="Call the Next Rider" class="btn-secondary"
+                            help="Stop waiting for the rider offered now and call the next candidate."
+                            confirm="Give up on this rider and call the next one?"
+                            invisible="sa_delivery_state != 'offered'"/>
+                    <field name="sa_pickup_handover" invisible="1"/>
+                    <button name="sa_action_branch_dispatch_button" type="object"
+                            string="Dispatch" class="btn-primary"
+                            help="Step 1. The rider is at the counter: press to make the 6-digit pickup code. It shows below (Pickup Code). Read it to the rider; the rider types it in the app and the status becomes Collected by Rider. Press again for a new code."
+                            invisible="sa_pickup_handover != 'branch' or sa_delivery_state != 'accepted'"/>
+                    <button name="sa_action_generate_pickup_code" type="object"
+                            string="Generate Pickup Code" class="btn-secondary"
+                            help="Makes the 6-digit pickup code: shown below with a copy icon and sent to the rider's WhatsApp. The rider shows it at the counter."
+                            invisible="sa_delivery_state not in ('awaiting_shop', 'preparing', 'ready', 'to_assign', 'offered', 'accepted', 'picked') or (sa_pickup_handover == 'branch' and sa_delivery_state == 'accepted')"/>
+                    <button name="action_sa_open_otp_entry" type="object"
+                            string="Dispatch" class="btn-primary"
+                            context="{'sa_otp_kind': 'pickup'}"
+                            help="Step 1. Pick the rider and type the pickup code the rider shows you (Delivery ▸ Create OTP). The parcel leaves with the rider - status becomes Collected by Rider."
+                            invisible="sa_delivery_state not in ('awaiting_shop', 'preparing', 'ready', 'to_assign', 'offered', 'accepted', 'picked') or (sa_pickup_handover == 'branch' and sa_delivery_state == 'accepted')"/>
+                    <button name="sa_action_rider_near" type="object"
+                            string="Rider Near Customer" class="btn-primary"
+                            help="Step 2. Tells the customer on WhatsApp that the rider is close - please be ready to receive the order."
+                            invisible="sa_delivery_state != 'dispatched'"/>
+                    <button name="sa_action_reached_customer" type="object"
+                            string="Reached Customer Location" class="btn-primary"
+                            help="Step 3. Sends the customer a 6-digit code on WhatsApp. The customer gives it to the rider after taking the parcel."
+                            invisible="sa_delivery_state != 'out_for_delivery' or sa_arrived_customer_on"/>
+                    <button name="sa_action_reached_customer" type="object"
+                            string="Resend Customer Code" class="btn-secondary"
+                            help="Sends the customer a fresh code (the old one stops working)."
+                            invisible="sa_delivery_state != 'out_for_delivery' or not sa_arrived_customer_on"/>
+                    <button name="action_sa_open_otp_entry" type="object"
+                            string="Delivered" class="btn-success"
+                            context="{'sa_otp_kind': 'delivery'}"
+                            help="Step 4. Type the code the customer gave the rider. Closes the delivery and the order."
+                            invisible="sa_delivery_state != 'out_for_delivery' or not sa_arrived_customer_on"/>
+                    <button name="action_sa_open_fail" type="object"
+                            string="Failed" class="btn-secondary"
+                            help="Could not deliver - pick a reason. The customer and the rider are told; the job stays open to retry or return."
+                            invisible="sa_delivery_state not in ('dispatched', 'out_for_delivery')"/>
+                    <button name="action_sa_relay_retry" type="object"
+                            string="Find a Takeover Rider Again" class="btn-primary"
+                            help="Vehicle problem: look again for a free rider to collect the parcel from the rider who has it."
+                            invisible="not sa_relay_state"/>
+                    <button name="action_sa_relay_cancel" type="object"
+                            string="Cancel Handover" class="btn-secondary"
+                            help="The rider with the parcel continues the delivery; the takeover offer is withdrawn."
+                            confirm="Cancel the handover? The rider who has the parcel continues the delivery."
+                            invisible="not sa_relay_state"/>
+                    <button name="sa_action_reoffer" type="object"
+                            string="Send Job Again" class="btn-secondary"
+                            help="Re-sends the job message to the rider on WhatsApp. Only while the job waits for a rider's answer."
+                            groups="sales_automation_delivery.group_sa_delivery_manager"
+                            invisible="sa_delivery_state not in ('ready', 'to_assign', 'offered')"/>
+                    <button name="action_sa_accepted" type="object"
+                            string="Accepted" class="btn-secondary" invisible="1"/>
+                    <button name="action_sa_picked" type="object"
+                            string="Force: Picked Up (no code)" class="btn-secondary"
+                            groups="sales_automation_delivery.group_sa_delivery_manager"
+                            confirm="Mark as picked up WITHOUT the pickup code? This is logged."
+                            invisible="sa_delivery_state != 'accepted'"/>
+                    <button name="action_sa_delivered" type="object"
+                            string="Force: Delivered (no code)" class="btn-secondary"
+                            groups="sales_automation_delivery.group_sa_delivery_manager"
+                            confirm="Mark as delivered WITHOUT the customer code? This is logged."
+                            invisible="sa_delivery_state not in ('picked', 'dispatched', 'out_for_delivery')"/>
+                    <button name="sa_action_cancel" type="object"
+                            string="Cancel Delivery" class="btn-secondary"
+                            confirm="Stop this delivery? The rider and the customer are both told."
+                            invisible="sa_delivery_state not in ('to_assign', 'offered', 'accepted', 'picked', 'dispatched', 'out_for_delivery')"/>
+                    <button name="sa_action_confirm_return" type="object"
+                            string="Goods Back on the Shelf" class="btn-primary"
+                            invisible="sa_delivery_state != 'returning'"/>
+                    <button name="sa_action_refund" type="object"
+                            string="Refund the Customer" class="btn-secondary"
+                            confirm="Raise a credit note for what the customer paid?"
+                            invisible="sa_delivery_state not in ('cancelled', 'returned') or sa_refund_move_id"/>
+                    <field name="sa_delivery_state" widget="statusbar"
+                           statusbar_visible="to_assign,dispatched,out_for_delivery,delivered"
+                           invisible="sa_delivery_state in ('none', False)"/>
+            </xpath>
+            <xpath expr="//group[1]" position="after">
+                <div class="alert alert-info py-1 px-2 mb-2" role="status"
+                     invisible="not sa_stage_text">
+                    <field name="sa_stage_text" readonly="1" nolabel="1" class="oe_inline"/>
+                </div>
+                <group string="Rider's reports" col="1" invisible="not sa_report_ids">
+                    <field name="sa_report_ids" nolabel="1" readonly="1">
+                        <list decoration-muted="handled_on">
+                            <field name="reported_on" string="Time"/>
+                            <field name="rider_id"/>
+                            <field name="reason_label"/>
+                            <field name="note"/>
+                            <field name="photo_count" string="Photos"/>
+                            <field name="handled_on" optional="show"/>
+                            <field name="handled_by" optional="hide"/>
+                        </list>
+                    </field>
+                </group>
+                <group string="Pickup code" col="1"
+                       invisible="not sa_pickup_code_shown or sa_delivery_state not in ('awaiting_shop', 'preparing', 'ready', 'to_assign', 'offered', 'accepted', 'picked')">
+                    <div style="font-size:40px;font-weight:700;letter-spacing:10px;font-family:monospace" class="text-primary">
+                        <field name="sa_pickup_code_shown" readonly="1" widget="CopyClipboardChar" nolabel="1"/>
+                    </div>
+                    <div class="text-muted">Give this code to the rider (it was also sent to the rider's WhatsApp). Then press <b>Dispatch</b> and type it.</div>
+                </group>
+                <group string="Delivery Job"
+                       invisible="sa_delivery_state in ('none', False)">
+                    <group>
+                        <field name="sa_ref_code"/>
+                        <field name="sa_shop_id"/>
+                        <field name="sa_delivery_partner_id"/>
+                        <field name="sa_partner_kind"/>
+                        <field name="sa_offer_expires_on" invisible="sa_delivery_state != 'offered'"/>
+                        <field name="sa_offer_round" invisible="not sa_offer_round"/>
+                        <field name="sa_call_log" invisible="not sa_call_log" widget="text"/>
+                        <field name="sa_delivery_note" placeholder="flat, gate, landmark - the rider sees it in the app"/>
+                        <field name="sa_rider_fee"/>
+                        <field name="sa_rider_fee_locked" invisible="not sa_rider_fee"/>
+                        <field name="sa_trip_m" invisible="not sa_trip_m"/>
+                        <field name="sa_issue_text" invisible="not sa_issue_on" decoration-danger="1"/>
+                        <field name="sa_issue_note" invisible="not sa_issue_note"/>
+                        <field name="sa_packed_unpaid_on" invisible="not sa_packed_unpaid_on"/>
+                        <field name="sa_run_sequence" invisible="sa_delivery_kind != 'express'"/>
+                        <field name="sa_run_current" invisible="not sa_run_current"/>
+                        <field name="sa_route_km" invisible="not sa_route_polyline"/>
+                        <field name="sa_route_approx" invisible="not sa_route_polyline"/>
+                        <field name="sa_route_polyline" invisible="1"/>
+                        <field name="sa_code_resends" invisible="not sa_code_resends"/>
+                        <field name="sa_photos_missing" invisible="not sa_photos_missing" decoration-danger="1"/>
+                        <field name="sa_problem_kind" invisible="not sa_problem_on"/>
+                        <field name="sa_problem_on" invisible="not sa_problem_on"/>
+                        <field name="sa_wait_until" invisible="not sa_wait_until"/>
+                        <field name="sa_wait_for" invisible="not sa_wait_until"/>
+                        <field name="sa_return_reason" invisible="not sa_return_reason"/>
+                        <field name="sa_drop_label" invisible="not sa_drop_label"/>
+                        <field name="sa_drop_lat" invisible="not sa_drop_label"/>
+                        <field name="sa_drop_lng" invisible="not sa_drop_label"/>
+                        <field name="sa_relay_state" invisible="not sa_relay_state" decoration-danger="1"/>
+                        <field name="sa_relay_to_id" invisible="not sa_relay_to_id"/>
+                        <field name="sa_relay_from_id" invisible="not sa_relay_from_id"/>
+                        <field name="sa_photos_html" nolabel="1" colspan="2" readonly="1" invisible="not sa_photos_html"/>
+                    </group>
+                    <group>
+                        <field name="sa_currency_id" invisible="1"/>
+                        <field name="sa_cod_amount"/>
+                        <field name="sa_delivery_kind"/>
+                        <field name="sa_promised_on"/>
+                        <field name="sa_offered_on"/>
+                        <field name="sa_accepted_on"/>
+                        <field name="sa_picked_on"/>
+                        <field name="sa_dispatched_on"/>
+                        <field name="sa_out_on"/>
+                        <field name="sa_delivered_on"/>
+                        <field name="sa_cancel_reason"
+                               invisible="not sa_cancel_reason"/>
+                        <field name="sa_returned_on"
+                               invisible="not sa_returned_on"/>
+                        <field name="sa_refund_move_id" readonly="1"
+                               invisible="not sa_refund_move_id"/>
+                        <field name="sa_job_url" widget="url" readonly="1"/>
+                        <field name="sa_last_error" readonly="1"
+                               invisible="not sa_last_error"/>
+                    </group>
+                </group>
+                <!-- The address the customer gave next to where the parcel was
+                     really handed over, both in words, so a different place
+                     (office, a corner) is obvious. -->
+                <div class="alert alert-warning py-1 px-2 mb-2" role="alert"
+                     invisible="sa_delivery_state in ('none', False) or not sa_handover_far">
+                    <field name="sa_handover_far" invisible="1"/>
+                    Handed over <field name="sa_handover_m" readonly="1" class="oe_inline fw-bold"/> m
+                    away from the address the customer gave.
+                </div>
+                <group string="Address" invisible="sa_delivery_state in ('none', False)">
+                    <group string="Customer gave">
+                        <field name="sa_customer_address" string="Address"/>
+                        <field name="sa_pin_source" invisible="not sa_pin_source"/>
+                        <field name="sa_customer_lat" string="Latitude" invisible="not sa_customer_lat"/>
+                        <field name="sa_customer_lng" string="Longitude" invisible="not sa_customer_lat"/>
+                        <field name="sa_customer_map_url" string="Map" widget="url"
+                               text="Open in Google Maps" invisible="not sa_customer_map_url"/>
+                    </group>
+                    <group string="Handed over at" invisible="not sa_handover_on">
+                        <label for="sa_handover_address" string="Address"/>
+                        <div class="o_row">
+                            <field name="sa_handover_address" invisible="not sa_handover_address"/>
+                            <button name="action_sa_lookup_handover_address" type="object"
+                                    string="Look up address" icon="fa-map-marker"
+                                    class="btn-link p-0" invisible="sa_handover_address"/>
+                        </div>
+                        <field name="sa_handover_on"/>
+                        <field name="sa_handover_m" string="Distance from the Pin (m)"/>
+                        <field name="sa_handover_lat" string="Latitude"/>
+                        <field name="sa_handover_lng" string="Longitude"/>
+                        <field name="sa_handover_map_url" string="Map" widget="url"
+                               text="Open in Google Maps" invisible="not sa_handover_map_url"/>
+                    </group>
+                </group>
+                <!-- How long the rider took, leg by leg. A leg whose stamps
+                     are missing or out of order is left out. -->
+                <group string="Delivery Time" invisible="not sa_delivered_on">
+                    <group>
+                        <label for="sa_time_ride" string="Pickup → Delivered"/>
+                        <div class="fs-4 fw-bold text-primary">
+                            <field name="sa_time_ride" class="oe_inline"/>
+                            <span invisible="sa_time_ride" class="text-muted fs-6 fw-normal">
+                                no pickup time recorded
+                            </span>
+                        </div>
+                        <field name="sa_picked_on" string="Picked Up" invisible="not sa_picked_on"/>
+                        <field name="sa_dispatched_on" string="Dispatched" invisible="sa_picked_on or not sa_dispatched_on"/>
+                        <field name="sa_delivered_on" string="Delivered"/>
+                    </group>
+                    <group>
+                        <field name="sa_time_answer" invisible="not sa_time_answer"/>
+                        <field name="sa_time_to_shop" invisible="not sa_time_to_shop"/>
+                        <field name="sa_time_collect" invisible="not sa_time_collect"/>
+                        <field name="sa_time_door" invisible="not sa_time_door"/>
+                        <field name="sa_time_total" invisible="not sa_time_total"/>
+                    </group>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="action_sa_delivery_all" model="ir.actions.act_window">
+        <field name="name">All Deliveries</field>
+        <field name="res_model">stock.picking</field>
+        <field name="view_mode">list,kanban,form</field>
+        <field name="domain">[('sa_delivery_state','not in',['none',False])]</field>
+        <field name="context">{'search_default_group_delivery_state': 1}</field>
+        <field name="search_view_id" ref="view_sa_delivery_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No deliveries yet</p>
+            <p>A delivery job appears here the moment a sale order is confirmed.</p>
+        </field>
+    </record>
+
+    <record id="action_sa_delivery_to_dispatch" model="ir.actions.act_window">
+        <field name="name">To Dispatch</field>
+        <field name="res_model">stock.picking</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('sa_delivery_state','=','to_assign')]</field>
+        <field name="search_view_id" ref="view_sa_delivery_search"/>
+    </record>
+
+    <record id="action_sa_delivery_in_progress" model="ir.actions.act_window">
+        <field name="name">In Progress</field>
+        <field name="res_model">stock.picking</field>
+        <field name="view_mode">list,kanban,form</field>
+        <field name="domain">[('sa_delivery_state','in',['offered','accepted','picked','dispatched','out_for_delivery'])]</field>
+        <field name="context">{'search_default_group_delivery_state': 1}</field>
+        <field name="search_view_id" ref="view_sa_delivery_search"/>
+    </record>
+
+    <!--
+        The two queues the counter thinks in. Domained on the kind and grouped
+        by the day promised, so the list reads as a diary rather than a pile:
+        today's work, then tomorrow's. Finished and cancelled jobs are left
+        out - this is a worklist.
+    -->
+    <record id="action_sa_delivery_same_day" model="ir.actions.act_window">
+        <field name="name">Quick Delivery</field>
+        <field name="res_model">stock.picking</field>
+        <field name="view_mode">kanban,list,form</field>
+        <field name="domain">[('sa_delivery_kind','=','quick'),('sa_delivery_state','not in',['none','delivered','cancelled','returned','failed'])]</field>
+        <field name="context">{'search_default_group_promised': 1}</field>
+        <field name="search_view_id" ref="view_sa_delivery_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Nothing due today</p>
+            <p>Orders promised for today appear here.</p>
+        </field>
+    </record>
+
+    <record id="action_sa_delivery_express" model="ir.actions.act_window">
+        <field name="name">Express Delivery</field>
+        <field name="res_model">stock.picking</field>
+        <field name="view_mode">kanban,list,form</field>
+        <field name="domain">[('sa_delivery_kind','=','express'),('sa_delivery_state','not in',['none','delivered','cancelled','returned','failed'])]</field>
+        <field name="context">{'search_default_group_promised': 1}</field>
+        <field name="search_view_id" ref="view_sa_delivery_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Nothing on order</p>
+            <p>Orders that have to be brought in first appear here, under the
+               day they were promised for.</p>
+        </field>
+    </record>
+
+    <!-- Which kanban: without these the generic one is picked and its
+         own group-by fights the day grouping. -->
+    <record id="action_sa_delivery_same_day_kanban"
+            model="ir.actions.act_window.view">
+        <field name="sequence">1</field>
+        <field name="view_mode">kanban</field>
+        <field name="view_id" ref="view_sa_delivery_queue_kanban"/>
+        <field name="act_window_id" ref="action_sa_delivery_same_day"/>
+    </record>
+    <record id="action_sa_delivery_same_day_list"
+            model="ir.actions.act_window.view">
+        <field name="sequence">2</field>
+        <field name="view_mode">list</field>
+        <field name="view_id" ref="view_sa_delivery_list"/>
+        <field name="act_window_id" ref="action_sa_delivery_same_day"/>
+    </record>
+    <record id="action_sa_delivery_express_kanban"
+            model="ir.actions.act_window.view">
+        <field name="sequence">1</field>
+        <field name="view_mode">kanban</field>
+        <field name="view_id" ref="view_sa_delivery_queue_kanban"/>
+        <field name="act_window_id" ref="action_sa_delivery_express"/>
+    </record>
+    <record id="action_sa_delivery_express_list"
+            model="ir.actions.act_window.view">
+        <field name="sequence">2</field>
+        <field name="view_mode">list</field>
+        <field name="view_id" ref="view_sa_delivery_list"/>
+        <field name="act_window_id" ref="action_sa_delivery_express"/>
+    </record>
+
+    <record id="action_sa_delivery_delivered" model="ir.actions.act_window">
+        <field name="name">Delivered</field>
+        <field name="res_model">stock.picking</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('sa_delivery_state','=','delivered')]</field>
+        <field name="search_view_id" ref="view_sa_delivery_search"/>
+    </record>
+
+    <record id="action_sa_delivery_failed" model="ir.actions.act_window">
+        <field name="name">Failed</field>
+        <field name="res_model">stock.picking</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('sa_delivery_state','=','failed')]</field>
+        <field name="search_view_id" ref="view_sa_delivery_search"/>
+    </record>
+
+    <!-- The list and search views above are ours; bind them to the actions. -->
+    <record id="action_sa_delivery_all_list" model="ir.actions.act_window.view">
+        <field name="sequence">1</field>
+        <field name="view_mode">list</field>
+        <field name="view_id" ref="view_sa_delivery_list"/>
+        <field name="act_window_id" ref="action_sa_delivery_all"/>
+    </record>
+    <record id="action_sa_delivery_all_kanban" model="ir.actions.act_window.view">
+        <field name="sequence">2</field>
+        <field name="view_mode">kanban</field>
+        <field name="view_id" ref="view_sa_delivery_kanban"/>
+        <field name="act_window_id" ref="action_sa_delivery_all"/>
+    </record>
+    <record id="action_sa_delivery_dispatch_list" model="ir.actions.act_window.view">
+        <field name="sequence">1</field>
+        <field name="view_mode">list</field>
+        <field name="view_id" ref="view_sa_delivery_list"/>
+        <field name="act_window_id" ref="action_sa_delivery_to_dispatch"/>
+    </record>
+    <record id="action_sa_delivery_progress_list" model="ir.actions.act_window.view">
+        <field name="sequence">1</field>
+        <field name="view_mode">list</field>
+        <field name="view_id" ref="view_sa_delivery_list"/>
+        <field name="act_window_id" ref="action_sa_delivery_in_progress"/>
+    </record>
+    <record id="action_sa_delivery_delivered_list" model="ir.actions.act_window.view">
+        <field name="sequence">1</field>
+        <field name="view_mode">list</field>
+        <field name="view_id" ref="view_sa_delivery_list"/>
+        <field name="act_window_id" ref="action_sa_delivery_delivered"/>
+    </record>
+    <record id="action_sa_delivery_failed_list" model="ir.actions.act_window.view">
+        <field name="sequence">1</field>
+        <field name="view_mode">list</field>
+        <field name="view_id" ref="view_sa_delivery_list"/>
+        <field name="act_window_id" ref="action_sa_delivery_failed"/>
+    </record>
+
+</odoo>

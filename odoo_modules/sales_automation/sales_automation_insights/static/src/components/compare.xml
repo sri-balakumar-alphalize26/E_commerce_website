@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+<t t-name="sales_automation_insights.Compare">
+    <div class="sai_sect">
+        <button class="sai_btn" t-on-click="() => props.onBack()">← Board</button>
+        Compare <span class="sai_count"><t t-esc="props.compare.columns.length"/></span>
+    </div>
+    <div class="sai_grid">
+        <div class="sai_panel sai_panel_wide">
+            <table class="sai_cmp">
+                <thead>
+                    <tr>
+                        <th></th>
+                        <th t-foreach="props.compare.columns" t-as="c" t-key="c.id">
+                            <a href="#" t-on-click.prevent="() => props.onOpen(c.id)"><t t-esc="c.name"/></a>
+                            <div class="sai_stars" t-att-class="{ sai_stars_none: !c.enough_data }">
+                                <t t-if="c.enough_data">
+                                    <span class="sai_star_on"><t t-esc="stars(c).on"/></span><span class="sai_star_off"><t t-esc="stars(c).off"/></span>
+                                </t>
+                                <t t-else="">not enough data</t>
+                            </div>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr t-foreach="props.compare.metrics" t-as="m" t-key="m.code">
+                        <td><t t-esc="m.label"/></td>
+                        <td t-foreach="m.values" t-as="v" t-key="v_index" t-att-class="{ sai_best: m.best_index === v_index }">
+                            <t t-esc="fmt(m, v)"/>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="sai_panel sai_panel_wide">
+            <Radar data="props.compare.radar" theme="props.theme"/>
+        </div>
+    </div>
+</t>
+
+</templates>

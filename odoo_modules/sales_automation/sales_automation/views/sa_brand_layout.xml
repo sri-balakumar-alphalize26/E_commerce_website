@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--
+        One layout for every page a WhatsApp message opens in the browser
+        (price request, delivery job, product confirmation, tracking): the
+        369 Mart website look - Inter, navy/blue/orange tokens, white cards
+        with a 1 px border and 16 px radius, 44 px buttons, 50 px inputs -
+        with the logo in a small header. Standalone on purpose: no website
+        layout, no asset bundle, nothing to fetch on a weak signal.
+
+        Logo: system parameter `sa.brand_logo_url` (a public image URL), else
+        the file shipped in static/src/img. Pages pass `head_title`, an
+        optional `brand_badge` (the small pill on the right of the header)
+        and their body.
+    -->
+    <template id="sa_brand_layout" name="369 Mart Link Page Layout">
+        <t t-set="head_title" t-value="head_title or 'Order'"/>
+        <t t-set="brand_name" t-value="brand_name or (res_company and res_company.name) or '369 Mart'"/>
+        <!-- res_company is always injected by QWeb; `request` is not bound in a shell -->
+        <t t-set="brand_logo" t-value="res_company.env['ir.config_parameter'].sudo().get_param('sa.brand_logo_url', '') or '/sales_automation/static/src/img/369mart-logo.png'"/>
+        &lt;!DOCTYPE html&gt;
+        <html lang="en">
+            <head>
+                <meta charset="utf-8"/>
+                <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5"/>
+                <meta name="robots" content="noindex"/>
+                <meta name="theme-color" content="#0b4a6e"/>
+                <title t-esc="head_title"/>
+                <link rel="preconnect" href="https://fonts.googleapis.com"/>
+                <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous"/>
+                <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+                <style>
+:root{--navy:#0b4a6e;--blue:#0a78ab;--btn-a:#0c86be;--btn-b:#08658f;--orange:#f7931e;--ink:#13212b;--muted:#6b7a86;
+ --soft:#f4f6f8;--line:#e6ebef;--ok:#1a7f3c;--ok-bg:#e9f6ee;--err:#c8433a;--err-bg:#fdecea;--warn:#8a4a00;--warn-bg:#fff4e5;
+ --font:"Inter",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--soft);color:var(--ink);font:14px/1.5 var(--font);-webkit-font-smoothing:antialiased}
+.brand{display:flex;align-items:center;gap:10px;padding:10px 16px;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+.brand img{height:34px;width:auto;display:block}
+.brand .badge{margin-left:auto;font-size:12px;font-weight:600;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:4px 10px;white-space:nowrap}
+.wrap{max-width:520px;margin:0 auto;padding:14px 16px 28px}
+.card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:12px}
+h1{font-size:21px;font-weight:800;letter-spacing:-.02em;line-height:1.25;margin:4px 0 10px;color:var(--navy);text-wrap:balance}
+h2{font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:0 0 8px}
+.sub,.muted{color:var(--muted);font-size:13px}
+.code{font-size:12px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase;font-weight:600}
+.zh{color:var(--muted);font-weight:400;font-size:13px}
+.pill{display:inline-block;font-size:12px;font-weight:600;border-radius:999px;padding:3px 10px;background:var(--soft);color:var(--muted)}
+.pill.quick{background:#fff1e0;color:var(--warn)} .pill.express{background:#e6f1f8;color:var(--navy)}
+label{display:block;margin:14px 0 6px;font-weight:600;font-size:14px}
+input[type=number],input[type=text],input[type=tel],select{width:100%;height:50px;padding:0 14px;font:inherit;font-size:18px;
+ font-variant-numeric:tabular-nums;border:1px solid #cfd8df;border-radius:11px;background:#fff;color:var(--ink);outline:0}
+input:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(10,120,171,.18)}
+.btn{display:block;width:100%;min-height:44px;padding:12px 16px;border:0;border-radius:12px;font:inherit;font-size:16px;font-weight:700;
+ margin-top:12px;cursor:pointer;text-align:center;text-decoration:none;color:#fff;background:linear-gradient(180deg,var(--btn-a),var(--btn-b));
+ box-shadow:0 6px 14px -8px rgba(8,101,143,.7)}
+.btn.grey,.btn.no{background:#eef2f5;color:var(--ink);box-shadow:none}
+.btn.map{background:#fff;color:var(--blue);border:1px solid #cfe0ea;box-shadow:none}
+.btn.ok{background:linear-gradient(180deg,#239a4c,var(--ok))}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.row{display:flex;gap:10px;justify-content:space-between;align-items:baseline;padding:8px 0;border-top:1px solid var(--line);font-size:15px}
+.row:first-of-type{border-top:0}
+.row .lbl{color:var(--muted);min-width:96px}
+.row .val{flex:1;font-weight:600}
+.row > b,.row > .big{margin-left:auto;font-variant-numeric:tabular-nums;text-align:right}
+.big{font-size:26px;font-weight:800;color:var(--navy);letter-spacing:-.02em}
+.err{background:var(--err-bg);color:#8a1c13;padding:10px 12px;border-radius:12px;margin-top:12px;font-size:14px}
+.ok{background:var(--ok-bg);color:var(--ok);padding:12px 14px;border-radius:12px}
+.done{background:var(--ok-bg);color:var(--ok);font-weight:700;text-align:center;padding:16px;border-radius:12px}
+.cod{background:var(--warn-bg);border-left:4px solid var(--orange);color:var(--warn);padding:11px 14px;border-radius:8px 12px 12px 8px;margin:12px 0;font-size:16px}
+.cod.paid{background:var(--ok-bg);border-left-color:var(--ok);color:var(--ok)}
+.steps{display:flex;gap:6px;margin:12px 0 6px}
+.step{flex:1;text-align:center;font-size:11px;font-weight:600;padding:7px 2px;border-radius:999px;background:var(--soft);color:var(--muted)}
+.step.on{background:var(--blue);color:#fff}
+.banner{padding:14px;border-radius:12px;margin:12px 0;font-weight:600}
+.banner.acc{background:var(--ok-bg);color:var(--ok)} .banner.rej{background:var(--err-bg);color:var(--err)}
+.foot{color:var(--muted);font-size:12px;text-align:center;margin-top:8px}
+.pic{width:100%;border-radius:12px;background:var(--soft);display:block;max-height:420px;object-fit:contain;border:1px solid var(--line)}
+.nopic{padding:40px 10px;text-align:center;color:var(--muted);border:1px dashed #cfd8df;border-radius:12px}
+.gal{display:flex;gap:8px;margin-top:8px}
+.gal img{flex:1;min-width:0;height:84px;object-fit:cover;border-radius:10px;border:2px solid var(--line);cursor:pointer;background:var(--soft)}
+.gal img.on{border-color:var(--blue)} .hint{color:var(--muted);font-size:12px;text-align:center;margin-top:4px}
+table{width:100%;border-collapse:collapse;margin:14px 0 6px;font-size:15px}
+td{padding:9px 6px;border-bottom:1px solid var(--line);vertical-align:top} td:first-child{color:var(--muted);width:38%;font-weight:600}
+.brand_foot{color:var(--muted);font-size:12px;text-align:center;padding:4px 16px 24px}
+                </style>
+            </head>
+            <body>
+                <header class="brand">
+                    <img t-att-src="brand_logo" t-att-alt="brand_name"/>
+                    <span class="badge" t-if="brand_badge" t-esc="brand_badge"/>
+                </header>
+                <div class="wrap"><t t-out="0"/></div>
+                <footer class="brand_foot"><t t-esc="brand_name"/> &#183; this link is private to you</footer>
+            </body>
+        </html>
+    </template>
+
+</odoo>

@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ===== App crashes ===== -->
+    <record id="view_sa_app_crash_list" model="ir.ui.view">
+        <field name="name">sa.app.crash.list</field>
+        <field name="model">sa.app.crash</field>
+        <field name="arch" type="xml">
+            <list decoration-danger="fatal" default_order="at desc">
+                <field name="at"/>
+                <field name="rider_id"/>
+                <field name="message"/>
+                <field name="route"/>
+                <field name="source"/>
+                <field name="fatal"/>
+                <field name="app_version"/>
+                <field name="os"/>
+                <field name="device"/>
+                <field name="received_on" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_sa_app_crash_form" model="ir.ui.view">
+        <field name="name">sa.app.crash.form</field>
+        <field name="model">sa.app.crash</field>
+        <field name="arch" type="xml">
+            <form string="App Crash">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="rider_id"/>
+                            <field name="at"/>
+                            <field name="received_on"/>
+                            <field name="route"/>
+                        </group>
+                        <group>
+                            <field name="source"/>
+                            <field name="fatal"/>
+                            <field name="app_version"/>
+                            <field name="os"/>
+                            <field name="device"/>
+                        </group>
+                    </group>
+                    <group string="Error">
+                        <field name="message" nolabel="1" colspan="2"/>
+                        <field name="stack" nolabel="1" colspan="2" widget="text"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_sa_app_crash_search" model="ir.ui.view">
+        <field name="name">sa.app.crash.search</field>
+        <field name="model">sa.app.crash</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="rider_id"/>
+                <field name="message"/>
+                <field name="app_version"/>
+                <field name="route"/>
+                <filter name="fatal" string="Fatal" domain="[('fatal', '=', True)]"/>
+                <filter name="today" string="Today" domain="[('at', '>=', context_today().strftime('%Y-%m-%d'))]"/>
+                <separator/>
+                <filter name="group_rider" string="Rider" context="{'group_by': 'rider_id'}"/>
+                <filter name="group_version" string="App version" context="{'group_by': 'app_version'}"/>
+                <filter name="group_day" string="Day" context="{'group_by': 'at:day'}"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_sa_app_crash" model="ir.actions.act_window">
+        <field name="name">App Crashes</field>
+        <field name="res_model">sa.app.crash</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{'search_default_group_rider': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No crash reports</p>
+            <p>The rider app keeps every crash on the phone and sends it here the next time the rider is online.</p>
+        </field>
+    </record>
+
+    <!-- ===== SOS alerts ===== -->
+    <record id="view_sa_sos_alert_list" model="ir.ui.view">
+        <field name="name">sa.sos.alert.list</field>
+        <field name="model">sa.sos.alert</field>
+        <field name="arch" type="xml">
+            <list decoration-danger="state == 'new'" default_order="at desc">
+                <field name="at"/>
+                <field name="rider_id"/>
+                <field name="picking_id"/>
+                <field name="map_url" widget="url" string="Map"/>
+                <field name="whatsapp_sent"/>
+                <field name="state"/>
+                <field name="handled_by"/>
+                <button name="action_handled" type="object" string="Handled" class="btn-primary"
+                        invisible="state != 'new'"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_sa_sos_alert_form" model="ir.ui.view">
+        <field name="name">sa.sos.alert.form</field>
+        <field name="model">sa.sos.alert</field>
+        <field name="arch" type="xml">
+            <form string="SOS Alert">
+                <header>
+                    <button name="action_handled" type="object" string="Mark Handled" class="btn-primary"
+                            invisible="state != 'new'"/>
+                    <field name="state" widget="statusbar"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="rider_id"/>
+                            <field name="at"/>
+                            <field name="received_on"/>
+                            <field name="picking_id"/>
+                        </group>
+                        <group>
+                            <field name="map_url" widget="url"/>
+                            <field name="latitude"/>
+                            <field name="longitude"/>
+                            <field name="accuracy"/>
+                        </group>
+                    </group>
+                    <group string="Emergency contacts">
+                        <field name="contacts" nolabel="1" colspan="2"/>
+                    </group>
+                    <group string="Office alerted">
+                        <field name="notified_on"/>
+                        <field name="whatsapp_sent"/>
+                        <field name="whatsapp_to"/>
+                        <field name="handled_on"/>
+                        <field name="handled_by"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_sa_sos_alert_search" model="ir.ui.view">
+        <field name="name">sa.sos.alert.search</field>
+        <field name="model">sa.sos.alert</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="rider_id"/>
+                <field name="picking_id"/>
+                <filter name="new" string="Open" domain="[('state', '=', 'new')]"/>
+                <filter name="handled" string="Handled" domain="[('state', '=', 'handled')]"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_sa_sos_alert" model="ir.actions.act_window">
+        <field name="name">SOS Alerts</field>
+        <field name="res_model">sa.sos.alert</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{'search_default_new': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No SOS alerts</p>
+            <p>A rider holds the red SOS button for 3 seconds: the alert lands here, the delivery managers get a notification and the office number a WhatsApp.</p>
+        </field>
+    </record>
+
+    <menuitem id="menu_sa_delivery_fleet_sos"
+              name="SOS Alerts"
+              parent="menu_sa_delivery_fleet"
+              action="action_sa_sos_alert"
+              sequence="3"/>
+
+    <menuitem id="menu_sa_delivery_fleet_crashes"
+              name="App Crashes"
+              parent="menu_sa_delivery_fleet"
+              action="action_sa_app_crash"
+              sequence="4"/>
+
+</odoo>

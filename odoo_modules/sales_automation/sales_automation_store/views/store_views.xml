@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- The shop's own columns on the delivery list. -->
+    <record id="view_sa_store_picking_list" model="ir.ui.view">
+        <field name="name">stock.picking.list.sa.store</field>
+        <field name="model">stock.picking</field>
+        <field name="inherit_id" ref="stock.vpicktree"/>
+        <field name="arch" type="xml">
+            <field name="state" position="before">
+                <field name="sa_ref_code" string="Job" optional="show"/>
+                <field name="sa_delivery_state" string="Stage" optional="show"
+                       widget="badge"
+                       decoration-danger="sa_delivery_state == 'awaiting_shop'"
+                       decoration-warning="sa_delivery_state == 'preparing'"
+                       decoration-success="sa_delivery_state == 'ready'"/>
+                <field name="sa_waiting_minutes" string="Waiting" optional="hide"/>
+                <field name="sa_shop_id" string="Shop" optional="hide"/>
+                <field name="sa_shop_user_id" string="Packed By" optional="hide"/>
+            </field>
+        </field>
+    </record>
+
+    <!-- The two buttons, for anyone working from the form. -->
+    <record id="view_sa_store_picking_form" model="ir.ui.view">
+        <field name="name">stock.picking.form.sa.store</field>
+        <field name="model">stock.picking</field>
+        <field name="inherit_id" ref="stock.view_picking_form"/>
+        <field name="arch" type="xml">
+            <header position="inside">
+                <button name="sa_shop_accept" type="object" string="Accept"
+                        class="btn-primary"
+                        invisible="sa_delivery_state != 'awaiting_shop'"/>
+                <button name="sa_shop_ready" type="object"
+                        string="Packed - call the rider" class="btn-success"
+                        invisible="sa_delivery_state not in ['awaiting_shop', 'preparing']"/>
+                <button name="sa_shop_unaccept" type="object" string="Put Back"
+                        invisible="sa_delivery_state != 'preparing'"/>
+            </header>
+        </field>
+    </record>
+
+    <!-- Group the queue by stage, which is how a supervisor reads it. -->
+    <record id="view_sa_store_picking_search" model="ir.ui.view">
+        <field name="name">stock.picking.search.sa.store</field>
+        <field name="model">stock.picking</field>
+        <field name="inherit_id" ref="stock.view_picking_internal_search"/>
+        <field name="arch" type="xml">
+            <filter name="starred" position="after">
+                <separator/>
+                <filter name="sa_awaiting_shop" string="Waiting for the Shop"
+                        domain="[('sa_delivery_state','=','awaiting_shop')]"/>
+                <filter name="sa_preparing" string="Being Packed"
+                        domain="[('sa_delivery_state','=','preparing')]"/>
+                <filter name="sa_ready" string="Ready for Pickup"
+                        domain="[('sa_delivery_state','=','ready')]"/>
+            </filter>
+        </field>
+    </record>
+
+    <!-- The alarm cadence and whether the shop step runs at all. -->
+    <record id="view_sa_store_settings_form" model="ir.ui.view">
+        <field name="name">sa.delivery.settings.form.store</field>
+        <field name="model">sa.delivery.settings</field>
+        <field name="inherit_id"
+               ref="sales_automation_delivery.view_sa_delivery_settings_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//group[field[@name='otp_test_mode']]" position="before">
+                <group string="The Shop Counter" colspan="2">
+                    <field name="shop_confirms"/>
+                    <field name="alarm_ring_seconds"
+                           invisible="not shop_confirms"/>
+                    <field name="alarm_repeat_seconds"
+                           invisible="not shop_confirms"/>
+                </group>
+                <group string="The Enquiry Desk" colspan="2">
+                    <field name="enquiry_ring_seconds"/>
+                    <field name="enquiry_repeat_seconds"/>
+                    <field name="enquiry_alarm_minutes"/>
+                </group>
+                <group string="When No Vendor Replies" colspan="2">
+                    <field name="stalled_ring_seconds"/>
+                    <field name="stalled_repeat_minutes"/>
+                    <field name="stalled_alarm_minutes"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+    <!--
+        The store module knows about goods bought in for an order; the
+        delivery module, which owns the card, cannot see those fields. Added
+        here so the queue card says "waiting for stock" where it is true.
+    -->
+    <record id="view_sa_delivery_queue_kanban_supply" model="ir.ui.view">
+        <field name="name">stock.picking.sa.queue.kanban.supply</field>
+        <field name="model">stock.picking</field>
+        <field name="inherit_id"
+               ref="sales_automation_delivery.view_sa_delivery_queue_kanban"/>
+        <field name="arch" type="xml">
+            <!-- `//kanban/field`, not `//field`: the card template names
+                 sa_promised_on too, and a bare match would take whichever
+                 came first. -->
+            <xpath expr="//kanban/field[@name='sa_promised_on']"
+                   position="after">
+                <field name="sa_supply_waiting"/>
+                <field name="sa_supply_cost"/>
+                <field name="sa_supply_partner_id"/>
+            </xpath>
+            <!-- `inside` appends to the card. `//div[last()]` would have
+                 matched every div that is its parent's last child, and 369ai
+                 takes the first of those. -->
+            <xpath expr="//t[@t-name='card']" position="inside">
+                <div class="mt-1 text-warning fw-bold"
+                     t-if="record.sa_supply_waiting.raw_value">
+                    Waiting for stock
+                    <t t-if="record.sa_supply_partner_id.raw_value">
+                        - <field name="sa_supply_partner_id"/>
+                    </t>
+                </div>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

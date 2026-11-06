@@ -1,0 +1,439 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <template id="delivery_job_tracker" name="Rider Position Reporter">
+        <script type="text/javascript">
+            (function () {
+                var jobId = <t t-out="picking.id"/>;
+                var token = "<t t-out="token"/>";
+                var live = <t t-out="picking.sa_delivery_state in ('accepted', 'picked') and 'true' or 'false'"/>;
+                var note = document.getElementById("sa_geo_note");
+                if (!live) { return; }
+                if (!navigator.geolocation) {
+                    if (note) { note.textContent = "This phone cannot share its position."; }
+                    return;
+                }
+                // Reported at most every 20s. A delivery is minutes long, and
+                // a fix per second would drain the battery it depends on.
+                var last = 0;
+                function send(pos) {
+                    var now = Date.now();
+                    if (now - last &lt; 20000) { return; }
+                    last = now;
+                    var body = new FormData();
+                    body.append("token", token);
+                    body.append("lat", pos.coords.latitude);
+                    body.append("lng", pos.coords.longitude);
+                    body.append("acc", pos.coords.accuracy || 0);
+                    fetch("/wa/delivery/" + jobId + "/ping", {
+                        method: "POST", body: body
+                    }).then(function (r) { return r.json(); })
+                      .then(function (d) {
+                        if (d &amp;&amp; d.stop &amp;&amp; watch !== null) {
+                            navigator.geolocation.clearWatch(watch);
+                            watch = null;
+                        } else if (note) {
+                            note.textContent = "This page is sending your position to the customer while it stays open.";
+                        }
+                      }).catch(function () { /* a lost fix is not worth a popup */ });
+                }
+                function failed(err) {
+                    if (note) {
+                        note.textContent = err &amp;&amp; err.code === 1
+                            ? "Location is off - the customer cannot follow you."
+                            : "Could not read your position.";
+                    }
+                }
+                var watch = navigator.geolocation.watchPosition(send, failed, {
+                    enableHighAccuracy: true, maximumAge: 15000, timeout: 20000
+                });
+            })();
+        </script>
+    </template>
+
+    <!-- The customer's tracking page, phone first (6 Oct 2026, the app
+         team's "live tracking for every role"): the live map on top with
+         the road route, the shop, the door and the rider's dot sliding
+         between positions; a sheet below with "Arriving in N min", the
+         promise, the stop number on an Express run, the code note, the
+         rider card, the parcel, the journey (folded) and help. The page
+         draws what /pos allows and nothing else: the server decides who may
+         see the rider. One URL for the life of the order. -->
+    <template id="delivery_track_page" name="Customer Tracking">
+        <t t-set="brand_logo" t-value="logo_url or '/sales_automation/static/src/img/369mart-logo.png'"/>
+        &lt;!DOCTYPE html&gt;
+        <html lang="en">
+        <head>
+            <meta charset="utf-8"/>
+            <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+            <meta name="robots" content="noindex"/>
+            <title t-esc="'%s · %s' % (tr['label'], brand)"/>
+            <meta name="theme-color" content="#0b4a6e"/>
+            <link rel="preconnect" href="https://fonts.googleapis.com"/>
+            <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous"/>
+            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+            <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+            <style>
+:root{--navy:#0b4a6e;--blue:#0a78ab;--btn-a:#0c86be;--btn-b:#08658f;--orange:#f7931e;--ink:#13212b;--muted:#6b7a86;
+ --soft:#f4f6f8;--line:#e6ebef;--ok:#1a7f3c;--ok-bg:#e9f6ee;--err:#c8433a;--err-bg:#fdecea;--warn:#8a4a00;--warn-bg:#fff4e5;
+ --font:"Inter",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--soft);color:var(--ink);font:14px/1.5 var(--font);-webkit-font-smoothing:antialiased}
+h1,h2,h3,p,ul{margin:0} ul{list-style:none;padding:0} a{color:inherit}
+.brand{display:flex;align-items:center;gap:10px;padding:10px 16px;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:30}
+.brand img{height:34px;width:auto;display:block}
+.brand .badge{margin-left:auto;font-size:12px;font-weight:600;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:4px 10px;white-space:nowrap}
+.brand .share{font:inherit;font-size:12px;font-weight:600;color:var(--blue);background:none;border:1px solid #cfe0ea;border-radius:999px;padding:5px 10px;cursor:pointer}
+.brand .kind{font-size:11px;font-weight:800;padding:4px 10px;border-radius:999px;white-space:nowrap}
+.brand .kind.quick{background:#fff1de;color:var(--warn)} .brand .kind.express{background:#eaf5fb;color:var(--blue)}
+.head.quick{background:linear-gradient(#fff7ec,#fff)} .head.express{background:linear-gradient(#f3f9fd,#fff)}
+.mapwrap{position:relative;height:50vh;min-height:260px;max-height:520px;background:#e6f1f8}
+#sa_map{position:absolute;inset:0;z-index:1}
+.mapwrap .nomap{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);font-size:13px;padding:24px;text-align:center;z-index:2}
+.pill{position:absolute;z-index:10;display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:700;padding:6px 12px 6px 9px;border-radius:999px;background:#fff;color:var(--navy);box-shadow:0 2px 10px rgba(11,34,51,.14)}
+.pill .dot{width:8px;height:8px;border-radius:50%;background:var(--orange);position:relative}
+.pill .dot::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:2px solid var(--orange);opacity:.5;animation:ping 1.9s ease-out infinite}
+@keyframes ping{0%{transform:scale(.6);opacity:.6}70%,100%{transform:scale(1.5);opacity:0}}
+.pill.is-ok{color:var(--ok)} .pill.is-ok .dot{background:var(--ok)} .pill.is-ok .dot::after{animation:none;opacity:0}
+.pill.is-alert{color:var(--err)} .pill.is-alert .dot{background:var(--err)} .pill.is-alert .dot::after{border-color:var(--err)}
+.pill.state{top:12px;left:12px}
+.pill.fresh{bottom:12px;left:12px;font-weight:600;color:var(--muted)} .pill.fresh .dot{background:var(--ok)} .pill.fresh .dot::after{display:none}
+.pill.fresh.stale .dot{background:#9aa7b1} .pill.fresh.off{display:none}
+.sheet{max-width:560px;margin:-18px auto 0;position:relative;z-index:5;padding:0 12px 28px}
+.card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px 18px;margin-bottom:10px;box-shadow:0 1px 2px rgba(11,34,51,.04)}
+.head h1{font-size:28px;font-weight:800;letter-spacing:-.03em;line-height:1.15;color:var(--navy);text-wrap:balance}
+.head .promise{margin-top:4px;color:var(--muted);font-size:14px}
+.head .sub{margin-top:8px;font-size:14px;color:var(--ink)}
+.note{margin-top:10px;padding:10px 12px;border-radius:12px;font-size:13px;font-weight:600;display:none}
+.note.on{display:block}
+.note.run{background:#e6f1f8;color:var(--navy)}
+.note.code{background:var(--warn-bg);color:var(--warn)}
+.note.ended{background:var(--soft);color:var(--muted)}
+.ref{display:flex;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.ref .v{font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:.04em;background:var(--soft);color:var(--navy);padding:4px 9px;border-radius:8px}
+.ref button{font:inherit;font-size:13px;font-weight:600;color:var(--blue);background:none;border:0;padding:0;cursor:pointer}
+h2{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
+.who{display:flex;align-items:center;gap:12px}
+.avatar{width:44px;height:44px;border-radius:50%;flex:0 0 auto;background:linear-gradient(135deg,var(--navy),#4aa3d6);color:#fff;font-weight:700;display:grid;place-items:center}
+.who .name{font-weight:700;display:block} .who .role{font-size:13px;color:var(--muted)}
+.rider p{font-size:13px;color:var(--muted);margin-top:10px}
+.actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;justify-content:center;flex:1;min-height:44px;padding:10px 14px;border-radius:12px;font:inherit;font-size:14px;font-weight:700;text-decoration:none;border:1px solid transparent;cursor:pointer}
+.btn-primary{background:linear-gradient(180deg,var(--btn-a),var(--btn-b));color:#fff;box-shadow:0 6px 14px -8px rgba(8,101,143,.7)}
+.btn-ghost{background:#fff;color:var(--blue);border-color:#cfe0ea}
+address{font-style:normal;color:var(--muted);font-size:13px;line-height:1.6}
+.items li{display:flex;gap:12px;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
+.items li:last-child{border-bottom:0} .items b{font-weight:600;color:var(--muted);white-space:nowrap}
+.total{display:flex;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-weight:700}
+.total.due span:last-child{color:var(--warn)}
+details summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px}
+details summary::-webkit-details-marker{display:none}
+details summary h2{margin:0} details summary .count{margin-left:auto;font-size:12px;color:var(--muted)}
+details summary::after{content:"\203A";color:var(--muted);font-size:20px;line-height:1;transform:rotate(90deg);transition:transform .2s}
+details[open] summary::after{transform:rotate(-90deg)}
+.tl{margin-top:10px}
+.day{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding:10px 0 6px;border-bottom:1px solid var(--line)}
+.ev{display:grid;grid-template-columns:52px 22px minmax(0,1fr);gap:0 8px;padding:10px 0;position:relative}
+.ev time{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;padding-top:2px}
+.ev .mark{position:relative}
+.ev .mark i{position:absolute;left:5px;top:6px;width:10px;height:10px;border-radius:50%;background:var(--blue);box-shadow:0 0 0 3px #e6f1f8}
+.ev .mark::before{content:"";position:absolute;left:9px;top:16px;height:calc(100% + 8px);width:2px;background:var(--line)}
+.ev:last-child .mark::before{display:none}
+.ev h3{font-size:14px;font-weight:600;line-height:1.35} .ev p{font-size:13px;color:var(--muted);margin-top:2px}
+.ev .place{font-size:12px;color:var(--muted)}
+.ev.is-now h3{color:var(--warn)} .ev.is-now .mark i{background:var(--orange);box-shadow:0 0 0 4px var(--warn-bg)}
+.ev.is-next{opacity:.65} .ev.is-next .mark i{background:#fff;border:2px solid var(--line);box-shadow:none}
+.ev.is-ok .mark i{background:var(--ok);box-shadow:0 0 0 4px var(--ok-bg)}
+.ev.is-fail .mark i{background:var(--err);box-shadow:0 0 0 4px var(--err-bg)} .ev.is-fail h3{color:var(--err)}
+.help p{font-size:13px;color:var(--muted)} .help .btn{width:100%;margin-top:10px}
+.live{font-size:12px;color:var(--muted);text-align:center;padding:6px 0 0} .live b{color:var(--ok)}
+.toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);background:var(--ink);color:#fff;font-size:13px;font-weight:500;padding:10px 18px;border-radius:999px;opacity:0;transition:all .25s;z-index:40;pointer-events:none}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.sa-rider{width:22px;height:22px;border-radius:50%;background:var(--orange);border:3px solid #fff;box-shadow:0 0 0 2px rgba(247,147,30,.45),0 2px 8px rgba(0,0,0,.25);transition:opacity .3s}
+.sa-rider.stale{background:#9aa7b1;box-shadow:0 0 0 2px rgba(154,167,177,.4)}
+.sa-pin{width:auto;white-space:nowrap;font:700 11px/1 var(--font);color:#fff;background:var(--navy);padding:5px 8px;border-radius:999px;box-shadow:0 2px 6px rgba(0,0,0,.25);transform:translate(-50%,-50%)}
+.sa-pin.you{background:var(--blue)}
+@media (min-width:700px){.mapwrap{height:46vh}.sheet{margin-top:-24px}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+            </style>
+        </head>
+        <body>
+
+        <header class="brand">
+            <img t-att-src="brand_logo" t-att-alt="brand"/>
+            <span class="badge">Track order</span>
+            <span t-attf-class="kind #{tr.get('kind') == 'express' and 'express' or 'quick'}"
+                  t-esc="tr.get('kind') == 'express' and 'Express' or 'Quick'"/>
+            <button class="share" id="shareBtn" type="button">Share</button>
+        </header>
+
+        <div class="mapwrap">
+            <div id="sa_map"></div>
+            <div class="nomap" id="sa_nomap">The map appears when your parcel's pins are known.</div>
+            <span t-attf-class="pill state #{tr['tone'] == 'ok' and 'is-ok' or tr['tone'] == 'alert' and 'is-alert' or ''}">
+                <span class="dot"></span><span id="sa_label" t-esc="tr['label']"/>
+            </span>
+            <span class="pill fresh off" id="sa_fresh"><span class="dot"></span><span id="sa_fresh_t">Updated just now</span></span>
+        </div>
+
+        <main class="sheet" id="sa_data" t-att-data-init="init_json">
+            <section t-attf-class="card head #{tr.get('kind') == 'express' and 'express' or 'quick'}">
+                <h1 id="sa_head" t-esc="tr['eta']"/>
+                <p class="promise" id="sa_promise" t-esc="tr['promise'] or tr['eta_tail']"/>
+                <p class="sub" id="sa_sub" t-esc="tr['sub']"/>
+                <div class="note run" id="sa_run"></div>
+                <div class="note code" id="sa_code">Your 6-digit delivery code was sent to you on WhatsApp. Give it to the rider at the door.</div>
+                <div class="note ended" id="sa_ended">The rider's location is no longer shared.</div>
+                <div class="ref">
+                    <span>Order</span><span class="v" t-esc="tr['ref']"/>
+                    <button id="copyBtn" type="button">Copy</button>
+                    <t t-if="tr.get('delivery_ref')"><span>Delivery</span><span class="v" t-esc="tr['delivery_ref']"/></t>
+                    <span t-if="tr.get('kind')" t-attf-class="v #{tr['kind']}" t-esc="tr['kind'] == 'express' and 'Express' or 'Quick'"/>
+                </div>
+            </section>
+
+            <section class="card rider">
+                <h2 t-esc="tr['who_head']"/>
+                <div class="who">
+                    <span class="avatar" t-esc="tr['who_initials']"/>
+                    <span>
+                        <span class="name" t-esc="tr['who_name']"/>
+                        <span class="role" id="sa_role" t-esc="tr['who_role']"/>
+                    </span>
+                </div>
+                <p t-esc="tr['who_note']"/>
+                <div class="actions" t-if="tr['actions']">
+                    <t t-foreach="tr['actions']" t-as="act">
+                        <a t-attf-class="btn #{act[1]}" t-att-href="act[2]" t-esc="act[0]"/>
+                    </t>
+                </div>
+            </section>
+
+            <section class="card">
+                <h2>Delivering to</h2>
+                <p class="name" style="font-weight:700" t-esc="partner.name or 'Customer'"/>
+                <address>
+                    <t t-if="partner.street"><t t-esc="partner.street"/><br/></t>
+                    <t t-if="partner.street2"><t t-esc="partner.street2"/><br/></t>
+                    <t t-esc="' '.join([x for x in [partner.city, partner.zip] if x])"/>
+                    <t t-if="partner.phone"><br/><t t-esc="partner.phone"/></t>
+                </address>
+            </section>
+
+            <section class="card">
+                <h2>In this parcel</h2>
+                <ul class="items">
+                    <li t-foreach="tr['items']" t-as="it"><span t-esc="it[0]"/><b>&#215; <t t-esc="it[1]"/></b></li>
+                </ul>
+                <p t-attf-class="total #{tr['due'] and 'due' or ''}"><span t-esc="tr['pay_label']"/><span t-esc="tr['pay_value']"/></p>
+            </section>
+
+            <section class="card">
+                <details>
+                    <summary><h2>Journey</h2><span class="count"><t t-esc="len(tr['events'])"/> updates</span></summary>
+                    <div class="tl">
+                        <t t-set="last_day" t-value="None"/>
+                        <t t-foreach="tr['events']" t-as="ev">
+                            <t t-if="ev['day'] != last_day">
+                                <div class="day" t-esc="ev['day']"/>
+                                <t t-set="last_day" t-value="ev['day']"/>
+                            </t>
+                            <div t-attf-class="ev #{ev['cls']}">
+                                <time t-esc="ev['time']"/>
+                                <span class="mark"><i></i></span>
+                                <div><h3 t-esc="ev['title']"/><p t-esc="ev['note']"/><span class="place" t-esc="ev['place']"/></div>
+                            </div>
+                        </t>
+                        <t t-if="tr['next']">
+                            <div class="day">Still to come</div>
+                            <t t-foreach="tr['next']" t-as="nx">
+                                <div class="ev is-next">
+                                    <time>&#8212;</time>
+                                    <span class="mark"><i></i></span>
+                                    <div><h3 t-esc="nx[0]"/><p t-esc="nx[1]"/><span class="place" t-esc="nx[2]"/></div>
+                                </div>
+                            </t>
+                        </t>
+                    </div>
+                </details>
+            </section>
+
+            <section class="card help" id="help">
+                <h2>Something wrong?</h2>
+                <p t-esc="tr['help_text']"/>
+                <a class="btn btn-primary" t-att-href="tr['help_link']" target="_blank" rel="noopener">Message us on WhatsApp</a>
+            </section>
+            <p class="live">This page updates by itself &#183; <b id="sa_live">live</b></p>
+        </main>
+
+        <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+        <script type="text/javascript">
+        // Inside a QWeb template: text is escaped, so "&lt;" and "&amp;&amp;"
+        // are written as entities here and arrive as the operators.
+        var STATE = "<t t-out="tr['state']"/>";
+        var REF = "<t t-out="tr['ref']"/>";
+        var POS_URL = "/wa/track/<t t-out="picking.id"/>/pos?token=<t t-out="token"/>";
+        var PROMISE = "<t t-out="tr['promise'] or ''"/>";
+        var INIT = JSON.parse(document.getElementById("sa_data").getAttribute("data-init") || "{}");
+
+        function $(s) { return document.querySelector(s); }
+        function toast(msg) {
+            var t = $("#toast"); t.textContent = msg; t.classList.add("show");
+            clearTimeout(t._x); t._x = setTimeout(function () { t.classList.remove("show"); }, 2200);
+        }
+        function decode(str) {
+            // Google's encoded polyline -> [[lat, lng], ...]
+            var out = [], i = 0, lat = 0, lng = 0;
+            while (i &lt; str.length) {
+                var b, shift = 0, result = 0;
+                do { b = str.charCodeAt(i++) - 63; result |= (b &amp; 0x1f) &lt;&lt; shift; shift += 5; } while (b >= 0x20);
+                lat += (result &amp; 1) ? ~(result >> 1) : (result >> 1);
+                shift = 0; result = 0;
+                do { b = str.charCodeAt(i++) - 63; result |= (b &amp; 0x1f) &lt;&lt; shift; shift += 5; } while (b >= 0x20);
+                lng += (result &amp; 1) ? ~(result >> 1) : (result >> 1);
+                out.push([lat / 1e5, lng / 1e5]);
+            }
+            return out;
+        }
+
+        $("#copyBtn").addEventListener("click", function () {
+            navigator.clipboard.writeText(REF).then(function () { toast("Order reference copied"); },
+                                                     function () { toast("Press and hold to copy"); });
+        });
+        $("#shareBtn").addEventListener("click", function () {
+            var data = { title: "Track my order", text: "Order " + REF, url: location.href };
+            if (navigator.share) { navigator.share(data).catch(function () {}); }
+            else { navigator.clipboard.writeText(location.href).then(function () { toast("Link copied"); }); }
+        });
+
+        var map = null, routeLine = null, shopPin = null, youPin = null, rider = null, fitted = false;
+        var glideTimer = null, lastFixMs = 0, glideMs = 6000, fixAtMs = 0, ageAtFix = 0, staleNow = false;
+
+        function pin(lat, lng, text, cls) {
+            return L.marker([lat, lng], { icon: L.divIcon({ className: "", html: '&lt;span class="sa-pin ' + cls + '">' + text + '&lt;/span>', iconSize: [0, 0] }), interactive: false });
+        }
+        function ensureMap(d) {
+            if (!window.L) { return false; }
+            var pts = [];
+            if (d.shop) { if (d.shop.latitude) { pts.push([d.shop.latitude, d.shop.longitude]); } }
+            if (d.dropoff) { if (d.dropoff.latitude) { pts.push([d.dropoff.latitude, d.dropoff.longitude]); } }
+            if (!pts.length) { return false; }
+            if (!map) {
+                map = L.map("sa_map", { zoomControl: false, attributionControl: false }).setView(pts[0], 14);
+                L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(map);
+                $("#sa_nomap").style.display = "none";
+            }
+            if (d.shop) { if (d.shop.latitude) { if (!shopPin) { shopPin = pin(d.shop.latitude, d.shop.longitude, "Shop", "").addTo(map); } } }
+            if (d.dropoff) { if (d.dropoff.latitude) { if (!youPin) { youPin = pin(d.dropoff.latitude, d.dropoff.longitude, "You", "you").addTo(map); } } }
+            if (d.route) { if (d.route.polyline) {
+                var line = decode(d.route.polyline);
+                if (!routeLine) {
+                    routeLine = L.polyline(line, { color: "#0a78ab", weight: 5, opacity: .85, dashArray: d.route.approximate ? "6 10" : null, lineCap: "round" }).addTo(map);
+                } else { routeLine.setLatLngs(line); }
+                line.forEach(function (p) { pts.push(p); });
+            } }
+            if (!fitted) { map.fitBounds(L.latLngBounds(pts).pad(0.18)); fitted = true; }
+            return true;
+        }
+        function glide(lat, lng) {
+            var from = rider.getLatLng(), t0 = Date.now(), ms = glideMs;
+            if (Math.abs(from.lat - lat) &lt; 1e-7) { if (Math.abs(from.lng - lng) &lt; 1e-7) { return; } }
+            if (glideTimer) { clearInterval(glideTimer); }
+            glideTimer = setInterval(function () {
+                var k = Math.min(1, (Date.now() - t0) / ms);
+                rider.setLatLng([from.lat + (lat - from.lat) * k, from.lng + (lng - from.lng) * k]);
+                if (k >= 1) { clearInterval(glideTimer); glideTimer = null; }
+            }, 60);
+        }
+        function showRider(r) {
+            if (!map) { return; }
+            var html = '&lt;span class="sa-rider' + (r.stale ? " stale" : "") + '">&lt;/span>';
+            if (!rider) {
+                rider = L.marker([r.latitude, r.longitude], { icon: L.divIcon({ className: "", html: html, iconSize: [22, 22], iconAnchor: [11, 11] }), interactive: false, zIndexOffset: 1000 }).addTo(map);
+                map.fitBounds(L.latLngBounds([[r.latitude, r.longitude]].concat(youPin ? [youPin.getLatLng()] : [])).pad(0.3));
+            } else {
+                rider.setIcon(L.divIcon({ className: "", html: html, iconSize: [22, 22], iconAnchor: [11, 11] }));
+                glide(r.latitude, r.longitude);
+                if (!map.getBounds().pad(-0.25).contains([r.latitude, r.longitude])) { map.panTo([r.latitude, r.longitude], { animate: true, duration: 1.2 }); }
+            }
+        }
+        function hideRider() {
+            if (rider) { map.removeLayer(rider); rider = null; }
+            $("#sa_fresh").classList.add("off");
+        }
+        function clock(iso) {
+            var d = new Date(iso); if (isNaN(d.getTime())) { return ""; }
+            return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+        }
+        function fresh() {
+            // ticks every second from the last fix the server reported
+            if (!fixAtMs) { return; }
+            var age = ageAtFix + Math.round((Date.now() - fixAtMs) / 1000);
+            var el = $("#sa_fresh"), t = $("#sa_fresh_t");
+            el.classList.remove("off");
+            if (staleNow) { el.classList.add("stale"); t.textContent = "Last seen " + (age &lt; 90 ? age + " s" : Math.round(age / 60) + " min") + " ago"; }
+            else { el.classList.remove("stale"); t.textContent = "Updated " + Math.max(0, age) + " s ago"; }
+        }
+        function apply(d) {
+            if (d.state) { if (d.state !== STATE) { location.reload(); return; } }
+            ensureMap(d);
+            var head = $("#sa_head"), promise = $("#sa_promise"), run = $("#sa_run"), code = $("#sa_code"), ended = $("#sa_ended");
+            if (d.ended) { ended.classList.add("on"); hideRider(); fixAtMs = 0; }
+            else if (d.show_rider) {
+                if (d.rider) {
+                    showRider(d.rider);
+                    staleNow = !!d.rider.stale;
+                    ageAtFix = d.rider.age_seconds || 0; fixAtMs = Date.now();
+                    if (d.rider.fix_at) {
+                        var t = new Date(d.rider.fix_at).getTime();
+                        if (lastFixMs) { if (t > lastFixMs) { glideMs = Math.max(3000, Math.min(20000, t - lastFixMs)); } }
+                        if (t) { lastFixMs = t; }
+                    }
+                    fresh();
+                } else { hideRider(); fixAtMs = 0; }
+            } else { hideRider(); fixAtMs = 0; }
+            if (d.eta) {
+                if (d.eta.minutes) {
+                    if (d.show_rider) { head.textContent = "Arriving in " + d.eta.minutes + " min"; promise.textContent = PROMISE || ""; }
+                } else if (d.eta.window_to) {
+                    if (!d.ended) { promise.textContent = (d.eta.window_from ? "Between " + clock(d.eta.window_from) + " and " + clock(d.eta.window_to) : "By " + clock(d.eta.window_to)); }
+                }
+            }
+            run.classList.remove("on");
+            if (d.run) { if (!d.show_rider) { if (d.run.stops_before > 0) {
+                run.textContent = "You are stop " + d.run.stop_no + " of " + d.run.stops_total + ". The live map turns on when you are next.";
+                run.classList.add("on");
+            } } }
+            if (d.run) { if (d.show_rider) { if (d.run.stops_total > 1) { $("#sa_role").textContent = "Stop " + d.run.stop_no + " of " + d.run.stops_total + " on this run"; } } }
+            code.classList.toggle("on", !!d.show_code);
+            if (d.vehicle) { if (!d.run || d.run.stops_total == 1) { $("#sa_role").textContent = d.vehicle; } }
+        }
+
+        var missed = 0, pollTimer = null;
+        function poll() {
+            fetch(POS_URL, { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (d) {
+                missed = 0; $("#sa_live").textContent = "live";
+                apply(d);
+                schedule(d.next_poll_seconds || 20);
+            }).catch(function () {
+                missed += 1;
+                if (missed > 2) { $("#sa_live").textContent = "reconnecting…"; }
+                schedule(15);
+            });
+        }
+        function schedule(s) {
+            if (STATE === "delivered") { return; }
+            clearTimeout(pollTimer); pollTimer = setTimeout(poll, Math.max(5, Math.min(60, s)) * 1000);
+        }
+        apply(INIT);
+        setInterval(fresh, 1000);
+        if (STATE !== "delivered") { schedule(INIT.next_poll_seconds || 10); }
+        </script>
+        </body>
+        </html>
+    </template>
+
+</odoo>

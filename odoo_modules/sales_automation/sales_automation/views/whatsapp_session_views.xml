@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--
+        The Sync Groups button, on the session form the groups belong to.
+
+        Appended inside the header that is already there, rather than aimed at
+        a particular field or button: whatsapp_gateway's form is shared with
+        whatsapp_broadcast and whatsapp_email, and an xpath onto a node one of
+        them moves takes the whole form down with an "owl lifecycle" error that
+        names nothing. `position="inside"` on the container survives whatever
+        those two do to its contents.
+    -->
+    <record id="view_whatsapp_session_form_sa_groups" model="ir.ui.view">
+        <field name="name">whatsapp.session.form.sa.groups</field>
+        <field name="model">whatsapp.session</field>
+        <field name="inherit_id" ref="whatsapp_gateway.view_whatsapp_session_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <button name="action_sa_sync_groups" type="object"
+                        string="Sync Groups" class="btn-secondary"
+                        groups="sales_automation.group_sa_manager"
+                        help="Fetch every group this number has joined, then tick the ones that should answer product enquiries."/>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

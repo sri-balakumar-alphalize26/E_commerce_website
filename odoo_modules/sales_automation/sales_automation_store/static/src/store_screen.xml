@@ -1,0 +1,581 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+<t t-name="sales_automation_store.StoreScreen">
+  <div class="sa_store">
+
+    <div class="sa_store_bar">
+      <div class="sa_store_counts">
+        <span class="sa_pill sa_pill_new" t-att-class="{ 'sa_pulse': state.ringing }">
+          <t t-esc="state.ringing"/> new
+        </span>
+        <span class="sa_pill sa_pill_pack"><t t-esc="state.packing"/> packing</span>
+      </div>
+
+      <select class="sa_store_shop" t-on-change="onShopChange"
+              t-if="state.shops.length > 1">
+        <option value="0">All shops</option>
+        <t t-foreach="state.shops" t-as="shop" t-key="shop.id">
+          <option t-att-value="shop.id" t-att-selected="shop.id === state.shopId">
+            <t t-esc="shop.name"/>
+          </option>
+        </t>
+      </select>
+
+      <button class="btn btn-outline-primary btn-sm sa_live_map_btn" t-on-click="() => this.openLiveMap()"
+              title="Every rider of this shop on one map, with their stops and the orders waiting for a rider.">
+        &#128506; Live map
+      </button>
+
+      <button class="btn btn-warning sa_store_sound" t-if="state.soundBlocked"
+              t-on-click="onEnableSound">
+        Turn on the alarm
+      </button>
+      <t t-else="">
+        <span class="sa_sound_on">Alarm on</span>
+        <button class="btn btn-secondary btn-sm sa_test_sound"
+                t-on-click="onTestSound" title="Play the alarm once">
+          Test sound
+        </button>
+      </t>
+    </div>
+
+    <!-- Said plainly. A screen that believes it is alerting somebody while
+         making no sound is worse than one with no alarm at all. -->
+    <div class="sa_store_warn" t-if="state.soundBlocked">
+      This browser blocked the sound - tap "Turn on the alarm" once.
+    </div>
+
+    <div class="sa_store_empty" t-if="!state.loading and !state.rows.length">
+      <div class="sa_store_empty_mark">✓</div>
+      <div>Nothing waiting. New orders appear here on their own.</div>
+    </div>
+
+    <div class="sa_store_grid">
+      <t t-foreach="state.rows" t-as="row" t-key="row.id">
+        <div class="sa_card" t-att-class="'sa_card_' + row.state">
+
+          <div class="sa_card_top">
+            <span class="sa_ref">#<t t-esc="row.ref"/></span>
+            <span class="sa_stage"><t t-esc="stageLabel(row)"/></span>
+            <span class="sa_company" t-if="row.company"><t t-esc="row.company"/></span>
+            <span class="sa_wait" t-if="row.waiting">
+              <t t-esc="row.waiting"/> min
+            </span>
+          </div>
+
+          <div class="sa_who">
+            <div class="sa_cust"><t t-esc="row.customer"/></div>
+            <div class="sa_addr"><t t-esc="row.address"/></div>
+            <div class="sa_addr" t-if="row.phone"><t t-esc="row.phone"/></div>
+          </div>
+
+          <ul class="sa_lines">
+            <t t-foreach="row.lines" t-as="line" t-key="line_index">
+              <li>
+                <span class="sa_qty"><t t-esc="line.qty"/></span>
+                <span><t t-esc="line.name"/></span>
+              </li>
+            </t>
+          </ul>
+
+          <!-- Where the money and the paperwork are. Opens 369ai in a new
+               tab so the counter screen keeps ringing behind it. -->
+          <div class="sa_docs">
+            <a t-if="row.order_id" class="sa_doc"
+               t-attf-href="/odoo/sale.order/#{row.order_id}" target="_blank">
+              Order <t t-esc="row.order_name"/>
+            </a>
+            <a t-if="row.invoice_id" class="sa_doc"
+               t-attf-href="/odoo/account.move/#{row.invoice_id}" target="_blank">
+              Invoice <t t-esc="row.invoice_name"/>
+              <t t-if="row.invoice_paid"> · paid</t>
+            </a>
+            <a t-if="row.invoice_id" class="sa_doc sa_doc_print"
+               t-attf-href="/report/pdf/account.account_invoices/#{row.invoice_id}"
+               target="_blank">
+              Print invoice
+            </a>
+            <button t-if="row.can_cancel" class="btn btn-link sa_cancel"
+                    t-on-click="() => this.onCancel(row)">
+              Cancel order
+            </button>
+          </div>
+
+          <div class="sa_money">
+            <t t-if="row.paid">
+              <span class="sa_paid">Paid</span>
+            </t>
+            <t t-else="">
+              <span class="sa_cod">
+                Collect <t t-esc="row.collect"/> <t t-esc="row.currency"/>
+              </span>
+            </t>
+            <span class="sa_rider" t-if="row.rider"><t t-esc="row.rider"/></span>
+          </div>
+
+          <!-- the live line (6 Oct 2026): who carries it, which stop, how far, how fresh -->
+          <div class="sa_live" t-if="row.live">
+            <span class="sa_live_main">
+              <b t-esc="row.rider"/>
+              <t t-if="row.live.stops_total > 1"> &#183; stop <t t-esc="row.live.stop_no"/> of <t t-esc="row.live.stops_total"/></t>
+              <t t-if="row.live.km !== null and row.live.km !== undefined"> &#183; <t t-esc="row.live.km"/> km</t>
+              <t t-if="row.live.minutes"> &#183; <t t-esc="row.live.minutes"/> min</t>
+              <t t-elif="row.live.arrives_by"> &#183; arrives by <t t-esc="row.live.arrives_by"/></t>
+            </span>
+            <span class="sa_live_fresh" t-att-class="{ sa_live_stale: row.live.stale or !row.live.has_pos }"><t t-esc="freshText(row.live)"/></span>
+            <a class="sa_live_map" t-on-click="() => this.openLiveMap(row)">Live map</a>
+          </div>
+          <div class="sa_live sa_live_missed" t-if="!row.live and row.missed_by and !row.rider">
+            Missed by <t t-esc="row.missed_by"/> &#183; nobody free nearby
+          </div>
+
+          <div class="sa_supply_line" t-if="row.supply_waiting">
+            <span class="sa_supply_badge">
+              <t t-esc="row.kind === 'express' ? 'Express' : 'Same day'"/>
+            </span>
+            <t t-if="row.promised"> · <t t-esc="row.promised"/></t>
+            <t t-if="row.supply_vendor"> · <t t-esc="row.supply_vendor"/></t>
+            <t t-if="row.supply_cost"> · we pay <t t-esc="row.supply_cost"/></t>
+            <span t-if="!row.supply_asked" class="sa_supply_none">
+              · no supplier asked yet
+            </span>
+          </div>
+
+          <div class="sa_actions">
+            <button class="btn btn-primary sa_big"
+                    t-if="row.state === 'awaiting_shop'"
+                    t-att-disabled="state.busy === row.id"
+                    t-on-click="() => this.onAccept(row)">
+              Accept
+            </button>
+
+            <!-- Bought in and not here yet: there is nothing to pack, so
+                 the packing button would be a lie. -->
+            <button class="btn btn-warning sa_big"
+                    t-if="row.supply_waiting"
+                    t-att-disabled="state.busy === row.id"
+                    t-on-click="() => this.act(row, 'supply_arrived')">
+              Goods arrived
+            </button>
+
+            <button class="btn btn-success sa_big"
+                    t-if="row.state === 'preparing' and !row.supply_waiting"
+                    t-att-disabled="state.busy === row.id"
+                    t-on-click="() => this.act(row, 'ready')">
+              Packed - call the rider
+            </button>
+
+            <button class="btn btn-link sa_undo"
+                    t-if="row.state === 'preparing' and !row.supply_waiting"
+                    t-on-click="() => this.act(row, 'unaccept')">
+              Put back
+            </button>
+
+            <button class="btn btn-warning sa_big"
+                    t-if="(row.state === 'ready' or row.state === 'to_assign') and !row.rider and !row.waiting_payment"
+                    title="Calls ONE rider: pick one yourself, or Auto picks the nearest free rider to the shop (random on an exact tie). No answer in time = the next rider is called."
+                    t-att-disabled="state.busy === row.id"
+                    t-on-click="() => this.onCallRider(row)">
+              Call a Rider <span class="sa_info">&#9432;</span>
+            </button>
+            <!-- online order, not paid yet (6 Oct 2026): the button waits for the payment -->
+            <t t-if="(row.state === 'ready' or row.state === 'to_assign') and !row.rider and row.waiting_payment">
+              <button class="btn btn-secondary sa_big sa_wait_pay" disabled="disabled"
+                      title="The customer chose to pay online and has not paid yet. The rider is called by itself the moment the payment arrives.">
+                Waiting for the customer's payment
+              </button>
+              <button class="btn btn-link sa_force_call" t-if="state.isManager"
+                      title="Delivery managers only: call a rider before the payment."
+                      t-on-click="() => this.onForceCall(row)">Call anyway</button>
+            </t>
+            <span class="sa_waiting_rider" t-if="row.state === 'offered'">
+              Offered to <b t-esc="row.rider"/> &#183; <t t-esc="row.offer_left"/> s left
+            </span>
+            <button class="btn btn-link sa_undo" t-if="row.state === 'offered'"
+                    title="Stop waiting for this rider and call the next candidate now."
+                    t-att-disabled="state.busy === row.id"
+                    t-on-click="() => this.act(row, 'next_rider')">
+              Next rider
+            </button>
+            <span class="sa_waiting_pay" t-if="row.unpaid_wait">
+              <t t-if="row.unpaid_wait_left > 0">&#9203; Waiting for payment &#183; <t t-esc="row.unpaid_wait_left"/> s</t>
+              <t t-else="">Not paid yet &#8212; the rider will be called when the customer pays.</t>
+            </span>
+            <span class="sa_waiting_rider" t-if="(row.state === 'ready' or row.state === 'to_assign') and row.rider">
+              Rider: <b t-esc="row.rider"/>
+            </span>
+          </div>
+
+          <!-- The five steps (owner, 1 Oct 2026): Dispatch (pickup code) ->
+               Collected by rider -> Rider near customer -> Reached (customer
+               code) -> Delivered (customer code). Each button has an (i). -->
+          <!-- a rider pressed SOS (6 Oct 2026): red until somebody presses Handled -->
+          <div class="sa_issue sa_sos" t-if="row.sos">
+            <span>
+              <b>&#127384; SOS from <t t-esc="row.sos.rider"/></b> at <t t-esc="row.sos.at"/>
+              <t t-if="row.sos.phone"> &#183; <a t-attf-href="tel:#{row.sos.phone}"><t t-esc="row.sos.phone"/></a></t>
+              <t t-if="row.sos.map_url"> &#183; <a t-att-href="row.sos.map_url" target="_blank">Open map &#8599;</a></t>
+              <div class="sa_issue_note" t-if="!row.sos.whatsapp_sent">The office WhatsApp could not be sent - call the rider.</div>
+            </span>
+            <button class="btn btn-sm btn-danger"
+                    title="Press once the rider has been reached and helped. Clears the alert on every screen."
+                    t-on-click="() => this.act(row, 'sos_handled', { sos_id: row.sos.id })">Handled</button>
+          </div>
+          <div class="sa_issue" t-if="row.issue">
+            <span>
+              <b>&#9888; Rider report:</b> <t t-esc="row.issue"/>
+              <t t-if="row.issue_at"> &#183; <t t-esc="row.issue_at"/></t>
+              <div class="sa_issue_note" t-if="row.issue_note">&#8220;<t t-esc="row.issue_note"/>&#8221;</div>
+              <div class="sa_issue_photos" t-if="row.issue_photos and row.issue_photos.length">
+                <a t-foreach="row.issue_photos" t-as="ph" t-key="ph.id" t-att-href="ph.url" target="_blank"
+                   t-att-title="ph.name" class="sa_issue_photo">
+                  <img t-att-src="ph.thumb" t-att-alt="ph.name"/>
+                </a>
+                <span class="sa_issue_photo_count">Photo (<t t-esc="row.issue_photos.length"/>) &#8599;</span>
+              </div>
+            </span>
+            <button class="btn btn-sm btn-light"
+                    title="Press when it is dealt with (the missing item handed over, the customer called ...). Hides this report."
+                    t-on-click="() => this.act(row, 'issue_seen')">Done</button>
+          </div>
+          <div class="sa_stage_text" t-if="row.stage_text"><t t-esc="row.stage_text"/></div>
+          <a class="sa_track_link" target="_blank"
+             t-if="row.track_url and ['accepted','picked','dispatched','out_for_delivery'].includes(row.state)"
+             t-att-href="row.track_url"
+             title="Opens this order's live tracking page: the rider on the map, from the rider app.">
+            &#128205; Live tracking
+          </a>
+
+          <div class="sa_pickup" t-if="['ready','offered','accepted','picked','to_assign'].includes(row.state)">
+            <div class="sa_arrived" t-if="row.pickup_handover === 'branch' and row.rider_arrived">
+              &#128757; <b t-esc="row.rider"/> is at the counter (<t t-esc="row.rider_arrived_at"/>).
+              <t t-if="!row.pickup_code">Press Dispatch and read the code to the rider.</t>
+            </div>
+            <t t-if="row.pickup_code">
+              <div class="sa_pickup_label">
+                <t t-if="row.pickup_handover === 'branch' and row.state === 'accepted'">Pickup code - read it to the rider; the rider types it in the app</t>
+                <t t-else="">Pickup code (also sent to the rider)</t>
+              </div>
+              <div class="sa_pickup_code"><t t-esc="row.pickup_code"/></div>
+            </t>
+            <div class="sa_actions" style="margin-top:6px">
+              <button class="btn btn-secondary" t-if="row.rider and !(row.pickup_handover === 'branch' and row.state === 'accepted')"
+                      title="Makes a 6-digit pickup code, shows it here and sends it to the rider's WhatsApp."
+                      t-att-disabled="state.busy === row.id"
+                      t-on-click="() => this.act(row, 'gen_pickup_otp')">
+                <t t-if="row.pickup_code">New pickup code</t><t t-else="">Generate pickup code</t>
+              </button>
+              <button class="btn btn-primary sa_big"
+                      t-att-title="(row.pickup_handover === 'branch' and row.state === 'accepted') ? 'Step 1. The rider is at the counter: press to show the 6-digit pickup code. Read it to the rider; the rider types it in the app and the parcel leaves.' : 'Step 1. Pick the rider and type the pickup code the rider shows you. The parcel leaves with the rider.'"
+                      t-att-disabled="state.busy === row.id"
+                      t-on-click="() => this.onDispatch(row)">
+                Dispatch <span class="sa_info">&#9432;</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="sa_pickup" t-if="row.state === 'dispatched'">
+            <div class="sa_actions" style="margin-top:6px">
+              <button class="btn btn-primary sa_big"
+                      title="Step 2. Tells the customer on WhatsApp that the rider is close - please be ready to receive."
+                      t-att-disabled="state.busy === row.id"
+                      t-on-click="() => this.act(row, 'near')">
+                Rider near customer <span class="sa_info">&#9432;</span>
+              </button>
+              <button class="btn btn-link sa_undo"
+                      title="Could not deliver - the customer and the rider are told; the job stays open."
+                      t-att-disabled="state.busy === row.id"
+                      t-on-click="() => this.onFail(row)">
+                Failed
+              </button>
+            </div>
+          </div>
+
+          <div class="sa_pickup" t-if="row.state === 'out_for_delivery'">
+            <div class="sa_actions" style="margin-top:6px">
+              <button class="btn btn-primary sa_big" t-if="!row.reached_on"
+                      title="Step 3. Sends the customer a 6-digit code on WhatsApp. The customer gives it to the rider after taking the parcel."
+                      t-att-disabled="state.busy === row.id"
+                      t-on-click="() => this.act(row, 'reached')">
+                Reached customer location <span class="sa_info">&#9432;</span>
+              </button>
+              <button class="btn btn-secondary" t-if="row.reached_on"
+                      title="Sends the customer a fresh code; the old one stops working."
+                      t-att-disabled="state.busy === row.id"
+                      t-on-click="() => this.act(row, 'reached')">
+                Resend code
+              </button>
+              <button class="btn btn-success sa_big" t-if="row.reached_on"
+                      title="Step 4. Type the code the customer gave the rider. Closes the delivery and the order."
+                      t-att-disabled="state.busy === row.id"
+                      t-on-click="() => this.onOtp(row, 'delivery')">
+                Delivered <span class="sa_info">&#9432;</span>
+              </button>
+              <button class="btn btn-link sa_undo"
+                      title="Could not deliver - the customer and the rider are told; the job stays open."
+                      t-att-disabled="state.busy === row.id"
+                      t-on-click="() => this.onFail(row)">
+                Failed
+              </button>
+            </div>
+          </div>
+        </div>
+      </t>
+    </div>
+  </div>
+</t>
+
+<t t-name="sales_automation_store.OtpDialog">
+  <Dialog title="props.title" size="'sm'">
+    <p class="sa_cd_lead"><t t-esc="props.hint"/></p>
+    <div class="alert alert-danger" t-if="state.error"><t t-esc="state.error"/></div>
+    <t t-if="props.riders">
+      <label class="sa_lbl">Rider collecting</label>
+      <select class="form-select mb-2" t-model="state.rider">
+        <option value="">- pick the rider -</option>
+        <option t-foreach="props.riders" t-as="r" t-key="r.id" t-att-value="r.id"><t t-esc="r.name"/></option>
+      </select>
+    </t>
+    <input type="text" inputmode="numeric" maxlength="6" class="form-control"
+           style="font-size:28px;letter-spacing:10px;text-align:center;font-family:monospace"
+           placeholder="6 digits" t-model="state.code"/>
+    <t t-set-slot="footer">
+      <button class="btn btn-primary" t-on-click="confirm">Confirm</button>
+      <button class="btn btn-secondary" t-on-click="() => props.close()">Cancel</button>
+    </t>
+  </Dialog>
+</t>
+
+<t t-name="sales_automation_store.DispatchCodeDialog">
+  <Dialog title="props.title" size="'md'">
+    <t t-if="state.done">
+      <div class="sa_code_done">&#10004; Collected - the rider typed the code.</div>
+    </t>
+    <t t-else="">
+      <p class="sa_cd_lead">
+        Read this code to <b t-esc="props.rider"/>. The rider types it in the rider app;
+        this window closes by itself when the code is accepted.
+      </p>
+      <div class="alert alert-warning" t-if="!props.arrived">
+        The rider has not signalled arrival yet. Hand the parcel only to the rider named above.
+      </div>
+      <div class="sa_code_big">
+        <span t-foreach="digits" t-as="d" t-key="d_index" t-esc="d"/>
+      </div>
+      <div class="sa_code_left" t-if="state.left"><t t-esc="state.left"/></div>
+    </t>
+    <t t-set-slot="footer">
+      <button class="btn btn-secondary" t-if="!state.done" t-att-disabled="state.busy"
+              title="Makes a new code; the old one stops working."
+              t-on-click="newCode">New code</button>
+      <button class="btn btn-primary" t-on-click="() => props.close()">Close</button>
+    </t>
+  </Dialog>
+</t>
+
+<t t-name="sales_automation_store.CallRiderDialog">
+  <Dialog title="props.title" size="'lg'">
+    <p class="sa_cd_lead">
+      <t t-if="props.mode === 'manual'">
+        Tick the riders for this order. They are called <b>one at a time</b>, the nearest
+        free rider first; if one does not answer in the time limit, the next ticked rider
+        is called. Nobody else is called.
+      </t>
+      <t t-else="">
+        Press <b>Auto</b> to call the nearest free rider, or tick the riders yourself.
+        One rider is called at a time, never all.
+      </t>
+    </p>
+    <div class="alert alert-danger" t-if="state.error"><t t-esc="state.error"/></div>
+    <div class="sa_cand_tabs">
+      <button t-att-class="{ 'sa_cand_tab': true, 'sa_cand_tab_on': state.tab === 'free' }"
+              t-on-click="() => { state.tab = 'free'; }">
+        Available (<t t-esc="free.length"/>)
+      </button>
+      <button t-att-class="{ 'sa_cand_tab': true, 'sa_cand_tab_on': state.tab === 'other' }"
+              t-on-click="() => { state.tab = 'other'; }">
+        Not available (<t t-esc="others.length"/>)
+      </button>
+    </div>
+
+    <t t-if="state.tab === 'free'">
+      <table class="sa_cand_table" t-if="free.length">
+        <thead>
+          <tr>
+            <th class="sa_cand_chk">
+              <input type="checkbox" title="Tick every available rider"
+                     t-att-checked="allFreeTicked" t-on-change="toggleAll"/>
+            </th>
+            <th>#</th><th>Rider</th><th>Distance</th><th>Idle</th><th>Where</th>
+          </tr>
+        </thead>
+        <tbody>
+          <t t-foreach="free" t-as="c" t-key="c.id">
+            <tr t-att-class="{ 'sa_cand_sel': state.picked[c.id] }" t-on-click="() => this.toggle(c)">
+              <td class="sa_cand_chk"><input type="checkbox" t-att-checked="!!state.picked[c.id]"/></td>
+              <td><t t-esc="rank(c)"/></td>
+              <td><b t-esc="c.name"/><div class="sa_cand_sub" t-esc="c.phone"/></td>
+              <td>
+                <t t-if="c.distance_km !== null"><t t-esc="c.distance_km"/> km</t>
+                <t t-else="">no position</t>
+              </td>
+              <td><t t-esc="idle(c)"/></td>
+              <td>
+                <t t-esc="c.address_short or '-'"/>
+                <div class="sa_cand_sub" t-if="c.fix_age_min !== null">seen <t t-esc="c.fix_age_min"/> min ago</div>
+              </td>
+            </tr>
+          </t>
+        </tbody>
+      </table>
+      <p class="sa_cd_lead" t-else="">
+        No rider can be called right now.
+        <t t-if="others.length">See <b>Not available</b> for who is on a delivery or off duty.</t>
+        <t t-else="">Riders go on duty from the rider app.</t>
+      </p>
+    </t>
+
+    <t t-else="">
+      <p class="sa_cd_lead">These riders cannot be called for this order now.</p>
+      <table class="sa_cand_table sa_cand_readonly" t-if="others.length">
+        <thead><tr><th>Rider</th><th>Why</th><th>Where</th></tr></thead>
+        <tbody>
+          <t t-foreach="others" t-as="c" t-key="c.id">
+            <tr class="sa_cand_dim">
+              <td><b t-esc="c.name"/><div class="sa_cand_sub" t-esc="c.phone"/></td>
+              <td>
+                <span class="sa_badge sa_badge_busy" t-if="c.busy and !c.declined"><t t-esc="why(c)"/></span>
+                <span class="sa_badge sa_badge_miss" t-elif="c.declined"><t t-esc="why(c)"/></span>
+                <span class="sa_badge sa_badge_off" t-else=""><t t-esc="why(c)"/></span>
+              </td>
+              <td>
+                <t t-esc="c.address_short or '-'"/>
+                <div class="sa_cand_sub" t-if="c.fix_age_min !== null">seen <t t-esc="c.fix_age_min"/> min ago</div>
+              </td>
+            </tr>
+          </t>
+        </tbody>
+      </table>
+      <p class="sa_cd_lead" t-else="">Nobody: every rider of this shop is available.</p>
+    </t>
+    <t t-set-slot="footer">
+      <button class="btn btn-primary" t-att-disabled="!count" t-on-click="() => this.confirm(false)">
+        Call selected (<t t-esc="count"/>)
+      </button>
+      <button class="btn btn-warning" t-if="props.mode !== 'manual'" t-on-click="() => this.confirm(true)">
+        Auto - nearest free rider
+      </button>
+      <button class="btn btn-secondary" t-on-click="() => props.close()">Cancel</button>
+    </t>
+  </Dialog>
+</t>
+
+<t t-name="sales_automation_store.CompanyDialog">
+  <Dialog title="props.title" size="'md'">
+    <p class="sa_cd_lead">
+      Pick the company whose stock this order comes from. Only a company that
+      has every line on its shelf can be chosen.
+    </p>
+    <div class="sa_cd_list">
+      <t t-foreach="props.options" t-as="co" t-key="co.id">
+        <button class="sa_cd_option" t-att-class="{ 'sa_cd_ok': co.ok, 'sa_cd_no': !co.ok, 'sa_cd_current': co.current }"
+                t-att-disabled="!co.ok"
+                t-on-click="() => this.pick(co)">
+          <div class="sa_cd_head">
+            <span class="sa_cd_name"><t t-esc="co.name"/></span>
+            <span class="sa_cd_wh"><t t-esc="co.warehouse"/></span>
+            <span class="sa_cd_tag" t-if="co.current">booked here now</span>
+          </div>
+          <ul class="sa_cd_lines">
+            <li t-foreach="co.lines" t-as="ln" t-key="ln_index"
+                t-att-class="{ 'sa_cd_short': !ln.found or ln.have &lt; ln.need }">
+              <span><t t-esc="ln.name"/></span>
+              <b t-if="ln.found"><t t-esc="ln.have"/> in stock · need <t t-esc="ln.need"/></b>
+              <b t-else="">not sold here</b>
+            </li>
+          </ul>
+        </button>
+      </t>
+    </div>
+    <t t-set-slot="footer">
+      <!-- The dead end this screen used to be: with every company short of
+           stock all four buttons above are disabled and Back was the only
+           thing left. -->
+      <button class="btn btn-warning sa_cd_supply" t-if="stuck"
+              t-on-click="supply">
+        No stock anywhere - order from supplier
+      </button>
+      <button class="btn btn-secondary" t-on-click="props.close">Back</button>
+    </t>
+  </Dialog>
+</t>
+
+<t t-name="sales_automation_store.SupplyDialog">
+  <Dialog title="'Order #' + props.row.ref + ' from a supplier'" size="'md'">
+    <div class="sa_supply_dlg">
+      <p class="sa_cd_lead">
+        Nothing on any shelf. Ask a supplier what they want for it, then put
+        the amount and the day it will be here.
+      </p>
+
+      <div class="alert alert-warning" t-if="props.noCateg">
+        This product has no category, so suppliers cannot be routed - every
+        supplier is offered instead. Worth fixing on the product.
+      </div>
+      <div class="alert alert-danger" t-if="state.error">
+        <t t-esc="state.error"/>
+      </div>
+
+      <label class="sa_lbl">Who should we ask?</label>
+      <div class="sa_cd_list">
+        <div class="sa_cd_option sa_supply_vendor" t-foreach="props.vendors"
+             t-as="v" t-key="v.id"
+             t-att-class="{ sa_cd_no: !v.ok, sa_supply_on: isPicked(v) }"
+             t-on-click="() => this.toggle(v)">
+          <input type="checkbox" t-att-checked="isPicked(v)"
+                 t-att-disabled="!v.ok"/>
+          <span class="sa_cd_name"><t t-esc="v.name"/></span>
+          <span class="sa_cd_wh" t-if="v.ok"><t t-esc="v.phone"/></span>
+          <span class="sa_cd_wh" t-else="">no number</span>
+        </div>
+      </div>
+      <button class="btn btn-secondary sa_supply_ask" t-on-click="ask">
+        <t t-if="state.asked">Ask again</t>
+        <t t-else="">Ask these suppliers</t>
+      </button>
+
+      <label class="sa_lbl">What do we pay?</label>
+      <input type="text" inputmode="decimal" class="form-control sa_supply_cost"
+             placeholder="900" t-model="state.cost"/>
+
+      <label class="sa_lbl">Which supplier? (optional)</label>
+      <select class="form-select" t-model="state.partner">
+        <option value="">Not saying</option>
+        <option t-foreach="props.vendors" t-as="v" t-key="v.id"
+                t-att-value="v.id"><t t-esc="v.name"/></option>
+      </select>
+
+      <label class="sa_lbl">When will it be here?</label>
+      <div class="sa_supply_when">
+        <input type="date" class="form-control" t-model="state.day"/>
+        <span class="sa_supply_kind"><t t-esc="kindLabel"/></span>
+      </div>
+      <p class="sa_supply_note">
+        The customer keeps the price they already agreed - this is only what
+        it costs us. They are not sent a new message.
+      </p>
+    </div>
+
+    <t t-set-slot="footer">
+      <button class="btn btn-primary" t-on-click="save">
+        Accept and order it in
+      </button>
+      <button class="btn btn-secondary" t-on-click="() => props.close()">
+        Cancel
+      </button>
+    </t>
+  </Dialog>
+</t>
+
+</templates>
