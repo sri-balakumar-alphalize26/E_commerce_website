@@ -128,6 +128,35 @@ class TestOrderTrack(Mart369BridgeHttpCase):
         self.assertEqual(status, 200)
         self.assertIsNone(payload['track'])
 
+    # ------------------------------------------------------------ the road
+
+    def test_the_road_line_reaches_the_card(self):
+        order, job = self._out_for_delivery()
+        # Google's own example line, as sa_compute_route stores OSRM's answer.
+        job.sudo().write({'sa_route_polyline': '_p~iF~ps|U_ulLnnqC_mqNvxq`@',
+                          'sa_route_km': 3.2, 'sa_route_approx': False})
+        __, payload, __ = self._track(order)
+        track = payload['track']
+        self.assertEqual(track['route'], [[38.5, -120.2], [40.7, -120.95], [43.252, -126.453]])
+        self.assertFalse(track['route_approx'])
+
+    def test_an_approximate_road_says_so(self):
+        order, job = self._out_for_delivery()
+        job.sudo().write({'sa_route_polyline': '_p~iF~ps|U_ulLnnqC',
+                          'sa_route_km': 3.2, 'sa_route_approx': True})
+        __, payload, __ = self._track(order)
+        self.assertEqual(len(payload['track']['route']), 2)
+        self.assertTrue(payload['track']['route_approx'])
+
+    def test_a_broken_road_line_is_no_line_and_no_error(self):
+        order, job = self._out_for_delivery()
+        for broken in ('_p~iF', '_p~iF~ps|U_', 'not a line ₹'):
+            job.sudo().write({'sa_route_polyline': broken, 'sa_route_km': 3.2})
+            status, payload, __ = self._track(order)
+            self.assertEqual(status, 200, broken)
+            self.assertIsNone(payload['track']['route'], broken)
+            self.assertAlmostEqual(payload['track']['lat'], 10.35162, msg=broken)
+
     # ------------------------------------------------------- the rider name
 
     def test_name_is_capitalised_when_typed_in_one_case(self):

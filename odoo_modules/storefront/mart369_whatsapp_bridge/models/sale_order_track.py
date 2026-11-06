@@ -78,6 +78,39 @@ def _point(lat, lng):
     return {'lat': lat, 'lng': lng} if (lat or lng) else None
 
 
+def _decode_polyline(text):
+    """[[lat, lng], ...] from Google's encoded polyline, the way the delivery
+    stack keeps its road route. None for anything that is not a real line, so
+    the card draws its dashed straight line rather than a wrong road."""
+    if not text or not isinstance(text, str):
+        return None
+    points = []
+    index = lat = lng = 0
+    try:
+        while index < len(text):
+            deltas = []
+            for __ in range(2):
+                shift = result = 0
+                while True:
+                    byte = ord(text[index]) - 63
+                    index += 1
+                    if not 0 <= byte < 64:
+                        return None
+                    result |= (byte & 0x1f) << shift
+                    shift += 5
+                    if byte < 0x20:
+                        break
+                deltas.append(~(result >> 1) if result & 1 else result >> 1)
+            lat += deltas[0]
+            lng += deltas[1]
+            if abs(lat) > 9000000 or abs(lng) > 18000000:
+                return None
+            points.append([lat / 1e5, lng / 1e5])
+    except IndexError:  # cut off part way through a number
+        return None
+    return points if len(points) > 1 else None
+
+
 class SaleOrder(models.Model):
     _inherit = 'sale.order'
 
@@ -201,7 +234,8 @@ class SaleOrder(models.Model):
             out['fix_on'] = theirs['fix_on'] or ''
         route = theirs.get('route')
         if isinstance(route, dict):
-            out['route'] = route.get('points') or route.get('coordinates')
+            out['route'] = (_decode_polyline(route.get('polyline'))
+                            or route.get('points') or route.get('coordinates'))
             out['route_approx'] = bool(route.get('approximate'))
         elif isinstance(route, list):
             out['route'] = route

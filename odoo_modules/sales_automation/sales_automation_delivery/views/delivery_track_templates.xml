@@ -53,8 +53,9 @@
 
     <!-- The customer's tracking page, phone first (6 Oct 2026, the app
          team's "live tracking for every role"): the live map on top with
-         the road route, the shop, the door and the rider's dot sliding
-         between positions; a sheet below with "Arriving in N min", the
+         the road route, the shop, the door and the rider's scooter gliding
+         between positions along the road (static/src/track_map.js, on
+         OpenFreeMap; the Leaflet code here is its backup); a sheet below with "Arriving in N min", the
          promise, the stop number on an Express run, the code note, the
          rider card, the parcel, the journey (folded) and help. The page
          draws what /pos allows and nothing else: the server decides who may
@@ -73,6 +74,7 @@
             <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous"/>
             <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
             <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+            <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css"/>
             <style>
 :root{--navy:#0b4a6e;--blue:#0a78ab;--btn-a:#0c86be;--btn-b:#08658f;--orange:#f7931e;--ink:#13212b;--muted:#6b7a86;
  --soft:#f4f6f8;--line:#e6ebef;--ok:#1a7f3c;--ok-bg:#e9f6ee;--err:#c8433a;--err-bg:#fdecea;--warn:#8a4a00;--warn-bg:#fff4e5;
@@ -154,6 +156,10 @@ details[open] summary::after{transform:rotate(-90deg)}
 .sa-rider.stale{background:#9aa7b1;box-shadow:0 0 0 2px rgba(154,167,177,.4)}
 .sa-pin{width:auto;white-space:nowrap;font:700 11px/1 var(--font);color:#fff;background:var(--navy);padding:5px 8px;border-radius:999px;box-shadow:0 2px 6px rgba(0,0,0,.25);transform:translate(-50%,-50%)}
 .sa-pin.you{background:var(--blue)}
+.maplibregl-marker.sa-pin{display:inline-block;pointer-events:none}
+/* Above the sheet's overlap and the "Updated" pill, so the credits stay readable. */
+#sa_map .maplibregl-ctrl-bottom-right{bottom:44px}
+#sa_map .maplibregl-ctrl-attrib{font-size:10.5px;background:rgba(255,255,255,.8)}
 @media (min-width:700px){.mapwrap{height:46vh}.sheet{margin-top:-24px}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
             </style>
@@ -270,6 +276,8 @@ details[open] summary::after{transform:rotate(-90deg)}
         <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
         <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+        <script src="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
+        <script src="/sales_automation_delivery/static/src/track_map.js"></script>
         <script type="text/javascript">
         // Inside a QWeb template: text is escaped, so "&lt;" and "&amp;&amp;"
         // are written as entities here and arrive as the operators.
@@ -309,6 +317,9 @@ details[open] summary::after{transform:rotate(-90deg)}
             else { navigator.clipboard.writeText(location.href).then(function () { toast("Link copied"); }); }
         });
 
+        // The new map (track_map.js) when it can start; everything below that
+        // uses `map`, `rider` and L is the Leaflet backup for when it cannot.
+        var freeMap = null, lastPayload = null;
         var map = null, routeLine = null, shopPin = null, youPin = null, rider = null, fitted = false;
         var glideTimer = null, lastFixMs = 0, glideMs = 6000, fixAtMs = 0, ageAtFix = 0, staleNow = false;
 
@@ -316,6 +327,7 @@ details[open] summary::after{transform:rotate(-90deg)}
             return L.marker([lat, lng], { icon: L.divIcon({ className: "", html: '&lt;span class="sa-pin ' + cls + '">' + text + '&lt;/span>', iconSize: [0, 0] }), interactive: false });
         }
         function ensureMap(d) {
+            if (freeMap) { freeMap.show(d); return true; }
             if (!window.L) { return false; }
             var pts = [];
             if (d.shop) { if (d.shop.latitude) { pts.push([d.shop.latitude, d.shop.longitude]); } }
@@ -379,6 +391,7 @@ details[open] summary::after{transform:rotate(-90deg)}
         }
         function apply(d) {
             if (d.state) { if (d.state !== STATE) { location.reload(); return; } }
+            lastPayload = d;
             ensureMap(d);
             var head = $("#sa_head"), promise = $("#sa_promise"), run = $("#sa_run"), code = $("#sa_code"), ended = $("#sa_ended");
             if (d.ended) { ended.classList.add("on"); hideRider(); fixAtMs = 0; }
@@ -427,6 +440,21 @@ details[open] summary::after{transform:rotate(-90deg)}
         function schedule(s) {
             if (STATE === "delivered") { return; }
             clearTimeout(pollTimer); pollTimer = setTimeout(poll, Math.max(5, Math.min(60, s)) * 1000);
+        }
+        if (window.SaTrackMap) {
+            freeMap = SaTrackMap.start({
+                container: "sa_map",
+                style: "https://tiles.openfreemap.org/styles/liberty",
+                picture: "/sales_automation_delivery/static/src/img/rider-top.png",
+                pictureHeight: 256,
+                drawnHeight: 52,
+                decode: decode,
+                onShown: function () { $("#sa_nomap").style.display = "none"; },
+                onFail: function () {
+                    freeMap = null;
+                    if (lastPayload) { apply(lastPayload); }
+                },
+            });
         }
         apply(INIT);
         setInterval(fresh, 1000);
