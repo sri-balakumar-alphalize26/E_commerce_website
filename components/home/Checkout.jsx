@@ -747,6 +747,15 @@ export default function CheckoutPage({
           <Step n={3} icon="card" title="Payment" open={step === 3} done={false}>
             <div key={nudge} className={nudge ? "co-nudge" : ""}>
               <PointsRow points={bill.points} on={usePoints} onChange={togglePoints} busy={place.busy || pointsBusy} error={pointsErr} />
+              {(bill.parts?.length > 1 || options?.onlineOff) && (
+                <p className="co-parts-note">
+                  <Icon n="truck" size={15} />
+                  <span>
+                    This basket comes from {bill.parts?.length || options?.parts} hubs, so it arrives in {bill.parts?.length || options?.parts} parts.
+                    Pay cash on delivery (each rider collects their part) or with your 369 Wallet. Paying online for several hubs is coming soon.
+                  </span>
+                </p>
+              )}
               <PaymentStep payable={payable} pay={pay} setPay={setPay} wallet={wallet} walletUse={walletUse} setWalletUse={setWalletUse} walletBal={walletBalance} offered={offered} optionsPending={!options} codLimit={options?.codLimit || 0} cards={cards} upis={savedPay.upis} />
             </div>
           </Step>

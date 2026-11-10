@@ -423,6 +423,9 @@ function BranchDrawer({ branch, onClose, onSaved }) {
   const [form, setForm] = useState({
     quick: branch.quick, quickKm: branch.quickKm ? String(branch.quickKm) : "",
     maybeKm: branch.maybeKm ? String(branch.maybeKm) : "", quickEta: branch.quickEta || "",
+    ownFees: !!branch.ownFees, quickFee: branch.quickFee ? String(branch.quickFee) : "",
+    expressFee: branch.expressFee ? String(branch.expressFee) : "",
+    freeAbove: branch.freeAbove ? String(branch.freeAbove) : "",
     lat: branch.lat ?? "", lng: branch.lng ?? "",
   });
   const [error, setError] = useState("");
@@ -489,6 +492,29 @@ function BranchDrawer({ branch, onClose, onSaved }) {
           "Quick if possible", the customer is promised Express and it comes
           Quick when a rider is free. Both, and the Quick promise, count once
           Hub rules in Odoo has a row.
+        </p>
+      </section>
+
+      <section className="ad-dsec">
+        <h4>Delivery fees</h4>
+        <div className="ad-kv-rows">
+          <label className="ad-kv-row">
+            <span>Own delivery fees<small>What this branch ships is charged these, not the shop's</small></span>
+            <Switch on={!!form.ownFees} onChange={(v) => set("ownFees", v)} label="Own delivery fees" />
+          </label>
+        </div>
+        {form.ownFees && (
+          <div className="ad-form">
+            <Field label="Quick fee" value={form.quickFee} onChange={(v) => set("quickFee", v)} placeholder="0.500" decimal />
+            <Field label="Express fee" value={form.expressFee} onChange={(v) => set("expressFee", v)} placeholder="1.000" decimal />
+            <Field label="Free delivery above" value={form.freeAbove} onChange={(v) => set("freeAbove", v)} placeholder="10.000" decimal />
+          </div>
+        )}
+        <p className="ad-hint">
+          <Icon n="info" size={14} />
+          Counted once the shop has more than one company: what this branch ships is
+          charged these fees, and a basket from several hubs pays each hub's fee for
+          its own part.
         </p>
       </section>
 

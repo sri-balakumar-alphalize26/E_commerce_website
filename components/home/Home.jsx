@@ -35,6 +35,37 @@ import { setCurrency, useCurrency } from "@/lib/money";
 import { ApiError, api } from "@/lib/api";
 import { addressText } from "@/lib/address";
 import { DeliveryContext } from "@/lib/delivery";
+
+/* One checkout, several orders: a basket from more than one hub comes as one
+   order per hub, each with its own delivery, code and tracking. */
+function OrderParts({ group, parts, onOpen, onShop }) {
+  const total = parts.reduce((s, p) => s + (Number(p.total) || 0), 0);
+  return (
+    <section className="hm-parts">
+      <h1>Order #{group}</h1>
+      <p className="hm-parts-lead">
+        Your order comes in {parts.length} parts, one from each hub. Each part is delivered
+        separately, with its own delivery code.
+      </p>
+      <ul>
+        {parts.map((p) => (
+          <li key={p.id}>
+            <div>
+              <b>Part {p.part} of {p.parts}{p.seller?.name ? ` · ${p.seller.name}` : ""}</b>
+              <small>
+                {p.mode === "quick" ? "Quick" : "Express"} · {(p.items || []).length} {(p.items || []).length === 1 ? "item" : "items"} · {money(p.total)}
+              </small>
+              {p.eta ? <small>{p.eta}</small> : null}
+            </div>
+            <button className="hm-parts-btn" onClick={() => onOpen(p.id)}>Track</button>
+          </li>
+        ))}
+      </ul>
+      <p className="hm-parts-total">Total <b>{money(total)}</b></p>
+      <button className="hm-parts-shop" onClick={onShop}>Continue shopping</button>
+    </section>
+  );
+}
 import Logo from "@/components/Logo";
 import Bell from "./Bell";
 import { AllCategoriesPage, BuyAgainPage, CategoryPage, NotFoundView, OffersPage, SearchResults, SiteFooter } from "./Browse";
@@ -879,6 +910,16 @@ export default function Home({
         <CheckoutPage cart={cart} byId={byId} draft={draft} ready={ready}
           addresses={addresses} onSaveAddress={saveAddress} addressForm={addressForm} me={me} address={address} onSelectAddress={pickAddress} addrBusy={addrAct.busy}
           walletBalance={wallet} onBack={() => nav("cart")} onPlaced={orderPlaced} />
+      </main>
+    );
+  } else if ((view === "track" || view === "order") && !orders.some((x) => x.id === route.param)
+      && orders.some((x) => x.group === route.param)) {
+    /* A checkout number from a basket that came from several hubs: one
+       order per hub, each tracked on its own page. */
+    const parts = orders.filter((x) => x.group === route.param).sort((a, b) => (a.part || 0) - (b.part || 0));
+    body = (
+      <main className="hm-wrap hm-view-order" key={"parts-" + route.param}>
+        <OrderParts group={route.param} parts={parts} onOpen={(id) => nav("track", id)} onShop={() => nav("home")} />
       </main>
     );
   } else if (view === "track") {

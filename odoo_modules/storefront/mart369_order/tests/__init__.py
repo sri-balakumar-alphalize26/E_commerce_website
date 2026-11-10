@@ -19,3 +19,4 @@ from . import test_refunds
 from . import test_books
 
 from . import test_variants
+from . import test_split_orders

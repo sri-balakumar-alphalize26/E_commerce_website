@@ -452,6 +452,35 @@
                 and the Quick promise count once Hub rules has a row.
             </p>
 
+            <h3>Delivery fees</h3>
+            <div class="dv-rows">
+                <div class="dv-row">
+                    <span><b>Own delivery fees</b><small>What this branch ships is charged these, not the shop's</small></span>
+                    <Switch on="state.draft.ownFees"
+                            label="'Own delivery fees'"
+                            onChange="() => this.set('ownFees', !state.draft.ownFees)"/>
+                </div>
+            </div>
+            <div t-if="state.draft.ownFees" class="dv-form">
+                <label class="dv-field"><span>Quick fee</span>
+                    <input type="text" inputmode="decimal" placeholder="0.500"
+                           t-att-value="state.draft.quickFee"
+                           t-on-input="(ev) => this.set('quickFee', ev.target.value)"/></label>
+                <label class="dv-field"><span>Express fee</span>
+                    <input type="text" inputmode="decimal" placeholder="1.000"
+                           t-att-value="state.draft.expressFee"
+                           t-on-input="(ev) => this.set('expressFee', ev.target.value)"/></label>
+                <label class="dv-field"><span>Free delivery above</span>
+                    <input type="text" inputmode="decimal" placeholder="10.000"
+                           t-att-value="state.draft.freeAbove"
+                           t-on-input="(ev) => this.set('freeAbove', ev.target.value)"/></label>
+            </div>
+            <p class="mart-hint">
+                Counted once the shop has more than one company: what this branch
+                ships is charged these fees, and a basket from several hubs pays
+                each hub's fee for its own part.
+            </p>
+
             <h3>Where the branch is</h3>
             <div class="dv-form">
                 <label class="dv-field"><span>Latitude</span>

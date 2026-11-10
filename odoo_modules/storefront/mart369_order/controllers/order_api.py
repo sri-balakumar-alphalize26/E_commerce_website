@@ -86,12 +86,45 @@ class Mart369OrderApi(http.Controller):
             order = request.env['sale.order']._mart369_place(self._me(), body)
         except UserError as exc:
             return self._fail(str(exc))
+        if len(order) > 1:
+            # A basket from several hubs: one order per hub, one checkout.
+            return self._json(dict(self._group_payload(order), ok=True), status=201)
         return self._json({
             'ok': True,
             'ref': order.mart369_ref,
             'total': order.currency_id.round(order.amount_total),
             'order': order._mart369_serialize(),
         }, status=201)
+
+    def _group_payload(self, parts):
+        """One checkout made of several orders, in the shape the app reads
+        for one order - `order` is the first part with the checkout number as
+        its id - plus every part in `parts`."""
+        parts = parts.sorted('id')
+        first = parts[:1]
+        group = first.mart369_group
+        total = first.currency_id.round(sum(parts.mapped('amount_total')))
+        summary = dict(first._mart369_serialize(), id=group, total=total)
+        return {
+            'ref': group,
+            'total': total,
+            'order': summary,
+            'parts': [p._mart369_serialize() for p in parts],
+        }
+
+    def _own_group(self, ref):
+        """The parts of one of this customer's several-hub baskets, once paid
+        for (a draft does not exist yet, as for `_own`)."""
+        empty = request.env['sale.order'].browse()
+        if not ref or not isinstance(ref, str):
+            return empty
+        parts = request.env['sale.order'].sudo().search([
+            ('mart369_group', '=', ref),
+            ('partner_id', '=', self._me().id),
+        ])
+        if not parts or parts.filtered(lambda o: o.mart369_state in (False, 'draft')):
+            return empty
+        return parts
 
     @http.route('/369mart/orders', **_GET)
     def index(self, **kwargs):
@@ -114,6 +147,9 @@ class Mart369OrderApi(http.Controller):
     def show(self, ref, **kwargs):
         order = self._own(ref)
         if not order:
+            parts = self._own_group(ref)
+            if parts:
+                return self._json(dict(self._group_payload(parts), ok=True))
             return self._fail('No such order.', status=404)
         return self._json({'ok': True, 'order': order._mart369_serialize()})
 

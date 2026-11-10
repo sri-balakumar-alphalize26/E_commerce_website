@@ -67,6 +67,10 @@ class Mart369Cart(models.AbstractModel):
         reason = ''
         if not config.loyalty_redeem:
             reason = 'off'
+        elif len(bill.get('parts') or []) > 1:
+            # A basket from several hubs is several orders; points are not
+            # split across them yet.
+            reason = 'split'
         elif not card:
             reason = 'none'
         elif card.state != 'active':
