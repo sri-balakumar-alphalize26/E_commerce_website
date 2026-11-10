@@ -82,7 +82,7 @@ export function useBill({ cart, byId, rules, coupon = null, slotFee = 0, address
     ...shape,
     mrp: 0, items: 0, fees: 0, couponOff: 0, total: 0, saved: 0,
     couponValid: false, blocked: false, coupons: [], unknown: [], points: null,
-    modes: null, movedToExpress: 0, movedWhy: "", branch: "",
+    modes: null, movedToExpress: 0, movedWhy: "", branch: "", sellers: {},
     ...(money || {}),
     sub, feeFor, priced: !!money, error,
   };
@@ -119,7 +119,7 @@ function Stepper({ qty, onChange, name }) {
   );
 }
 
-function LineItem({ p, qty, setQty, i }) {
+function LineItem({ p, qty, setQty, i, seller = null }) {
   const [leaving, setLeaving] = useState(false);
   const open = useContext(OpenContext);
   const change = (n) => {
@@ -132,6 +132,7 @@ function LineItem({ p, qty, setQty, i }) {
       <div className="ct-line-info" data-open="" onClick={(e) => open?.(p, e.currentTarget.parentElement.querySelector(".ct-thumb")?.getBoundingClientRect())}>
         <b>{p.name}</b>
         <small>{p.unit}</small>
+        {seller?.name ? <small className="ct-seller">Sold by {seller.name}</small> : null}
       </div>
       <Stepper qty={qty} onChange={change} name={p.name} />
       <div className="ct-line-price">
@@ -142,7 +143,7 @@ function LineItem({ p, qty, setQty, i }) {
   );
 }
 
-function DeliveryGroup({ group, lines, setQty, rules, onAddMore }) {
+function DeliveryGroup({ group, lines, setQty, rules, onAddMore, sellers = null }) {
   const subtotal = lines.reduce((s, l) => s + l.p.price * l.qty, 0);
   const count = lines.reduce((s, l) => s + l.qty, 0);
   const short = rules ? Math.max(0, rules.minOrder - subtotal) : 0;
@@ -157,7 +158,7 @@ function DeliveryGroup({ group, lines, setQty, rules, onAddMore }) {
         <Amount value={subtotal} />
       </header>
       <ul className="ct-lines">
-        {lines.map((l, i) => <LineItem key={l.p.id} p={l.p} qty={l.qty} setQty={setQty} i={i} />)}
+        {lines.map((l, i) => <LineItem key={l.p.id} p={l.p} qty={l.qty} setQty={setQty} i={i} seller={sellers?.[l.p.id]} />)}
       </ul>
       <div className={"ct-minorder" + (short > 0 ? " ct-show" : "")} aria-hidden={short === 0}>
         <div className="ct-minorder-in">
@@ -268,7 +269,7 @@ export default function CartPage({ cart, setQty, byId, recommended = [], alsoLik
       <div className="ct-grid">
         <div className="ct-main">
           {["quick", "all"].map((g) => groups[g].length > 0 && (
-            <DeliveryGroup key={g} group={g} lines={groups[g]} setQty={setQty} rules={rules?.[g]} onAddMore={onBack} />
+            <DeliveryGroup key={g} group={g} lines={groups[g]} setQty={setQty} rules={rules?.[g]} onAddMore={onBack} sellers={bill.sellers} />
           ))}
           {recommended.length > 0 && (
             <div className="ct-card ct-railcard">

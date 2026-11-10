@@ -34,6 +34,7 @@ import { absorb, ensure, useProducts } from "@/lib/products";
 import { setCurrency, useCurrency } from "@/lib/money";
 import { ApiError, api } from "@/lib/api";
 import { addressText } from "@/lib/address";
+import { DeliveryContext } from "@/lib/delivery";
 import Logo from "@/components/Logo";
 import Bell from "./Bell";
 import { AllCategoriesPage, BuyAgainPage, CategoryPage, NotFoundView, OffersPage, SearchResults, SiteFooter } from "./Browse";
@@ -367,6 +368,8 @@ export default function Home({
      save fails - so it can never outlive a disagreement. */
   const [picking, setPicking] = useState(null);
   const address = useMemo(() => addresses.find((a) => a.id === (picking ?? addrData?.selected)) || null, [addresses, addrData, picking]);
+  /* Where things are going, for every card's "Sold by" and Quick/Express. */
+  const delivery = useMemo(() => ({ addressId: address?.id || null }), [address?.id]);
   /* What the address form needs from the shop: phone prefix, pincode length,
      the country's states. The shop delivers in one country; the form follows. */
   const { data: addressForm } = useResource("/addresses/form");
@@ -957,6 +960,7 @@ export default function Home({
 
   return (
     <NavContext.Provider value={nav}>
+    <DeliveryContext.Provider value={delivery}>
     <WishContext.Provider value={wish}>
     <OpenContext.Provider value={openProduct}>
     <div className={"hm-page" + (count > 0 && browsing ? " hm-has-cart" : "") + (view !== "home" ? " hm-in-cart" : "") + " hm-at-" + view} data-mode={mode}>
@@ -996,6 +1000,7 @@ export default function Home({
     </div>
     </OpenContext.Provider>
     </WishContext.Provider>
+    </DeliveryContext.Provider>
     </NavContext.Provider>
   );
 }

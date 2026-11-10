@@ -96,6 +96,8 @@
 .pd-liked .hm-ic { fill: currentColor; animation: hm-heart 460ms var(--hm-spring); }
 .pd-brand { display: inline-block; font-size: 12.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--hm-blue) !important; text-decoration: none; }
 .pd-brand:hover { text-decoration: underline; text-underline-offset: 3px; }
+.pd-seller { margin: 2px 0 0; font-size: 13px; color: var(--hm-muted); }
+.pd-seller b { color: var(--hm-ink, inherit); font-weight: 700; }
 .pd-name { margin: 4px 0 6px; font-size: 22px; line-height: 1.3; font-weight: 700; letter-spacing: -0.02em; text-wrap: balance; }
 .pd-rating { display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; padding: 2px 0; font-size: 13.5px; color: var(--hm-muted) !important; }
 .pd-rating b { color: var(--hm-ink); font-weight: 700; }

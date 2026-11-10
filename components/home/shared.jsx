@@ -7,6 +7,7 @@ export const WishContext = createContext(null);
 /* open the product page: open(product, rectOfTappedImage) */
 export const OpenContext = createContext(null);
 import ProductArt from "./art";
+import { modeOf, useBadge } from "@/lib/delivery";
 
 /* Re-exported so the eighty-odd call sites that already import it from
    here keep working. What it prints is the shop's answer now, not a rupee
@@ -354,6 +355,10 @@ export function ProductCard({ p, qty, setQty, i }) {
   const open = useContext(OpenContext);
   const oos = p.stock === 0;
   const off = p.mrp ? Math.round(((p.mrp - p.price) / p.mrp) * 100) : 0;
+  /* The shop's answer for this customer: who sells it, Quick or Express.
+     Until it arrives the product decides, as it always has. */
+  const badge = useBadge(p.id);
+  const express = modeOf(p, badge) === "all";
   return (
     <article className={"hm-card" + (oos ? " hm-oos" : "")} style={{ "--i": i }} data-open={open ? "" : undefined}
       onClick={(e) => {
@@ -380,14 +385,15 @@ export function ProductCard({ p, qty, setQty, i }) {
         <div className="hm-unit">{p.unit}</div>
         <h3 className="hm-name" title={p.name}>{open ? <a href={`/product/${p.id}`} onClick={(e) => { e.preventDefault(); open(p, e.currentTarget.closest(".hm-card")?.querySelector(".hm-card-img")?.getBoundingClientRect()); }}>{p.name}</a> : p.name}</h3>
         {p.note && <div className="hm-subnote">({p.note})</div>}
+        {badge?.seller?.name && <div className="hm-seller" title={`Sold by ${badge.seller.name}`}>Sold by {badge.seller.name}</div>}
         <div className="hm-price">
           <b>{money(p.price)}</b>
           {p.mrp ? <s>{money(p.mrp)}</s> : null}
           {p.perUnit && <small>({p.perUnit})</small>}
         </div>
         <div className="hm-meta">
-          {p.delivery
-            ? <span className="hm-quick hm-ship"><Icon n="truck" size={12} />{p.delivery}</span>
+          {express
+            ? <span className="hm-quick hm-ship"><Icon n="truck" size={12} />{p.delivery || "Express"}</span>
             : <span className="hm-quick"><Icon n="bolt" size={11} className="hm-fill" />Quick</span>}
           {p.low ? <span className="hm-low">Only {p.low} left</span> : null}
         </div>
