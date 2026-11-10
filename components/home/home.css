@@ -253,6 +253,16 @@
 .hm-meta { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-height: 16px; }
 .hm-quick { display: inline-flex; align-items: center; gap: 2px; font-size: 11px; font-weight: 700; color: #7b8993; }
 .hm-quick .hm-ic { color: var(--hm-orange); }
+.hm-parts { max-width: 640px; margin: 24px auto; display: flex; flex-direction: column; gap: 14px; }
+.hm-parts h1 { margin: 0; font-size: 22px; }
+.hm-parts-lead { margin: 0; color: var(--hm-muted); line-height: 1.5; }
+.hm-parts ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.hm-parts li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border: 1px solid #e3e8ee; border-radius: 12px; background: #fff; }
+.hm-parts li > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.hm-parts li small { color: var(--hm-muted); font-size: 12.5px; }
+.hm-parts-btn, .hm-parts-shop { border: 0; border-radius: 10px; padding: 9px 16px; font-weight: 700; cursor: pointer; background: var(--hm-blue); color: #fff; }
+.hm-parts-shop { align-self: flex-start; background: #eef2f6; color: var(--hm-ink); }
+.hm-parts-total { margin: 0; text-align: right; }
 .hm-modes { display: inline-flex; align-items: center; gap: 4px; min-width: 0; }
 .hm-cargo { font-size: 10px; font-weight: 700; line-height: 1; border-radius: 4px; padding: 2px 5px; color: #b3305f; background: #fbe6ee; }
 .hm-ship { color: #3d6f8c; }

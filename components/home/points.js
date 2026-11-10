@@ -25,6 +25,7 @@ export function pointsWhy(p) {
     case "min": return `Points can be used from ${pointsText(p.min)}. You have ${pointsText(p.balance)}.`;
     case "small": return "This order is too small to use your points.";
     case "today": return "Points can be used once a day. Try again tomorrow.";
+    case "split": return "Points can't be used yet on a basket that comes from more than one hub.";
     default: return "";
   }
 }

@@ -88,6 +88,8 @@
 
 /* steps */
 .co-step-head { display: flex; align-items: center; gap: 12px; padding: 16px 18px; }
+.co-parts-note { display: flex; gap: 8px; align-items: flex-start; margin: 0 0 12px; padding: 10px 12px; border-radius: 10px; background: #eef4fb; color: #24506e; font-size: 13px; line-height: 1.45; }
+.co-parts-note .hm-ic { flex: none; margin-top: 2px; }
 .co-step-n { flex: none; width: 34px; height: 34px; border-radius: 50%; background: var(--hm-soft); color: var(--hm-muted); display: grid; place-items: center; transition: background-color 300ms, color 300ms; }
 .co-step.co-open .co-step-n { background: var(--hm-blue); color: #fff; }
 .co-step.co-isdone:not(.co-open) .co-step-n { background: var(--co-green, #1a7f3c); color: #fff; animation: hm-pop 420ms var(--hm-spring) both; }

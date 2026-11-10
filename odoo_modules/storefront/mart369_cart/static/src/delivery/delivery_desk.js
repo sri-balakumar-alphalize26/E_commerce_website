@@ -286,6 +286,10 @@ export class BranchDialog extends Component {
                 quickKm: b.quickKm ? String(b.quickKm) : "",
                 maybeKm: b.maybeKm ? String(b.maybeKm) : "",
                 quickEta: b.quickEta || "",
+                ownFees: !!b.ownFees,
+                quickFee: b.quickFee ? String(b.quickFee) : "",
+                expressFee: b.expressFee ? String(b.expressFee) : "",
+                freeAbove: b.freeAbove ? String(b.freeAbove) : "",
                 lat: b.lat ?? "",
                 lng: b.lng ?? "",
             },
@@ -321,6 +325,8 @@ export class BranchDialog extends Component {
             await this.orm.call(M.branch, "mart369_admin_save", [this.props.branch.id, {
                 quick: !!d.quick, quickKm: d.quickKm, maybeKm: d.maybeKm,
                 quickEta: d.quickEta, lat: d.lat, lng: d.lng,
+                ownFees: !!d.ownFees, quickFee: d.quickFee, expressFee: d.expressFee,
+                freeAbove: d.freeAbove,
             }]);
             this.props.close();
             await this.props.onSaved(_t("%s saved.", this.props.branch.name));

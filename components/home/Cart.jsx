@@ -82,7 +82,7 @@ export function useBill({ cart, byId, rules, coupon = null, slotFee = 0, address
     ...shape,
     mrp: 0, items: 0, fees: 0, couponOff: 0, total: 0, saved: 0,
     couponValid: false, blocked: false, coupons: [], unknown: [], points: null,
-    modes: null, movedToExpress: 0, movedWhy: "", branch: "", sellers: {}, notes: {},
+    modes: null, movedToExpress: 0, movedWhy: "", branch: "", sellers: {}, notes: {}, parts: [],
     ...(money || {}),
     sub, feeFor, priced: !!money, error,
   };
@@ -274,6 +274,16 @@ export default function CartPage({ cart, setQty, byId, recommended = [], alsoLik
 
       <div className="ct-grid">
         <div className="ct-main">
+          {bill.parts?.length > 1 && (
+            <p className="ct-card ct-parts">
+              <Icon n="truck" size={16} />
+              <span>
+                <b>Arrives in {bill.parts.length} parts</b>, one from each hub:{" "}
+                {bill.parts.map((p) => p.seller?.name).filter(Boolean).join(" · ")}. Each part has its own
+                delivery and its own delivery fee.
+              </span>
+            </p>
+          )}
           {["quick", "all"].map((g) => groups[g].length > 0 && (
             <DeliveryGroup key={g} group={g} lines={groups[g]} setQty={setQty} rules={rules?.[g]} onAddMore={onBack} sellers={bill.sellers} notes={bill.notes} />
           ))}

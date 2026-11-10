@@ -270,6 +270,7 @@ function OrdersSec({ orders, byId, onReorder, onTrack }) {
                 <span className="ac-order-txt">
                   <b>{o.mode === "quick" ? <Icon n="bolt" size={13} className="hm-fill ac-q" /> : <Icon n="truck" size={14} className="ac-e" />}
                     Order #{o.id}{o.channel === "whatsapp" && <em className="ac-wa">via WhatsApp</em>}</b>
+                  {o.group ? <small className="ac-part">Part {o.part} of {o.parts}{o.seller?.name ? ` · ${o.seller.name}` : ""}</small> : null}
                   <small>{fmtPlaced(o.at)} · {money(o.total)}</small>
                 </span>
                 <span className={"ac-status ac-s-" + o.status}>{label}</span>
