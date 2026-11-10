@@ -392,9 +392,14 @@ export function ProductCard({ p, qty, setQty, i }) {
           {p.perUnit && <small>({p.perUnit})</small>}
         </div>
         <div className="hm-meta">
-          {express
-            ? <span className="hm-quick hm-ship"><Icon n="truck" size={12} />{p.delivery || "Express"}</span>
-            : <span className="hm-quick"><Icon n="bolt" size={11} className="hm-fill" />Quick</span>}
+          <span className="hm-modes">
+            {express
+              ? <span className="hm-quick hm-ship" title={badge?.maybe ? "May come today, when a rider is free" : undefined}>
+                  <Icon n="truck" size={12} />{p.delivery || badge?.when || "Express"}
+                </span>
+              : <span className="hm-quick"><Icon n="bolt" size={11} className="hm-fill" />{badge?.when ? `Quick · ${badge.when}` : "Quick"}</span>}
+            {badge?.cargo && <span className="hm-cargo">Cargo</span>}
+          </span>
           {p.low ? <span className="hm-low">Only {p.low} left</span> : null}
         </div>
       </div>

@@ -253,6 +253,8 @@
 .hm-meta { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-height: 16px; }
 .hm-quick { display: inline-flex; align-items: center; gap: 2px; font-size: 11px; font-weight: 700; color: #7b8993; }
 .hm-quick .hm-ic { color: var(--hm-orange); }
+.hm-modes { display: inline-flex; align-items: center; gap: 4px; min-width: 0; }
+.hm-cargo { font-size: 10px; font-weight: 700; line-height: 1; border-radius: 4px; padding: 2px 5px; color: #b3305f; background: #fbe6ee; }
 .hm-ship { color: #3d6f8c; }
 .hm-ship .hm-ic { color: var(--hm-blue); }
 .hm-low { font-size: 11px; font-weight: 700; color: #c9620c; }

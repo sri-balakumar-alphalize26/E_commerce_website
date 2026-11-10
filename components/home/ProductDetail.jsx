@@ -31,7 +31,7 @@ import { api } from "@/lib/api";
 import { galleryOf, preload, whenIdle } from "@/lib/images";
 import { toSafeHtml } from "@/lib/safeHtml";
 import { startPreviewBridge } from "./previewBridge";
-import { modeOf, useBadge } from "@/lib/delivery";
+import { deliveryLine, modeOf, useBadge } from "@/lib/delivery";
 
 const ZOOM = 2.6;
 /* A limit on the download for a product with a very long list of variants. */
@@ -499,11 +499,11 @@ function KeyDetails({ rows }) {
    Quick / Express promise), then the shop's words for returns, warranty, cash
    on delivery and secure payment (mart369_product `trust`). */
 const TRUST_ICON = { returns: "reorder", warranty: "check", cod: "wallet", secure: "lock" };
-function TrustBadges({ p, quick, badges }) {
+function TrustBadges({ p, quick, badges, line }) {
   return (
     <ul className="pd-trust" aria-label="Why buy here">
       <li><span><Icon n={quick ? "bolt" : "truck"} size={16} className={quick ? "hm-fill" : ""} /></span>
-        {quick ? "Quick · 10–20 mins" : p.delivery ? `Express · ${p.delivery}` : "Express"}</li>
+        {line || (quick ? "Quick · 10–20 mins" : p.delivery ? `Express · ${p.delivery}` : "Express")}</li>
       {(badges || []).map((b) => (
         <li key={b.key}><span><Icon n={TRUST_ICON[b.key] || "check"} size={16} /></span>{b.text}</li>
       ))}
@@ -746,8 +746,9 @@ export default function ProductDetail({
             <div className="pd-row pd-crumbs">
               <button className="pd-back" onClick={onBack}><Icon n="left" size={16} />Back</button>
               <span className={"pd-mode " + (quick ? "pd-quick" : "pd-express")}>
-                <Icon n={quick ? "bolt" : "truck"} size={12} className={quick ? "hm-fill" : ""} />{quick ? "Quick · 10–20 mins" : p.delivery ? `Express · ${p.delivery}` : "Express"}
+                <Icon n={quick ? "bolt" : "truck"} size={12} className={quick ? "hm-fill" : ""} />{deliveryLine(p, badge)}
               </span>
+              {badge?.cargo ? <span className="pd-cargo">Cargo</span> : null}
               <span className="pd-actions">
                 <button className={"pd-round" + (liked ? " pd-liked" : "")} onClick={() => wish?.toggle(ownId)} aria-pressed={!!liked} aria-label={liked ? "Remove from My List" : "Save to My List"}>
                   <Icon n={liked ? "heartFill" : "heart"} size={18} />
@@ -758,6 +759,7 @@ export default function ProductDetail({
             {d.brand ? <a className="pd-brand" href="#" onClick={(e) => { e.preventDefault(); onExplore?.(); }}>{d.brand}</a> : null}
             <h1 className="pd-name" key={"n" + p.id}>{p.name}</h1>
             {badge?.seller?.name ? <p className="pd-seller">Sold by <b>{badge.seller.name}</b></p> : null}
+            {badge?.maybe && !quick ? <p className="pd-maybe">May come today, when a rider is free.</p> : null}
             {d.rating != null && (
               <button className="pd-rating" onClick={() => { setOpen((o) => ({ ...o, reviews: true })); document.getElementById("pd-reviews")?.scrollIntoView({ behavior: "smooth", block: "start" }); }}>
                 <b>{d.rating.toFixed(1)}</b><Stars value={d.rating} /><span>({d.ratingCount.toLocaleString("en-IN")} ratings)</span>
@@ -776,7 +778,7 @@ export default function ProductDetail({
               ? <p className="pd-var-wait">Couldn't load the options. <button className="pd-link" onClick={onRetryOptions}>Try again</button></p>
               : <p className="pd-var-wait">Loading the options…</p>)}
 
-            <TrustBadges p={p} quick={quick} badges={trust} />
+            <TrustBadges p={p} quick={quick} badges={trust} line={deliveryLine(p, badge)} />
 
             <div className="pd-cta">
               {oos ? (
