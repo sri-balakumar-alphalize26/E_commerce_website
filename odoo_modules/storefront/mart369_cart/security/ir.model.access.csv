@@ -14,3 +14,6 @@ access_mart369_deal_user,mart369.deal user,model_mart369_deal,base.group_user,1,
 access_mart369_delivery_rule_editor,mart369.delivery.rule editor,model_mart369_delivery_rule,website.group_website_designer,1,1,0,0
 access_mart369_delivery_slot_editor,mart369.delivery.slot editor,model_mart369_delivery_slot,website.group_website_designer,1,1,1,0
 access_mart369_service_area_editor,mart369.service.area editor,model_mart369_service_area,website.group_website_designer,1,1,1,0
+access_mart369_hub_rule_system,mart369.hub.rule system,model_mart369_hub_rule,base.group_system,1,1,1,1
+access_mart369_hub_rule_user,mart369.hub.rule user,model_mart369_hub_rule,base.group_user,1,0,0,0
+access_mart369_hub_rule_editor,mart369.hub.rule editor,model_mart369_hub_rule,website.group_website_designer,1,1,1,1
