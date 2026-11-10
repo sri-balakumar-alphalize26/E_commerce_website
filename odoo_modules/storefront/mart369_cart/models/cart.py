@@ -16,7 +16,12 @@ What is returned is what the cart page prints:
     mrp, items, sub{quick,all}, fees, couponValid, couponOff, total, saved,
     count, blocked
 
-plus `modes`, `movedToExpress`, `movedWhy` and `branch` (below).
+plus `modes`, `movedToExpress`, `movedWhy`, `branch` and `sellers` (below).
+
+**Who sells it.** Once the shop has more than one company - one per hub -
+each line also says which company sells it (`_mart369_seller`): the company
+of the branch that hands it over Quick, else the product's own. The product
+cards ask the same question through `_mart369_badges`.
 
 **Quick or Express, per line.** With no address the product decides, as it
 always has: a delivery promise (`mart_delivery_text`) makes it Express. With
@@ -162,6 +167,68 @@ class Mart369Cart(models.AbstractModel):
         """A product with its own delivery promise never goes Quick."""
         return bool(product.mart_delivery_text)
 
+    # ------------------------------------------------------------ the seller
+
+    @api.model
+    def _mart369_sellers_on(self):
+        """"Sold by" means something only once the shop has more than one
+        company (one per hub: Ruwi, Sohar, Salalah). A one-company shop shows
+        no seller anywhere, exactly as before."""
+        return self.env['res.company'].sudo().search_count([]) > 1
+
+    @api.model
+    def _mart369_seller(self, product, branch=None):
+        """{'id', 'name'} of the company that sells this line.
+
+        The branch that would hand it over Quick decides first - a
+        `stock.warehouse` here, or the bridge's `sa.delivery.shop`, whose
+        company is its warehouse's. Otherwise the product's own company, and a
+        product shared by every company is sold by the shop's own.
+        """
+        company = self.env['res.company']
+        if branch:
+            if 'company_id' in branch._fields:
+                company = branch.company_id
+            elif 'warehouse_id' in branch._fields:
+                company = branch.warehouse_id.company_id
+        company = company or product.company_id or self.env.company
+        company = company.sudo()
+        return {'id': company.id, 'name': company.name or ''}
+
+    @api.model
+    def _mart369_badges(self, keys, address=None, pin=None):
+        """What each product card says about delivery, for this customer.
+
+        {'sellers': bool, 'badges': {key: {'mode', 'eta'?, 'seller'?}}}
+
+        The same rule as the bill, one item at a time, so a card and the cart
+        never disagree. With no address, a pincode alone still counts (a guest
+        who only typed one); with neither, the product decides, as it always
+        has. Keys that are not published products are left out.
+        """
+        keys = [str(k).strip() for k in (keys or []) if str(k).strip()]
+        if not address and pin:
+            # Never saved: both versions of `_mart369_where` (ours and the
+            # WhatsApp bridge's) only read a pin and a pincode off it.
+            address = self.env['res.partner'].new({'zip': str(pin).strip()})
+        where = self._mart369_where(address)
+        rules = self.env['mart369.delivery.rule']._mart369_rules()
+        sellers = self._mart369_sellers_on()
+        badges = {}
+        for line in self._mart369_resolve({key: 1 for key in keys}):
+            tmpl = line['tmpl']
+            mode, branch = self._mart369_mode_of(tmpl, 1, where, variant=line['variant'])
+            entry = {'mode': mode}
+            rule = rules.get(mode)
+            eta = (tmpl.mart_delivery_text if self._mart369_express_only(tmpl)
+                   else (rule.eta if rule else '')) or ''
+            if eta:
+                entry['eta'] = eta
+            if sellers:
+                entry['seller'] = self._mart369_seller(tmpl, branch)
+            badges[line['key']] = entry
+        return {'sellers': sellers, 'badges': badges}
+
     @api.model
     def _mart369_fees(self, rules, present, sub, gross, slot_fee):
         """The delivery fee for this basket.
@@ -205,6 +272,8 @@ class Mart369Cart(models.AbstractModel):
         modes = {}
         branches = []           # who would hand each Quick line over, by name
         moved = 0
+        sellers_on = self._mart369_sellers_on()
+        sellers = {}            # which company sells each line, when there are several
 
         for line in lines:
             tmpl, qty = line['tmpl'], line['qty']
@@ -218,6 +287,8 @@ class Mart369Cart(models.AbstractModel):
             # - is the stock that counts, never its siblings' together.
             mode, branch = self._mart369_mode_of(tmpl, qty, where, variant=line['variant'])
             modes[line['key']] = mode
+            if sellers_on:
+                sellers[line['key']] = self._mart369_seller(tmpl, branch)
             if branch and branch.name not in branches:
                 branches.append(branch.name)
             if mode == EXPRESS and not self._mart369_express_only(tmpl):
@@ -276,6 +347,9 @@ class Mart369Cart(models.AbstractModel):
             'movedToExpress': moved,
             'movedWhy': (where['reason'] or 'stock') if moved else '',
             'branch': branches[0] if branches else '',
+            # {key: {id, name}}: who sells each line. Empty on a one-company
+            # shop, where the cart shows no seller.
+            'sellers': sellers,
         }
 
     @api.model
