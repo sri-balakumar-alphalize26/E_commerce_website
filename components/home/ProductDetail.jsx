@@ -31,6 +31,7 @@ import { api } from "@/lib/api";
 import { galleryOf, preload, whenIdle } from "@/lib/images";
 import { toSafeHtml } from "@/lib/safeHtml";
 import { startPreviewBridge } from "./previewBridge";
+import { modeOf, useBadge } from "@/lib/delivery";
 
 const ZOOM = 2.6;
 /* A limit on the download for a product with a very long list of variants. */
@@ -502,7 +503,7 @@ function TrustBadges({ p, quick, badges }) {
   return (
     <ul className="pd-trust" aria-label="Why buy here">
       <li><span><Icon n={quick ? "bolt" : "truck"} size={16} className={quick ? "hm-fill" : ""} /></span>
-        {quick ? "Quick · 10–20 mins" : `Express · ${p.delivery}`}</li>
+        {quick ? "Quick · 10–20 mins" : p.delivery ? `Express · ${p.delivery}` : "Express"}</li>
       {(badges || []).map((b) => (
         <li key={b.key}><span><Icon n={TRUST_ICON[b.key] || "check"} size={16} /></span>{b.text}</li>
       ))}
@@ -701,7 +702,10 @@ export default function ProductDetail({
   const qty = cart[p.id] || 0;
   const off = p.mrp ? Math.round(((p.mrp - p.price) / p.mrp) * 100) : 0;
   const oos = p.stock === 0;
-  const quick = !p.delivery;
+  /* The shop's answer for this customer's address - who sells it, Quick or
+     Express - and until it comes, the product's own rule as before. */
+  const badge = useBadge(p.id);
+  const quick = modeOf(p, badge) === "quick";
   /* How many to add, before any are in the basket: 1 up to 12, or what is
      left when only a few are. */
   const maxQty = Math.max(1, Math.min(12, p.low || 12));
@@ -742,7 +746,7 @@ export default function ProductDetail({
             <div className="pd-row pd-crumbs">
               <button className="pd-back" onClick={onBack}><Icon n="left" size={16} />Back</button>
               <span className={"pd-mode " + (quick ? "pd-quick" : "pd-express")}>
-                <Icon n={quick ? "bolt" : "truck"} size={12} className={quick ? "hm-fill" : ""} />{quick ? "Quick · 10–20 mins" : `Express · ${p.delivery}`}
+                <Icon n={quick ? "bolt" : "truck"} size={12} className={quick ? "hm-fill" : ""} />{quick ? "Quick · 10–20 mins" : p.delivery ? `Express · ${p.delivery}` : "Express"}
               </span>
               <span className="pd-actions">
                 <button className={"pd-round" + (liked ? " pd-liked" : "")} onClick={() => wish?.toggle(ownId)} aria-pressed={!!liked} aria-label={liked ? "Remove from My List" : "Save to My List"}>
@@ -753,6 +757,7 @@ export default function ProductDetail({
             </div>
             {d.brand ? <a className="pd-brand" href="#" onClick={(e) => { e.preventDefault(); onExplore?.(); }}>{d.brand}</a> : null}
             <h1 className="pd-name" key={"n" + p.id}>{p.name}</h1>
+            {badge?.seller?.name ? <p className="pd-seller">Sold by <b>{badge.seller.name}</b></p> : null}
             {d.rating != null && (
               <button className="pd-rating" onClick={() => { setOpen((o) => ({ ...o, reviews: true })); document.getElementById("pd-reviews")?.scrollIntoView({ behavior: "smooth", block: "start" }); }}>
                 <b>{d.rating.toFixed(1)}</b><Stars value={d.rating} /><span>({d.ratingCount.toLocaleString("en-IN")} ratings)</span>

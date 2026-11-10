@@ -101,6 +101,28 @@ class Mart369CartApi(http.Controller):
             return Partner.browse()
         return address
 
+    # ------------------------------------------------------- the badges
+
+    # A page of cards is a few dozen products; more than this is not a page.
+    BADGES_MAX = 200
+
+    @http.route('/369mart/delivery/badges', **_PUBLIC_JSON)
+    def badges(self, ids=None, address=None, pin=None, **kwargs):
+        """Quick or Express, and who sells it, for each product on a page.
+
+        ?ids=41,42,v123&address=<id>&pin=<pincode>
+
+        `address` counts only when it is the signed-in customer's own
+        (`_own_address`); `pin` is for a guest who only typed a pincode.
+        Shape: {"ok": true, "sellers": bool,
+                "badges": {"41": {"mode": "quick", "eta": "...", "seller": {...}}}}
+        """
+        keys = [k.strip() for k in (ids or '').split(',') if k.strip()][:self.BADGES_MAX]
+        answer = request.env['mart369.cart'].sudo()._mart369_badges(
+            keys, address=self._own_address(address), pin=(pin or '').strip()[:12])
+        answer['ok'] = True
+        return request.make_json_response(answer)
+
     # ------------------------------------------------------ serviceability
 
     @http.route('/369mart/serviceability', **_PUBLIC_JSON)
