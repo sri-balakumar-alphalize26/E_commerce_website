@@ -77,8 +77,10 @@ class SaleOrder(models.Model):
                 mart369_partner_id=partner.id,
                 mart369_use_points=bool(body.get('usePoints')),
             ))._mart369_place(partner, body)
-            if order.mart369_state == 'draft':
-                order._mart369_points_hold()
+            # A basket from several hubs comes back as several orders.
+            for one in order:
+                if one.mart369_state == 'draft':
+                    one._mart369_points_hold()
         return order.with_context(mart369_partner_id=None, mart369_use_points=None)
 
     def _mart369_write_lines(self, items, bill, coupon):

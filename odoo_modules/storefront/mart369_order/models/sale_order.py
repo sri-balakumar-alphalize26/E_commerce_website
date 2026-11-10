@@ -74,6 +74,11 @@ class SaleOrder(models.Model):
         string='369 Mart order', copy=False, index=True,
         help="The order number the app shows, e.g. 369M-8412. Also the key "
              "that stops one basket being ordered twice.")
+    mart369_group = fields.Char(
+        string='Checkout', copy=False, index=True,
+        help="Set on each part of a basket from several hubs: the checkout "
+             "number they share, e.g. 369M-25111014 for 369M-25111014-1, -2. "
+             "Empty for a basket from one hub, which is one order.")
     mart369_state = fields.Selection(
         STATE_CHOICES, string='369 Mart status', copy=False, index=True,
         group_expand='_mart369_state_groups',
@@ -418,6 +423,20 @@ class SaleOrder(models.Model):
 
     # ------------------------------------------------------------ serializing
 
+    def _mart369_part_info(self):
+        """{group, part, parts, seller} for a part of a several-hub basket;
+        {} for an order that is a whole basket, so its shape is unchanged."""
+        self.ensure_one()
+        if not self.mart369_group:
+            return {}
+        siblings = self.sudo().search([('mart369_group', '=', self.mart369_group)], order='id')
+        return {
+            'group': self.mart369_group,
+            'part': (siblings.ids.index(self.id) + 1) if self.id in siblings.ids else 1,
+            'parts': len(siblings),
+            'seller': {'id': self.company_id.id, 'name': self.company_id.name or ''},
+        }
+
     def _mart369_serialize(self):
         """The order object the app already reads, field for field.
 
@@ -432,6 +451,9 @@ class SaleOrder(models.Model):
         placed = self.mart369_placed_at or self.create_date or fields.Datetime.now()
         return {
             'id': self.mart369_ref or str(self.id),
+            # One part of a basket from several hubs: the checkout number the
+            # parts share, which part this is, of how many, and who sends it.
+            **self._mart369_part_info(),
             'at': int(placed.timestamp() * 1000),
             'mode': self.mart369_mode or 'quick',
             'placed': self._mart369_placed_text(placed),

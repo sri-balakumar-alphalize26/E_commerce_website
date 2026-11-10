@@ -373,6 +373,12 @@ class CartQe(models.AbstractModel):
         return QUICK, none
 
     @api.model
+    def _mart369_split_allowed(self):
+        """His stack decides one delivery per basket (`_qe_decide`), so a
+        basket stays one order while it is in charge."""
+        return super()._mart369_split_allowed() and not qe_on(self.env)
+
+    @api.model
     def _mart369_order_mode(self, present):
         """His rule: an order is Quick only when every line is."""
         return QUICK if present.get(QUICK) and not present.get(EXPRESS) else EXPRESS

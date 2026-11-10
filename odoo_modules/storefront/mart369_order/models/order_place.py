@@ -56,20 +56,23 @@ class SaleOrder(models.Model):
         if not ref:
             raise UserError(self.env._('That order is missing its order number.'))
 
-        # 1. Seen this number before?
+        # 1. Seen this number before? As one order, or as a basket from
+        #    several hubs that became one order per hub.
         existing = self.sudo().search([('mart369_ref', '=', ref)], limit=1)
-        if existing:
-            if existing.partner_id != partner:
-                # Someone else's number. Say nothing useful about it.
-                raise UserError(self.env._('That order number is not available.'))
-            if existing.mart369_state not in ('draft', False):
-                # Paid for, or on its way. This is a retry, not a second order.
-                return existing
-            # Still a draft: nobody has been asked to pack it and no money has
-            # moved, so it is the same basket being settled - rewrite it. The
-            # app asks for the order before choosing how to pay, because
-            # whether cash is allowed is a question about the order, and the
-            # customer can still go back and change the slot after that.
+        parts_before = self.sudo().search([('mart369_group', '=', ref)])
+        if (existing | parts_before).filtered(lambda o: o.partner_id != partner):
+            # Someone else's number. Say nothing useful about it.
+            raise UserError(self.env._('That order number is not available.'))
+        if existing and existing.mart369_state not in ('draft', False):
+            # Paid for, or on its way. This is a retry, not a second order.
+            return existing
+        if parts_before.filtered(lambda o: o.mart369_state not in ('draft', False)):
+            return parts_before
+        # A draft is still nobody's to pack and no money has moved, so it is
+        # the same basket being settled - rewrite it. The app asks for the
+        # order before choosing how to pay, because whether cash is allowed is
+        # a question about the order, and the customer can still go back and
+        # change the slot after that.
 
         # 2. The address, and that it is really theirs.
         address = self._mart369_address_for(partner, body.get('address_id'))
@@ -99,6 +102,23 @@ class SaleOrder(models.Model):
         if coupon:
             self._mart369_check_coupon(coupon, partner)
 
+        # A basket the bill split by seller - two or more hubs - becomes one
+        # order per hub (see `_mart369_place_parts`). Whatever this number held
+        # before as a draft goes: the basket is being settled again.
+        if bill.get('parts'):
+            (existing | parts_before).sudo().unlink()
+            return self._mart369_place_parts(partner, body, ref, address, items, bill,
+                                             coupon, slot, slot_fee)
+        if parts_before:
+            # Was split, now one hub has everything: one order again.
+            parts_before.sudo().unlink()
+        return self._mart369_place_one(partner, body, ref, address, items, bill, coupon,
+                                       slot, existing=existing)
+
+    def _mart369_place_one(self, partner, body, ref, address, items, bill, coupon, slot,
+                           existing=None, extra=None):
+        """Write one order for this bill: a whole basket, or one hub's part of
+        it (`extra` then carries the part's company, warehouse and checkout)."""
         # The server's answer, not the app's: which items are Quick now depends
         # on the address and the branches' stock, which the browser cannot see.
         mode = self._mart369_mode_of_bill(bill)
@@ -122,6 +142,7 @@ class SaleOrder(models.Model):
             'mart369_coupon_off': bill['couponOff'] if coupon else 0.0,
             'mart369_due_at': self._mart369_due_at(slot, mode),
         }
+        values.update(extra or {})
         if existing:
             order = existing
             order.order_line.sudo().unlink()
@@ -131,6 +152,59 @@ class SaleOrder(models.Model):
         order._mart369_write_lines(items, bill, coupon)
         order._mart369_check_total(bill)
         return order
+
+    @api.model
+    def _mart369_place_parts(self, partner, body, ref, address, items, bill, coupon, slot,
+                             slot_fee):
+        """One order per hub for a basket from several, numbered <ref>-1, -2...
+        and sharing `mart369_group` = <ref>, the number the customer sees.
+
+        Each part is a whole order of its own - in that hub's company, from its
+        warehouse, at its own delivery fee - so paying, confirming, the
+        invoice, the delivery code, the rider and a cancellation work on it
+        exactly as on any order. Only two things are shared out:
+
+        * the coupon, worked out on the whole basket and split by what each
+          part is worth (the last part takes the rounding);
+        * the slot's extra fee, charged once, on the first part.
+
+        Points are not offered on such a basket (the bill says why).
+        """
+        Cart = self.env['mart369.cart'].sudo()
+        Company = self.env['res.company'].sudo()
+        Branch = self.env['stock.warehouse'].sudo()
+        gross = bill.get('items') or 0.0
+        coupon_total = bill['couponOff'] if coupon else 0.0
+        given = 0.0
+        orders = self.browse()
+        parts = bill['parts']
+        # Each hub is paid for its own part, so each needs cash on delivery
+        # and the wallet in its own company.
+        self.env['payment.provider'].sudo()._mart369_ensure_hub_providers(
+            Company.browse([p['seller']['id'] for p in parts]).exists())
+        for index, part in enumerate(parts, 1):
+            company = Company.browse(part['seller']['id']).exists() or self.env.company
+            hub = Branch.browse(part['hubId']).exists() if part.get('hubId') else Branch
+            here = self.with_company(company).with_context(mart369_use_points=False)
+            part_items = {key: part['qty'][key] for key in part['keys']}
+            part_bill = Cart.with_company(company).with_context(
+                mart369_use_points=False)._mart369_bill(
+                    part_items, slot_fee=slot_fee if index == 1 else 0.0, address=address)
+            currency = company.currency_id
+            if index < len(parts):
+                share = currency.round(coupon_total * part_bill['items'] / gross) if gross else 0.0
+            else:
+                share = currency.round(coupon_total - given)
+            given += share
+            part_bill = dict(part_bill, couponOff=share,
+                             total=currency.round(max(0.0, part_bill['total'] - share)))
+            extra = {'mart369_group': ref, 'company_id': company.id}
+            if hub and hub.company_id == company:
+                extra['warehouse_id'] = hub.id
+            orders |= here._mart369_place_one(
+                partner, body, '%s-%d' % (ref, index), address, part_items, part_bill,
+                coupon if share else self.env['mart369.coupon'].browse(), slot, extra=extra)
+        return orders
 
     @api.model
     def _mart369_carrier(self, partner):
@@ -287,11 +361,14 @@ class SaleOrder(models.Model):
         if coupon.limit_total and coupon.used_count >= coupon.limit_total:
             raise UserError(self.env._('That coupon has been fully used.'))
         if coupon.limit_per_customer:
-            mine = self.sudo().search_count([
+            used = self.sudo().search([
                 ('partner_id', '=', partner.id),
                 ('mart369_coupon_id', '=', coupon.id),
                 ('mart369_state', '!=', 'cancelled'),
             ])
+            # The parts of one basket from several hubs are one use.
+            mine = len(used.filtered(lambda o: not o.mart369_group)) + len(
+                set(used.filtered('mart369_group').mapped('mart369_group')))
             if mine >= coupon.limit_per_customer:
                 raise UserError(self.env._(
                     'You have already used that coupon.'))
@@ -409,6 +486,14 @@ class SaleOrder(models.Model):
         """
         self.ensure_one()
         if self.mart369_coupon_id:
+            if self.mart369_group and self.sudo().search_count([
+                    ('mart369_group', '=', self.mart369_group),
+                    ('id', '!=', self.id),
+                    ('mart369_coupon_id', '=', self.mart369_coupon_id.id),
+                    ('mart369_state', 'not in', (False, 'draft', 'cancelled'))]):
+                # One checkout, one use: another part of the same basket has
+                # already counted it.
+                return True
             coupon = self.mart369_coupon_id.sudo()
             coupon.write({'used_count': (coupon.used_count or 0) + 1})
         return True

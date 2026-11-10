@@ -63,6 +63,48 @@ class PaymentProvider(models.Model):
             provider.sudo().write({'maximum_amount': 5000})
             _logger.info('mart369: cash on delivery limited to 5000')
 
+    # ------------------------------------------------------------- the hubs
+
+    @api.model
+    def _mart369_wallet_provider(self, company=None):
+        """The 369 Wallet provider of this company, switched on, or nothing.
+        The shop's own is the data record; a hub's is its copy."""
+        company = company or self.env.company
+        main = self.env.ref('mart369_payment.payment_provider_wallet', raise_if_not_found=False)
+        if main and main.sudo().company_id == company:
+            return main.sudo() if main.sudo().state != 'disabled' else self.browse()
+        return self.sudo().search([
+            ('code', '=', 'custom'), ('custom_mode', '=', 'mart369_wallet'),
+            ('company_id', '=', company.id), ('state', '!=', 'disabled'),
+        ], limit=1)
+
+    @api.model
+    def _mart369_ensure_hub_providers(self, companies):
+        """Cash on delivery and the 369 Wallet in every hub company.
+
+        Odoo copies a provider into a company made after it, switched off; a
+        company made before it gets none at all. This gives a company that has
+        none a copy, the way Odoo would, in the state the shop's own is in, so
+        a hub can take its part of a basket. A copy someone has switched off is
+        left alone: that was a choice.
+        """
+        Provider = self.sudo()
+        for xmlid in ('delivery.payment_provider_cod', 'mart369_payment.payment_provider_wallet'):
+            main = self.env.ref(xmlid, raise_if_not_found=False)
+            if not main:
+                continue
+            main = main.sudo()
+            for company in companies:
+                if company == main.company_id or company.parent_id:
+                    continue
+                if Provider.with_context(active_test=False).search_count([
+                        ('code', '=', main.code), ('custom_mode', '=', main.custom_mode),
+                        ('company_id', '=', company.id)]):
+                    continue
+                copy = main.copy({'company_id': company.id})
+                copy.write({'state': main.state, 'is_published': main.is_published})
+                _logger.info('mart369: %s set up for %s', main.name, company.name)
+
     # ---------------------------------------------------------------- lookup
 
     @api.model
@@ -79,8 +121,12 @@ class PaymentProvider(models.Model):
         unless the order's carrier allows it, and it needs the order to find out.
         """
         currency = currency or self.env.company.currency_id
+        # The order's own company: one hub's part of a basket from several is
+        # paid to that hub. A whole-basket order is in the shop's company, as
+        # always, so this is the same company it always asked about.
+        company = order.company_id if order and order.company_id else self.env.company
         compatible = self.sudo()._get_compatible_providers(
-            self.env.company.id, partner.id, amount,
+            company.id, partner.id, amount,
             currency_id=currency.id,
             sale_order_id=order.id if order else None)
         if not compatible:

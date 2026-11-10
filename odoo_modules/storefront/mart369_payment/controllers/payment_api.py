@@ -111,6 +111,20 @@ class Mart369PaymentApi(http.Controller):
             return request.env['sale.order'].browse()
         return order
 
+    def _group_parts(self, ref):
+        """This customer's orders that share one checkout number - a basket
+        from several hubs, one order per hub - or nothing. A number that is
+        itself an order is never a checkout."""
+        SaleOrder = request.env['sale.order'].sudo()
+        ref = (ref or '').strip()
+        if not ref or 'mart369_group' not in SaleOrder._fields:
+            return SaleOrder.browse()
+        if SaleOrder.search_count([('mart369_ref', '=', ref)]):
+            return SaleOrder.browse()
+        return SaleOrder.search([
+            ('mart369_group', '=', ref), ('partner_id', '=', self._me().id),
+        ], order='id')
+
     def _methods(self):
         """Both lists, in the shape `369mart.payments` already holds."""
         tokens = request.env['payment.token'].sudo().search([
@@ -147,6 +161,9 @@ class Mart369PaymentApi(http.Controller):
 
         order = self._order(kwargs.get('order_ref'))
         Provider = request.env['payment.provider']
+        parts = self._group_parts(kwargs.get('order_ref')) if not order else order
+        if parts and not order:
+            return self._json(self._group_options(parts, currency))
         available = []
         for code in ('upi', 'card', 'netbanking', 'cod', 'wallet'):
             if code == 'wallet' and currency.compare_amounts(
@@ -179,6 +196,122 @@ class Mart369PaymentApi(http.Controller):
             'codLimit': cod.sudo().maximum_amount if cod else 0.0,
             'walletBalance': self._wallet()._mart369_balance(),
         })
+
+    def _group_options(self, parts, currency):
+        """How a basket from several hubs can be paid: cash on delivery, each
+        hub's rider collecting its own part, or the 369 Wallet - never online
+        yet, because one card payment would land in one hub's bank. Cash is
+        offered only if every hub can take its own part."""
+        Provider = request.env['payment.provider']
+        Tx = request.env['payment.transaction']
+        total = 0.0
+        cod_ok = True
+        for part in parts:
+            try:
+                gross, __ = Tx._mart369_amount_for(part.mart369_ref, None, currency)
+            except UserError:
+                cod_ok = False
+                continue
+            total += gross
+            if not Provider._mart369_provider_for('cod', self._me(), gross, currency, order=part):
+                cod_ok = False
+        methods = ['cod'] if cod_ok else []
+        balance = self._wallet()._mart369_balance()
+        if currency.compare_amounts(balance, total) >= 0 and all(
+                Provider._mart369_wallet_provider(p.company_id) for p in parts):
+            methods.append('wallet')
+        cod = request.env.ref('delivery.payment_provider_cod', raise_if_not_found=False)
+        return {
+            'ok': True,
+            'methods': methods,
+            'codLimit': cod.sudo().maximum_amount if cod else 0.0,
+            'walletBalance': balance,
+            # Says why there is no online payment, for the checkout to show.
+            'parts': len(parts),
+            'onlineOff': True,
+        }
+
+    def _pay_group(self, parts, method, body):
+        """Pay a basket from several hubs: one payment per part, each to that
+        hub, all in this one request.
+
+        Everything is checked before any money moves - each part's amount,
+        the wallet's share of it, and who takes the rest - so a part that
+        cannot be paid leaves the wallet untouched. Then the parts are paid in
+        turn inside one savepoint: a failure half-way rolls them all back.
+        """
+        if method not in ('cod', 'wallet'):
+            return self._fail(_(
+                "Online payment isn't available yet for a basket from several "
+                "hubs. Pay cash on delivery or with your 369 Wallet."), 'method')
+        card = self._wallet()
+        currency = card.currency_id or request.env.company.currency_id
+        Tx = request.env['payment.transaction']
+        Provider = request.env['payment.provider']
+        balance = card._mart369_balance() if (body.get('wallet_use') or method == 'wallet') else 0.0
+
+        plan = []
+        for part in parts:
+            try:
+                gross, client_priced = Tx._mart369_amount_for(part.mart369_ref, None, currency)
+            except UserError as exc:
+                return self._fail(str(exc), 'amount')
+            wallet_used = currency.round(min(balance, gross))
+            balance -= wallet_used
+            payable = currency.round(gross - wallet_used)
+            hub = part.company_id.name or ''
+            if currency.is_zero(payable):
+                provider = Provider._mart369_wallet_provider(part.company_id)
+                if not provider:
+                    return self._fail(_(
+                        "%s can't take the 369 Wallet yet. Pay cash on delivery.", hub), 'method')
+            else:
+                if method == 'wallet':
+                    return self._fail(_(
+                        "Your 369 Wallet doesn't cover this order. Choose another way "
+                        "to pay."), 'method')
+                provider = Provider._mart369_provider_for(
+                    'cod', self._me(), payable, currency, order=part)
+                if not provider:
+                    return self._fail(_(
+                        "Cash on delivery isn't available for the part from %s.", hub), 'method')
+            plan.append((part, wallet_used, payable, provider, client_priced))
+
+        txs = Tx.browse()
+        try:
+            with request.env.cr.savepoint():
+                for part, wallet_used, payable, provider, client_priced in plan:
+                    if wallet_used:
+                        card._mart369_move(
+                            wallet_used, 'spend', _("Order"),
+                            sub=_("Order #%s", part.mart369_ref))
+                    tx = self._create_tx(
+                        provider, payable or wallet_used, currency,
+                        kind='order', card=card, order_ref=part.mart369_ref,
+                        wallet_used=wallet_used, client_priced=client_priced)
+                    if currency.is_zero(payable):
+                        tx._set_done(state_message=_("Paid from the 369 Wallet."))
+                        tx._post_process()
+                    else:
+                        tx._set_pending()
+                        tx._post_process()
+                    txs |= tx
+        except UserError as exc:
+            return self._fail(str(exc), 'wallet')
+
+        first = txs[:1]
+        return self._json({
+            'ok': True,
+            'reference': first.reference,
+            'references': txs.mapped('reference'),
+            'txn': first.mart369_txn,
+            # Done when every part is paid from the wallet; otherwise the
+            # riders collect, which reads as pending until they do.
+            'state': 'done' if all(t.state == 'done' for t in txs) else first.state,
+            'wallet_used': sum(p[1] for p in plan),
+            'payable': sum(p[2] for p in plan),
+            'parts': len(txs),
+        }, status=201)
 
     # -------------------------------------------------------- saved methods
 
@@ -399,6 +532,11 @@ class Mart369PaymentApi(http.Controller):
         method = body.get('method')
         if method not in ('upi', 'card', 'netbanking', 'cod', 'wallet'):
             return self._fail(_("Choose how you want to pay."), 'method')
+
+        # A basket from several hubs is one order per hub, paid together.
+        parts = self._group_parts(body.get('order_ref'))
+        if parts:
+            return self._pay_group(parts, method, body)
 
         card = self._wallet()
         currency = card.currency_id or request.env.company.currency_id

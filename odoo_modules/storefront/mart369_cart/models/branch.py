@@ -61,11 +61,28 @@ class Mart369Branch(models.Model):
         help='What Quick means from this branch, e.g. "30 mins" or "2-4 hours". '
              "Empty: the shop's usual Quick promise.")
 
-    @api.constrains('mart369_quick_km', 'mart369_maybe_km', 'mart369_lat', 'mart369_lng')
+    # A hub's own delivery charges, for the part of a basket it ships. Off:
+    # the shop's Quick and Express fees apply, as everywhere else.
+    mart369_own_fees = fields.Boolean(
+        string='Own delivery fees',
+        help="On: what this branch ships is charged the fees below instead of "
+             "the shop's.")
+    mart369_quick_fee = fields.Float(string='Quick fee', default=0.0)
+    mart369_express_fee = fields.Float(string='Express fee', default=0.0)
+    mart369_free_above = fields.Float(
+        string='Free delivery above', default=0.0,
+        help="Items from this branch worth more than this ship free. 0 means "
+             "delivery is never free.")
+
+    @api.constrains('mart369_quick_km', 'mart369_maybe_km', 'mart369_lat', 'mart369_lng',
+                    'mart369_quick_fee', 'mart369_express_fee', 'mart369_free_above')
     def _check_mart369_quick(self):
         for branch in self:
             if branch.mart369_quick_km < 0 or branch.mart369_maybe_km < 0:
                 raise ValidationError(self.env._('The Quick reach cannot be negative.'))
+            if min(branch.mart369_quick_fee, branch.mart369_express_fee,
+                   branch.mart369_free_above) < 0:
+                raise ValidationError(self.env._('Delivery amounts cannot be negative.'))
             if branch.mart369_maybe_km and branch.mart369_maybe_km < branch.mart369_quick_km:
                 raise ValidationError(self.env._(
                     '"Quick if possible up to" must be at least the Quick reach.'))
@@ -142,7 +159,14 @@ class Mart369Branch(models.Model):
             vals['mart369_quick'] = bool(values['quick'])
         if 'quickEta' in values:
             vals['mart369_quick_eta'] = (str(values['quickEta'] or '')).strip()[:40]
+        if 'ownFees' in values:
+            vals['mart369_own_fees'] = bool(values['ownFees'])
         for key, field, what in (('quickKm', 'mart369_quick_km', self.env._('The reach')),
+                                 ('quickFee', 'mart369_quick_fee', self.env._('The Quick fee')),
+                                 ('expressFee', 'mart369_express_fee',
+                                  self.env._('The Express fee')),
+                                 ('freeAbove', 'mart369_free_above',
+                                  self.env._('"Free delivery above"')),
                                  ('maybeKm', 'mart369_maybe_km',
                                   self.env._('"Quick if possible up to"')),
                                  ('lat', 'mart369_lat', self.env._('Latitude')),
@@ -172,6 +196,10 @@ class Mart369Branch(models.Model):
             'quickKm': round(self.mart369_quick_km or 0.0, 2),
             'maybeKm': round(self.mart369_maybe_km or 0.0, 2),
             'quickEta': self.mart369_quick_eta or '',
+            'ownFees': self.mart369_own_fees,
+            'quickFee': round(self.mart369_quick_fee or 0.0, 3),
+            'expressFee': round(self.mart369_express_fee or 0.0, 3),
+            'freeAbove': round(self.mart369_free_above or 0.0, 3),
             'lat': self.mart369_lat if pinned else None,
             'lng': self.mart369_lng if pinned else None,
             # Quick is on but it cannot actually reach anyone - the screens

@@ -41,6 +41,8 @@ are what the customer pays, which is how Indian retail quotes a price. The GST
 split belongs on the invoice, and that is mart369_order's job.
 """
 
+from types import SimpleNamespace
+
 from odoo import api, models
 
 from .branch import has_pin, haversine_km
@@ -163,6 +165,8 @@ class Mart369Cart(models.AbstractModel):
             return EXPRESS, none
         if where.get('branches') is not None:
             for branch, __ in where['branches']:
+                if product.company_id and branch.company_id != product.company_id:
+                    continue    # another company's product is not this branch's
                 if branch._mart369_has_stock(product, qty, variant=variant):
                     return QUICK, branch
             return EXPRESS, none
@@ -235,6 +239,9 @@ class Mart369Cart(models.AbstractModel):
         none = self.env['stock.warehouse'].browse()
         best = None
         for branch, km in where['hubs']:
+            if product.company_id and branch.company_id != product.company_id:
+                # Another company's product is not this branch's to sell.
+                continue
             if not branch._mart369_has_stock(product, qty, variant=variant):
                 continue
             offer = self._mart369_hub_tier(branch, km, where['home'], where['table'])
@@ -297,7 +304,8 @@ class Mart369Cart(models.AbstractModel):
                 company = branch.company_id
             elif 'warehouse_id' in branch._fields:
                 company = branch.warehouse_id.company_id
-        company = company or product.company_id or self.env.company
+        # A product that belongs to one company is only ever that company's.
+        company = product.company_id or company or self.env.company
         company = company.sudo()
         return {'id': company.id, 'name': company.name or ''}
 
@@ -383,6 +391,7 @@ class Mart369Cart(models.AbstractModel):
         sellers_on = self._mart369_sellers_on()
         sellers = {}            # which company sells each line, when there are several
         notes = {}              # the hub rules' when / cargo / maybe, per line
+        rows = []               # (seller, branch, key, qty, mode, value) for the parts
 
         for line in lines:
             tmpl, qty = line['tmpl'], line['qty']
@@ -402,6 +411,7 @@ class Mart369Cart(models.AbstractModel):
                 notes[line['key']] = line_notes
             if sellers_on:
                 sellers[line['key']] = self._mart369_seller(tmpl, branch)
+                rows.append((sellers[line['key']], branch, line['key'], qty, mode, price * qty))
             # The hub rules also name the hub an Express line ships from;
             # `branch` stays what it always was - who hands a Quick line over.
             if branch and mode == QUICK and branch.name not in branches:
@@ -414,7 +424,14 @@ class Mart369Cart(models.AbstractModel):
             mrp += was * qty
             count += qty
 
-        fees = self._mart369_fees(rules, present, sub, gross, slot_fee)
+        parts = (self._mart369_parts(rows, rules)
+                 if sellers_on and self._mart369_split_allowed() else [])
+        if parts:
+            # One delivery per seller, each at that hub's own fees (or the
+            # shop's), and the slot's fee once.
+            fees = sum(p['fees'] for p in parts) + max(0.0, slot_fee or 0.0)
+        else:
+            fees = self._mart369_fees(rules, present, sub, gross, slot_fee)
 
         sums = {'items': gross, QUICK: sub[QUICK], EXPRESS: sub[EXPRESS], 'fees': fees}
 
@@ -468,7 +485,73 @@ class Mart369Cart(models.AbstractModel):
             # {key: {when?, cargo?, maybe?}}: only lines the hub rules said
             # something about. Empty while the hub table is.
             'notes': notes,
+            # A basket from two or more sellers comes as one order per seller
+            # (mart369_order places them): [{seller, keys, qty, items, fees,
+            # mode, hubId}]. Empty for a one-seller basket, which is one order
+            # as it always was.
+            'parts': [dict(p, fees=round(p['fees'], 2), items=round(p['items'], 2))
+                      for p in parts] if len(parts) > 1 else [],
         }
+
+    # ------------------------------------------------------------ the parts
+
+    @api.model
+    def _mart369_split_allowed(self):
+        """Whether a basket from several sellers becomes one order per seller.
+        The WhatsApp bridge's own delivery stack keeps one order per basket
+        (it says so in its own override)."""
+        return True
+
+    @api.model
+    def _mart369_hub_rules(self, rules, hub):
+        """The delivery rules for a part a hub ships: its own fee and
+        free-delivery amount when it has set them, else the shop's. The Quick
+        minimum and the promise stay the shop's."""
+        if not hub or not hub.mart369_own_fees:
+            return rules
+        out = {}
+        for mode, fee in ((QUICK, hub.mart369_quick_fee), (EXPRESS, hub.mart369_express_fee)):
+            base = rules.get(mode)
+            out[mode] = SimpleNamespace(
+                fee=fee or 0.0, free_above=hub.mart369_free_above or 0.0,
+                min_order=base.min_order if base else 0.0,
+                eta=base.eta if base else '', label=base.label if base else '')
+        return out
+
+    @api.model
+    def _mart369_parts(self, rows, rules):
+        """The basket split by seller: one entry per company, in the order the
+        lines came, each with what its own delivery costs."""
+        Branch = self.env['stock.warehouse'].sudo()
+        groups = {}
+        for seller, branch, key, qty, mode, value in rows:
+            part = groups.get(seller['id'])
+            if part is None:
+                part = groups[seller['id']] = {
+                    'seller': seller, 'keys': [], 'qty': {}, 'items': 0.0,
+                    'hub': Branch.browse(),
+                    'sub': {QUICK: 0.0, EXPRESS: 0.0},
+                    'present': {QUICK: False, EXPRESS: False}}
+            part['keys'].append(key)
+            part['qty'][key] = qty
+            part['items'] += value
+            part['sub'][mode] += value
+            part['present'][mode] = True
+            if (branch and not part['hub'] and branch._name == 'stock.warehouse'
+                    and branch.company_id.id == seller['id']):
+                part['hub'] = branch
+        out = []
+        for company_id, part in groups.items():
+            hub = part['hub'] or Branch.search([('company_id', '=', company_id)], limit=1)
+            fees = self._mart369_fees(self._mart369_hub_rules(rules, hub), part['present'],
+                                      part['sub'], part['items'], 0.0)
+            out.append({
+                'seller': part['seller'], 'keys': part['keys'], 'qty': part['qty'],
+                'items': part['items'], 'fees': fees,
+                'mode': QUICK if part['sub'][QUICK] else EXPRESS,
+                'hubId': hub.id or False,
+            })
+        return out
 
     @api.model
     def _mart369_unknown(self, items, lines):
