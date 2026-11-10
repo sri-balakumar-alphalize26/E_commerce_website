@@ -5,3 +5,4 @@ from . import coupon
 from . import deal
 from . import cart
 from . import branch
+from . import hub_rule

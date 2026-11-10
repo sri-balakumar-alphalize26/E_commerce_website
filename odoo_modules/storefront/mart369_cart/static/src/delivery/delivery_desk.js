@@ -266,7 +266,8 @@ export class AreaDialog extends Component {
 }
 
 /** One branch's Quick settings. Branches themselves are made in Inventory,
- *  so this edits the four things delivery owns and nothing else. */
+ *  so this edits only the things delivery owns: Quick on or off, its reach,
+ *  "Quick if possible up to", its Quick promise and its pin. */
 export class BranchDialog extends Component {
     static template = "mart369_cart.BranchDialog";
     static components = { Dialog, Switch, Icon };
@@ -283,6 +284,8 @@ export class BranchDialog extends Component {
             draft: {
                 quick: b.quick,
                 quickKm: b.quickKm ? String(b.quickKm) : "",
+                maybeKm: b.maybeKm ? String(b.maybeKm) : "",
+                quickEta: b.quickEta || "",
                 lat: b.lat ?? "",
                 lng: b.lng ?? "",
             },
@@ -316,7 +319,8 @@ export class BranchDialog extends Component {
         const d = this.state.draft;
         try {
             await this.orm.call(M.branch, "mart369_admin_save", [this.props.branch.id, {
-                quick: !!d.quick, quickKm: d.quickKm, lat: d.lat, lng: d.lng,
+                quick: !!d.quick, quickKm: d.quickKm, maybeKm: d.maybeKm,
+                quickEta: d.quickEta, lat: d.lat, lng: d.lng,
             }]);
             this.props.close();
             await this.props.onSaved(_t("%s saved.", this.props.branch.name));

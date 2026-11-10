@@ -416,12 +416,13 @@ function AreaDrawer({ area, onClose, onSaved }) {
 }
 
 /* ============================== branch form ============================== */
-/* A branch is a warehouse, made in Odoo's Inventory. Delivery owns only these
-   four things about it, so there is no "New branch" here. */
+/* A branch is a warehouse, made in Odoo's Inventory. Delivery owns only its
+   Quick settings and pin, so there is no "New branch" here. */
 function BranchDrawer({ branch, onClose, onSaved }) {
   const act = useAction();
   const [form, setForm] = useState({
     quick: branch.quick, quickKm: branch.quickKm ? String(branch.quickKm) : "",
+    maybeKm: branch.maybeKm ? String(branch.maybeKm) : "", quickEta: branch.quickEta || "",
     lat: branch.lat ?? "", lng: branch.lng ?? "",
   });
   const [error, setError] = useState("");
@@ -476,11 +477,18 @@ function BranchDrawer({ branch, onClose, onSaved }) {
         <div className="ad-form">
           <Field label="Reach" value={form.quickKm} onChange={(v) => set("quickKm", v)}
             placeholder="5" suffix="km" decimal />
+          <Field label="Quick if possible up to" value={form.maybeKm} onChange={(v) => set("maybeKm", v)}
+            placeholder="Off" suffix="km" decimal />
+          <Field label="Quick promise" value={form.quickEta} onChange={(v) => set("quickEta", v)}
+            placeholder="30 mins" />
         </div>
         <p className="ad-hint">
           <Icon n="info" size={14} />
           A straight line from the branch. Roads are longer, so set it a little
-          under what a rider covers in the Quick time.
+          under what a rider covers in the Quick time. Past the reach and up to
+          "Quick if possible", the customer is promised Express and it comes
+          Quick when a rider is free. Both, and the Quick promise, count once
+          Hub rules in Odoo has a row.
         </p>
       </section>
 

@@ -169,6 +169,39 @@
         </field>
     </record>
 
+    <!-- ========================= hub rules =========================
+         One row per pair of hubs: a product in this hub, for a customer in
+         that one, arrives when. Empty table = the shop works as before. -->
+    <record id="mart369_hub_rule_view_list" model="ir.ui.view">
+        <field name="name">mart369.hub.rule.list</field>
+        <field name="model">mart369.hub.rule</field>
+        <field name="arch" type="xml">
+            <list string="Hub rules" class="o_mart369_list" editable="bottom">
+                <field name="from_hub_id" options="{'no_create': True}"/>
+                <field name="to_hub_id" options="{'no_create': True}"/>
+                <field name="arrives" placeholder="Next day"/>
+                <field name="days"/>
+                <field name="cargo" widget="boolean_toggle"/>
+                <field name="active" string="Live" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_mart369_hub_rules" model="ir.actions.act_window">
+        <field name="name">Hub rules</field>
+        <field name="res_model">mart369.hub.rule</field>
+        <field name="view_mode">list</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No hub rule yet</p>
+            <p>Add one row per pair of hubs: <b>Product is in</b> Sohar Hub,
+               <b>Customer is in</b> Ruwi, <b>Arrives</b> Next day. Turn on
+               <b>Cargo badge</b> for long trips, such as to or from Salalah.</p>
+            <p>Inside one hub, the distance decides instead: each branch's Quick
+               reach and its "Quick if possible up to", set under Delivery,
+               Branches. While this table is empty the shop works as before.</p>
+        </field>
+    </record>
+
     <!-- The desk: the front door of Delivery & Pricing, and the twin of the
          app's console screen. It answers "what does delivery cost, when can
          it arrive, and where do we go" in one place. The three list views
@@ -210,6 +243,15 @@
               action="action_mart369_delivery_desk"
               groups="base.group_system,website.group_website_designer"
               sequence="50"/>
+
+    <!-- Beside Delivery, for the same people: the hub-to-hub table is part
+         of the same question - when does this arrive. -->
+    <menuitem id="menu_mart369_hub_rules"
+              name="Hub rules"
+              parent="mart369.menu_mart369_store"
+              action="action_mart369_hub_rules"
+              groups="base.group_system,website.group_website_designer"
+              sequence="51"/>
 
     <!-- The list views keep what the desk deliberately does not do: grouping,
          export, the saved filters. They live under Advanced, like every other

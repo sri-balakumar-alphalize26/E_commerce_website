@@ -5,4 +5,5 @@ from . import test_admin_delivery
 from . import test_coupon_desk
 from . import test_branch_quick
 from . import test_sellers
+from . import test_hub_rules
 from . import test_sample_coupons

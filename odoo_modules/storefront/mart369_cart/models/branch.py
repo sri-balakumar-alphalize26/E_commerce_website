@@ -51,12 +51,24 @@ class Mart369Branch(models.Model):
              "0 means nowhere.")
     mart369_lat = fields.Float(string='Latitude', digits=(10, 7))
     mart369_lng = fields.Float(string='Longitude', digits=(10, 7))
+    # Used once the hub rules are on (hub_rule.py); until then nothing reads them.
+    mart369_maybe_km = fields.Float(
+        string='Quick if possible up to (km)', default=0.0,
+        help="Past the Quick reach and up to here, the customer is promised "
+             "Express, and it comes Quick when a rider is free. 0 means off.")
+    mart369_quick_eta = fields.Char(
+        string='Quick promise',
+        help='What Quick means from this branch, e.g. "30 mins" or "2-4 hours". '
+             "Empty: the shop's usual Quick promise.")
 
-    @api.constrains('mart369_quick_km', 'mart369_lat', 'mart369_lng')
+    @api.constrains('mart369_quick_km', 'mart369_maybe_km', 'mart369_lat', 'mart369_lng')
     def _check_mart369_quick(self):
         for branch in self:
-            if branch.mart369_quick_km < 0:
+            if branch.mart369_quick_km < 0 or branch.mart369_maybe_km < 0:
                 raise ValidationError(self.env._('The Quick reach cannot be negative.'))
+            if branch.mart369_maybe_km and branch.mart369_maybe_km < branch.mart369_quick_km:
+                raise ValidationError(self.env._(
+                    '"Quick if possible up to" must be at least the Quick reach.'))
             if not -90 <= branch.mart369_lat <= 90 or not -180 <= branch.mart369_lng <= 180:
                 raise ValidationError(self.env._(
                     'That is not a place on the map: latitude is -90 to 90, '
@@ -114,7 +126,7 @@ class Mart369Branch(models.Model):
 
         The desk in Odoo calls this through the ORM and the console's PATCH
         route calls it too, so both refuse the same things in the same words.
-        Only the four Quick fields: a branch's name, company and stock are
+        Only the Quick fields: a branch's name, company and stock are
         Inventory's business, and a delivery screen must not rename one.
 
         sudo after the group check, because the branches belong to other
@@ -128,7 +140,11 @@ class Mart369Branch(models.Model):
         vals = {}
         if 'quick' in values:
             vals['mart369_quick'] = bool(values['quick'])
+        if 'quickEta' in values:
+            vals['mart369_quick_eta'] = (str(values['quickEta'] or '')).strip()[:40]
         for key, field, what in (('quickKm', 'mart369_quick_km', self.env._('The reach')),
+                                 ('maybeKm', 'mart369_maybe_km',
+                                  self.env._('"Quick if possible up to"')),
                                  ('lat', 'mart369_lat', self.env._('Latitude')),
                                  ('lng', 'mart369_lng', self.env._('Longitude'))):
             if key not in values:
@@ -154,6 +170,8 @@ class Mart369Branch(models.Model):
             'company': self.company_id.name or '',
             'quick': self.mart369_quick,
             'quickKm': round(self.mart369_quick_km or 0.0, 2),
+            'maybeKm': round(self.mart369_maybe_km or 0.0, 2),
+            'quickEta': self.mart369_quick_eta or '',
             'lat': self.mart369_lat if pinned else None,
             'lng': self.mart369_lng if pinned else None,
             # Quick is on but it cannot actually reach anyone - the screens

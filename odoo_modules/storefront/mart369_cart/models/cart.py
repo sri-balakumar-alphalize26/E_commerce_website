@@ -43,6 +43,8 @@ split belongs on the invoice, and that is mart369_order's job.
 
 from odoo import api, models
 
+from .branch import has_pin, haversine_km
+
 # A product is Express if it carries a delivery promise, exactly as the app
 # decides it: `groups[p.delivery ? "all" : "quick"]`.
 QUICK, EXPRESS = 'quick', 'all'
@@ -128,6 +130,9 @@ class Mart369Cart(models.AbstractModel):
         where = {'branches': None, 'area_quick': None, 'reason': ''}
         if not address:
             return where
+        hubs = self._mart369_hub_where(address)
+        if hubs:
+            return hubs
         Branch = self.env['stock.warehouse'].sudo()
         any_ready = any(b._mart369_ready()
                         for b in Branch.search([('mart369_quick', '=', True)]))
@@ -150,9 +155,12 @@ class Mart369Cart(models.AbstractModel):
         over, when Quick came from a branch; otherwise an empty recordset.
         `variant`, when the customer picked one, is the stock that counts."""
         none = self.env['stock.warehouse'].browse()
+        where = where or {}
+        if where.get('hubs') is not None:
+            offer = self._mart369_hub_offer(product, qty, where, variant=variant)
+            return offer['mode'], offer['branch']
         if self._mart369_express_only(product):
             return EXPRESS, none
-        where = where or {}
         if where.get('branches') is not None:
             for branch, __ in where['branches']:
                 if branch._mart369_has_stock(product, qty, variant=variant):
@@ -166,6 +174,104 @@ class Mart369Cart(models.AbstractModel):
     def _mart369_express_only(self, product):
         """A product with its own delivery promise never goes Quick."""
         return bool(product.mart_delivery_text)
+
+    # ------------------------------------------------------------- the hubs
+
+    @api.model
+    def _mart369_hub_where(self, address):
+        """The hub rules' view of an address, or None to use the old rule.
+
+        On only when the hub table has a row (hub_rule.py) and the address
+        has a map pin. Every branch with a pin is a hub, measured from the
+        address, nearest first; the nearest is the customer's own hub.
+        """
+        table = self.env['mart369.hub.rule']._mart369_table()
+        if not table:
+            return None
+        lat, lng = address.partner_latitude, address.partner_longitude
+        if not has_pin(lat, lng):
+            return None
+        hubs = sorted(
+            ((b, haversine_km(lat, lng, b.mart369_lat, b.mart369_lng))
+             for b in self.env['stock.warehouse'].sudo().search([])
+             if has_pin(b.mart369_lat, b.mart369_lng)),
+            key=lambda pair: pair[1])
+        if not hubs:
+            return None
+        reaches = any(b._mart369_ready() and km <= b.mart369_quick_km for b, km in hubs)
+        return {'branches': None, 'area_quick': None, 'reason': '' if reaches else 'far',
+                'hubs': hubs, 'home': hubs[0][0], 'table': table}
+
+    @api.model
+    def _mart369_hub_tier(self, branch, km, home, table):
+        """How this branch would deliver to an address `km` away, whose own
+        hub is `home`: {'mode', 'when', 'cargo', 'maybe', 'rank'}.
+
+        Close enough for its Quick reach: Quick, in the branch's own promise.
+        Up to its "Quick if possible" reach: Express, which may come Quick.
+        Otherwise the table: its row for (this branch, the customer's hub), or
+        plain Express when no row says how. `rank` picks between hubs - Quick
+        first, then the fewest days, then the nearest.
+        """
+        if branch._mart369_ready() and km <= branch.mart369_quick_km:
+            return {'mode': QUICK, 'when': branch.mart369_quick_eta or '', 'cargo': False,
+                    'maybe': False, 'rank': (0, 0, km)}
+        row = table.get((branch.id, home.id))
+        when = (row.arrives or '') if row else ''
+        cargo = bool(row and row.cargo)
+        days = row.days if row else 99
+        if branch.mart369_maybe_km and km <= branch.mart369_maybe_km:
+            return {'mode': EXPRESS, 'when': when, 'cargo': cargo, 'maybe': True,
+                    'rank': (1, days, km)}
+        return {'mode': EXPRESS, 'when': when, 'cargo': cargo, 'maybe': False,
+                'rank': (2, days, km)}
+
+    @api.model
+    def _mart369_hub_offer(self, product, qty, where, variant=None):
+        """The best way to get this item to the address, from any hub that
+        has it: {'mode', 'branch', 'when', 'cargo', 'maybe'}. The customer's
+        own hub out of stock? The next hub steps in. No hub has it: Express,
+        as before, from nobody in particular."""
+        none = self.env['stock.warehouse'].browse()
+        best = None
+        for branch, km in where['hubs']:
+            if not branch._mart369_has_stock(product, qty, variant=variant):
+                continue
+            offer = self._mart369_hub_tier(branch, km, where['home'], where['table'])
+            if best is None or offer['rank'] < best['rank']:
+                best = dict(offer, branch=branch)
+        if best is None:
+            return {'mode': EXPRESS, 'branch': none, 'when': '', 'cargo': False, 'maybe': False}
+        if self._mart369_express_only(product):
+            # Its own promise wins; the hub still decides who sells it.
+            best.update(mode=EXPRESS, when=product.mart_delivery_text, maybe=False)
+        best.pop('rank', None)
+        return best
+
+    @api.model
+    def _mart369_offer_notes(self, offer):
+        """What a card or a cart line adds from the hub rules, only what is
+        set: {'when': 'Next day', 'cargo': True, 'maybe': True}. Empty while
+        the hub rules are off, so the shop shows what it always did."""
+        notes = {}
+        if offer.get('when'):
+            notes['when'] = offer['when']
+        if offer.get('cargo'):
+            notes['cargo'] = True
+        if offer.get('maybe'):
+            notes['maybe'] = True
+        return notes
+
+    @api.model
+    def _mart369_offer(self, product, qty=1, where=None, variant=None):
+        """{'mode', 'branch', 'when'?, 'cargo'?, 'maybe'?} for one line: the
+        hub rules' full answer when they are on, else `_mart369_mode_of`'s
+        (ours or the WhatsApp bridge's)."""
+        where = where or {}
+        if where.get('hubs') is not None:
+            return self._mart369_hub_offer(product, qty, where, variant=variant)
+        mode, branch = self._mart369_mode_of(product, qty, where, variant=variant)
+        return {'mode': mode, 'branch': branch}
 
     # ------------------------------------------------------------ the seller
 
@@ -217,13 +323,15 @@ class Mart369Cart(models.AbstractModel):
         badges = {}
         for line in self._mart369_resolve({key: 1 for key in keys}):
             tmpl = line['tmpl']
-            mode, branch = self._mart369_mode_of(tmpl, 1, where, variant=line['variant'])
+            offer = self._mart369_offer(tmpl, 1, where, variant=line['variant'])
+            mode, branch = offer['mode'], offer['branch']
             entry = {'mode': mode}
             rule = rules.get(mode)
             eta = (tmpl.mart_delivery_text if self._mart369_express_only(tmpl)
                    else (rule.eta if rule else '')) or ''
             if eta:
                 entry['eta'] = eta
+            entry.update(self._mart369_offer_notes(offer))
             if sellers:
                 entry['seller'] = self._mart369_seller(tmpl, branch)
             badges[line['key']] = entry
@@ -274,6 +382,7 @@ class Mart369Cart(models.AbstractModel):
         moved = 0
         sellers_on = self._mart369_sellers_on()
         sellers = {}            # which company sells each line, when there are several
+        notes = {}              # the hub rules' when / cargo / maybe, per line
 
         for line in lines:
             tmpl, qty = line['tmpl'], line['qty']
@@ -285,11 +394,17 @@ class Mart369Cart(models.AbstractModel):
 
             # The variant the order will sell - picked, or the product's first
             # - is the stock that counts, never its siblings' together.
-            mode, branch = self._mart369_mode_of(tmpl, qty, where, variant=line['variant'])
+            offer = self._mart369_offer(tmpl, qty, where, variant=line['variant'])
+            mode, branch = offer['mode'], offer['branch']
             modes[line['key']] = mode
+            line_notes = self._mart369_offer_notes(offer)
+            if line_notes:
+                notes[line['key']] = line_notes
             if sellers_on:
                 sellers[line['key']] = self._mart369_seller(tmpl, branch)
-            if branch and branch.name not in branches:
+            # The hub rules also name the hub an Express line ships from;
+            # `branch` stays what it always was - who hands a Quick line over.
+            if branch and mode == QUICK and branch.name not in branches:
                 branches.append(branch.name)
             if mode == EXPRESS and not self._mart369_express_only(tmpl):
                 moved += 1
@@ -350,6 +465,9 @@ class Mart369Cart(models.AbstractModel):
             # {key: {id, name}}: who sells each line. Empty on a one-company
             # shop, where the cart shows no seller.
             'sellers': sellers,
+            # {key: {when?, cargo?, maybe?}}: only lines the hub rules said
+            # something about. Empty while the hub table is.
+            'notes': notes,
         }
 
     @api.model
