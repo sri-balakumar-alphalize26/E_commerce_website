@@ -90,9 +90,9 @@ class SaGroupRequestFinder(models.Model):
     finder_company_id = fields.Many2one(
         'res.company', string='Stock Company', readonly=True, copy=False,
         help="The company whose shelf the chosen product sits on. Price and "
-             "stock are read there; the order is still raised by the "
-             "WhatsApp session's company and the shop can move the delivery "
-             "at Accept.")
+             "stock are read there; the order is still raised in the "
+             "group's company and the shop can move the delivery at "
+             "Accept.")
     finder_options = fields.Text(
         'Current Options (JSON)', readonly=True, copy=False,
         help="What each label in the last poll stands for, so a vote is "

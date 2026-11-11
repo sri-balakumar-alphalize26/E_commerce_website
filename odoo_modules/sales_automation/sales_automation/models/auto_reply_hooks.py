@@ -118,18 +118,40 @@ class WaAutoReply(models.Model):
     # ----------------------------------------------------------
     # 3. Link the order back to the enquiry that started it
     # ----------------------------------------------------------
+    @api.model
+    def _sa_for_company(self, company):
+        """This model, set to raise its next sale order in `company`.
+
+        The tracker writes the employee session's Order Company onto every
+        order it makes. One session serves every group, so a group selling
+        for another company had its orders booked in the session's instead.
+        The tracker is shared by every database on the server and is left
+        alone; `sale.order.create` here reads the context key instead.
+        """
+        if not company:
+            return self
+        return self.with_company(company).with_context(sa_order_company_id=company.id)
+
     def _create_sale_order(self, session, conv, product_template, qty,
                            is_existing_contact, unit_price=None):
-        order = super()._create_sale_order(
+        request = self.env['sa.group.request']
+        if conv:
+            request = request.sudo().search([
+                ('conversation_id', '=', conv.id),
+                ('product_id', '=', product_template.id),
+                ('state', 'in', ('answered', 'handed_off')),
+            ], order='id desc', limit=1)
+        engine = self
+        if request and not self.env.context.get('sa_order_company_id'):
+            # The quantity was answered in the private chat after a group
+            # quote: the order is still the group's.
+            engine = self._sa_for_company(request._sa_order_company())
+        order = super(WaAutoReply, engine)._create_sale_order(
             session, conv, product_template, qty, is_existing_contact,
             unit_price=unit_price)
         if not order or not conv:
             return order
-        request = self.env['sa.group.request'].sudo().search([
-            ('conversation_id', '=', conv.id),
-            ('product_id', '=', product_template.id),
-            ('state', 'in', ('answered', 'handed_off')),
-        ], order='id desc', limit=1)
+        order = order.with_env(self.env)
         if request:
             request.write({'order_id': order.id, 'state': 'order_created'})
             order.sudo().sa_group_request_id = request.id

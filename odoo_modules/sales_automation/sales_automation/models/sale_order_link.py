@@ -2,7 +2,7 @@
 
 import logging
 
-from odoo import SUPERUSER_ID, fields, models
+from odoo import SUPERUSER_ID, api, fields, models
 
 _logger = logging.getLogger(__name__)
 
@@ -19,6 +19,22 @@ class SaleOrder(models.Model):
         related='sa_group_request_id.group_id', store=True,
         string='WhatsApp Group',
     )
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        """An order raised for a WhatsApp group is in the group's company.
+
+        Set from `wa.auto.reply._sa_for_company`, replacing the employee
+        session's Order Company the tracker wrote. Done at creation so the
+        warehouse, price list and line taxes are that company's from the
+        start; moving it afterwards would leave another company's taxes on
+        the lines. Without the key nothing changes.
+        """
+        company_id = self.env.context.get('sa_order_company_id')
+        if company_id:
+            for vals in vals_list:
+                vals['company_id'] = company_id
+        return super().create(vals_list)
 
     def action_confirm(self):
         """Confirm as the system user when an automated step is doing it.

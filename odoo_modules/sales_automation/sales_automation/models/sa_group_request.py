@@ -2400,10 +2400,18 @@ class SaGroupRequest(models.Model):
 
         price = self.agreed_price or self.quoted_price
         qty = self.qty or 1
-        AutoReply = self.env['wa.auto.reply'].sudo()
+        # The order is the group's business's, not whichever company the
+        # shared employee session happens to name (S00003: a Test 2 order for
+        # NEW COMPANY was raised in My Company, the session's).
+        AutoReply = self.env['wa.auto.reply'].sudo()._sa_for_company(
+            self._sa_order_company())
         order = AutoReply._create_sale_order(
             self.group_id.employee_session_id, conversation, product, qty,
             self._is_existing_contact(conversation), unit_price=price)
+        if order:
+            # Back in this request's own environment, so nothing made later
+            # in this flow inherits the order company switch.
+            order = self.env['sale.order'].sudo().browse(order.id)
         if not order:
             self._say(_("Something went wrong raising the order - somebody "
                         "will follow up. \U0001F64F"))
@@ -2576,6 +2584,14 @@ class SaGroupRequest(models.Model):
                 or employee_session.auto_reply_company_id
                 or group.session_id.company_id
                 or self.env.company)
+
+    def _sa_order_company(self):
+        """The company a sale order for this enquiry is raised in: the
+        group's. The finder's stock company is only the shelf the goods come
+        from - the shop moves the delivery there at Accept - so it does not
+        decide whose books the sale is in."""
+        self.ensure_one()
+        return self._company_for(self.group_id)
 
     # ==========================================================
     # The flow
