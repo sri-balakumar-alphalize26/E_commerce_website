@@ -40,6 +40,16 @@ def qe_on(env):
     return 'sa.qe.delivery.rule' in env and 'sa.qe.delivery.slot' in env
 
 
+def hubs_on(env):
+    """Are the website's hub rules switched on (the hub table has a row)?
+
+    Then the hubs decide the website, even where his module runs: which hub
+    sells each item, Quick / Express / Cargo, each hub's own fee, and one
+    order per hub. WhatsApp is not touched - there each hub is its own group,
+    and the group's company is the hub."""
+    return bool(env['mart369.hub.rule'].sudo().search_count([], limit=1))
+
+
 def clock(hour):
     """18.5 -> '6:30 PM', 8 -> '8 AM'."""
     hour = float(hour or 0.0)
@@ -338,12 +348,18 @@ class CartQe(models.AbstractModel):
 
     @api.model
     def _mart369_where(self, address):
-        """His shops instead of our warehouses; his areas without a pin."""
+        """His shops instead of our warehouses; his areas without a pin.
+
+        The hub rules come first: with the hub table on and a pinned address,
+        the hubs decide, exactly as on a database without his module."""
         if not qe_on(self.env):
             return super()._mart369_where(address)
         where = {'branches': None, 'area_quick': None, 'reason': ''}
         if not address:
             return where
+        hubs = self._mart369_hub_where(address)
+        if hubs:
+            return hubs
         ready = self.env['sa.delivery.shop'].sudo().search(
             [('qe_quick', '=', True)]).filtered(lambda s: s._qe_ready())
         lat, lng = address.partner_latitude, address.partner_longitude
@@ -361,7 +377,7 @@ class CartQe(models.AbstractModel):
 
     @api.model
     def _mart369_mode_of(self, product, qty=1, where=None, variant=None):
-        if not qe_on(self.env):
+        if not qe_on(self.env) or (where or {}).get('hubs') is not None:
             return super()._mart369_mode_of(product, qty, where=where, variant=variant)
         none = self.env['sa.delivery.shop']
         if self._mart369_express_only(product):
@@ -370,6 +386,9 @@ class CartQe(models.AbstractModel):
         if where.get('branches') is not None:
             item = variant or product.product_variant_id
             for shop, __ in where['branches']:
+                if (product.company_id
+                        and shop.warehouse_id.company_id != product.company_id):
+                    continue    # another hub's product is not this shop's
                 if shop._qe_has_stock(item, qty):
                     return QUICK, shop
             return EXPRESS, none
@@ -377,11 +396,9 @@ class CartQe(models.AbstractModel):
             return (QUICK if where['area_quick'] else EXPRESS), none
         return QUICK, none
 
-    @api.model
-    def _mart369_split_allowed(self):
-        """His stack decides one delivery per basket (`_qe_decide`), so a
-        basket stays one order while it is in charge."""
-        return super()._mart369_split_allowed() and not qe_on(self.env)
+    # A basket from several hubs is one order per hub here too: the split is
+    # not switched off for his module any more. Each part keeps the website's
+    # own fee line (SaleOrderQe._mart369_own_fee), so it costs what was shown.
 
     @api.model
     def _mart369_order_mode(self, present):
@@ -391,8 +408,9 @@ class CartQe(models.AbstractModel):
     @api.model
     def _mart369_fees(self, rules, present, sub, gross, slot_fee):
         """One fee per order, his formula (`_qe_refresh_amounts`): the order's
-        rule fee while the goods are under its free-above, plus the slot's."""
-        if not qe_on(self.env):
+        rule fee while the goods are under its free-above, plus the slot's.
+        With the hub rules on, the website's own: each hub's fee per storefront."""
+        if not qe_on(self.env) or hubs_on(self.env):
             return super()._mart369_fees(rules, present, sub, gross, slot_fee)
         fees = 0.0
         if present.get(QUICK) or present.get(EXPRESS):
@@ -403,7 +421,7 @@ class CartQe(models.AbstractModel):
 
     @api.model
     def _mart369_blocked(self, rules, present, sub, gross):
-        if not qe_on(self.env):
+        if not qe_on(self.env) or hubs_on(self.env):
             return super()._mart369_blocked(rules, present, sub, gross)
         rule = rules.get(QUICK)
         return bool(self._mart369_order_mode(present) == QUICK and rule
@@ -415,8 +433,9 @@ class SaleOrderQe(models.Model):
 
     @api.model
     def _mart369_mode_of_bill(self, bill):
-        """His rule: Quick only when nothing in the basket is Express."""
-        if not qe_on(self.env):
+        """His rule: Quick only when nothing in the basket is Express. With
+        the hub rules on, the website's: any Quick item makes it Quick."""
+        if not qe_on(self.env) or hubs_on(self.env):
             return super()._mart369_mode_of_bill(bill)
         sub = bill.get('sub') or {}
         return QUICK if sub.get('quick') and not sub.get('all') else EXPRESS
@@ -476,29 +495,67 @@ class SaleOrderQe(models.Model):
             slot = None
         return super()._mart369_due_at(slot, mode)
 
+    def _mart369_own_fee(self):
+        """Does this website order keep the website's own fee line, not his?
+
+        Every part of a basket split by hub (each at its hub's fee), and every
+        website order while the hub rules are on. His fee would be his shared
+        rule's - dearer than the bill for a hub with its own fee, and the order
+        is refused for being dearer than what the customer was shown."""
+        self.ensure_one()
+        return bool(self.mart369_ref and (self.mart369_group or hubs_on(self.env)))
+
     def _mart369_fee_lines(self, bill):
-        """The delivery fee is his line (`_mart369_after_item_lines`)."""
-        if qe_on(self.env):
+        """The delivery fee is his line (`_mart369_after_item_lines`), except
+        on an order that keeps the website's own."""
+        if qe_on(self.env) and not self._mart369_own_fee():
             return []
         return super()._mart369_fee_lines(bill)
 
     def _mart369_after_item_lines(self, bill):
         """The goods are on the order: his decision fields, his slot, and his
         single fee line - marked as the website's fee too, so the bill, the
-        receipt and points-earning treat it as delivery, not as an item."""
+        receipt and points-earning treat it as delivery, not as an item.
+
+        An order that keeps the website's own fee gets his decision fields
+        only, so his stack never decides it again; a Quick hub part is sent
+        from its hub's shop."""
         result = super()._mart369_after_item_lines(bill)
         if not qe_on(self.env):
             return result
         order = self.sudo()
         slot = order._mart369_qe_slot(order.mart369_slot_key)
-        order.write({
+        values = {
             'qe_decided': True,
             'qe_mode': THEIRS.get(order.mart369_mode, 'express'),
             'qe_slot_id': slot.id if slot else False,
-        })
+        }
+        if order._mart369_own_fee():
+            values.update(qe_fee=bill.get('fees') or 0.0, qe_blocked=False)
+            if order.mart369_group and order.mart369_mode == QUICK:
+                shop = self.env['sa.delivery.shop'].sudo().search(
+                    [('warehouse_id', '=', order.warehouse_id.id)], limit=1)
+                values['qe_shop_id'] = shop.id or False
+            order.write(values)
+            return result
+        order.write(values)
         order._qe_apply_fee()
         order.order_line.filtered(lambda l: l.qe_kind == 'fee').write({'mart369_kind': 'fee'})
         return result
+
+    def _qe_apply_fee(self):
+        """Never on an order that keeps the website's own fee - not at
+        confirm (his "add the fee automatically"), not from his button. The
+        customer has paid, or will pay, the fee they were shown.
+
+        This override wins because this module loads after his: it depends on
+        sales_automation_confirm, which sits above sales_automation_store, his
+        module's own base (test_hub_split_qe checks it)."""
+        own = self.filtered(lambda o: o.mart369_ref and o._mart369_own_fee())
+        rest = self - own
+        if rest:
+            return super(SaleOrderQe, rest)._qe_apply_fee()
+        return True
 
 
 class ProductTemplateQe(models.Model):

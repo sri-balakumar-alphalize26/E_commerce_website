@@ -522,8 +522,8 @@ class Mart369Cart(models.AbstractModel):
     @api.model
     def _mart369_split_allowed(self):
         """Whether a basket from several sellers becomes one order per seller.
-        The WhatsApp bridge's own delivery stack keeps one order per basket
-        (it says so in its own override)."""
+        Always, here; a module that must keep one order per basket overrides
+        it. (The WhatsApp bridge no longer does: hub parts keep their fees.)"""
         return True
 
     @api.model
