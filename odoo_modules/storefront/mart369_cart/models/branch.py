@@ -243,6 +243,32 @@ class Mart369Branch(models.Model):
         branch.flush_recordset()
         return branch._mart369_admin_row()
 
+    # ------------------------------------------------ where the branch is
+
+    @api.model
+    def mart369_admin_locate(self, branch_id, address=None):
+        """The "Find from the address" button: where the branch's address is
+        on the map. The branch's own address, else its company's. The
+        location itself is not saved - the screen fills its boxes and Save
+        keeps them.
+
+        `address` ({'street', 'city', 'zip'}) is what was typed when the
+        branch had none: it is saved on that contact first, so the next look
+        - and the invoices - have it too."""
+        from .postcode import editor_only
+        editor_only(self.env)
+        branch = self.sudo().browse(int(branch_id)).exists()
+        if not branch:
+            raise UserError(self.env._('There is no such branch.'))
+        partner = (branch.partner_id or branch.company_id.partner_id).sudo()
+        if address:
+            vals = {key: str(address.get(key) or '').strip() or False
+                    for key in ('street', 'city', 'zip') if key in address}
+            if not any(vals.values()):
+                raise UserError(self.env._('Type the street, the town or the pincode.'))
+            partner.write(vals)
+        return self.env['mart369.postcode'].sudo()._mart369_locate(partner)
+
     # ------------------------------------------- pincodes around the branch
 
     def _mart369_reach_km(self):
@@ -268,8 +294,8 @@ class Mart369Branch(models.Model):
             raise UserError(self.env._('There is no such branch.'))
         if not has_pin(branch.mart369_lat, branch.mart369_lng):
             raise UserError(self.env._(
-                "Set the branch's location from Google Maps first, so we know "
-                "where to look."))
+                "Set the branch's location first (Find from the address, Pick on "
+                "map, or paste it from Google Maps), so we know where to look."))
         Postcode = self.env['mart369.postcode'].sudo()
         pin_key = '%.5f,%.5f' % (branch.mart369_lat, branch.mart369_lng)
         if not branch.mart369_country_code or branch.mart369_country_pin != pin_key:

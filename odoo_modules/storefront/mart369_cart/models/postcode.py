@@ -45,6 +45,7 @@ GEONAMES_COUNTRIES = frozenset((
     'PW PY RE RO RS RU SE SG SI SJ SK SM TC TH TR UA US UY VA VI WF WS YT ZA'
 ).split())
 NOMINATIM_URL = 'https://nominatim.openstreetmap.org/reverse'
+NOMINATIM_SEARCH_URL = 'https://nominatim.openstreetmap.org/search'
 # Nominatim asks for a name for the app; a generic one, no personal details.
 USER_AGENT = '369Mart-delivery/1.0'
 GRID_KM = 2.0           # one OpenStreetMap question every 2 km
@@ -119,6 +120,90 @@ class Mart369Postcode(models.Model):
             raise UserError(self.env._(
                 "We couldn't reach OpenStreetMap to see which country the branch "
                 "is in. Check the internet and try again. (%s)", exc)) from exc
+
+    @api.model
+    def _mart369_search(self, params):
+        """OpenStreetMap's best match for an address: (lat, lng), or None when
+        it knows no such place. Raises on a network problem."""
+        data = self._mart369_get(NOMINATIM_SEARCH_URL, params=dict(
+            params, format='jsonv2', limit=1), timeout=20).json() or []
+        if not data:
+            return None
+        return float(data[0]['lat']), float(data[0]['lon'])
+
+    @api.model
+    def _mart369_locate(self, partner):
+        """Where an address is on the map, for "Find from the address".
+
+        Tries the street, then the pincode, then the town: the first one
+        OpenStreetMap knows answers. A pincode already on our own list answers
+        without the internet. Nothing is saved here - the screen fills its
+        boxes and Save keeps them.
+
+        Returns {'found', 'lat', 'lng', 'level', 'message', 'name',
+        'country'}; `level` is street, pincode or town, and `message` says in
+        plain words how close it is. With no address at all, `found` is False
+        and the screen asks for one in place."""
+        name = partner.display_name or self.env._('This branch')
+        street = ', '.join(filter(None, [partner.street, partner.street2]))
+        city = (partner.city or '').strip()
+        zip_code = (partner.zip or '').strip()
+        state = partner.state_id.name or ''
+        country = partner.country_id
+        only_in = {'countrycodes': country.code.lower()} if country.code else {}
+        if not (street or city or zip_code):
+            return {'found': False, 'lat': None, 'lng': None, 'level': '',
+                    'name': name, 'country': country.name or '',
+                    'message': self.env._(
+                        "%(name)s has no street, town or pincode in Odoo yet. "
+                        "Type it below and we'll look it up, or use Pick on map.",
+                        name=name)}
+        written = ', '.join(filter(None, [street, city, zip_code, state, country.name]))
+        tries = []
+        if street:
+            tries.append(('street', {'q': written}))
+        if zip_code:
+            tries.append(('pincode', dict(only_in, postalcode=zip_code)))
+        if city:
+            tries.append(('town', dict(only_in, city=city, **({'state': state} if state else {}))))
+        asked = False
+        for level, params in tries:
+            spot = None
+            if level == 'pincode':
+                listed = self._mart369_spot(zip_code)
+                if listed['known']:
+                    spot = (listed['lat'], listed['lng'])
+            if spot is None:
+                if asked:
+                    self._mart369_pause(1)   # Nominatim asks for one a second
+                asked = True
+                try:
+                    spot = self._mart369_search(params)
+                except (requests.RequestException, ValueError) as exc:
+                    raise UserError(self.env._(
+                        "We couldn't reach OpenStreetMap to look up the address. "
+                        "Check the internet and try again, or use Pick on map. (%s)",
+                        exc)) from exc
+            if spot:
+                messages = {
+                    'street': self.env._(
+                        "Found %(address)s on the map. Check it with Pick on map, "
+                        "then Save.", address=written),
+                    'pincode': self.env._(
+                        "Found the pincode %(zip)s but not the street, so this is "
+                        "the middle of that area. Use Pick on map to put it on the "
+                        "branch's door, then Save.", zip=zip_code),
+                    'town': self.env._(
+                        "Found the town %(city)s but not the street, so this is its "
+                        "middle. Use Pick on map to put it on the branch's door, "
+                        "then Save.", city=city),
+                }
+                return {'found': True, 'lat': round(spot[0], 6), 'lng': round(spot[1], 6),
+                        'level': level, 'message': messages[level], 'name': name,
+                        'country': country.name or ''}
+        raise UserError(self.env._(
+            "OpenStreetMap couldn't find %(address)s. Use Pick on map, or paste "
+            "the location from Google Maps.", address=written))
 
     # ------------------------------------------------------------ GeoNames
 

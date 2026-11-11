@@ -222,12 +222,87 @@ class TestPostcodes(TransactionCase):
         with self.assertRaisesRegex(Exception, 'location'):
             self._find()
 
+    # ------------------------------------------- "Find from the address"
+
+    def _address(self, **values):
+        partner = self.branch.partner_id or self.branch.company_id.partner_id
+        partner.write(dict({'street': False, 'street2': False, 'city': False,
+                            'zip': False, 'state_id': False,
+                            'country_id': self.env.ref('base.in').id}, **values))
+        return partner
+
+    def _locate(self):
+        return self.env['stock.warehouse'].mart369_admin_locate(self.branch.id)
+
+    def test_find_from_the_address_uses_the_street_first(self):
+        self.branch.write({'mart369_lat': 0.0, 'mart369_lng': 0.0})
+        self._address(street='Zz 12 Fort Road', city='Dindigul', zip='998401')
+        with patch.object(self.Postcode, '_mart369_search', return_value=DINDIGUL) as search:
+            found = self._locate()
+        self.assertEqual((found['lat'], found['lng'], found['level']),
+                         (DINDIGUL[0], DINDIGUL[1], 'street'))
+        self.assertIn('Zz 12 Fort Road', search.call_args.args[0]['q'])
+        self.assertIn('Pick on map', found['message'])
+        self.assertEqual(self.branch.mart369_lat, 0.0, 'nothing is saved by looking')
+
+    def test_an_unknown_street_falls_back_to_our_own_pincode_list(self):
+        """The pincode on the list answers without asking the internet."""
+        self.env['mart369.postcode']._mart369_load_geonames('IN', data=sample_zip())
+        self._address(street='Zz Nowhere Lane', city='Dindigul', zip='998401')
+        with patch.object(self.Postcode, '_mart369_search', return_value=None) as search, \
+                patch.object(self.Postcode, '_mart369_pause'):
+            found = self._locate()
+        self.assertEqual(found['level'], 'pincode')
+        self.assertAlmostEqual(found['lat'], 10.365, places=3)
+        self.assertEqual(search.call_count, 1, 'only the street was asked')
+
+    def test_a_town_alone_is_found_and_said_to_be_rough(self):
+        self._address(city='Dindigul')
+        with patch.object(self.Postcode, '_mart369_search', return_value=DINDIGUL) as search:
+            found = self._locate()
+        self.assertEqual(found['level'], 'town')
+        self.assertEqual(search.call_args.args[0]['countrycodes'], 'in')
+        self.assertIn('middle', found['message'])
+
+    def test_no_address_and_not_found_say_what_to_do(self):
+        self._address()
+        answer = self._locate()
+        self.assertFalse(answer['found'], 'no address: the screen asks for one')
+        self.assertIn('Type it below', answer['message'])
+        self._address(city='Zz Atlantis')
+        with patch.object(self.Postcode, '_mart369_search', return_value=None):
+            with self.assertRaisesRegex(Exception, "couldn't find"):
+                self._locate()
+
+    def test_an_address_typed_in_the_window_is_saved_then_found(self):
+        partner = self._address()
+        with patch.object(self.Postcode, '_mart369_search', return_value=DINDIGUL):
+            found = self.env['stock.warehouse'].mart369_admin_locate(
+                self.branch.id, {'street': ' Zz 12 Fort Road ', 'city': 'Dindigul', 'zip': ''})
+        self.assertTrue(found['found'])
+        self.assertEqual(found['level'], 'street')
+        self.assertEqual((partner.street, partner.city, partner.zip),
+                         ('Zz 12 Fort Road', 'Dindigul', False), 'kept on the contact')
+        with self.assertRaisesRegex(Exception, 'Type the street'):
+            self.env['stock.warehouse'].mart369_admin_locate(
+                self.branch.id, {'street': ' ', 'city': '', 'zip': ''})
+
+    def test_find_from_the_address_offline_says_so(self):
+        self._address(city='Dindigul')
+        with patch.object(self.Postcode, '_mart369_search',
+                          side_effect=requests.ConnectionError('offline')):
+            with self.assertRaisesRegex(Exception, "couldn't reach OpenStreetMap"):
+                self._locate()
+
     def test_a_shopper_cannot_look(self):
         shopper = self.env['res.users'].create({
             'name': 'Zz Postcode Shopper', 'login': 'zz_postcode_shopper',
             'group_ids': [(6, 0, [self.env.ref('base.group_portal').id])]})
         with self.assertRaises(AccessError):
             self.env['stock.warehouse'].with_user(shopper).mart369_admin_find_pincodes(
+                self.branch.id)
+        with self.assertRaises(AccessError):
+            self.env['stock.warehouse'].with_user(shopper).mart369_admin_locate(
                 self.branch.id)
 
     # --------------------------------------------- postcodes with letters

@@ -94,6 +94,67 @@
 
     .dv-find-done { background: rgba(22, 163, 74, 0.09); }
     .dv-find-failed { background: rgba(220, 38, 38, 0.08); }
+    /* Found the pincode or town, not the door: close, but check it. */
+    .dv-find-rough { background: #fdf1dc; color: #8a5a06; }
+
+    /* "Find from the address" and "Pick on map", side by side. */
+    .dv-locate {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 4px 0 8px;
+
+        .mart-btn { display: inline-flex; align-items: center; gap: 6px; }
+    }
+
+    /* The address asked for in place, when the branch has none in Odoo. */
+    .dv-address {
+        margin: 4px 0 8px;
+        padding: 12px;
+        border: 1px solid #f3dcae;
+        border-radius: 12px;
+        background: #fffaf0;
+
+        .dv-locate { margin-bottom: 0; }
+        .mart-hint { margin: 8px 0 0; }
+    }
+
+    /* The branch's map: the pin stays in the middle, the map moves. */
+    .dv-pick { display: grid; gap: 8px; margin: 4px 0 8px; }
+    .dv-pick-help { margin: 0; font-size: 13px; color: $mart-ink; }
+    .dv-pick-map {
+        position: relative;
+        height: 300px;
+        border-radius: 12px;
+        overflow: hidden;
+        background: #eef3f6;
+    }
+    .dv-pick-canvas { position: absolute; inset: 0; }
+    .dv-pick-pin {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 38px;
+        height: 38px;
+        transform: translate(-50%, -100%);
+        pointer-events: none;
+        filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.3));
+
+        svg { width: 100%; height: 100%; fill: #e5484d; stroke: #fff; stroke-width: 1.5; }
+        svg circle { fill: #fff; stroke: none; }
+    }
+    .dv-pick-msg {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        padding: 20px;
+        text-align: center;
+        font-size: 13px;
+        color: #64757f;
+    }
+    .dv-pick-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .dv-pick-gap { flex: 1; }
 
     .dv-find-bar {
         width: 100%;
@@ -222,6 +283,21 @@
 
         .fa { margin-top: 2px; flex: none; }
         b { font-weight: 800; }
+
+        /* Opens the branch the warning names, where its pin and reach are set. */
+        .dv-fix {
+            margin-left: 6px;
+            padding: 0;
+            border: 0;
+            background: none;
+            color: #1f5fbf;
+            font: inherit;
+            font-weight: 700;
+            text-decoration: underline;
+            cursor: pointer;
+
+            &:disabled { opacity: .5; cursor: default; }
+        }
     }
 
     /* ------------------------------------------------------------- fees */

@@ -829,6 +829,16 @@ class Mart369DeliveryAdminApi(Mart369CouponAdminApi):
             return self._fail(str(exc))
         return self._json({'ok': True, 'branch': row})
 
+    @http.route('/369mart/admin/delivery/branches/<int:branch_id>/locate', **_POST)
+    def locate_branch(self, branch_id, **kwargs):
+        """"Find from the address": the branch's address on the map, with a
+        plain-words `message` saying how close it is. The location is not
+        saved; an `address` in the body ({street, city, zip}) is saved on the
+        branch's contact first, for a branch that had none."""
+        address = self._body().get('address') or None
+        return self._pincodes(branch_id, 'mart369_admin_locate',
+                              *([address] if isinstance(address, dict) else []))
+
     @http.route('/369mart/admin/delivery/branches/<int:branch_id>/pincodes', **_POST)
     def find_pincodes(self, branch_id, **kwargs):
         """"Find pincodes around this branch": from the country's postcode
@@ -841,14 +851,14 @@ class Mart369DeliveryAdminApi(Mart369CouponAdminApi):
         """How the last "Find pincodes" for this branch is going."""
         return self._pincodes(branch_id, 'mart369_admin_find_status')
 
-    def _pincodes(self, branch_id, method):
+    def _pincodes(self, branch_id, method, *args):
         if not self._may_edit():
             return self._fail('You do not have access to this.', status=403)
         if not request.env['stock.warehouse'].sudo().browse(branch_id).exists():
             return self._fail('There is no such branch.', status=404)
         try:
             with request.env.cr.savepoint():
-                status = getattr(request.env['stock.warehouse'], method)(branch_id)
+                status = getattr(request.env['stock.warehouse'], method)(branch_id, *args)
         except (AccessError, UserError, ValidationError) as exc:
             return self._fail(str(exc))
         return self._json(dict(status, ok=True))

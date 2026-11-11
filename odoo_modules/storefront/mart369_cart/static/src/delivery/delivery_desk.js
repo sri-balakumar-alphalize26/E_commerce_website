@@ -34,7 +34,8 @@
  * Nothing here deletes. A rule, a slot and an area are each pointed at by
  * orders that have gone out, so each is switched off instead.
  */
-import { Component, onWillStart, onWillUnmount, useState } from "@odoo/owl";
+import { Component, onMounted, onWillStart, onWillUnmount, useRef, useState } from "@odoo/owl";
+import { loadCSS, loadJS } from "@web/core/assets";
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
 import { _t } from "@web/core/l10n/translation";
@@ -503,15 +504,125 @@ function quickTime(km) {
     return `${Math.floor(mins / 60)} hr${rest ? ` ${rest} mins` : ""}`;
 }
 
+/* The same free map as the shop's "Pick on map" and the tracking page:
+ * OpenFreeMap's style through MapLibre, no key. Loaded only when somebody
+ * opens the map. */
+const MAPLIBRE_JS = "https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js";
+const MAPLIBRE_CSS = "https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css";
+const MAP_STYLE = "https://tiles.openfreemap.org/styles/liberty";
+
+/** "Pick on map" for a branch: the pin stays in the middle and the map moves
+ *  under it, as in the shop's address form. Opens on the boxes' location, or
+ *  wide when they are empty. */
+export class BranchPinMap extends Component {
+    static template = "mart369_cart.BranchPinMap";
+    static props = {
+        lat: { type: [String, Number], optional: true },
+        lng: { type: [String, Number], optional: true },
+        onPick: Function,
+        onCancel: Function,
+    };
+
+    setup() {
+        this.canvas = useRef("canvas");
+        this.state = useState({ status: "loading", note: "", locating: false });
+        onMounted(() => this.start());
+        onWillUnmount(() => {
+            this.gone = true;
+            try {
+                this.map?.remove();
+            } catch {
+                // never started
+            }
+        });
+    }
+
+    async start() {
+        const lat = Number(this.props.lat);
+        const lng = Number(this.props.lng);
+        const known = (lat || lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
+        try {
+            await loadCSS(MAPLIBRE_CSS);
+            await loadJS(MAPLIBRE_JS);
+        } catch {
+            this.state.status = "failed";
+            return;
+        }
+        const ml = window.maplibregl;
+        if (this.gone) {
+            return;
+        }
+        if (!ml || !this.canvas.el) {
+            this.state.status = "failed";
+            return;
+        }
+        try {
+            this.map = new ml.Map({
+                container: this.canvas.el, style: MAP_STYLE,
+                center: known ? [lng, lat] : [78.9629, 22.5937], zoom: known ? 16 : 4,
+                maxZoom: 19, dragRotate: false, pitchWithRotate: false, touchPitch: false,
+                attributionControl: { compact: false },
+            });
+        } catch {
+            this.state.status = "failed";
+            return;
+        }
+        this.map.touchZoomRotate.disableRotation();
+        this.map.addControl(new ml.NavigationControl({ showCompass: false }), "bottom-right");
+        this.map.on("error", (ev) => {
+            if (this.state.status === "loading" && !ev?.sourceId) {
+                this.state.status = "failed";
+            }
+        });
+        this.map.once("load", () => {
+            if (!this.gone) {
+                this.map.resize();
+                this.state.status = "ready";
+            }
+        });
+        if (!known) {
+            this.state.note = _t("Zoom in to the branch, or use Where I am now if you are there.");
+        }
+    }
+
+    here() {
+        if (!navigator.geolocation) {
+            this.state.note = _t("Location isn't available in this browser. Move the map instead.");
+            return;
+        }
+        this.state.locating = true;
+        navigator.geolocation.getCurrentPosition(
+            ({ coords }) => {
+                this.state.locating = false;
+                this.map?.flyTo({ center: [coords.longitude, coords.latitude], zoom: 17 });
+                this.state.note = _t("Moved to where you are now. Check the pin is on the branch.");
+            },
+            () => {
+                this.state.locating = false;
+                this.state.note = _t("We couldn't get your location. Move the map instead.");
+            },
+            { enableHighAccuracy: true, timeout: 8000 }
+        );
+    }
+
+    confirm() {
+        const c = this.map?.getCenter();
+        if (c) {
+            this.props.onPick(c.lat.toFixed(6), c.lng.toFixed(6));
+        }
+    }
+}
+
 /** One branch's Quick settings. Branches themselves are made in Inventory,
  *  so this edits only the things delivery owns: Quick on or off, its reach,
  *  "Quick if possible up to" and its pin. The Quick time is worked out. */
 export class BranchDialog extends Component {
     static template = "mart369_cart.BranchDialog";
-    static components = { Dialog, Switch, Icon };
+    static components = { Dialog, Switch, Icon, BranchPinMap };
     static props = {
         branch: Object,
         onSaved: Function,
+        onChanged: { type: Function, optional: true },
         close: Function,
     };
 
@@ -527,10 +638,14 @@ export class BranchDialog extends Component {
                 quickFee: b.quickFee ? String(b.quickFee) : "",
                 expressFee: b.expressFee ? String(b.expressFee) : "",
                 freeAbove: b.freeAbove ? String(b.freeAbove) : "",
-                // One box, as Google Maps copies it: "10.3673, 77.9803".
-                pin: b.lat !== null && b.lat !== undefined ? `${b.lat}, ${b.lng}` : "",
+                // 0/0 is how Odoo stores "no pin": shown as two empty boxes.
+                lat: b.lat || b.lng ? String(b.lat) : "",
+                lng: b.lat || b.lng ? String(b.lng) : "",
             },
             find: null,     // how "Find pincodes around this branch" is going
+            locate: null,   // what "Find from the address" said
+            address: null,  // {street, city, zip} being typed for a branch with none
+            picking: false, // the map is open
             error: "",
             busy: false,
         });
@@ -547,6 +662,24 @@ export class BranchDialog extends Component {
         this.state.draft[field] = value;
     }
 
+    /** Google Maps copies both numbers at once ("10.3673, 77.9803"): pasted
+     *  into either box, they fill both. A single number is typed as usual. */
+    setCoord(field, value, input) {
+        const m = String(value || "").match(
+            /^\s*(-?\d+(?:\.\d+)?)\s*(?:,|\s)\s*(-?\d+(?:\.\d+)?)\s*$/);
+        if (m) {
+            this.state.draft.lat = m[1];
+            this.state.draft.lng = m[2];
+            // The box pasted into holds the pair until told otherwise: Owl
+            // only rewrites a value that changed since it last drew it.
+            if (input) {
+                input.value = field === "lat" ? m[1] : m[2];
+            }
+        } else {
+            this.state.draft[field] = value;
+        }
+    }
+
     /** Quick on with the boxes still empty fills the usual reaches. */
     toggleQuick() {
         const d = this.state.draft;
@@ -559,10 +692,76 @@ export class BranchDialog extends Component {
         }
     }
 
-    /** "Find pincodes around this branch": the answer comes with a sentence
+    /** "Find from the address": the branch's address in Odoo, looked up on
+     *  OpenStreetMap, fills the two boxes. The location is not saved until
+     *  Save. With no address in Odoo, three boxes ask for it right here;
+     *  `address` is what was typed in them, saved on the contact first. */
+    async locate(address = null) {
+        this.state.locate = { state: "running", message: _t("Looking up the branch's address…") };
+        try {
+            const args = [this.props.branch.id];
+            if (address) {
+                args.push(address);
+            }
+            const found = await this.orm.call(M.branch, "mart369_admin_locate", args);
+            if (!found.found) {
+                this.state.address = this.state.address || { street: "", city: "", zip: "" };
+                this.state.locate = { state: "rough", message: found.message,
+                                      name: found.name, country: found.country };
+                return;
+            }
+            this.state.address = null;
+            this.state.draft.lat = String(found.lat);
+            this.state.draft.lng = String(found.lng);
+            this.state.locate = { state: found.level === "street" ? "done" : "rough",
+                                  message: found.message };
+        } catch (err) {
+            this.state.locate = { state: "failed", message: message(err, _t("That didn't work.")) };
+        }
+    }
+
+    /** The map's "Use this spot". */
+    picked(lat, lng) {
+        this.state.draft.lat = lat;
+        this.state.draft.lng = lng;
+        this.state.picking = false;
+        this.state.locate = { state: "done", message: _t("Spot picked. Save to keep it.") };
+    }
+
+    /** What the boxes say, as mart369_admin_save takes it, or null with the
+     *  reason shown when they cannot be saved as they are. */
+    values() {
+        const d = this.state.draft;
+        if (!String(d.lat).trim() !== !String(d.lng).trim()) {
+            this.state.error = _t("Type both the latitude and the longitude, or leave both empty.");
+            return null;
+        }
+        return {
+            quick: !!d.quick, quickKm: d.quickKm, maybeKm: d.maybeKm,
+            lat: d.lat, lng: d.lng, ownFees: !!d.ownFees, quickFee: d.quickFee,
+            expressFee: d.expressFee, freeAbove: d.freeAbove,
+        };
+    }
+
+    /** "Find pincodes around this branch": saves what is typed first, so the
+     *  search uses this location and reach; the answer comes with a sentence
      *  that says what is happening; while OpenStreetMap is still looking, ask
      *  again every few seconds so the count climbs on screen. */
     async findPincodes() {
+        this.state.error = "";
+        const values = this.values();
+        if (!values) {
+            return;
+        }
+        this.state.find = { state: "starting", message: _t("Saving, then looking…") };
+        try {
+            await this.orm.call(M.branch, "mart369_admin_save", [this.props.branch.id, values]);
+            this.props.onChanged?.();
+        } catch (err) {
+            this.state.find = null;
+            this.state.error = message(err, _t("That could not be saved."));
+            return;
+        }
         this.state.find = {
             state: "starting",
             message: _t("Working out which country this branch is in, and getting its postcode list. The first time for a country this can take up to a minute…"),
@@ -606,15 +805,14 @@ export class BranchDialog extends Component {
         if (this.state.busy) {
             return;
         }
-        this.state.busy = true;
         this.state.error = "";
-        const d = this.state.draft;
+        const values = this.values();
+        if (!values) {
+            return;
+        }
+        this.state.busy = true;
         try {
-            await this.orm.call(M.branch, "mart369_admin_save", [this.props.branch.id, {
-                quick: !!d.quick, quickKm: d.quickKm, maybeKm: d.maybeKm,
-                pin: d.pin, ownFees: !!d.ownFees, quickFee: d.quickFee, expressFee: d.expressFee,
-                freeAbove: d.freeAbove,
-            }]);
+            await this.orm.call(M.branch, "mart369_admin_save", [this.props.branch.id, values]);
             this.props.close();
             await this.props.onSaved(_t("%s saved.", this.props.branch.name));
         } catch (err) {
@@ -872,12 +1070,21 @@ export class DeliveryDesk extends Component {
     // ------------------------------------------------------------ branches
 
     openBranch(branch) {
+        // "Find pincodes" saves without closing the window; the list behind
+        // it is read again once the window closes.
+        let changed = false;
         this.dialog.add(BranchDialog, {
             branch,
             onSaved: async (msg) => {
+                changed = false;
                 await this.load();
                 this.notification.add(msg, { type: "success" });
             },
+            onChanged: () => {
+                changed = true;
+            },
+        }, {
+            onClose: () => changed && this.load(),
         });
     }
 

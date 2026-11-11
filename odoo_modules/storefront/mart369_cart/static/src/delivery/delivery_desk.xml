@@ -67,6 +67,12 @@
                         <b t-esc="branch.name"/><t t-if="!branch_last">, </t>
                     </t>
                     but it has no map pin or no reach, so it delivers Quick to nobody.
+                    <t t-foreach="unready" t-as="branch" t-key="'fix-' + branch.id">
+                        <button type="button" class="dv-fix" t-att-disabled="state.busy"
+                                t-on-click="() => this.openBranch(branch)">
+                            Add pin and reach at <t t-esc="branch.name"/>
+                        </button>
+                    </t>
                 </span>
             </p>
 
@@ -482,16 +488,72 @@
             </p>
 
             <h3>Where the branch is</h3>
-            <div class="dv-form dv-form-one">
-                <label class="dv-field"><span>Location from Google Maps</span>
-                    <input type="text" inputmode="decimal" placeholder="10.3673, 77.9803"
-                           t-att-value="state.draft.pin"
-                           t-on-input="(ev) => this.set('pin', ev.target.value)"/></label>
+            <div class="dv-form">
+                <label class="dv-field"><span>Latitude</span>
+                    <input type="text" placeholder="10.3673"
+                           t-att-value="state.draft.lat"
+                           t-on-input="(ev) => this.setCoord('lat', ev.target.value, ev.target)"/></label>
+                <label class="dv-field"><span>Longitude</span>
+                    <input type="text" placeholder="77.9803"
+                           t-att-value="state.draft.lng"
+                           t-on-input="(ev) => this.setCoord('lng', ev.target.value, ev.target)"/></label>
             </div>
+            <div class="dv-locate">
+                <button type="button" class="mart-btn"
+                        t-att-disabled="state.locate and state.locate.state === 'running'"
+                        t-on-click="() => this.locate()">
+                    <Icon n="'search'" size="14"/> Find from the address
+                </button>
+                <button type="button" class="mart-btn" t-if="!state.picking"
+                        t-on-click="() => { state.picking = true; }">
+                    <Icon n="'pin'" size="14"/> Pick on map
+                </button>
+            </div>
+            <p t-if="state.locate and state.locate.message" role="status"
+               t-attf-class="dv-find-msg dv-find-{{ state.locate.state }}">
+                <span t-if="state.locate.state === 'running'" class="dv-spin"/>
+                <t t-esc="state.locate.message"/>
+            </p>
+            <div t-if="state.address" class="dv-address">
+                <div class="dv-form">
+                    <label class="dv-field dv-span2"><span>Street</span>
+                        <input type="text" placeholder="12 Fort Road"
+                               t-att-value="state.address.street"
+                               t-on-input="(ev) => { state.address.street = ev.target.value; }"/></label>
+                    <label class="dv-field"><span>Town</span>
+                        <input type="text" placeholder="Dubai"
+                               t-att-value="state.address.city"
+                               t-on-input="(ev) => { state.address.city = ev.target.value; }"/></label>
+                    <label class="dv-field"><span>Pincode</span>
+                        <input type="text" placeholder="Optional"
+                               t-att-value="state.address.zip"
+                               t-on-input="(ev) => { state.address.zip = ev.target.value; }"/></label>
+                </div>
+                <div class="dv-locate">
+                    <button type="button" class="mart-btn mart-btn-primary"
+                            t-att-disabled="state.locate and state.locate.state === 'running'"
+                            t-on-click="() => this.locate(state.address)">
+                        Save address and find
+                    </button>
+                    <button type="button" class="mart-btn"
+                            t-on-click="() => { state.address = null; state.locate = null; }">Cancel</button>
+                </div>
+                <p class="mart-hint">
+                    Saved on <t t-esc="state.locate and state.locate.name"/> in
+                    Contacts<t t-if="state.locate and state.locate.country">
+                    (<t t-esc="state.locate.country"/>)</t>, so invoices and the
+                    next look have it too.
+                </p>
+            </div>
+            <BranchPinMap t-if="state.picking"
+                          lat="state.draft.lat" lng="state.draft.lng"
+                          onPick="(lat, lng) => this.picked(lat, lng)"
+                          onCancel="() => { state.picking = false; }"/>
             <p class="mart-hint">
-                Open Google Maps, right-click the branch (long-press on a phone)
-                and click the two numbers at the top. They are copied. Paste them
-                here as they are.
+                Find from the address looks up the branch's address in Odoo. Pick
+                on map lets you drag the map until the pin is on the branch. Or
+                paste the two numbers Google Maps copies (right-click the branch)
+                into either box and both fill in.
             </p>
 
             <h3>Pincodes around this branch</h3>
@@ -513,9 +575,10 @@
                 </div>
             </div>
             <p class="mart-hint">
-                Uses the saved location and the farthest km above, so save first if
-                you changed them. You can still type pincodes yourself in Service
-                areas. Postcodes from GeoNames and © OpenStreetMap contributors.
+                Saves what you typed above first, then looks around the location
+                as far as the farthest km. You can still type pincodes yourself in
+                Service areas. Postcodes from GeoNames and © OpenStreetMap
+                contributors.
             </p>
         </div>
 
@@ -525,6 +588,41 @@
             <button class="mart-btn" t-on-click="() => this.props.close()">Cancel</button>
         </t>
     </Dialog>
+</t>
+
+<!-- ============================ branch pin map ============================= -->
+<t t-name="mart369_cart.BranchPinMap">
+    <div class="dv-pick">
+        <p class="dv-pick-help">
+            <b>Put the pin on the branch.</b> Drag the map; the pin stays in the middle.
+            <t t-if="state.note"> <t t-esc="state.note"/></t>
+        </p>
+        <div class="dv-pick-map">
+            <div t-ref="canvas" class="dv-pick-canvas"/>
+            <span t-if="state.status === 'ready'" class="dv-pick-pin" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M12 22s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12z"/><circle cx="12" cy="10" r="2.6"/></svg>
+            </span>
+            <span t-if="state.status === 'loading'" class="dv-pick-msg">Loading the map…</span>
+            <span t-if="state.status === 'failed'" class="dv-pick-msg">
+                The map couldn't load here. Use Find from the address, or paste the
+                location from Google Maps.
+            </span>
+        </div>
+        <div class="dv-pick-actions">
+            <button type="button" class="mart-btn mart-btn-sm"
+                    t-att-disabled="state.status !== 'ready' or state.locating"
+                    t-on-click="() => this.here()">
+                <t t-if="state.locating">Finding you…</t>
+                <t t-else="">Where I am now</t>
+            </button>
+            <span class="dv-pick-gap"/>
+            <button type="button" class="mart-btn mart-btn-sm"
+                    t-on-click="() => this.props.onCancel()">Cancel</button>
+            <button type="button" class="mart-btn mart-btn-sm mart-btn-primary"
+                    t-att-disabled="state.status !== 'ready'"
+                    t-on-click="() => this.confirm()">Use this spot</button>
+        </div>
+    </div>
 </t>
 
 <!-- ============================== area dialog ============================== -->
