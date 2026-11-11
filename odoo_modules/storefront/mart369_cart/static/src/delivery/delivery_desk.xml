@@ -199,7 +199,7 @@
                 <table t-if="state.areas.length" class="dv-table">
                     <thead>
                         <tr>
-                            <th>Pincode</th><th>Area</th><th>Quick</th><th>Express</th>
+                            <th>Pincode</th><th>Area</th><th>We deliver</th>
                             <th>Promise</th><th>State</th><th/>
                         </tr>
                     </thead>
@@ -212,12 +212,8 @@
                             </td>
                             <td><t t-esc="area.name or '—'"/></td>
                             <td>
-                                <span t-if="area.quick" class="mart-pill mart-t-green">On</span>
-                                <span t-else="" class="mart-pill mart-t-grey">Off</span>
-                            </td>
-                            <td>
-                                <span t-if="area.express" class="mart-pill mart-t-green">On</span>
-                                <span t-else="" class="mart-pill mart-t-grey">Off</span>
+                                <span t-if="area.quick or area.express" class="mart-pill mart-t-green">Yes</span>
+                                <span t-else="" class="mart-pill mart-t-grey">No</span>
                             </td>
                             <td t-esc="area.eta or '—'"/>
                             <td>
@@ -311,7 +307,9 @@
     <Dialog size="'lg'" contentClass="'dv-dialog'"
             title="state.draft.id ? 'Edit slot' : 'New slot'">
         <div class="dv-dialog-body">
-            <p class="dv-sub">A chip on the checkout's slot step.</p>
+            <p class="dv-sub">A chip on the checkout's slot step. Pick the kind, the
+                day and the time - the heading, detail, key and order fill
+                themselves in, and anything you type over stays.</p>
             <p t-if="state.error" class="dv-error" role="alert" t-esc="state.error"/>
 
             <h3>What the chip says</h3>
@@ -324,7 +322,7 @@
                            t-on-input="(ev) => this.set('sub', ev.target.value)"/></label>
                 <label class="dv-field dv-span2"><span>Confirmation line</span>
                     <input type="text" t-att-value="state.draft.label"
-                           placeholder="Left empty, the shop writes it from the heading and the window"
+                           t-att-placeholder="labelPreview"
                            t-on-input="(ev) => this.set('label', ev.target.value)"/></label>
             </div>
 
@@ -355,8 +353,9 @@
                            t-on-input="(ev) => this.set('sequence', ev.target.value)"/></label>
             </div>
             <p t-if="!state.draft.id" class="mart-hint">
-                The key is how the app and every order refer to this slot. Pick a
-                short one - now, eve, tm, std - and it cannot be changed afterwards.
+                The key is how the app and every order refer to this slot. It is
+                filled in for you - change it if you like, but it cannot be
+                changed after saving. If it is already used, a number is added.
             </p>
 
             <h3>When it runs</h3>
@@ -422,40 +421,40 @@
 
             <div class="dv-rows">
                 <div class="dv-row">
-                    <span><b>Quick delivery</b><small>This branch delivers Quick near it</small></span>
+                    <span><b>Quick delivery</b><small>Riders from this branch deliver to customers nearby</small></span>
                     <Switch on="state.draft.quick"
                             label="'Quick delivery'"
-                            onChange="() => this.set('quick', !state.draft.quick)"/>
+                            onChange="() => this.toggleQuick()"/>
                 </div>
             </div>
 
-            <h3>How far</h3>
+            <h3>How far riders go</h3>
             <div class="dv-form">
-                <label class="dv-field"><span>Reach (km)</span>
+                <label class="dv-field"><span>Quick, up to (km)</span>
                     <input type="text" inputmode="decimal" placeholder="5"
                            t-att-value="state.draft.quickKm"
                            t-on-input="(ev) => this.set('quickKm', ev.target.value)"/></label>
-                <label class="dv-field"><span>Quick if possible up to (km)</span>
-                    <input type="text" inputmode="decimal" placeholder="Off"
+                <label class="dv-field"><span>Quick when a rider is free, up to (km)</span>
+                    <input type="text" inputmode="decimal" placeholder="15"
                            t-att-value="state.draft.maybeKm"
                            t-on-input="(ev) => this.set('maybeKm', ev.target.value)"/></label>
-                <label class="dv-field"><span>Quick promise</span>
-                    <input type="text" maxlength="40" placeholder="30 mins"
-                           t-att-value="state.draft.quickEta"
-                           t-on-input="(ev) => this.set('quickEta', ev.target.value)"/></label>
             </div>
+            <p t-if="quickTimes" class="dv-quick-time">
+                Customers are told <b t-esc="quickTimes"/>, depending on how far
+                they are. Nobody types it: 10 minutes to pack, then 5 minutes
+                for every km.
+            </p>
             <p class="mart-hint">
-                A straight line from the branch. Roads are longer, so set it a
-                little under what a rider covers in the Quick time.
-                Past the reach and up to "Quick if possible", the customer is
-                promised Express and it comes Quick when a rider is free. Both
-                and the Quick promise count once Hub rules has a row.
+                Customers closer than the first number get Quick. Between the two
+                numbers they are told Express, and it comes Quick if a rider is
+                free. Farther away is Express. The km are a straight line on the
+                map, so keep them a little short of the real road.
             </p>
 
             <h3>Delivery fees</h3>
             <div class="dv-rows">
                 <div class="dv-row">
-                    <span><b>Own delivery fees</b><small>What this branch ships is charged these, not the shop's</small></span>
+                    <span><b>Own delivery fees</b><small>Off: this branch charges the shop's usual fees</small></span>
                     <Switch on="state.draft.ownFees"
                             label="'Own delivery fees'"
                             onChange="() => this.set('ownFees', !state.draft.ownFees)"/>
@@ -476,25 +475,47 @@
                            t-on-input="(ev) => this.set('freeAbove', ev.target.value)"/></label>
             </div>
             <p class="mart-hint">
-                Counted once the shop has more than one company: what this branch
-                ships is charged these fees, and a basket from several hubs pays
-                each hub's fee for its own part.
+                Amounts are in the shop's money. "Free delivery above 10" means a
+                customer buying more than 10 from this branch pays no delivery.
+                If a basket comes from two branches, each branch charges its own
+                fee for its own items.
             </p>
 
             <h3>Where the branch is</h3>
-            <div class="dv-form">
-                <label class="dv-field"><span>Latitude</span>
-                    <input type="text" inputmode="decimal" placeholder="23.5880"
-                           t-att-value="state.draft.lat"
-                           t-on-input="(ev) => this.pastePin(ev)"/></label>
-                <label class="dv-field"><span>Longitude</span>
-                    <input type="text" inputmode="decimal" placeholder="58.3829"
-                           t-att-value="state.draft.lng"
-                           t-on-input="(ev) => this.set('lng', ev.target.value)"/></label>
+            <div class="dv-form dv-form-one">
+                <label class="dv-field"><span>Location from Google Maps</span>
+                    <input type="text" inputmode="decimal" placeholder="10.3673, 77.9803"
+                           t-att-value="state.draft.pin"
+                           t-on-input="(ev) => this.set('pin', ev.target.value)"/></label>
             </div>
             <p class="mart-hint">
-                In Google Maps, right-click the branch and click the numbers at the
-                top to copy them. Paste both into Latitude.
+                Open Google Maps, right-click the branch (long-press on a phone)
+                and click the two numbers at the top. They are copied. Paste them
+                here as they are.
+            </p>
+
+            <h3>Pincodes around this branch</h3>
+            <div class="dv-find">
+                <button type="button" class="mart-btn"
+                        t-att-disabled="state.find and (state.find.state === 'starting' or state.find.state === 'running')"
+                        t-on-click="() => this.findPincodes()">
+                    <t t-if="state.find and state.find.state === 'failed'">Try again</t>
+                    <t t-else="">Find pincodes around this branch</t>
+                </button>
+                <p t-if="state.find and state.find.message" role="status"
+                   t-attf-class="dv-find-msg dv-find-{{ state.find.state }}">
+                    <span t-if="state.find.state === 'starting' or state.find.state === 'running'" class="dv-spin"/>
+                    <t t-esc="state.find.message"/>
+                </p>
+                <div t-if="state.find and state.find.state === 'running' and state.find.total"
+                     class="dv-find-bar" aria-hidden="true">
+                    <i t-attf-style="width: {{ findPercent }}%"/>
+                </div>
+            </div>
+            <p class="mart-hint">
+                Uses the saved location and the farthest km above, so save first if
+                you changed them. You can still type pincodes yourself in Service
+                areas. Postcodes from GeoNames and © OpenStreetMap contributors.
             </p>
         </div>
 
@@ -508,49 +529,135 @@
 
 <!-- ============================== area dialog ============================== -->
 <t t-name="mart369_cart.AreaDialog">
-    <Dialog contentClass="'dv-dialog'"
-            title="state.draft.id ? 'Edit service area' : 'New service area'">
+    <Dialog contentClass="'dv-dialog'" size="state.draft.id ? 'md' : 'lg'"
+            title="state.draft.id ? 'Edit service area' : 'Add service areas'">
         <div class="dv-dialog-body">
             <p t-if="state.error" class="dv-error" role="alert" t-esc="state.error"/>
 
-            <h3>Where</h3>
+            <t t-if="!state.draft.id">
+                <h3>Pick pincodes</h3>
+                <p t-if="!state.known" class="mart-hint">Finding the pincodes your customers use…</p>
+                <t t-else="">
+                    <t t-foreach="state.known.groups" t-as="group" t-key="group.branch">
+                    <div t-if="group.pincodes.length" class="dv-known">
+                        <div class="dv-known-head">
+                            <b>Near <t t-esc="group.branch"/></b>
+                            <small><t t-esc="group.pincodes.length"/> pincodes within <t t-esc="group.reach"/> km · <t t-esc="tickedIn(group.pincodes)"/> ticked</small>
+                            <button type="button" class="mart-btn mart-btn-sm" t-on-click="() => this.tickAll(group.pincodes)">
+                                <t t-if="allTicked(group.pincodes)">Untick all</t><t t-else="">Tick all</t>
+                            </button>
+                            <button type="button" class="mart-btn mart-btn-sm" t-on-click="() => this.toggleOpen('b:' + group.branch)">
+                                <t t-if="state.open['b:' + group.branch]">Hide list</t><t t-else="">Show list</t>
+                            </button>
+                        </div>
+                        <t t-if="state.open['b:' + group.branch]">
+                            <label t-foreach="group.pincodes" t-as="row" t-key="row.pincode" class="dv-known-row">
+                                <input type="checkbox" t-att-checked="state.ticked[row.pincode]"
+                                       t-on-change="() => this.tick(row.pincode)"/>
+                                <b t-esc="row.pincode"/>
+                                <span t-esc="row.place or '—'"/>
+                                <span t-esc="kmText(row.km)"/>
+                                <span t-if="row.addresses"><t t-esc="row.addresses"/> <t t-if="row.addresses === 1">address</t><t t-else="">addresses</t></span>
+                                <span t-else="">from the map</span>
+                            </label>
+                        </t>
+                    </div>
+                    </t>
+                    <div t-if="state.known.far and state.known.far.length" class="dv-known">
+                        <div class="dv-known-head">
+                            <b>Far from every branch</b>
+                            <small><t t-esc="state.known.far.length"/> pincodes past every branch's reach · <t t-esc="tickedIn(state.known.far)"/> ticked</small>
+                            <button type="button" class="mart-btn mart-btn-sm" t-on-click="() => this.tickAll(state.known.far)">
+                                <t t-if="allTicked(state.known.far)">Untick all</t><t t-else="">Tick all</t>
+                            </button>
+                            <button type="button" class="mart-btn mart-btn-sm" t-on-click="() => this.toggleOpen('far')">
+                                <t t-if="state.open['far']">Hide list</t><t t-else="">Show list</t>
+                            </button>
+                        </div>
+                        <t t-if="state.open['far']">
+                            <label t-foreach="state.known.far" t-as="row" t-key="row.pincode" class="dv-known-row">
+                                <input type="checkbox" t-att-checked="state.ticked[row.pincode]"
+                                       t-on-change="() => this.tick(row.pincode)"/>
+                                <b t-esc="row.pincode"/>
+                                <span t-esc="row.place or '—'"/>
+                                <span t-esc="kmText(row.km)"/>
+                                <span t-if="row.addresses"><t t-esc="row.addresses"/> <t t-if="row.addresses === 1">address</t><t t-else="">addresses</t></span>
+                                <span t-else="">from the map</span>
+                                <em>nearest branch: <t t-esc="row.branch"/></em>
+                            </label>
+                        </t>
+                    </div>
+                    <div t-if="state.known.noPin.length" class="dv-known">
+                        <div class="dv-known-head">
+                            <b>No map pin yet</b>
+                            <small><t t-esc="state.known.noPin.length"/> pincodes we can't place on the map · <t t-esc="tickedIn(state.known.noPin)"/> ticked</small>
+                            <button type="button" class="mart-btn mart-btn-sm" t-on-click="() => this.tickAll(state.known.noPin)">
+                                <t t-if="allTicked(state.known.noPin)">Untick all</t><t t-else="">Tick all</t>
+                            </button>
+                            <button type="button" class="mart-btn mart-btn-sm" t-on-click="() => this.toggleOpen('nopin')">
+                                <t t-if="state.open['nopin']">Hide list</t><t t-else="">Show list</t>
+                            </button>
+                        </div>
+                        <t t-if="state.open['nopin']">
+                            <label t-foreach="state.known.noPin" t-as="row" t-key="row.pincode" class="dv-known-row">
+                                <input type="checkbox" t-att-checked="state.ticked[row.pincode]"
+                                       t-on-change="() => this.tick(row.pincode)"/>
+                                <b t-esc="row.pincode"/>
+                                <span t-esc="row.place or '—'"/>
+                                <span t-esc="kmText(row.km)"/>
+                                <span t-if="row.addresses"><t t-esc="row.addresses"/> <t t-if="row.addresses === 1">address</t><t t-else="">addresses</t></span>
+                                <span t-else="">from the map</span>
+                            </label>
+                        </t>
+                    </div>
+                    <p t-if="!state.known.groups.length and !state.known.noPin.length" class="mart-hint">
+                        No new pincodes from your customers yet. Type them below.
+                    </p>
+                    <p t-if="state.known.credit" class="mart-hint" t-esc="state.known.credit"/>
+                    <p t-if="state.known.covered.length" class="mart-hint">
+                        Already added: <t t-esc="state.known.covered.join(', ')"/>
+                    </p>
+                </t>
+            </t>
+
+            <h3><t t-if="state.draft.id">Where</t><t t-else="">Or type pincodes</t></h3>
             <div class="dv-form">
-                <label class="dv-field"><span>Pincode</span>
-                    <input type="text" placeholder="682016" t-att-value="state.draft.pincode"
+                <label t-if="state.draft.id" class="dv-field"><span>Pincode</span>
+                    <input type="text" placeholder="624001" t-att-value="state.draft.pincode"
                            t-on-input="(ev) => this.set('pincode', ev.target.value)"/></label>
-                <label class="dv-field"><span>Area</span>
-                    <input type="text" placeholder="Kochi" t-att-value="state.draft.name"
+                <label t-else="" class="dv-field dv-span2"><span>Pincodes not in the list</span>
+                    <textarea rows="2" placeholder="624001, 624002, 624003"
+                              t-att-value="state.draft.pincode"
+                              t-on-input="(ev) => this.set('pincode', ev.target.value)"/></label>
+                <label class="dv-field"><span>Area name (optional, only you see it)</span>
+                    <input type="text" t-att-placeholder="state.draft.id ? 'Dindigul' : 'Empty: each pincode uses its own place name'" t-att-value="state.draft.name"
                            t-on-input="(ev) => this.set('name', ev.target.value)"/></label>
             </div>
             <p class="mart-hint">
-                A full pincode, or the start of one: 68 covers every pincode
-                beginning with it. The most specific entry wins, so 6820 beats 68.
-                The area name is for you - customers never see it.
+                <t t-if="!state.draft.id">Commas between them, or one per line. </t>
+                A short number covers every pincode that starts with it: 624
+                covers 624001, 624002 and the rest.
             </p>
 
-            <h3>What reaches it</h3>
+            <h3>Delivery</h3>
             <div class="dv-rows">
                 <div class="dv-row">
-                    <span><b>Quick delivery</b><small>The 10-minute grocery run</small></span>
-                    <Switch on="state.draft.quick"
-                            label="'Quick delivery'"
-                            onChange="() => this.set('quick', !state.draft.quick)"/>
-                </div>
-                <div class="dv-row">
-                    <span><b>Express delivery</b><small>Items that ship over days</small></span>
-                    <Switch on="state.draft.express"
-                            label="'Express delivery'"
-                            onChange="() => this.set('express', !state.draft.express)"/>
+                    <span><b>We deliver here</b><small>Quick or Express is worked out from how far the customer is from the branch</small></span>
+                    <Switch on="state.draft.deliver"
+                            label="'We deliver here'"
+                            onChange="() => this.set('deliver', !state.draft.deliver)"/>
                 </div>
             </div>
 
             <div class="dv-form">
-                <label class="dv-field"><span>Delivery promise</span>
-                    <input type="text" placeholder="13 mins" t-att-value="state.draft.eta"
-                           t-on-input="(ev) => this.set('eta', ev.target.value)"/></label>
+                <label class="dv-field"><span>Customers are told it comes in</span>
+                    <select t-on-change="(ev) => this.set('eta', ev.target.value)">
+                        <option t-foreach="promises" t-as="p" t-key="p" t-att-value="p"
+                                t-att-selected="p === state.draft.eta" t-esc="p"/>
+                    </select></label>
             </div>
             <p class="mart-hint">
-                Switch both off and the pincode is told we do not deliver there yet.
+                Switched off, customers there are told we don't deliver yet.
             </p>
         </div>
 
@@ -558,7 +665,8 @@
             <button class="mart-btn mart-btn-primary" t-att-disabled="state.busy"
                     t-on-click="() => this.save()">
                 <t t-if="state.draft.id">Save changes</t>
-                <t t-else="">Add area</t>
+                <t t-elif="tickedCount">Add <t t-esc="tickedCount"/> ticked<t t-if="tickedSplit"> (<t t-esc="tickedSplit"/>)</t></t>
+                <t t-else="">Add</t>
             </button>
             <button class="mart-btn" t-on-click="() => this.props.close()">Cancel</button>
         </t>

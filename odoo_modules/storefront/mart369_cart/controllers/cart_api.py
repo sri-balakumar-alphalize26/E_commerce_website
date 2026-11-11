@@ -132,6 +132,25 @@ class Mart369CartApi(http.Controller):
         answer = request.env['mart369.service.area'].sudo()._mart369_check(pin)
         return request.make_json_response(answer, status=200 if answer['ok'] else 200)
 
+    @http.route('/369mart/pincode-spot', **_PUBLIC_JSON)
+    def pincode_spot(self, pin=None, **kwargs):
+        """Where a pincode is, roughly, so "Pick on map" opens there:
+        {known, lat, lng, place}. {known: false} when it is not on the list."""
+        return request.make_json_response(
+            request.env['mart369.postcode'].sudo()._mart369_spot((pin or '')[:12]))
+
+    @http.route('/369mart/pincode-pin', **_PUBLIC_JSON)
+    def pincode_pin(self, pin=None, lat=None, lng=None, **kwargs):
+        """Does the typed pincode match the map pin? The address form asks
+        before saving, and only warns: {known, match, km, place}."""
+        try:
+            lat, lng = float(lat), float(lng)
+        except (TypeError, ValueError):
+            return request.make_json_response({'known': False})
+        answer = request.env['mart369.postcode'].sudo()._mart369_pin_check(
+            (pin or '')[:12], lat, lng)
+        return request.make_json_response(answer)
+
     # ----------------------------------------------------------- the slots
 
     @http.route('/369mart/slots', **_PUBLIC_JSON)

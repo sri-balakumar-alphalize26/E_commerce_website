@@ -45,7 +45,7 @@ from types import SimpleNamespace
 
 from odoo import api, models
 
-from .branch import has_pin, haversine_km
+from .branch import has_pin, haversine_km, quick_time_text
 
 # A product is Express if it carries a delivery promise, exactly as the app
 # decides it: `groups[p.delivery ? "all" : "quick"]`.
@@ -144,6 +144,13 @@ class Mart369Cart(models.AbstractModel):
             if not where['branches']:
                 where['reason'] = 'far'
             return where
+        if any_ready:
+            # Branches decide Quick by distance now, and a pincode alone has
+            # none to measure: Express, and the shop asks for the location.
+            # A shop with no branch set up keeps the area's own switch below.
+            where['area_quick'] = False
+            where['reason'] = 'nopin'
+            return where
         area = self.env['mart369.service.area']._mart369_match(address.zip)
         if area:
             where['area_quick'] = bool(area.quick)
@@ -211,14 +218,15 @@ class Mart369Cart(models.AbstractModel):
         """How this branch would deliver to an address `km` away, whose own
         hub is `home`: {'mode', 'when', 'cargo', 'maybe', 'rank'}.
 
-        Close enough for its Quick reach: Quick, in the branch's own promise.
+        Close enough for its Quick reach: Quick, in a time worked out from
+        the distance (branch.quick_time_text - 10 mins to pack, 5 a km).
         Up to its "Quick if possible" reach: Express, which may come Quick.
         Otherwise the table: its row for (this branch, the customer's hub), or
         plain Express when no row says how. `rank` picks between hubs - Quick
         first, then the fewest days, then the nearest.
         """
         if branch._mart369_ready() and km <= branch.mart369_quick_km:
-            return {'mode': QUICK, 'when': branch.mart369_quick_eta or '', 'cargo': False,
+            return {'mode': QUICK, 'when': quick_time_text(km), 'cargo': False,
                     'maybe': False, 'rank': (0, 0, km)}
         row = table.get((branch.id, home.id))
         when = (row.arrives or '') if row else ''
@@ -475,7 +483,8 @@ class Mart369Cart(models.AbstractModel):
             'modes': modes,
             # Quick items that went Express because of where they are going,
             # and why: 'far' (no Quick branch reaches the pin), 'stock' (one
-            # does, but not with this item), 'area' (the pincode is Express).
+            # does, but not with this item), 'area' (the pincode is Express),
+            # 'nopin' (branches measure Quick and the address has no map pin).
             'movedToExpress': moved,
             'movedWhy': (where['reason'] or 'stock') if moved else '',
             'branch': branches[0] if branches else '',

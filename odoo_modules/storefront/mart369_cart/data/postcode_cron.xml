@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Looks up the pincodes around a branch on OpenStreetMap, a batch at a time,
+     one a second (postcode.py). Started at once by "Find pincodes around this
+     branch"; the hourly run only picks up a lookup that stopped half way. -->
+<odoo>
+    <data noupdate="1">
+        <record id="ir_cron_postcode_scan" model="ir.cron">
+            <field name="name">369 Mart: find pincodes around branches</field>
+            <field name="model_id" ref="model_mart369_postcode_scan"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_postcode_scan()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">hours</field>
+            <field name="active" eval="True"/>
+        </record>
+    </data>
+</odoo>

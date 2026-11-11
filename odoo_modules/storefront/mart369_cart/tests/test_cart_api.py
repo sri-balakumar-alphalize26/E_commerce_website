@@ -21,6 +21,12 @@ class TestMart369CartApi(HttpCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+        # The shop's own fees are what these tests check, so a real branch's
+        # own fees (say "free above 10") must not stand in for them.
+        # And no branch set up for Quick: these check the shop's own rules,
+        # which a branch measuring distance would stand in for.
+        cls.env['stock.warehouse'].search([]).write({'mart369_own_fees': False,
+                                                     'mart369_quick': False})
         Template = cls.env['product.template']
         # Quick items: no delivery promise.
         cls.apple = Template.create({

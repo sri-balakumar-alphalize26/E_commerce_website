@@ -42,7 +42,7 @@
             color: $mart-blue;
         }
 
-        input {
+        input, select, textarea {
             height: 38px;
             padding: 0 11px;
             border: 1px solid $mart-line;
@@ -60,9 +60,117 @@
                 box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.14);
             }
         }
+
+        /* After the shared rule, so it keeps its own height. */
+        textarea {
+            height: auto;
+            padding: 9px 11px;
+            resize: vertical;
+        }
     }
 
     .dv-span2 { grid-column: 1 / -1; }
+    .dv-form-one { grid-template-columns: minmax(0, 1fr); }
+
+    /* "Find pincodes around this branch", and how it is going, in words. */
+    .dv-find {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .dv-find-msg {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        margin: 0;
+        padding: 9px 12px;
+        border-radius: 10px;
+        background: rgba(10, 120, 171, 0.08);
+        font-size: 13px;
+        color: $mart-ink;
+    }
+
+    .dv-find-done { background: rgba(22, 163, 74, 0.09); }
+    .dv-find-failed { background: rgba(220, 38, 38, 0.08); }
+
+    .dv-find-bar {
+        width: 100%;
+        height: 6px;
+        border-radius: 99px;
+        background: $mart-line;
+        overflow: hidden;
+
+        i {
+            display: block;
+            height: 100%;
+            background: $mart-blue;
+            transition: width 400ms ease;
+        }
+    }
+
+    .dv-spin {
+        flex: none;
+        width: 14px;
+        height: 14px;
+        margin-top: 2px;
+        border: 2px solid rgba(10, 120, 171, 0.25);
+        border-top-color: $mart-blue;
+        border-radius: 50%;
+        animation: dv-spin 0.8s linear infinite;
+    }
+
+    @keyframes dv-spin { to { transform: rotate(360deg); } }
+
+    /* Pincodes we already know, under the branch nearest them, to tick. */
+    .dv-known {
+        margin: 0 0 12px;
+        border: 1px solid $mart-line;
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    .dv-known-head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 12px;
+        background: rgba(10, 120, 171, 0.06);
+        font-size: 13px;
+
+        small { color: $mart-muted; flex: 1; }
+    }
+
+    .dv-known-row {
+        display: grid;
+        grid-template-columns: 20px 80px minmax(0, 1fr) 120px 110px;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 12px;
+        border-top: 1px solid $mart-line;
+        font-size: 13px;
+        cursor: pointer;
+
+        em {
+            grid-column: 3 / -1;
+            font-style: normal;
+            font-size: 12px;
+            color: $mart-muted;
+        }
+    }
+
+    /* The worked-out Quick time, under the km it comes from. */
+    .dv-quick-time {
+        margin: 10px 0 0;
+        padding: 9px 12px;
+        border-radius: 10px;
+        background: rgba(10, 120, 171, 0.08);
+        font-size: 13px;
+        color: $mart-ink;
+
+        b { color: $mart-blue; }
+    }
 
     /* Two or three options, both worth reading without opening anything. */
     .dv-choice {

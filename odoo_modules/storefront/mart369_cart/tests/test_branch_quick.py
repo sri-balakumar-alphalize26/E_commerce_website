@@ -2,8 +2,9 @@
 
 An item is Quick when a branch with Quick on is within its reach of the
 address's map pin and has the item in stock there. Otherwise Express. An
-address with no pin follows its pincode's area, and until any branch is set up
-the product decides exactly as before.
+address with no pin is Express and the shop asks for the location, since a
+pincode has no distance to measure. Until any branch is set up, a pincode's
+area and then the product decide exactly as before.
 """
 
 from odoo.exceptions import AccessError, UserError, ValidationError
@@ -25,8 +26,11 @@ class TestBranchQuick(TransactionCase):
     def setUpClass(cls):
         super().setUpClass()
         env = cls.env
-        # Whatever the database already has must not answer for these tests.
-        env['stock.warehouse'].search([]).write({'mart369_quick': False})
+        # Whatever the database already has must not answer for these tests,
+        # branch fees included: a real branch with "free above 10" would make
+        # every fee here 0.
+        env['stock.warehouse'].search([]).write({'mart369_quick': False,
+                                                 'mart369_own_fees': False})
 
         company = env.company
         cls.near_branch = env['stock.warehouse'].search(
@@ -144,18 +148,33 @@ class TestBranchQuick(TransactionCase):
 
     # ------------------------------------------------------- no map pin
 
-    def test_no_pin_follows_an_express_only_pincode(self):
+    def test_no_pin_is_express_and_asks_for_the_location(self):
+        """A branch measures Quick by distance; a pincode alone has none."""
+        for zip_code in ('992001', '991001', '555'):
+            bill = self._bill(self.milk, address=self._address(None, zip_code))
+            self.assertEqual(self._mode(bill, self.milk), 'all', zip_code)
+            self.assertEqual(bill['movedWhy'], 'nopin', zip_code)
+
+    def test_the_pincode_check_asks_for_the_location(self):
+        answer = self.env['mart369.service.area']._mart369_check('992001')
+        self.assertTrue(answer['ok'])
+        self.assertFalse(answer['quick'])
+        self.assertTrue(answer['needPin'])
+
+    # ---------------------------------- no branch set up: exactly as before
+
+    def test_with_no_branch_set_up_no_pin_follows_the_pincode(self):
+        self.near_branch.mart369_quick = False
         bill = self._bill(self.milk, address=self._address(None, '991001'))
         self.assertEqual(self._mode(bill, self.milk), 'all')
         self.assertEqual(bill['movedWhy'], 'area')
-
-    def test_no_pin_follows_a_quick_pincode(self):
-        bill = self._bill(self.eggs, address=self._address(None, '992001'))
-        self.assertEqual(self._mode(bill, self.eggs), 'quick')
-
-    def test_no_pin_and_no_area_leaves_the_product_to_decide(self):
-        bill = self._bill(self.eggs, address=self._address(None, '555'))
-        self.assertEqual(self._mode(bill, self.eggs), 'quick')
+        bill = self._bill(self.milk, address=self._address(None, '992001'))
+        self.assertEqual(self._mode(bill, self.milk), 'quick')
+        bill = self._bill(self.milk, address=self._address(None, '555'))
+        self.assertEqual(self._mode(bill, self.milk), 'quick', 'no area: the product decides')
+        answer = self.env['mart369.service.area']._mart369_check('992001')
+        self.assertTrue(answer['quick'])
+        self.assertNotIn('needPin', answer)
 
     # ------------------------------------------------------------ money
 

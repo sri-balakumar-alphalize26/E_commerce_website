@@ -1,6 +1,6 @@
 {
     'name': '369 Mart Delivery & Pricing',
-    'version': '19.0.1.8.1',
+    'version': '19.0.1.9.0',
     'category': 'Website',
     'summary': 'The bill, delivery fees, coupons, service areas and slots.',
     'description': """
@@ -35,6 +35,7 @@ them in **369 Mart -> Delivery & Pricing**.
         'views/deal_views.xml',
         # After the views, so the menu exists by the time the examples do.
         'data/deal_cron.xml',
+        'data/postcode_cron.xml',
     ],
     'assets': {
         'web.assets_backend': [

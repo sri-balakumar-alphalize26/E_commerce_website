@@ -6,3 +6,4 @@ from . import deal
 from . import cart
 from . import branch
 from . import hub_rule
+from . import postcode

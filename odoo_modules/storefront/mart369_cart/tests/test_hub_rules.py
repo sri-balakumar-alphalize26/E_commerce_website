@@ -6,9 +6,11 @@ and its Cargo badge marks the long trips. When the customer's own hub has
 none, the next hub steps in. While the table is empty nothing changes.
 """
 
-from odoo.exceptions import ValidationError
+from odoo.exceptions import UserError, ValidationError
 from odoo.tests import tagged
 from odoo.tests.common import TransactionCase
+
+from ..models.branch import haversine_km, quick_minutes, quick_time_text
 
 RUWI = (23.5880, 58.3829)
 SOHAR = (24.3470, 56.7090)
@@ -41,7 +43,7 @@ class TestHubRules(TransactionCase):
         cls.salalah = Branch.search([('company_id', '=', cls.salalah_co.id)], limit=1)
         cls.ruwi.write({
             'mart369_quick': True, 'mart369_quick_km': 30.0, 'mart369_maybe_km': 40.0,
-            'mart369_quick_eta': '30 mins', 'mart369_lat': RUWI[0], 'mart369_lng': RUWI[1],
+            'mart369_quick_eta': 'typed long ago', 'mart369_lat': RUWI[0], 'mart369_lng': RUWI[1],
         })
         cls.sohar.write({'mart369_lat': SOHAR[0], 'mart369_lng': SOHAR[1]})
         cls.salalah.write({'mart369_lat': SALALAH[0], 'mart369_lng': SALALAH[1]})
@@ -106,10 +108,12 @@ class TestHubRules(TransactionCase):
 
     # ---------------------------------------------------- Priya, in Ruwi
 
-    def test_near_her_own_hub_it_is_quick_in_the_hubs_promise(self):
+    def test_near_her_own_hub_it_is_quick_in_a_time_from_her_distance(self):
         badge = self._badge(self.keyboard, self.qurum)
         self.assertEqual(badge['mode'], 'quick')
-        self.assertEqual(badge['when'], '30 mins')
+        km = haversine_km(*QURUM, *RUWI)
+        self.assertEqual(badge['when'], quick_time_text(km),
+                         'worked out from how far she is, never the typed promise')
         self.assertEqual(badge['seller']['id'], self.ruwi_co.id)
         self.assertNotIn('cargo', badge)
 
@@ -207,9 +211,39 @@ class TestHubRules(TransactionCase):
 
     def test_saving_the_new_branch_settings(self):
         row = self.env['stock.warehouse'].mart369_admin_save(
-            self.sohar.id, {'quickKm': '20', 'maybeKm': '25', 'quickEta': '  2-4 hours '})
+            self.sohar.id, {'quickKm': '20', 'maybeKm': '25'})
         self.assertEqual(row['maybeKm'], 25.0)
-        self.assertEqual(row['quickEta'], '2-4 hours')
+        self.assertEqual(row['quickUpTo'], '1 hr 50 mins', '10 + 5 x 20 km')
+        self.assertNotIn('quickEta', row, 'nobody types the Quick time any more')
+
+    def test_the_quick_time_is_worked_out(self):
+        self.assertEqual(quick_minutes(0), 10)
+        self.assertEqual(quick_minutes(1), 15)
+        self.assertEqual(quick_minutes(3), 25)
+        self.assertEqual(quick_minutes(5), 35)
+        self.assertEqual(quick_minutes(2.2), 25, 'rounded up to the next 5')
+        self.assertEqual(quick_time_text(5), '35 mins')
+        self.assertEqual(quick_time_text(10), '1 hr')
+        self.assertEqual(quick_time_text(12), '1 hr 10 mins')
+
+    def test_the_location_is_one_box_from_google_maps(self):
+        Branch = self.env['stock.warehouse']
+        row = Branch.mart369_admin_save(self.sohar.id, {'pin': ' 10.3673,  77.9803 '})
+        self.assertEqual((row['lat'], row['lng']), (10.3673, 77.9803))
+        with self.assertRaises(UserError):
+            Branch.mart369_admin_save(self.sohar.id, {'pin': '10.3673'})
+        row = Branch.mart369_admin_save(self.sohar.id, {'pin': ''})
+        self.assertIsNone(row['lat'], 'an empty box takes the pin away')
+
+    def test_switching_quick_on_fills_the_usual_reaches(self):
+        Branch = self.env['stock.warehouse']
+        self.sohar.write({'mart369_quick': False, 'mart369_quick_km': 0.0,
+                          'mart369_maybe_km': 0.0})
+        row = Branch.mart369_admin_save(self.sohar.id, {'quick': True})
+        self.assertEqual((row['quickKm'], row['maybeKm']), (5.0, 15.0))
+        # Already on: what the operator typed is left alone.
+        row = Branch.mart369_admin_save(self.sohar.id, {'quick': True, 'maybeKm': ''})
+        self.assertEqual(row['maybeKm'], 0.0)
 
     def test_quick_if_possible_cannot_be_under_the_reach(self):
         with self.assertRaises(ValidationError):

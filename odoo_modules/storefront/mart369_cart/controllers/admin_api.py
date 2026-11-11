@@ -24,6 +24,7 @@ from odoo.exceptions import AccessError, UserError, ValidationError
 from odoo.http import request
 
 from ..models.delivery_slot import KIND_CHOICES, MODE_CHOICES
+from ..models.postcode import clean_pincode
 
 _logger = logging.getLogger(__name__)
 
@@ -559,21 +560,26 @@ class Mart369DeliveryAdminApi(Mart369CouponAdminApi):
         # every order already out for that window - and the capacity count,
         # which finds those orders by key, would start reading zero.
         if creating:
+            # Left empty, the model works one out from the day and the time
+            # (`_mart369_auto_key`) and makes sure it is free.
             key = (body.get('key') or '').strip()
-            if not key:
-                raise ValueError('key')
-            values['key'] = key
+            if key:
+                values['key'] = key
             if not values.get('top'):
                 raise ValueError('top')
         return values
 
     def _area_values(self, body, creating=False):
         values = self._typed(body, AREA_WRITABLE, booleans=AREA_BOOLS)
+        if 'deliver' in body:
+            # The one "We deliver here" switch; turned into Quick / Express
+            # by the model, which knows what the area had before.
+            values['deliver'] = bool(body['deliver'])
         if 'pincode' in values:
             # Whitespace out first: a pincode pasted from a spreadsheet
             # arrives as '682 016', which is digits with a space in it, and
             # refusing that teaches nobody anything.
-            values['pincode'] = ''.join(values['pincode'].split())
+            values['pincode'] = clean_pincode(values['pincode'])
             if not values['pincode']:
                 raise ValueError('pincode')
         if creating and not values.get('pincode'):
@@ -664,7 +670,7 @@ class Mart369DeliveryAdminApi(Mart369CouponAdminApi):
             values = self._slot_values(self._body(), creating=True)
         except ValueError as exc:
             return self._fail(self._why(str(exc)), field=str(exc))
-        taken = self._slots().search(
+        taken = values.get('key') and self._slots().search(
             [('mode', '=', values.get('mode') or 'quick'),
              ('key', '=', values['key'])], limit=1)
         if taken:
@@ -713,13 +719,33 @@ class Mart369DeliveryAdminApi(Mart369CouponAdminApi):
 
     @http.route('/369mart/admin/delivery/areas', **_POST)
     def create_area(self, **kwargs):
-        """Start delivering somewhere."""
+        """Start delivering somewhere. With `pincodes` ("624001, 624002"),
+        several areas at once, all with the same switches and promise."""
         if not self._may_edit():
             return self._fail('You do not have access to this.', status=403)
+        body = self._body()
+        if 'pincodes' in body:
+            try:
+                common = self._area_values(
+                    {k: v for k, v in body.items() if k not in ('pincodes', 'pincode')})
+                with request.env.cr.savepoint():
+                    done = request.env['mart369.service.area'].mart369_admin_add_many(
+                        body.get('pincodes'), common)
+                    request.env['mart369.service.area'].flush_model()
+            except ValueError as exc:
+                return self._fail(self._why(str(exc)), field=str(exc))
+            except (AccessError, UserError, ValidationError) as exc:
+                return self._fail(str(exc), field='pincode')
+            except IntegrityError:
+                return self._fail('One of those pincodes has just been added.',
+                                  field='pincode', status=409)
+            return self._json(dict(done, ok=True), status=201)
         try:
-            values = self._area_values(self._body(), creating=True)
+            values = self._area_values(body, creating=True)
         except ValueError as exc:
             return self._fail(self._why(str(exc)), field=str(exc))
+        if 'deliver' in values:
+            values.update(self._areas()._mart369_switch_values(values.pop('deliver')))
         taken = self._areas().search([('pincode', '=', values['pincode'])], limit=1)
         if taken:
             return self._fail('There is already an area for %s.' % taken.pincode,
@@ -736,6 +762,18 @@ class Mart369DeliveryAdminApi(Mart369CouponAdminApi):
                               field='pincode', status=409)
         return self._json({'ok': True, 'area': area._mart369_admin_row()}, status=201)
 
+    @http.route('/369mart/admin/delivery/areas/known', **_GET)
+    def known_pincodes(self, **kwargs):
+        """Pincodes the shop already knows, grouped by nearest branch, for
+        the new-area form to tick instead of type."""
+        if not self._may_edit():
+            return self._fail('You do not have access to this.', status=403)
+        try:
+            known = request.env['mart369.service.area'].mart369_admin_known_pincodes()
+        except AccessError as exc:
+            return self._fail(str(exc), status=403)
+        return self._json(dict(known, ok=True))
+
     @http.route('/369mart/admin/delivery/areas/<int:area_id>', **_PATCH)
     def update_area(self, area_id, **kwargs):
         """Change an area, or stop delivering to it."""
@@ -748,8 +786,13 @@ class Mart369DeliveryAdminApi(Mart369CouponAdminApi):
             values = self._area_values(self._body())
         except ValueError as exc:
             return self._fail(self._why(str(exc)), field=str(exc))
-        if not values:
+        if 'deliver' in values:
+            values.update(self._areas()._mart369_switch_values(values.pop('deliver'), area))
+        if not values and 'deliver' not in self._body():
             return self._fail('Nothing to change.')
+        if not values:
+            # Switched on, and it already delivered: nothing moves.
+            return self._json({'ok': True, 'area': area._mart369_admin_row()})
         if values.get('pincode'):
             taken = self._areas().search(
                 [('pincode', '=', values['pincode']), ('id', '!=', area.id)], limit=1)
@@ -785,3 +828,27 @@ class Mart369DeliveryAdminApi(Mart369CouponAdminApi):
         except (AccessError, UserError, ValidationError) as exc:
             return self._fail(str(exc))
         return self._json({'ok': True, 'branch': row})
+
+    @http.route('/369mart/admin/delivery/branches/<int:branch_id>/pincodes', **_POST)
+    def find_pincodes(self, branch_id, **kwargs):
+        """"Find pincodes around this branch": from the country's postcode
+        list at once, or an OpenStreetMap lookup in the background. The
+        answer carries a plain-words `message` for the screen."""
+        return self._pincodes(branch_id, 'mart369_admin_find_pincodes')
+
+    @http.route('/369mart/admin/delivery/branches/<int:branch_id>/pincodes', **_GET)
+    def find_pincodes_status(self, branch_id, **kwargs):
+        """How the last "Find pincodes" for this branch is going."""
+        return self._pincodes(branch_id, 'mart369_admin_find_status')
+
+    def _pincodes(self, branch_id, method):
+        if not self._may_edit():
+            return self._fail('You do not have access to this.', status=403)
+        if not request.env['stock.warehouse'].sudo().browse(branch_id).exists():
+            return self._fail('There is no such branch.', status=404)
+        try:
+            with request.env.cr.savepoint():
+                status = getattr(request.env['stock.warehouse'], method)(branch_id)
+        except (AccessError, UserError, ValidationError) as exc:
+            return self._fail(str(exc))
+        return self._json(dict(status, ok=True))

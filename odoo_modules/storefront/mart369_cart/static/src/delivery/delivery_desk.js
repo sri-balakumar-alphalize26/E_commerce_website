@@ -34,7 +34,7 @@
  * Nothing here deletes. A rule, a slot and an area are each pointed at by
  * orders that have gone out, so each is switched off instead.
  */
-import { Component, onWillStart, useState } from "@odoo/owl";
+import { Component, onWillStart, onWillUnmount, useState } from "@odoo/owl";
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
 import { _t } from "@web/core/l10n/translation";
@@ -97,6 +97,92 @@ function num(value) {
     return value === "" || value === null || value === undefined ? 0 : Number(value);
 }
 
+const pad2 = (n) => String(n).padStart(2, "0");
+const blank = (v) => v === "" || v === null || v === undefined;
+
+/** "6 - 8 PM", or "11 AM - 1 PM" when the two halves of the day differ. */
+function span(from, to) {
+    const a = clock(from);
+    const b = clock(to);
+    return a.slice(-2) === b.slice(-2) ? `${a.slice(0, -3)} - ${b}` : `${a} - ${b}`;
+}
+
+/** "Thu, 18 Sep" - `_mart369_day_label` on the model. */
+function dayLabel(days) {
+    const d = new Date();
+    d.setDate(d.getDate() + days);
+    const weekday = d.toLocaleDateString("en-GB", { weekday: "short" });
+    const month = d.toLocaleDateString("en-GB", { month: "short" });
+    return `${weekday}, ${d.getDate()} ${month}`;
+}
+
+/**
+ * What a slot is called, worked out from its kind, day and time: the
+ * heading, the detail, the key and its place in the list. The base key is
+ * `_mart369_auto_key` on the model, which also adds -2, -3 when it is taken.
+ * AdminDelivery.jsx keeps the same function - change both together.
+ */
+export function slotWording(draft) {
+    const days = Math.max(0, Math.floor(num(draft.day_offset)));
+    const from = num(draft.from_hour);
+    const when = days === 0 ? "Today" : days === 1 ? "Tomorrow" : `In ${days} days`;
+    if (draft.kind === "now") {
+        return { top: "Now", sub: "10-20 min", key: "now", sequence: 0 };
+    }
+    if (draft.kind === "days") {
+        return { top: when, sub: "", key: `d${days}`, sequence: 1000 + days };
+    }
+    const hour = Math.floor(from) % 24;
+    const minute = Math.round((from - Math.floor(from)) * 60);
+    const stem = days === 0 ? "today" : days === 1 ? "tm" : `d${days}`;
+    return {
+        top: when,
+        sub: span(from, num(draft.to_hour)),
+        key: `${stem}-${pad2(hour)}${minute ? pad2(minute) : ""}`,
+        sequence: 1 + days * 100 + Math.round(from * 4),
+    };
+}
+
+/** The confirmation line the shop writes when that box is left empty -
+ *  `_mart369_serialize` on the model, from what the slot says right now. */
+export function slotLabelPreview(draft) {
+    const days = Math.max(0, Math.floor(num(draft.day_offset)));
+    if (draft.kind === "now") {
+        return `Arriving in ${draft.sub || ""}`.trim();
+    }
+    if (draft.kind === "days") {
+        return `Arrives by ${dayLabel(days)}`;
+    }
+    const window = draft.sub || span(num(draft.from_hour), num(draft.to_hour));
+    return days === 0 ? `Today, ${window}` : `${dayLabel(days)}, ${window}`;
+}
+
+/** The fields whose change moves the wording along. */
+const WORDING_DRIVERS = ["kind", "day_offset", "from_hour", "to_hour"];
+
+/**
+ * Set `field` on a slot draft, and move the wording along with it: a field
+ * that is empty or still says what was filled in for it follows; anything
+ * the operator typed stays. The key follows only on a slot not yet saved.
+ */
+export function setSlotField(draft, field, value) {
+    const before = slotWording(draft);
+    draft[field] = value;
+    if (!WORDING_DRIVERS.includes(field)) {
+        return draft;
+    }
+    const after = slotWording(draft);
+    for (const name of ["top", "sub", "sequence"]) {
+        if (blank(draft[name]) || String(draft[name]) === String(before[name])) {
+            draft[name] = after[name];
+        }
+    }
+    if (!draft.id && (blank(draft.key) || draft.key === before.key)) {
+        draft.key = after.key;
+    }
+    return draft;
+}
+
 function message(err, fallback) {
     return (
         err?.data?.message || err?.message?.data?.message || err?.message || fallback
@@ -132,11 +218,15 @@ export class SlotDialog extends Component {
                     order_before: s.orderBefore, fee: s.fee, capacity: s.capacity,
                     sequence: s.sequence, active: s.active,
                 }
-                : {
-                    id: null, mode: "quick", kind: "window", key: "", top: "Today",
-                    sub: "", label: "", from_hour: 18, to_hour: 20, day_offset: 0,
-                    order_before: 24, fee: 0, capacity: 0, sequence: 10, active: true,
-                },
+                : (() => {
+                    // Already filled in: Today, 6 - 8 PM, today-18.
+                    const fresh = {
+                        id: null, mode: "quick", kind: "window", key: "", top: "",
+                        sub: "", label: "", from_hour: 18, to_hour: 20, day_offset: 0,
+                        order_before: 24, fee: 0, capacity: 0, sequence: "", active: true,
+                    };
+                    return { ...fresh, ...slotWording(fresh) };
+                })(),
             error: "",
             busy: false,
         });
@@ -147,11 +237,16 @@ export class SlotDialog extends Component {
     }
 
     set(field, value) {
-        this.state.draft[field] = value;
+        setSlotField(this.state.draft, field, value);
     }
 
     clock(value) {
         return clock(num(value));
+    }
+
+    /** What the order will say if the Confirmation line is left empty. */
+    get labelPreview() {
+        return slotLabelPreview(this.state.draft);
     }
 
     async save() {
@@ -180,11 +275,14 @@ export class SlotDialog extends Component {
                    that window. */
                 await this.orm.write(M.slot, [d.id], values);
             } else {
-                const key = (d.key || "").trim();
-                if (!key) {
-                    throw new Error(_t("A slot needs a key. Keep it short: now, eve, tm, std."));
+                /* Still the filled-in key, or empty: the model works it out
+                   again and adds -2, -3 when it is taken in this storefront
+                   (`_mart369_auto_key`). A typed key goes as typed. */
+                let key = (d.key || "").trim();
+                if (key === slotWording(d).key) {
+                    key = "";
                 }
-                await this.orm.create(M.slot, [{ ...values, key }]);
+                await this.orm.create(M.slot, [key ? { ...values, key } : values]);
             }
             this.props.close();
             await this.props.onSaved(d.id ? _t("Slot updated.") : _t("Slot added."));
@@ -199,7 +297,27 @@ export class SlotDialog extends Component {
     }
 }
 
-/** The service-area editor. Short enough that it is all one panel. */
+/** What an area can promise. Picked, never typed, so every screen says it
+ *  the same way. AdminDelivery.jsx keeps the same list. */
+const AREA_PROMISES = [
+    "15 mins", "30 mins", "45 mins", "1 hour", "2 hours", "Same day", "Next day",
+];
+
+/** The one "We deliver here" switch, as the two old fields - the same rule
+ *  as _mart369_switch_values in service_area.py. Off: both off. On: an area
+ *  that already delivers keeps what it had; one that did not gets both. */
+function switchValues(deliver, area) {
+    if (!deliver) {
+        return { quick: false, express: false };
+    }
+    if (area && (area.quick || area.express)) {
+        return {};
+    }
+    return { quick: true, express: true };
+}
+
+/** The service-area editor. Short enough that it is all one panel. A new
+ *  area takes several pincodes at once, ticked from the ones we know. */
 export class AreaDialog extends Component {
     static template = "mart369_cart.AreaDialog";
     static components = { Dialog, Switch, Icon };
@@ -215,20 +333,104 @@ export class AreaDialog extends Component {
         this.state = useState({
             draft: a
                 ? {
-                    id: a.id, pincode: a.pincode, name: a.name, quick: a.quick,
-                    express: a.express, eta: a.eta, active: a.active,
+                    id: a.id, pincode: a.pincode, name: a.name,
+                    deliver: !!(a.quick || a.express), eta: a.eta, active: a.active,
                 }
                 : {
-                    id: null, pincode: "", name: "", quick: true, express: true,
-                    eta: "13 mins", active: true,
+                    id: null, pincode: "", name: "", deliver: true,
+                    eta: "30 mins", active: true,
                 },
+            known: null,        // the pincodes we know, grouped by branch
+            ticked: {},         // pincode -> true
+            open: {},           // which groups are unfolded
             error: "",
             busy: false,
         });
+        if (!a) {
+            // Not awaited: the window opens at once and the list fills in.
+            this.loadKnown();
+        }
+    }
+
+    async loadKnown() {
+        try {
+            const known = await this.orm.call(M.area, "mart369_admin_known_pincodes", []);
+            const ticked = {};
+            for (const group of known.groups) {
+                for (const row of group.pincodes) {
+                    if (row.near) {
+                        ticked[row.pincode] = true;
+                    }
+                }
+            }
+            this.state.known = known;
+            this.state.ticked = ticked;
+        } catch {
+            // Not fatal: the box below still takes typed pincodes.
+            this.state.known = { groups: [], noPin: [], covered: [] };
+        }
     }
 
     set(field, value) {
         this.state.draft[field] = value;
+    }
+
+    /** "0.4 km away", "2,511 km away". */
+    kmText(km) {
+        if (km === null || km === undefined) {
+            return "";
+        }
+        return _t("%s km away", km < 100 ? km : Math.round(km).toLocaleString());
+    }
+
+    tick(pincode) {
+        this.state.ticked[pincode] = !this.state.ticked[pincode];
+    }
+
+    /** Tick or untick a whole branch's list at once. */
+    tickAll(rows) {
+        const on = !rows.every((r) => this.state.ticked[r.pincode]);
+        for (const r of rows) {
+            this.state.ticked[r.pincode] = on;
+        }
+    }
+
+    /** Groups start folded to one line; this opens or closes one. */
+    toggleOpen(key) {
+        this.state.open[key] = !this.state.open[key];
+    }
+
+    /** Where the ticks come from, for the Add button: "Ruwi 4 · Sohar 37".
+     *  Folded groups hide their ticks, so the button says it out loud. */
+    get tickedSplit() {
+        const known = this.state.known;
+        if (!known) {
+            return "";
+        }
+        const parts = known.groups.map((g) => [g.branch.split(" ")[0], this.tickedIn(g.pincodes)]);
+        parts.push([_t("far"), this.tickedIn(known.far || [])]);
+        parts.push([_t("no pin"), this.tickedIn(known.noPin || [])]);
+        const shown = parts.filter(([, n]) => n);
+        return shown.length > 1 ? shown.map(([name, n]) => `${name} ${n}`).join(" · ") : "";
+    }
+
+    tickedIn(rows) {
+        return rows.filter((r) => this.state.ticked[r.pincode]).length;
+    }
+
+    allTicked(rows) {
+        return rows.length && rows.every((r) => this.state.ticked[r.pincode]);
+    }
+
+    get tickedCount() {
+        return Object.values(this.state.ticked).filter(Boolean).length;
+    }
+
+    /** The list, plus whatever an older area already says, so opening it
+     *  never quietly changes its promise. */
+    get promises() {
+        const eta = this.state.draft.eta;
+        return eta && !AREA_PROMISES.includes(eta) ? [eta, ...AREA_PROMISES] : AREA_PROMISES;
     }
 
     async save() {
@@ -238,13 +440,37 @@ export class AreaDialog extends Component {
         this.state.busy = true;
         this.state.error = "";
         const d = this.state.draft;
+        if (!d.id) {
+            const ticked = Object.keys(this.state.ticked).filter((p) => this.state.ticked[p]);
+            const pincodes = [...ticked, d.pincode || ""].filter((p) => p.trim()).join(", ");
+            try {
+                const done = await this.orm.call(M.area, "mart369_admin_add_many", [pincodes, {
+                    name: d.name || "", eta: d.eta || "",
+                    deliver: !!d.deliver, active: true,
+                }]);
+                this.props.close();
+                let said = done.added.length === 1
+                    ? _t("1 area added.")
+                    : _t("%s areas added.", done.added.length);
+                if (done.skipped.length) {
+                    said += " " + _t("Already there, left as they were: %s.",
+                                     done.skipped.join(", "));
+                }
+                await this.props.onSaved(said);
+            } catch (err) {
+                this.state.error = message(err, _t("That could not be saved."));
+            } finally {
+                this.state.busy = false;
+            }
+            return;
+        }
         /* Whitespace out first: a pincode pasted from a spreadsheet arrives
            as "682 016", which is digits with a space in it, and refusing that
            teaches nobody anything. */
         const values = {
             pincode: (d.pincode || "").split(/\s+/).join(""),
-            name: d.name || "", eta: d.eta || "",
-            quick: !!d.quick, express: !!d.express, active: !!d.active,
+            name: d.name || "", eta: d.eta || "", active: !!d.active,
+            ...switchValues(d.deliver, this.props.area),
         };
         try {
             if (!values.pincode) {
@@ -265,9 +491,21 @@ export class AreaDialog extends Component {
     }
 }
 
+/** Minutes for Quick `km` away: 10 to pack, 5 a km, rounded up to the next
+ *  5. The same sum as quick_time_text in branch.py, so the window shows what
+ *  the shop will say. */
+function quickTime(km) {
+    const mins = Math.ceil((10 + 5 * Math.max(0, Number(km) || 0)) / 5 - 1e-9) * 5;
+    if (mins < 60) {
+        return `${mins} mins`;
+    }
+    const rest = mins % 60;
+    return `${Math.floor(mins / 60)} hr${rest ? ` ${rest} mins` : ""}`;
+}
+
 /** One branch's Quick settings. Branches themselves are made in Inventory,
  *  so this edits only the things delivery owns: Quick on or off, its reach,
- *  "Quick if possible up to", its Quick promise and its pin. */
+ *  "Quick if possible up to" and its pin. The Quick time is worked out. */
 export class BranchDialog extends Component {
     static template = "mart369_cart.BranchDialog";
     static components = { Dialog, Switch, Icon };
@@ -285,33 +523,83 @@ export class BranchDialog extends Component {
                 quick: b.quick,
                 quickKm: b.quickKm ? String(b.quickKm) : "",
                 maybeKm: b.maybeKm ? String(b.maybeKm) : "",
-                quickEta: b.quickEta || "",
                 ownFees: !!b.ownFees,
                 quickFee: b.quickFee ? String(b.quickFee) : "",
                 expressFee: b.expressFee ? String(b.expressFee) : "",
                 freeAbove: b.freeAbove ? String(b.freeAbove) : "",
-                lat: b.lat ?? "",
-                lng: b.lng ?? "",
+                // One box, as Google Maps copies it: "10.3673, 77.9803".
+                pin: b.lat !== null && b.lat !== undefined ? `${b.lat}, ${b.lng}` : "",
             },
+            find: null,     // how "Find pincodes around this branch" is going
             error: "",
             busy: false,
         });
+        onWillUnmount(() => clearTimeout(this.findTimer));
+        // A lookup already under way shows its progress as the window opens.
+        this.orm.call(M.branch, "mart369_admin_find_status", [b.id]).then((status) => {
+            if (status.state === "running") {
+                this.showFind(status);
+            }
+        }).catch(() => {});
     }
 
     set(field, value) {
         this.state.draft[field] = value;
     }
 
-    /** A pin pasted from Google Maps arrives as "23.588, 58.3829" in one box. */
-    pastePin(ev) {
-        const parts = (ev.target.value || "").split(",").map((x) => x.trim());
-        if (parts.length === 2 && parts.every((x) => x !== "" && !isNaN(Number(x)))) {
-            this.state.draft.lat = parts[0];
-            this.state.draft.lng = parts[1];
-            ev.target.value = parts[0];
-        } else {
-            this.state.draft.lat = ev.target.value;
+    /** Quick on with the boxes still empty fills the usual reaches. */
+    toggleQuick() {
+        const d = this.state.draft;
+        d.quick = !d.quick;
+        if (d.quick && !Number(d.quickKm)) {
+            d.quickKm = "5";
         }
+        if (d.quick && !Number(d.maybeKm)) {
+            d.maybeKm = String(Math.max(15, Number(d.quickKm) || 0));
+        }
+    }
+
+    /** "Find pincodes around this branch": the answer comes with a sentence
+     *  that says what is happening; while OpenStreetMap is still looking, ask
+     *  again every few seconds so the count climbs on screen. */
+    async findPincodes() {
+        this.state.find = {
+            state: "starting",
+            message: _t("Working out which country this branch is in, and getting its postcode list. The first time for a country this can take up to a minute…"),
+        };
+        try {
+            const status = await this.orm.call(M.branch, "mart369_admin_find_pincodes",
+                                               [this.props.branch.id]);
+            this.showFind(status);
+        } catch (err) {
+            this.state.find = { state: "failed", message: message(err, _t("That didn't work.")) };
+        }
+    }
+
+    get findPercent() {
+        const f = this.state.find;
+        return f && f.total ? Math.round((100 * f.done) / f.total) : 0;
+    }
+
+    showFind(status) {
+        this.state.find = status;
+        clearTimeout(this.findTimer);
+        if (status.state === "running") {
+            this.findTimer = setTimeout(async () => {
+                try {
+                    this.showFind(await this.orm.call(M.branch, "mart369_admin_find_status",
+                                                      [this.props.branch.id]));
+                } catch {
+                    // A missed check is not news; the next button press asks again.
+                }
+            }, 4000);
+        }
+    }
+
+    /** "15 mins to 35 mins" for the reach typed in, or "" with none. */
+    get quickTimes() {
+        const km = Number(this.state.draft.quickKm);
+        return km > 0 ? `${quickTime(0)} to ${quickTime(km)}` : "";
     }
 
     async save() {
@@ -324,8 +612,7 @@ export class BranchDialog extends Component {
         try {
             await this.orm.call(M.branch, "mart369_admin_save", [this.props.branch.id, {
                 quick: !!d.quick, quickKm: d.quickKm, maybeKm: d.maybeKm,
-                quickEta: d.quickEta, lat: d.lat, lng: d.lng,
-                ownFees: !!d.ownFees, quickFee: d.quickFee, expressFee: d.expressFee,
+                pin: d.pin, ownFees: !!d.ownFees, quickFee: d.quickFee, expressFee: d.expressFee,
                 freeAbove: d.freeAbove,
             }]);
             this.props.close();
