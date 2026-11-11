@@ -31,6 +31,8 @@ class TestBranchQuick(TransactionCase):
         # every fee here 0.
         env['stock.warehouse'].search([]).write({'mart369_quick': False,
                                                  'mart369_own_fees': False})
+        # Nor its hub rules: these tests are the shop without them.
+        env['mart369.hub.rule'].search([]).unlink()
 
         company = env.company
         cls.near_branch = env['stock.warehouse'].search(

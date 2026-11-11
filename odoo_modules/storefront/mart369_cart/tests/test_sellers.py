@@ -25,6 +25,8 @@ class TestSellers(TransactionCase):
         env = cls.env
         # Whatever the database already has must not answer for these tests.
         env['stock.warehouse'].search([]).write({'mart369_quick': False})
+        # Nor its hub rules: these tests are the shop without them.
+        env['mart369.hub.rule'].search([]).unlink()
 
         cls.main = env.company
         cls.sohar = env['res.company'].create({'name': 'Zz Sohar Hub'})
