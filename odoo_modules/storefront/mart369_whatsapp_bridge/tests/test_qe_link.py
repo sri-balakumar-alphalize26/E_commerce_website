@@ -5,7 +5,8 @@ private copy that matches DUBAI_TEST.
 """
 
 from odoo.exceptions import UserError
-from odoo.tests import tagged
+from odoo.service.model import call_kw
+from odoo.tests import TransactionCase, tagged
 
 from ..models.qe_link import qe_on
 from .common import Mart369BridgeCase
@@ -186,3 +187,15 @@ class TestQeLink(Mart369BridgeCase):
             'a slot he already has, by its times, is not copied again')
         self.assertEqual(self.env['sa.qe.delivery.rule']._qe_for('quick').fee, 30.0,
                          'his rule is never written over')
+
+
+@tagged('post_install', '-at_install')
+class TestDeskOpens(TransactionCase):
+    """Runs with or without his module: the Odoo Delivery desk asks for its
+    lists with no ids, exactly as the browser does."""
+
+    def test_the_desk_loads_with_no_ids(self):
+        data = call_kw(self.env['mart369.delivery.rule'], 'mart369_admin_list', [],
+                       {'context': {'mart369_desk': True}})
+        self.assertIn('branches', data)
+        self.assertIn('rules', data)

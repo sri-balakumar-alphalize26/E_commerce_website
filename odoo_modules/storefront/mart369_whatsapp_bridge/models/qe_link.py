@@ -262,10 +262,15 @@ class DeliveryRuleQe(models.Model):
                 menu.sudo().active = False
         return done
 
+    @api.model
     def mart369_admin_list(self):
         """The staff console's Delivery screen, from his records. The Odoo
         delivery desk (mart369_desk) keeps the website's own settings: it
-        writes them by id, so his ids must never reach it."""
+        writes them by id, so his ids must never reach it.
+
+        @api.model again here: an override without it is a record method to
+        Odoo, and the desk's call with no ids failed "list index out of
+        range"."""
         if not qe_on(self.env) or self.env.context.get('mart369_desk'):
             return super().mart369_admin_list()
         env = self.env
