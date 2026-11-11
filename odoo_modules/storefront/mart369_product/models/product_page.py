@@ -130,9 +130,11 @@ class Mart369ProductPage(models.AbstractModel):
         storable = variants[:1].product_tmpl_id
         if 'free_qty' in variants._fields and (
                 'is_storable' not in storable._fields or storable.is_storable):
-            in_stock = variants.filtered(lambda v: v.free_qty > 0)
+            # Counted as the cards count it: every hub while hub rules are on.
+            counted = self.env['mart369.serializable']._mart369_stock_view(variants)
+            in_stock = counted.filtered(lambda v: v.free_qty > 0)
             if in_stock:
-                return in_stock[0]
+                return variants.browse(in_stock[0].id)
         return variants[0]
 
     # ------------------------------------------------------------- the d block

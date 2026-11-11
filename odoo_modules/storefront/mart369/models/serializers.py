@@ -701,7 +701,7 @@ class Mart369Serializable(models.AbstractModel):
         vals.pop('low', None)
         if 'free_qty' in variant._fields and (
                 'is_storable' not in tmpl._fields or tmpl.is_storable):
-            qty = variant.free_qty
+            qty = self._mart369_stock_view(variant).free_qty
             if qty <= 0:
                 vals['stock'] = 0
             elif tmpl.mart_low_stock_at and qty <= tmpl.mart_low_stock_at:
@@ -753,14 +753,27 @@ class Mart369Serializable(models.AbstractModel):
             return None  # Nothing Inventory tracks has nothing to run out of.
         # sudo: free stock is what the shop shows everyone, but reading it walks
         # stock.move, which a website designer without stock rights may not.
-        return sum(product.sudo().product_variant_ids.mapped('free_qty'))
+        return sum(self._mart369_stock_view(product).product_variant_ids.mapped('free_qty'))
+
+    @api.model
+    def _mart369_stock_context(self):
+        """Extra context for reading free stock: {} counts the shopper's own
+        company's warehouses, as the shop always has. mart369_cart widens it
+        to every hub while the hub rules are on, so an item another hub holds
+        is not shown as sold out (it is sent from there)."""
+        return {}
+
+    @api.model
+    def _mart369_stock_view(self, records):
+        """`records` (templates or variants) as the shop reads their stock."""
+        return records.sudo().with_context(**self._mart369_stock_context())
 
     @api.model
     def _mart369_load_stock(self, templates):
         """Count stock for a whole page in one go, so that _mart369_free_qty
         finds the answer already there rather than asking once per product."""
         if 'free_qty' in self.env['product.product']._fields:
-            templates.sudo().product_variant_ids.mapped('free_qty')
+            self._mart369_stock_view(templates).product_variant_ids.mapped('free_qty')
 
     def _price_context_for(self, templates):
         """{template_id: {'price': x, 'mrp': y or None}} for these
