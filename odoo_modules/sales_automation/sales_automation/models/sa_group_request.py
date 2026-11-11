@@ -1873,6 +1873,26 @@ class SaGroupRequest(models.Model):
                  name=partner.name or '-', street=partner.street or '-',
                  zip=partner.zip or '-', phone=partner.phone or '-')
 
+    @api.model
+    def _sa_rename_own_addresses(self, partner, old_name):
+        """The customer's own delivery addresses carry their name - the
+        address book copies it on when it makes one. When they change their
+        name, those follow; an address for somebody else keeps its own.
+
+        Before: NO > NAME > "Sri" renamed the contact only, so the order's
+        address still said "RaviKavitha", the read-back showed
+        "RaviKavitha (for Sri)" and the rider was given the old name (S00024).
+        """
+        old_name = (old_name or '').strip()
+        partner = partner.sudo()
+        if not old_name or old_name == (partner.name or '').strip():
+            return
+        own = partner.child_ids.filtered(
+            lambda c: c.type in ('delivery', 'other')
+            and (c.name or '').strip() == old_name)
+        if own:
+            own.write({'name': partner.name})
+
     def _sa_take_profile_answer(self, text, order):
         """Record one answer and move the ladder on."""
         self.ensure_one()
@@ -1904,7 +1924,9 @@ class SaGroupRequest(models.Model):
 
         if step == 'name':
             if self._sa_looks_like_name(answer):
+                old = partner.name
                 partner.name = answer[:80]
+                self._sa_rename_own_addresses(partner, old)
                 move_on('address')
             else:
                 reject()

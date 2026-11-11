@@ -15,10 +15,23 @@ class SaleOrder(models.Model):
         readonly=True, copy=False, index=True,
         help="The WhatsApp group message this order grew out of.",
     )
+    # The enquiry's own `order_id` is always written; the forward link above is
+    # not (an order placed from the group's YES has only the enquiry pointing
+    # at it). The group is read from either, so the order form, the rider
+    # job's WhatsApp number and the console all know it.
+    sa_enquiry_ids = fields.One2many(
+        'sa.group.request', 'order_id', string='Group Enquiries', copy=False)
     sa_group_id = fields.Many2one(
-        related='sa_group_request_id.group_id', store=True,
-        string='WhatsApp Group',
+        'sa.sales.group', string='WhatsApp Group',
+        compute='_compute_sa_group_id', store=True, index=True,
     )
+
+    @api.depends('sa_group_request_id.group_id', 'sa_enquiry_ids.group_id')
+    def _compute_sa_group_id(self):
+        for order in self:
+            request = order.sa_group_request_id or order.sa_enquiry_ids.sorted(
+                'id', reverse=True)[:1]
+            order.sa_group_id = request.group_id
 
     @api.model_create_multi
     def create(self, vals_list):
