@@ -10,6 +10,7 @@
    ========================================================================== */
 import { useEffect, useMemo, useRef, useState } from "react";
 import Pick from "./Pick";
+import PinPicker from "./PinPicker";
 import { api } from "@/lib/api";
 import { nationalNumber } from "@/lib/address";
 
@@ -65,6 +66,13 @@ export default function AddressForm({ initial, meta: startMeta, me, onSave, onCa
   const [err, setErr] = useState({});
   const [saving, setSaving] = useState(false);
   const [look, setLook] = useState(null); /* {busy} | {ok, town, state, areas} | {ok:false} */
+  /* The pincode is far from the map pin: {pin, km, place}. Shown once per
+     pincode; saving again with the same pincode is "Save anyway". */
+  const [mismatch, setMismatch] = useState(null);
+  /* The map pin: from "Use my current location", the address as saved, or
+     "Pick on map". With it the shop measures Quick from the branch. */
+  const [spot, setSpot] = useState(() => (initial?.lat || initial?.lng ? { lat: initial.lat, lng: initial.lng } : null));
+  const [picking, setPicking] = useState(false);
   /* Which of town/state the lookup filled, so a later pincode may refill them
      but never overwrite what the shopper typed. */
   const auto = useRef({ town: false, state: false, phone: false });
@@ -158,7 +166,20 @@ export default function AddressForm({ initial, meta: startMeta, me, onSave, onCa
       town: d.town.trim(), state_id: d.state_id ? Number(d.state_id) : false,
       country_id: code,
     };
-    if (initial?.lat || initial?.lng) Object.assign(body, { lat: initial.lat, lng: initial.lng });
+    if (spot) Object.assign(body, { lat: spot.lat, lng: spot.lng });
+    /* A pincode and a map pin far apart are usually a typo or a pin dropped
+       where the shopper stands, not where the parcel goes. Say so once; it
+       never stops the save - "Save anyway" goes ahead. */
+    if ((body.lat || body.lng) && mismatch?.pin !== d.pin) {
+      const m = await api(`/pincode-pin?pin=${encodeURIComponent(d.pin)}&lat=${body.lat}&lng=${body.lng}`,
+        { raw: true }).catch(() => null);
+      if (m?.known && !m.match) {
+        setSaving(false);
+        setMismatch({ pin: d.pin, km: m.km, place: m.place });
+        return;
+      }
+    }
+    setMismatch(null);
     const r = await onSave(body);
     setSaving(false);
     if (r?.error) {
@@ -229,11 +250,44 @@ export default function AddressForm({ initial, meta: startMeta, me, onSave, onCa
             error={err.state} />
         ) : <span />}
         <div className="co-span2">{field("landmark", "Landmark (optional)", { ac: "off" })}</div>
+        <div className="co-span2 af-spot">
+          {picking ? (
+            <PinPicker start={spot} pincode={d.pin}
+              onPick={(p) => { setSpot(p); setPicking(false); setMismatch(null); }}
+              onCancel={() => setPicking(false)} />
+          ) : (
+            <div className="af-spot-row">
+              <span className={"af-spot-ic" + (spot ? " af-spot-on" : "")} aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M12 22s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12z" /><circle cx="12" cy="10" r="2.6" /></svg>
+              </span>
+              <span className="af-spot-txt">
+                <b>{spot ? "Location on map is set" : "Location on map"}</b>
+                <small>{spot
+                  ? "Riders use this pin to find you."
+                  : "Optional, but it shows if Quick delivery reaches you and helps the rider find you."}</small>
+              </span>
+              <button type="button" className="co-ghost" onClick={() => setPicking(true)}>
+                {spot ? "Change" : "Pick on map"}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
       {err.form && <p className="co-error" key={err.form}>{err.form}</p>}
+      {mismatch && mismatch.pin === d.pin && (
+        <div className="af-mismatch" role="alert">
+          <b>Is the pincode right?</b>
+          <span>
+            Pincode {mismatch.pin}{mismatch.place ? ` is in ${mismatch.place}` : ""}, about {mismatch.km} km
+            from where your map pin is. Please check the pincode, or save anyway if it's right.
+          </span>
+        </div>
+      )}
       <div className="co-row-end">
         {onCancel && <button type="button" className="co-ghost" onClick={onCancel}>Cancel</button>}
-        <button className="co-primary" type="submit" disabled={saving || !meta}>{saving ? "Saving…" : saveLabel}</button>
+        <button className="co-primary" type="submit" disabled={saving || !meta}>
+          {saving ? "Saving…" : mismatch && mismatch.pin === d.pin ? "Save anyway" : saveLabel}
+        </button>
       </div>
     </form>
   );

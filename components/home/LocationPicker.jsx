@@ -69,7 +69,8 @@ export default function LocationPicker({ open, onClose, anchorSelector = ".hm-lo
 
   const submitPin = async (e) => {
     e.preventDefault();
-    if (!/^\d{6}$/.test(pin)) { setCheck({ ok: false, error: "Enter a 6-digit pincode." }); setShake((s) => s + 1); return; }
+    /* Any country's postcode: letters and numbers, 3 to 10 of them (SW1A 1AA, 682016). */
+    if (!/^[A-Za-z0-9]{3,10}$/.test(pin.replace(/\s/g, ""))) { setCheck({ ok: false, error: "Enter a valid pincode." }); setShake((s) => s + 1); return; }
     setCheck({ busy: true });
     const r = onCheckPincode ? await onCheckPincode(pin) : { ok: false, error: "Serviceability is unavailable right now." };
     setCheck(r);
@@ -113,14 +114,19 @@ export default function LocationPicker({ open, onClose, anchorSelector = ".hm-lo
           <form className="lp-pin-form lp-in" style={{ "--i": 1 }} onSubmit={submitPin} noValidate>
             <label htmlFor="lp-pin">Check delivery by pincode</label>
             <div key={shake} className={"lp-pin-row" + (check && check.ok === false ? " lp-shake" : "")}>
-              <input id="lp-pin" inputMode="numeric" maxLength={6} placeholder="e.g. 682016" value={pin}
-                onChange={(e) => { setPin(e.target.value.replace(/\D/g, "").slice(0, 6)); setCheck(null); }} />
+              <input id="lp-pin" maxLength={12} placeholder="e.g. 682016" value={pin} autoCapitalize="characters"
+                onChange={(e) => { setPin(e.target.value.replace(/[^0-9A-Za-z ]/g, "").slice(0, 12)); setCheck(null); }} />
               <button type="submit" disabled={check?.busy}>{check?.busy ? <span className="lp-spin" /> : "Check"}</button>
             </div>
             {check && !check.busy && (
               <p className={"lp-result " + (check.ok ? "lp-good" : "lp-bad")} role="status">
                 <Icon n={check.ok ? (check.quick ? "bolt" : "truck") : "info"} size={14} className={check.ok && check.quick ? "hm-fill" : ""} />
-                {check.ok ? (check.quick ? `Quick delivery available · in ${check.eta}` : "Express delivery available · 2–5 days") : check.error}
+                {check.ok
+                  ? (check.quick ? `Quick delivery available · in ${check.eta}`
+                    /* Quick is measured from the store now: a pincode alone can't say. */
+                    : check.needPin ? "We deliver here · Use your location above to see if Quick reaches you"
+                    : "Express delivery available · 2–5 days")
+                  : check.error}
               </p>
             )}
           </form>

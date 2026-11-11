@@ -102,3 +102,30 @@
 /* Account: an address card reads as lines now, and the form opens as a card */
 .ac-addr { align-items: flex-start; }
 .ac-addr-edit { padding: 4px 16px 16px; }
+
+/* The pincode and the map pin are far apart: a warning, never a block */
+.af-mismatch { display: grid; gap: 3px; margin: 12px 0 0; padding: 10px 12px; border-radius: 12px; background: #fff7e6; border: 1px solid #f5d38a; color: #7a4b00; font-size: 13px; line-height: 1.45; animation: hm-rise 260ms var(--hm-ease) both; }
+.af-mismatch b { font-size: 13.5px; }
+@media (prefers-reduced-motion: reduce) { .af-mismatch { animation: none; } }
+
+/* "Location on map": the row, and the picker that opens in its place */
+.af-spot-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px dashed var(--hm-line, #dfe5ea); border-radius: 14px; }
+.af-spot-ic { flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: #eef3f6; color: var(--hm-muted, #64757f); }
+.af-spot-ic svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+.af-spot-ic.af-spot-on { background: #e7f6ec; color: var(--co-green, #1a7f3c); }
+.af-spot-txt { flex: 1; display: grid; gap: 2px; min-width: 0; }
+.af-spot-txt b { font-size: 14px; }
+.af-spot-txt small { font-size: 12.5px; color: var(--hm-muted, #64757f); }
+
+.pp-root { display: grid; gap: 10px; }
+.pp-help { margin: 0; font-size: 13px; color: var(--hm-muted, #64757f); }
+.pp-help b { color: var(--hm-ink, #13212b); }
+.pp-map { position: relative; height: 320px; border-radius: 14px; overflow: hidden; background: #eef3f6; }
+.pp-canvas { position: absolute; inset: 0; }
+.pp-pin { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; transform: translate(-50%, -100%); pointer-events: none; filter: drop-shadow(0 3px 4px rgba(0, 0, 0, .3)); }
+.pp-pin svg { width: 100%; height: 100%; fill: #e5484d; stroke: #fff; stroke-width: 1.5; }
+.pp-pin svg circle { fill: #fff; stroke: none; }
+.pp-msg { position: absolute; inset: 0; display: grid; place-items: center; padding: 20px; text-align: center; font-size: 13.5px; color: var(--hm-muted, #64757f); }
+.pp-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.pp-gap { flex: 1; }
+@media (max-width: 560px) { .pp-map { height: 260px; } }

@@ -187,6 +187,7 @@ function SlotStep({ bill, slots, slot, setSlot, onContinue, busy = false }) {
               {bill.movedToExpress} item{bill.movedToExpress === 1 ? "" : "s"} ship{bill.movedToExpress === 1 ? "s" : ""} Express
               {bill.movedWhy === "far" ? ": your address is outside our Quick delivery area."
                 : bill.movedWhy === "area" ? ": Quick delivery doesn't reach this pincode yet."
+                : bill.movedWhy === "nopin" ? ": add your location on the map to see if Quick reaches you."
                 : ": not in stock at the store near you."}
             </p>
           )}
