@@ -7,7 +7,7 @@ export const WishContext = createContext(null);
 /* open the product page: open(product, rectOfTappedImage) */
 export const OpenContext = createContext(null);
 import ProductArt from "./art";
-import { modeOf, useBadge } from "@/lib/delivery";
+import { modeOf, useBadgeState, useSellersShown } from "@/lib/delivery";
 
 /* Re-exported so the eighty-odd call sites that already import it from
    here keep working. What it prints is the shop's answer now, not a rupee
@@ -356,8 +356,10 @@ export function ProductCard({ p, qty, setQty, i }) {
   const oos = p.stock === 0;
   const off = p.mrp ? Math.round(((p.mrp - p.price) / p.mrp) * 100) : 0;
   /* The shop's answer for this customer: who sells it, Quick or Express.
-     Until it arrives the product decides, as it always has. */
-  const badge = useBadge(p.id);
+     Until it arrives a quiet placeholder holds the place, so the badge never
+     says Quick and then flips to Express, and "Sold by" never pushes in late. */
+  const { badge, ready } = useBadgeState(p.id);
+  const sellersRoom = useSellersShown();
   const express = modeOf(p, badge) === "all";
   return (
     <article className={"hm-card" + (oos ? " hm-oos" : "")} style={{ "--i": i }} data-open={open ? "" : undefined}
@@ -385,7 +387,9 @@ export function ProductCard({ p, qty, setQty, i }) {
         <div className="hm-unit">{p.unit}</div>
         <h3 className="hm-name" title={p.name}>{open ? <a href={`/product/${p.id}`} onClick={(e) => { e.preventDefault(); open(p, e.currentTarget.closest(".hm-card")?.querySelector(".hm-card-img")?.getBoundingClientRect()); }}>{p.name}</a> : p.name}</h3>
         {p.note && <div className="hm-subnote">({p.note})</div>}
-        {badge?.seller?.name && <div className="hm-seller" title={`Sold by ${badge.seller.name}`}>Sold by {badge.seller.name}</div>}
+        {badge?.seller?.name
+          ? <div className="hm-seller" title={`Sold by ${badge.seller.name}`}>Sold by {badge.seller.name}</div>
+          : !ready && sellersRoom ? <div className="hm-seller" aria-hidden="true"><span className="hm-wait hm-wait-seller" /></div> : null}
         <div className="hm-price">
           <b>{money(p.price)}</b>
           {p.mrp ? <s>{money(p.mrp)}</s> : null}
@@ -393,7 +397,7 @@ export function ProductCard({ p, qty, setQty, i }) {
         </div>
         <div className="hm-meta">
           <span className="hm-modes">
-            {express
+            {!ready ? <span className="hm-wait hm-wait-mode" aria-label="Checking delivery" /> : express
               ? <span className="hm-quick hm-ship" title={badge?.maybe ? "May come today, when a rider is free" : undefined}>
                   <Icon n="truck" size={12} />{p.delivery || badge?.when || "Express"}
                 </span>
