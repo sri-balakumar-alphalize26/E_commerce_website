@@ -23,7 +23,9 @@ class TestQeLink(Mart369BridgeCase):
         if not qe_on(self.env):
             self.skipTest("the senior's Quick / Express module is not installed here")
         env = self.env
-        # Nothing else in the database takes part.
+        # Nothing else in the database takes part - nor the website's hub
+        # rules, which win over his where they are on (test_hub_split_qe).
+        env['mart369.hub.rule'].sudo().search([]).unlink()
         env['sa.delivery.shop'].sudo().search([]).write({'qe_quick': False})
         env['sa.qe.service.area'].sudo().search([]).write({'active': False})
         env['sa.qe.delivery.slot'].sudo().search([]).write({'active': False})
