@@ -189,6 +189,34 @@ class TestHubRules(TransactionCase):
             self.assertEqual(bill['modes'][key], badges[key]['mode'], key)
             self.assertEqual(bill['sellers'][key], badges[key]['seller'], key)
 
+    # --------------------------------------------- where it is in stock
+
+    def test_the_badge_names_every_hub_that_has_it_fastest_first(self):
+        badge = self._badge(self.cable, self.qurum)
+        self.assertFalse(badge['atHome'], 'Ruwi, her nearest hub, has no cable')
+        self.assertEqual(badge['home'], self.ruwi_co.name)
+        self.assertEqual([s['name'] for s in badge['stockAt']], ['Zz Sohar Hub', 'Zz Salalah Hub'])
+        self.assertEqual(badge['stockAt'][0]['when'], 'Next day')
+        self.assertTrue(badge['stockAt'][1]['cargo'])
+        self.assertTrue(self._badge(self.keyboard, self.qurum)['atHome'])
+
+    def test_nobody_has_it_names_nobody(self):
+        self.assertEqual(self._badge(self.ssd, self.qurum)['stockAt'], [])
+
+    def test_stock_at_another_hub_is_not_sold_out(self):
+        """Each hub is its own company. While the hub rules are on, the shop
+        counts them all, so a mouse only Sohar has is not "Notify me" for a
+        shopper in Ruwi's company - its badge already says Next day."""
+        def free(product):
+            # As a shop request reads it: the shopper is in Ruwi's company.
+            ruwi_only = {'allowed_company_ids': [self.ruwi_co.id]}
+            return self.env['mart369.serializable'].with_context(**ruwi_only)._mart369_free_qty(
+                product.with_context(**ruwi_only))
+        self.assertEqual(free(self.mouse), 5)
+        self.assertEqual(free(self.ssd), 0, 'no hub has it: sold out')
+        self.env['mart369.hub.rule'].search([]).unlink()
+        self.assertEqual(free(self.mouse), 0, 'hub rules off: the own company only, as before')
+
     # ------------------------------------------------ switched off = as before
 
     def test_an_empty_table_works_exactly_as_before(self):
@@ -201,6 +229,7 @@ class TestHubRules(TransactionCase):
         self.assertEqual(bill['notes'], {})
         badge = self._badge(self.keyboard, self.qurum)
         self.assertNotIn('when', badge)
+        self.assertNotIn('stockAt', badge, 'nothing new on the page while the rules are off')
 
     def test_an_address_without_a_pin_uses_the_old_rule(self):
         no_pin = self._address(None)

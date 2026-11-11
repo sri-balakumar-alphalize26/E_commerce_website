@@ -89,6 +89,11 @@
 .pd-quick { color: #a45300; background: #fff1de; }
 .pd-quick .hm-ic { color: var(--hm-orange); }
 .pd-express { color: var(--hm-navy); background: #e6f2f9; }
+/* The badge's place while the shop answers: same size, no words, no flip. */
+.pd-mode-wait { width: 118px; height: 22px; padding: 0;
+  background: linear-gradient(90deg, #edf1f4 0%, #f6f8fa 50%, #edf1f4 100%); background-size: 200% 100%;
+  animation: hm-wait 1.1s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .pd-mode-wait { animation: none; } }
 .pd-actions { margin-left: auto; display: flex; gap: 8px; }
 .pd-round { width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--pd-line); background: #fff; display: grid; place-items: center; color: var(--hm-ink) !important; transition: transform 240ms var(--hm-spring), border-color 200ms, color 200ms; }
 .pd-round:hover { transform: scale(1.08); border-color: #b9cad6; }
@@ -98,6 +103,9 @@
 .pd-brand:hover { text-decoration: underline; text-underline-offset: 3px; }
 .pd-seller { margin: 2px 0 0; font-size: 13px; color: var(--hm-muted); }
 .pd-seller b { color: var(--hm-ink, inherit); font-weight: 700; }
+/* Hub rules: which branches hold it, when the nearest one does not. */
+.pd-stockat { margin: 4px 0 0; font-size: 12.5px; line-height: 1.45; color: var(--hm-muted); }
+.pd-stockat b { color: var(--hm-ink, inherit); font-weight: 700; }
 .pd-maybe { margin: 2px 0 0; font-size: 13px; font-weight: 600; color: #1e8a4c; }
 .pd-cargo { display: inline-flex; align-items: center; font-size: 11.5px; font-weight: 700; border-radius: 999px; padding: 3px 9px; color: #b3305f; background: #fbe6ee; }
 .pd-name { margin: 4px 0 6px; font-size: 22px; line-height: 1.3; font-weight: 700; letter-spacing: -0.02em; text-wrap: balance; }

@@ -31,7 +31,7 @@ import { api } from "@/lib/api";
 import { galleryOf, preload, whenIdle } from "@/lib/images";
 import { toSafeHtml } from "@/lib/safeHtml";
 import { startPreviewBridge } from "./previewBridge";
-import { deliveryLine, modeOf, useBadge } from "@/lib/delivery";
+import { deliveryLine, modeOf, useBadgeState, useSellersShown } from "@/lib/delivery";
 
 const ZOOM = 2.6;
 /* A limit on the download for a product with a very long list of variants. */
@@ -499,11 +499,15 @@ function KeyDetails({ rows }) {
    Quick / Express promise), then the shop's words for returns, warranty, cash
    on delivery and secure payment (mart369_product `trust`). */
 const TRUST_ICON = { returns: "reorder", warranty: "check", cod: "wallet", secure: "lock" };
-function TrustBadges({ p, quick, badges, line }) {
+function TrustBadges({ p, quick, badges, line, waiting = false }) {
   return (
     <ul className="pd-trust" aria-label="Why buy here">
-      <li><span><Icon n={quick ? "bolt" : "truck"} size={16} className={quick ? "hm-fill" : ""} /></span>
-        {line || (quick ? "Quick · 10–20 mins" : p.delivery ? `Express · ${p.delivery}` : "Express")}</li>
+      {waiting ? (
+        <li aria-label="Checking delivery"><span><Icon n="truck" size={16} /></span><span className="hm-wait hm-wait-mode" /></li>
+      ) : (
+        <li><span><Icon n={quick ? "bolt" : "truck"} size={16} className={quick ? "hm-fill" : ""} /></span>
+          {line || (quick ? "Quick · 10–20 mins" : p.delivery ? `Express · ${p.delivery}` : "Express")}</li>
+      )}
       {(badges || []).map((b) => (
         <li key={b.key}><span><Icon n={TRUST_ICON[b.key] || "check"} size={16} /></span>{b.text}</li>
       ))}
@@ -703,8 +707,17 @@ export default function ProductDetail({
   const off = p.mrp ? Math.round(((p.mrp - p.price) / p.mrp) * 100) : 0;
   const oos = p.stock === 0;
   /* The shop's answer for this customer's address - who sells it, Quick or
-     Express - and until it comes, the product's own rule as before. */
-  const badge = useBadge(p.id);
+     Express. Until it comes, placeholders rather than a guess, so nothing
+     flips in front of the customer. Picking another variant of the same
+     product keeps the last answer on screen while the new one is asked. */
+  const asked = useBadgeState(p.id);
+  const badgeFamily = p.variantGroup || p.id;
+  const lastBadge = useRef(null);
+  if (asked.ready) lastBadge.current = { family: badgeFamily, badge: asked.badge };
+  const held = !asked.ready && lastBadge.current?.family === badgeFamily ? lastBadge.current : null;
+  const badge = asked.ready ? asked.badge : held?.badge ?? null;
+  const badgeReady = asked.ready || !!held;
+  const sellersRoom = useSellersShown();
   const quick = modeOf(p, badge) === "quick";
   /* How many to add, before any are in the basket: 1 up to 12, or what is
      left when only a few are. */
@@ -745,9 +758,11 @@ export default function ProductDetail({
           <div className="pd-card pd-buy">
             <div className="pd-row pd-crumbs">
               <button className="pd-back" onClick={onBack}><Icon n="left" size={16} />Back</button>
-              <span className={"pd-mode " + (quick ? "pd-quick" : "pd-express")}>
-                <Icon n={quick ? "bolt" : "truck"} size={12} className={quick ? "hm-fill" : ""} />{deliveryLine(p, badge)}
-              </span>
+              {badgeReady ? (
+                <span className={"pd-mode " + (quick ? "pd-quick" : "pd-express")}>
+                  <Icon n={quick ? "bolt" : "truck"} size={12} className={quick ? "hm-fill" : ""} />{deliveryLine(p, badge)}
+                </span>
+              ) : <span className="pd-mode pd-mode-wait" aria-label="Checking delivery" />}
               {badge?.cargo ? <span className="pd-cargo">Cargo</span> : null}
               <span className="pd-actions">
                 <button className={"pd-round" + (liked ? " pd-liked" : "")} onClick={() => wish?.toggle(ownId)} aria-pressed={!!liked} aria-label={liked ? "Remove from My List" : "Save to My List"}>
@@ -758,7 +773,21 @@ export default function ProductDetail({
             </div>
             {d.brand ? <a className="pd-brand" href="#" onClick={(e) => { e.preventDefault(); onExplore?.(); }}>{d.brand}</a> : null}
             <h1 className="pd-name" key={"n" + p.id}>{p.name}</h1>
-            {badge?.seller?.name ? <p className="pd-seller">Sold by <b>{badge.seller.name}</b></p> : null}
+            {badge?.seller?.name ? <p className="pd-seller">Sold by <b>{badge.seller.name}</b></p>
+              : !badgeReady && sellersRoom ? <p className="pd-seller" aria-hidden="true"><span className="hm-wait hm-wait-seller" /></p> : null}
+            {/* Hub rules on: where it is in stock, fastest first. Said when the
+                customer's nearest branch has none, or more than one has it. */}
+            {badge?.stockAt?.length > 0 && (!badge.atHome || badge.stockAt.length > 1) ? (
+              <p className="pd-stockat">
+                {!badge.atHome && badge.home ? <>Not in stock at <b>{badge.home}</b>, your nearest branch. </> : null}
+                In stock at{" "}
+                {badge.stockAt.map((s, i) => (
+                  <span key={s.name + i}>
+                    {i ? ", " : ""}<b>{s.name}</b>{s.when ? ` (${s.when}${s.cargo ? ", Cargo" : ""})` : ""}
+                  </span>
+                ))}.
+              </p>
+            ) : null}
             {badge?.maybe && !quick ? <p className="pd-maybe">May come today, when a rider is free.</p> : null}
             {d.rating != null && (
               <button className="pd-rating" onClick={() => { setOpen((o) => ({ ...o, reviews: true })); document.getElementById("pd-reviews")?.scrollIntoView({ behavior: "smooth", block: "start" }); }}>
@@ -778,7 +807,7 @@ export default function ProductDetail({
               ? <p className="pd-var-wait">Couldn't load the options. <button className="pd-link" onClick={onRetryOptions}>Try again</button></p>
               : <p className="pd-var-wait">Loading the options…</p>)}
 
-            <TrustBadges p={p} quick={quick} badges={trust} line={deliveryLine(p, badge)} />
+            <TrustBadges p={p} quick={quick} badges={trust} line={deliveryLine(p, badge)} waiting={!badgeReady} />
 
             <div className="pd-cta">
               {oos ? (

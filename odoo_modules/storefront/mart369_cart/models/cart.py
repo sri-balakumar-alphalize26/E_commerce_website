@@ -245,18 +245,27 @@ class Mart369Cart(models.AbstractModel):
         own hub out of stock? The next hub steps in. No hub has it: Express,
         as before, from nobody in particular."""
         none = self.env['stock.warehouse'].browse()
-        best = None
+        home = where['home']
+        held = []           # every hub that has it, as it would deliver
         for branch, km in where['hubs']:
             if product.company_id and branch.company_id != product.company_id:
                 # Another company's product is not this branch's to sell.
                 continue
             if not branch._mart369_has_stock(product, qty, variant=variant):
                 continue
-            offer = self._mart369_hub_tier(branch, km, where['home'], where['table'])
-            if best is None or offer['rank'] < best['rank']:
-                best = dict(offer, branch=branch)
-        if best is None:
-            return {'mode': EXPRESS, 'branch': none, 'when': '', 'cargo': False, 'maybe': False}
+            held.append(dict(self._mart369_hub_tier(branch, km, home, where['table']),
+                             branch=branch))
+        held.sort(key=lambda offer: offer['rank'])
+        # Where it is in stock, fastest first, for the product page:
+        # "Not in stock at Ruwi, your nearest branch. In stock at Sohar (Next day)".
+        stock_at = [{'name': o['branch'].company_id.name or o['branch'].name or '',
+                     'mode': o['mode'], 'when': o['when'], 'cargo': o['cargo']}
+                    for o in held]
+        at_home = any(o['branch'] == home for o in held)
+        if not held:
+            return {'mode': EXPRESS, 'branch': none, 'when': '', 'cargo': False, 'maybe': False,
+                    'stockAt': [], 'home': home, 'atHome': False}
+        best = dict(held[0], stockAt=stock_at, home=home, atHome=at_home)
         if self._mart369_express_only(product):
             # Its own promise wins; the hub still decides who sells it.
             best.update(mode=EXPRESS, when=product.mart_delivery_text, maybe=False)
@@ -350,6 +359,12 @@ class Mart369Cart(models.AbstractModel):
             entry.update(self._mart369_offer_notes(offer))
             if sellers:
                 entry['seller'] = self._mart369_seller(tmpl, branch)
+            if 'stockAt' in offer:
+                # Hub rules on: which hubs hold it, and whether the customer's
+                # own (nearest) one does - the product page names them.
+                entry['stockAt'] = offer['stockAt']
+                entry['home'] = offer['home'].company_id.name or offer['home'].name or ''
+                entry['atHome'] = offer['atHome']
             badges[line['key']] = entry
         return {'sellers': sellers, 'badges': badges}
 
