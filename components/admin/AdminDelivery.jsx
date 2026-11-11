@@ -35,7 +35,7 @@ import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import { money } from "@/lib/money";
 import { useAction, useResource } from "@/lib/useFetch";
-import { Confirm, Drawer, Empty, Icon, Pill, Switch, Tabs } from "./AdminUI";
+import { Confirm, Drawer, Empty, Icon, Pill, Select, Switch, Tabs } from "./AdminUI";
 
 /* The three shopper feeds this screen can change under a customer's feet. A
    staff edit that leaves them cached is an edit nobody sees. */
@@ -53,10 +53,12 @@ const ON_TONE = {
   off: { label: "Off", tone: "grey" },
 };
 
+/* The heading, detail, key and order are filled in from these by
+   `slotWording` when the drawer opens: Today, 6 - 8 PM, today-18. */
 const BLANK_SLOT = {
-  mode: "quick", kind: "window", key: "", top: "Today", sub: "", label: "",
+  mode: "quick", kind: "window", key: "", top: "", sub: "", label: "",
   from_hour: 18, to_hour: 20, day_offset: 0, order_before: 24,
-  fee: 0, capacity: 0, sequence: 10, active: true,
+  fee: 0, capacity: 0, sequence: "", active: true,
 };
 
 const QUICK_TONE = {
@@ -65,7 +67,20 @@ const QUICK_TONE = {
   unready: { label: "Not ready", tone: "amber" },
 };
 
-const BLANK_AREA = { pincode: "", name: "", quick: true, express: true, eta: "13 mins", active: true };
+const BLANK_AREA = { pincode: "", name: "", deliver: true, eta: "30 mins", active: true };
+
+/* What an area can promise. Picked, never typed, so every screen says it the
+   same way. The Odoo desk (delivery_desk.js) keeps the same list. */
+const AREA_PROMISES = ["15 mins", "30 mins", "45 mins", "1 hour", "2 hours", "Same day", "Next day"];
+
+/* Minutes for Quick `km` away: 10 to pack, 5 a km, rounded up to the next 5.
+   The same sum as quick_time_text in branch.py. */
+function quickTime(km) {
+  const mins = Math.ceil((10 + 5 * Math.max(0, Number(km) || 0)) / 5 - 1e-9) * 5;
+  if (mins < 60) return `${mins} mins`;
+  const rest = mins % 60;
+  return `${Math.floor(mins / 60)} hr${rest ? ` ${rest} mins` : ""}`;
+}
 
 /* 18.5 -> "6:30 PM". The same arithmetic as `_mart369_clock` on the model,
    for the same reason it exists there: staff type a number, everyone else
@@ -85,6 +100,73 @@ function clock(value) {
    way, and a NaN posted to the server comes back as an error about a field the
    operator is in the middle of filling in. */
 const num = (v) => (v === "" || v === null || v === undefined ? 0 : Number(v));
+
+const pad2 = (n) => String(n).padStart(2, "0");
+const blank = (v) => v === "" || v === null || v === undefined;
+
+/* "6 - 8 PM", or "11 AM - 1 PM" when the two halves of the day differ. */
+function span(from, to) {
+  const a = clock(from);
+  const b = clock(to);
+  return a.slice(-2) === b.slice(-2) ? `${a.slice(0, -3)} - ${b}` : `${a} - ${b}`;
+}
+
+/* "Thu, 18 Sep" — `_mart369_day_label` on the model. */
+function dayLabel(days) {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  const weekday = d.toLocaleDateString("en-GB", { weekday: "short" });
+  const month = d.toLocaleDateString("en-GB", { month: "short" });
+  return `${weekday}, ${d.getDate()} ${month}`;
+}
+
+/* What a slot is called, worked out from its kind, day and time: heading,
+   detail, key and place in the list. The base key is `_mart369_auto_key` on
+   the model, which also adds -2, -3 when it is taken. delivery_desk.js keeps
+   the same function — change both together. */
+function slotWording(form) {
+  const days = Math.max(0, Math.floor(num(form.day_offset)));
+  const from = num(form.from_hour);
+  const when = days === 0 ? "Today" : days === 1 ? "Tomorrow" : `In ${days} days`;
+  if (form.kind === "now") return { top: "Now", sub: "10-20 min", key: "now", sequence: 0 };
+  if (form.kind === "days") return { top: when, sub: "", key: `d${days}`, sequence: 1000 + days };
+  const hour = Math.floor(from) % 24;
+  const minute = Math.round((from - Math.floor(from)) * 60);
+  const stem = days === 0 ? "today" : days === 1 ? "tm" : `d${days}`;
+  return {
+    top: when,
+    sub: span(from, num(form.to_hour)),
+    key: `${stem}-${pad2(hour)}${minute ? pad2(minute) : ""}`,
+    sequence: 1 + days * 100 + Math.round(from * 4),
+  };
+}
+
+/* The confirmation line the shop writes when that box is left empty —
+   `_mart369_serialize` on the model, from what the slot says right now. */
+function slotLabelPreview(form) {
+  const days = Math.max(0, Math.floor(num(form.day_offset)));
+  if (form.kind === "now") return `Arriving in ${form.sub || ""}`.trim();
+  if (form.kind === "days") return `Arrives by ${dayLabel(days)}`;
+  const window = form.sub || span(num(form.from_hour), num(form.to_hour));
+  return days === 0 ? `Today, ${window}` : `${dayLabel(days)}, ${window}`;
+}
+
+const WORDING_DRIVERS = ["kind", "day_offset", "from_hour", "to_hour"];
+
+/* A copy of `form` with `field` set and the wording moved along with it: a
+   field that is empty or still says what was filled in for it follows;
+   anything the operator typed stays. The key follows only on a new slot. */
+function withSlotField(form, field, value, isNew) {
+  const before = slotWording(form);
+  const next = { ...form, [field]: value };
+  if (!WORDING_DRIVERS.includes(field)) return next;
+  const after = slotWording(next);
+  for (const name of ["top", "sub", "sequence"]) {
+    if (blank(next[name]) || String(next[name]) === String(before[name])) next[name] = after[name];
+  }
+  if (isNew && (blank(next.key) || next.key === before.key)) next.key = after.key;
+  return next;
+}
 
 /* ============================== small pieces ============================= */
 function Field({ label, value, onChange, placeholder, suffix, wide, decimal }) {
@@ -190,9 +272,9 @@ function SlotDrawer({ slot, modes, kinds, onClose, onSaved }) {
       day_offset: slot.dayOffset, order_before: slot.orderBefore,
       fee: slot.fee, capacity: slot.capacity, sequence: slot.sequence, active: slot.active,
     }
-    : { ...BLANK_SLOT }));
+    : { ...BLANK_SLOT, ...slotWording(BLANK_SLOT) }));
   const [error, setError] = useState("");
-  const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+  const set = (k, v) => setForm((f) => withSlotField(f, k, v, !slot));
   const isWindow = form.kind === "window";
 
   const save = async () => {
@@ -205,8 +287,13 @@ function SlotDrawer({ slot, modes, kinds, onClose, onSaved }) {
       active: form.active,
     };
     /* The key identifies the slot to the app and to every order that booked
-       one, so it is set once and never rewritten. */
-    if (!slot) body.key = (form.key || "").trim();
+       one, so it is set once and never rewritten. Still the filled-in key, it
+       goes empty: the server works it out again and adds -2, -3 when it is
+       taken. A typed key goes as typed. */
+    if (!slot) {
+      const key = (form.key || "").trim();
+      body.key = key === slotWording(form).key ? "" : key;
+    }
 
     const done = await act.run(async () => {
       await api(slot ? `/admin/delivery/slots/${slot.id}` : "/admin/delivery/slots",
@@ -225,7 +312,8 @@ function SlotDrawer({ slot, modes, kinds, onClose, onSaved }) {
   return (
     <Drawer wide onClose={onClose}
       title={slot ? `Edit ${slot.top}` : "New slot"}
-      sub={slot ? `${slot.modeLabel} · ${slot.key}` : "A chip on the checkout's slot step"}
+      sub={slot ? `${slot.modeLabel} · ${slot.key}`
+        : "Pick the kind, the day and the time — the wording fills itself in"}
       foot={(close) => (
         <>
           <button className="ad-btn" onClick={close}>Cancel</button>
@@ -243,10 +331,10 @@ function SlotDrawer({ slot, modes, kinds, onClose, onSaved }) {
           <Field label="Heading" value={form.top} onChange={(v) => set("top", v)}
             placeholder="Today" />
           <Field label="Detail" value={form.sub} onChange={(v) => set("sub", v)}
-            placeholder={isWindow ? `${clock(num(form.from_hour))} - ${clock(num(form.to_hour))}` : "10–20 min"} />
+            placeholder={isWindow ? span(num(form.from_hour), num(form.to_hour)) : "10-20 min"} />
           <Field label="Confirmation line" value={form.label} wide
             onChange={(v) => set("label", v)}
-            placeholder="Left empty, the shop writes it from the heading and the window" />
+            placeholder={slotLabelPreview(form)} />
         </div>
       </section>
 
@@ -271,8 +359,9 @@ function SlotDrawer({ slot, modes, kinds, onClose, onSaved }) {
         {!slot && (
           <p className="ad-hint">
             <Icon n="info" size={14} />
-            The key is how the app and every order refer to this slot. Pick a short
-            one — now, eve, tm, std — and it cannot be changed afterwards.
+            The key is how the app and every order refer to this slot. It is filled
+            in for you — change it if you like, but it cannot be changed after
+            saving. If it is already used, a number is added.
           </p>
         )}
       </section>
@@ -335,80 +424,210 @@ function ChoiceRow({ value, onChange, options }) {
 }
 
 /* =============================== area form =============================== */
+/* The one "We deliver here" switch, as the two old fields - the same rule as
+   _mart369_switch_values in service_area.py. Off: both off. On: an area that
+   already delivers keeps what it had; one that did not gets both. */
+function switchValues(deliver, area) {
+  if (!deliver) return { quick: false, express: false };
+  if (area && (area.quick || area.express)) return {};
+  return { quick: true, express: true };
+}
+
+/* One pincode we already know, to tick. */
+function KnownRow({ row, on, onTick }) {
+  return (
+    <label className="ad-known-row">
+      <input type="checkbox" checked={!!on} onChange={onTick} />
+      <b>{row.pincode}</b>
+      <span>{row.place || "—"}</span>
+      <span>{row.km !== null && row.km !== undefined
+        ? `${row.km < 100 ? row.km : Math.round(row.km).toLocaleString()} km away` : ""}</span>
+      <span>{row.addresses ? `${row.addresses} ${row.addresses === 1 ? "address" : "addresses"}` : "from the map"}</span>
+      {row.branch && <em>nearest branch: {row.branch}</em>}
+    </label>
+  );
+}
+
 function AreaDrawer({ area, onClose, onSaved }) {
   const act = useAction();
   const [form, setForm] = useState(() => (area
-    ? { pincode: area.pincode, name: area.name, quick: area.quick, express: area.express, eta: area.eta, active: area.active }
+    ? { pincode: area.pincode, name: area.name, deliver: !!(area.quick || area.express), eta: area.eta, active: area.active }
     : { ...BLANK_AREA }));
   const [error, setError] = useState("");
+  const [known, setKnown] = useState(null);
+  const [ticked, setTicked] = useState({});
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+
+  /* A new area starts from the pincodes customers already use, grouped by
+     the branch nearest them; the ones inside its reach come ticked. */
+  useEffect(() => {
+    if (area) return undefined;
+    let alive = true;
+    api("/admin/delivery/areas/known").then((k) => {
+      if (!alive) return;
+      const on = {};
+      (k.groups || []).forEach((g) => g.pincodes.forEach((r) => { if (r.near) on[r.pincode] = true; }));
+      setKnown(k);
+      setTicked(on);
+    }).catch(() => alive && setKnown({ groups: [], noPin: [], covered: [] }));
+    return () => { alive = false; };
+  }, [area]);
+
+  const tick = (pin) => setTicked((t) => ({ ...t, [pin]: !t[pin] }));
+  const allOn = (rows) => rows.length > 0 && rows.every((r) => ticked[r.pincode]);
+  const tickAll = (rows) => setTicked((t) => {
+    const on = !rows.every((r) => t[r.pincode]);
+    const next = { ...t };
+    rows.forEach((r) => { next[r.pincode] = on; });
+    return next;
+  });
+  const tickedPins = Object.keys(ticked).filter((p) => ticked[p]);
+  /* Where the ticks come from, for the Add button: "Ruwi 4 · Sohar 37".
+     Folded groups hide their ticks, so the button says it out loud. */
+  const tickedSplit = (() => {
+    if (!known) return "";
+    const count = (rows) => (rows || []).filter((r) => ticked[r.pincode]).length;
+    const parts = [
+      ...known.groups.map((g) => [g.branch.split(" ")[0], count(g.pincodes)]),
+      ["far", count(known.far)], ["no pin", count(known.noPin)],
+    ].filter(([, n]) => n);
+    return parts.length > 1 ? parts.map(([name, n]) => `${name} ${n}`).join(" · ") : "";
+  })();
+
+  /* Each group starts folded to one line - "Near Ruwi Warehouse · 19
+     pincodes within 15 km · 19 ticked" - and opens to untick any. */
+  const [open, setOpen] = useState({});
+  const KnownGroup = ({ id, rows, title, sub }) => (
+    <div className="ad-known">
+      <div className="ad-known-head">
+        <b>{title}</b>
+        <small>{sub} · {rows.filter((r) => ticked[r.pincode]).length} ticked</small>
+        <button type="button" className="ad-btn ad-sm" onClick={() => tickAll(rows)}>
+          {allOn(rows) ? "Untick all" : "Tick all"}
+        </button>
+        <button type="button" className="ad-btn ad-sm" onClick={() => setOpen((o) => ({ ...o, [id]: !o[id] }))}>
+          {open[id] ? "Hide list" : "Show list"}
+        </button>
+      </div>
+      {open[id] && rows.map((r) => (
+        <KnownRow key={r.pincode} row={r} on={ticked[r.pincode]} onTick={() => tick(r.pincode)} />
+      ))}
+    </div>
+  );
+
+  /* The list, plus whatever an older area already says, so opening it never
+     quietly changes its promise. */
+  const promises = (form.eta && !AREA_PROMISES.includes(form.eta)
+    ? [form.eta, ...AREA_PROMISES] : AREA_PROMISES).map((p) => [p, p]);
 
   const save = async () => {
     setError("");
-    const body = {
-      pincode: (form.pincode || "").trim(), name: form.name, eta: form.eta,
-      quick: !!form.quick, express: !!form.express, active: !!form.active,
-    };
-    const done = await act.run(async () => {
-      await api(area ? `/admin/delivery/areas/${area.id}` : "/admin/delivery/areas",
-        { method: area ? "PATCH" : "POST", body });
-      return true;
-    });
+    const common = { name: form.name, eta: form.eta, active: !!form.active, deliver: !!form.deliver };
+    /* A new area takes several pincodes at once: the ticked ones and any typed. */
+    const body = area
+      ? { ...common, pincode: (form.pincode || "").trim() }
+      : { ...common, pincodes: [...tickedPins, form.pincode || ""].filter((p) => p.trim()).join(", ") };
+    const done = await act.run(async () =>
+      api(area ? `/admin/delivery/areas/${area.id}` : "/admin/delivery/areas",
+        { method: area ? "PATCH" : "POST", body }));
     if (done === null) {
       setError(act.error?.message || "That could not be saved.");
       return;
     }
-    onSaved(area ? "Area updated" : "Area added");
+    if (area) {
+      onSaved("Area updated");
+      return;
+    }
+    const added = done?.added?.length || 0;
+    const skipped = done?.skipped || [];
+    onSaved(`${added === 1 ? "1 area" : `${added} areas`} added`
+      + (skipped.length ? `. Already there: ${skipped.join(", ")}` : ""));
   };
 
   return (
     <Drawer onClose={onClose}
-      title={area ? `Edit ${area.pincode}` : "New service area"}
-      sub={area ? area.name || "No name" : "A pincode, or the start of one"}
+      title={area ? `Edit ${area.pincode}` : "Add service areas"}
+      sub={area ? area.name || "No name" : "Tick the pincodes you deliver to"}
       foot={(close) => (
         <>
           <button className="ad-btn" onClick={close}>Cancel</button>
           <button className="ad-btn ad-primary" disabled={act.busy} onClick={save}>
-            {area ? "Save" : "Add it"}<Icon n="right" size={15} />
+            {area ? "Save" : tickedPins.length
+              ? `Add ${tickedPins.length} ticked${tickedSplit ? ` (${tickedSplit})` : ""}` : "Add"}
+            <Icon n="right" size={15} />
           </button>
         </>
       )}>
 
       {error && <p className="ad-form-error" role="alert">{error}</p>}
 
+      {!area && (
+        <section className="ad-dsec">
+          <h4>Pick pincodes</h4>
+          {!known && <p className="ad-hint">Finding the pincodes your customers use…</p>}
+          {known && known.groups.map((g) => (
+            <KnownGroup key={g.branch} id={`b:${g.branch}`} rows={g.pincodes}
+              title={`Near ${g.branch}`} sub={`${g.pincodes.length} pincodes within ${g.reach} km`} />
+          ))}
+          {known && known.far?.length > 0 && (
+            <KnownGroup id="far" rows={known.far} title="Far from every branch"
+              sub={`${known.far.length} pincodes past every branch's reach`} />
+          )}
+          {known && known.noPin.length > 0 && (
+            <KnownGroup id="nopin" rows={known.noPin} title="No map pin yet"
+              sub={`${known.noPin.length} pincodes we can't place on the map`} />
+          )}
+          {known && !known.groups.length && !known.noPin.length && (
+            <p className="ad-hint">No new pincodes from your customers yet. Type them below.</p>
+          )}
+          {known && known.credit && <p className="ad-hint">{known.credit}</p>}
+          {known && known.covered.length > 0 && (
+            <p className="ad-hint">Already added: {known.covered.join(", ")}</p>
+          )}
+        </section>
+      )}
+
       <section className="ad-dsec">
-        <h4>Where</h4>
+        <h4>{area ? "Where" : "Or type pincodes"}</h4>
         <div className="ad-form">
-          <Field label="Pincode" value={form.pincode} onChange={(v) => set("pincode", v)}
-            placeholder="682016" />
-          <Field label="Area" value={form.name} onChange={(v) => set("name", v)}
-            placeholder="Kochi" />
+          {area ? (
+            <Field label="Pincode" value={form.pincode} onChange={(v) => set("pincode", v)}
+              placeholder="624001" />
+          ) : (
+            <label className="ad-field ad-span2">
+              <span>Pincodes not in the list</span>
+              <textarea className="ad-reply" rows={2} value={form.pincode}
+                placeholder="624001, 624002, 624003"
+                onChange={(e) => set("pincode", e.target.value)} />
+            </label>
+          )}
+          <Field label="Area name (optional, only you see it)" value={form.name} onChange={(v) => set("name", v)}
+            placeholder={area ? "Dindigul" : "Empty: each pincode uses its own place name"} />
         </div>
         <p className="ad-hint">
           <Icon n="info" size={14} />
-          A full pincode, or the start of one: 68 covers every pincode beginning
-          with it. The most specific entry wins, so 6820 beats 68. The area name
-          is for you — customers never see it.
+          {area ? "" : "Commas between them, or one per line. "}
+          A short number covers every pincode that starts with it: 624 covers
+          624001, 624002 and the rest.
         </p>
       </section>
 
       <section className="ad-dsec">
-        <h4>What reaches it</h4>
+        <h4>Delivery</h4>
         <div className="ad-kv-rows">
           <label className="ad-kv-row">
-            <span>Quick delivery<small>The 10-minute local run</small></span>
-            <Switch on={!!form.quick} onChange={(v) => set("quick", v)} label="Quick delivery" />
-          </label>
-          <label className="ad-kv-row">
-            <span>Express delivery<small>Items that ship over days</small></span>
-            <Switch on={!!form.express} onChange={(v) => set("express", v)} label="Express delivery" />
+            <span>We deliver here<small>Quick or Express is worked out from how far the customer is from the branch</small></span>
+            <Switch on={!!form.deliver} onChange={(v) => set("deliver", v)} label="We deliver here" />
           </label>
         </div>
-        <Field label="Delivery promise" value={form.eta} onChange={(v) => set("eta", v)}
-          placeholder="13 mins" />
+        <div className="ad-field">
+          <span>Customers are told it comes in</span>
+          <Select value={form.eta} onChange={(v) => set("eta", v)} options={promises}
+            label="Customers are told it comes in" />
+        </div>
         <p className="ad-hint">
           <Icon n="info" size={14} />
-          Switch both off and the pincode is told we do not deliver there yet.
+          Switched off, customers there are told we don't deliver yet.
         </p>
       </section>
     </Drawer>
@@ -422,22 +641,62 @@ function BranchDrawer({ branch, onClose, onSaved }) {
   const act = useAction();
   const [form, setForm] = useState({
     quick: branch.quick, quickKm: branch.quickKm ? String(branch.quickKm) : "",
-    maybeKm: branch.maybeKm ? String(branch.maybeKm) : "", quickEta: branch.quickEta || "",
+    maybeKm: branch.maybeKm ? String(branch.maybeKm) : "",
     ownFees: !!branch.ownFees, quickFee: branch.quickFee ? String(branch.quickFee) : "",
     expressFee: branch.expressFee ? String(branch.expressFee) : "",
     freeAbove: branch.freeAbove ? String(branch.freeAbove) : "",
-    lat: branch.lat ?? "", lng: branch.lng ?? "",
+    /* One box, as Google Maps copies it: "10.3673, 77.9803". */
+    pin: branch.lat !== null && branch.lat !== undefined ? `${branch.lat}, ${branch.lng}` : "",
   });
   const [error, setError] = useState("");
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
-  /* A pin copied from Google Maps arrives as "23.588, 58.3829" in one box. */
-  const setLat = (v) => {
-    const parts = v.split(",").map((x) => x.trim());
-    if (parts.length === 2 && parts.every((x) => x !== "" && !isNaN(Number(x)))) {
-      setForm((f) => ({ ...f, lat: parts[0], lng: parts[1] }));
-    } else set("lat", v);
+  /* Quick on with the boxes still empty fills the usual reaches. */
+  const setQuick = (on) => setForm((f) => {
+    const next = { ...f, quick: on };
+    if (on && !Number(f.quickKm)) next.quickKm = "5";
+    if (on && !Number(f.maybeKm)) next.maybeKm = String(Math.max(15, Number(next.quickKm) || 0));
+    return next;
+  });
+  const reach = Number(form.quickKm);
+
+  /* "Find pincodes around this branch". Every answer carries a sentence
+     saying what is happening; while OpenStreetMap is still looking, ask again
+     every few seconds so the count climbs on screen. */
+  const [find, setFind] = useState(null);
+  const findPath = `/admin/delivery/branches/${branch.id}/pincodes`;
+  useEffect(() => {
+    let alive = true;
+    let timer = null;
+    const poll = () => {
+      timer = setTimeout(async () => {
+        try {
+          const s = await api(findPath);
+          if (!alive) return;
+          setFind(s);
+          if (s.state === "running") poll();
+        } catch { /* a missed check is not news; the button asks again */ }
+      }, 4000);
+    };
+    if (find?.state === "running") poll();
+    else if (find === null) {
+      /* A lookup already under way shows its progress as the drawer opens. */
+      api(findPath).then((s) => { if (alive && s.state === "running") setFind(s); }).catch(() => {});
+    }
+    return () => { alive = false; clearTimeout(timer); };
+  }, [find?.state, find?.done, findPath]); // eslint-disable-line react-hooks/exhaustive-deps
+  const findPincodes = async () => {
+    setFind({
+      state: "starting",
+      message: "Working out which country this branch is in, and getting its postcode list. The first time for a country this can take up to a minute…",
+    });
+    try {
+      setFind(await api(findPath, { method: "POST", body: {} }));
+    } catch (e) {
+      setFind({ state: "failed", message: e?.message || "That didn't work." });
+    }
   };
+  const finding = find && (find.state === "starting" || find.state === "running");
 
   const save = async () => {
     setError("");
@@ -469,29 +728,34 @@ function BranchDrawer({ branch, onClose, onSaved }) {
       <section className="ad-dsec">
         <div className="ad-kv-rows">
           <label className="ad-kv-row">
-            <span>Quick delivery<small>This branch delivers Quick near it</small></span>
-            <Switch on={!!form.quick} onChange={(v) => set("quick", v)} label="Quick delivery" />
+            <span>Quick delivery<small>Riders from this branch deliver to customers nearby</small></span>
+            <Switch on={!!form.quick} onChange={setQuick} label="Quick delivery" />
           </label>
         </div>
       </section>
 
       <section className="ad-dsec">
-        <h4>How far</h4>
+        <h4>How far riders go</h4>
         <div className="ad-form">
-          <Field label="Reach" value={form.quickKm} onChange={(v) => set("quickKm", v)}
+          <Field label="Quick, up to" value={form.quickKm} onChange={(v) => set("quickKm", v)}
             placeholder="5" suffix="km" decimal />
-          <Field label="Quick if possible up to" value={form.maybeKm} onChange={(v) => set("maybeKm", v)}
-            placeholder="Off" suffix="km" decimal />
-          <Field label="Quick promise" value={form.quickEta} onChange={(v) => set("quickEta", v)}
-            placeholder="30 mins" />
+          <Field label="Quick when a rider is free, up to" value={form.maybeKm} onChange={(v) => set("maybeKm", v)}
+            placeholder="15" suffix="km" decimal />
         </div>
+        {reach > 0 && (
+          <p className="ad-hint">
+            <Icon n="clock" size={14} />
+            Customers are told <b>{quickTime(0)} to {quickTime(reach)}</b>, depending
+            on how far they are. Nobody types it: 10 minutes to pack, then 5 minutes
+            for every km.
+          </p>
+        )}
         <p className="ad-hint">
           <Icon n="info" size={14} />
-          A straight line from the branch. Roads are longer, so set it a little
-          under what a rider covers in the Quick time. Past the reach and up to
-          "Quick if possible", the customer is promised Express and it comes
-          Quick when a rider is free. Both, and the Quick promise, count once
-          Hub rules in Odoo has a row.
+          Customers closer than the first number get Quick. Between the two numbers
+          they are told Express, and it comes Quick if a rider is free. Farther away
+          is Express. The km are a straight line on the map, so keep them a little
+          short of the real road.
         </p>
       </section>
 
@@ -499,7 +763,7 @@ function BranchDrawer({ branch, onClose, onSaved }) {
         <h4>Delivery fees</h4>
         <div className="ad-kv-rows">
           <label className="ad-kv-row">
-            <span>Own delivery fees<small>What this branch ships is charged these, not the shop's</small></span>
+            <span>Own delivery fees<small>Off: this branch charges the shop's usual fees</small></span>
             <Switch on={!!form.ownFees} onChange={(v) => set("ownFees", v)} label="Own delivery fees" />
           </label>
         </div>
@@ -512,22 +776,47 @@ function BranchDrawer({ branch, onClose, onSaved }) {
         )}
         <p className="ad-hint">
           <Icon n="info" size={14} />
-          Counted once the shop has more than one company: what this branch ships is
-          charged these fees, and a basket from several hubs pays each hub's fee for
-          its own part.
+          Amounts are in the shop's money. "Free delivery above 10" means a customer
+          buying more than 10 from this branch pays no delivery. If a basket comes
+          from two branches, each branch charges its own fee for its own items.
         </p>
       </section>
 
       <section className="ad-dsec">
         <h4>Where the branch is</h4>
         <div className="ad-form">
-          <Field label="Latitude" value={form.lat} onChange={setLat} placeholder="23.5880" decimal />
-          <Field label="Longitude" value={form.lng} onChange={(v) => set("lng", v)} placeholder="58.3829" decimal />
+          <Field label="Location from Google Maps" value={form.pin} onChange={(v) => set("pin", v)}
+            placeholder="10.3673, 77.9803" wide decimal />
         </div>
         <p className="ad-hint">
           <Icon n="info" size={14} />
-          In Google Maps, right-click the branch and click the numbers at the top
-          to copy them. Paste both into Latitude.
+          Open Google Maps, right-click the branch (long-press on a phone) and click
+          the two numbers at the top. They are copied. Paste them here as they are.
+        </p>
+      </section>
+
+      <section className="ad-dsec">
+        <h4>Pincodes around this branch</h4>
+        <button type="button" className="ad-btn" disabled={finding} onClick={findPincodes}>
+          <Icon n="search" size={15} />
+          {find?.state === "failed" ? "Try again" : "Find pincodes around this branch"}
+        </button>
+        {find?.message && (
+          <p className={`ad-find-msg ad-find-${find.state}`} role="status">
+            {finding && <span className="ad-find-spin" />}
+            {find.message}
+          </p>
+        )}
+        {find?.state === "running" && find.total > 0 && (
+          <div className="ad-find-bar" aria-hidden="true">
+            <i style={{ width: `${Math.round((100 * find.done) / find.total)}%` }} />
+          </div>
+        )}
+        <p className="ad-hint">
+          <Icon n="info" size={14} />
+          Uses the saved location and the farthest km above, so save first if you
+          changed them. You can still type pincodes yourself in Service areas.
+          Postcodes from GeoNames and © OpenStreetMap contributors.
         </p>
       </section>
     </Drawer>
@@ -738,7 +1027,7 @@ export function DeliverySection({ flash }) {
             <table className="ad-table">
               <thead>
                 <tr>
-                  <th>Pincode</th><th>Area</th><th>Quick</th><th>Express</th>
+                  <th>Pincode</th><th>Area</th><th>We deliver</th>
                   <th>Promise</th><th>State</th><th />
                 </tr>
               </thead>
@@ -749,8 +1038,7 @@ export function DeliverySection({ flash }) {
                       {a.pincode.length < 6 && <small className="ad-sub">and everything under it</small>}
                     </td>
                     <td>{a.name || <span className="ad-sub">—</span>}</td>
-                    <td><Pill s={a.quick ? "on" : "off"} map={ON_TONE} /></td>
-                    <td><Pill s={a.express ? "on" : "off"} map={ON_TONE} /></td>
+                    <td><Pill s={a.quick || a.express ? "on" : "off"} map={ON_TONE} /></td>
                     <td>{a.eta || "—"}</td>
                     <td><Pill s={a.active ? "on" : "off"} map={ON_TONE} /></td>
                     <td className="ad-row-act">
