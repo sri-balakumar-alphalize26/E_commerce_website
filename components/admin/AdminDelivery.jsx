@@ -36,6 +36,7 @@ import { api } from "@/lib/api";
 import { money } from "@/lib/money";
 import { useAction, useResource } from "@/lib/useFetch";
 import { Confirm, Drawer, Empty, Icon, Pill, Select, Switch, Tabs } from "./AdminUI";
+import PinPicker from "@/components/home/PinPicker";
 
 /* The three shopper feeds this screen can change under a customer's feet. A
    staff edit that leaves them cached is an edit nobody sees. */
@@ -169,6 +170,13 @@ function withSlotField(form, field, value, isNew) {
 }
 
 /* ============================== small pieces ============================= */
+/* "10.3673, 77.9803" (or with a space instead of the comma) -> ["10.3673",
+   "77.9803"]; anything else -> null, so a single number is typed as usual. */
+function splitLatLng(text) {
+  const m = String(text || "").match(/^\s*(-?\d+(?:\.\d+)?)\s*(?:,|\s)\s*(-?\d+(?:\.\d+)?)\s*$/);
+  return m ? [m[1], m[2]] : null;
+}
+
 function Field({ label, value, onChange, placeholder, suffix, wide, decimal }) {
   return (
     <label className={"ad-field" + (wide ? " ad-span2" : "")}>
@@ -637,7 +645,7 @@ function AreaDrawer({ area, onClose, onSaved }) {
 /* ============================== branch form ============================== */
 /* A branch is a warehouse, made in Odoo's Inventory. Delivery owns only its
    Quick settings and pin, so there is no "New branch" here. */
-function BranchDrawer({ branch, onClose, onSaved }) {
+function BranchDrawer({ branch, onClose, onSaved, onChanged }) {
   const act = useAction();
   const [form, setForm] = useState({
     quick: branch.quick, quickKm: branch.quickKm ? String(branch.quickKm) : "",
@@ -645,11 +653,19 @@ function BranchDrawer({ branch, onClose, onSaved }) {
     ownFees: !!branch.ownFees, quickFee: branch.quickFee ? String(branch.quickFee) : "",
     expressFee: branch.expressFee ? String(branch.expressFee) : "",
     freeAbove: branch.freeAbove ? String(branch.freeAbove) : "",
-    /* One box, as Google Maps copies it: "10.3673, 77.9803". */
-    pin: branch.lat !== null && branch.lat !== undefined ? `${branch.lat}, ${branch.lng}` : "",
+    /* 0/0 is how Odoo stores "no pin": shown as two empty boxes. */
+    lat: branch.lat || branch.lng ? String(branch.lat) : "",
+    lng: branch.lat || branch.lng ? String(branch.lng) : "",
   });
   const [error, setError] = useState("");
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+  /* Google Maps copies both numbers at once ("10.3673, 77.9803"): pasted into
+     either box, they fill both. */
+  const setCoord = (k, v) => {
+    const pair = splitLatLng(v);
+    if (pair) setForm((f) => ({ ...f, lat: pair[0], lng: pair[1] }));
+    else set(k, v);
+  };
 
   /* Quick on with the boxes still empty fills the usual reaches. */
   const setQuick = (on) => setForm((f) => {
@@ -685,7 +701,60 @@ function BranchDrawer({ branch, onClose, onSaved }) {
     }
     return () => { alive = false; clearTimeout(timer); };
   }, [find?.state, find?.done, findPath]); // eslint-disable-line react-hooks/exhaustive-deps
+  /* What the boxes say can be saved, or why not (shown at the top). */
+  const coordsOk = () => {
+    if (!form.lat.trim() !== !form.lng.trim()) {
+      setError("Type both the latitude and the longitude, or leave both empty.");
+      return false;
+    }
+    return true;
+  };
+
+  /* "Find from the address": the branch's address in Odoo, looked up on
+     OpenStreetMap, fills the two boxes. Nothing is saved until Save. */
+  const [locate, setLocate] = useState(null); // { state, message, name, country }
+  const [picking, setPicking] = useState(false);
+  /* With no address in Odoo, three boxes ask for it right here; what is
+     typed is saved on the branch's contact first, then looked up. */
+  const [address, setAddress] = useState(null); // { street, city, zip }
+  const findFromAddress = async (typed = null) => {
+    setLocate({ state: "running", message: "Looking up the branch's address…" });
+    try {
+      const found = await api(`/admin/delivery/branches/${branch.id}/locate`,
+        { method: "POST", body: typed ? { address: typed } : {} });
+      if (!found.found) {
+        setAddress((a) => a || { street: "", city: "", zip: "" });
+        setLocate({ state: "rough", message: found.message, name: found.name, country: found.country });
+        return;
+      }
+      setAddress(null);
+      setForm((f) => ({ ...f, lat: String(found.lat), lng: String(found.lng) }));
+      setLocate({ state: found.level === "street" ? "done" : "rough", message: found.message });
+    } catch (e) {
+      setLocate((l) => ({ ...l, state: "failed", message: e?.message || "That didn't work." }));
+    }
+  };
+  const setAddr = (k, v) => setAddress((a) => ({ ...a, [k]: v }));
+  const picked = ({ lat, lng }) => {
+    setForm((f) => ({ ...f, lat: String(lat), lng: String(lng) }));
+    setPicking(false);
+    setLocate({ state: "done", message: "Spot picked. Save to keep it." });
+  };
+
+  /* "Find pincodes" saves what is typed first, so the search uses this
+     location and reach - no "save first" step. */
   const findPincodes = async () => {
+    setError("");
+    if (!coordsOk()) return;
+    setFind({ state: "starting", message: "Saving, then looking…" });
+    try {
+      await api(`/admin/delivery/branches/${branch.id}`, { method: "PATCH", body: form });
+      onChanged?.();
+    } catch (e) {
+      setFind(null);
+      setError(e?.message || "That could not be saved.");
+      return;
+    }
     setFind({
       state: "starting",
       message: "Working out which country this branch is in, and getting its postcode list. The first time for a country this can take up to a minute…",
@@ -700,6 +769,7 @@ function BranchDrawer({ branch, onClose, onSaved }) {
 
   const save = async () => {
     setError("");
+    if (!coordsOk()) return;
     const done = await act.run(async () => {
       await api(`/admin/delivery/branches/${branch.id}`, { method: "PATCH", body: form });
       return true;
@@ -785,13 +855,64 @@ function BranchDrawer({ branch, onClose, onSaved }) {
       <section className="ad-dsec">
         <h4>Where the branch is</h4>
         <div className="ad-form">
-          <Field label="Location from Google Maps" value={form.pin} onChange={(v) => set("pin", v)}
-            placeholder="10.3673, 77.9803" wide decimal />
+          <Field label="Latitude" value={form.lat} onChange={(v) => setCoord("lat", v)}
+            placeholder="10.3673" />
+          <Field label="Longitude" value={form.lng} onChange={(v) => setCoord("lng", v)}
+            placeholder="77.9803" />
         </div>
+        <div className="ad-locate">
+          <button type="button" className="ad-btn" disabled={locate?.state === "running"}
+            onClick={() => findFromAddress()}>
+            <Icon n="search" size={15} />Find from the address
+          </button>
+          {!picking && (
+            <button type="button" className="ad-btn" onClick={() => setPicking(true)}>
+              <Icon n="pin" size={15} />Pick on map
+            </button>
+          )}
+        </div>
+        {locate?.message && (
+          <p className={`ad-find-msg ad-find-${locate.state}`} role="status">
+            {locate.state === "running" && <span className="ad-find-spin" />}
+            {locate.message}
+          </p>
+        )}
+        {address && (
+          <div className="ad-address">
+            <div className="ad-form">
+              <Field label="Street" value={address.street} onChange={(v) => setAddr("street", v)}
+                placeholder="12 Fort Road" wide />
+              <Field label="Town" value={address.city} onChange={(v) => setAddr("city", v)} placeholder="Dubai" />
+              <Field label="Pincode" value={address.zip} onChange={(v) => setAddr("zip", v)} placeholder="Optional" />
+            </div>
+            <div className="ad-locate">
+              <button type="button" className="ad-btn ad-primary" disabled={locate?.state === "running"}
+                onClick={() => findFromAddress(address)}>Save address and find</button>
+              <button type="button" className="ad-btn" onClick={() => { setAddress(null); setLocate(null); }}>
+                Cancel
+              </button>
+            </div>
+            <p className="ad-hint">
+              <Icon n="info" size={14} />
+              Saved on {locate?.name || "the branch"} in Odoo's Contacts
+              {locate?.country ? ` (${locate.country})` : ""}, so invoices and the next look have it too.
+            </p>
+          </div>
+        )}
+        {picking && (
+          <div className="ad-locate-map">
+            <PinPicker start={form.lat && form.lng ? { lat: Number(form.lat), lng: Number(form.lng) } : null}
+              help={<><b>Put the pin on the branch.</b> Drag the map; the pin stays in the middle.</>}
+              hereLabel="Where I am now"
+              onPick={picked} onCancel={() => setPicking(false)} />
+          </div>
+        )}
         <p className="ad-hint">
           <Icon n="info" size={14} />
-          Open Google Maps, right-click the branch (long-press on a phone) and click
-          the two numbers at the top. They are copied. Paste them here as they are.
+          Find from the address looks up the branch's address in Odoo. Pick on map
+          lets you drag the map until the pin is on the branch. Or paste the two
+          numbers Google Maps copies (right-click the branch) into either box and
+          both fill in.
         </p>
       </section>
 
@@ -814,9 +935,9 @@ function BranchDrawer({ branch, onClose, onSaved }) {
         )}
         <p className="ad-hint">
           <Icon n="info" size={14} />
-          Uses the saved location and the farthest km above, so save first if you
-          changed them. You can still type pincodes yourself in Service areas.
-          Postcodes from GeoNames and © OpenStreetMap contributors.
+          Saves what you typed above first, then looks around the location as far
+          as the farthest km. You can still type pincodes yourself in Service
+          areas. Postcodes from GeoNames and © OpenStreetMap contributors.
         </p>
       </section>
     </Drawer>
@@ -951,8 +1072,17 @@ export function DeliverySection({ flash }) {
         {!!unready.length && (
           <p className="ad-hint ad-hint-warn">
             <Icon n="info" size={14} />
-            Quick is on at {unready.map((b) => b.name).join(", ")} but it has no map pin
-            or no reach, so it delivers Quick to nobody.
+            <span>
+              Quick is on at {unready.map((b) => b.name).join(", ")} but it has no map pin
+              or no reach, so it delivers Quick to nobody.
+              {unready.map((b) => (
+                <span key={b.id}>
+                  {" "}
+                  <button className="ad-link" disabled={act.busy}
+                    onClick={() => setBranchEdit(b)}>Add pin and reach at {b.name}</button>
+                </span>
+              ))}
+            </span>
           </p>
         )}
 
@@ -1117,7 +1247,8 @@ export function DeliverySection({ flash }) {
 
       {branchEdit && (
         <BranchDrawer branch={branchEdit}
-          onClose={() => setBranchEdit(null)} onSaved={saved(setBranchEdit)} />
+          onClose={() => setBranchEdit(null)} onSaved={saved(setBranchEdit)}
+          onChanged={() => { refresh(); reload(); }} />
       )}
 
       {drop && (

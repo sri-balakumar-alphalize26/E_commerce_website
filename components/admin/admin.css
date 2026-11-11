@@ -691,6 +691,14 @@ html.ad-lock { overflow: hidden; }
 .ad-find-msg { display: flex; align-items: flex-start; gap: 8px; margin: 10px 0 0; padding: 9px 12px; border-radius: 10px; background: rgba(10, 120, 171, .08); font-size: 13px; color: var(--ad-ink); }
 .ad-find-done { background: rgba(22, 163, 74, .09); }
 .ad-find-failed { background: rgba(220, 38, 38, .08); }
+/* Found the pincode or town, not the door: close, but check it. */
+.ad-find-rough { background: #fdf1dc; color: #8a5a06; }
+/* "Find from the address" and "Pick on map", side by side, then the map. */
+.ad-locate { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.ad-locate-map { margin-top: 10px; }
+/* The address asked for in place, when the branch has none in Odoo. */
+.ad-address { margin-top: 10px; padding: 12px; border: 1px solid #f3dcae; border-radius: 12px; background: #fffaf0; }
+.ad-address .ad-locate { margin-top: 8px; }
 .ad-find-bar { height: 6px; margin-top: 8px; border-radius: 99px; background: var(--ad-line); overflow: hidden; }
 .ad-find-bar i { display: block; height: 100%; background: var(--ad-blue); transition: width 400ms ease; }
 .ad-find-spin { flex: none; width: 14px; height: 14px; margin-top: 2px; border: 2px solid rgba(10, 120, 171, .25); border-top-color: var(--ad-blue); border-radius: 50%; animation: ad-find-spin .8s linear infinite; }

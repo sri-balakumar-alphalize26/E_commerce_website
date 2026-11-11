@@ -21,7 +21,13 @@ const START_ZOOM = 15;
 const AREA_ZOOM = 13;       // a pincode's area, before zooming to the door
 const WIDE_ZOOM = 4;        // nothing known yet
 
-export default function PinPicker({ start, pincode, onPick, onCancel }) {
+/* `help` and `hereLabel` let the staff console say "branch" where the shop
+   says "your door"; left out, the shopper's words stay as they were. */
+export default function PinPicker({
+  start, pincode, onPick, onCancel,
+  help = <><b>Put the pin on your door.</b> Drag the map; the pin stays in the middle.</>,
+  hereLabel = "Use where I am now",
+}) {
   const box = useRef(null);
   const mapRef = useRef(null);
   const [state, setState] = useState("loading"); // loading | ready | failed
@@ -87,7 +93,7 @@ export default function PinPicker({ start, pincode, onPick, onCancel }) {
   return (
     <div className="pp-root">
       <p className="pp-help">
-        <b>Put the pin on your door.</b> Drag the map; the pin stays in the middle.
+        {help}
         {note && <span> {note}</span>}
       </p>
       <div className="pp-map">
@@ -104,7 +110,7 @@ export default function PinPicker({ start, pincode, onPick, onCancel }) {
       </div>
       <div className="pp-actions">
         <button type="button" className="co-ghost" onClick={here} disabled={state !== "ready" || locating}>
-          {locating ? "Finding you…" : "Use where I am now"}
+          {locating ? "Finding you…" : hereLabel}
         </button>
         <span className="pp-gap" />
         <button type="button" className="co-ghost" onClick={onCancel}>Cancel</button>
