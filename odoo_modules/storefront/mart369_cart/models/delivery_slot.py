@@ -86,6 +86,48 @@ class Mart369DeliverySlot(models.Model):
         'That slot key is already used in this storefront.',
     )
 
+    @api.model_create_multi
+    def create(self, vals_list):
+        """A slot made without a key gets one worked out from its day and
+        time - both screens fill the wording in for the operator, and the key
+        is the one part that must also be free in its storefront."""
+        for vals in vals_list:
+            if not (vals.get('key') or '').strip():
+                vals['key'] = self._mart369_auto_key(
+                    vals.get('mode') or 'quick', vals.get('kind') or 'window',
+                    vals.get('day_offset') or 0,
+                    vals.get('from_hour') if 'from_hour' in vals else 18.0)
+        return super().create(vals_list)
+
+    @api.model
+    def _mart369_auto_key(self, mode, kind, day_offset=0, from_hour=18.0):
+        """'now', 'today-18', 'tm-1830', 'd3-09' or 'd3', then '-2', '-3'...
+        until it is free in `mode` - the rule `_key_mode_uniq` enforces.
+
+        The screens show the same base key before saving
+        (`slotWording` in delivery_desk.js and AdminDelivery.jsx); the
+        number on the end is only ever added here, where the taken keys are
+        known.
+        """
+        days = max(0, int(day_offset or 0))
+        if kind == 'now':
+            base = 'now'
+        elif kind == 'days':
+            base = 'd%d' % days
+        else:
+            day = {0: 'today', 1: 'tm'}.get(days, 'd%d' % days)
+            hours = float(from_hour or 0.0)
+            hour = int(hours) % 24
+            minute = int(round((hours - int(hours)) * 60))
+            base = '%s-%02d%s' % (day, hour, '%02d' % minute if minute else '')
+        taken = set(self.sudo().with_context(active_test=False).search(
+            [('mode', '=', mode), ('key', '=like', base + '%')]).mapped('key'))
+        key, n = base, 1
+        while key in taken:
+            n += 1
+            key = '%s-%d' % (base, n)
+        return key
+
     @api.constrains('from_hour', 'to_hour', 'order_before')
     def _check_hours(self):
         for slot in self:
