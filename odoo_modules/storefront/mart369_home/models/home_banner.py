@@ -149,7 +149,7 @@ class Mart369HomeBanner(models.Model):
         """The uploaded picture at full width, with its save time on the end
         so a replaced picture is not served from yesterday's cache."""
         self.ensure_one()
-        if not self.image_1920:
+        if not self._mart369_has_picture(self, 'image_1920'):
             return ''
         return self._image_url('image_1920', '1920x768')
 
@@ -164,7 +164,9 @@ class Mart369HomeBanner(models.Model):
             'art': self._lines_to_list(self.art_lines),
             'showShop': self.show_shop_now,
         }
-        if self.image_1920:
+        # Asked by size, never `self.image_1920`: reading that downloads the
+        # whole picture from the Image Server, on every load of the home page.
+        if self._mart369_has_picture(self, 'image_1920'):
             vals['image'] = self._mart369_picture_url()
             if self.text_on_image:
                 vals['textOnImage'] = True
@@ -250,7 +252,7 @@ class Mart369HomeBanner(models.Model):
             'active': self.active,
             'sequence': self.sequence,
             'usage_count': self.usage_count,
-            'has_image': bool(self.image_1920),
+            'has_image': self._mart369_has_picture(self, 'image_1920'),
             'image_url': self._mart369_picture_url(),
             'text_on_image': self.text_on_image,
             'show_shop_now': self.show_shop_now,

@@ -119,10 +119,13 @@ class Mart369HomeTile(models.Model):
         for rec in self:
             if rec.image_source == 'url':
                 rec.image_path = rec.image_url or ''
-            elif rec.image_source == 'category' and rec.public_categ_id.image_1920:
+            # Asked by size, never `rec.image_1920`: reading that downloads the
+            # whole picture from the Image Server.
+            elif rec.image_source == 'category' and rec.public_categ_id \
+                    and rec._mart369_has_picture(rec.public_categ_id, 'image_1920'):
                 rec.image_path = rec._image_url(
                     'image_512', '256x256', record=rec.public_categ_id)
-            elif rec.image_source == 'upload' and rec.image_1920:
+            elif rec.image_source == 'upload' and rec._mart369_has_picture(rec, 'image_1920'):
                 rec.image_path = rec._image_url('image_512', '256x256')
             else:
                 rec.image_path = ''
@@ -179,7 +182,7 @@ class Mart369HomeTile(models.Model):
         """This tile's own uploaded picture (not a category's logo), with its
         save time on the end so a replaced one is not served from cache."""
         self.ensure_one()
-        if self.image_source != 'upload' or not self.image_1920:
+        if self.image_source != 'upload' or not self._mart369_has_picture(self, 'image_1920'):
             return ''
         return self._image_url('image_512', '512x512')
 
@@ -201,7 +204,7 @@ class Mart369HomeTile(models.Model):
             vals['t'] = self.badge
         if self.route:
             vals['route'] = self.route
-        if self.image_source == 'upload' and self.image_1920:
+        if self.image_source == 'upload' and self._mart369_has_picture(self, 'image_1920'):
             # An uploaded picture fills the tile edge to edge, like a logo.
             vals['fill'] = True
         return vals
@@ -236,6 +239,6 @@ class Mart369HomeTile(models.Model):
             'colour_from': self.colour_from or '',
             'active': self.active,
             'sequence': self.sequence,
-            'has_image': bool(self.image_1920),
+            'has_image': self._mart369_has_picture(self, 'image_1920'),
             'write_date': fields.Datetime.to_string(self.write_date),
         }

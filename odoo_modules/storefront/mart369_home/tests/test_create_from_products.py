@@ -163,3 +163,45 @@ class TestLinksAreClean(TransactionCase):
         slug = category.mart_slug
         self.assertIn([slug, 'Zzq Laptop DC Jack'], vocab['routes'])
         self.assertIn(['/category/%s' % slug, 'Zzq Laptop DC Jack'], vocab['links'])
+
+
+@tagged('post_install', '-at_install')
+class TestTheShopNeverDownloadsPictures(TransactionCase):
+    """A picture on the Image Server is only ever linked to. Building the home
+    page must not fetch it, or every visit pays for a download and the page
+    fails whenever the Image Server is unreachable."""
+
+    def _put_on_image_server(self, record):
+        attachments = self.env['ir.attachment'].sudo().search([
+            ('res_model', '=', record._name), ('res_id', '=', record.id),
+            ('res_field', 'like', 'image_%')])
+        self.assertTrue(attachments)
+        attachments.flush_recordset()
+        self.env.cr.execute(
+            "UPDATE ir_attachment SET store_fname=%s, imgsrv_url=%s, imgsrv_state='remote' WHERE id IN %s",
+            ('imgsrv:m:media/x.webp?v=abc#512', 'https://images.example.com/x.webp', tuple(attachments.ids)))
+        attachments.invalidate_recordset()
+        record.invalidate_recordset()
+
+    def test_a_banner_and_a_tile(self):
+        if 'imgsrv_url' not in self.env['ir.attachment']._fields:
+            self.skipTest('The Image Server connector is not installed.')
+        self.env['ir.config_parameter'].sudo().set_param('ai369_image_server.enabled', 'False')
+        mode = self.env['mart369.home.version'].sudo()._mart369_live().mode_ids[:1]
+        png = ('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/AAAMCAQAB'
+               'pX0qTwAAAABJRU5ErkJggg==')
+        banner = self.env['mart369.home.banner'].sudo().create({
+            'mode_id': mode.id, 'key': 'zz-pic', 'name': 'Pic', 'image_1920': png})
+        tile = self.env['mart369.home.tile'].sudo().create({
+            'mode_id': mode.id, 'key': 'zz-pic', 'name': 'Pic', 'image_1920': png, 'image_source': 'upload'})
+        self._put_on_image_server(banner)
+        self._put_on_image_server(tile)
+        with patch.object(type(self.env['ir.attachment']), '_imgsrv_read',
+                          side_effect=AssertionError('A picture was downloaded')):
+            row = banner._serialize()
+            self.assertEqual(row['image'], 'https://images.example.com/x.webp?v=abc')
+            self.assertTrue(banner._builder_vals()['has_image'])
+            row = tile._serialize()
+            self.assertTrue(row['image'])
+            self.assertTrue(row['fill'])
+            self.assertTrue(tile._builder_vals()['has_image'])
