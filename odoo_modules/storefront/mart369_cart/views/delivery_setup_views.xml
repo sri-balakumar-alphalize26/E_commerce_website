@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Delivery setup: every branch, what is set up and what is left
+     (delivery_autosetup.py). The same checklist as the console's Delivery >
+     Setup. The button runs the automatic setup at once instead of waiting
+     for the hourly job. -->
+<odoo>
+    <record id="mart369_delivery_setup_view_list" model="ir.ui.view">
+        <field name="name">stock.warehouse.mart369.delivery.setup</field>
+        <field name="model">stock.warehouse</field>
+        <field name="priority">90</field>
+        <field name="arch" type="xml">
+            <list string="Delivery setup" create="0" delete="0"
+                  decoration-muted="mart369_setup_state == 'off'">
+                <header>
+                    <button name="action_mart369_auto_setup" type="object"
+                            string="Set up automatically" class="btn-primary"
+                            display="always"/>
+                </header>
+                <field name="name" string="Branch"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+                <field name="mart369_setup_state" widget="badge"
+                       decoration-success="mart369_setup_state == 'ok'"
+                       decoration-info="mart369_setup_state == 'wait'"
+                       decoration-warning="mart369_setup_state == 'todo'"/>
+                <field name="mart369_setup_done" string="Set up"/>
+                <field name="mart369_setup_todo" string="To do"/>
+                <button name="action_mart369_fix" type="object" string="Fix it"
+                        icon="fa-wrench" class="btn-link"
+                        invisible="mart369_setup_state != 'todo'"/>
+                <field name="mart369_auto" string="Sets itself up" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- One branch: what is set up, what is left, and the two ways on - run
+         the setup now, or open the Delivery desk to set the pin and Quick by
+         hand. Read-only: the desk is where delivery is edited, so the
+         automatic setup knows a person decided. -->
+    <record id="mart369_delivery_setup_view_form" model="ir.ui.view">
+        <field name="name">stock.warehouse.mart369.delivery.setup.form</field>
+        <field name="model">stock.warehouse</field>
+        <field name="priority">90</field>
+        <field name="arch" type="xml">
+            <form string="Delivery setup" create="0" delete="0" edit="0">
+                <header>
+                    <button name="action_mart369_fix" type="object" string="Fix it"
+                            class="btn-primary" invisible="mart369_setup_state != 'todo'"/>
+                    <button name="action_mart369_auto_setup" type="object"
+                            string="Set up automatically"/>
+                    <button name="%(action_mart369_delivery_desk)d" type="action"
+                            string="Set pin and Quick by hand"/>
+                    <field name="mart369_setup_state" widget="statusbar"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="name" readonly="1"/></h1>
+                        <field name="company_id" readonly="1"/>
+                    </div>
+                    <group>
+                        <field name="mart369_setup_done" string="Set up" readonly="1"/>
+                        <field name="mart369_setup_todo" string="To do" readonly="1"
+                               invisible="not mart369_setup_todo"/>
+                        <field name="mart369_auto_note" readonly="1"
+                               invisible="not mart369_auto_note"/>
+                        <field name="mart369_auto" readonly="1"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_mart369_delivery_setup" model="ir.actions.act_window">
+        <field name="name">Delivery setup</field>
+        <field name="res_model">stock.warehouse</field>
+        <field name="view_mode">list,form</field>
+        <field name="view_ids" eval="[(5, 0, 0),
+            (0, 0, {'view_mode': 'list', 'view_id': ref('mart369_delivery_setup_view_list')}),
+            (0, 0, {'view_mode': 'form', 'view_id': ref('mart369_delivery_setup_view_form')})]"/>
+        <field name="context">{'active_test': True}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No branch yet</p>
+            <p>A branch is a warehouse: make one in Inventory, give its company
+               an address, and delivery sets itself up.</p>
+        </field>
+    </record>
+
+    <!-- Every delivery option on one page, one Save (delivery_settings.js).
+         It shows the checklist above too, so it replaces "Delivery setup"
+         in the menu; the list stays one click away from Fix it. -->
+    <record id="action_mart369_delivery_settings" model="ir.actions.client">
+        <field name="name">Delivery settings</field>
+        <field name="tag">mart369_cart.delivery_settings</field>
+        <field name="path">mart-delivery-settings</field>
+    </record>
+
+    <menuitem id="menu_mart369_delivery_setup"
+              name="Delivery settings"
+              parent="mart369.menu_mart369_store"
+              action="action_mart369_delivery_settings"
+              groups="base.group_system,website.group_website_designer"
+              sequence="49"/>
+</odoo>

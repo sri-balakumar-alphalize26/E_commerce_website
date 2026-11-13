@@ -182,6 +182,7 @@
                 <field name="arrives" placeholder="Next day"/>
                 <field name="days"/>
                 <field name="cargo" widget="boolean_toggle"/>
+                <field name="auto" string="From distance" readonly="1" optional="show"/>
                 <field name="active" string="Live" widget="boolean_toggle"/>
             </list>
         </field>

@@ -1,0 +1,61 @@
+/* Delivery settings - every delivery option on one page (13 Nov 2026).
+ * The shell, header and buttons come from mart369's builder.scss / kit.scss
+ * (loaded earlier in the bundle). Plain CSS values only, no @import. */
+.o_mart369_delivery_settings .dz {
+    display: flex; flex-direction: column; gap: 14px; padding-bottom: 90px; overflow-y: auto;
+    .dz-card { background: #fff; border: 1px solid #e3e6ea; border-radius: 12px; padding: 14px 16px; min-width: 0; }
+    h3 { margin: 0 0 10px; font-size: 15px; font-weight: 700; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+    h3 small, .dz-hint, .dz-sub, .dz-note { font-size: 12.5px; font-weight: 400; color: #6b7280; }
+    h4 { margin: 12px 0 2px; font-size: 13.5px; font-weight: 700; }
+    .dz-sub { display: block; }
+    .dz-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+    .dz-pills { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; min-width: 0; }
+    .dz-pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap;
+        i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; } }
+    .dz-green { background: #e3f4e9; color: #14602d; } .dz-blue { background: #e6f1f8; color: #08516f; }
+    .dz-amber { background: #fdf1dc; color: #8a5a06; } .dz-grey { background: #eceff2; color: #5b6b76; }
+    .dz-todos { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px;
+        li { display: flex; gap: 10px; align-items: baseline; color: #8a5a06; font-size: 13px; } li span { flex: 1; min-width: 0; } }
+    .dz-done { margin: 10px 0 0; padding: 8px 10px; border-radius: 8px; background: #eef8f1; color: #1a7f3c; font-size: 13px; }
+    .dz-explain { padding: 12px 16px; border-radius: 12px; background: #e6f3f4; border-left: 3px solid #017e84; font-size: 13.5px;
+        ol { margin: 6px 0 0; padding-left: 20px; } small { display: block; margin-top: 6px; color: #6b7280; } }
+    .dz-banner { padding: 10px 14px; border-radius: 8px; background: #fdf1dc; color: #8a5a06; font-weight: 600; }
+    .dz-banner.dz-bad { background: #fbeaea; color: #b42318; }
+    .dz-empty { padding: 30px; text-align: center; color: #6b7280; }
+    .dz-two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .dz-mode { display: flex; gap: 10px; align-items: flex-start; padding: 12px; border: 1px solid #e3e6ea; border-radius: 10px; cursor: pointer; min-width: 0; }
+    .dz-mode.on { border-color: #017e84; background: #f2f9f9; }
+    .dz-mode span, .dz-box-h span, .dz-col { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .dz-mode small, .dz-box-h small, .dz-col small { font-size: 12.5px; color: #6b7280; }
+    .dz-scroll { overflow-x: auto; }
+    .dz-table { width: 100%; border-collapse: collapse; font-size: 13.5px;
+        th { text-align: left; font-weight: 600; padding: 8px 10px; border-bottom: 1px solid #e3e6ea; white-space: nowrap; }
+        td { padding: 7px 10px; border-bottom: 1px solid #f0f2f4; vertical-align: middle; white-space: nowrap; }
+        .dz-n { text-align: right; } }
+    .dz-muted td { color: #6b7280; }
+    .dz-grid tbody th { background: #f7f8fa; } .dz-self { text-align: center; color: #9ca3af; background: #f7f8fa; }
+    .dz-cell { display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
+        select { border: 1px solid #d8dadd; border-radius: 6px; padding: 2px 6px; background: #fff; } }
+    .dz-cargo { display: inline-flex; gap: 4px; align-items: center; font-size: 12px; color: #6b7280; margin: 0; }
+    .dz-auto { display: inline-block; padding: 1px 7px; border-radius: 999px; background: #efe9f7; color: #6c4fa0; font-size: 11px; font-weight: 700; }
+    .dz-in { height: 30px; border: 1px solid #d8dadd; border-radius: 6px; padding: 0 8px; background: #fff; min-width: 0; }
+    .dz-in:focus { outline: none; border-color: #017e84; }
+    .dz-in:disabled { background: #f3f4f6; color: #9ca3af; }
+    .dz-num { width: 76px; text-align: right; } .dz-pin { width: 180px; }
+    .dz-err { display: block; margin-top: 3px; font-size: 12px; font-weight: 600; color: #b42318; white-space: normal; }
+    .dz-box { display: flex; flex-direction: column; gap: 10px; padding: 12px; border: 1px solid #e3e6ea; border-radius: 10px; min-width: 0; }
+    .dz-box-h { display: flex; gap: 10px; align-items: flex-start; }
+    .dz-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 12px;
+        label { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; font-weight: 600; color: #6b7280; margin: 0; min-width: 0; }
+        .dz-wide { grid-column: 1 / -1; } }
+    .dz-link { border: 0; background: none; padding: 0; color: #017e84; font-weight: 600; cursor: pointer; }
+    .dz-adv summary { cursor: pointer; font-weight: 700; font-size: 15px; }
+    .dz-savebar { position: sticky; bottom: 10px; z-index: 4; display: flex; gap: 10px; align-items: center; justify-content: flex-end;
+        padding: 10px 14px; border: 1px solid #e3e6ea; border-radius: 12px; background: #fff; box-shadow: 0 8px 24px -12px rgba(0, 0, 0, .35);
+        span { margin-right: auto; font-weight: 600; color: #6b7280; } }
+    .dz-savebar.on span { color: #8a5a06; }
+    @media (max-width: 760px) {
+        .dz-two { grid-template-columns: minmax(0, 1fr); }
+        .dz-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+}

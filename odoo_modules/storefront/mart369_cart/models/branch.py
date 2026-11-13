@@ -231,6 +231,11 @@ class Mart369Branch(models.Model):
                 raise UserError(self.env._('%s is a number.', what))  # noqa: B904
         if not vals:
             raise UserError(self.env._('Nothing to change.'))
+        if {'mart369_quick', 'mart369_quick_km', 'mart369_maybe_km'} & set(vals):
+            # Somebody decided this branch's Quick by hand: the automatic
+            # setup (delivery_autosetup.py) leaves it alone from now on. A
+            # pin alone does not count - Quick still comes on by itself.
+            vals['mart369_auto'] = False
         if vals.get('mart369_quick') and not branch.mart369_quick:
             # Switching Quick on with the boxes still empty: the usual
             # reaches, so one switch is enough to start.

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Fills in what delivery can work out by itself (delivery_autosetup.py):
+     a new branch's pin from its address, Quick once it is on the map, missing
+     routes between hubs, and (with WhatsApp orders) a delivery shop per
+     branch. Started at once when a warehouse is made or its address changes;
+     the hourly run catches whatever was missed. Never changes what a person
+     set. -->
+<odoo>
+    <data noupdate="1">
+        <record id="ir_cron_delivery_autosetup" model="ir.cron">
+            <field name="name">369 Mart: delivery sets itself up</field>
+            <field name="model_id" ref="stock.model_stock_warehouse"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_mart369_auto_setup()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">hours</field>
+            <field name="active" eval="True"/>
+        </record>
+    </data>
+</odoo>

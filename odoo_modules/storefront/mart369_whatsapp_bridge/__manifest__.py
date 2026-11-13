@@ -1,6 +1,6 @@
 {
     'name': '369 Mart: WhatsApp Bridge',
-    'version': '19.0.1.8.0',
+    'version': '19.0.1.9.0',
     'category': 'Website',
     'summary': 'One shop across the website and the WhatsApp selling flow',
     'description': """

@@ -1,0 +1,248 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+<t t-name="mart369_cart.DeliverySettings">
+    <Layout display="{ controlPanel: {} }" className="'o_mart369_delivery_settings h-100'">
+        <div class="mart-builder pe dz">
+
+            <header class="pe-head">
+                <div>
+                    <h1>Delivery settings</h1>
+                    <p>Every delivery option on one page. Change what you need, then Save all.</p>
+                </div>
+            </header>
+
+            <div t-if="state.loading and !state.page" class="dz-empty">Loading the delivery settings…</div>
+            <div t-if="state.error" class="dz-banner dz-bad" t-esc="state.error"/>
+
+            <t t-if="state.page and state.draft">
+                <t t-set="page" t-value="state.page"/>
+                <t t-set="d" t-value="state.draft"/>
+
+                <!-- status -->
+                <section class="dz-card">
+                    <div class="dz-row">
+                        <div class="dz-pills">
+                            <t t-foreach="page.status.branches" t-as="b" t-key="b.id">
+                                <span t-attf-class="dz-pill dz-#{STATE_TONE[b.state]}"><i/><t t-esc="b.name"/> · <t t-esc="STATE_WORD[b.state]"/></span>
+                            </t>
+                        </div>
+                        <button class="mart-btn" t-att-disabled="state.busy" t-on-click="() => this.runSetup()">
+                            <Icon n="'check'" size="14"/> Set up automatically
+                        </button>
+                    </div>
+                    <ul t-if="todos.length" class="dz-todos">
+                        <t t-foreach="todos" t-as="c" t-key="c_index">
+                            <li>
+                                <span><b t-if="c.branch"><t t-esc="c.branch.name"/>: </b><t t-esc="c.text"/></span>
+                                <button class="dz-link" t-on-click="() => this.fix(c)">Fix</button>
+                            </li>
+                        </t>
+                    </ul>
+                    <p t-if="state.done" class="dz-done">
+                        <t t-if="state.done.length" t-esc="state.done.join(' ')"/>
+                        <t t-else="">Nothing new to fill in: everything the shop can work out is done.</t>
+                    </p>
+                </section>
+
+                <!-- explainer -->
+                <section class="dz-explain">
+                    <b>How delivery decides, with these settings</b>
+                    <ol><t t-foreach="page.explain" t-as="l" t-key="l_index"><li t-esc="l"/></t></ol>
+                    <small t-if="dirty">Save all to see this with your changes.</small>
+                </section>
+
+                <div t-if="state.banner" class="dz-banner" t-esc="state.banner"/>
+
+                <!-- how we deliver -->
+                <section class="dz-card">
+                    <h3>How we deliver</h3>
+                    <div class="dz-two">
+                        <label t-attf-class="dz-mode #{d.mode === 'one' ? 'on' : ''}">
+                            <input type="radio" name="dz_mode" t-att-checked="d.mode === 'one'" t-on-change="() => this.setVal(d, 'mode', 'one')"/>
+                            <span><b>One area</b><small>Each branch delivers near itself. Anything farther goes Express from wherever it is, with no branch-to-branch times.</small></span>
+                        </label>
+                        <label t-attf-class="dz-mode #{d.mode === 'many' ? 'on' : ''}">
+                            <input type="radio" name="dz_mode" t-att-checked="d.mode === 'many'" t-on-change="() => this.setVal(d, 'mode', 'many')"/>
+                            <span><b>Many branches</b><small>A branch that is out of stock is covered by another branch, and Between branches says how long that takes. Missing routes are worked out from the distance.</small></span>
+                        </label>
+                    </div>
+                </section>
+
+                <!-- branches -->
+                <section class="dz-card">
+                    <h3>Branches <small>A branch is a warehouse. Its pin and Quick are kept the same on its WhatsApp delivery shop.</small></h3>
+                    <div class="dz-scroll">
+                        <table class="dz-table">
+                            <thead><tr><th>Branch</th><th>Map pin</th><th>Quick</th><th class="dz-n">Quick up to</th><th class="dz-n">Quick if possible</th><th>WhatsApp shop</th><th>Riders</th></tr></thead>
+                            <tbody>
+                                <t t-foreach="d.branches" t-as="b" t-key="b.id">
+                                    <tr t-att-class="b.pin ? '' : 'dz-muted'">
+                                        <td><b t-esc="b.name"/><small class="dz-sub"><t t-esc="b.company"/><t t-if="b.auto"> · sets itself up</t></small></td>
+                                        <td><input class="dz-in dz-pin" t-model="b.pin" placeholder="no pin"/>
+                                            <small t-if="err('branches', b.id, 'pin')" class="dz-err" t-esc="err('branches', b.id, 'pin')"/></td>
+                                        <td><Switch on="b.quick" label="'Quick at ' + b.name" onChange="(v) => this.setVal(b, 'quick', v)"/></td>
+                                        <td class="dz-n"><input class="dz-in dz-num" t-model="b.quickKm"/> km
+                                            <small t-if="err('branches', b.id, 'quickKm')" class="dz-err" t-esc="err('branches', b.id, 'quickKm')"/></td>
+                                        <td class="dz-n"><input class="dz-in dz-num" t-model="b.maybeKm"/> km
+                                            <small t-if="err('branches', b.id, 'maybeKm')" class="dz-err" t-esc="err('branches', b.id, 'maybeKm')"/></td>
+                                        <td>
+                                            <span t-if="b.shop === 'auto'" class="dz-pill dz-blue"><i/>made automatically</span>
+                                            <span t-elif="b.shop === 'yours'" class="dz-pill dz-green"><i/>yes</span>
+                                            <span t-elif="b.shop === 'archived'" class="dz-pill dz-grey"><i/>archived</span>
+                                            <t t-else="">—</t>
+                                        </td>
+                                        <td>
+                                            <t t-if="b.riders === null or b.riders === undefined">—</t>
+                                            <span t-elif="!b.riders" class="dz-pill dz-amber"><i/>none</span>
+                                            <t t-else="" t-esc="b.riders"/>
+                                        </td>
+                                    </tr>
+                                </t>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="dz-hint">To pick a pin on the map, use <button class="dz-link" t-on-click="() => this.open('mart369_cart.action_mart369_delivery_desk')">Delivery › Branches</button>, or paste it here as two numbers, e.g. 25.2697, 55.3095.</p>
+                </section>
+
+                <!-- between branches -->
+                <section t-if="d.mode === 'many'" class="dz-card" id="dz-routes">
+                    <h3>Between branches <small>Row: where the product is. Column: the branch nearest the customer.</small></h3>
+                    <p t-if="page.routes.hubs.length &lt; 2" class="dz-hint">Put at least two branches on the map to use this.</p>
+                    <div t-else="" class="dz-scroll">
+                        <table class="dz-table dz-grid">
+                            <thead><tr><th/><t t-foreach="page.routes.hubs" t-as="h" t-key="h.id"><th t-esc="h.name"/></t></tr></thead>
+                            <tbody>
+                                <t t-foreach="page.routes.hubs" t-as="from" t-key="from.id">
+                                    <tr>
+                                        <th t-esc="from.name"/>
+                                        <t t-foreach="page.routes.hubs" t-as="to" t-key="to.id">
+                                            <td t-if="from.id === to.id" class="dz-self">—</td>
+                                            <td t-else="">
+                                                <t t-set="c" t-value="cell(from.id, to.id)"/>
+                                                <div class="dz-cell">
+                                                    <select t-on-change="(ev) => this.setCell(from.id, to.id, 'arrives', ev.target.value)">
+                                                        <option t-if="!c.arrives" value="" selected="selected">Not set</option>
+                                                        <t t-foreach="options(c)" t-as="o" t-key="o">
+                                                            <option t-att-value="o" t-att-selected="o === c.arrives" t-esc="o"/>
+                                                        </t>
+                                                    </select>
+                                                    <label t-if="c.arrives and c.arrives !== NONE" class="dz-cargo">
+                                                        <input type="checkbox" t-att-checked="c.cargo" t-on-change="(ev) => this.setCell(from.id, to.id, 'cargo', ev.target.checked)"/> Cargo
+                                                    </label>
+                                                    <span t-if="c.auto" class="dz-auto">auto</span>
+                                                </div>
+                                            </td>
+                                        </t>
+                                    </tr>
+                                </t>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="dz-hint"><span class="dz-auto">auto</span> worked out from the distance. Change a cell and it is yours: setting up automatically never changes it back.</p>
+                </section>
+
+                <!-- fees -->
+                <section class="dz-card" id="dz-fees">
+                    <h3>Fees</h3>
+                    <div class="dz-two">
+                        <t t-foreach="[['quick', 'Quick delivery', 'From a branch near the customer.'], ['all', 'Express delivery', 'Everything else, including from another branch.']]" t-as="m" t-key="m[0]">
+                            <t t-set="f" t-value="d.fees[m[0]]"/>
+                            <div t-if="f" class="dz-box">
+                                <div class="dz-box-h">
+                                    <Switch on="f.active" label="m[1]" onChange="(v) => this.setVal(f, 'active', v)"/>
+                                    <span><b t-esc="m[1]"/><small t-esc="m[2]"/></span>
+                                </div>
+                                <div class="dz-fields">
+                                    <label>Fee<input class="dz-in" t-model="f.fee"/><small t-if="err('fees', m[0], 'fee')" class="dz-err" t-esc="err('fees', m[0], 'fee')"/></label>
+                                    <label>Free above<input class="dz-in" t-model="f.freeAbove"/><small t-if="err('fees', m[0], 'freeAbove')" class="dz-err" t-esc="err('fees', m[0], 'freeAbove')"/></label>
+                                    <label>Minimum order<input class="dz-in" t-model="f.minOrder"/><small t-if="err('fees', m[0], 'minOrder')" class="dz-err" t-esc="err('fees', m[0], 'minOrder')"/></label>
+                                    <label class="dz-wide">Words the customer reads<input class="dz-in" t-model="f.eta"/><small t-if="err('fees', m[0], 'eta')" class="dz-err" t-esc="err('fees', m[0], 'eta')"/></label>
+                                    <label class="dz-wide">Storefront name<input class="dz-in" t-model="f.label"/><small t-if="err('fees', m[0], 'label')" class="dz-err" t-esc="err('fees', m[0], 'label')"/></label>
+                                </div>
+                                <small class="dz-note" t-if="this.isFree(f)">Free when the basket is above <t t-esc="f.freeAbove"/>.</small>
+                                <small class="dz-note" t-else="">Free above 0 means this delivery is never free.</small>
+                            </div>
+                        </t>
+                    </div>
+                </section>
+
+                <!-- slots -->
+                <section class="dz-card" id="dz-slots">
+                    <h3>Delivery slots</h3>
+                    <div class="dz-box-h">
+                        <Switch on="d.slotsOn" label="'Let customers pick a delivery slot'" onChange="(v) => this.setVal(d, 'slotsOn', v)"/>
+                        <span><b>Let customers pick a delivery slot</b>
+                            <small>Optional for the customer, on the website checkout and the WhatsApp order page. Off: everyone gets the soonest delivery.</small>
+                            <small><t t-esc="page.slots.count"/> slots<t t-if="page.slots.names.length">: <t t-esc="page.slots.names.join(' · ')"/></t> ·
+                                <button class="dz-link" t-on-click="() => this.open('mart369_cart.action_mart369_delivery_desk')">Edit slots</button></small>
+                        </span>
+                    </div>
+                </section>
+
+                <!-- whatsapp -->
+                <section t-if="d.whatsapp" class="dz-card">
+                    <h3>WhatsApp delivery</h3>
+                    <div class="dz-two">
+                        <div class="dz-box">
+                            <span class="dz-col"><b>Promise for WhatsApp orders</b><small>What the customer is told when the order is confirmed.</small></span>
+                            <div class="dz-fields">
+                                <label>Quick within (hours)<input class="dz-in" t-model="d.whatsapp.quickHours"/><small t-if="err('whatsapp', '', 'quickHours')" class="dz-err" t-esc="err('whatsapp', '', 'quickHours')"/></label>
+                                <label>If ordered before (hour, 0-23)<input class="dz-in" t-model="d.whatsapp.cutoffHour"/><small t-if="err('whatsapp', '', 'cutoffHour')" class="dz-err" t-esc="err('whatsapp', '', 'cutoffHour')"/></label>
+                                <label>Express in (days)<input class="dz-in" t-model="d.whatsapp.expressDays"/><small t-if="err('whatsapp', '', 'expressDays')" class="dz-err" t-esc="err('whatsapp', '', 'expressDays')"/></label>
+                            </div>
+                        </div>
+                        <div class="dz-box">
+                            <div class="dz-box-h">
+                                <Switch on="d.whatsapp.autoCallRider" label="'Call a rider automatically when packed'" onChange="(v) => this.setVal(d.whatsapp, 'autoCallRider', v)"/>
+                                <span><b>Call a rider automatically when packed</b><small>Off: the counter presses "Call a rider". On: the nearest free rider is asked the moment the order is packed.</small></span>
+                            </div>
+                            <div t-if="d.whatsapp.askReview !== null" class="dz-box-h">
+                                <Switch on="d.whatsapp.askReview" label="'Ask for a review after delivery'" onChange="(v) => this.setVal(d.whatsapp, 'askReview', v)"/>
+                                <span><b>Ask for a review after delivery</b><small>One line in the customer's private Delivered message, once per order.</small></span>
+                            </div>
+                            <span class="dz-col"><b>Riders</b><small><t t-esc="d.whatsapp.riders"/> rider(s), <t t-esc="d.whatsapp.onDuty"/> on duty. A rider with no branch serves every branch.
+                                <button class="dz-link" t-on-click="() => this.open('sales_automation_delivery.action_sa_delivery_partner')">Riders &amp; Couriers</button></small></span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- advanced -->
+                <details class="dz-card dz-adv">
+                    <summary>Advanced</summary>
+                    <p class="dz-hint">Service areas are only for addresses with no map pin: <t t-esc="page.areas"/> area(s).
+                        <button class="dz-link" t-on-click="() => this.open('mart369_cart.action_mart369_delivery_desk')">Service areas</button></p>
+                    <h4>A branch charges its own fees</h4>
+                    <p class="dz-hint">Only when one basket is split between branches of different companies.</p>
+                    <div class="dz-scroll">
+                        <table class="dz-table">
+                            <thead><tr><th>Branch</th><th>Own fees</th><th class="dz-n">Quick fee</th><th class="dz-n">Express fee</th><th class="dz-n">Free above</th></tr></thead>
+                            <tbody>
+                                <t t-foreach="d.branches" t-as="b" t-key="b.id">
+                                    <tr>
+                                        <td t-esc="b.name"/>
+                                        <td><Switch on="b.ownFees" label="'Own fees at ' + b.name" onChange="(v) => this.setVal(b, 'ownFees', v)"/></td>
+                                        <td class="dz-n"><input class="dz-in dz-num" t-model="b.quickFee" t-att-disabled="!b.ownFees"/><small t-if="err('branches', b.id, 'quickFee')" class="dz-err" t-esc="err('branches', b.id, 'quickFee')"/></td>
+                                        <td class="dz-n"><input class="dz-in dz-num" t-model="b.expressFee" t-att-disabled="!b.ownFees"/><small t-if="err('branches', b.id, 'expressFee')" class="dz-err" t-esc="err('branches', b.id, 'expressFee')"/></td>
+                                        <td class="dz-n"><input class="dz-in dz-num" t-model="b.freeAbove" t-att-disabled="!b.ownFees"/><small t-if="err('branches', b.id, 'freeAbove')" class="dz-err" t-esc="err('branches', b.id, 'freeAbove')"/></td>
+                                    </tr>
+                                </t>
+                            </tbody>
+                        </table>
+                    </div>
+                </details>
+
+                <!-- save bar -->
+                <div t-attf-class="dz-savebar #{dirty ? 'on' : ''}">
+                    <span t-if="dirty">Unsaved changes</span><span t-else="">All saved</span>
+                    <button class="mart-btn" t-att-disabled="!dirty or state.busy" t-on-click="() => this.discard()">Discard</button>
+                    <button class="mart-btn mart-btn-primary" t-att-disabled="!dirty or state.busy" t-on-click="() => this.save()">
+                        <t t-if="state.busy">Saving…</t><t t-else="">Save all</t>
+                    </button>
+                </div>
+            </t>
+        </div>
+    </Layout>
+</t>
+
+</templates>

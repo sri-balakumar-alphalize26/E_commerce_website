@@ -875,3 +875,57 @@ class Mart369DeliveryAdminApi(Mart369CouponAdminApi):
         except (AccessError, UserError, ValidationError) as exc:
             return self._fail(str(exc))
         return self._json(dict(status, ok=True))
+
+    # ------------------------------------------------------------- setup
+
+    @http.route('/369mart/admin/delivery/setup', **_GET)
+    def delivery_setup(self, **kwargs):
+        """The checklist: every branch, what is set up and what is left
+        (models/delivery_autosetup.py)."""
+        return self._setup('mart369_setup_status')
+
+    @http.route('/369mart/admin/delivery/setup/run', **_POST)
+    def delivery_setup_run(self, **kwargs):
+        """"Set up automatically now": the hourly job at once, then the
+        checklist, with `done` saying what it filled in."""
+        return self._setup('mart369_setup_run')
+
+    def _setup(self, method):
+        if not self._may_edit():
+            return self._fail('You do not have access to this.', status=403)
+        try:
+            with request.env.cr.savepoint():
+                status = getattr(request.env['stock.warehouse'], method)()
+        except (AccessError, UserError, ValidationError) as exc:
+            return self._fail(str(exc))
+        return self._json(dict(status, ok=True))
+
+    # ----------------------------------------------------- one-page settings
+
+    @http.route('/369mart/admin/delivery/settings', **_GET)
+    def delivery_settings(self, **kwargs):
+        """Every delivery option on one page (models/delivery_settings.py)."""
+        if not self._may_edit():
+            return self._fail('You do not have access to this.', status=403)
+        try:
+            page = request.env['mart369.delivery.settings.page'].mart369_settings_get()
+        except (AccessError, UserError) as exc:
+            return self._fail(str(exc), status=403)
+        return self._json(dict(page, ok=True))
+
+    @http.route('/369mart/admin/delivery/settings', **_POST)
+    def delivery_settings_save(self, **kwargs):
+        """Save all: every value is checked first; nothing is written unless
+        all of them are right. Wrong values come back as `errors`, each with
+        the section, row and field the page shows it under."""
+        if not self._may_edit():
+            return self._fail('You do not have access to this.', status=403)
+        try:
+            result = request.env['mart369.delivery.settings.page'].mart369_settings_save(self._body())
+        except (AccessError, UserError) as exc:
+            return self._fail(str(exc), status=403)
+        if not result.get('ok'):
+            first = (result.get('errors') or [{}])[0]
+            return self._json({'ok': False, 'error': first.get('message') or 'Not saved.',
+                               'errors': result.get('errors') or []}, status=400)
+        return self._json(dict(result['page'], ok=True))

@@ -9,3 +9,5 @@ from . import hub_rule
 from . import hub_stock
 from . import postcode
 from . import res_company
+from . import delivery_autosetup
+from . import delivery_settings
