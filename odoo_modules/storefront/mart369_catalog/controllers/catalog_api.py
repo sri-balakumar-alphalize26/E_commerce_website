@@ -305,7 +305,15 @@ class Mart369CatalogApi(http.Controller):
             return (was - price) / was if was > price > 0 else 0.0
 
         deals = deals.sorted(key=saving, reverse=True)[:BROWSE_LIMIT]
-        payload = {'deals': self._cards(deals)}
+        payload = {'deals': self._cards(deals), 'endsAt': None}
+        # What the page's timer counts down to: the first real deal end among
+        # the products shown. None when nothing shown has one (hand-priced
+        # products and open-ended deals), and the page then shows no timer.
+        # UTC with a Z, so the browser does not read it as its own local time.
+        if 'mart369.deal' in request.env:
+            end = request.env['mart369.deal'].sudo()._mart369_soonest_end(deals.ids)
+            if end:
+                payload['endsAt'] = end.strftime('%Y-%m-%dT%H:%M:%SZ')
         # The cart module owns coupons; offers only borrows them to show. Same
         # live-window filter /369mart/cart/rules uses, so the two never disagree.
         if 'mart369.coupon' in request.env:
