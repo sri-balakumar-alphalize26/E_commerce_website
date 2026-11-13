@@ -141,7 +141,7 @@ export function useProductFilters(items) {
     items.forEach((p) => {
       brands[p.brand] = (brands[p.brand] || 0) + 1;
       min = Math.min(min, p.price); max = Math.max(max, p.price);
-      hasQuick = hasQuick || !p.delivery; hasExpress = hasExpress || !!p.delivery;
+      hasQuick = hasQuick || (!p.delivery && p.stock !== 0); hasExpress = hasExpress || !!p.delivery;
     });
     if (!items.length) { min = 0; max = 0; }
     return { brands: Object.entries(brands).sort((a, b) => b[1] - a[1]), min, max, hasQuick, hasExpress };
@@ -166,7 +166,8 @@ export function useProductFilters(items) {
       p.price >= f.price[0] && p.price <= f.price[1] &&
       p.off >= f.discount && p.rating >= f.rating &&
       (!f.inStock || p.stock !== 0) &&
-      (f.delivery === "any" || (f.delivery === "quick" ? !p.delivery : !!p.delivery)));
+      /* nothing in stock is never Quick */
+      (f.delivery === "any" || (f.delivery === "quick" ? !p.delivery && p.stock !== 0 : !!p.delivery)));
     const by = {
       popular: (a, b) => b.popularity - a.popularity,
       "price-asc": (a, b) => a.price - b.price,

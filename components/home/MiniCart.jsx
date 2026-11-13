@@ -36,7 +36,7 @@ function Row({ p, qty, setQty, i, onOpen }) {
       <div>
         <button className="mc-row-img" onClick={() => onOpen(p)} aria-label={`Open ${p.name}`}><Thumb p={p} /></button>
         <div className="mc-row-txt">
-          <small>{p.delivery ? "Express" : "Quick"} · {p.unit}</small>
+          <small>{p.delivery ? "Express · " : p.stock === 0 ? "" : "Quick · "}{p.unit}</small>
           <b>{p.name}</b>
         </div>
         <div className="mc-step" role="group" aria-label={`${p.name} quantity`}>

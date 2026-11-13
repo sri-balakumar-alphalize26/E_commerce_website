@@ -397,12 +397,14 @@ export function ProductCard({ p, qty, setQty, i }) {
         </div>
         <div className="hm-meta">
           <span className="hm-modes">
-            {!ready ? <span className="hm-wait hm-wait-mode" aria-label="Checking delivery" /> : express
+            {/* Out of stock: never Quick - only the product's own Express promise, if it has one. */}
+            {oos ? (p.delivery ? <span className="hm-quick hm-ship"><Icon n="truck" size={12} />{p.delivery}</span> : null)
+              : !ready ? <span className="hm-wait hm-wait-mode" aria-label="Checking delivery" /> : express
               ? <span className="hm-quick hm-ship" title={badge?.maybe ? "May come today, when a rider is free" : undefined}>
                   <Icon n="truck" size={12} />{p.delivery || badge?.when || "Express"}
                 </span>
               : <span className="hm-quick"><Icon n="bolt" size={11} className="hm-fill" />{badge?.when ? `Quick · ${badge.when}` : "Quick"}</span>}
-            {badge?.cargo && <span className="hm-cargo">Cargo</span>}
+            {badge?.cargo && !oos && <span className="hm-cargo">Cargo</span>}
           </span>
           {p.low ? <span className="hm-low">Only {p.low} left</span> : null}
         </div>

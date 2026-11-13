@@ -10,7 +10,7 @@
     "demo:build": "node scripts/demo.mjs build",
     "demo:start": "node scripts/demo.mjs start",
     "lint": "next lint",
-    "test:unit": "node --test tests/unit/riderPath.test.mjs tests/unit/trackMapWa.test.mjs",
+    "test:unit": "node --test tests/unit/riderPath.test.mjs tests/unit/trackMapWa.test.mjs tests/unit/deliveryLine.test.mjs",
     "test:e2e": "playwright test"
   },
   "engines": {

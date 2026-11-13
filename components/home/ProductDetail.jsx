@@ -499,15 +499,14 @@ function KeyDetails({ rows }) {
    Quick / Express promise), then the shop's words for returns, warranty, cash
    on delivery and secure payment (mart369_product `trust`). */
 const TRUST_ICON = { returns: "reorder", warranty: "check", cod: "wallet", secure: "lock" };
-function TrustBadges({ p, quick, badges, line, waiting = false }) {
+function TrustBadges({ quick, badges, line, waiting = false }) {
   return (
     <ul className="pd-trust" aria-label="Why buy here">
       {waiting ? (
         <li aria-label="Checking delivery"><span><Icon n="truck" size={16} /></span><span className="hm-wait hm-wait-mode" /></li>
-      ) : (
-        <li><span><Icon n={quick ? "bolt" : "truck"} size={16} className={quick ? "hm-fill" : ""} /></span>
-          {line || (quick ? "Quick · 10–20 mins" : p.delivery ? `Express · ${p.delivery}` : "Express")}</li>
-      )}
+      ) : line ? (
+        <li><span><Icon n={quick ? "bolt" : "truck"} size={16} className={quick ? "hm-fill" : ""} /></span>{line}</li>
+      ) : null}
       {(badges || []).map((b) => (
         <li key={b.key}><span><Icon n={TRUST_ICON[b.key] || "check"} size={16} /></span>{b.text}</li>
       ))}
@@ -550,7 +549,7 @@ function CompareTable({ p, details, rating, ratingCount, others, cart, setQty })
           <tbody>
             <tr><th scope="row">Price</th>{cols.map((c) => <td key={c.card.id} className={c.me ? "pd-compare-me" : ""}><b>{money(c.card.price)}</b></td>)}</tr>
             <tr><th scope="row">Rating</th>{cols.map((c) => <td key={c.card.id} className={c.me ? "pd-compare-me" : ""}>{c.rating != null ? <>★ {Number(c.rating).toFixed(1)} <small>({c.ratingCount})</small></> : "—"}</td>)}</tr>
-            <tr><th scope="row">Delivery</th>{cols.map((c) => <td key={c.card.id} className={c.me ? "pd-compare-me" : ""}>{c.card.delivery ? `Express · ${c.card.delivery}` : "Quick · 10–20 mins"}</td>)}</tr>
+            <tr><th scope="row">Delivery</th>{cols.map((c) => <td key={c.card.id} className={c.me ? "pd-compare-me" : ""}>{deliveryLine(c.card) || "—"}</td>)}</tr>
             {shown.map((k) => (
               <tr key={k}><th scope="row">{k}</th>{cols.map((c) => <td key={c.card.id} className={c.me ? "pd-compare-me" : ""}>{valueOf(c, k)}</td>)}</tr>
             ))}
@@ -719,6 +718,9 @@ export default function ProductDetail({
   const badgeReady = asked.ready || !!held;
   const sellersRoom = useSellersShown();
   const quick = modeOf(p, badge) === "quick";
+  /* "" when out of stock with no Express promise of its own: no delivery line. */
+  const line = deliveryLine(p, badge);
+  const lineReady = badgeReady || oos;
   /* How many to add, before any are in the basket: 1 up to 12, or what is
      left when only a few are. */
   const maxQty = Math.max(1, Math.min(12, p.low || 12));
@@ -758,12 +760,12 @@ export default function ProductDetail({
           <div className="pd-card pd-buy">
             <div className="pd-row pd-crumbs">
               <button className="pd-back" onClick={onBack}><Icon n="left" size={16} />Back</button>
-              {badgeReady ? (
+              {lineReady ? (line ? (
                 <span className={"pd-mode " + (quick ? "pd-quick" : "pd-express")}>
-                  <Icon n={quick ? "bolt" : "truck"} size={12} className={quick ? "hm-fill" : ""} />{deliveryLine(p, badge)}
+                  <Icon n={quick ? "bolt" : "truck"} size={12} className={quick ? "hm-fill" : ""} />{line}
                 </span>
-              ) : <span className="pd-mode pd-mode-wait" aria-label="Checking delivery" />}
-              {badge?.cargo ? <span className="pd-cargo">Cargo</span> : null}
+              ) : null) : <span className="pd-mode pd-mode-wait" aria-label="Checking delivery" />}
+              {badge?.cargo && !oos ? <span className="pd-cargo">Cargo</span> : null}
               <span className="pd-actions">
                 <button className={"pd-round" + (liked ? " pd-liked" : "")} onClick={() => wish?.toggle(ownId)} aria-pressed={!!liked} aria-label={liked ? "Remove from My List" : "Save to My List"}>
                   <Icon n={liked ? "heartFill" : "heart"} size={18} />
@@ -807,7 +809,7 @@ export default function ProductDetail({
               ? <p className="pd-var-wait">Couldn't load the options. <button className="pd-link" onClick={onRetryOptions}>Try again</button></p>
               : <p className="pd-var-wait">Loading the options…</p>)}
 
-            <TrustBadges p={p} quick={quick} badges={trust} line={deliveryLine(p, badge)} waiting={!badgeReady} />
+            <TrustBadges quick={quick} badges={trust} line={line} waiting={!lineReady} />
 
             <div className="pd-cta">
               {oos ? (
@@ -940,7 +942,11 @@ export default function ProductDetail({
               <span className="pd-addr-txt">
                 <b>{address ? address.label : "Add a delivery address"}</b>
                 <small>{address ? addressText(address) : "See delivery time and charges for your area"}</small>
-                <em className={quick ? "pd-quick" : "pd-express"}><Icon n={quick ? "bolt" : "truck"} size={11} className={quick ? "hm-fill" : ""} />{quick ? "Quick delivery in 10–20 mins" : `Express delivery in ${p.delivery}`}</em>
+                {line ? (
+                  <em className={quick ? "pd-quick" : "pd-express"}><Icon n={quick ? "bolt" : "truck"} size={11} className={quick ? "hm-fill" : ""} />
+                    {quick ? `Quick delivery in ${badge?.when || "10–20 mins"}`
+                      : (p.delivery || badge?.when) ? `Express delivery in ${p.delivery || badge?.when}` : "Express delivery"}</em>
+                ) : null}
               </span>
               <Icon n="right" size={18} />
             </button>

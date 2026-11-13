@@ -278,7 +278,7 @@ export default function SearchOverlay({ open, onClose, products, picks, cart, se
                     <span className="sr-row-img"><Thumb p={p} /></span>
                     <span className="sr-row-txt">
                       <b><Highlight text={p.name} q={term} /></b>
-                      <small>{p.unit}{p.delivery ? ` · ${p.delivery}` : " · Quick"}{p.stock === 0 ? " · out of stock" : ""}</small>
+                      <small>{p.unit}{p.delivery ? ` · ${p.delivery}` : p.stock === 0 ? "" : " · Quick"}{p.stock === 0 ? " · out of stock" : ""}</small>
                     </span>
                     <span className="sr-row-price">{money(p.price)}</span>
                     {p.stock === 0 ? <span className="sr-sold">Sold out</span> : <QtyControl qty={cart[p.id] || 0} id={p.id} name={p.name} onChange={(n) => { remember(term); setQty(p.id, n); }} />}
