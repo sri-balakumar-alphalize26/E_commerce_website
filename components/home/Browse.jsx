@@ -849,25 +849,47 @@ export function SearchResults({ q, cart, setQty, mode = "quick" }) {
 }
 
 /* ---------------- offers ---------------- */
-function useCountdown() {
+/* Counts down to `endsAt`, the first real deal end the shop sent (UTC). No
+   end means no timer: a clock running to a made-up midnight tells a shopper
+   to hurry for a deadline that does not exist. `onEnd` fires once at zero. */
+function useCountdown(endsAt, onEnd) {
   const [now, setNow] = useState(null); /* null on the server render, so hydration matches */
-  useEffect(() => { setNow(Date.now()); const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
-  if (now === null) return ["--", "--", "--"];
-  const end = new Date(now); end.setHours(23, 59, 59, 999);
-  const s = Math.max(0, Math.floor((end - now) / 1000));
-  return [Math.floor(s / 3600), Math.floor((s % 3600) / 60), s % 60].map((n) => String(n).padStart(2, "0"));
+  const end = endsAt ? Date.parse(endsAt) : NaN;
+  const fired = useRef(null);
+  useEffect(() => {
+    if (Number.isNaN(end)) return undefined;
+    setNow(Date.now());
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [end]);
+  const left = now === null || Number.isNaN(end) ? null : Math.max(0, Math.floor((end - now) / 1000));
+  useEffect(() => {
+    if (left === 0 && fired.current !== end) { fired.current = end; onEnd?.(); }
+  }, [left, end]); // eslint-disable-line
+  if (Number.isNaN(end)) return null;
+  if (left === null) return [["--", "hrs"], ["--", "min"], ["--", "sec"]];
+  const pad = (n) => String(n).padStart(2, "0");
+  const d = Math.floor(left / 86400), h = Math.floor((left % 86400) / 3600), m = Math.floor((left % 3600) / 60);
+  return d > 0
+    ? [[String(d), d === 1 ? "day" : "days"], [pad(h), "hrs"], [pad(m), "min"]]
+    : [[pad(h), "hrs"], [pad(m), "min"], [pad(left % 60), "sec"]];
 }
 
 export function OffersPage({ cart, setQty }) {
-  const [h, m, s] = useCountdown();
+  const nav = useContext(NavContext);
   const [min, setMin] = useState(0);
   const [copied, setCopied] = useState("");
   /* Deriving this from the browsed store would show a shopper only the deals
      they had already walked past. The shop knows them all. */
-  const { data, loading: fetching } = useResource("/offers");
+  const { data, loading: fetching, reload } = useResource("/offers");
   const { coupons } = useRules();
   const deals = useMemo(() => cards(data?.deals), [data]);
   useEffect(() => { if (deals.length) absorb(deals); }, [deals]);
+  /* At zero the deal has ended: ask again (a beat late, so the shop's clock
+     has passed the edge too) and the ended products drop off the page. */
+  const timer = useCountdown(data?.endsAt, () => setTimeout(reload, 1500));
+  const loading = fetching && !data;
+  const best = deals[0]?.off || 0;
   const shown = deals.filter((p) => p.off >= min);
   const copy = async (code) => {
     try { await navigator.clipboard.writeText(code); } catch (e) { /* clipboard blocked: still show the state */ }
@@ -879,44 +901,68 @@ export function OffersPage({ cart, setQty }) {
       <header className="of-hero">
         <div>
           <span className="of-kicker"><Icon n="pct" size={14} />Deals of the day</span>
-          <h1>Up to {deals[0]?.off || 0}% off across 369 Mart</h1>
-          <p>Prices reset at midnight.</p>
+          <h1>{best > 0 ? `Up to ${best}% off across 369 Mart` : "Today's deals at 369 Mart"}</h1>
+          <p>{timer ? "These deals end soon." : "Fresh deals, picked for you."}</p>
         </div>
-        <div className="of-timer" aria-label={`Ends in ${h} hours ${m} minutes`}>
-          {[[h, "hrs"], [m, "min"], [s, "sec"]].map(([v, l], k) => (
-            <span key={l} className="of-cell"><b key={v}>{v}</b><small>{l}</small></span>
-          ))}
-        </div>
+        {timer && (
+          <div className="of-timer" aria-label={"Ends in " + timer.map(([v, l]) => `${v} ${l}`).join(" ")}>
+            {timer.map(([v, l]) => (
+              <span key={l} className="of-cell"><b key={v}>{v}</b><small>{l}</small></span>
+            ))}
+          </div>
+        )}
       </header>
 
-      <section className="of-coupons" aria-label="Coupons">
-        <h2>Coupons for you</h2>
-        <div className="of-coupon-row">
-          {coupons.map((c, k) => (
-            <article key={c.code} className="of-coupon" style={{ "--k": k }}>
-              <div className="of-coupon-l"><Icon n="ticket" size={22} /></div>
-              <div className="of-coupon-r">
-                <b>{c.title}</b>
-                <small>{c.note}</small>
-                <button className={copied === c.code ? "of-copied" : ""} onClick={() => copy(c.code)}>
-                  <span>{c.code}</span><em>{copied === c.code ? <><Icon n="check" size={12} />Copied</> : "Copy"}</em>
-                </button>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
+      {coupons.length > 0 && (
+        <section className="of-coupons" aria-label="Coupons">
+          <h2>Coupons for you</h2>
+          <div className="of-coupon-row">
+            {coupons.map((c, k) => (
+              <article key={c.code} className="of-coupon" style={{ "--k": k }}>
+                <div className="of-coupon-l"><Icon n="ticket" size={22} /></div>
+                <div className="of-coupon-r">
+                  <b>{c.title}</b>
+                  <small>{c.note}</small>
+                  <button className={copied === c.code ? "of-copied" : ""} onClick={() => copy(c.code)}>
+                    <span>{c.code}</span><em>{copied === c.code ? <><Icon n="check" size={12} />Copied</> : "Copy"}</em>
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="of-deals">
         <div className="of-deals-head">
           <h2>Top deals</h2>
-          <div className="ls-pills">
-            {[0, 20, 30, 40].map((d) => <button key={d} className={min === d ? "ls-on" : ""} onClick={() => setMin(d)}>{d ? `${d}%+ off` : "All deals"}</button>)}
+          {deals.length > 0 && (
+            <div className="ls-pills">
+              {[0, 20, 30, 40].map((d) => <button key={d} className={min === d ? "ls-on" : ""} onClick={() => setMin(d)}>{d ? `${d}%+ off` : "All deals"}</button>)}
+            </div>
+          )}
+        </div>
+        {loading ? (
+          <div className="ls-grid">{Array.from({ length: 8 }, (_, k) => <SkeletonCard key={k} i={k} />)}</div>
+        ) : !deals.length ? (
+          <div className="ls-empty">
+            <span className="ls-empty-art"><ProductArt art="Basket" /></span>
+            <h3>No deals right now</h3>
+            <p>Check back soon. New offers drop regularly.</p>
+            <button className="ls-primary" onClick={() => nav("home")}>Start shopping</button>
           </div>
-        </div>
-        <div className="ls-grid" key={min}>
-          {shown.map((p, i) => <ProductCard key={p.id} p={p} i={i % 12} qty={cart[p.id] || 0} setQty={setQty} />)}
-        </div>
+        ) : !shown.length ? (
+          <div className="ls-empty">
+            <span className="ls-empty-art"><ProductArt art="Basket" /></span>
+            <h3>No deals at {min}%+ off right now</h3>
+            <p>There are {deals.length} smaller {deals.length === 1 ? "deal" : "deals"} on today.</p>
+            <button className="ls-primary" onClick={() => setMin(0)}>Show all deals</button>
+          </div>
+        ) : (
+          <div className="ls-grid" key={min}>
+            {shown.map((p, i) => <ProductCard key={p.id} p={p} i={i % 12} qty={cart[p.id] || 0} setQty={setQty} />)}
+          </div>
+        )}
       </section>
     </div>
   );
