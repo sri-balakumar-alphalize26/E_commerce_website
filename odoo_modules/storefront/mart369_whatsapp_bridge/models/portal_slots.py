@@ -75,8 +75,29 @@ class SaleOrderPortalSlots(models.Model):
             return out
         # No slot fee on these orders (owner): the chips carry none.
         out['chips'] = [{k: c.get(k) for k in ('key', 'top', 'sub', 'label')} for c in chips if c.get('key')]
-        out['chosen'] = o.mart369_slot_key or '' if 'mart369_slot_key' in o._fields else ''
+        chosen = (o.mart369_slot_key or '') if 'mart369_slot_key' in o._fields else ''
+        if chosen and chosen not in {c['key'] for c in out['chips']}:
+            # The slot saved on the order is not offered any more - closed for
+            # today, full, a past day, or a key from the other slot list (an
+            # order placed on the website before Quick / Express came in).
+            # Highlighting nothing looked broken (S00008, 13 Nov 2026); keeping
+            # it would promise a slot that cannot happen. So it goes, and the
+            # card says which one.
+            label = o.mart369_slot_label or chosen
+            out['stale'] = _('Your earlier slot "%s" is no longer available. '
+                             'Pick another, or leave it as no preference.', label)
+            o._sa_slot_clear()
+            chosen = ''
+        out['chosen'] = chosen
         return out
+
+    def _sa_slot_clear(self):
+        self.ensure_one()
+        clear = {'mart369_slot_key': False, 'mart369_slot_label': False,
+                 'mart369_slot_day': False, 'mart369_due_at': False}
+        if qe_on(self.env) and 'qe_slot_id' in self._fields:
+            clear['qe_slot_id'] = False
+        self.sudo().write(clear)
 
     def _sa_portal_set_slot(self, key):
         self.ensure_one()
@@ -84,12 +105,8 @@ class SaleOrderPortalSlots(models.Model):
         if not o._sa_slot_open():
             return _("This order can no longer change its delivery slot.")
         key = (key or '').strip()
-        clear = {'mart369_slot_key': False, 'mart369_slot_label': False,
-                 'mart369_slot_day': False, 'mart369_due_at': False}
-        if qe_on(self.env) and 'qe_slot_id' in o._fields:
-            clear['qe_slot_id'] = False
         if not key:
-            o.write(clear)
+            o._sa_slot_clear()
             return ''
         if key not in {c['key'] for c in o._sa_portal_slots()['chips']}:
             return _("That delivery slot is not available any more. Please pick another.")

@@ -98,6 +98,7 @@
                         <section t-if="sa_slots['chips']" class="sa-card sa-slot" id="sa_slot">
                             <h2 class="sa-ct">Delivery slot <small>optional</small></h2>
                             <p t-if="request.params.get('slot_error')" class="sa-note" t-out="request.params.get('slot_error')"/>
+                            <p t-if="sa_slots.get('stale')" class="sa-note" t-out="sa_slots.get('stale')"/>
                             <form method="post" class="sa-slot-chips" t-attf-action="/my/orders/#{sale_order.id}/slot">
                                 <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
                                 <input type="hidden" name="access_token" t-att-value="sale_order.access_token"/>

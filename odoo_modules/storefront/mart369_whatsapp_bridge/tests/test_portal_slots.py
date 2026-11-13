@@ -57,6 +57,17 @@ class TestPortalSlots(TransactionCase):
         self.assertEqual(self.order._sa_portal_set_slot(''), '')
         self.assertFalse(self.order.mart369_slot_key)
 
+    def test_a_saved_slot_no_longer_offered_is_cleared_and_said(self):
+        """S00008 (13 Nov 2026): saved "now" from the website, not on today's
+        list - the card highlighted nothing, not even No preference."""
+        self.order.write({'mart369_slot_key': 'zz_gone', 'mart369_slot_label': 'Arriving in 10-20 mins'})
+        data = self.order._sa_portal_slots()
+        self.assertEqual(data['chosen'], '', "No preference is the one highlighted.")
+        self.assertIn('Arriving in 10-20 mins', data['stale'])
+        self.assertFalse(self.order.mart369_slot_key, "The old slot no longer promises anything.")
+        self.assertFalse(self.order.mart369_slot_label)
+        self.assertNotIn('stale', self.order._sa_portal_slots())
+
     def test_an_unknown_slot_is_refused(self):
         self.assertTrue(self.order._sa_portal_set_slot('nope'))
         self.assertFalse(self.order.mart369_slot_key)

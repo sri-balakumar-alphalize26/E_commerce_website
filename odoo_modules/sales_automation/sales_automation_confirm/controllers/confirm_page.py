@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """The product confirmation page, laid out like the 369 Mart product page
-(13 Nov 2026, design 1): photos, name, price, Reject / Yes - pinned to the
+(13 Nov 2026, design 1): photos, name, price, REJECT / ACCEPT - pinned to the
 bottom of a phone screen - then the details. Public route; the token in the link is the whole credential
 and is compared in constant time. Every open and press is logged.
 
@@ -412,7 +412,8 @@ class SaConfirmPage(http.Controller):
         else:
             # saving() greys both buttons after the first press: a second tap
             # would send the answer again while the first is still saving.
-            yes = 'Yes, this is it' if link.kind == 'customer' else 'Accept'
+            # The same words the chat and the manual use: "tap ✔ ACCEPT".
+            yes = '&#10004; ACCEPT'
             # The pressed button spins while it saves, the other one fades back.
             bar = ('<div class="bar"><script>function saving(f){if(window.__sent)return false;window.__sent=true;'
                    'var me=f.querySelector(".btn");document.querySelectorAll(".btn").forEach(function(b){'
@@ -420,7 +421,7 @@ class SaConfirmPage(http.Controller):
                    'me.innerHTML="Saving&hellip;";return true}</script>'
                    '<div class="acts">'
                    '<form class="f-no" method="post" action="/wa/confirm/%(t)s/reject" onsubmit="return confirm(\'Reject this product?\') &amp;&amp; saving(this)">'
-                   '<button class="btn no" type="submit">Reject%(r)s</button></form>'
+                   '<button class="btn no" type="submit">&#10008; REJECT%(r)s</button></form>'
                    '<form class="f-ok" method="post" action="/wa/confirm/%(t)s/accept" onsubmit="return saving(this)">'
                    '<button class="btn ok" type="submit">%(y)s%(a)s</button></form></div>'
                    '<div class="foot">One answer only - the first tap is final.%(o)s</div></div>'
