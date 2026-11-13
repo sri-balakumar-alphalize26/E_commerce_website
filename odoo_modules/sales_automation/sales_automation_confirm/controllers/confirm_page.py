@@ -43,6 +43,14 @@ _PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8">
  .picbox{height:min(360px,78vw);border-radius:18px;background:#fff;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
  .pic{width:100%%;height:100%%;object-fit:contain;display:block;cursor:zoom-in}
  .zoom{position:absolute;right:10px;bottom:10px;font-size:12px;font-weight:600;color:#3d4c58;background:#fff;border:1px solid #e3e9ee;border-radius:999px;padding:5px 10px;pointer-events:none}
+ .zoom .zh-hover{display:none}
+ /* Hover zoom, like the storefront product page: a lens on the picture and a
+    magnified pane over the right-hand column. Mouse only, 860 px and wider. */
+ .media{position:relative}
+ .lens{position:absolute;display:none;pointer-events:none;border-radius:8px;background:rgba(10,120,171,.12);border:1.5px solid rgba(10,120,171,.55);box-shadow:0 0 0 9999px rgba(255,255,255,.35)}
+ .zp{display:none;position:absolute;top:0;left:calc(100%% + 20px);width:440px;height:440px;z-index:7;background:#fff no-repeat;border:1px solid var(--line);border-radius:20px;box-shadow:0 24px 50px -24px rgba(19,33,43,.45);pointer-events:none}
+ @media(hover:hover) and (pointer:fine) and (min-width:860px){.zoom .zh-touch{display:none}.zoom .zh-hover{display:inline}}
+ @media(max-width:859px){.lens,.zp{display:none !important}}
  .gal{display:flex;gap:8px;margin-top:10px;overflow-x:auto;padding-bottom:2px}
  .gal img{flex:0 0 64px;width:64px;height:64px;object-fit:contain;border-radius:12px;border:1.5px solid var(--line);cursor:pointer;background:#fff}
  .gal img.on{border-color:var(--blue)}
@@ -127,6 +135,27 @@ function show(i){var m=document.getElementById('main');if(!m)return;m.src='/wa/c
 document.querySelectorAll('.gal img').forEach(function(t){t.classList.toggle('on',t.dataset.i==i)})}
 function openOv(){var m=document.getElementById('main');if(!m)return;var o=document.getElementById('ovimg');o.classList.remove('z');o.src=m.src;document.getElementById('ov').style.display='flex'}
 function closeOv(){document.getElementById('ov').style.display='none'}
+(function(){
+ var fine=window.matchMedia&&matchMedia('(hover: hover) and (pointer: fine)').matches;
+ var m=document.getElementById('main'),lens=document.getElementById('lens'),zp=document.getElementById('zp');
+ if(!fine||!m||!lens||!zp)return;
+ var box=m.parentNode,Z=2.6;
+ function hide(){lens.style.display='none';zp.style.display='none'}
+ box.addEventListener('mouseleave',hide);
+ box.addEventListener('mousemove',function(e){
+  if(window.innerWidth<860||!m.naturalWidth){hide();return}
+  var b=box.getBoundingClientRect(),s=Math.min(b.width/m.naturalWidth,b.height/m.naturalHeight);
+  var w=m.naturalWidth*s,h=m.naturalHeight*s,x=b.left+(b.width-w)/2,y=b.top+(b.height-h)/2;
+  if(e.clientX<x||e.clientX>x+w||e.clientY<y||e.clientY>y+h){hide();return}
+  zp.style.display='block';lens.style.display='block';
+  var pw=zp.clientWidth,ph=zp.clientHeight,lw=Math.min(pw/Z,w),lh=Math.min(ph/Z,h);
+  var lx=Math.min(Math.max(e.clientX-lw/2,x),x+w-lw),ly=Math.min(Math.max(e.clientY-lh/2,y),y+h-lh);
+  lens.style.left=(lx-b.left)+'px';lens.style.top=(ly-b.top)+'px';lens.style.width=lw+'px';lens.style.height=lh+'px';
+  zp.style.backgroundImage='url("'+(m.currentSrc||m.src)+'")';
+  zp.style.backgroundSize=(w*Z)+'px '+(h*Z)+'px';
+  zp.style.backgroundPosition=(lw<w?-(lx-x)*Z:(pw-w*Z)/2)+'px '+(lh<h?-(ly-y)*Z:(ph-h*Z)/2)+'px';
+ });
+})();
 </script></body></html>"""
 
 
@@ -245,8 +274,10 @@ class SaConfirmPage(http.Controller):
         pictures = link._picture_items()
         if pictures:
             media = ('<div class="picbox"><img class="pic" id="main" data-t="%s" data-i="0" src="/wa/confirm/%s/image/0" alt="%s" onclick="openOv()">'
-                     '<span class="zoom">Tap to zoom%s</span></div>'
-                     % (link.token, link.token, html.escape(product.name or ''), zh('点击放大')))
+                     '<span class="lens" id="lens"></span>'
+                     '<span class="zoom"><span class="zh-touch">Tap to zoom%s</span><span class="zh-hover">Hover to zoom · click for full screen%s</span></span></div>'
+                     '<div class="zp" id="zp" aria-hidden="true"></div>'
+                     % (link.token, link.token, html.escape(product.name or ''), zh('点击放大'), zh('悬停放大')))
             if len(pictures) > 1:
                 media += '<div class="gal">' + ''.join(
                     '<img src="/wa/confirm/%s/image/%d" data-i="%d" class="%s" onclick="show(%d)" alt="">'
