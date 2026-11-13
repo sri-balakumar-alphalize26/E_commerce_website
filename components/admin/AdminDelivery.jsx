@@ -43,6 +43,7 @@ import PinPicker from "@/components/home/PinPicker";
 const SHOPPER_FEEDS = ["/cart/rules", "/slots", "/serviceability"];
 
 const TABS = [
+  ["settings", "Settings"],
   ["fees", "Fees"],
   ["slots", "Slots"],
   ["areas", "Service areas"],
@@ -190,6 +191,327 @@ function Field({ label, value, onChange, placeholder, suffix, wide, decimal }) {
         {suffix && <em>{suffix}</em>}
       </span>
     </label>
+  );
+}
+
+/* ============================ settings page ============================= */
+/* Every delivery option on one page, saved with one Save (13 Nov 2026). The
+   shop asked for it after hub rules, branches, shops and settings across six
+   screens "made us collapse". The same page is in Odoo (369 Mart › Store ›
+   Delivery settings); both read and save `mart369.delivery.settings.page`, so
+   they cannot disagree. Save is all or nothing: a wrong value comes back
+   under its field and nothing is written. */
+const ROUTE_NONE = "Not delivered";
+
+const asText = (v) => (v === null || v === undefined ? "" : String(v));
+
+function draftOf(page) {
+  if (!page) return null;
+  const cells = {};
+  (page.routes?.cells || []).forEach((c) => { cells[`${c.from}-${c.to}`] = { ...c }; });
+  return {
+    mode: page.mode,
+    branches: (page.branches || []).map((b) => ({ ...b, quickKm: asText(b.quickKm), maybeKm: asText(b.maybeKm),
+      quickFee: asText(b.quickFee), expressFee: asText(b.expressFee), freeAbove: asText(b.freeAbove) })),
+    cells,
+    fees: Object.fromEntries(Object.entries(page.fees || {}).filter(([, f]) => f).map(([k, f]) => [k,
+      { ...f, fee: asText(f.fee), freeAbove: asText(f.freeAbove), minOrder: asText(f.minOrder) }])),
+    slotsOn: !!page.slots?.on,
+    whatsapp: page.whatsapp ? { ...page.whatsapp, quickHours: asText(page.whatsapp.quickHours),
+      cutoffHour: asText(page.whatsapp.cutoffHour), expressDays: asText(page.whatsapp.expressDays) } : null,
+  };
+}
+
+function Err({ errs, k }) {
+  const e = errs[k];
+  return e ? <small className="ds-err">{e}</small> : null;
+}
+
+const STATE_TONE = { ok: "green", wait: "blue", todo: "amber", off: "grey" };
+const STATE_WORD = { ok: "Ready", wait: "Setting up", todo: "Needs you", off: "Not delivering" };
+
+function SettingsPanel({ page, busy, onSave, onRun, onEditBranch, onTab, done }) {
+  const [draft, setDraft] = useState(() => draftOf(page));
+  const [errs, setErrs] = useState({});
+  const [banner, setBanner] = useState("");
+  const [saving, setSaving] = useState(false);
+  const base = useMemo(() => JSON.stringify(draftOf(page)), [page]);
+  useEffect(() => { setDraft(draftOf(page)); setErrs({}); setBanner(""); }, [page]);
+  if (!draft) return null;
+  const dirty = JSON.stringify(draft) !== base;
+
+  const set = (fn) => setDraft((d) => { const n = JSON.parse(JSON.stringify(d)); fn(n); return n; });
+  const hubs = page.routes?.hubs || [];
+  const choices = page.routes?.choices || [];
+  const status = page.status || { branches: [], shop: [], todo: 0 };
+  const todos = [
+    ...status.branches.flatMap((b) => b.checks.filter((c) => c.state === "todo").map((c) => ({ ...c, branch: b }))),
+    ...status.shop.filter((c) => c.state === "todo"),
+  ];
+
+  const save = async () => {
+    setSaving(true); setErrs({}); setBanner("");
+    const body = {
+      mode: draft.mode,
+      branches: draft.branches.map((b) => ({ id: b.id, pin: b.pin, quick: b.quick, quickKm: b.quickKm,
+        maybeKm: b.maybeKm, ownFees: b.ownFees, quickFee: b.quickFee, expressFee: b.expressFee, freeAbove: b.freeAbove })),
+      cells: Object.values(draft.cells).filter((c) => c.arrives),
+      fees: draft.fees,
+      slotsOn: draft.slotsOn,
+      ...(draft.whatsapp ? { whatsapp: draft.whatsapp } : {}),
+    };
+    const result = await onSave(body);
+    setSaving(false);
+    if (result && result.errors) {
+      const map = {};
+      result.errors.forEach((e) => { map[`${e.section}|${e.row}|${e.field}`] = e.message; });
+      setErrs(map);
+      const n = result.errors.length;
+      setBanner(n ? `Nothing was saved. Fix ${n === 1 ? "the value" : `the ${n} values`} marked in red, then Save all again.`
+        : "Nothing was saved.");
+    }
+  };
+  const discard = () => { setDraft(draftOf(page)); setErrs({}); setBanner(""); };
+
+  return (
+    <div className="ds">
+      {/* status */}
+      <section className="ds-card ds-status">
+        <div className="ds-status-row">
+          <div className="ds-pills">
+            {status.branches.map((b) => (
+              <span key={b.id} className={"ad-pill ad-t-" + STATE_TONE[b.state]}><i />{b.name} · {STATE_WORD[b.state]}</span>
+            ))}
+          </div>
+          <button className="ad-btn" disabled={busy || saving} onClick={onRun}>
+            <Icon n="check" size={16} />Set up automatically
+          </button>
+        </div>
+        {!!todos.length && (
+          <ul className="ds-todos">
+            {todos.map((c, i) => (
+              <li key={i}><Icon n="info" size={14} />
+                <span>{c.branch ? <b>{c.branch.name}: </b> : null}{c.text}
+                  {c.fix === "riders" && <small>In Odoo: Delivery › Configuration › Riders &amp; Couriers</small>}
+                  {c.fix === "shop" && <small>In Odoo: Delivery › Configuration › Shops</small>}
+                </span>
+                {(c.fix === "branch" || c.fix === "address") && c.branch && (
+                  <button className="ad-link" onClick={() => onEditBranch(c.branch.id)}>Fix</button>)}
+                {(c.fix === "fees") && <a className="ad-link" href="#ds-fees">Fix</a>}
+                {(c.fix === "slots") && <a className="ad-link" href="#ds-slots">Fix</a>}
+                {c.fix === "routes" && <a className="ad-link" href="#ds-routes">Fix</a>}
+              </li>
+            ))}
+          </ul>
+        )}
+        {done && <p className="ds-done"><Icon n="check" size={14} /><span>{done.length ? done.join(" ") : "Nothing new to fill in: everything the shop can work out is done."}</span></p>}
+      </section>
+
+      {/* explainer */}
+      <section className="ds-explain">
+        <b>How delivery decides, with these settings</b>
+        <ol>{(page.explain || []).map((l, i) => <li key={i}>{l}</li>)}</ol>
+        {dirty && <small>Save all to see this with your changes.</small>}
+      </section>
+
+      {banner && <p className="ad-hint ad-hint-warn ds-banner"><Icon n="info" size={14} /><span>{banner}</span></p>}
+
+      {/* how we deliver */}
+      <section className="ds-card">
+        <h3>How we deliver</h3>
+        <div className="ds-modes">
+          {[["one", "One area", "Each branch delivers near itself. Anything farther goes Express from wherever it is, with no branch-to-branch times."],
+            ["many", "Many branches", "A branch that is out of stock is covered by another branch, and Between branches says how long that takes. Missing routes are worked out from the distance."]]
+            .map(([k, t, h]) => (
+              <label key={k} className={"ds-mode" + (draft.mode === k ? " on" : "")}>
+                <input type="radio" name="ds-mode" id={"ds-mode-" + k} checked={draft.mode === k}
+                  onChange={() => set((d) => { d.mode = k; })} />
+                <span><b>{t}</b><small>{h}</small></span>
+              </label>
+            ))}
+        </div>
+      </section>
+
+      {/* branches */}
+      <section className="ds-card">
+        <h3>Branches <small>A branch is a warehouse. Its pin and Quick are kept the same on its WhatsApp delivery shop.</small></h3>
+        <div className="ad-table-wrap">
+          <table className="ad-table ds-table">
+            <thead><tr><th>Branch</th><th>Map pin</th><th>Quick</th><th className="ad-num">Quick up to</th>
+              <th className="ad-num">Quick if possible</th><th>WhatsApp shop</th><th>Riders</th><th /></tr></thead>
+            <tbody>
+              {draft.branches.map((b, i) => (
+                <tr key={b.id} className={b.pin ? "" : "ds-muted"}>
+                  <td><b>{b.name}</b><small className="ad-sub">{b.company}{b.auto ? " · sets itself up" : ""}</small></td>
+                  <td><input id={`ds-pin-${b.id}`} className="ds-in ds-pin" value={b.pin} placeholder="no pin"
+                    aria-label={`Map pin of ${b.name}`}
+                    onChange={(e) => set((d) => { d.branches[i].pin = e.target.value; })} />
+                    <Err errs={errs} k={`branches|${b.id}|pin`} /></td>
+                  <td><Switch on={b.quick} label={`Quick at ${b.name}`} onChange={(v) => set((d) => { d.branches[i].quick = v; })} /></td>
+                  <td className="ad-num"><input id={`ds-km-${b.id}`} className="ds-in ds-num" value={b.quickKm} inputMode="decimal"
+                    aria-label={`Quick up to, ${b.name}`}
+                    onChange={(e) => set((d) => { d.branches[i].quickKm = e.target.value; })} /> km
+                    <Err errs={errs} k={`branches|${b.id}|quickKm`} /></td>
+                  <td className="ad-num"><input id={`ds-maybe-${b.id}`} className="ds-in ds-num" value={b.maybeKm} inputMode="decimal"
+                    aria-label={`Quick if possible up to, ${b.name}`}
+                    onChange={(e) => set((d) => { d.branches[i].maybeKm = e.target.value; })} /> km
+                    <Err errs={errs} k={`branches|${b.id}|maybeKm`} /></td>
+                  <td>{b.shop === "auto" ? <span className="ad-pill ad-t-blue"><i />made automatically</span>
+                    : b.shop === "yours" ? <span className="ad-pill ad-t-green"><i />yes</span>
+                    : b.shop === "archived" ? <span className="ad-pill ad-t-grey"><i />archived</span> : "—"}</td>
+                  <td>{b.riders === null || b.riders === undefined ? "—"
+                    : b.riders ? b.riders : <span className="ad-pill ad-t-amber"><i />none</span>}</td>
+                  <td><button className="ad-link" onClick={() => onEditBranch(b.id)}>{b.pin ? "Pick on map" : "Find from address"}</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* between branches */}
+      {draft.mode === "many" && (
+        <section className="ds-card" id="ds-routes">
+          <h3>Between branches <small>Row: where the product is. Column: the branch nearest the customer.</small></h3>
+          {hubs.length < 2 ? <p className="ad-hint">Put at least two branches on the map to use this.</p> : (
+            <div className="ad-table-wrap">
+              <table className="ad-table ds-grid">
+                <thead><tr><th />{hubs.map((h) => <th key={h.id}>{h.name}</th>)}</tr></thead>
+                <tbody>
+                  {hubs.map((from) => (
+                    <tr key={from.id}><th>{from.name}</th>
+                      {hubs.map((to) => {
+                        if (from.id === to.id) return <td key={to.id} className="ds-self">—</td>;
+                        const k = `${from.id}-${to.id}`;
+                        const c = draft.cells[k] || { from: from.id, to: to.id, arrives: "", cargo: false, auto: false };
+                        const opts = c.arrives && !choices.includes(c.arrives) ? [c.arrives, ...choices] : choices;
+                        return (
+                          <td key={to.id}>
+                            <div className="ds-cell">
+                              <select id={`ds-cell-${k}`} value={c.arrives} aria-label={`${from.name} to ${to.name}`}
+                                onChange={(e) => set((d) => { d.cells[k] = { ...c, arrives: e.target.value, auto: false }; })}>
+                                {!c.arrives && <option value="">Not set</option>}
+                                {opts.map((o) => <option key={o}>{o}</option>)}
+                              </select>
+                              {c.arrives && c.arrives !== ROUTE_NONE && (
+                                <label className="ds-cargo"><input type="checkbox" checked={!!c.cargo}
+                                  onChange={(e) => set((d) => { d.cells[k] = { ...c, cargo: e.target.checked, auto: false }; })} />Cargo</label>)}
+                              {c.auto && <span className="ds-auto">auto</span>}
+                            </div>
+                            <Err errs={errs} k={`routes|${k}|arrives`} />
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <p className="ad-hint"><span className="ds-auto">auto</span> worked out from the distance. Change a cell and it is yours: setting up automatically never changes it back.</p>
+        </section>
+      )}
+
+      {/* fees */}
+      <section className="ds-card" id="ds-fees">
+        <h3>Fees</h3>
+        <div className="ds-two">
+          {[["quick", "Quick delivery", "From a branch near the customer."], ["all", "Express delivery", "Everything else, including from another branch."]].map(([mode, t, h]) => {
+            const f = draft.fees[mode];
+            if (!f) return null;
+            const upd = (key) => (e) => set((d) => { d.fees[mode][key] = e.target.value; });
+            return (
+              <div key={mode} className="ds-box">
+                <div className="ds-box-h"><Switch on={f.active} label={t} onChange={(v) => set((d) => { d.fees[mode].active = v; })} />
+                  <span><b>{t}</b><small>{h}</small></span></div>
+                <div className="ds-fields">
+                  <label>Fee<input id={`ds-fee-${mode}`} className="ds-in ds-num" value={f.fee} inputMode="decimal" onChange={upd("fee")} /><Err errs={errs} k={`fees|${mode}|fee`} /></label>
+                  <label>Free above<input id={`ds-free-${mode}`} className="ds-in ds-num" value={f.freeAbove} inputMode="decimal" onChange={upd("freeAbove")} /><Err errs={errs} k={`fees|${mode}|freeAbove`} /></label>
+                  <label>Minimum order<input id={`ds-min-${mode}`} className="ds-in ds-num" value={f.minOrder} inputMode="decimal" onChange={upd("minOrder")} /><Err errs={errs} k={`fees|${mode}|minOrder`} /></label>
+                  <label className="ds-wide">Words the customer reads<input id={`ds-eta-${mode}`} className="ds-in" value={f.eta} onChange={upd("eta")} /><Err errs={errs} k={`fees|${mode}|eta`} /></label>
+                  <label className="ds-wide">Storefront name<input id={`ds-label-${mode}`} className="ds-in" value={f.label} onChange={upd("label")} /><Err errs={errs} k={`fees|${mode}|label`} /></label>
+                </div>
+                <small className="ds-note">{Number(f.freeAbove) ? `Free when the basket is above ${f.freeAbove}.` : "Free above 0 means this delivery is never free."}</small>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* slots */}
+      <section className="ds-card" id="ds-slots">
+        <h3>Delivery slots</h3>
+        <div className="ds-box-h">
+          <Switch on={draft.slotsOn} label="Let customers pick a delivery slot" onChange={(v) => set((d) => { d.slotsOn = v; })} />
+          <span><b>Let customers pick a delivery slot</b>
+            <small>Optional for the customer, on the website checkout and the WhatsApp order page. Off: everyone gets the soonest delivery.</small>
+            <small>{page.slots?.count || 0} slots{page.slots?.names?.length ? `: ${page.slots.names.join(" · ")}` : ""} · <button className="ad-link" onClick={() => onTab("slots")}>Edit slots</button></small>
+          </span>
+        </div>
+      </section>
+
+      {/* whatsapp */}
+      {draft.whatsapp && (
+        <section className="ds-card">
+          <h3>WhatsApp delivery</h3>
+          <div className="ds-two">
+            <div className="ds-box">
+              <span><b>Promise for WhatsApp orders</b><small>What the customer is told when the order is confirmed.</small></span>
+              <div className="ds-fields">
+                <label>Quick within (hours)<input id="ds-wa-hours" className="ds-in ds-num" value={draft.whatsapp.quickHours} inputMode="numeric"
+                  onChange={(e) => set((d) => { d.whatsapp.quickHours = e.target.value; })} /><Err errs={errs} k="whatsapp||quickHours" /></label>
+                <label>If ordered before (hour, 0-23)<input id="ds-wa-cut" className="ds-in ds-num" value={draft.whatsapp.cutoffHour} inputMode="numeric"
+                  onChange={(e) => set((d) => { d.whatsapp.cutoffHour = e.target.value; })} /><Err errs={errs} k="whatsapp||cutoffHour" /></label>
+                <label>Express in (days)<input id="ds-wa-days" className="ds-in ds-num" value={draft.whatsapp.expressDays} inputMode="numeric"
+                  onChange={(e) => set((d) => { d.whatsapp.expressDays = e.target.value; })} /><Err errs={errs} k="whatsapp||expressDays" /></label>
+              </div>
+            </div>
+            <div className="ds-box ds-stack">
+              <div className="ds-box-h"><Switch on={draft.whatsapp.autoCallRider} label="Call a rider automatically when packed"
+                onChange={(v) => set((d) => { d.whatsapp.autoCallRider = v; })} />
+                <span><b>Call a rider automatically when packed</b><small>Off: the counter presses "Call a rider". On: the nearest free rider is asked the moment the order is packed.</small></span></div>
+              {draft.whatsapp.askReview !== null && (
+                <div className="ds-box-h"><Switch on={draft.whatsapp.askReview} label="Ask for a review after delivery"
+                  onChange={(v) => set((d) => { d.whatsapp.askReview = v; })} />
+                  <span><b>Ask for a review after delivery</b><small>One line in the customer's private Delivered message, once per order.</small></span></div>)}
+              <span><b>Riders</b><small>{draft.whatsapp.riders} {draft.whatsapp.riders === 1 ? "rider" : "riders"} ({draft.whatsapp.onDuty} on duty). A rider with no branch serves every branch. Add riders in Odoo: Delivery › Configuration › Riders &amp; Couriers.</small></span>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* advanced */}
+      <details className="ds-card ds-adv">
+        <summary>Advanced</summary>
+        <p className="ad-hint">Service areas are only for addresses with no map pin: {page.areas} {page.areas === 1 ? "area" : "areas"}. <button className="ad-link" onClick={() => onTab("areas")}>Service areas</button></p>
+        <h4>A branch charges its own fees</h4>
+        <p className="ad-hint">Only when one basket is split between branches of different companies.</p>
+        <div className="ad-table-wrap">
+          <table className="ad-table ds-table">
+            <thead><tr><th>Branch</th><th>Own fees</th><th className="ad-num">Quick fee</th><th className="ad-num">Express fee</th><th className="ad-num">Free above</th></tr></thead>
+            <tbody>
+              {draft.branches.map((b, i) => (
+                <tr key={b.id}><td>{b.name}</td>
+                  <td><Switch on={b.ownFees} label={`Own fees at ${b.name}`} onChange={(v) => set((d) => { d.branches[i].ownFees = v; })} /></td>
+                  {["quickFee", "expressFee", "freeAbove"].map((k) => (
+                    <td key={k} className="ad-num"><input id={`ds-${k}-${b.id}`} className="ds-in ds-num" value={b[k]} disabled={!b.ownFees} inputMode="decimal"
+                      aria-label={`${k} at ${b.name}`}
+                      onChange={(e) => set((d) => { d.branches[i][k] = e.target.value; })} /><Err errs={errs} k={`branches|${b.id}|${k}`} /></td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </details>
+
+      {/* save bar */}
+      <div className={"ds-savebar" + (dirty ? " on" : "")}>
+        <span>{dirty ? "Unsaved changes" : "All saved"}</span>
+        <button className="ad-btn" disabled={!dirty || saving} onClick={discard}>Discard</button>
+        <button className="ad-btn ad-primary" disabled={!dirty || saving} onClick={save}>{saving ? "Saving…" : "Save all"}</button>
+      </div>
+    </div>
   );
 }
 
@@ -946,7 +1268,8 @@ function BranchDrawer({ branch, onClose, onSaved, onChanged }) {
 
 /* ================================ the page ============================== */
 export function DeliverySection({ flash }) {
-  const [tab, setTab] = useState("fees");
+  const [tab, setTab] = useState("settings");
+  const [setupDone, setSetupDone] = useState(null);
   const [slotEdit, setSlotEdit] = useState(null); // a slot, or {} for a new one
   const [areaEdit, setAreaEdit] = useState(null);
   const [branchEdit, setBranchEdit] = useState(null);
@@ -954,6 +1277,8 @@ export function DeliverySection({ flash }) {
 
   const { data, loading, error, reload } = useResource("/admin/delivery",
     { pollMs: 60000, keepLast: true });
+  const setupRes = useResource("/admin/delivery/settings", { keepLast: true });
+  const setup = setupRes.data?.status;
   const act = useAction();
 
   const rules = data?.rules || [];
@@ -971,7 +1296,8 @@ export function DeliverySection({ flash }) {
     slots: slots.filter((s) => s.active).length,
     areas: areas.filter((a) => a.active).length,
     branches: branches.filter((b) => b.quick).length,
-  }), [rules, slots, areas, branches]);
+    settings: setup ? setup.todo || null : null,
+  }), [rules, slots, areas, branches, setup]);
   const unready = branches.filter((b) => b.unready);
 
   /* Read-after-write, like every live section. Two caches have to be dropped,
@@ -981,6 +1307,43 @@ export function DeliverySection({ flash }) {
   const refresh = () => {
     api.invalidate("/admin/delivery");
     SHOPPER_FEEDS.forEach((feed) => api.invalidate(feed));
+    setupRes.reload();
+  };
+
+  /* "Set up automatically now": the hourly job at once. What it filled in
+     shows above the checklist. */
+  const runSetup = () =>
+    act.run(async () => {
+      const out = await api("/admin/delivery/setup/run", { method: "POST", body: {} });
+      setSetupDone(out?.done || []);
+      refresh();
+      await reload();
+      return true;
+    }).then((r) => {
+      if (r === null) flash?.(act.error?.message || "That did not work.", "bad");
+      else flash?.("Delivery set up");
+    });
+
+  /* Fix / Pick on map: the branch drawer, which has the map. */
+  const editBranch = (id) => {
+    const row = branches.find((b) => b.id === id);
+    if (row) setBranchEdit(row);
+  };
+
+  /* Save all: one request. Wrong values come back as `errors` and nothing
+     is written; the page puts each one under its field. */
+  const saveSettings = async (body) => {
+    try {
+      await api("/admin/delivery/settings", { method: "POST", body });
+    } catch (e) {
+      if (e?.data?.errors) return { errors: e.data.errors };
+      flash?.(e?.message || "That could not be saved.", "bad");
+      return { errors: [] };
+    }
+    refresh();
+    await reload();
+    flash?.("Delivery settings saved");
+    return { ok: true };
   };
 
   const run = (fn, ok) =>
@@ -1097,6 +1460,19 @@ export function DeliverySection({ flash }) {
               ))}
             </span>
           </p>
+        )}
+
+        {/* ------------------------------------------------------ setup */}
+        {tab === "settings" && setupRes.error && (
+          <Empty icon="info" title="We could not reach the shop"
+            text={setupRes.error.message} action="Try again" onAction={setupRes.reload} />
+        )}
+        {tab === "settings" && !setupRes.data && !setupRes.error && (
+          <Empty icon="box" title="Loading…" text="Fetching every delivery setting." />
+        )}
+        {tab === "settings" && setupRes.data && (
+          <SettingsPanel page={setupRes.data} busy={act.busy} onSave={saveSettings} onRun={runSetup}
+            onEditBranch={editBranch} onTab={setTab} done={setupDone} />
         )}
 
         {/* ------------------------------------------------------- fees */}
