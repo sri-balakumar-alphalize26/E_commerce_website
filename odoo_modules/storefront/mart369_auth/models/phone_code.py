@@ -75,6 +75,11 @@ class Mart369PhoneCode(models.Model):
     def _mart369_wait_minutes(self, phone, ip=None):
         """Minutes until another code may go to this number (or from this
         caller), or 0."""
+        # A test number (mart369_auth.test_phones) is sent nothing, so there
+        # is nothing to rate-limit: testers signing in again and again were
+        # locked out for an hour (13 Nov 2026).
+        if self._mart369_test_code(phone):
+            return 0
         now = fields.Datetime.now()
         hour_ago = now - timedelta(hours=1)
         Code = self.sudo()

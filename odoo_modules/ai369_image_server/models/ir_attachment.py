@@ -457,10 +457,31 @@ class IrAttachment(models.Model):
         """Push at the end of the transaction (record is complete, one upload per save)."""
         if self.env.context.get("imgsrv_skip") or not self:
             return
+        user = self.env.user
+        if user._is_public() or user.share:
+            self._imgsrv_defer()
+            return
         data = self._imgsrv_hook()
         data["ai369_imgsrv.ids"].update(self.ids)
         if self.env.context.get("imgsrv_link"):
             data["ai369_imgsrv.link"].update(self.env.context["imgsrv_link"])
+
+    def _imgsrv_defer(self):
+        """A customer's request (signing, paying, a review on a public page)
+        never waits for the image server (13 Nov 2026: signing an order took
+        about 20 s longer while the server timed out on the order PDFs). The
+        files stay local as "pending" - the same as when the server can't be
+        reached - and the background job is woken to upload them in a moment.
+        Staff saves still upload at once."""
+        if not conf(self.env)["enabled"]:
+            return
+        self.env.cr.execute(
+            "UPDATE ir_attachment SET imgsrv_state='pending' WHERE id IN %s AND imgsrv_state IS NULL",
+            (tuple(self.ids),))
+        self.invalidate_recordset(["imgsrv_state"])
+        cron = self.env.ref("ai369_image_server.ir_cron_imgsrv", raise_if_not_found=False)
+        if cron:
+            cron.sudo()._trigger()
 
     @api.model_create_multi
     def create(self, vals_list):
