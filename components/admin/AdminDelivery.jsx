@@ -1009,6 +1009,13 @@ export function DeliverySection({ flash }) {
     return "";
   };
 
+  /* Delivery slots on or off for this company (13 Nov 2026): off, customers
+     get no slot choice at the checkout or on the WhatsApp order page. */
+  const slotsOn = data?.slotsOn !== false;
+  const toggleSlotsOn = () =>
+    run(() => api("/admin/delivery/slots-on", { method: "POST", body: { on: !slotsOn } }),
+      slotsOn ? "Delivery slots switched off" : "Delivery slots switched on");
+
   const retireSlot = (slot, retired) =>
     run(() => api(`/admin/delivery/slots/${slot.id}`, { method: "PATCH", body: { active: !retired } }),
       retired ? "Slot switched off" : "Slot back on");
@@ -1054,9 +1061,15 @@ export function DeliverySection({ flash }) {
             tabs={TABS.map(([k, label]) => [k, label, counts[k] ?? null])} />
           <div className="ad-toolbar-right">
             {tab === "slots" && (
-              <button className="ad-btn ad-primary" onClick={() => setSlotEdit({})}>
-                <Icon n="plus" size={16} />New slot
-              </button>
+              <>
+                <button className={"ad-btn" + (slotsOn ? "" : " ad-primary")} onClick={toggleSlotsOn}
+                  title={slotsOn ? "Customers can pick a slot. Click to stop offering slots." : "Customers get no slot choice. Click to offer slots."}>
+                  <Icon n="clock" size={16} />{slotsOn ? "Slots on · switch off" : "Slots off · switch on"}
+                </button>
+                <button className="ad-btn ad-primary" onClick={() => setSlotEdit({})}>
+                  <Icon n="plus" size={16} />New slot
+                </button>
+              </>
             )}
             {tab === "areas" && (
               <button className="ad-btn ad-primary" onClick={() => setAreaEdit({})}>
@@ -1102,6 +1115,9 @@ export function DeliverySection({ flash }) {
         )}
 
         {/* ------------------------------------------------------ slots */}
+        {tab === "slots" && !error && !slotsOn && (
+          <p className="ad-hint ad-gap-note"><Icon n="info" size={14} /><span>Delivery slots are switched off for this company: customers get no slot choice at the checkout or on the WhatsApp order page. The slots below are kept for when you switch them back on.</span></p>
+        )}
         {tab === "slots" && !error && !!slots.length && (
           <div className="ad-table-wrap">
             <table className="ad-table">

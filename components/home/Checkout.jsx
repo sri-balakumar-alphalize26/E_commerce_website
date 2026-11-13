@@ -69,11 +69,14 @@ function useSlots() {
   const { data } = useResource("/slots");
   const clock = useClockSlots();
   return useMemo(() => {
-    /* Each storefront falls back on its own. A shop with slots for Quick and
-       none for Express should not have its Quick list thrown away too. */
-    const quick = data?.quick?.length ? data.quick : clock.quick;
-    const all = data?.all?.length ? data.all : clock.all;
-    return { quick, all };
+    /* Until the shop answers: the clock chips, so the step is not empty on
+       the first paint. Once it has answered, only the slots set up in the
+       backend (13 Nov 2026) - none when the company has slots switched off
+       ("on": false), and none for a storefront with no slots of its own.
+       Picking a slot is optional either way. */
+    if (!data) return { ...clock, off: false };
+    if (data.on === false) return { quick: [], all: [], off: true };
+    return { quick: data.quick || [], all: data.all || [], off: false };
   }, [data, clock]);
 }
 
@@ -190,6 +193,9 @@ function SlotStep({ bill, slots, slot, setSlot, onContinue, busy = false }) {
                 : bill.movedWhy === "nopin" ? ": add your location on the map to see if Quick reaches you."
                 : ": not in stock at the store near you."}
             </p>
+          )}
+          {slots[g].length === 0 && (
+            <p className="co-moved"><Icon n="clock" size={13} />{g === "quick" ? "We deliver as soon as we can." : "We deliver on the next available day."}</p>
           )}
           <div className="co-slots" role="radiogroup" aria-label={`${g === "quick" ? "Quick" : "Express"} delivery slot`}>
             {slots[g].map((s, k) => {
@@ -612,7 +618,8 @@ export default function CheckoutPage({
     coupon: coupon || "",
     usePoints: !!points,
     mode: bill.groups.quick.length ? "quick" : "all",
-    slot_key: bill.groups.all.length ? slot.all : slot.quick,
+    /* No chips for that storefront (slots off, or none set up): no slot. */
+    slot_key: bill.groups.all.length ? (slots.all.length ? slot.all : "") : (slots.quick.length ? slot.quick : ""),
     slot: slotLabel,
     eta: bill.groups.quick.length && slot.quick === "now" ? "Arriving in 10–20 mins" : slotLabel,
     instructions: instructionLine(draft.instructions),
@@ -742,7 +749,7 @@ export default function CheckoutPage({
             <AddressStep addresses={addresses} onSaveAddress={onSaveAddress} formMeta={addressForm} me={me}
               selected={address} onSelect={onSelectAddress} onContinue={() => setStep(2)} busy={addrBusy} />
           </Step>
-          <Step n={2} icon="clock" title="Delivery slot" open={step === 2} done={step > 2} summary={step > 2 ? slotLabel : ""} onEdit={() => setStep(2)}>
+          <Step n={2} icon="clock" title={slots.off ? "Delivery" : "Delivery slot"} open={step === 2} done={step > 2} summary={step > 2 ? slotLabel : ""} onEdit={() => setStep(2)}>
             <SlotStep bill={bill} slots={slots} slot={slot} setSlot={setSlot} busy={place.busy} onContinue={async () => { if (await draftOrder()) setStep(3); }} />
           </Step>
           <Step n={3} icon="card" title="Payment" open={step === 3} done={false}>

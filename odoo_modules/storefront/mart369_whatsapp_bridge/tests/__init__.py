@@ -18,3 +18,4 @@ from . import test_staff_alert
 from . import test_qe_link
 from . import test_hub_split_qe
 from . import test_photos_tab
+from . import test_portal_slots

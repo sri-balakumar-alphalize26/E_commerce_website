@@ -221,6 +221,12 @@ class Mart369DeliverySlot(models.Model):
         return vals
 
     @api.model
+    def _mart369_slots_on(self, company=None):
+        """Is this company offering delivery slots? (Settings > Companies.)"""
+        company = company or self.env.company
+        return bool(getattr(company.sudo(), 'mart369_slots_on', True))
+
+    @api.model
     def _mart369_slots(self):
         """{'quick': [...], 'all': [...]} - what the checkout asks for."""
         now = fields.Datetime.now()

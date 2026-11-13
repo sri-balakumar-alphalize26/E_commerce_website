@@ -8,3 +8,4 @@ from . import branch
 from . import hub_rule
 from . import hub_stock
 from . import postcode
+from . import res_company

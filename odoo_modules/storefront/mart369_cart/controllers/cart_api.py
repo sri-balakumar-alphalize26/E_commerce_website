@@ -157,5 +157,10 @@ class Mart369CartApi(http.Controller):
     def slots(self, **kwargs):
         """{"quick": [chip, ...], "all": [chip, ...]} - the shape useSlots()
         built from the browser clock."""
-        return request.make_json_response(
-            request.env['mart369.delivery.slot'].sudo()._mart369_slots())
+        # 13 Nov 2026: per company, slots can be switched off - then the
+        # checkout offers no slot at all ("on": false) rather than made-up ones.
+        Slot = request.env['mart369.delivery.slot'].sudo()
+        on = Slot._mart369_slots_on(request.env.company)
+        data = Slot._mart369_slots() if on else {'quick': [], 'all': []}
+        data['on'] = on
+        return request.make_json_response(data)

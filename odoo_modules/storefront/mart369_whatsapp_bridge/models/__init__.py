@@ -18,3 +18,4 @@ from . import mirrors
 from . import sa_hooks
 from . import qe_link
 from . import staff_alert
+from . import portal_slots

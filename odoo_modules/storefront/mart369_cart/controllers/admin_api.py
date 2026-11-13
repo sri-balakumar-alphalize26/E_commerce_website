@@ -629,7 +629,20 @@ class Mart369DeliveryAdminApi(Mart369CouponAdminApi):
         except AccessError as exc:
             return self._fail(str(exc), status=403)
         payload['ok'] = True
+        payload['slotsOn'] = bool(request.env.company.mart369_slots_on)
         return self._json(payload)
+
+    @http.route('/369mart/admin/delivery/slots-on', **_POST)
+    def slots_on(self, **kwargs):
+        """Delivery slots on or off for the company the console works in."""
+        if not self._may_edit():
+            return self._fail('You do not have access to this.', status=403)
+        on = bool(self._body().get('on'))
+        try:
+            request.env.company.write({'mart369_slots_on': on})
+        except (AccessError, UserError) as exc:
+            return self._fail(str(exc), status=403)
+        return self._json({'ok': True, 'slotsOn': on})
 
     @http.route('/369mart/admin/delivery/rules/<int:rule_id>', **_PATCH)
     def update_rule(self, rule_id, **kwargs):

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Delivery slots on or off for this company (13 Nov 2026). -->
+    <record id="view_company_form_mart369_slots" model="ir.ui.view">
+        <field name="name">res.company.form.mart369.slots</field>
+        <field name="model">res.company</field>
+        <field name="inherit_id" ref="base.view_company_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='currency_id']" position="after">
+                <field name="mart369_slots_on"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>
