@@ -127,10 +127,28 @@
 <div class="part">Part 1 — Setting Up</div>
 <p class="part-intro">Done by an Owner or Manager. The starting numbers already work, so change only what differs for your shop.</p>
 
+<h3 class="step"><span class="n">★</span>The quick way: Delivery settings, everything on one page</h3>
+<p>Open <b>Store <span class="arr">→</span> Delivery settings</b> (in the staff console: <b>Delivery <span class="arr">→</span> Settings</b>, the first tab). Both show the same page and save the same records. From top to bottom:</p>
+<ul class="f">
+  <li><b>Status</b> — one pill per branch: <b>Ready</b>, <b>Setting up</b> (the shop is filling it in), <b>Needs you</b> (with what, and a <b>Fix</b> button) or <b>Not delivering</b> (no map pin, so it is not used for delivery). <b>Set up automatically</b> fills in at once what the shop can work out by itself.</li>
+  <li><b>How delivery decides</b> — the settings below, said in plain sentences. Change something, press Save all, and the sentences change.</li>
+  <li><b>How we deliver</b> — <b>One area</b> (each branch delivers near itself; farther goes Express) or <b>Many branches</b> (a branch out of stock is covered by another, and the Between-branches table says how long that takes).</li>
+  <li><b>Branches</b> — one row per warehouse: map pin, Quick on/off, <b>Quick up to</b> (km) and <b>Quick if possible up to</b> (km), its WhatsApp delivery shop and riders. A branch's pin and Quick are written to its WhatsApp delivery shop too, so the two never disagree.</li>
+  <li><b>Between branches</b> (Many branches only) — a table: the row is where the product is, the column is the branch nearest the customer. Each cell says <b>Same day</b>, <b>Next day</b>, <b>In 2-3 days</b>, <b>In 3-4 days</b>, <b>In 5-7 days</b> or <b>Not delivered</b>, with a <b>Cargo</b> tick for long trips. A cell marked <b>auto</b> was worked out from the distance; change it and it is yours.</li>
+  <li><b>Fees</b> — Quick and Express: fee, free above, minimum order, the words the customer reads, the storefront name, and on/off.</li>
+  <li><b>Delivery slots</b> — on or off for the company; <b>Edit slots</b> opens the slot list.</li>
+  <li><b>WhatsApp delivery</b> — the promise for WhatsApp orders (Quick within so many hours if ordered before the cut-off hour; Express in so many days), <b>Call a rider automatically when packed</b>, and <b>Ask for a review after delivery</b>.</li>
+  <li><b>Advanced</b> — service areas (only for addresses with no map pin) and a branch's own fees (only when one basket is split between branches of different companies).</li>
+</ul>
+<p>Change what you need and press <b>Save all</b> at the bottom. Everything is saved together. If any value is wrong, <b>nothing</b> is saved and the page shows the message in red under that box; fix it and press Save all again. <b>Discard</b> puts the page back as it was.</p>
+<div class="note good"><span class="lbl">How delivery decides:</span> The customer's map pin is measured to every branch that has the item in stock. Within a branch's <b>Quick up to</b> distance it comes Quick, in about 10 minutes to pack plus 5 minutes a km. Up to <b>Quick if possible</b> it is promised Express and may still come Quick when a rider is free. Farther, the nearest branch that has it ships it: with Many branches, the Between-branches table says when it arrives; with One area it is plain Express.</div>
+<div class="note tip"><span class="lbl">It sets itself up:</span> Make a new warehouse in Inventory and give its company an address. Within the hour (or at once with <b>Set up automatically</b>) the shop finds its map pin, switches Quick on at 5 km, adds its routes to the other branches from the distance, and makes its WhatsApp delivery shop. It never changes anything a person has set. Riders are the one thing it cannot add: the status asks for one.</div>
+
 <h3 class="step"><span class="n">1</span>Where everything lives</h3>
 <p>Open <b>369 Mart</b> from the main menu. This module adds these entries:</p>
 <ul class="f">
-  <li><b>Store <span class="arr">→</span> Delivery</b> — the Delivery desk, with four tabs: <b>Fees</b>, <b>Slots</b>, <b>Service areas</b> and <b>Branches</b>.</li>
+  <li><b>Store <span class="arr">→</span> Delivery settings</b> — <b>every delivery option on one page with one Save</b>: start here (see "The quick way" below).</li>
+  <li><b>Store <span class="arr">→</span> Delivery</b> — the Delivery desk, with four tabs: <b>Fees</b>, <b>Slots</b>, <b>Service areas</b> and <b>Branches</b>, for the detail (editing a slot, picking a pin on the map, adding service areas).</li>
   <li><b>Sales <span class="arr">→</span> Coupons</b> — the Coupons desk.</li>
   <li><b>Sales <span class="arr">→</span> Deals</b> — the Deals desk, with its Trash.</li>
   <li><b>Advanced <span class="arr">→</span> Delivery &amp; fees (all views)</b>, <b>Service areas (all views)</b>, <b>Delivery slots (all views)</b>, <b>Coupons (all views)</b> and <b>Deals (all views)</b> — plain lists of the same records, for grouping, filtering and export.</li>
