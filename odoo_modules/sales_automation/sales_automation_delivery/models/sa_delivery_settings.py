@@ -123,6 +123,12 @@ class SaDeliverySettings(models.Model):
              "rider's token can read the code that proves a customer received "
              "their parcel. Every use is written to the log.")
 
+    ask_review = fields.Boolean(
+        'Ask for a Review When Delivered', default=True,
+        help="The private Delivered message carries a link where the customer "
+             "rates what they bought (13 Nov 2026). The reviews show on the "
+             "product pages after the usual moderation.")
+
     promise_customer = fields.Boolean(
         'Tell the Customer the Date', default=True,
         help="Include the promised date in the WhatsApp message and on the "

@@ -788,6 +788,26 @@ class StockPicking(models.Model):
                             phone, self.sa_ref_code, err)
             return False
 
+    def _sa_review_line(self):
+        """"How was it? Rate your products: <link>" for the private Delivered
+        message (13 Nov 2026) - once per order, only when the shop asks for
+        reviews (Delivery Settings) and the order has products to rate. Goes
+        with the existing one-to-one message, never into a group."""
+        self.ensure_one()
+        order = self.sale_id
+        settings = self.env['sa.delivery.settings'].sudo().get_settings()
+        if not order or (settings and not settings.ask_review):
+            return ''
+        if not hasattr(order, '_sa_review_message_line'):
+            return ''
+        if not self.env['sa.outbox.guard'].sudo().claim('review|%s' % order.id, 60 * 60 * 24 * 365):
+            return ''
+        try:
+            return order._sa_review_message_line(order.sudo())
+        except Exception as err:  # noqa: BLE001 - the Delivered message matters more
+            _logger.info("Delivery: no review link for %s: %s", order.name, err)
+            return ''
+
     def sa_track_link_once(self):
         """The tracking URL the first time it is asked for, '' after that.
 
@@ -838,7 +858,7 @@ class StockPicking(models.Model):
                      "*#%(ref)s*. Please be ready to receive it.%(tail)s",
                      rider=name, ref=self.sa_ref_code or '', tail=tail)
         elif state == 'delivered':
-            body = _("\u2705 Delivered. Thank you! \U0001F64F")
+            body = _("\u2705 Delivered. Thank you! \U0001F64F") + self._sa_review_line()
         else:
             return False
         return self._sa_tell_customer(body)

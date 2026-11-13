@@ -147,7 +147,7 @@ class SaDeliveryJob(http.Controller):
             # Set `sa_delivery.track_logo_url` to a public image to replace
             # the drawn mark; the company logo is not used because Odoo ships
             # it pre-filled with its own placeholder.
-            'logo_url': (request.env['ir.config_parameter'].sudo().get_param('sa.brand_logo_url', '')
+            'logo_url': ((request.env['sa.brand'].logo_url(fallback='') if 'sa.brand' in request.env else '')
                          or request.env['ir.config_parameter'].sudo().get_param('sa_delivery.track_logo_url', '')),
             'tr': self._track_values(picking),
             # the first paint: the same answer /pos gives, so the map and the

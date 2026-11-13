@@ -96,6 +96,7 @@
                         <group string="Express - it has to be sourced">
                             <field name="express_days"/>
                             <field name="promise_customer"/>
+                            <field name="ask_review"/>
                         </group>
                         <group string="Calling a rider (after Packed)" colspan="2">
                             <field name="call_rider_mode" widget="radio"/>
