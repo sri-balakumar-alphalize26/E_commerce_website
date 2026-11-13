@@ -151,6 +151,44 @@ class TestDeals(HttpCase):
         names = [d.get('name') for d in response.json().get('deals', [])]
         self.assertIn('Test Deal Other', names)
 
+    # ---------------------------------------------------- the offers page timer
+
+    def test_the_timer_counts_to_the_first_real_deal_end(self):
+        """Not to midnight: a deal running for three days must not look like
+        it ends tonight, and one ending at six must not look like midnight."""
+        soon = fields.Datetime.now() + timedelta(hours=2)
+        self._deal(name='Soon', ends_on=soon)
+        self._deal(name='Later', ends_on=soon + timedelta(days=2))
+        end = self.Deal._mart369_soonest_end([self.widget.id])
+        self.assertEqual(fields.Datetime.to_string(end), fields.Datetime.to_string(soon))
+
+    def test_no_timer_without_a_deal_end(self):
+        """An open-ended deal and a hand-priced product never end on their
+        own, so there is nothing to count down to."""
+        self._deal()
+        self.assertIsNone(self.Deal._mart369_soonest_end([self.widget.id]))
+        self.assertIsNone(self.Deal._mart369_soonest_end([self.other.id]))
+
+    def test_a_deal_not_yet_started_does_not_set_the_timer(self):
+        self._deal(starts_on=fields.Datetime.now() + timedelta(days=1),
+                   ends_on=fields.Datetime.now() + timedelta(days=2))
+        self.assertIsNone(self.Deal._mart369_soonest_end([self.widget.id]))
+
+    def test_a_deal_on_products_not_shown_does_not_set_the_timer(self):
+        self._deal(ends_on=fields.Datetime.now() + timedelta(hours=2))
+        self.assertIsNone(self.Deal._mart369_soonest_end([self.other.id]))
+
+    def test_the_offers_page_sends_the_end_in_utc(self):
+        """With a Z, or the browser reads it as its own local time and the
+        timer is off by the shopper's time zone."""
+        soon = fields.Datetime.now() + timedelta(minutes=10)
+        self._deal(ends_on=soon)
+        ends_at = self.url_open('/369mart/offers').json().get('endsAt')
+        self.assertTrue(ends_at and ends_at.endswith('Z'), ends_at)
+        sent = fields.Datetime.to_datetime(ends_at[:-1].replace('T', ' '))
+        # Another live deal in the database may end sooner; never later.
+        self.assertLessEqual(sent, soon.replace(microsecond=0))
+
     # -------------------------------------------------------------- the edges
 
     def test_the_next_edge_is_the_soonest_one_still_ahead(self):

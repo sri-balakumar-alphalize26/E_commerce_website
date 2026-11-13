@@ -266,6 +266,22 @@ class Mart369Deal(models.Model):
         return deals.product_ids.ids if deals else []
 
     @api.model
+    def _mart369_soonest_end(self, template_ids):
+        """When the first live deal on any of these products ends, or None.
+
+        What the offers page counts down to. Only deals that name a product
+        the page actually shows count: a timer ticking towards the end of a
+        deal the shopper cannot see is a deadline that means nothing to them.
+        A deal with no end date never ends on its own, so it adds nothing.
+        """
+        wanted = set(template_ids or [])
+        if not wanted:
+            return None
+        ends = [deal.ends_on for deal in self._mart369_live_deals()
+                if deal.ends_on and wanted & set(deal.product_ids.ids)]
+        return min(ends) if ends else None
+
+    @api.model
     def _mart369_next_edge(self):
         """When the next window opens or closes, or None.
 
