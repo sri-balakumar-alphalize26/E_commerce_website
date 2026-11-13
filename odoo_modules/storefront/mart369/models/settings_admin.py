@@ -47,6 +47,11 @@ class Mart369Config(models.Model):
         string='Alert on new orders', default=True,
         help="The console's bell and sidebar badge count orders waiting to be "
              "moved on. Off: they stay quiet.")
+    shop_logo = fields.Image(
+        string='Shop logo', max_width=1024, max_height=1024,
+        help="The logo the storefront and every page sent by link (WhatsApp "
+             "product page, sign and pay page, payment pages) show. Empty: "
+             "the logo that ships with the shop.")
     alert_low_stock = fields.Boolean(
         string='Alert on low stock', default=True,
         help="The console's bell says how many products are at or below the "
@@ -63,10 +68,43 @@ class Mart369Config(models.Model):
     def _mart369_admin_settings_groups(self):
         company = self.env.company
         config = self._get()
+        store = {key: company[field] or '' for key, field in STORE_FIELDS.items()}
+        store['logo'] = config._mart369_logo_url()
         return {
-            'store': {key: company[field] or '' for key, field in STORE_FIELDS.items()},
+            'store': store,
             'alerts': {key: bool(config[field]) for key, field in ALERT_FIELDS.items()},
         }
+
+    # ------------------------------------------------------------ the logo
+
+    def _mart369_logo_url(self):
+        """'/369mart/logo?v=<when>' when a logo was uploaded, else ''. The
+        version changes with every upload, so browsers never keep the old one."""
+        config = self.sudo()._get()
+        if not config.shop_logo:
+            return ''
+        stamp = int(config.write_date.timestamp()) if config.write_date else 0
+        return '/369mart/logo?v=%s' % stamp
+
+    @api.model
+    def _mart369_save_logo(self, value):
+        """value: a data URL from the console ("data:image/png;base64,..."),
+        '' or None to go back to the shop's own logo, or the current
+        '/369mart/logo?...' address, which means unchanged."""
+        if isinstance(value, str) and value.startswith('/369mart/logo'):
+            return
+        config = self._get()
+        if not value:
+            config.write({'shop_logo': False})
+            return
+        if not isinstance(value, str) or not value.startswith('data:image/') or ';base64,' not in value:
+            raise UserError(_('The logo must be a PNG, JPG or WebP picture.'))
+        mimetype, data = value[5:].split(';base64,', 1)
+        if mimetype not in ('image/png', 'image/jpeg', 'image/webp'):
+            raise UserError(_('The logo must be a PNG, JPG or WebP picture.'))
+        if len(data) > 4 * 1024 * 1024:
+            raise UserError(_('The logo is too big - please use one under 3 MB.'))
+        config.write({'shop_logo': data})
 
     # -------------------------------------------------------------- writing
 
@@ -89,6 +127,8 @@ class Mart369Config(models.Model):
                 raise UserError(_('The store needs a name.'))
             if vals:
                 self.env.company.write(vals)
+            if 'logo' in values:
+                self._mart369_save_logo(values['logo'])
             return True
         if group == 'alerts':
             vals = {field: bool(values[key])

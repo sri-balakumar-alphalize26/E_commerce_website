@@ -1035,6 +1035,39 @@ function LoyaltySettings({ value: L, set }) {
 const PAY_ICON = { cod: "cash", wallet: "wallet", gateway: "card" };
 const PAY_STATE = { enabled: ["On", "green"], test: ["Test mode", "orange"], disabled: ["Off", "grey"] };
 
+/* The shop's logo (13 Nov 2026). Saved in Odoo with the other store settings;
+   the storefront header and every page sent by link (WhatsApp product page,
+   sign and pay page, payment pages) show it. "" = the logo that ships with the
+   shop. The value is the saved address, or a data URL until it is saved. */
+function ShopLogoField({ value, onChange, onError }) {
+  const pick = (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!/^image\/(png|jpeg|webp)$/.test(file.type)) { onError("The logo must be a PNG, JPG or WebP picture."); return; }
+    if (file.size > 3 * 1024 * 1024) { onError("The logo is too big - please use one under 3 MB."); return; }
+    const reader = new FileReader();
+    reader.onload = () => { onError(""); onChange(String(reader.result)); };
+    reader.readAsDataURL(file);
+  };
+  return (
+    <div className="ad-field ad-span2 ad-logo-field">
+      <span>Shop logo</span>
+      <div className="ad-logo-row">
+        <span className="ad-logo-preview"><img src={value || "/brand/369mart-logo-clear.png"} alt="" /></span>
+        <div className="ad-logo-actions">
+          <label className="ad-btn">
+            Upload logo
+            <input type="file" accept="image/png,image/jpeg,image/webp" onChange={pick} hidden />
+          </label>
+          {value && <button type="button" className="ad-btn" onClick={() => onChange("")}>Use the original logo</button>}
+          <small className="ad-dim">Shown on the website and on every page sent by link (WhatsApp product page, sign and pay page). PNG with a clear background works best.</small>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function SettingsSection({ flash }) {
   const [tab, setTab] = useState("store");
   const { data, loading, error, reload } = useResource("/admin/settings");
@@ -1103,6 +1136,7 @@ export function SettingsSection({ flash }) {
 
         {tab === "store" && (
           <div className="ad-form ad-form-pad">
+            <ShopLogoField value={draft.store.logo || ""} onChange={set("store", "logo")} onError={setErr} />
             <Field label="Store name" value={draft.store.name} onChange={set("store", "name")} wide />
             <Field label="Phone" value={draft.store.phone} onChange={set("store", "phone")} />
             <Field label="Email" value={draft.store.email} onChange={set("store", "email")} type="email" />
