@@ -236,11 +236,151 @@ class SaConfirmLink(models.Model):
                 out['description'] = str(cleaned)
         return out
 
+    def _money(self, amount):
+        """"AED 567.00" - with the decimals Odoo is set to for the currency
+        (its rounding, Accounting > Currencies), like Odoo's own pages."""
+        cur = self.request_id.currency_id
+        digits = cur.decimal_places if cur else 2
+        number = '{:,.{d}f}'.format(amount or 0.0, d=digits)
+        symbol = (cur.symbol or cur.name or '') if cur else ''
+        return ('%s %s' % (number, symbol) if cur and cur.position == 'after'
+                else ('%s %s' % (symbol, number)).strip())
+
+    def _page_extras(self):
+        """What the page adds around the price for a customer (13 Nov 2026):
+        {price, mrp, off, qty, total, stock: (tone, text), rating, rating_count,
+        reviews: [{name, stars, when, text}]}. Each part only when it is known;
+        a supplier's link gets none of the selling parts."""
+        self.ensure_one()
+        req, product = self.request_id, self._product()
+        out = {}
+        if self.kind != 'customer' or not product:
+            return out
+        qty = int(req.qty or 0)
+        if qty:
+            out['qty'] = qty
+        price = req.agreed_price or req.quoted_price
+        if price:
+            out['price'] = self._money(price)
+            # The website's rule: the "compare to" price, else the list price,
+            # struck through when the customer pays less than it.
+            mrp = getattr(product, 'compare_list_price', 0.0) or product.list_price or 0.0
+            if mrp > price + 0.001:
+                out['mrp'] = self._money(mrp)
+                out['off'] = int(round((mrp - price) * 100 / mrp))
+            if qty > 1:
+                out['total'] = self._money(price * qty)
+        # Stock: only for a product Inventory counts.
+        if getattr(product, 'is_storable', False) or getattr(product, 'type', '') == 'product':
+            free = sum(product.sudo().product_variant_ids.mapped('free_qty'))
+            need = qty or 1
+            if free >= need:
+                out['stock'] = ('ok', _('In stock'))
+            elif free > 0:
+                out['stock'] = ('low', _('Only %s in stock') % int(free))
+            else:
+                out['stock'] = ('none', _('Not in stock right now - we will arrange it for you'))
+        # Ratings and reviews, read the way the shop's product page reads them.
+        page = self.env.get('mart369.product.page')
+        if page is not None:
+            try:
+                data = page.sudo().reviews(product, {'rating', 'rating_count', 'reviews'}, {})
+            except Exception as err:  # noqa: BLE001 - their change must never break the page
+                _logger.info("Sales Automation: shop reviews for %s skipped: %s", product.id, err)
+                data = {}
+            if data.get('rating'):
+                out['rating'] = data['rating']
+                out['rating_count'] = data.get('ratingCount') or len(data.get('reviews') or [])
+                out['reviews'] = [r for r in (data.get('reviews') or []) if r.get('text')][:3]
+        promise = self._delivery_promise(qty or 1, out_of_stock=out.get('stock', ('',))[0] == 'none')
+        if promise:
+            out['delivery'] = promise
+        return out
+
+    def _chat_number(self):
+        """Digits of the shop's own WhatsApp number - the session that runs
+        this enquiry's group, where the 1:1 flow answers. Never the company
+        phone or a hand-typed employee phone. '' when unknown."""
+        self.ensure_one()
+        session = self.request_id.sudo().group_id.session_id
+        for raw in (getattr(session, 'phone_number', '') or '', getattr(session, 'authorized_number', '') or ''):
+            digits = ''.join(c for c in raw.split('@')[0] if c.isdigit())
+            if len(digits) >= 10:
+                return digits
+        return ''
+
+    def _similar_after_reject(self, limit=4):
+        """"Not this one?" (13 Nov 2026): up to `limit` products like the one
+        the customer rejected, each a WhatsApp link saying "I want <name>" to
+        the shop's number - the existing chat flow takes it from there, so
+        nothing in the ordering changes. [] when there is no number, no
+        storefront, or nothing similar."""
+        self.ensure_one()
+        req = self.request_id.sudo()
+        number = self._chat_number()
+        page = self.env.get('mart369.product.page')
+        rejected = req.rejected_product_ids if 'rejected_product_ids' in req._fields else self.env['product.template']
+        product = req.product_id or rejected[-1:]
+        if not number or page is None or not product:
+            return []
+        try:
+            page = page.sudo()
+            items = page._similar(product, {'similar_items'}) or page._guess(product)
+            items = (items - rejected - product)[:limit]
+            out = []
+            for tmpl in items:
+                price = tmpl.list_price or 0.0
+                out.append({
+                    'name': tmpl.name or '',
+                    'image': '/web/image/product.template/%s/image_256' % tmpl.id if tmpl.image_128 else '',
+                    'price': self._money(price) if price else '',
+                    'url': 'https://wa.me/%s?text=%s' % (number, quote(_('I want %s', tmpl.name or ''))),
+                })
+            return out
+        except Exception as err:  # noqa: BLE001 - their change must never break the page
+            _logger.info("Sales Automation: similar products for link %s skipped: %s", self.id, err)
+            return []
+
+    def _delivery_promise(self, qty, out_of_stock=False):
+        """('quick'|'express', "25 mins") for this customer's address and
+        product, decided by the shop's own rules (13 Nov 2026) - the same call
+        the website makes, which already follows the hub rules and the
+        WhatsApp Quick/Express shops (mart369_whatsapp_bridge). None when the
+        storefront modules are not installed or anything goes wrong: the page
+        must never break over a delivery line."""
+        self.ensure_one()
+        cart = self.env.get('mart369.cart')
+        product = self._product()
+        if cart is None or not product:
+            return None
+        try:
+            req = self.request_id.sudo()
+            order = req.order_id
+            address = (order.partner_shipping_id or order.partner_id) if order else False
+            if not address and hasattr(req, '_sa_address_book'):
+                customer = self.partner_id or (req._sa_address_partner() if hasattr(req, '_sa_address_partner') else False)
+                address = req._sa_address_book(customer)[:1] if customer else False
+            cart = cart.sudo()
+            tmpl = product.sudo()
+            own = getattr(tmpl, 'mart_delivery_text', '') or getattr(tmpl, 'qe_delivery_text', '') or ''
+            if out_of_stock and not own:
+                return None          # the website's rule: nothing in stock is never Quick
+            where = cart._mart369_where(address) if address else {}
+            offer = cart._mart369_offer(tmpl, qty, where, variant=tmpl.product_variant_id)
+            mode = 'quick' if offer.get('mode') == 'quick' and not out_of_stock else 'express'
+            text = offer.get('when') or own
+            if not text and 'mart369.delivery.rule' in self.env:
+                rules = self.env['mart369.delivery.rule'].sudo()._mart369_rules()
+                text = getattr(rules.get('quick' if mode == 'quick' else 'all'), 'eta', '') or ''
+            return (mode, text)
+        except Exception as err:  # noqa: BLE001
+            _logger.info("Sales Automation: delivery line for link %s skipped: %s", self.id, err)
+            return None
+
     def _details_rows(self):
         """Rows for the details table: (label EN, label ZH, value)."""
         self.ensure_one()
         req, product = self.request_id, self._product()
-        cur = req.currency_id.symbol or req.currency_id.name or ''
         rows = [(_('Product'), '产品', product.name or req._sa_confirm_name() or ''),
                 (_('Reference'), '编号', '#%s' % (req.ref_code or ''))]
         qty = req.qty or 0
@@ -258,7 +398,7 @@ class SaConfirmLink(models.Model):
             if self.kind == 'customer':
                 price = req.agreed_price or req.quoted_price
                 if price:
-                    rows.append((_('Price'), '价格', '%s %.2f' % (cur, price)))
+                    rows.append((_('Price'), '价格', self._money(price)))
             for line in product.attribute_line_ids:
                 values = ', '.join(line.value_ids.mapped('name'))
                 if values:

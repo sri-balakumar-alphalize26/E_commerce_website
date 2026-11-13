@@ -46,7 +46,7 @@ _PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8">
  .zoom .zh-hover{display:none}
  /* Hover zoom, like the storefront product page: a lens on the picture and a
     magnified pane over the right-hand column. Mouse only, 860 px and wider. */
- .media{position:relative}
+ .media{position:relative;z-index:8}
  .lens{position:absolute;display:none;pointer-events:none;border-radius:8px;background:rgba(10,120,171,.12);border:1.5px solid rgba(10,120,171,.55);box-shadow:0 0 0 9999px rgba(255,255,255,.35)}
  .zp{display:none;position:absolute;top:0;left:calc(100%% + 20px);width:440px;height:440px;z-index:7;background:#fff no-repeat;border:1px solid var(--line);border-radius:20px;box-shadow:0 24px 50px -24px rgba(19,33,43,.45);pointer-events:none}
  @media(hover:hover) and (pointer:fine) and (min-width:860px){.zoom .zh-touch{display:none}.zoom .zh-hover{display:inline}}
@@ -64,6 +64,35 @@ _PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8">
  .price{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px}
  .price b{font-size:24px;font-weight:800;color:var(--navy)}
  .price span{font-size:14px;color:var(--muted)}
+ .price s{font-size:14px;color:var(--muted)}
+ .price .off{font-style:normal;font-size:13px;font-weight:800;color:#fff;background:#e2552d;border-radius:6px;padding:2px 7px}
+ .total{font-size:14px;color:#3d4c58}.total b{color:var(--ink);font-size:16px}
+ .rate{display:inline-flex;align-items:center;gap:8px;text-decoration:none;font-size:13px;color:var(--muted);align-self:flex-start}
+ .rate b{background:var(--ok);color:#fff;border-radius:6px;padding:2px 8px;font-size:13px}
+ .dlv{display:inline-flex;align-items:center;gap:6px;align-self:flex-start;border-radius:999px;padding:6px 12px;font-size:13.5px;font-weight:700}
+ .dlv-quick{background:#fff1de;color:#a35a00}
+ .dlv-express{background:#e5f2f9;color:#0b4a6e}
+ .stock{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700}
+ .stock i{width:9px;height:9px;border-radius:50%%;flex:none}
+ .st-ok{color:#17703a}.st-ok i{background:var(--ok)}
+ .st-low{color:#8a4f00}.st-low i{background:#f7931e}
+ .st-none{color:#8a4f00}.st-none i{background:#c3ccd3}
+ .rbig{display:flex;align-items:baseline;gap:10px;margin-bottom:6px}
+ .rbig b{font-size:30px;font-weight:800}.rbig small{color:var(--muted)}
+ .sim-sub{margin:-2px 0 12px;font-size:14px;color:var(--muted)}
+ .sim-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+ .sim-item{display:flex;flex-direction:column;gap:4px;padding:10px;border:1px solid var(--line);border-radius:14px;text-decoration:none;color:var(--ink);background:#fff;transition:transform .15s,box-shadow .15s}
+ .sim-item:hover{transform:translateY(-2px);box-shadow:0 10px 20px -16px rgba(19,33,43,.5)}
+ .sim-item img,.sim-noimg{width:100%%;height:110px;object-fit:contain;border-radius:10px;background:var(--soft);display:block}
+ .sim-item b{font-size:13.5px;line-height:1.3;overflow-wrap:anywhere}
+ .sim-item small{font-size:13px;font-weight:700;color:var(--navy)}
+ .sim-item em{font-style:normal;font-size:12.5px;font-weight:700;color:var(--ok);margin-top:auto}
+ @media(min-width:860px){.sim-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+ .rv-st{color:#f5a623;letter-spacing:1px}
+ .rv{list-style:none;margin:0;padding:0}
+ .rv li{padding:10px 0;border-top:1px solid #f0f3f5}
+ .rv-hd{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;font-size:13.5px}.rv-hd small{color:var(--muted)}
+ .rv p{margin:4px 0 0;font-size:14px;color:#3d4c58;overflow-wrap:anywhere}
  .trust{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
  .trust span{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:#3d4c58;background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px 10px;min-width:0;overflow-wrap:anywhere}
  .trust i{width:22px;height:22px;flex:none;border-radius:7px;background:var(--ok-bg);color:var(--ok);display:grid;place-items:center;font-style:normal;font-size:12px}
@@ -119,6 +148,38 @@ _PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8">
    .lower{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
    .lower .wide{grid-column:span 2}
  }
+ /* ---- motion (13 Nov 2026): the page opens in steps, the buttons press, the answer lands ---- */
+ @keyframes sa-rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+ @keyframes sa-drop{from{opacity:0;transform:translateY(-100%%)}to{opacity:1;transform:none}}
+ @keyframes sa-up{from{transform:translateY(110%%)}to{transform:none}}
+ @keyframes sa-photo{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:none}}
+ @keyframes sa-pop{0%%{opacity:0;transform:scale(.6)}60%%{opacity:1;transform:scale(1.08)}100%%{transform:scale(1)}}
+ @keyframes sa-draw{to{stroke-dashoffset:0}}
+ @keyframes sa-ring{from{box-shadow:0 0 0 0 var(--ring)}to{box-shadow:0 0 0 18px rgba(0,0,0,0)}}
+ @keyframes sa-shake{0%%,100%%{transform:none}20%%{transform:translateX(-6px)}40%%{transform:translateX(6px)}60%%{transform:translateX(-4px)}80%%{transform:translateX(3px)}}
+ @keyframes sa-spin{to{transform:rotate(360deg)}}
+ .ask{animation:sa-drop .45s cubic-bezier(.2,.8,.2,1) backwards}
+ .pic{animation:sa-photo .6s cubic-bezier(.2,.8,.2,1) .05s backwards}
+ .top>*,.lower>*,.info>*{animation:sa-rise .5s cubic-bezier(.2,.8,.2,1) backwards}
+ .top>:nth-child(2){animation-delay:.08s}
+ .info>:nth-child(1){animation-delay:.10s}.info>:nth-child(2){animation-delay:.15s}.info>:nth-child(3){animation-delay:.20s}
+ .info>:nth-child(4){animation-delay:.25s}.info>:nth-child(5){animation-delay:.30s}.info>:nth-child(n+6){animation-delay:.35s}
+ .lower>:nth-child(1){animation-delay:.30s}.lower>:nth-child(2){animation-delay:.38s}.lower>:nth-child(n+3){animation-delay:.46s}
+ .gal img{animation:sa-rise .4s ease backwards}.gal img:nth-child(2){animation-delay:.06s}.gal img:nth-child(n+3){animation-delay:.12s}
+ .btn{transition:transform .16s cubic-bezier(.2,.8,.2,1),filter .2s,opacity .25s,box-shadow .2s}
+ .btn:hover:not([disabled]){transform:translateY(-1px);filter:brightness(1.05)}
+ .btn:active:not([disabled]){transform:scale(.96)}
+ .btn.busy{opacity:1 !important;cursor:progress}
+ .btn.busy::before{content:"";display:inline-block;width:16px;height:16px;margin-right:8px;vertical-align:-3px;border:2.5px solid currentColor;border-right-color:transparent;border-radius:50%%;animation:sa-spin .7s linear infinite}
+ .btn.dim{opacity:.35 !important;transform:scale(.97)}
+ .done.fresh{animation:sa-pop .5s cubic-bezier(.2,.8,.2,1) backwards}
+ .done.fresh i{animation:sa-ring .9s ease-out .25s backwards}
+ .done.acc{--ring:rgba(26,127,60,.45)}.done.rej{--ring:rgba(163,50,42,.4)}
+ .done.rej.fresh{animation:sa-pop .45s cubic-bezier(.2,.8,.2,1) backwards,sa-shake .45s ease .45s backwards}
+ .done svg path{stroke-dasharray:30;stroke-dashoffset:0}
+ .done.fresh svg path{stroke-dashoffset:30;animation:sa-draw .45s ease-out .3s forwards}
+ @media(max-width:859px){.bar{animation:sa-up .45s cubic-bezier(.2,.8,.2,1) .35s backwards}}
+ @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none !important;transition:none !important}}
  .ov{display:none;position:fixed;inset:0;background:rgba(10,20,28,.95);z-index:9;overflow:auto;-webkit-overflow-scrolling:touch}
  .ov .in{min-width:100%%;min-height:100%%;display:flex}
  /* margin:auto centres without pushing a zoomed picture's left edge out of reach */
@@ -160,8 +221,8 @@ function closeOv(){document.getElementById('ov').style.display='none'}
 
 
 def _page(title, body, status=200, ask='', body_class=''):
-    logo = (request.env['ir.config_parameter'].sudo().get_param('sa.brand_logo_url', '')
-            or '/sales_automation/static/src/img/369mart-logo.png')
+    # the logo uploaded in the 369 Mart console, else the old setting, else ours
+    logo = request.env['sa.brand'].logo_url()
     return request.make_response(_PAGE % {'title': title, 'body': body, 'logo': html.escape(logo),
                                           'ask': ask, 'body_class': body_class}, status=status,
                                  headers=[('Content-Type', 'text/html; charset=utf-8'),
@@ -222,7 +283,7 @@ _TOP_ROWS = {'产品', '编号', '价格', '数量'}
 
 
 def _not_found():
-    return _page('Not found', '<div class="nopic">This link is not valid.<br><span class="zh">此链接无效。</span></div>', 404)
+    return _page('Not found', '<div class="nopic">This link is not valid.</div>', 404)
 
 
 def _client():
@@ -262,8 +323,10 @@ class SaConfirmPage(http.Controller):
         On a phone the answers are pinned to the bottom of the screen."""
         req = link.request_id
         product = req.product_id
-        bilingual = link.kind == 'vendor'
-        zh = (lambda t: ' <span class="zh">%s</span>' % t) if bilingual else (lambda t: '')
+        # 13 Nov 2026, owner: English only, supplier links too (they used to
+        # carry a Chinese line under each label). `zh` stays so the page is
+        # built the same way; it just adds nothing.
+        zh = lambda t: ''  # noqa: E731
         title = 'Confirm the product #%s' % (req.ref_code or '')
         ask = ('<div class="ask">%s%s<small>Ref #%s</small></div>'
                % (html.escape('Is this the product you want?' if link.kind == 'customer'
@@ -296,13 +359,35 @@ class SaConfirmPage(http.Controller):
             info += '<div class="attrs">%s</div>' % ''.join(
                 '<span>%s: <b>%s</b></span>' % (html.escape(label), html.escape(value)) for label, value in attrs)
         qty = by_cn.get('数量')
-        if by_cn.get('价格'):
+        ex = link._page_extras()
+        if ex.get('rating'):
+            info += ('<a class="rate" href="#reviews"><b>&#9733; %.1f</b><span>%s rating%s</span></a>'
+                     % (ex['rating'], ex['rating_count'], '' if ex['rating_count'] == 1 else 's'))
+        if ex.get('price'):
+            info += '<div class="price"><b>%s</b>%s<span>each%s</span></div>' % (
+                html.escape(ex['price']),
+                ('<s>%s</s><em class="off">%d%% OFF</em>' % (html.escape(ex['mrp']), ex['off'])) if ex.get('mrp') else '',
+                (' · quantity %s' % ex['qty']) if ex.get('qty') else '')
+            if ex.get('total'):
+                info += '<div class="total">Total for %s: <b>%s</b></div>' % (ex['qty'], html.escape(ex['total']))
+        elif by_cn.get('价格'):
             counted = str(qty or '').isdigit()
             info += '<div class="price"><b>%s</b><span>each%s</span></div>' % (
                 html.escape(str(by_cn['价格'])), html.escape(' · quantity %s' % qty) if counted else '')
         elif qty:
             info += '<div class="price"><span>Quantity%s: <b style="font-size:18px">%s</b></span></div>' % (
                 zh('数量'), html.escape(str(qty)))
+        if ex.get('delivery'):
+            mode, when = ex['delivery']
+            icon = ('<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>' if mode == 'quick' else
+                    '<path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="1.8"/><circle cx="17" cy="18" r="1.8"/>')
+            info += ('<div class="dlv dlv-%s"><svg width="14" height="14" viewBox="0 0 24 24" fill="%s" stroke="currentColor" '
+                     'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">%s</svg>%s%s</div>'
+                     % (mode, 'currentColor' if mode == 'quick' else 'none', icon,
+                        'Quick' if mode == 'quick' else 'Express', html.escape(' · %s' % when) if when else ''))
+        if ex.get('stock'):
+            tone, text = ex['stock']
+            info += '<div class="stock st-%s"><i></i>%s</div>' % (tone, html.escape(text))
         parts = link._shop_sections()
         info += _trust_html(parts.get('trust'))
 
@@ -310,8 +395,13 @@ class SaConfirmPage(http.Controller):
             when = link.decided_on
             stamp = (when.strftime('%d %b %Y %H:%M') + ' UTC') if when else ''
             accepted = link.decided == 'accept'
-            info = ('<div class="done %s"><i>%s</i><span><b>%s%s</b><small>%s</small></span></div>'
-                    % ('acc' if accepted else 'rej', '&#10003;' if accepted else '&#10005;',
+            # "fresh": the answer was given just now - the tick / cross draws itself.
+            fresh = ' fresh' if outcome in ('accept', 'reject') else ''
+            icon = ('<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" '
+                    'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="%s"/></svg>'
+                    % ('M5 12l5 5L20 7' if accepted else 'M6 6l12 12M18 6L6 18'))
+            info = ('<div class="done %s%s" role="status"><i>%s</i><span><b>%s%s</b><small>%s</small></span></div>'
+                    % ('acc' if accepted else 'rej', fresh, icon,
                        'You accepted this product' if accepted else 'You rejected this product',
                        zh('已确认' if accepted else '已拒绝'),
                        html.escape(' · '.join(p for p in (stamp, link.identity or '') if p)))) + info
@@ -323,9 +413,11 @@ class SaConfirmPage(http.Controller):
             # saving() greys both buttons after the first press: a second tap
             # would send the answer again while the first is still saving.
             yes = 'Yes, this is it' if link.kind == 'customer' else 'Accept'
+            # The pressed button spins while it saves, the other one fades back.
             bar = ('<div class="bar"><script>function saving(f){if(window.__sent)return false;window.__sent=true;'
-                   'document.querySelectorAll(".btn").forEach(function(b){b.disabled=true});'
-                   'f.querySelector(".btn").innerHTML="Saving&hellip;";return true}</script>'
+                   'var me=f.querySelector(".btn");document.querySelectorAll(".btn").forEach(function(b){'
+                   'b.classList.add(b===me?"busy":"dim");b.disabled=true});'
+                   'me.innerHTML="Saving&hellip;";return true}</script>'
                    '<div class="acts">'
                    '<form class="f-no" method="post" action="/wa/confirm/%(t)s/reject" onsubmit="return confirm(\'Reject this product?\') &amp;&amp; saving(this)">'
                    '<button class="btn no" type="submit">Reject%(r)s</button></form>'
@@ -342,9 +434,35 @@ class SaConfirmPage(http.Controller):
         details = ('<section class="card sec"><h2>Details%s</h2><table class="dt">%s</table></section>'
                    % (zh('详情'), rows)) if rows else ''
         shown = {en.strip().lower() for en, _cn, _v in detail_rows} | {a.strip().lower() for a, _v in attrs}
+        reviews = ''
+        if ex.get('rating'):
+            items = ''.join(
+                '<li><div class="rv-hd"><span class="rv-st">%s</span><b>%s</b><small>%s</small></div><p>%s</p></li>'
+                % ('&#9733;' * int(r.get('stars') or 0) + '&#9734;' * (5 - int(r.get('stars') or 0)),
+                   html.escape(r.get('name') or 'Customer'), html.escape(r.get('when') or ''),
+                   html.escape(r.get('text') or '')) for r in ex.get('reviews') or [])
+            reviews = ('<section class="card sec" id="reviews"><h2>Ratings and reviews</h2>'
+                       '<div class="rbig"><b>%.1f</b><span class="rv-st">%s</span><small>%s rating%s</small></div>%s</section>'
+                       % (ex['rating'], '&#9733;' * int(round(ex['rating'])) + '&#9734;' * (5 - int(round(ex['rating']))),
+                          ex['rating_count'], '' if ex['rating_count'] == 1 else 's',
+                          ('<ul class="rv">%s</ul>' % items) if items else ''))
+        # After Reject: products like it, each a WhatsApp "I want ..." link (13 Nov 2026).
+        similar = ''
+        if link.kind == 'customer' and link.decided == 'reject':
+            items = link._similar_after_reject()
+            if items:
+                cards = ''.join(
+                    '<a class="sim-item" href="%s" target="_blank" rel="noopener">%s<b>%s</b>%s<em>Ask on WhatsApp</em></a>'
+                    % (html.escape(i['url']),
+                       ('<img src="%s" alt="" loading="lazy">' % html.escape(i['image'])) if i['image'] else '<span class="sim-noimg"></span>',
+                       html.escape(i['name']), ('<small>%s</small>' % html.escape(i['price'])) if i['price'] else '')
+                    for i in items)
+                similar = ('<section class="card sec wide sim"><h2>Not this one?</h2>'
+                           '<p class="sim-sub">Tap one of these to ask us on WhatsApp. We are also looking for the right one for you.</p>'
+                           '<div class="sim-grid">%s</div></section>' % cards)
         body = ('<div class="top"><div class="media">%s</div><div class="info">%s%s</div></div>'
-                '<div class="lower">%s%s</div>'
-                % (media, info, bar, details, _shop_sections_html(parts, shown, zh)))
+                '<div class="lower">%s%s%s%s</div>'
+                % (media, info, bar, similar, details, reviews, _shop_sections_html(parts, shown, zh)))
         return _page(title, body, ask=ask, body_class=body_class)
 
     @http.route('/wa/confirm/<string:token>', type='http', auth='public', methods=['GET'], csrf=False)
@@ -357,8 +475,7 @@ class SaConfirmPage(http.Controller):
             tries = int(kw.get('r') or 0) if str(kw.get('r') or '').isdigit() else 0
             if well_formed and tries < 20:
                 # up to a minute: the message arrives before the server has finished its work
-                return _page('One moment', '<div class="nopic">Loading your product page&hellip;<br>'
-                             '<span class="zh">正在加载&hellip;</span></div>'
+                return _page('One moment', '<div class="nopic">Loading your product page&hellip;</div>'
                              '<script>setTimeout(function(){location.replace("/wa/confirm/%s?r=%d")},3000)</script>'
                              % (html.escape(token), tries + 1))
             return _not_found()
