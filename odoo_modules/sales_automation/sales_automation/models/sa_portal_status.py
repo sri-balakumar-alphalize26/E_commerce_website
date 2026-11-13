@@ -41,7 +41,11 @@ class SaleOrderPortalStatus(models.Model):
         o = self.sudo()
         Req = self.env['sa.group.request'].sudo()
         paid = Req._sa_order_is_paid(o)
-        due = max((o.amount_total or 0.0) - (o._sa_paid_elsewhere() or 0.0), 0.0)
+        # Money taken online counts at once (Odoo's amount_paid: done or
+        # authorized transactions), not only when the invoice is paid - a
+        # card payment with no invoice yet still showed "Pay" (13 Nov 2026).
+        online = o.amount_paid if 'amount_paid' in o._fields else 0.0
+        due = max((o.amount_total or 0.0) - (o._sa_paid_elsewhere() or 0.0) - (online or 0.0), 0.0)
         if paid:
             due = 0.0
         jobs = o.picking_ids.filtered(lambda p: p.state != 'cancel' and p.picking_type_id.code == 'outgoing')

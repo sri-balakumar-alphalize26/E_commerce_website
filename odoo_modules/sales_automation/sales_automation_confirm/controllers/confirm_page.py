@@ -112,8 +112,9 @@ _PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8">
    .lower .wide{grid-column:span 2}
  }
  .ov{display:none;position:fixed;inset:0;background:rgba(10,20,28,.95);z-index:9;overflow:auto;-webkit-overflow-scrolling:touch}
- .ov .in{min-width:100%%;min-height:100%%;display:flex;align-items:center;justify-content:center}
- .ov img{max-width:100vw;max-height:100vh;cursor:zoom-in;display:block}
+ .ov .in{min-width:100%%;min-height:100%%;display:flex}
+ /* margin:auto centres without pushing a zoomed picture's left edge out of reach */
+ .ov img{max-width:100vw;max-height:100vh;cursor:zoom-in;display:block;margin:auto;flex:none}
  .ov img.z{max-width:none;max-height:none;width:250vw;cursor:zoom-out}
  .ov .x{position:fixed;top:12px;right:14px;width:40px;height:40px;border-radius:50%%;background:rgba(255,255,255,.16);color:#fff;font-size:20px;line-height:40px;text-align:center;cursor:pointer;z-index:10}
  .ov .tip{position:fixed;left:0;right:0;bottom:16px;text-align:center;color:#c9d6df;font-size:13px;pointer-events:none}

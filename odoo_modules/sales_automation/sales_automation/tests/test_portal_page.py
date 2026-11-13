@@ -44,6 +44,26 @@ class TestPortalPageSteps(TransactionCase, _Orders):
         order = self._make(self.env, require_signature=True, require_payment=True)
         self.assertEqual(order._sa_portal_page(payment_amount=order.amount_total)['step'], 'pay')
 
+    def test_paid_online_with_no_invoice_yet_is_paid(self):
+        """A card payment shows Paid at once - it no longer waits for an
+        invoice and offered Pay again (13 Nov 2026)."""
+        provider = self.env['payment.provider'].search([('code', '=', 'demo')], limit=1)
+        method = self.env['payment.method'].search([('code', '=', 'demo')], limit=1)
+        if not provider or not method:
+            self.skipTest("no demo payment provider in this database")
+        # Not confirmed here: this database's serial-number check blocks
+        # action_confirm in tests; the payment alone must count.
+        order = self._make(self.env, require_signature=False, require_payment=True)
+        self.env['payment.transaction'].create({
+            'provider_id': provider.id, 'payment_method_id': method.id,
+            'amount': order.amount_total, 'currency_id': order.currency_id.id,
+            'partner_id': order.partner_id.id, 'reference': 'ZZ-PORTAL-%s' % order.id,
+            'sale_order_ids': [(6, 0, order.ids)], 'state': 'done'})
+        order.invalidate_recordset(['amount_paid', 'transaction_ids'])
+        page = order._sa_portal_page()
+        self.assertTrue(page['status']['paid'])
+        self.assertEqual(page['step'], 'done')
+
     def test_a_cancelled_order_says_so(self):
         order = self._make(self.env, require_signature=True)
         order._action_cancel()
