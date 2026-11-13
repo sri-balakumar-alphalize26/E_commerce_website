@@ -1,0 +1,129 @@
+/* 369 Mart order page (/my/orders/<id>), design A of 13 Nov 2026: the
+   storefront checkout look (components/home/checkout.css - .co-card,
+   .co-primary, .co-field). Everything is under .sa-page, so nothing else on
+   the website changes. Template: views/sa_portal_brand.xml. */
+
+.sa-page ~ .o_portal_sale_sidebar { display: none !important; }
+
+.sa-page {
+  --sa-ink: #13212b; --sa-muted: #52616d; --sa-line: #e6ebef; --sa-field: #d5dee5;
+  --sa-blue: #0a78ab; --sa-blue-d: #08658f; --sa-deep: #0b4a6e; --sa-green: #1a7f3c;
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: var(--sa-ink); font-size: 15px; line-height: 1.45;
+  max-width: 1080px; margin: 0 auto; padding-bottom: 32px;
+}
+.sa-page *, .sa-page *::before, .sa-page *::after { box-sizing: border-box; }
+.sa-page a { color: var(--sa-blue); }
+
+/* header */
+.sa-hd { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 0; margin-bottom: 8px; border-bottom: 1px solid var(--sa-line); }
+.sa-brand img { height: 36px; width: auto; display: block; }
+.sa-secure { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; color: #3d4c58; background: #fff; border: 1px solid #e3e9ee; border-radius: 999px; padding: 6px 11px; white-space: nowrap; }
+
+/* layout: order left, action right; one column on phones */
+.sa-grid { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 24px; align-items: start; padding-top: 16px; }
+.sa-main, .sa-side { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.sa-side { position: sticky; top: 16px; }
+
+.sa-h1 { margin: 0; font-size: 28px; font-weight: 800; color: var(--sa-deep); letter-spacing: -0.02em; line-height: 1.2; }
+.sa-sub { margin: -10px 0 0; font-size: 15px; color: var(--sa-muted); }
+
+/* Sign - Pay - Delivery */
+.sa-steps { list-style: none; margin: 0; padding: 0; display: flex; align-items: center; gap: 10px; max-width: 460px; font-size: 14px; font-weight: 600; color: var(--sa-muted); }
+.sa-st { display: flex; align-items: center; gap: 7px; white-space: nowrap; }
+.sa-st b { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; background: #e8edf1; color: var(--sa-muted); }
+.sa-st-cur { color: var(--sa-deep); }
+.sa-st-cur b { background: var(--sa-blue); color: #fff; }
+.sa-st-done { color: var(--sa-green); }
+.sa-st-done b { background: #e3f3e8; color: var(--sa-green); }
+.sa-bar { flex: 1; min-width: 16px; height: 2px; background: #e3e9ee; border-radius: 2px; }
+.sa-bar[data-done] { background: var(--sa-green); }
+
+/* cards */
+.sa-card { background: #fff; border: 1px solid var(--sa-line); border-radius: 16px; padding: 18px 20px; box-shadow: 0 1px 2px rgba(19, 33, 43, 0.04); }
+.sa-card-hd { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.sa-ct { margin: 0 0 10px; font-size: 16px; font-weight: 800; color: var(--sa-ink); letter-spacing: -0.01em; font-style: normal; }
+.sa-link { font-size: 13px; font-weight: 700; text-decoration: none; white-space: nowrap; }
+.sa-muted { color: var(--sa-muted); margin: 0 0 12px; }
+.sa-center { text-align: center; }
+.sa-note { margin: 0 0 12px; padding: 10px 12px; border-radius: 10px; background: #fff1de; color: #7a4500; font-size: 13.5px; }
+
+.sa-items { list-style: none; margin: 0; padding: 0; }
+.sa-it { display: flex; align-items: center; gap: 14px; padding: 10px 0; border-bottom: 1px solid #f0f3f5; }
+.sa-it:last-child { border-bottom: 0; }
+.sa-th { width: 52px; height: 52px; flex: none; border-radius: 12px; background: #e7f2f9; color: var(--sa-deep); display: grid; place-items: center; font-weight: 800; font-size: 17px; overflow: hidden; border: 1px solid var(--sa-line); }
+.sa-th img { width: 100%; height: 100%; object-fit: contain; background: #fff; }
+.sa-nm { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
+.sa-nm small { display: block; font-weight: 500; color: var(--sa-muted); font-size: 13px; margin-top: 2px; }
+.sa-pr { font-size: 15px; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.sa-rows { margin-top: 8px; }
+.sa-row { display: flex; justify-content: space-between; gap: 12px; font-size: 15px; color: #3d4c58; padding: 4px 0; font-variant-numeric: tabular-nums; }
+.sa-tot { font-size: 19px; font-weight: 800; color: var(--sa-ink); padding-top: 12px; margin-top: 6px; border-top: 1px solid var(--sa-line); }
+
+.sa-dl { display: flex; gap: 12px; align-items: flex-start; }
+.sa-ic { width: 38px; height: 38px; flex: none; border-radius: 10px; background: #fff1de; color: #8a4f00; display: grid; place-items: center; }
+.sa-dl b { display: block; font-size: 15px; }
+.sa-dl small { display: block; font-size: 13.5px; color: var(--sa-muted); margin-top: 2px; }
+
+/* buttons (.co-primary / .co-ghost) */
+.sa-btn, .sa-page .o_portal_sign_submit, .sa-page button[name="o_payment_submit_button"] {
+  display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 52px; padding: 0 20px;
+  border: 0; border-radius: 12px; font: 700 16px/1 "Inter", system-ui, sans-serif; text-decoration: none; cursor: pointer;
+  color: #fff !important; background: linear-gradient(180deg, #0c86be, var(--sa-blue-d)); box-shadow: 0 10px 18px -12px rgba(8, 101, 143, 0.9);
+}
+.sa-btn:hover, .sa-page .o_portal_sign_submit:hover, .sa-page button[name="o_payment_submit_button"]:hover { filter: brightness(1.07); }
+.sa-page .o_portal_sign_submit:disabled, .sa-page button[name="o_payment_submit_button"]:disabled { opacity: 0.45; box-shadow: none; }
+.sa-btn-g { color: var(--sa-ink) !important; background: #fff; border: 1.5px solid var(--sa-field); box-shadow: none; }
+.sa-btns { display: flex; flex-direction: column; gap: 10px; }
+.sa-due { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; color: var(--sa-muted); }
+.sa-due b { font-size: 22px; color: var(--sa-ink); font-variant-numeric: tabular-nums; }
+.sa-ok { width: 72px; height: 72px; border-radius: 50%; background: #e3f3e8; color: var(--sa-green); display: grid; place-items: center; margin: 4px auto 14px; }
+.sa-reject { margin: 0; text-align: center; font-size: 13px; color: var(--sa-muted); }
+.sa-reject a { font-weight: 700; }
+
+/* Odoo's sign / pay box shown in place (was the #modalaccept popup) */
+.sa-inline .modal-dialog { max-width: none; margin: 0; transform: none; }
+.sa-inline .modal-content { border: 0; border-radius: 0; box-shadow: none; background: transparent; }
+.sa-inline .modal-header { display: none; }
+.sa-inline .modal-body { padding: 0; font-size: 13px; color: var(--sa-muted); }
+.sa-inline .modal-body b { color: var(--sa-ink); font-weight: 600; }
+.sa-inline input.form-control, .sa-inline .o_web_sign_name_and_signature input {
+  min-height: 50px; border: 1.5px solid var(--sa-field); border-radius: 11px; font-size: 15px; font-weight: 600; color: var(--sa-ink);
+}
+.sa-inline input.form-control:focus { border-color: var(--sa-blue); box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.15); }
+.sa-inline .o_web_sign_signature_group, .sa-inline .o_signature_stroke, .sa-inline canvas {
+  border-radius: 12px;
+}
+.sa-inline .o_web_sign_signature_group { border: 1.5px dashed #b9c6d0 !important; background: #fafbfc; }
+.sa-inline .nav-link, .sa-inline .btn-link { color: var(--sa-blue); font-weight: 600; }
+.sa-inline .o_portal_sign_controls .text-end { text-align: center !important; }
+
+/* payment methods as the storefront's option rows */
+.sa-inline .o_payment_form .list-group { display: flex; flex-direction: column; gap: 10px; border-radius: 0; }
+.sa-inline .o_payment_form .list-group-item {
+  border: 1.5px solid var(--sa-field) !important; border-radius: 12px !important; padding: 12px 14px !important; margin: 0 !important; color: var(--sa-ink);
+}
+.sa-inline .o_payment_form .list-group-item:has(input[name="o_payment_radio"]:checked) {
+  border-color: var(--sa-blue) !important; background: #f2f9fd; box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.12);
+}
+.sa-inline .o_payment_option_label { font-size: 15px; font-weight: 700; }
+.sa-inline .form-check-input:checked { background-color: var(--sa-blue); border-color: var(--sa-blue); }
+/* the card already says "Payment method" */
+.sa-inline .o_payment_form p.h4, .sa-inline .o_payment_form p.h5 { display: none; }
+.sa-inline .o_payment_form .btn-primary, .sa-page button[name="o_payment_submit_button"] { width: 100% !important; margin: 4px 0 0 !important; }
+
+@media (max-width: 860px) {
+  .sa-grid { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .sa-side { position: static; }
+}
+@media (max-width: 480px) {
+  .sa-page { font-size: 14px; }
+  .sa-hd { padding: 12px 0; }
+  .sa-brand img { height: 30px; }
+  .sa-h1 { font-size: 22px; }
+  .sa-card { padding: 14px 16px; border-radius: 14px; }
+  .sa-th { width: 44px; height: 44px; }
+  .sa-nm, .sa-pr, .sa-row { font-size: 14px; }
+  .sa-tot { font-size: 17px; }
+  .sa-steps { font-size: 13px; gap: 8px; }
+}

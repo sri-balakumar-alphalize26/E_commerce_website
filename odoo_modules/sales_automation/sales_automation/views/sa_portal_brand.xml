@@ -2,98 +2,164 @@
 <odoo>
 
     <!--
-        The pay page is 369ai's own order portal (/my/orders/<id>, with its
-        pay window): it keeps 369ai's flow and gets the 369 Mart brand on
-        top - the logo bar, Inter, the blue buttons, the 16 px cards.
+        The customer's order page (/my/orders/<id>), opened from the WhatsApp
+        sign and pay links. 13 Nov 2026, owner: it looked like Odoo and showed
+        too much - now it is the storefront's checkout ("design A"): the order
+        on the left, one card on the right that signs, pays, or says what
+        happens next. One column on a phone.
+
+        Odoo's own working parts stay: the signature form and the payment form
+        are Odoo's #modalaccept, moved into the right-hand card and shown in
+        place instead of as a popup; the reject popup moves next to it. The
+        rest of Odoo's page (sidebar, quote table, chatter) is still rendered
+        for the modules that extend it, but hidden (.sa-page ~ ...).
+        Styles: static/src/css/sa_portal.css, all under .sa-page.
     -->
-    <template id="sa_portal_order_brand" name="369 Mart look on the order portal"
+    <template id="sa_portal_order_brand" name="369 Mart order page"
               inherit_id="sale.sale_order_portal_template">
         <xpath expr="//div[hasclass('o_portal_sale_sidebar')]" position="before">
             <t t-set="sa_brand_logo" t-value="res_company.env['ir.config_parameter'].sudo().get_param('sa.brand_logo_url', '') or '/sales_automation/static/src/img/369mart-logo.png'"/>
+            <t t-set="sa_pg" t-value="sale_order._sa_portal_page(payment_amount)"/>
+            <t t-set="sa_st" t-value="sa_pg['status']"/>
             <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+            <!-- This page only: no website header, footer, breadcrumbs or Odoo promo. -->
             <style>
-.sa_brand_bar{display:flex;align-items:center;gap:12px;padding:12px 0 16px;margin-bottom:8px;border-bottom:1px solid #e6ebef}
-.sa_brand_bar img{height:36px;width:auto}
-.sa_brand_bar .sa_brand_title{font:800 18px/1.2 "Inter",system-ui,sans-serif;color:#0b4a6e;letter-spacing:-.02em}
-.sa_brand_bar .sa_brand_sub{font:500 13px/1.3 "Inter",system-ui,sans-serif;color:#6b7a86}
-.sa_brand_bar .sa_brand_badge{margin-left:auto;font:600 12px/1 "Inter",system-ui,sans-serif;color:#6b7a86;border:1px solid #e6ebef;border-radius:999px;padding:6px 10px;white-space:nowrap}
-.o_portal_sale_sidebar,.o_portal_sale_sidebar .card,.o_portal_sale_sidebar .btn{font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-.o_portal_sale_sidebar .card{border:1px solid #e6ebef;border-radius:16px}
-.o_portal_sale_sidebar .btn-primary,.o_portal_sale_sidebar a.btn-primary{background:linear-gradient(180deg,#0c86be,#08658f);border:0;border-radius:12px;min-height:44px;font-weight:700;box-shadow:0 6px 14px -8px rgba(8,101,143,.7)}
-.o_portal_sale_sidebar .btn-primary:hover{background:#08658f}
-.o_portal_sale_sidebar .btn-secondary,.o_portal_sale_sidebar .btn-light{border-radius:12px;min-height:44px}
-.o_portal_sale_sidebar h2,.o_portal_sale_sidebar h4,.o_portal_sale_sidebar .h2{color:#0b4a6e;font-weight:800;letter-spacing:-.02em}
-.o_portal_sale_sidebar a{color:#0a78ab}
-.o_portal_sale_sidebar .alert-success{background:#e9f6ee;color:#1a7f3c;border:0;border-radius:12px}
-.o_portal_sale_sidebar .badge{border-radius:999px}
-/* 6 Oct 2026, the app team's checks: a white label in every state, no 369ai bar, no 369ai promo, no 369ai teal or italics */
-#wrapwrap{--bs-primary:#0a78ab;--bs-primary-rgb:10,120,171;--bs-link-color:#0a78ab;--bs-link-color-rgb:10,120,171;--bs-link-hover-color:#08658f;--bs-link-hover-color-rgb:8,101,143}
-#wrapwrap > header#top, #wrapwrap > footer#bottom, #portal_connect_software_modal_btn, .o_portal_sale_sidebar .o_portal_connect_software{display:none !important}
-.o_portal_sale_sidebar .btn-primary, .o_portal_sale_sidebar .btn-primary:hover, .o_portal_sale_sidebar .btn-primary:focus, .o_portal_sale_sidebar .btn-primary:active, .o_portal_sale_sidebar .btn-primary:disabled, .o_portal_sale_sidebar .btn-primary.disabled, #o_sale_portal_paynow.btn-primary{color:#fff !important}
-.o_portal_sale_sidebar .btn-primary i{color:#fff}
-.o_portal_sale_sidebar .text-primary, .o_portal_sale_sidebar .text-o-color-1{color:#0a78ab !important}
-.o_portal_sale_sidebar h1, .o_portal_sale_sidebar h2, .o_portal_sale_sidebar h3, .o_portal_sale_sidebar h4, .o_portal_sale_sidebar h5, .o_portal_sale_sidebar .fst-italic, .o_portal_sale_sidebar em, .o_portal_sale_sidebar i:not(.fa):not(.oi){font-style:normal !important;font-family:"Inter",system-ui,sans-serif;color:#0b4a6e}
-.o_portal_sale_sidebar table th{color:#6b7a86;font-weight:600}
-.o_portal_sale_sidebar .o_portal_sidebar_content .btn-light, .o_portal_sale_sidebar .btn-light{background:#eef2f5;border:0;border-radius:12px;color:#13212b}
-@media (max-width:767px){.o_portal_sale_sidebar .card{border-radius:12px}}
-/* 8 Oct 2026, owner: the status card on top; 369ai's wrapped "2,600.000 AE D", "Powered by", Order Again,
-   the warehouse delivery list (DT/OUT/...) and an empty Loyalty Card box are not for the customer */
-.sa_status{border:1px solid #e6ebef;border-radius:16px;padding:16px 18px;margin:0 0 18px;background:#fff;font-family:"Inter",system-ui,sans-serif}
-.sa_status.wait{border-left:6px solid #f7931e}.sa_status.ok{border-left:6px solid #1a7f3c}.sa_status.off{border-left:6px solid #9aa5ae;background:#f7f8f9}
-.sa_status .sa_st_label{font-weight:800;font-size:17px;color:#13212b}
-.sa_status .sa_st_amount{font-weight:800;font-size:26px;color:#0b4a6e;white-space:nowrap;margin:4px 0 10px;letter-spacing:-.02em}
-.sa_status .sa_st_btns{display:flex;flex-wrap:wrap;gap:10px}
-.sa_status .sa_st_btns a{flex:1 1 220px;display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;border-radius:12px;font-weight:700;font-size:16px;text-decoration:none;border:0}
-.sa_status .sa_st_pay{background:linear-gradient(180deg,#0c86be,#08658f);color:#fff !important;box-shadow:0 6px 14px -8px rgba(8,101,143,.7)}
-.sa_status .sa_st_sec{background:#eef2f5;color:#13212b !important}
-.sa_status .sa_st_delivery{margin-top:12px;padding-top:12px;border-top:1px solid #e6ebef;font-weight:600;color:#13212b}
-.sa_old_total{display:none !important}
-#sidebar_content > .text-muted, #reorder_sidebar_button, .o_wsale_reorder_button{display:none !important}
-.o_portal_sale_sidebar div.col-12.mb-4:has(div[name='delivery_order']){display:none !important}
-#total > div:has(> table.table-sm tr:only-child){display:none !important}
-.sa_line_pic{width:48px;height:48px;object-fit:contain;border-radius:8px;border:1px solid #e6ebef;background:#fff;margin-right:10px;vertical-align:middle}
+#wrapwrap{background:#f6f8fa}
+#wrapwrap > header#top, #wrapwrap > footer#bottom, #wrapwrap .o_portal.container, #portal_connect_software_modal_btn{display:none !important}
+#wrapwrap .o_portal_wrap > .container{max-width:1128px;padding-top:0 !important}
             </style>
-            <div class="sa_brand_bar">
-                <img t-att-src="sa_brand_logo" t-att-alt="sale_order.company_id.name"/>
-                <div>
-                    <div class="sa_brand_title">Order <t t-esc="sale_order.name"/></div>
-                    <div class="sa_brand_sub">Check your order and pay online. This page becomes your receipt once paid.</div>
-                </div>
-                <span class="sa_brand_badge">&#128274; Secure</span>
-            </div>
-            <t t-set="sa_st" t-value="sale_order._sa_portal_status()"/>
-            <div t-attf-class="sa_status #{sa_st['tone']}">
-                <div class="sa_st_label"><t t-out="sa_st['icon']"/> <t t-out="sa_st['label']"/></div>
-                <div class="sa_st_amount" t-out="sa_st['amount_text']"/>
-                <div class="sa_st_btns">
-                    <t t-if="sa_st['pay_url']">
-                        <a t-if="payment_amount" href="#" class="sa_st_pay" data-bs-toggle="modal" data-bs-target="#modalaccept">&#128179; PAY NOW</a>
-                        <a t-else="" t-att-href="sa_st['pay_url']" class="sa_st_pay">&#128179; PAY NOW</a>
-                    </t>
-                    <a t-if="sa_st['invoice_url']" t-att-href="sa_st['invoice_url']" class="sa_st_sec">&#129534; INVOICE</a>
-                </div>
-                <div t-if="sa_st['delivery']" class="sa_st_delivery">
-                    &#128666; Delivery: <t t-out="sa_st['delivery']"/>
-                    <div t-if="sa_st['track_url']" class="sa_st_btns mt-2">
-                        <a t-att-href="sa_st['track_url']" class="sa_st_sec">&#128205; TRACK MY ORDER</a>
+            <div class="sa-page" id="sa_page" t-att-data-step="sa_pg['step']">
+                <header class="sa-hd">
+                    <div class="sa-brand">
+                        <img t-att-src="sa_brand_logo" t-att-alt="sale_order.company_id.name"/>
                     </div>
+                    <span class="sa-secure">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+                        Secure page
+                    </span>
+                </header>
+
+                <div class="sa-grid">
+                    <div class="sa-main">
+                        <h1 class="sa-h1">Order <t t-out="sale_order.name"/></h1>
+                        <p class="sa-sub" t-out="sa_pg['subtitle']"/>
+                        <ol class="sa-steps" aria-label="Order steps">
+                            <t t-foreach="sa_pg['steps']" t-as="s">
+                                <li t-if="not s_first" class="sa-bar" t-att-data-done="'1' if s['state'] == 'done' else None" aria-hidden="true"/>
+                                <li t-attf-class="sa-st sa-st-#{s['state']}" t-att-aria-current="'step' if s['state'] == 'cur' else None">
+                                    <b>
+                                        <svg t-if="s['state'] == 'done'" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>
+                                        <t t-else="" t-out="s['n']"/>
+                                    </b>
+                                    <t t-out="s['label']"/>
+                                </li>
+                            </t>
+                        </ol>
+
+                        <section class="sa-card">
+                            <div class="sa-card-hd">
+                                <h2 class="sa-ct">Your order · <t t-out="len(sa_pg['items'])"/> <t t-if="len(sa_pg['items']) == 1">item</t><t t-else="">items</t></h2>
+                                <a class="sa-link" t-att-href="sa_pg['pdf_url']" target="_blank">Download PDF</a>
+                            </div>
+                            <ul class="sa-items">
+                                <li t-foreach="sa_pg['items']" t-as="it" class="sa-it">
+                                    <span class="sa-th">
+                                        <img t-if="it['product'].image_128" t-att-src="image_data_uri(it['product'].image_128)" alt=""/>
+                                        <t t-else="" t-out="it['initial']"/>
+                                    </span>
+                                    <span class="sa-nm"><t t-out="it['name']"/><small t-out="it['qty_text']"/></span>
+                                    <span class="sa-pr" t-out="it['total_text']"/>
+                                </li>
+                            </ul>
+                            <div class="sa-rows">
+                                <div t-foreach="sa_pg['rows']" t-as="r" class="sa-row"><span t-out="r['label']"/><span t-out="r['amount']"/></div>
+                                <div class="sa-row sa-tot">
+                                    <span><t t-if="sa_pg['step'] == 'done'">Paid</t><t t-else="">Total</t></span>
+                                    <span t-out="sa_pg['total_text']"/>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section t-if="sa_pg['address']" class="sa-card sa-dl">
+                            <span class="sa-ic">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="1.8"/><circle cx="17" cy="18" r="1.8"/></svg>
+                            </span>
+                            <span>
+                                <b>Delivery to <t t-out="sa_pg['address']"/></b>
+                                <small t-if="sa_st['delivery']" t-out="sa_st['delivery']"/>
+                            </span>
+                        </section>
+                    </div>
+
+                    <aside class="sa-side">
+                        <section class="sa-card sa-action" id="sa_action">
+                            <t t-if="sa_pg['step'] == 'sign'">
+                                <h2 class="sa-ct">Sign to confirm</h2>
+                            </t>
+                            <t t-elif="sa_pg['step'] == 'pay'">
+                                <h2 class="sa-ct">Payment method</h2>
+                                <p t-if="sa_pg['tx_pending']" class="sa-note">We are still checking your last payment. Pay again only if it failed.</p>
+                            </t>
+                            <t t-elif="sa_pg['step'] == 'pay_link'">
+                                <h2 class="sa-ct">Pay for your order</h2>
+                                <div class="sa-due"><span>To pay</span><b t-out="sa_st['amount_text']"/></div>
+                                <a class="sa-btn" t-att-href="sa_st['pay_url']">Pay <t t-out="sa_st['amount_text']"/></a>
+                            </t>
+                            <t t-elif="sa_pg['step'] == 'done'">
+                                <div class="sa-ok">
+                                    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>
+                                </div>
+                                <h2 class="sa-ct sa-center"><t t-if="sa_st['delivered']">Delivered</t><t t-else="">Order confirmed</t></h2>
+                                <p class="sa-center sa-muted">Paid <t t-out="sa_pg['total_text']"/><t t-if="sa_pg['signed_by']"> · signed by <t t-out="sa_pg['signed_by']"/></t></p>
+                                <div class="sa-btns">
+                                    <a t-if="sa_st['track_url']" class="sa-btn" t-att-href="sa_st['track_url']">Track my order</a>
+                                    <a t-if="sa_st['invoice_url']" class="sa-btn sa-btn-g" t-att-href="sa_st['invoice_url']">Download invoice</a>
+                                </div>
+                            </t>
+                            <t t-elif="sa_pg['step'] == 'cancel'">
+                                <h2 class="sa-ct">Order cancelled</h2>
+                                <p class="sa-muted">Message us on WhatsApp and we will make you a new order.</p>
+                            </t>
+                            <t t-else="">
+                                <h2 class="sa-ct" t-out="sa_st['label']"/>
+                                <p class="sa-muted">We will message you on WhatsApp when there is something to do.</p>
+                            </t>
+                            <div id="sa_action_slot"/>
+                        </section>
+                        <p t-if="sa_pg['step'] == 'sign'" class="sa-reject">
+                            Something wrong? <a href="#" data-bs-toggle="modal" data-bs-target="#modaldecline">Reject this order</a>
+                        </p>
+                        <div id="sa_decline_slot"/>
+                    </aside>
                 </div>
             </div>
         </xpath>
-        <xpath expr="//h2[@t-field='sale_order.amount_total']" position="attributes">
-            <attribute name="class" add="sa_old_total" separator=" "/>
+
+        <!-- Odoo's sign / pay box, in the card instead of a popup. -->
+        <xpath expr="//div[@id='sa_action_slot']" position="inside">
+            <xpath expr="//div[@id='modalaccept']" position="move"/>
+        </xpath>
+        <xpath expr="//div[@id='modalaccept']" position="attributes">
+            <attribute name="class">sa-inline</attribute>
+            <attribute name="role"/>
+        </xpath>
+        <xpath expr="//div[@id='sa_decline_slot']" position="inside">
+            <xpath expr="//div[@id='modaldecline']" position="move"/>
+        </xpath>
+        <!-- After signing Odoo "clicks" its Pay Now to open the popup; the pay
+             box is already on the page, so that click only scrolls to it. -->
+        <xpath expr="//a[@id='o_sale_portal_paynow']" position="attributes">
+            <attribute name="data-bs-toggle"/>
+            <attribute name="data-bs-target"/>
+            <attribute name="href">#sa_action</attribute>
         </xpath>
     </template>
 
-    <!-- The order itself: no staff note for the customer, a photo per line. -->
+    <!-- The staff note our WhatsApp flow writes (employee, phone) is not for the customer. -->
     <template id="sa_portal_order_content" name="369 Mart order content"
               inherit_id="sale.sale_order_portal_content">
         <xpath expr="//section[@id='terms']" position="attributes">
             <attribute name="t-if">not is_html_empty(sale_order.note) and not sale_order._sa_portal_note_is_internal()</attribute>
-        </xpath>
-        <xpath expr="//td[@name='td_product_name']/*[1]" position="before">
-            <img t-if="line.product_id.image_128" class="sa_line_pic" alt=""
-                 t-att-src="image_data_uri(line.product_id.sudo().image_128)"/>
         </xpath>
     </template>
 
