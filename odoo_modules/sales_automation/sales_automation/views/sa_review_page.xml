@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--
+        "Rate your products" (13 Nov 2026): /wa/review/<order>?access_token=...
+        for an order bought through WhatsApp, linked from the private
+        Delivered message and from the delivered order page. One card per
+        product: five stars and an optional line. 369 Mart look (.sa-pp, the
+        logo bar), styles in static/src/css/sa_portal.css.
+    -->
+    <template id="sa_review_page" name="369 Mart: rate your products">
+        <t t-call="portal.frontend_layout">
+            <t t-set="no_breadcrumbs" t-value="True"/>
+            <div class="wrap sa-pp sa-rvp">
+                <div class="container">
+                    <t t-call="sales_automation.sa_brand_chrome"/>
+                    <h1 class="sa-h1 sa-pp-title">Rate your products</h1>
+                    <p class="sa-sub sa-pp-sub">Order <t t-out="order.name"/> · your stars help other customers choose.</p>
+                    <div class="sa-rv-list">
+                        <div t-if="not open" class="sa-card sa-rv-wait">
+                            You can rate these once your order is delivered.
+                        </div>
+                        <t t-else="">
+                            <form t-foreach="items" t-as="it" method="post" class="sa-card sa-rv-card"
+                                  t-attf-id="p#{it['product'].id}"
+                                  t-attf-action="/wa/review/#{order.id}/#{it['product'].id}">
+                                <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                <input type="hidden" name="access_token" t-att-value="token"/>
+                                <div class="sa-rv-hd">
+                                    <span class="sa-rv-img">
+                                        <img t-if="it['image_data']" t-att-src="image_data_uri(it['image_data'])" alt=""/>
+                                    </span>
+                                    <b t-out="it['name']"/>
+                                </div>
+                                <div class="sa-stars" role="radiogroup" t-att-aria-label="'Stars for %s' % it['name']">
+                                    <t t-foreach="[5, 4, 3, 2, 1]" t-as="n">
+                                        <input type="radio" name="stars" t-att-value="n" required="required"
+                                               t-attf-id="s#{it['product'].id}_#{n}"
+                                               t-att-checked="'checked' if it['stars'] == n else None"/>
+                                        <label t-attf-for="s#{it['product'].id}_#{n}" t-att-title="'%s star%s' % (n, '' if n == 1 else 's')">&#9733;</label>
+                                    </t>
+                                </div>
+                                <textarea name="text" rows="2" maxlength="500" class="sa-rv-text"
+                                          placeholder="What did you like? (optional)" t-out="it['text']"/>
+                                <div class="sa-rv-foot">
+                                    <span t-if="saved == str(it['product'].id)" class="sa-rv-ok">&#10003; Thank you! Your review is saved.</span>
+                                    <span t-elif="it['stars']" class="sa-rv-was">You rated this <t t-out="it['stars']"/>/5 - you can change it.</span>
+                                    <button type="submit" class="sa-btn"><t t-if="it['stars']">Update</t><t t-else="">Send</t></button>
+                                </div>
+                            </form>
+                        </t>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
+</odoo>

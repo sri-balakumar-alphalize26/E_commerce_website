@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!--
+        13 Nov 2026, owner: "no Odoo here after". Odoo's own payment pages a
+        customer reaches from the WhatsApp pay link and from the order page
+        (/payment/pay, the "processing" page /payment/status, and
+        /payment/confirmation) get the 369 Mart look of the order page: the
+        logo bar, Inter, white 16 px cards, the storefront buttons. Odoo's
+        markup stays as it is, so its scripts (the status page waits for the
+        payment and then goes back to the order) keep working.
+        Styles: static/src/css/sa_portal.css, all under .sa-pp.
+    -->
+
+    <!-- The logo bar, and on this page only: no website header, footer or breadcrumbs. -->
+    <template id="sa_brand_chrome" name="369 Mart logo bar for pages sent by link">
+        <t t-set="sa_brand_logo" t-value="res_company.env['sa.brand'].logo_url()"/>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+        <style>
+#wrapwrap{background:#f6f8fa}
+#wrapwrap > header#top, #wrapwrap > footer#bottom, #wrapwrap .o_portal.container{display:none !important}
+        </style>
+        <header class="sa-hd">
+            <div class="sa-brand"><img t-att-src="sa_brand_logo" t-att-alt="res_company.name"/></div>
+            <span class="sa-secure">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+                Secure page
+            </span>
+        </header>
+    </template>
+
+    <!-- "Processing your payment" -->
+    <template id="sa_payment_status_brand" name="369 Mart look: payment status"
+              inherit_id="payment.payment_status">
+        <xpath expr="//div[hasclass('wrap')]" position="attributes">
+            <attribute name="class" add="sa-pp" separator=" "/>
+        </xpath>
+        <xpath expr="//t[@t-call='payment.portal_breadcrumb']" position="replace">
+            <t t-call="sales_automation.sa_brand_chrome"/>
+            <h1 class="sa-h1 sa-pp-title">Your payment</h1>
+            <p class="sa-sub sa-pp-sub">Please keep this page open - we will take you back to your order.</p>
+        </xpath>
+    </template>
+
+    <!-- The pay link (/payment/pay?...) -->
+    <template id="sa_payment_pay_brand" name="369 Mart look: pay link"
+              inherit_id="payment.pay">
+        <xpath expr="//div[hasclass('wrap')]" position="attributes">
+            <attribute name="class" add="sa-pp" separator=" "/>
+        </xpath>
+        <xpath expr="//t[@t-call='payment.portal_breadcrumb']" position="replace">
+            <t t-call="sales_automation.sa_brand_chrome"/>
+            <h1 class="sa-h1 sa-pp-title">Pay for your order</h1>
+            <p class="sa-sub sa-pp-sub">Choose how you want to pay.</p>
+        </xpath>
+        <xpath expr="//div[hasclass('mt-4')][.//t[@t-call='payment.form']]" position="attributes">
+            <attribute name="class" add="sa-inline sa-card sa-pp-form" separator=" "/>
+        </xpath>
+    </template>
+
+    <!-- Payment confirmation (used when a payment has no page to go back to) -->
+    <template id="sa_payment_confirm_brand" name="369 Mart look: payment confirmation"
+              inherit_id="payment.confirm">
+        <xpath expr="//div[hasclass('wrap')]" position="attributes">
+            <attribute name="class" add="sa-pp" separator=" "/>
+        </xpath>
+        <xpath expr="//t[@t-call='payment.portal_breadcrumb']" position="replace">
+            <t t-call="sales_automation.sa_brand_chrome"/>
+            <h1 class="sa-h1 sa-pp-title">Your payment</h1>
+        </xpath>
+        <xpath expr="//a[@href='/my/home']" position="replace">
+            <t t-set="sa_orders" t-value="tx.sudo().sale_order_ids if 'sale_order_ids' in tx._fields else False"/>
+            <a t-if="sa_orders" class="sa-btn" t-att-href="sa_orders[:1].get_portal_url()">Back to my order</a>
+        </xpath>
+    </template>
+
+</odoo>

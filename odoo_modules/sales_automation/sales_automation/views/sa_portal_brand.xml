@@ -18,7 +18,7 @@
     <template id="sa_portal_order_brand" name="369 Mart order page"
               inherit_id="sale.sale_order_portal_template">
         <xpath expr="//div[hasclass('o_portal_sale_sidebar')]" position="before">
-            <t t-set="sa_brand_logo" t-value="res_company.env['ir.config_parameter'].sudo().get_param('sa.brand_logo_url', '') or '/sales_automation/static/src/img/369mart-logo.png'"/>
+            <t t-set="sa_brand_logo" t-value="res_company.env['sa.brand'].logo_url()"/>
             <t t-set="sa_pg" t-value="sale_order._sa_portal_page(payment_amount)"/>
             <t t-set="sa_st" t-value="sa_pg['status']"/>
             <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
@@ -26,7 +26,7 @@
             <style>
 #wrapwrap{background:#f6f8fa}
 #wrapwrap > header#top, #wrapwrap > footer#bottom, #wrapwrap .o_portal.container, #portal_connect_software_modal_btn{display:none !important}
-#wrapwrap .o_portal_wrap > .container{max-width:1128px;padding-top:0 !important}
+#wrapwrap .o_portal_wrap > .container{max-width:1128px;padding-top:0 !important;padding-bottom:12px !important}
             </style>
             <div class="sa-page" id="sa_page" t-att-data-step="sa_pg['step']">
                 <header class="sa-hd">
@@ -92,27 +92,77 @@
                     </div>
 
                     <aside class="sa-side">
+                        <!-- 13 Nov 2026: the optional delivery slot - the same backend slots as
+                             the storefront checkout, no fee, only while the order is a quotation. -->
+                        <t t-set="sa_slots" t-value="sale_order._sa_portal_slots() if sa_pg['step'] in ('sign', 'pay') else {'chips': [], 'chosen': ''}"/>
+                        <section t-if="sa_slots['chips']" class="sa-card sa-slot" id="sa_slot">
+                            <h2 class="sa-ct">Delivery slot <small>optional</small></h2>
+                            <p t-if="request.params.get('slot_error')" class="sa-note" t-out="request.params.get('slot_error')"/>
+                            <form method="post" class="sa-slot-chips" t-attf-action="/my/orders/#{sale_order.id}/slot">
+                                <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                <input type="hidden" name="access_token" t-att-value="sale_order.access_token"/>
+                                <button type="submit" name="slot_key" value="" t-attf-class="sa-slotchip #{'on' if not sa_slots['chosen'] else ''}"
+                                        t-att-aria-pressed="'true' if not sa_slots['chosen'] else 'false'">
+                                    <b>No preference</b><span>As soon as we can</span>
+                                </button>
+                                <button t-foreach="sa_slots['chips']" t-as="c" type="submit" name="slot_key" t-att-value="c['key']"
+                                        t-attf-class="sa-slotchip #{'on' if c['key'] == sa_slots['chosen'] else ''}"
+                                        t-att-aria-pressed="'true' if c['key'] == sa_slots['chosen'] else 'false'"
+                                        t-att-title="c.get('label')">
+                                    <b t-out="c.get('top') or c.get('label')"/><span t-out="c.get('sub') or ''"/>
+                                </button>
+                            </form>
+                        </section>
                         <section class="sa-card sa-action" id="sa_action">
                             <t t-if="sa_pg['step'] == 'sign'">
                                 <h2 class="sa-ct">Sign to confirm</h2>
                             </t>
                             <t t-elif="sa_pg['step'] == 'pay'">
                                 <h2 class="sa-ct">Payment method</h2>
+                                <p t-if="sa_pg['promise']" class="sa-promise"><span>Delivery</span><b t-out="sa_pg['promise']"/></p>
                                 <p t-if="sa_pg['tx_pending']" class="sa-note">We are still checking your last payment. Pay again only if it failed.</p>
                             </t>
                             <t t-elif="sa_pg['step'] == 'pay_link'">
                                 <h2 class="sa-ct">Pay for your order</h2>
+                                <p t-if="sa_pg['promise']" class="sa-promise"><span>Delivery</span><b t-out="sa_pg['promise']"/></p>
                                 <div class="sa-due"><span>To pay</span><b t-out="sa_st['amount_text']"/></div>
                                 <a class="sa-btn" t-att-href="sa_st['pay_url']">Pay <t t-out="sa_st['amount_text']"/></a>
                             </t>
                             <t t-elif="sa_pg['step'] == 'done'">
-                                <div class="sa-ok">
-                                    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>
+                                <div class="sa-ok" id="sa_ok" t-att-data-order="sale_order.id">
+                                    <svg class="sa-tick" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>
                                 </div>
+                                <!-- The tick pops and draws itself the first time this browser sees the order done. -->
+                                <script>
+(function () {
+    var ok = document.getElementById('sa_ok');
+    if (!ok) { return; }
+    try {
+        var key = 'sa-done-' + ok.dataset.order;
+        if (window.sessionStorage.getItem(key)) { return; }
+        window.sessionStorage.setItem(key, '1');
+    } catch (e) { /* no storage: just play it */ }
+    ok.classList.add('fresh');
+})();
+                                </script>
                                 <h2 class="sa-ct sa-center"><t t-if="sa_st['delivered']">Delivered</t><t t-else="">Order confirmed</t></h2>
                                 <p class="sa-center sa-muted">Paid <t t-out="sa_pg['total_text']"/><t t-if="sa_pg['signed_by']"> · signed by <t t-out="sa_pg['signed_by']"/></t></p>
+                                <!-- Where the delivery is, and how it was paid (13 Nov 2026). -->
+                                <ol t-if="sa_pg['timeline']" class="sa-tl" aria-label="Delivery">
+                                    <li t-foreach="sa_pg['timeline']" t-as="tl" t-attf-class="sa-tl-#{tl['state']}"
+                                        t-att-aria-current="'step' if tl['state'] == 'cur' else None">
+                                        <i aria-hidden="true"/>
+                                        <span><b t-out="tl['label']"/><small t-if="tl['note']" t-out="tl['note']"/></span>
+                                    </li>
+                                </ol>
+                                <div t-if="sa_pg['paid_with']" class="sa-paidwith">
+                                    <span>Paid by</span>
+                                    <b t-out="sa_pg['paid_with']['method'] or 'Online payment'"/>
+                                    <small><t t-out="sa_pg['paid_with']['when']"/><t t-if="sa_pg['paid_with']['ref']"> · Ref <t t-out="sa_pg['paid_with']['ref']"/></t></small>
+                                </div>
                                 <div class="sa-btns">
                                     <a t-if="sa_st['track_url']" class="sa-btn" t-att-href="sa_st['track_url']">Track my order</a>
+                                    <a t-if="sa_st['delivered'] and sale_order.sudo()._sa_review_products()" class="sa-btn" t-att-href="sale_order.sudo()._sa_review_path()">&#11088; Rate your products</a>
                                     <a t-if="sa_st['invoice_url']" class="sa-btn sa-btn-g" t-att-href="sa_st['invoice_url']">Download invoice</a>
                                 </div>
                             </t>
@@ -126,10 +176,66 @@
                             </t>
                             <div id="sa_action_slot"/>
                         </section>
-                        <p t-if="sa_pg['step'] == 'sign'" class="sa-reject">
-                            Something wrong? <a href="#" data-bs-toggle="modal" data-bs-target="#modaldecline">Reject this order</a>
-                        </p>
-                        <div id="sa_decline_slot"/>
+                        <p t-if="message == 'cant_reject'" class="sa-note">This order can no longer be rejected. Message us on WhatsApp if something is wrong.</p>
+                        <t t-if="sa_pg['step'] == 'sign'">
+                            <p class="sa-reject">
+                                Something wrong? <button type="button" class="sa-linkbtn" onclick="saReject(true)">Reject this order</button>
+                            </p>
+                            <!-- 13 Nov 2026: our own warning popup instead of Odoo's. It posts to
+                                 Odoo's /decline, which cancels only with a reason, so one is always sent. -->
+                            <div class="sa-rj" id="sa_reject" hidden="hidden" role="dialog" aria-modal="true" aria-labelledby="sa_rj_title">
+                                <div class="sa-rj-back" onclick="saReject(false)"/>
+                                <form class="sa-rj-card" method="post" onsubmit="return saRejectSend(this)"
+                                      t-attf-action="/my/orders/#{sale_order.id}/decline?access_token=#{sale_order.access_token}">
+                                    <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                    <input type="hidden" name="decline_message" value=""/>
+                                    <span class="sa-rj-ic" aria-hidden="true">
+                                        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9L2.5 17.5a2 2 0 0 0 1.7 3h15.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+                                    </span>
+                                    <h3 class="sa-rj-title" id="sa_rj_title">Reject this order?</h3>
+                                    <p class="sa-rj-text">Order <b t-out="sale_order.name"/> will be cancelled. You can't undo this.</p>
+                                    <p class="sa-rj-q">What went wrong?</p>
+                                    <div class="sa-rj-chips">
+                                        <button type="button" class="sa-chip" data-r="Wrong product">Wrong product</button>
+                                        <button type="button" class="sa-chip" data-r="Price too high">Price too high</button>
+                                        <button type="button" class="sa-chip" data-r="Ordered by mistake">Ordered by mistake</button>
+                                        <button type="button" class="sa-chip" data-r="Other">Other</button>
+                                    </div>
+                                    <textarea class="sa-rj-note" name="sa_note" rows="2" placeholder="Anything else? (optional)"/>
+                                    <div class="sa-rj-acts">
+                                        <button type="button" class="sa-btn sa-btn-g" onclick="saReject(false)">Keep my order</button>
+                                        <button type="submit" class="sa-btn sa-btn-r">Yes, reject order</button>
+                                    </div>
+                                </form>
+                            </div>
+                            <script>
+function saReject(open) {
+    var box = document.getElementById('sa_reject');
+    if (!box) { return; }
+    box.hidden = !open;
+    document.documentElement.classList.toggle('sa-noscroll', open);
+    if (open) { box.querySelector('.sa-btn-g').focus(); }
+}
+document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { saReject(false); } });
+document.addEventListener('click', function (e) {
+    var chip = e.target.closest ? e.target.closest('.sa-chip') : null;
+    if (!chip) { return; }
+    document.querySelectorAll('.sa-chip').forEach(function (c) { c.classList.toggle('on', c === chip); });
+});
+function saRejectSend(form) {
+    if (form.dataset.sent) { return false; }
+    form.dataset.sent = '1';
+    var chip = document.querySelector('.sa-chip.on');
+    var parts = [chip ? chip.dataset.r : '', (form.sa_note.value || '').trim()].filter(Boolean);
+    form.decline_message.value = parts.join(' - ') || 'No reason given';
+    var send = form.querySelector('.sa-btn-r');
+    send.classList.add('busy');
+    send.textContent = 'Rejecting…';
+    form.querySelectorAll('button').forEach(function (b) { b.disabled = true; });
+    return true;
+}
+                            </script>
+                        </t>
                     </aside>
                 </div>
             </div>
@@ -142,9 +248,6 @@
         <xpath expr="//div[@id='modalaccept']" position="attributes">
             <attribute name="class">sa-inline</attribute>
             <attribute name="role"/>
-        </xpath>
-        <xpath expr="//div[@id='sa_decline_slot']" position="inside">
-            <xpath expr="//div[@id='modaldecline']" position="move"/>
         </xpath>
         <!-- After signing Odoo "clicks" its Pay Now to open the popup; the pay
              box is already on the page, so that click only scrolls to it. -->

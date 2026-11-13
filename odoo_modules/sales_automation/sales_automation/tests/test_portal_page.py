@@ -63,6 +63,30 @@ class TestPortalPageSteps(TransactionCase, _Orders):
         page = order._sa_portal_page()
         self.assertTrue(page['status']['paid'])
         self.assertEqual(page['step'], 'done')
+        # the paid card: how it was paid, and the delivery still at the start
+        self.assertEqual(page['paid_with']['ref'], 'ZZ-PORTAL-%s' % order.id)
+        self.assertEqual([t['label'] for t in page['timeline']], ['Packing', 'On the way', 'Delivered'])
+        self.assertEqual([t['state'] for t in page['timeline']], ['cur', 'todo', 'todo'])
+
+    def test_rate_your_products_saves_and_edits_one_review(self):
+        """13 Nov 2026: customers who bought through WhatsApp can rate."""
+        order = self._make(self.env, require_signature=True)
+        product = order.order_line.product_id.product_tmpl_id
+        self.assertEqual(order._sa_review_products(), product)
+        first = order._sa_review_save(product, 4, 'Good rice')
+        self.assertEqual(int(first.rating), 4)
+        again = order._sa_review_save(product, 5, 'Very good rice')
+        self.assertEqual(again, first, "the same review is changed, not a second one")
+        self.assertEqual(int(again.rating), 5)
+        self.assertEqual(order._sa_review_items()[0]['stars'], 5)
+        other = self.env['product.template'].create({'name': 'Zz Not Bought'})
+        self.assertFalse(order._sa_review_save(other, 5, 'never had it'))
+
+    def test_the_delivered_message_line_carries_the_review_link(self):
+        order = self._make(self.env, require_signature=True)
+        line = self.env['sale.order']._sa_review_message_line(order)
+        self.assertIn('/wa/review/%s' % order.id, line.replace('%2F', '/'))
+        self.assertIn('Rate your products', line)
 
     def test_a_cancelled_order_says_so(self):
         order = self._make(self.env, require_signature=True)
@@ -102,6 +126,46 @@ class TestPortalPageRender(HttpCase, _Orders):
         html = self._html(self._make(self.env, require_signature=False, require_payment=True))
         self.assertIn('data-step="pay"', html)
         self.assertIn('Payment method', html)
+
+    def test_reject_is_our_popup_posting_to_odoo_decline(self):
+        order = self._make(self.env, require_signature=True, require_payment=False)
+        html = self._html(order)
+        self.assertIn('id="sa_reject"', html)
+        popup = html.split('id="sa_reject"', 1)[1].split('</form>', 1)[0]
+        self.assertIn('/my/orders/%s/decline?access_token=%s' % (order.id, order.access_token), popup)
+        self.assertIn('name="csrf_token"', popup)
+        self.assertIn('name="decline_message"', popup)
+        self.assertIn('Yes, reject order', popup)
+        # Odoo's own reject popup is no longer moved onto the page
+        self.assertNotIn('data-bs-target="#modaldecline"', html.split('id="sa_page"', 1)[1].split('o_portal_sale_sidebar', 1)[0])
+
+    def test_rejecting_cancels_the_order(self):
+        order = self._make(self.env, require_signature=True, require_payment=False)
+        token = self._csrf(order)  # same browser session as the POST below
+        res = self.url_open('/my/orders/%s/decline?access_token=%s' % (order.id, order.access_token),
+                            data={'csrf_token': token, 'decline_message': 'Wrong product'})
+        self.assertEqual(res.status_code, 200)
+        order.invalidate_recordset(['state'])
+        self.assertEqual(order.state, 'cancel')
+
+    def _csrf(self, order):
+        html = self._html(order)
+        return html.split('name="csrf_token" value="', 1)[1].split('"', 1)[0]
+
+    def test_the_pay_link_opens_our_order_page_with_the_pay_box(self):
+        """For an order, Odoo's pay link goes to the order page with the
+        amount to pay - our page, on the pay step - not Odoo's /payment/pay."""
+        order = self._make(self.env, require_signature=False, require_payment=False)
+        wizard = self.env['payment.link.wizard'].with_context(
+            active_model='sale.order', active_id=order.id).create({
+                'res_model': 'sale.order', 'res_id': order.id, 'amount': order.amount_total,
+                'currency_id': order.currency_id.id, 'partner_id': order.partner_id.id})
+        path = wizard.link.split('/', 3)[3]
+        res = self.url_open('/' + path)
+        self.assertEqual(res.status_code, 200)
+        self.assertIn('id="sa_page"', res.text)
+        self.assertIn('data-step="pay"', res.text)
+        self.assertIn('o_payment_form', res.text)
 
     def test_odoo_pay_now_no_longer_opens_a_popup(self):
         """After signing Odoo clicks its Pay Now (allow_payment=yes); the pay

@@ -22,16 +22,14 @@ class SaleOrderPortalStatus(models.Model):
         return text.startswith(INTERNAL_NOTE_START)
 
     def _sa_money_text(self, amount):
-        """The amount with the currency's OFFICIAL decimals (AED 2, OMR 3),
-        whatever its rounding is set to: DUBAI_TEST's AED rounds to 0.001,
-        which printed "2,600.000 AED" on the customer's page."""
+        """The amount with the decimals Odoo is set to for this currency (its
+        rounding, Accounting > Currencies) - the same as Odoo's own payment
+        pages, invoices and PDFs (13 Nov 2026, owner). It used the currency's
+        official decimals before, which disagreed with Odoo's pages wherever
+        the rounding differs (AED set to 0.001 shows 3 decimals in Odoo)."""
         self.ensure_one()
         cur = self.currency_id
-        try:
-            from babel.numbers import get_currency_precision
-            digits = get_currency_precision(cur.name)
-        except Exception:  # noqa: BLE001
-            digits = cur.decimal_places
+        digits = cur.decimal_places if cur else 2
         number = '{:,.{d}f}'.format(amount or 0.0, d=digits)
         symbol = cur.symbol or cur.name or ''
         return '%s %s' % (number, symbol) if cur.position == 'after' else '%s %s' % (symbol, number)
@@ -75,7 +73,10 @@ class SaleOrderPortalStatus(models.Model):
         if dstate in IN_FLIGHT and 'sa_track_url' in job._fields:
             track_url = job.sa_track_url or ''
         invoices = o.invoice_ids.filtered(lambda m: m.move_type == 'out_invoice' and m.state == 'posted')
-        invoice_url = invoices[:1].get_portal_url() if invoices and (paid or delivered) else ''
+        # The PDF itself, not Odoo's invoice page (13 Nov 2026: "Download
+        # invoice" opened the old Odoo screen).
+        invoice_url = (invoices[:1].get_portal_url(report_type='pdf', download=True)
+                       if invoices and (paid or delivered) else '')
         shown = due if tone == 'wait' else (o.amount_total or 0.0)
         return {
             'icon': icon, 'label': label, 'tone': tone, 'amount_text': self._sa_money_text(shown),
@@ -84,6 +85,10 @@ class SaleOrderPortalStatus(models.Model):
             'delivery': delivery, 'track_url': track_url, 'invoice_url': invoice_url,
             'paid': bool(paid or (due <= 0.005 and (o.amount_total or 0.0) > 0)),
             'delivered': delivered,
+            'dstate': dstate or '',
+            'promised_on': job.sa_promised_on if job and 'sa_promised_on' in job._fields else False,
+            'rider': (job.sa_delivery_partner_id.name or '')
+            if job and 'sa_delivery_partner_id' in job._fields else '',
         }
 
     # -- the page itself (13 Nov 2026, design A: the storefront checkout look) --
@@ -104,6 +109,49 @@ class SaleOrderPortalStatus(models.Model):
         if (line.price_total or 0.0) < 0 or getattr(line, 'is_downpayment', False):
             return 'other'
         return 'item'
+
+    # -- delivery slots on the order page (13 Nov 2026) - hooks only here --
+    # The slots live in the storefront modules; mart369_whatsapp_bridge fills
+    # these in. Without it the page simply shows no slot picker.
+
+    def _sa_portal_slots(self):
+        """{'chips': [{key, top, sub, label}], 'chosen': key} for the optional
+        slot picker - empty when slots are off, none apply, or the order is
+        past choosing (signed, confirmed, paid)."""
+        return {'chips': [], 'chosen': ''}
+
+    def _sa_portal_set_slot(self, key):
+        """Book slot `key` on this order ('' = no preference). Returns an
+        error text for the customer, or '' when done."""
+        return _("Delivery slots are not available for this order.")
+
+    def _sa_portal_promise(self, step, status):
+        """When the delivery is due, in the words the order already has
+        (13 Nov 2026) - first found wins: the slot the customer chose on the
+        website or in WhatsApp, the delivery job's promise once it exists
+        (the one every WhatsApp update quotes), the due time, the promise
+        text. '' when there is none, or when the shop has switched off telling
+        customers a date (Delivery Settings > promise_customer)."""
+        self.ensure_one()
+        o = self.sudo()
+        settings = (self.env['sa.delivery.settings'].sudo().get_settings()
+                    if 'sa.delivery.settings' in self.env else None)
+        if settings and not getattr(settings, 'promise_customer', True):
+            return ''
+        when = lambda dt: self.env['sa.group.request']._sa_ss_when(dt, o.company_id)  # noqa: E731
+        if 'mart369_slot_label' in o._fields and o.mart369_slot_label:
+            return o.mart369_slot_label
+        if 'qe_slot_id' in o._fields and o.qe_slot_id:
+            day = o.qe_slot_day.strftime('%d %b') if 'qe_slot_day' in o._fields and o.qe_slot_day else ''
+            return ', '.join(p for p in (day, o.qe_slot_id.name) if p)
+        if step == 'done' and status.get('promised_on'):
+            return _("By %s", when(status['promised_on']))
+        for field in ('qe_due_at', 'mart369_due_at'):
+            if field in o._fields and o[field]:
+                return _("By %s", when(o[field]))
+        if 'mart369_eta' in o._fields and o.mart369_eta:
+            return o.mart369_eta
+        return ''
 
     @staticmethod
     def _sa_qty_text(qty):
@@ -203,7 +251,32 @@ class SaleOrderPortalStatus(models.Model):
             'wait': st['label'],
             'cancel': _("This order was cancelled."),
         }[step]
+        # The paid card (13 Nov 2026): how it was paid, and where the delivery is.
+        promise = self._sa_portal_promise(step, st)
+        paid_with, timeline = {}, []
+        if step == 'done':
+            done_tx = o.transaction_ids.filtered(lambda t: t.state in ('done', 'authorized')).sorted('id')[-1:]
+            if done_tx:
+                when = done_tx.last_state_change
+                paid_with = {
+                    'method': done_tx.payment_method_id.name or done_tx.provider_id.name or '',
+                    'when': when.strftime('%d %b %Y') if when else '',
+                    'ref': done_tx.reference or '',
+                }
+            dstate = st['dstate']
+            on_road = dstate in ('to_assign', 'offered', 'accepted', 'picked', 'dispatched', 'out_for_delivery')
+            stage = 2 if delivered else 1 if on_road else 0
+            road_note = (_("With %s", st['rider']) if st['rider'] and dstate in ('picked', 'dispatched', 'out_for_delivery')
+                         else st['delivery'] if on_road else '')
+            for index, (label, note) in enumerate((
+                    (_("Packing"), st['delivery'] if stage == 0 else ''),
+                    (_("On the way"), road_note),
+                    (_("Delivered"), '' if delivered else promise))):
+                state = 'done' if index < stage or delivered else ('cur' if index == stage else 'todo')
+                timeline.append({'label': label, 'note': note, 'state': state})
+
         return {
+            'paid_with': paid_with, 'timeline': timeline, 'promise': promise,
             'step': step, 'subtitle': subtitle, 'steps': steps, 'status': st,
             'items': items, 'rows': rows, 'total_text': self._sa_money_text(o.amount_total),
             'address': address, 'signed_by': o.signed_by if signed else '',

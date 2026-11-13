@@ -9,8 +9,9 @@
         with the logo in a small header. Standalone on purpose: no website
         layout, no asset bundle, nothing to fetch on a weak signal.
 
-        Logo: system parameter `sa.brand_logo_url` (a public image URL), else
-        the file shipped in static/src/img. Pages pass `head_title`, an
+        Logo: sa.brand.logo_url() - the logo uploaded in the 369 Mart console,
+        else system parameter `sa.brand_logo_url`, else the file shipped in
+        static/src/img. Pages pass `head_title`, an
         optional `brand_badge` (the small pill on the right of the header)
         and their body.
     -->
@@ -18,7 +19,7 @@
         <t t-set="head_title" t-value="head_title or 'Order'"/>
         <t t-set="brand_name" t-value="brand_name or (res_company and res_company.name) or '369 Mart'"/>
         <!-- res_company is always injected by QWeb; `request` is not bound in a shell -->
-        <t t-set="brand_logo" t-value="res_company.env['ir.config_parameter'].sudo().get_param('sa.brand_logo_url', '') or '/sales_automation/static/src/img/369mart-logo.png'"/>
+        <t t-set="brand_logo" t-value="res_company.env['sa.brand'].logo_url()"/>
         &lt;!DOCTYPE html&gt;
         <html lang="en">
             <head>

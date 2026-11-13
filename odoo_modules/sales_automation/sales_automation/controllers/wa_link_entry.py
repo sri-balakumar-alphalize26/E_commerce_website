@@ -68,6 +68,8 @@ ALLOWED_TARGETS = (
     # (`_sa_pay_link_any_state`). Both were sent through this doorway and
     # answered "Not Found" until they were listed here.
     re.compile(r'^/my/orders/\d{1,12}$'),
+    # "Rate your products", sent with the private Delivered message (13 Nov 2026).
+    re.compile(r'^/wa/review/\d{1,12}$'),
     re.compile(r'^/my/orders/\d{1,12}/[a-z_]{1,32}$'),
     re.compile(r'^/payment/pay$'),
     re.compile(r'^/payment/pay/[a-z_]{1,32}$'),

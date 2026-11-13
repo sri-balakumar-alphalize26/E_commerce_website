@@ -25,3 +25,5 @@ from . import sa_self_service
 from . import sa_common_hooks
 from . import sa_customer_name
 from . import sa_portal_status
+from . import sa_brand
+from . import sa_review
