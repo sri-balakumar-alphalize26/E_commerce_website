@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
-"""The product confirmation page: picture on top, details in a table, ACCEPT /
-REJECT below. Public route; the token in the link is the whole credential
+"""The product confirmation page, laid out like the 369 Mart product page
+(13 Nov 2026, design 1): photos, name, price, Reject / Yes - pinned to the
+bottom of a phone screen - then the details. Public route; the token in the link is the whole credential
 and is compared in constant time. Every open and press is logged.
 
 `/scoped_app/c?db=<db>&t=<token>` is the short doorway (binds the database
@@ -24,39 +25,102 @@ _PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
- :root{--navy:#0b4a6e;--blue:#0a78ab;--btn-a:#0c86be;--btn-b:#08658f;--orange:#f7931e;--ink:#13212b;--muted:#6b7a86;--soft:#f4f6f8;--line:#e6ebef;--ok:#1a7f3c;--ok-bg:#e9f6ee;--err:#c8433a;--err-bg:#fdecea}
+ /* 13 Nov 2026, design 1 "Shop page": the 369 Mart product page look. Phone first: one column,
+    the two answers pinned at the bottom; from 860 px photos left, name/price/answers right. */
+ :root{--navy:#0b4a6e;--blue:#0a78ab;--ink:#13212b;--muted:#52616d;--soft:#f6f8fa;--line:#e6ebef;--ok:#1a7f3c;--ok-bg:#e3f3e8;--err:#a3322a;--err-bg:#fbe9e7}
  *{box-sizing:border-box}
- body{margin:0;background:var(--soft);font:14px/1.5 "Inter",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;color:var(--ink);-webkit-font-smoothing:antialiased}
+ html,body{overflow-x:hidden}
+ body{margin:0;background:var(--soft);font:15px/1.5 "Inter",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;color:var(--ink);-webkit-font-smoothing:antialiased}
  .brand{display:flex;align-items:center;gap:10px;padding:10px 16px;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
- .brand img{height:34px;width:auto;display:block}.brand .badge{margin-left:auto;font-size:12px;font-weight:600;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:4px 10px}
- .wrap{max-width:1000px;margin:0 auto;padding:14px 16px 28px}
- .card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px}
- h1{font-size:21px;font-weight:800;letter-spacing:-.02em;color:var(--navy);margin:0 0 2px;line-height:1.25}.sub{color:var(--muted);font-size:13px;margin-bottom:12px}.zh{color:var(--muted);font-weight:400;font-size:13px}
- .picbox{height:min(400px,82vw);border-radius:12px;background:var(--soft);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;overflow:hidden}
+ .brand img{height:32px;width:auto;display:block}
+ .badge{margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:#3d4c58;border:1px solid #e3e9ee;border-radius:999px;padding:5px 10px;white-space:nowrap}
+ .ask{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;padding:10px 16px;background:#e5f2f9;color:var(--navy);font-weight:700;font-size:14px}
+ .ask small{margin-left:auto;font-weight:500;color:#3d5c70;white-space:nowrap}
+ .wrap{max-width:1120px;margin:0 auto;padding:14px 16px 28px;display:flex;flex-direction:column;gap:14px}
+ .card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px}
+ .zh{color:var(--muted);font-weight:400;font-size:.85em}
+ .top{display:grid;gap:14px}
+ .picbox{height:min(360px,78vw);border-radius:18px;background:#fff;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
  .pic{width:100%%;height:100%%;object-fit:contain;display:block;cursor:zoom-in}
- .grid{display:grid;gap:18px}@media(min-width:860px){.grid{grid-template-columns:1fr 1fr;gap:28px;align-items:start}.grid table{margin-top:0}}
- .trust{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}.trust span{display:flex;gap:8px;align-items:center;background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:13px;font-weight:600}
- .sec{border-top:1px solid var(--line);margin-top:18px;padding-top:14px}.sec h2{font-size:17px;font-weight:800;color:var(--navy);margin:0 0 8px}
- .rich{font-size:15px;line-height:1.6;overflow-wrap:anywhere}.rich ul,.rich ol{padding-left:22px;margin:6px 0}.rich li{margin:4px 0}.rich p{margin:6px 0}.rich img{max-width:100%%;height:auto}.rich a{color:var(--blue)}
- .show{display:grid;grid-template-columns:1fr 1fr}.show figure{margin:0;grid-column:span 2}.show figure.half{grid-column:span 1}.show figcaption{font-weight:700;font-size:15px;padding:10px 4px 6px}.show img{width:100%%;display:block}
- .nopic{padding:40px 10px;text-align:center;color:var(--muted);border:1px dashed #cfd8df;border-radius:12px}
- table{width:100%%;border-collapse:collapse;margin:14px 0 6px;font-size:15px}
- td{padding:9px 6px;border-bottom:1px solid var(--line);vertical-align:top}td:first-child{color:var(--muted);width:38%%;font-weight:600}
- .btn{display:block;width:100%%;min-height:44px;padding:12px 16px;border:0;border-radius:12px;font:inherit;font-size:17px;font-weight:700;margin:10px 0;cursor:pointer;text-align:center;color:#fff}
- .ok{background:linear-gradient(180deg,var(--btn-a),var(--btn-b));box-shadow:0 6px 14px -8px rgba(8,101,143,.7)}.no{background:#eef2f5;color:var(--ink)}
+ .zoom{position:absolute;right:10px;bottom:10px;font-size:12px;font-weight:600;color:#3d4c58;background:#fff;border:1px solid #e3e9ee;border-radius:999px;padding:5px 10px;pointer-events:none}
+ .gal{display:flex;gap:8px;margin-top:10px;overflow-x:auto;padding-bottom:2px}
+ .gal img{flex:0 0 64px;width:64px;height:64px;object-fit:contain;border-radius:12px;border:1.5px solid var(--line);cursor:pointer;background:#fff}
+ .gal img.on{border-color:var(--blue)}
+ .note{color:var(--muted);font-size:12.5px;margin-top:6px}
+ .nopic{padding:40px 10px;text-align:center;color:var(--muted);border:1px dashed #cfd8df;border-radius:14px;background:#fff}
+ .info{display:flex;flex-direction:column;gap:12px}
+ .nm{margin:0;font-size:21px;font-weight:800;letter-spacing:-.01em;line-height:1.25;overflow-wrap:anywhere}
+ .attrs{display:flex;flex-wrap:wrap;gap:6px}
+ .attrs span{background:#fff;border:1px solid #e3e9ee;border-radius:999px;padding:5px 10px;font-size:13px;color:#3d4c58;overflow-wrap:anywhere}
+ .attrs b{color:var(--ink)}
+ .price{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px}
+ .price b{font-size:24px;font-weight:800;color:var(--navy)}
+ .price span{font-size:14px;color:var(--muted)}
+ .trust{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+ .trust span{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:#3d4c58;background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px 10px;min-width:0;overflow-wrap:anywhere}
+ .trust i{width:22px;height:22px;flex:none;border-radius:7px;background:var(--ok-bg);color:var(--ok);display:grid;place-items:center;font-style:normal;font-size:12px}
+ .acts{display:flex;gap:10px}
+ .acts form{margin:0;display:flex}
+ .acts form.f-no{flex:1}.acts form.f-ok{flex:2}
+ .btn{width:100%%;min-height:52px;padding:10px 14px;border-radius:12px;font:inherit;font-size:16px;font-weight:700;cursor:pointer;text-align:center;line-height:1.2}
+ .ok{border:0;color:#fff;background:linear-gradient(180deg,#22924a,#17703a);box-shadow:0 10px 18px -12px rgba(23,112,58,.9)}
+ .no{border:1.5px solid #e2b4b0;background:#fff;color:var(--err)}
  .btn[disabled]{opacity:.45;cursor:not-allowed}
- .banner{padding:14px;border-radius:12px;margin:12px 0;font-weight:600}.banner.acc{background:var(--ok-bg);color:var(--ok)}.banner.rej{background:var(--err-bg);color:var(--err)}
- .foot{color:var(--muted);font-size:12px;text-align:center;margin-top:8px}
- .gal{display:flex;gap:8px;margin-top:8px;overflow-x:auto}.gal img{flex:1 0 76px;min-width:0;height:84px;object-fit:cover;border-radius:10px;border:2px solid var(--line);cursor:pointer;background:var(--soft)}
- .gal img.on{border-color:var(--blue)}.hint{color:var(--muted);font-size:12px;text-align:center;margin-top:4px}
- .attrs{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:10px 0 4px}.attrs span{background:var(--soft);border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:13px}.attrs b{font-weight:700;color:var(--navy)}
- .ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:9;align-items:center;justify-content:center;overflow:auto;touch-action:pinch-zoom}
- .ov img{max-width:100%%;max-height:100%%;transition:transform .15s;cursor:zoom-in}.ov img.z{transform:scale(2.5);cursor:zoom-out}
- .ov .x{position:fixed;top:12px;right:16px;color:#fff;font-size:30px;line-height:1;cursor:pointer}
-</style></head><body>
-<header class="brand"><img src="%(logo)s" alt=""><span class="badge">&#128274; Secure</span></header>
-<div class="wrap"><div class="card">%(body)s</div></div>
-<div class="ov" id="ov" onclick="closeOv()"><span class="x">&#10005;</span><img id="ovimg" alt="" onclick="event.stopPropagation();this.classList.toggle('z')"></div>
+ .btn .zh{color:inherit;opacity:.9}
+ .foot{color:var(--muted);font-size:12px;text-align:center}
+ .done{display:flex;gap:12px;align-items:center;border-radius:14px;padding:14px;font-weight:600}
+ .done i{width:40px;height:40px;flex:none;border-radius:50%%;display:grid;place-items:center;font-style:normal;color:#fff;font-size:18px}
+ .done b{display:block;font-size:16px}.done small{display:block;font-size:12.5px;font-weight:500;margin-top:2px;overflow-wrap:anywhere}
+ .done.acc{background:var(--ok-bg);color:#17703a}.done.acc i{background:var(--ok)}
+ .done.rej{background:var(--err-bg);color:var(--err)}.done.rej i{background:var(--err)}
+ .lower{display:grid;gap:14px;grid-template-columns:minmax(0,1fr)}
+ .top{grid-template-columns:minmax(0,1fr)}
+ .top>*,.lower>*{min-width:0}
+ .sec h2{font-size:16px;font-weight:800;margin:0 0 8px;color:var(--ink)}
+ table.dt{width:100%%;border-collapse:collapse;font-size:14px;table-layout:fixed}
+ table.dt td{padding:8px 0;border-bottom:1px solid #f0f3f5;vertical-align:top;overflow-wrap:anywhere;word-break:break-word}
+ table.dt tr:last-child td{border-bottom:0}
+ table.dt td:first-child{color:var(--muted);width:36%%;padding-right:12px}
+ table.dt td:last-child{font-weight:600}
+ .rich{font-size:15px;line-height:1.6;overflow-wrap:anywhere;color:#3d4c58}
+ .rich ul,.rich ol{padding-left:22px;margin:6px 0}.rich li{margin:4px 0}.rich p{margin:6px 0}.rich a{color:var(--blue)}
+ .rich img,.rich video,.rich iframe{max-width:100%%;height:auto}
+ .rich .tw{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:8px 0;border-radius:10px}
+ .rich table{border-collapse:collapse;width:max-content;min-width:100%%;font-size:14px}
+ .rich th,.rich td{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top;overflow-wrap:normal;word-break:normal;min-width:5em;max-width:16em}
+ .rich th{background:var(--soft);font-weight:700;color:var(--ink)}
+ .show{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+ .show figure{margin:0;grid-column:span 2;min-width:0}
+ .show figcaption{font-weight:700;font-size:15px;padding:0 2px 6px}
+ .show img{width:100%%;display:block;border-radius:12px}
+ @media(max-width:599px){.show figure.half{grid-column:span 2}}
+ @media(min-width:600px){.show figure.half{grid-column:span 1}}
+ @media(max-width:379px){.trust{grid-template-columns:minmax(0,1fr)}}
+ @media(max-width:859px){
+   body.open{padding-bottom:150px}
+   .bar{position:fixed;left:0;right:0;bottom:0;z-index:6;background:#fff;border-top:1px solid var(--line);padding:8px 16px calc(14px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:6px}
+ }
+ @media(min-width:860px){
+   .wrap{padding-top:22px}
+   .top{grid-template-columns:minmax(0,1fr) 440px;gap:20px;align-items:start}
+   .picbox{height:440px}
+   .info{background:#fff;border:1px solid var(--line);border-radius:20px;padding:22px}
+   .nm{font-size:26px}
+   .price b{font-size:28px}
+   .bar{display:flex;flex-direction:column;gap:8px}
+   .lower{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+   .lower .wide{grid-column:span 2}
+ }
+ .ov{display:none;position:fixed;inset:0;background:rgba(10,20,28,.95);z-index:9;overflow:auto;-webkit-overflow-scrolling:touch}
+ .ov .in{min-width:100%%;min-height:100%%;display:flex;align-items:center;justify-content:center}
+ .ov img{max-width:100vw;max-height:100vh;cursor:zoom-in;display:block}
+ .ov img.z{max-width:none;max-height:none;width:250vw;cursor:zoom-out}
+ .ov .x{position:fixed;top:12px;right:14px;width:40px;height:40px;border-radius:50%%;background:rgba(255,255,255,.16);color:#fff;font-size:20px;line-height:40px;text-align:center;cursor:pointer;z-index:10}
+ .ov .tip{position:fixed;left:0;right:0;bottom:16px;text-align:center;color:#c9d6df;font-size:13px;pointer-events:none}
+</style></head><body class="%(body_class)s">
+<header class="brand"><img src="%(logo)s" alt=""><span class="badge"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Secure</span></header>
+%(ask)s<main class="wrap">%(body)s</main>
+<div class="ov" id="ov" onclick="closeOv()"><span class="x" role="button" aria-label="Close">&#10005;</span><div class="in"><img id="ovimg" alt="" onclick="event.stopPropagation();this.classList.toggle('z')"></div><div class="tip">Tap the picture to zoom in, then move around</div></div>
 <script>
 function show(i){var m=document.getElementById('main');if(!m)return;m.src='/wa/confirm/'+m.dataset.t+'/image/'+i;m.dataset.i=i;
 document.querySelectorAll('.gal img').forEach(function(t){t.classList.toggle('on',t.dataset.i==i)})}
@@ -65,15 +129,13 @@ function closeOv(){document.getElementById('ov').style.display='none'}
 </script></body></html>"""
 
 
-def _page(title, body, status=200):
+def _page(title, body, status=200, ask='', body_class=''):
     logo = (request.env['ir.config_parameter'].sudo().get_param('sa.brand_logo_url', '')
             or '/sales_automation/static/src/img/369mart-logo.png')
-    return request.make_response(_PAGE % {'title': title, 'body': body, 'logo': html.escape(logo)}, status=status,
+    return request.make_response(_PAGE % {'title': title, 'body': body, 'logo': html.escape(logo),
+                                          'ask': ask, 'body_class': body_class}, status=status,
                                  headers=[('Content-Type', 'text/html; charset=utf-8'),
                                           ('Cache-Control', 'no-store')])
-
-
-_TRUST_ICON = {'returns': '&#8635;', 'warranty': '&#128737;', 'cod': '&#128176;', 'secure': '&#128274;'}
 
 
 def _trust_html(badges):
@@ -81,8 +143,16 @@ def _trust_html(badges):
     if not badges:
         return ''
     return '<div class="trust">%s</div>' % ''.join(
-        '<span>%s %s</span>' % (_TRUST_ICON.get(b.get('key'), '&#10004;'), html.escape(b.get('text') or ''))
+        '<span><i>&#10003;</i>%s</span>' % html.escape(b.get('text') or '')
         for b in badges if b.get('text'))
+
+
+def _wrap_tables(rich):
+    """A table pasted from a supplier scrolls sideways in its own box on a
+    phone instead of pushing the whole page wider than the screen."""
+    # str() first: html_sanitize gives Markup, whose replace() escapes its
+    # arguments, so '<table' would never be found.
+    return str(rich).replace('<table', '<div class="tw"><table').replace('</table>', '</table></div>')
 
 
 def _shop_sections_html(parts, shown, zh):
@@ -91,29 +161,34 @@ def _shop_sections_html(parts, shown, zh):
     the manufacturer. HTML is sanitised again here whatever its source."""
     out = []
     if parts.get('about_html'):
-        out.append('<div class="sec"><h2>About this item%s</h2><div class="rich">%s</div></div>'
-                   % (zh('商品简介'), html_sanitize(parts['about_html'], strip_style=True, strip_classes=True)))
+        out.append('<section class="card sec"><h2>About this item%s</h2><div class="rich">%s</div></section>'
+                   % (zh('商品简介'), _wrap_tables(html_sanitize(parts['about_html'], strip_style=True, strip_classes=True))))
     elif parts.get('about'):
         items = ''.join('<li>%s%s</li>' % ('<b>%s</b> — ' % html.escape(p.get('lead')) if p.get('lead') else '',
                                            html.escape(p.get('text') or '')) for p in parts['about'])
-        out.append('<div class="sec"><h2>About this item%s</h2><div class="rich"><ul>%s</ul></div></div>'
+        out.append('<section class="card sec"><h2>About this item%s</h2><div class="rich"><ul>%s</ul></div></section>'
                    % (zh('商品简介'), items))
     rows = [(label, value) for label, value in parts.get('details') or []
             if str(label).strip().lower() not in shown]
     if rows:
-        out.append('<div class="sec"><h2>Product details%s</h2><table>%s</table></div>' % (zh('商品详情'), ''.join(
+        out.append('<section class="card sec"><h2>Product details%s</h2><table class="dt">%s</table></section>' % (zh('商品详情'), ''.join(
             '<tr><td>%s</td><td>%s</td></tr>' % (html.escape(str(label)), html.escape(str(value))) for label, value in rows)))
     if parts.get('description'):
-        out.append('<div class="sec"><h2>Description%s</h2><div class="rich">%s</div></div>'
-                   % (zh('描述'), html_sanitize(parts['description'], strip_style=True, strip_classes=True)))
+        out.append('<section class="card sec wide"><h2>Description%s</h2><div class="rich">%s</div></section>'
+                   % (zh('描述'), _wrap_tables(html_sanitize(parts['description'], strip_style=True, strip_classes=True))))
     blocks = [b for b in parts.get('showcase') or [] if (b.get('src') or '').startswith('/')]
     if blocks:
-        out.append('<div class="sec"><h2>From the manufacturer%s</h2><div class="show">%s</div></div>' % (zh('品牌介绍'), ''.join(
+        out.append('<section class="card sec wide"><h2>From the manufacturer%s</h2><div class="show">%s</div></section>' % (zh('品牌介绍'), ''.join(
             '<figure class="%s">%s<img src="%s" alt="" loading="lazy"></figure>'
             % ('half' if b.get('width') == 'half' else 'full',
                '<figcaption>%s</figcaption>' % html.escape(b['caption']) if b.get('caption') else '',
                html.escape(b['src'])) for b in blocks)))
     return ''.join(out)
+
+
+# Rows the top of the page already shows (name, price, quantity) or that the
+# blue strip shows (reference): matched on the untranslated Chinese label.
+_TOP_ROWS = {'产品', '编号', '价格', '数量'}
 
 
 def _not_found():
@@ -152,68 +227,93 @@ class SaConfirmPage(http.Controller):
         return request.env['sa.confirm.link'].sudo()._by_token(token)
 
     def _render(self, link, outcome=None):
+        """Design 1 of 13 Nov 2026, "Shop page": photos, name, price and the
+        two answers like the 369 Mart product page, the details underneath.
+        On a phone the answers are pinned to the bottom of the screen."""
         req = link.request_id
         product = req.product_id
         bilingual = link.kind == 'vendor'
         zh = (lambda t: ' <span class="zh">%s</span>' % t) if bilingual else (lambda t: '')
         title = 'Confirm the product #%s' % (req.ref_code or '')
-        head = ('<h1>%s%s</h1><div class="sub">%s</div>'
-                % (html.escape('Please confirm this product' if link.kind == 'customer' else 'Is this the exact product you have?'),
-                   zh('请确认此产品' if link.kind == 'customer' else '您有这个产品吗？'),
-                   html.escape('%s · Ref #%s' % (request.env.company.name or '', req.ref_code or ''))))
+        ask = ('<div class="ask">%s%s<small>Ref #%s</small></div>'
+               % (html.escape('Is this the product you want?' if link.kind == 'customer'
+                              else 'Is this the exact product you have?'),
+                  zh('请确认此产品' if link.kind == 'customer' else '您有这个产品吗？'),
+                  html.escape(req.ref_code or '')))
+
         pictures = link._picture_items()
         if pictures:
-            pic = ('<div class="picbox"><img class="pic" id="main" data-t="%s" data-i="0" src="/wa/confirm/%s/image/0" alt="%s" onclick="openOv()"></div>'
-                   % (link.token, link.token, html.escape(product.name or '')))
+            media = ('<div class="picbox"><img class="pic" id="main" data-t="%s" data-i="0" src="/wa/confirm/%s/image/0" alt="%s" onclick="openOv()">'
+                     '<span class="zoom">Tap to zoom%s</span></div>'
+                     % (link.token, link.token, html.escape(product.name or ''), zh('点击放大')))
             if len(pictures) > 1:
-                pic += '<div class="gal">' + ''.join(
+                media += '<div class="gal">' + ''.join(
                     '<img src="/wa/confirm/%s/image/%d" data-i="%d" class="%s" onclick="show(%d)" alt="">'
                     % (link.token, i, i, 'on' if i == 0 else '', i) for i in range(len(pictures))) + '</div>'
-            pic += '<div class="hint">Tap the picture to zoom%s</div>' % zh('点击图片放大')
             if link.image_source == 'generated':
-                pic += '<div class="sub" style="margin-top:4px">Reference picture - the exact unit may differ%s</div>' % zh('参考图片，实物可能不同')
+                media += '<div class="note">Reference picture - the exact unit may differ%s</div>' % zh('参考图片，实物可能不同')
         else:
-            pic = '<div class="nopic">No photo yet%s</div>' % zh('暂无图片')
-        attrs = link._attribute_rows()
-        if attrs:
-            pic += '<div class="attrs">%s</div>' % ''.join(
-                '<span>%s : <b>%s</b></span>' % (html.escape(label), html.escape(value)) for label, value in attrs)
+            media = '<div class="nopic">No photo yet%s</div>' % zh('暂无图片')
+
         detail_rows = link._details_rows()
-        rows =''.join('<tr><td>%s%s</td><td>%s</td></tr>' % (html.escape(en), zh(html.escape(cn)) if cn != en else '',
-                                                               html.escape(str(val)).replace('\n', '<br>'))
-                       for en, cn, val in detail_rows)
-        table = '<table>%s</table>' % rows
+        by_cn = {cn: val for _en, cn, val in detail_rows}
+        name = by_cn.get('产品') or product.name or ''
+        attrs = link._attribute_rows()
+        info = '<h1 class="nm">%s</h1>' % html.escape(str(name))
+        if attrs:
+            info += '<div class="attrs">%s</div>' % ''.join(
+                '<span>%s: <b>%s</b></span>' % (html.escape(label), html.escape(value)) for label, value in attrs)
+        qty = by_cn.get('数量')
+        if by_cn.get('价格'):
+            counted = str(qty or '').isdigit()
+            info += '<div class="price"><b>%s</b><span>each%s</span></div>' % (
+                html.escape(str(by_cn['价格'])), html.escape(' · quantity %s' % qty) if counted else '')
+        elif qty:
+            info += '<div class="price"><span>Quantity%s: <b style="font-size:18px">%s</b></span></div>' % (
+                zh('数量'), html.escape(str(qty)))
+        parts = link._shop_sections()
+        info += _trust_html(parts.get('trust'))
+
         if link.decided:
             when = link.decided_on
             stamp = (when.strftime('%d %b %Y %H:%M') + ' UTC') if when else ''
-            if link.decided == 'accept':
-                banner = '<div class="banner acc">&#10004; Accepted%s<br><small>%s · %s</small></div>' % (
-                    zh('已确认'), html.escape(stamp), html.escape(link.identity or ''))
-            else:
-                banner = '<div class="banner rej">&#10008; Rejected%s<br><small>%s · %s</small></div>' % (
-                    zh('已拒绝'), html.escape(stamp), html.escape(link.identity or ''))
+            accepted = link.decided == 'accept'
+            info = ('<div class="done %s"><i>%s</i><span><b>%s%s</b><small>%s</small></span></div>'
+                    % ('acc' if accepted else 'rej', '&#10003;' if accepted else '&#10005;',
+                       'You accepted this product' if accepted else 'You rejected this product',
+                       zh('已确认' if accepted else '已拒绝'),
+                       html.escape(' · '.join(p for p in (stamp, link.identity or '') if p)))) + info
             if outcome == 'again':
-                banner += '<div class="sub">Your answer was already recorded and cannot be changed.%s</div>' % zh('您的回复已记录，无法更改。')
-            buttons = ('<button class="btn ok" disabled>&#10004; ACCEPT%s</button>'
-                       '<button class="btn no" disabled>&#10008; REJECT%s</button>' % (zh('接受'), zh('拒绝')))
+                info += '<div class="foot">Your answer was already recorded and cannot be changed.%s</div>' % zh('您的回复已记录，无法更改。')
+            info += '<div class="foot">Your answer is saved. We will carry on in WhatsApp.%s</div>' % zh('您的回复已保存。')
+            bar, body_class = '', ''
         else:
-            banner = ''
             # saving() greys both buttons after the first press: a second tap
             # would send the answer again while the first is still saving.
-            buttons = ('<script>function saving(f){if(window.__sent)return false;window.__sent=true;'
-                       'document.querySelectorAll(".btn").forEach(function(b){b.disabled=true});'
-                       'f.querySelector(".btn").innerHTML="Saving&hellip;";return true}</script>'
-                       '<form method="post" action="/wa/confirm/%(t)s/accept" onsubmit="return saving(this)"><button class="btn ok" type="submit">&#10004; ACCEPT%(a)s</button></form>'
-                       '<form method="post" action="/wa/confirm/%(t)s/reject" onsubmit="return confirm(\'Reject this product?\') &amp;&amp; saving(this)">'
-                       '<button class="btn no" type="submit">&#10008; REJECT%(r)s</button></form>'
-                       % {'t': link.token, 'a': zh('接受'), 'r': zh('拒绝')})
-        foot = '<div class="foot">One answer only - the first press is final.%s</div>' % zh('只能回复一次，首次点击即为最终答复。')
+            yes = 'Yes, this is it' if link.kind == 'customer' else 'Accept'
+            bar = ('<div class="bar"><script>function saving(f){if(window.__sent)return false;window.__sent=true;'
+                   'document.querySelectorAll(".btn").forEach(function(b){b.disabled=true});'
+                   'f.querySelector(".btn").innerHTML="Saving&hellip;";return true}</script>'
+                   '<div class="acts">'
+                   '<form class="f-no" method="post" action="/wa/confirm/%(t)s/reject" onsubmit="return confirm(\'Reject this product?\') &amp;&amp; saving(this)">'
+                   '<button class="btn no" type="submit">Reject%(r)s</button></form>'
+                   '<form class="f-ok" method="post" action="/wa/confirm/%(t)s/accept" onsubmit="return saving(this)">'
+                   '<button class="btn ok" type="submit">%(y)s%(a)s</button></form></div>'
+                   '<div class="foot">One answer only - the first tap is final.%(o)s</div></div>'
+                   % {'t': link.token, 'y': yes, 'a': zh('接受'), 'r': zh('拒绝'),
+                      'o': zh('只能回复一次，首次点击即为最终答复。')})
+            body_class = 'open'
+
+        rows = ''.join('<tr><td>%s%s</td><td>%s</td></tr>' % (html.escape(en), zh(html.escape(cn)) if cn != en else '',
+                                                             html.escape(str(val)).replace('\n', '<br>'))
+                       for en, cn, val in detail_rows if cn not in _TOP_ROWS)
+        details = ('<section class="card sec"><h2>Details%s</h2><table class="dt">%s</table></section>'
+                   % (zh('详情'), rows)) if rows else ''
         shown = {en.strip().lower() for en, _cn, _v in detail_rows} | {a.strip().lower() for a, _v in attrs}
-        parts = link._shop_sections()
-        badges = _trust_html(parts.get('trust'))
-        body = ('<div class="grid"><div>%s</div><div>%s</div></div>'
-                % (pic, table + badges + banner + buttons + foot)) + _shop_sections_html(parts, shown, zh)
-        return _page(title, head + body)
+        body = ('<div class="top"><div class="media">%s</div><div class="info">%s%s</div></div>'
+                '<div class="lower">%s%s</div>'
+                % (media, info, bar, details, _shop_sections_html(parts, shown, zh)))
+        return _page(title, body, ask=ask, body_class=body_class)
 
     @http.route('/wa/confirm/<string:token>', type='http', auth='public', methods=['GET'], csrf=False)
     def page(self, token, **kw):
