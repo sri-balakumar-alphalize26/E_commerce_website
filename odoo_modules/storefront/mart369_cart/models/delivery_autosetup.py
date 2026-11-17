@@ -218,7 +218,7 @@ class Mart369BranchAutoSetup(models.Model):
             checks.append(check('address', OK, _('Address: %s', partner.city or text), 'address'))
         elif not pinned:
             checks.append(check('address', TODO if self.mart369_auto else OFF,
-                                _('Add the branch address in Odoo'), 'address'))
+                                _("Add the branch's address (street, town, pincode)"), 'address'))
 
         if pinned:
             checks.append(check('pin', OK, _('On the map'), 'branch'))
