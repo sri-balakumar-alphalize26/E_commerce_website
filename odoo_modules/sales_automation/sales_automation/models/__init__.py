@@ -27,3 +27,4 @@ from . import sa_customer_name
 from . import sa_portal_status
 from . import sa_brand
 from . import sa_review
+from . import auto_upgrade
