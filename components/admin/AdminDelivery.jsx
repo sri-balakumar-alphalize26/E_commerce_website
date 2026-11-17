@@ -217,6 +217,9 @@ function draftOf(page) {
     fees: Object.fromEntries(Object.entries(page.fees || {}).filter(([, f]) => f).map(([k, f]) => [k,
       { ...f, fee: asText(f.fee), freeAbove: asText(f.freeAbove), minOrder: asText(f.minOrder) }])),
     slotsOn: !!page.slots?.on,
+    slots: (page.slots?.rows || []).map((s) => ({ ...s, key: `s${s.id}`, dayOffset: asText(s.dayOffset),
+      fromHour: asText(s.fromHour), toHour: asText(s.toHour), orderBefore: asText(s.orderBefore),
+      fee: asText(s.fee), capacity: asText(s.capacity) })),
     whatsapp: page.whatsapp ? { ...page.whatsapp, quickHours: asText(page.whatsapp.quickHours),
       cutoffHour: asText(page.whatsapp.cutoffHour), expressDays: asText(page.whatsapp.expressDays) } : null,
   };
@@ -229,6 +232,67 @@ function Err({ errs, k }) {
 
 const STATE_TONE = { ok: "green", wait: "blue", todo: "amber", off: "grey" };
 const STATE_WORD = { ok: "Ready", wait: "Setting up", todo: "Needs you", off: "Not delivering" };
+
+/* The slot list itself, on the settings page (17 Nov 2026: "slots in one
+   place"). The list customers are offered - the website's own, or the
+   WhatsApp Quick / Express one when that module runs (then a slot has one
+   name and no detail line). Saved with Save all; a slot is never deleted,
+   it is switched off. */
+let newSlotCount = 0;
+function SlotTable({ page, draft, set, errs }) {
+  const sp = page.slots || {};
+  const rk = (s) => s.id || s.key;
+  const add = () => set((d) => {
+    newSlotCount += 1;
+    d.slots.push({ id: null, key: `new-${newSlotCount}`, mode: "quick", kind: "window", heading: "Today",
+      detail: sp.detail ? "6 - 8 PM" : "", dayOffset: "0", fromHour: "18", toHour: "20", orderBefore: "24",
+      fee: "0", capacity: "0", active: true });
+  });
+  const upd = (i, key) => (e) => set((d) => { d.slots[i][key] = e.target.value; });
+  const num = (s, i, key, label, off) => (
+    <td className="ad-num"><input id={`ds-slot-${rk(s)}-${key}`} className="ds-in ds-num" value={s[key]} inputMode="decimal"
+      aria-label={`${label}, ${s.heading || "slot"}`} disabled={off} onChange={upd(i, key)} />
+      <Err errs={errs} k={`slots|${rk(s)}|${key}`} /></td>
+  );
+  return (
+    <>
+      <div className={"ad-table-wrap ds-slots" + (draft.slotsOn ? "" : " ds-dim")}>
+        <table className="ad-table ds-table">
+          <thead><tr><th>On</th><th>Delivery</th><th>Kind</th><th>Customer sees</th>{sp.detail && <th>Detail</th>}
+            <th className="ad-num">Days ahead</th><th className="ad-num">From</th><th className="ad-num">To</th>
+            <th className="ad-num">Order before</th><th className="ad-num">Extra fee</th><th className="ad-num">Orders per slot</th></tr></thead>
+          <tbody>
+            {!draft.slots.length && <tr><td colSpan={11} className="ad-hint">No slots yet. Add one below.</td></tr>}
+            {draft.slots.map((s, i) => (
+              <tr key={rk(s)} className={s.active ? "" : "ds-muted"}>
+                <td><Switch on={s.active} label={`Slot ${s.heading || ""} on`} onChange={(v) => set((d) => { d.slots[i].active = v; })} /></td>
+                <td><select className="ds-in" value={s.mode} aria-label="Delivery" onChange={upd(i, "mode")}>
+                  {(sp.modes || []).map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}</select>
+                  <Err errs={errs} k={`slots|${rk(s)}|mode`} /></td>
+                <td><select className="ds-in" value={s.kind} aria-label="Kind" onChange={upd(i, "kind")}>
+                  {(sp.kinds || []).map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}</select>
+                  <Err errs={errs} k={`slots|${rk(s)}|kind`} /></td>
+                <td><input className="ds-in ds-word" value={s.heading} placeholder="e.g. Today" aria-label="Customer sees" onChange={upd(i, "heading")} />
+                  <Err errs={errs} k={`slots|${rk(s)}|heading`} /></td>
+                {sp.detail && <td><input className="ds-in ds-word" value={s.detail} placeholder="e.g. 6 - 8 PM" aria-label="Detail" onChange={upd(i, "detail")} /></td>}
+                {num(s, i, "dayOffset", "Days ahead", s.kind === "now")}
+                {num(s, i, "fromHour", "From", s.kind !== "window")}
+                {num(s, i, "toHour", "To", s.kind !== "window")}
+                {num(s, i, "orderBefore", "Order before", s.kind !== "window")}
+                {num(s, i, "fee", "Extra fee", false)}
+                {num(s, i, "capacity", "Orders per slot", false)}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="ds-slot-foot">
+        <button className="ad-btn" onClick={add}><Icon n="plus" size={16} />Add a slot</button>
+        <small className="ad-hint">Hours are 0-24, e.g. 18.5 is 6:30 PM. Days ahead: 0 today, 1 tomorrow. Order before: the slot is hidden after this hour that day (24 = never). Orders per slot: 0 = no limit. A slot is never deleted; switch it off.</small>
+      </div>
+    </>
+  );
+}
 
 function SettingsPanel({ page, busy, onSave, onRun, onEditBranch, onTab, done }) {
   const [draft, setDraft] = useState(() => draftOf(page));
@@ -258,6 +322,7 @@ function SettingsPanel({ page, busy, onSave, onRun, onEditBranch, onTab, done })
       cells: Object.values(draft.cells).filter((c) => c.arrives),
       fees: draft.fees,
       slotsOn: draft.slotsOn,
+      slots: draft.slots,
       ...(draft.whatsapp ? { whatsapp: draft.whatsapp } : {}),
     };
     const result = await onSave(body);
@@ -445,9 +510,9 @@ function SettingsPanel({ page, busy, onSave, onRun, onEditBranch, onTab, done })
           <Switch on={draft.slotsOn} label="Let customers pick a delivery slot" onChange={(v) => set((d) => { d.slotsOn = v; })} />
           <span><b>Let customers pick a delivery slot</b>
             <small>Optional for the customer, on the website checkout and the WhatsApp order page. Off: everyone gets the soonest delivery.</small>
-            <small>{page.slots?.count || 0} slots{page.slots?.names?.length ? `: ${page.slots.names.join(" · ")}` : ""} · <button className="ad-link" onClick={() => onTab("slots")}>Edit slots</button></small>
           </span>
         </div>
+        <SlotTable page={page} draft={draft} set={set} errs={errs} />
       </section>
 
       {/* whatsapp */}

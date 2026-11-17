@@ -10,3 +10,4 @@ from . import test_sample_coupons
 from . import test_postcodes
 from . import test_delivery_autosetup
 from . import test_delivery_settings_page
+from . import test_delivery_settings_slots

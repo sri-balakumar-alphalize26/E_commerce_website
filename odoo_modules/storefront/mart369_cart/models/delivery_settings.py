@@ -37,6 +37,7 @@ ROUTE_CHOICES = (
 )
 NOT_DELIVERED = 'Not delivered'
 MODES = (('quick', 'Quick'), ('all', 'Express'))
+SLOT_KINDS = (('now', 'Now'), ('window', 'Time window'), ('days', 'In a number of days'))
 
 
 class Mart369DeliverySettingsPage(models.AbstractModel):
@@ -114,14 +115,73 @@ class Mart369DeliverySettingsPage(models.AbstractModel):
             } if rule else None
         return out
 
+    # ---------------------------------------------------------------- slots
+    # The slot list itself is edited here too (17 Nov 2026: "slots in one
+    # place"). Always the list customers are offered: the website's own, or -
+    # with the WhatsApp Quick / Express module - that module's, which the
+    # bridge (mart369_whatsapp_bridge) puts in its place. Nothing here
+    # deletes a slot: it is switched off.
+
+    @api.model
+    def _page_slot_records(self):
+        """Every slot of the list in use, switched-off ones too."""
+        return self.env['mart369.delivery.slot'].sudo().with_context(active_test=False).search(
+            [], order='mode, sequence, id')
+
+    @api.model
+    def _page_slot_row(self, slot):
+        """One slot as the page edits it."""
+        return {
+            'id': slot.id, 'mode': slot.mode, 'kind': slot.kind,
+            'heading': slot.top or '', 'detail': slot.sub or '',
+            'dayOffset': slot.day_offset or 0,
+            'fromHour': round(slot.from_hour or 0.0, 2), 'toHour': round(slot.to_hour or 0.0, 2),
+            'orderBefore': round(slot.order_before or 0.0, 2),
+            'fee': round(slot.fee or 0.0, 2), 'capacity': slot.capacity or 0,
+            'active': bool(slot.active),
+        }
+
+    @api.model
+    def _page_slot_shown(self, slot):
+        """How a slot is named in the summary line."""
+        return slot.label or ' '.join(x for x in (slot.top, slot.sub) if x) or slot.key or ''
+
+    @api.model
+    def _page_slot_write(self, slot, vals):
+        """Write one checked row (`slot` empty: a new one). `vals` uses the
+        page's names: mode, kind, heading, detail, dayOffset, fromHour,
+        toHour, orderBefore, fee, capacity, active."""
+        out = {'mode': vals['mode'], 'kind': vals['kind'], 'top': vals['heading'],
+               'sub': vals['detail'] or False, 'day_offset': vals['dayOffset'],
+               'from_hour': vals['fromHour'], 'to_hour': vals['toHour'],
+               'order_before': vals['orderBefore'], 'fee': vals['fee'],
+               'capacity': vals['capacity'], 'active': vals['active']}
+        Slot = self.env['mart369.delivery.slot'].sudo()
+        if slot:
+            if vals['mode'] != slot.mode:
+                # a key is unique per storefront: moved to the other one, it
+                # gets a key that is free there
+                out['key'] = Slot._mart369_auto_key(vals['mode'], vals['kind'], vals['dayOffset'],
+                                                    vals['fromHour'])
+            slot.write(out)
+        else:
+            # the key is worked out from the day and the time (create())
+            Slot.create(out)
+
     @api.model
     def _page_slots(self):
         Slot = self.env['mart369.delivery.slot'].sudo()
-        slots = Slot.search([], order='mode, sequence, id')
+        records = self._page_slot_records()
+        live = records.filtered('active')
         return {
             'on': bool(Slot._mart369_slots_on(self.env.company)),
-            'count': len(slots),
-            'names': [s.label or s.top or '' for s in slots[:6]],
+            'count': len(live),
+            'names': [self._page_slot_shown(s) for s in live[:6]],
+            'rows': [self._page_slot_row(s) for s in records],
+            # the website's slot has a detail line ("6 - 8 PM"); some lists do not
+            'detail': True,
+            'modes': [{'key': k, 'label': v} for k, v in MODES],
+            'kinds': [{'key': k, 'label': v} for k, v in SLOT_KINDS],
         }
 
     @api.model
@@ -329,9 +389,70 @@ class Mart369DeliverySettingsPage(models.AbstractModel):
 
         if 'slotsOn' in payload:
             plan['slots_on'] = bool(payload['slotsOn'])
+        if isinstance(payload.get('slots'), list):
+            plan['slots'] = self._page_slots_check(payload['slots'], errors)
         if isinstance(payload.get('whatsapp'), dict):
             plan['whatsapp'] = self._page_whatsapp_check(payload['whatsapp'], errors)
         return plan
+
+    @api.model
+    def _page_slots_check(self, rows, errors):
+        """The slot rows, checked: [(record or empty, vals)] for the changed
+        and the new ones. The same rules as the slot records themselves."""
+        _ = self.env._
+        records = self._page_slot_records()
+        by_id = {r.id: r for r in records}
+        modes, kinds = dict(MODES), dict(SLOT_KINDS)
+        out = []
+        for n, row in enumerate(rows):
+            if not isinstance(row, dict):
+                continue
+            try:
+                rid = int(row.get('id') or 0)
+            except (TypeError, ValueError):
+                rid = 0
+            record = by_id.get(rid) if rid else None
+            if rid and not record:
+                continue                      # gone meanwhile: nothing to write
+            where = {'section': 'slots', 'row': rid or str(row.get('key') or 'new-%d' % n)}
+            vals = {}
+            mode, kind = row.get('mode'), row.get('kind')
+            if mode not in modes:
+                errors.append(dict(where, field='mode', message=_('Pick Quick or Express.')))
+            if kind not in kinds:
+                errors.append(dict(where, field='kind', message=_('Pick Now, a time window or a number of days.')))
+            vals.update(mode=mode, kind=kind)
+            heading = str(row.get('heading') or '').strip()
+            if not heading:
+                errors.append(dict(where, field='heading', message=_('Write the words the customer sees, e.g. Today.')))
+            vals['heading'] = heading
+            vals['detail'] = str(row.get('detail') or '').strip()
+            for key, what, high, whole in (('dayOffset', _('Days ahead'), 60, True),
+                                           ('fromHour', _('From'), 24, False),
+                                           ('toHour', _('To'), 24, False),
+                                           ('orderBefore', _('Order before'), 24, False),
+                                           ('fee', _('Extra fee'), None, False),
+                                           ('capacity', _('Orders per slot'), None, True)):
+                value = self._number(row.get(key), errors, dict(where, field=key), what, high=high, whole=whole)
+                vals[key] = value
+            if kind == 'window' and vals['fromHour'] is not None and vals['toHour'] is not None \
+                    and vals['fromHour'] >= vals['toHour']:
+                errors.append(dict(where, field='toHour', message=_('"To" must be later than "From".')))
+            vals['active'] = bool(row.get('active', True))
+            if any(v is None for v in vals.values()):
+                continue                      # an error is already noted
+            if record:
+                now = self._page_slot_row(record)
+                if all(self._page_same(now.get(k), v) for k, v in vals.items()):
+                    continue                  # unchanged
+            out.append((record, vals))
+        return out
+
+    @staticmethod
+    def _page_same(old, new):
+        if isinstance(old, (int, float)) and isinstance(new, (int, float)) and not isinstance(old, bool):
+            return abs(float(old) - float(new)) < 1e-6
+        return old == new
 
     @api.model
     def _page_whatsapp_check(self, data, errors):
@@ -381,6 +502,8 @@ class Mart369DeliverySettingsPage(models.AbstractModel):
 
         if 'slots_on' in plan:
             self.env.company.sudo().write({'mart369_slots_on': plan['slots_on']})
+        for record, vals in plan.get('slots', []):
+            self._page_slot_write(record, vals)
         if plan.get('whatsapp'):
             self._page_whatsapp_write(plan['whatsapp'])
 

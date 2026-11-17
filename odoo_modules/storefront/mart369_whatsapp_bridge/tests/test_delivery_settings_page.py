@@ -60,3 +60,22 @@ class TestDeliverySettingsWhatsapp(TransactionCase):
             [('mode', '=', THEIRS['quick'])], order='active desc, id', limit=1)
         self.assertEqual(rule.fee, 21.0)
         self.assertEqual(self.Page.mart369_settings_get()['fees']['quick']['fee'], 21.0)
+
+    def test_the_slot_table_is_the_quick_express_list(self):
+        """With Quick / Express, the checkout and the WhatsApp order page offer
+        its slots: the page's slot table shows and saves those (17 Nov 2026)."""
+        if not qe_on(self.env):
+            self.skipTest('Quick / Express is not installed here')
+        Slot = self.env['sa.qe.delivery.slot'].with_context(active_test=False)
+        page = self.Page.mart369_settings_get()['slots']
+        self.assertFalse(page['detail'], 'his slot has one name')
+        self.assertEqual({r['id'] for r in page['rows']}, set(Slot.search([]).ids))
+        rows = page['rows'] + [{'id': None, 'key': 'new-1', 'mode': 'all', 'kind': 'days',
+                                'heading': 'Zz In 3 days', 'dayOffset': '3', 'fromHour': '0',
+                                'toHour': '0', 'orderBefore': '24', 'fee': '5', 'capacity': '0',
+                                'active': True}]
+        result = self.Page.mart369_settings_save({'slots': rows})
+        self.assertTrue(result['ok'], result)
+        made = Slot.search([('name', '=', 'Zz In 3 days')])
+        self.assertEqual((made.mode, made.kind, made.day_offset, made.fee),
+                         (THEIRS['all'], 'days', 3, 5.0))

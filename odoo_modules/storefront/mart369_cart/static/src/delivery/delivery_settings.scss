@@ -41,7 +41,9 @@
     .dz-in { height: 30px; border: 1px solid #d8dadd; border-radius: 6px; padding: 0 8px; background: #fff; min-width: 0; }
     .dz-in:focus { outline: none; border-color: #017e84; }
     .dz-in:disabled { background: #f3f4f6; color: #9ca3af; }
-    .dz-num { width: 76px; text-align: right; } .dz-pin { width: 180px; }
+    .dz-num { width: 76px; text-align: right; } .dz-pin { width: 180px; } .dz-word { width: 130px; }
+    .dz-slots { margin: 10px 0 8px; transition: opacity .2s; select.dz-in { padding: 0 6px; } }
+    .dz-dim { opacity: .55; }
     .dz-err { display: block; margin-top: 3px; font-size: 12px; font-weight: 600; color: #b42318; white-space: normal; }
     .dz-box { display: flex; flex-direction: column; gap: 10px; padding: 12px; border: 1px solid #e3e6ea; border-radius: 10px; min-width: 0; }
     .dz-box-h { display: flex; gap: 10px; align-items: flex-start; }

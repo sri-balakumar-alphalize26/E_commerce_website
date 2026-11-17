@@ -3,7 +3,8 @@
  *
  * Every delivery option on one page, saved with one Save: how we deliver
  * (one area / many branches), the branches, the Between-branches grid that
- * replaces the hub rules list, fees, slots on/off, the WhatsApp delivery
+ * replaces the hub rules list, fees, the delivery slots (on/off and the list
+ * itself, 17 Nov 2026), the WhatsApp delivery
  * section and, folded away, service areas and per-branch own fees.
  *
  * The twin of the console's Delivery > Settings. Both read
@@ -50,6 +51,10 @@ export function draftOf(page) {
         cells,
         fees,
         slotsOn: !!page.slots?.on,
+        slots: (page.slots?.rows || []).map((s) => ({
+            ...s, key: `s${s.id}`, dayOffset: str(s.dayOffset), fromHour: str(s.fromHour), toHour: str(s.toHour),
+            orderBefore: str(s.orderBefore), fee: str(s.fee), capacity: str(s.capacity),
+        })),
         whatsapp: page.whatsapp ? {
             ...page.whatsapp, quickHours: str(page.whatsapp.quickHours),
             cutoffHour: str(page.whatsapp.cutoffHour), expressDays: str(page.whatsapp.expressDays),
@@ -148,6 +153,23 @@ export class DeliverySettings extends Component {
         this.state.draft.cells[k] = c;
     }
 
+    // ------------------------------------------------------------- the slots
+
+    /** A new slot row: Quick, today 6 - 8 PM, on - saved with Save all. */
+    addSlot() {
+        this.newSlots = (this.newSlots || 0) + 1;
+        this.state.draft.slots.push({
+            id: null, key: `new-${this.newSlots}`, mode: "quick", kind: "window",
+            heading: _t("Today"), detail: this.state.page.slots?.detail ? "6 - 8 PM" : "",
+            dayOffset: "0", fromHour: "18", toHour: "20", orderBefore: "24",
+            fee: "0", capacity: "0", active: true,
+        });
+    }
+
+    slotRowKey(s) {
+        return s.id || s.key;
+    }
+
     // -------------------------------------------------------------- actions
 
     async save() {
@@ -161,6 +183,7 @@ export class DeliverySettings extends Component {
             cells: Object.values(d.cells).filter((c) => c.arrives),
             fees: d.fees,
             slotsOn: d.slotsOn,
+            slots: d.slots,
         };
         if (d.whatsapp) {
             body.whatsapp = d.whatsapp;

@@ -167,16 +167,58 @@
                     </div>
                 </section>
 
-                <!-- slots -->
+                <!-- slots: the switch and the list itself, saved with Save all -->
                 <section class="dz-card" id="dz-slots">
                     <h3>Delivery slots</h3>
                     <div class="dz-box-h">
                         <Switch on="d.slotsOn" label="'Let customers pick a delivery slot'" onChange="(v) => this.setVal(d, 'slotsOn', v)"/>
                         <span><b>Let customers pick a delivery slot</b>
                             <small>Optional for the customer, on the website checkout and the WhatsApp order page. Off: everyone gets the soonest delivery.</small>
-                            <small><t t-esc="page.slots.count"/> slots<t t-if="page.slots.names.length">: <t t-esc="page.slots.names.join(' · ')"/></t> ·
-                                <button class="dz-link" t-on-click="() => this.open('mart369_cart.action_mart369_delivery_desk')">Edit slots</button></small>
                         </span>
+                    </div>
+                    <div t-attf-class="dz-scroll dz-slots #{d.slotsOn ? '' : 'dz-dim'}">
+                        <table class="dz-table">
+                            <thead><tr>
+                                <th>On</th><th>Delivery</th><th>Kind</th><th>Customer sees</th>
+                                <th t-if="page.slots.detail">Detail</th>
+                                <th class="dz-n">Days ahead</th><th class="dz-n">From</th><th class="dz-n">To</th>
+                                <th class="dz-n">Order before</th><th class="dz-n">Extra fee</th><th class="dz-n">Orders per slot</th>
+                            </tr></thead>
+                            <tbody>
+                                <tr t-if="!d.slots.length"><td colspan="11" class="dz-hint">No slots yet. Add one below.</td></tr>
+                                <t t-foreach="d.slots" t-as="s" t-key="slotRowKey(s)">
+                                    <t t-set="rk" t-value="slotRowKey(s)"/>
+                                    <tr t-att-class="s.active ? '' : 'dz-muted'">
+                                        <td><Switch on="s.active" label="'Slot ' + (s.heading or '') + ' on'" onChange="(v) => this.setVal(s, 'active', v)"/></td>
+                                        <td><select class="dz-in" t-model="s.mode">
+                                                <t t-foreach="page.slots.modes" t-as="o" t-key="o.key"><option t-att-value="o.key" t-esc="o.label"/></t>
+                                            </select><small t-if="err('slots', rk, 'mode')" class="dz-err" t-esc="err('slots', rk, 'mode')"/></td>
+                                        <td><select class="dz-in" t-model="s.kind">
+                                                <t t-foreach="page.slots.kinds" t-as="o" t-key="o.key"><option t-att-value="o.key" t-esc="o.label"/></t>
+                                            </select><small t-if="err('slots', rk, 'kind')" class="dz-err" t-esc="err('slots', rk, 'kind')"/></td>
+                                        <td><input class="dz-in dz-word" t-model="s.heading" placeholder="e.g. Today"/>
+                                            <small t-if="err('slots', rk, 'heading')" class="dz-err" t-esc="err('slots', rk, 'heading')"/></td>
+                                        <td t-if="page.slots.detail"><input class="dz-in dz-word" t-model="s.detail" placeholder="e.g. 6 - 8 PM"/></td>
+                                        <td class="dz-n"><input class="dz-in dz-num" t-model="s.dayOffset" t-att-disabled="s.kind === 'now'"/>
+                                            <small t-if="err('slots', rk, 'dayOffset')" class="dz-err" t-esc="err('slots', rk, 'dayOffset')"/></td>
+                                        <td class="dz-n"><input class="dz-in dz-num" t-model="s.fromHour" t-att-disabled="s.kind !== 'window'"/>
+                                            <small t-if="err('slots', rk, 'fromHour')" class="dz-err" t-esc="err('slots', rk, 'fromHour')"/></td>
+                                        <td class="dz-n"><input class="dz-in dz-num" t-model="s.toHour" t-att-disabled="s.kind !== 'window'"/>
+                                            <small t-if="err('slots', rk, 'toHour')" class="dz-err" t-esc="err('slots', rk, 'toHour')"/></td>
+                                        <td class="dz-n"><input class="dz-in dz-num" t-model="s.orderBefore" t-att-disabled="s.kind !== 'window'"/>
+                                            <small t-if="err('slots', rk, 'orderBefore')" class="dz-err" t-esc="err('slots', rk, 'orderBefore')"/></td>
+                                        <td class="dz-n"><input class="dz-in dz-num" t-model="s.fee"/>
+                                            <small t-if="err('slots', rk, 'fee')" class="dz-err" t-esc="err('slots', rk, 'fee')"/></td>
+                                        <td class="dz-n"><input class="dz-in dz-num" t-model="s.capacity"/>
+                                            <small t-if="err('slots', rk, 'capacity')" class="dz-err" t-esc="err('slots', rk, 'capacity')"/></td>
+                                    </tr>
+                                </t>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="dz-row">
+                        <button class="mart-btn" t-on-click="() => this.addSlot()"><Icon n="'plus'" size="14"/> Add a slot</button>
+                        <small class="dz-hint">Hours are 0-24, e.g. 18.5 is 6:30 PM. Days ahead: 0 today, 1 tomorrow. Order before: the slot is hidden after this hour that day (24 = never). Orders per slot: 0 = no limit. A slot is never deleted; switch it off.</small>
                     </div>
                 </section>
 

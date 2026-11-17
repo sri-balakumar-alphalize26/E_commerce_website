@@ -1497,6 +1497,11 @@ html.ad-lock { overflow: hidden; }
 .ds-in:disabled { background: var(--ad-ground); color: var(--ad-muted); }
 .ds-num { width: 76px; text-align: right; font-variant-numeric: tabular-nums; }
 .ds-pin { width: 180px; font-variant-numeric: tabular-nums; }
+/* the slot list on the settings page (17 Nov 2026) */
+.ds-word { width: 130px; }
+.ds-slots { margin: 10px 0 8px; transition: opacity 0.2s; }
+.ds-dim { opacity: 0.55; }
+.ds-slot-foot { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 .ds-err { display: block; margin-top: 3px; font-size: 12px; font-weight: 600; color: var(--ad-red); white-space: normal; }
 .ds-table td { vertical-align: middle; }
 .ds-muted td { color: var(--ad-muted); }
