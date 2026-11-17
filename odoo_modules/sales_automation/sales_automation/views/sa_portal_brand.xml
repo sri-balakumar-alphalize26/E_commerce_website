@@ -21,6 +21,8 @@
             <t t-set="sa_brand_logo" t-value="res_company.env['sa.brand'].logo_url()"/>
             <t t-set="sa_pg" t-value="sale_order._sa_portal_page(payment_amount)"/>
             <t t-set="sa_st" t-value="sa_pg['status']"/>
+            <!-- the image server, when pictures are kept there: connect while the page arrives -->
+            <t t-out="res_company.env['sa.picture'].preconnect_html()"/>
             <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
             <!-- This page only: no website header, footer, breadcrumbs or Odoo promo. -->
             <style>
@@ -64,7 +66,7 @@
                             <ul class="sa-items">
                                 <li t-foreach="sa_pg['items']" t-as="it" class="sa-it">
                                     <span class="sa-th">
-                                        <img t-if="it['product'].image_128" t-att-src="image_data_uri(it['product'].image_128)" alt=""/>
+                                        <img t-if="it.get('picture')" t-att-src="it['picture']" alt="" decoding="async"/>
                                         <t t-else="" t-out="it['initial']"/>
                                     </span>
                                     <span class="sa-nm"><t t-out="it['name']"/><small t-out="it['qty_text']"/></span>

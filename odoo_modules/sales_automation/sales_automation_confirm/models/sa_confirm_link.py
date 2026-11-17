@@ -359,7 +359,12 @@ class SaConfirmLink(models.Model):
                 price = tmpl.list_price or 0.0
                 out.append({
                     'name': tmpl.name or '',
-                    'image': '/web/image/product.template/%s/image_256' % tmpl.id if tmpl.image_128 else '',
+                    # on the image server: its own address, no stop at Odoo
+                    'image': (self.env['sa.picture'].url(
+                        tmpl, 'image_256', '/web/image/product.template/%s/image_256' % tmpl.id)
+                              if 'sa.picture' in self.env else
+                              ('/web/image/product.template/%s/image_256' % tmpl.id
+                               if tmpl.with_context(bin_size=True).image_128 else '')),
                     'price': self._money(price) if price else '',
                     'url': 'https://wa.me/%s?text=%s' % (number, quote(_('I want %s', tmpl.name or ''))),
                 })

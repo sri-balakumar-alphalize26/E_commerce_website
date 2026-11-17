@@ -82,6 +82,28 @@ class TestConfirmPictureSizes(HttpCase):
             self.assertEqual(response.status_code, 200, path)
         self.assertEqual(self.url_open('/wa/confirm/%s/image/7' % self.link.token).status_code, 404)
 
+    def test_image_server_pictures_are_linked_straight(self):
+        """No stop at this server first: the image server's own addresses,
+        its thumbnail in the strip - and nothing downloaded to build the page."""
+        Attachment = self.env['ir.attachment'].sudo()
+        if 'imgsrv_url' not in Attachment._fields:
+            self.skipTest('ai369_image_server is not installed')
+        self.env.flush_all()    # the smaller sizes are written on flush
+        for record in (self.product, self.product.product_template_image_ids):
+            for att in Attachment.search([('res_model', '=', record._name), ('res_id', '=', record.id),
+                                          ('res_field', '!=', False)]):
+                att._imgsrv_set('imgsrv:m:products/zz/%s.webp?v=1' % att.id,
+                                'https://images.example.test/p/%s/%s/%s.webp' % (record._name, record.id, att.res_field),
+                                'link|products/zz/%s.webp' % att.id, checksum='sum%s' % att.id)
+        self.env.invalidate_all()
+        with patch.object(type(Attachment), '_imgsrv_read', side_effect=AssertionError('a download')):
+            html = self.url_open('/wa/confirm/%s' % self.link.token).text
+        main = 'https://images.example.test/p/product.template/%s/image_1920.webp' % self.product.id
+        side = self.product.product_template_image_ids
+        self.assertIn('src="%s"' % main, html)
+        self.assertIn('https://images.example.test/p/product.image/%s/image_256.webp' % side.id, html)
+        self.assertNotIn('/wa/confirm/%s/image/' % self.link.token, html)
+
     def test_the_strip_shows_and_swaps_the_right_sizes(self):
         html = self.url_open('/wa/confirm/%s' % self.link.token).text
         thumbs = re.findall(r'<img src="[^"]*s=256[^"]*" data-big="([^"]*)" data-full="([^"]*)"', html)

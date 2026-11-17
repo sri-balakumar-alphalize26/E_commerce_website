@@ -66,6 +66,8 @@
     // riders: the scooter seen from above, turned to its heading
     .sa_fm_rd {
         position: relative; width: 52px; height: 52px; cursor: pointer;
+        // the state classes colour the legend dots; on the scooter only its label is coloured
+        &, &.free, &.run, &.no_signal, &.off, &.sos { background: transparent; }
         .ring {
             position: absolute; left: 50%; top: 50%; width: 26px; height: 26px; margin: -13px 0 0 -13px; border-radius: 50%;
             background: rgba(15, 23, 42, .22); filter: blur(.4px);

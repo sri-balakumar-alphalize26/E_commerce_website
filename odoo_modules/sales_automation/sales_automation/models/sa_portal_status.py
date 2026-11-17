@@ -229,6 +229,9 @@ class SaleOrderPortalStatus(models.Model):
                     'qty_text': _("%(qty)s × %(price)s", qty=qty_text, price=self._sa_money_text(unit)),
                     'total_text': self._sa_money_text(line.price_total),
                     'product': line.product_id,
+                    # the image server's address, or the picture inline as
+                    # before - never downloaded here when it lives there
+                    'picture': self.env['sa.picture'].src(line.product_id, 'image_128'),
                     'initial': (name[:1] or '?').upper(),
                 })
         rows = [{'label': _("Items"), 'amount': self._sa_money_text(

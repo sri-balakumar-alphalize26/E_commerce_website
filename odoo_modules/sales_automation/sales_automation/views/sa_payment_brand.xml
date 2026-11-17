@@ -15,6 +15,7 @@
     <!-- The logo bar, and on this page only: no website header, footer or breadcrumbs. -->
     <template id="sa_brand_chrome" name="369 Mart logo bar for pages sent by link">
         <t t-set="sa_brand_logo" t-value="res_company.env['sa.brand'].logo_url()"/>
+        <t t-out="res_company.env['sa.picture'].preconnect_html()"/>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
         <style>
 #wrapwrap{background:#f6f8fa}

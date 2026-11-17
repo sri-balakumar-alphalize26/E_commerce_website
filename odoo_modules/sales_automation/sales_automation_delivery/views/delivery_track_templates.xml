@@ -72,6 +72,8 @@
             <meta name="theme-color" content="#0b4a6e"/>
             <link rel="preconnect" href="https://fonts.googleapis.com"/>
             <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous"/>
+            <!-- the image server, when pictures are kept there: connect while the page arrives -->
+            <t t-out="res_company.env['sa.picture'].preconnect_html() if res_company and 'sa.picture' in res_company.env else ''"/>
             <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
             <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
             <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css"/>

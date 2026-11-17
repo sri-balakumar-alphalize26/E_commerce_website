@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'WhatsApp Sales Automation - Delivery',
-    'version': '19.0.29.0.4',
+    'version': '19.0.29.0.5',
     'summary': 'Dispatch confirmed WhatsApp orders to riders and couriers',
     'description': """
 Delivery dispatch for WhatsApp orders

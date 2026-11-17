@@ -401,7 +401,8 @@ class SaDeliveryApi(http.Controller):
         # address rather than whatever identifies us to the WhatsApp panel.
         base = request.env['stock.picking'].sudo()._sa_public_base()
         image = ''
-        if contact and contact.image_128:
+        # asked by its size: reading it would download it from the image server
+        if contact and contact.with_context(bin_size=True).image_128:
             image = '%s/web/image/res.partner/%s/image_512' % (base, contact.id)
         return {
             'id': shop.id,

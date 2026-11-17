@@ -23,7 +23,7 @@ _logger = logging.getLogger(__name__)
 _PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5"><meta name="robots" content="noindex">
 <meta name="theme-color" content="#0b4a6e"><title>%(title)s</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>%(image_host)s
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <style>
  /* 13 Nov 2026, design 1 "Shop page": the 369 Mart product page look. Phone first: one column,
@@ -229,7 +229,9 @@ def _page(title, body, status=200, ask='', body_class=''):
     # the logo uploaded in the 369 Mart console, else the old setting, else ours
     logo = request.env['sa.brand'].logo_url()
     return request.make_response(_PAGE % {'title': title, 'body': body, 'logo': html.escape(logo),
-                                          'ask': ask, 'body_class': body_class}, status=status,
+                                          'ask': ask, 'body_class': body_class,
+                                          'image_host': (request.env['sa.picture'].preconnect_html()
+                                                         if 'sa.picture' in request.env else '')}, status=status,
                                  headers=[('Content-Type', 'text/html; charset=utf-8'),
                                           ('Cache-Control', 'no-store')])
 
@@ -346,6 +348,16 @@ class SaConfirmPage(http.Controller):
 
         def pic(i, size=None):
             entry = pictures[i]
+            # On the image server: its own address, so the phone does not
+            # stop at this server first only to be sent there (about a second
+            # each on a slow server). The strip gets the server's thumbnail.
+            if entry.get('url'):
+                direct = ''
+                if size and size <= 256 and '1920' in entry['field']:
+                    sized = entry['field'].replace('1920', '256')
+                    if sized in entry['record']._fields:
+                        direct = link._picture_remote_url(link._picture_attachment(entry['record'], sized))
+                return html.escape(direct or entry['url'])
             return html.escape('/wa/confirm/%s/image/%d.jpg?%sv=%s' % (
                 link.token, i, ('s=%d&' % size) if size else '', entry['version']))
 
