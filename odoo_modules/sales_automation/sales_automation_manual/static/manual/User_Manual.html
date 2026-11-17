@@ -25,6 +25,8 @@
  .nav a{color:#cbd5e1;text-decoration:none;margin-right:10px}.nav a:hover{color:#fff}.nav a.pdf{background:#16a34a;color:#fff;padding:3px 10px;border-radius:6px}
  .toc a{color:#0f172a;text-decoration:none}
  @media print{.nav{display:none}.cover{height:auto}}
+ @page{size:A4;margin:12mm}
+ .cover h1{color:#fff;page-break-before:avoid}
  @media screen{.cover{height:auto;padding:40px 60px}.cover,h1{page-break-before:auto}body{max-width:1000px;margin:0 auto}}
 </style></head><body>
 <div class="nav" id="top"><b>📖 User Manual</b> <a href="#customer">Customer flow</a> <a href="#vendors">Vendors</a> <a href="#store">Store</a> <a href="#delivery">Delivery</a> <a href="#payment">Payment</a> <a href="#loyalty">Loyalty</a> <a href="#insights">Insights</a> <a href="#config">Configuration</a> <a href="#install">Install</a> <a href="#operations">Operations</a> <a href="#troubleshooting">Troubleshooting</a> <a href="/sa/manual/flow">Full flow (MD)</a> <a class="pdf" href="/sa/manual/pdf">⬇ Download PDF</a></div>
@@ -79,6 +81,7 @@ Public web pages for phones (payment, signing, tracking, product confirmation): 
 <div class="step">4. Install <b>Sales Automation - Loyalty on WhatsApp</b> (<code>sales_automation_loyalty</code>): it installs pos_loyalty_card and sale_loyalty_card.</div>
 <div class="step">5. Python packages needed by the 369ai Python: <code>requests</code>, <code>Pillow</code>, <code>python-barcode</code>. For the picture search a <b>second</b> Python with Playwright is used (see 3.4).</div>
 <div class="warn">Never uninstall by deleting a module folder while it is installed. Upgrade a module that adds database columns on its own first (<code>-u thatmodule</code>) before upgrading the ones that depend on it.</div>
+<div class="note"><b>Upgrades run by themselves (17 Nov 2026).</b> Copy a new version of the modules onto the server and restart 369ai: the first time a database is opened (by a visitor or by the scheduler) it compares each module's version on disk (<code>__manifest__.py</code>) with the version it recorded, and upgrades the newer ones - the same as Apps ▸ Upgrade. No <code>-u</code> by hand. This covers sales_automation, whatsapp_gateway and every installed module that depends on them (all sales_automation_* modules, whatsapp_employee_tracker). Only a raised version triggers it: a copy that keeps the version is not upgraded. If an upgrade fails, the error is in the server log, the site keeps running on the code it loaded, and the same versions are tried again after ten minutes.</div>
 
 <h2>3.2 WhatsApp server (gateway + panel)</h2>
 <div class="step">1. Unzip <code>WhatsApp_Server.zip</code> to <code>C:\whatsapp_server</code>. Install Node.js 20 LTS.</div>
@@ -160,7 +163,7 @@ WD Blue · Seagate BarraCuda · Toshiba P300 · ✏️ TYPE IT / OTHER</div>
 Please check the photo and details, then press ACCEPT:
 https://…/scoped_app/c?db=…&t=…
 Ref K7</div>
-<p>One message: the picture with a short link. The page (section 6) shows up to three pictures, the details table and the ACCEPT / REJECT buttons. Nothing is priced and no vendor is asked until ACCEPT is pressed. A "yes" typed in the chat is answered with "please press ACCEPT on the page" once; after 10 minutes one reminder is sent.</p>
+<p>One message: the picture with a short link. The page (section 6) shows the photos, the details and the <b>✔ ACCEPT</b> / <b>✘ REJECT</b> buttons. Nothing is priced and no vendor is asked until ACCEPT is pressed. A "yes" typed in the chat is answered with "please press ACCEPT on the page" once; after 10 minutes one reminder is sent.</p>
 <h2>5.6 Price</h2>
 <ul>
  <li><b>In stock</b>: the shop price is announced at once, with ACCEPT / BETTER PRICE / CANCEL.</li>
@@ -173,7 +176,7 @@ Ref K7</div>
 Seagate BarraCuda 2TB Hard Disk 3.5 inch
 2 x 30.00
 Total: 60.00      CONFIRM · CHANGE</div>
-<p>CHANGE offers CHANGE QUANTITY / BETTER PRICE / KEEP / CANCEL. CONFIRM creates the sale order in 369ai (in the employee session's company, with the exact variant on the line) and posts its number.</p>
+<p>CHANGE offers CHANGE QUANTITY / BETTER PRICE / KEEP / CANCEL. CONFIRM creates the sale order in 369ai (in the company of the WhatsApp group - the employee session's Order Company only when the group has none - with the exact variant on the line) and posts its number.</p>
 <h2>5.9 Customer details, sign, pay, deliver</h2>
 <p>Every order, straight after "Done! Your order is placed", the bot collects the customer's details in the group, one question at a time:</p>
 <div class="chat">👤 What name should the quotation be in?
@@ -184,16 +187,18 @@ Total: 60.00      CONFIRM · CHANGE</div>
 Tap one:  ✅ YES, CORRECT · ✏️ NO, CHANGE · ❌ CANCEL</div>
 <p><b>NO, CHANGE</b> asks which field (👤 NAME / 🏠 ADDRESS / ⬅️ BACK); only that field is asked again and the check comes back. The customer contact in 369ai is written from these answers, so a quotation is never raised in the name of a phone number. Then:</p>
 <ul>
- <li><b>✍️ Sign</b>: "Details saved - please sign your order" with the order's portal page. The signature confirms the order; the confirmed order PDF is posted in the group ("📄 Order S000xx - confirmed").</li>
+ <li><b>✍️ Sign</b>: "Details saved - please sign your order" with the link to the order page (section 10). The signature confirms the order; the confirmed order PDF is posted in the group ("📄 Order S000xx - confirmed").</li>
+ <li>On the same page, before signing, the customer may pick a <b>Delivery slot</b> (optional, only where the shop offers slots) or press <b>Reject this order</b>, which asks for a reason and cancels the order.</li>
  <li>Goods in stock: the payment link is posted the moment it is signed.</li>
  <li>Goods to be sourced: "we are arranging the goods"; the payment link follows when the shop accepts the order on the counter screen (goods in hand).</li>
  <li>Loyalty: before the payment link the customer may be offered USE POINTS / PAY FULL (section 11).</li>
- <li>After payment: TRACK THIS ORDER / MY ORDERS / MAIN MENU / THAT'S ALL. The delivery job goes to a rider; the customer gets the tracking link and a delivery code (section 9).</li>
+ <li>After payment: TRACK THIS ORDER / MY ORDERS / MAIN MENU / THAT'S ALL. The delivery job goes to a rider; the customer gets the tracking link and a delivery code (section 9). Once delivered, the private Delivered message asks for a review (9.4).</li>
 </ul>
 
 <h1 id="confirm">6. Product confirmation page and pictures</h1>
 <h2>6.1 The page</h2>
-<p>A private link per enquiry and person (customer, each vendor). It opens one mobile page: the main picture, a strip of up to three pictures (tap to switch, tap the big picture to zoom, pinch to zoom), the details table (product, reference, quantity, chosen brand / capacity / colour, code, barcode, category, price when known, weight, description) and below it the two buttons <b>ACCEPT</b> / <b>REJECT</b>. The first press is final: the page then shows "Accepted ✔ date time by <i>who</i>" with both buttons disabled, and a later press is refused and logged. Vendor pages are bilingual English / Chinese.</p>
+<p>A private link per enquiry and person (customer, each vendor). It opens one page laid out like the 369 Mart shop's product page: the shop logo, a blue strip <b>"Is this the product you want?"</b> (vendor: <b>"Is this the exact product you have?"</b>) with the reference, then the photos with a strip of thumbnails (tap one to switch). <i>Tap to zoom</i> opens a photo full screen; tap it again to zoom in and move around. On a computer with a mouse: <i>Hover to zoom · click for full screen</i> - a magnified view opens beside the photo. Next to the photos: the product name, the chosen brand / capacity / colour, and for the customer the price each (the list price struck through with "N% OFF" when the customer pays less), the quantity and total, the star rating, a <b>Quick</b> or <b>Express</b> delivery line from the shop's own delivery rules (none when the item is not in stock, unless the product has its own promise), the stock ("In stock", "Only N in stock", "Not in stock right now - we will arrange it for you") and the shop's badges. Then the two buttons <b>✘ REJECT</b> / <b>✔ ACCEPT</b>, on a phone pinned to the bottom of the screen; REJECT asks "Reject this product?" first. Below: Details (product, reference, quantity, code, barcode, category, brand, price when known, attributes, weight, unit, description), Ratings and reviews, and the shop's About this item, Product details, Description and From the manufacturer. A vendor's page never shows the price, stock, rating or delivery line, and is in English only.</p>
+<p>The first press is final: the page then shows "You accepted this product" or "You rejected this product" with the date, time (UTC) and <i>who</i>, and a later press is refused ("Your answer was already recorded and cannot be changed.") and logged. After a customer presses REJECT, a <b>Not this one?</b> block shows up to four similar products; tapping one opens WhatsApp to the shop's number with "I want <i>product</i>" and the chat carries on from there. It appears only when the shop's WhatsApp number is known and the 369 Mart storefront is installed.</p>
 <h2>6.2 Where the pictures come from</h2>
 <ol>
  <li>The product's (or variant's) own picture in 369ai - always first. Add photos on the product form for the best result.</li>
@@ -241,7 +246,7 @@ https://…</div>
  <tr><td>2</td><td><b>Dispatch</b></td><td>Pick the rider (if the job has none) and type the code the rider shows you → status <b>Collected by Rider</b>.</td><td>"🚚 <i>Rider</i> has collected your order #D16 and is on the way" + tracking link</td></tr>
  <tr><td>3</td><td><b>Rider Near Customer</b></td><td>Status <b>Rider Near Customer</b>.</td><td>"🛵 <i>Rider</i> is near your location with order #D16. Please be ready to receive it."</td></tr>
  <tr><td>4</td><td><b>Reached Customer Location</b></td><td>The delivery code is sent to the customer now; the form shows <i>Reached at HH:MM</i>. <b>Resend Customer Code</b> makes a fresh one.</td><td>"📦 Your order is arriving. Give this code to the rider <b>after</b> you have the parcel: 123456"</td></tr>
- <tr><td>5</td><td><b>Delivered</b></td><td>Type the code the customer gave the rider → <b>Delivered</b>, stock transfer validated, order closed.</td><td>"✅ Delivered. Thank you!"</td></tr>
+ <tr><td>5</td><td><b>Delivered</b></td><td>Type the code the customer gave the rider → <b>Delivered</b>, stock transfer validated, order closed.</td><td>"✅ Delivered. Thank you! 🙏" and, in the private chat only, "⭐ How was it? Rate your products: <i>link</i>" (9.4)</td></tr>
  <tr><td>-</td><td><b>Failed</b></td><td>Reason (customer absent / refused / wrong address …) → <b>Failed</b>; the job stays open to retry or return.</td><td>"⚠ We could not deliver your order … we will contact you"</td></tr>
 </table>
 <p>The rider's own WhatsApp page has the same four steps: <i>Collect (type the pickup code)</i> → <i>I am near the customer</i> → <i>Reached - send the code</i> → <i>Delivered (type the customer's code)</i>. The rider app (later) uses the same server actions. A delivery manager also has <i>Force</i> buttons without codes; every force is logged in the chatter.</p>
@@ -253,11 +258,28 @@ https://…</div>
 <p>The same five steps on the counter screen, with the pickup code shown on the card and an ⓘ on every button.</p>
 <h2>9.3 Delivery ▸ Create OTP</h2>
 <p>Choose the order (S000xx, customer or job code D42), <i>Pickup / Dispatch</i> or <i>Delivery</i>, and whether to send it on WhatsApp. <b>Generate</b> shows the code in big digits with a copy button. Delivery ▸ Configuration ▸ Delivery Codes lists every code issued (never the digits).</p>
+<h2>9.4 Rate your products</h2>
+<p>When a WhatsApp order is delivered, the customer's private Delivered message gets one more line, "⭐ How was it? Rate your products: <i>link</i>" - once per order, never in a group. It is switched by Delivery ▸ Configuration ▸ Delivery Settings ▸ <b>Ask for a Review When Delivered</b> (on by default). The same page opens from the <b>⭐ Rate your products</b> button on the delivered order page (section 10). It lists each product of the order with five stars and an optional line ("What did you like? (optional)"); <b>Send</b> saves it, and the customer can come back and <b>Update</b> it. Before delivery the page says "You can rate these once your order is delivered." With the 369 Mart storefront installed the review is saved as a verified storefront review, moderated with the website's reviews and then shown on the product page; without it, it is kept as a plain 369ai rating.</p>
+<h2>9.5 The customer's tracking page and the office Live Map</h2>
+<p>The tracking link always shows a map. When the shop or the customer has no map pin, the page places an <b>approximate</b> pin (drawn lighter, with a dashed edge): the shop's from its storefront branch, warehouse or company address; the customer's from the order's delivery address or a look-up of the typed address, never saved on the contact. With nothing at all the map centres on the customer's town. Route, arrival time, rider pay and calling a rider keep using the real positions only, so still set each shop's pin under Delivery ▸ Configuration ▸ Shops. The <b>Message us on WhatsApp</b> button opens a chat with the shop's number, else the WhatsApp number the order runs on, else the company phone, with the order number filled in; with no number at all the button is hidden and the page asks the customer to reply in the order's WhatsApp chat.</p>
+<p>Delivery ▸ Fleet ▸ <b>Live Map</b> shows every rider on a street map (OpenFreeMap): the scooter turns to the rider's heading and glides between updates, shops are green pins and customers (the stops of a rider's run, orders waiting for a rider) orange pins - storefront branches and orders without a map pin included, placed approximately (lighter, dashed; "(approximate)" when you hold the mouse on them). Legend: SOS, Free, On a run, No signal, Shop, Waiting order. The page refreshes every 15 s; the list on the left has <b>Open rider</b>, <b>Call rider</b> and <b>Open job</b>.</p>
 <h1 id="payment">10. Payment, signing and the order</h1>
+<p>The sign and pay links open the customer's <b>order page</b> (13 Nov 2026), in the shop's look: the shop logo and "Secure page" at the top, "Order S000xx" with one line saying what to do, and a step bar <b>Sign - Pay - Delivery</b> (Sign only when the order needs a signature). The order itself: "Your order · N items" with pictures, quantities and prices, <b>Download PDF</b>, the Items / Delivery / Savings lines and the Total, and "Delivery to <i>address</i>". One column on a phone; on a computer one card on the right does the step the customer is on:</p>
+<table>
+ <tr><th>Card</th><th>When</th><th>What the customer sees and does</th></tr>
+ <tr><td><b>Sign to confirm</b></td><td>The quotation needs a signature</td><td>369ai's own signature box, inside the card instead of a popup. Under it, <b>Reject this order</b> opens "Reject this order?" with the reasons Wrong product / Price too high / Ordered by mistake / Other and an optional note: <b>Yes, reject order</b> cancels the order, <b>Keep my order</b> closes the popup.</td></tr>
+ <tr><td><b>Delivery slot</b> <i>optional</i></td><td>Sign or pay step, while the order is still an unpaid quotation; only with the 369 Mart storefront installed and the company form's <b>Offer delivery slots</b> on</td><td><b>No preference</b> ("As soon as we can") or one of the storefront checkout's slots for the order's Quick or Express mode. No slot fee: the total never changes. A full or closed slot asks to pick another; a saved slot that is no longer offered is cleared and the card says "Your earlier slot "…" is no longer available."</td></tr>
+ <tr><td><b>Payment method</b></td><td>Signed (or no signature needed) and something to pay</td><td>369ai's own payment form with the enabled providers (Demo provider in test mode), inside the card, with the delivery promise above it. While a payment is still being checked: "We are still checking your last payment. Pay again only if it failed."</td></tr>
+ <tr><td><b>Pay for your order</b></td><td>A confirmed order with money still due</td><td>"To pay" and the button <b>Pay <i>amount</i></b>, which opens the payment page.</td></tr>
+ <tr><td><b>Order confirmed</b> / <b>Delivered</b></td><td>Paid, or delivered</td><td>"Paid <i>amount</i> · signed by <i>name</i>", a timeline Packing → On the way → Delivered (with the rider's name and the promised time), "Paid by" with the method, date and reference, and the buttons <b>Track my order</b> (while the parcel is on its way), <b>⭐ Rate your products</b> (once delivered, 9.4) and <b>Download invoice</b> (the invoice PDF).</td></tr>
+ <tr><td><b>Order cancelled</b></td><td>Cancelled</td><td>"Message us on WhatsApp and we will make you a new order."</td></tr>
+</table>
 <ul>
- <li><b>Quotation (not yet confirmed):</b> the portal page offers Accept &amp; Sign and payment through the enabled payment providers (Demo provider in test mode on the test database).</li>
- <li><b>Confirmed order:</b> the portal page has no Pay button any more; the system sends 369ai's payment link (<code>/my/orders/&lt;id&gt;?…&amp;payment_amount=…</code>) which shows the payment form.</li>
- <li>The pay page, sign page, tracking page and confirmation page all go through a database doorway so a phone that never saw the server lands on the right database.</li>
+ <li><b>A card payment counts at once:</b> money taken online (a done or authorized card payment) counts as paid even before there is an invoice, so the page never offers to pay twice.</li>
+ <li><b>Payment pages in the shop's look:</b> 369ai's pay page (<code>/payment/pay</code>), the "Your payment" page shown while a payment is processed, and the payment confirmation, which has <b>Back to my order</b> instead of 369ai's account link.</li>
+ <li><b>Shop logo:</b> the order, payment, review, product confirmation and tracking pages show the logo uploaded in the 369 Mart console (Settings ▸ Store ▸ Shop logo); without one, the system parameter <code>sa.brand_logo_url</code>, else the bundled logo.</li>
+ <li>Amounts use the decimals set for the currency in 369ai (Accounting ▸ Currencies), the same as invoices and PDFs.</li>
+ <li>The pay page, sign page, tracking page and confirmation page all go through a database doorway so a phone that never saw the server lands on the right database; a pay link goes from the doorway straight to the order page.</li>
  <li>Payment reserved on a card at ordering and captured at delivery is supported where the provider allows it (GCC providers differ; see the payment module notes).</li>
 </ul>
 
@@ -283,6 +305,7 @@ https://…</div>
  <li>369ai service running.</li>
  <li>Evolution (8085) and panel (8086) running (start by hand if the services refuse; see 3.2 step 7).</li>
  <li>Public address: with a quick tunnel, start it again and set the new hostname in <code>sa_delivery.public_base_url</code> and in the WeChat bridge's <code>config.json</code>. With a named tunnel nothing changes.</li>
+ <li>After copying a new version of the modules: open the database once (or wait for the scheduler); the newer modules upgrade themselves (3.1). The server log says "Upgraded …", or why it failed.</li>
 </ol>
 
 <h1 id="troubleshooting">14. Troubleshooting</h1>
@@ -296,16 +319,17 @@ https://…</div>
  <tr><td>WeChat vendor got no message</td><td>Bridge down, wrong remark, WeChat 4.x on the PC, old address in config.json</td><td>Bridge window lights; remark equals 369ai's; WeChat 3.9.12; config.json</td></tr>
  <tr><td>Vendor reply matched to the wrong enquiry</td><td>Several open checks, reply without #REF</td><td>Ask vendors to prefix #REF; the newest open check is assumed otherwise</td></tr>
  <tr><td>"quota exceeded" from Gemini</td><td>Free tier used up for the day</td><td>Wait for the reset or use a paid key; the lite models are tried automatically</td></tr>
+ <tr><td>"500 Internal Server Error" right after new module code was copied</td><td>The database still has the old tables until the automatic upgrade has run</td><td>Open the database once and wait a moment; read the server log. After a failed upgrade the same versions are tried again after ten minutes, or use Apps ▸ Upgrade</td></tr>
  <tr><td>Order line has the wrong variant</td><td>Old enquiry without attributes</td><td>Edit the order line; new enquiries carry the exact variant</td></tr>
 </table>
 
 <h1 id="annex-modules">15. Annex A - module list and what each one adds</h1>
 <table>
  <tr><th>Module</th><th>Adds</th></tr>
- <tr><td>whatsapp_gateway</td><td>WhatsApp sessions talking to the panel (send text, image, document, poll, e-mail), incoming webhook, message log, opt-outs</td></tr>
+ <tr><td>whatsapp_gateway</td><td>WhatsApp sessions talking to the panel (send text, image, document, poll, e-mail), incoming webhook, message log, opt-outs, self-upgrade of the gateway and the tracker when the code is newer</td></tr>
  <tr><td>whatsapp_employee_tracker</td><td>Employee sessions, conversations, auto-reply engine, order creation from chats, quality scores, payment simulator page</td></tr>
- <tr><td>sales_automation</td><td>Group enquiries: classification, guided finder, vendor sourcing, quotes, bargaining, quantity, order, sign / pay links, menus, address change, human takeover, settings pages</td></tr>
- <tr><td>sales_automation_delivery</td><td>Delivery jobs on stock pickings, rider link and app, OTP codes, tracking page with map, delivery queues and analysis</td></tr>
+ <tr><td>sales_automation</td><td>Group enquiries: classification, guided finder, vendor sourcing, quotes, bargaining, quantity, order, sign / pay links, menus, address change, human takeover, settings pages, the customer's order page (sign, pay, delivery slot, reject), the Rate your products page, the shop look of the payment pages, the shop logo of the pages sent by link, self-upgrade when the code is newer</td></tr>
+ <tr><td>sales_automation_delivery</td><td>Delivery jobs on stock pickings, rider link and app, OTP codes, tracking page with map, the office Live Map, review link in the Delivered message, delivery queues and analysis</td></tr>
  <tr><td>sales_automation_store</td><td>Counter screen with alarm, shop acceptance and packing, pickup codes, enquiry desk for vendor picking, supply reminders</td></tr>
  <tr><td>sales_automation_insights</td><td>Customer and vendor ratings, dashboards, profiles, compare, chat log, conduct filter and remarks</td></tr>
  <tr><td>pos_loyalty_card / sale_loyalty_card</td><td>Loyalty ledger for POS and sales, cards, rules, history, redeem wizard, credit-note handling</td></tr>
@@ -335,11 +359,13 @@ https://…</div>
 <h1 id="annex-links">17. Annex C - public links and technical notes</h1>
 <table>
  <tr><th>Link</th><th>Page</th></tr>
- <tr><td><code>/scoped_app/c?db=…&amp;t=…</code> → <code>/wa/confirm/&lt;token&gt;</code></td><td>Product confirmation page (customer or vendor); <code>/image/&lt;n&gt;</code> its pictures; <code>/accept</code>, <code>/reject</code> (POST)</td></tr>
+ <tr><td><code>/scoped_app/c?db=…&amp;t=…</code> → <code>/wa/confirm/&lt;token&gt;</code></td><td>Product confirmation page (customer or vendor); <code>/image/&lt;n&gt;.jpg?s=1024|256&amp;v=…</code> its pictures by size (1024 px on the page, 256 px in the strip, the original only full screen; kept by phones and Cloudflare for a year; a picture kept on the image server is linked there directly); <code>/accept</code>, <code>/reject</code> (POST)</td></tr>
  <tr><td><code>/scoped_app/wx?db=…&amp;t=…</code> → <code>/sa/wx/&lt;token&gt;</code></td><td>WeChat vendor answer page (In stock / No stock, price, delivery time)</td></tr>
- <tr><td><code>/scoped_app/wa-link?db=…&amp;to=…</code></td><td>Doorway for <code>/wa/pay</code>, <code>/wa/track</code>, <code>/wa/delivery</code>, <code>/wa/quote</code>, <code>/my/orders</code>, <code>/payment/pay</code></td></tr>
+ <tr><td><code>/scoped_app/wa-link?db=…&amp;to=…</code></td><td>Doorway for <code>/wa/pay</code>, <code>/wa/track</code>, <code>/wa/delivery</code>, <code>/wa/quote</code>, <code>/wa/review</code>, <code>/my/orders</code>, <code>/payment/pay</code>; a <code>/wa/pay</code> link goes straight to the order page</td></tr>
  <tr><td><code>/sa/wechat/heartbeat, outbox, sent, contacts, inbound</code></td><td>The WeChat bridge API (headers X-SA-Key, X-Odoo-Database)</td></tr>
  <tr><td><code>/wa/delivery/&lt;id&gt;?token=…</code>, <code>/wa/track/&lt;id&gt;?token=…</code></td><td>Rider job page, customer tracking page</td></tr>
+ <tr><td><code>/my/orders/&lt;id&gt;/slot</code> (POST)</td><td>Delivery slot picked on the order page (the order's access token)</td></tr>
+ <tr><td><code>/wa/review/&lt;order&gt;?access_token=…</code>, POST <code>/wa/review/&lt;order&gt;/&lt;product&gt;</code></td><td>Rate your products page and saving one review</td></tr>
 </table>
 <h2>Design rules learned on the reference server</h2>
 <ul>
@@ -520,6 +546,7 @@ cost</td><td>Ordinary words that must never be sent to the model as a near miss 
 <tr><td><b>Express Delivery Within (days)</b><br><code>express_days</code></td><td>number</td><td>3</td><td>Promised time when something has to be ordered in from a supplier first. This is what the customer is told, so it should include the supplier&#x27;s own lead time, not just your dispatch.</td></tr>
 <tr><td><b>Return OTPs in the API (testing only)</b><br><code>otp_test_mode</code></td><td>on / off</td><td>True</td><td>Hands the pickup and delivery codes back in the API response so the flow can be driven from Postman while no WhatsApp session is connected.<br><br>Leave this OFF anywhere real: with it on, anyone holding a rider&#x27;s token can read the code that proves a customer received their parcel. Every use is written to the log.</td></tr>
 <tr><td><b>Tell the Customer the Date</b><br><code>promise_customer</code></td><td>on / off</td><td>True</td><td>Include the promised date in the WhatsApp message and on the tracking page. Turn it off if you would rather not commit to a date in writing.</td></tr>
+<tr><td><b>Ask for a Review When Delivered</b><br><code>ask_review</code></td><td>on / off</td><td>True (default)</td><td>The private Delivered message carries a link where the customer rates what they bought (13 Nov 2026). The reviews show on the product pages after the usual moderation.</td></tr>
 <tr><td><b>Same-Day Cut-off (hour, 0-23)</b><br><code>cutoff_hour</code></td><td>number</td><td>16</td><td>An in-stock order confirmed after this hour is promised for the next day rather than today. 16 means anything after 4pm rolls over. Set 0 to promise the quick window whatever the time.</td></tr>
 <tr><td><b>Shop Confirms Orders</b><br><code>shop_confirms</code></td><td>on / off</td><td>True</td><td>On, a paid order waits on the shop&#x27;s screen until somebody accepts it and says it is packed. Only then is a rider called.<br><br>Off, the rider is called the moment the order is paid - which is right for a business where the same person packs and delivers, and wrong for anywhere a rider can arrive before the goods are off the shelf.</td></tr>
 <tr><td><b>Ring For (seconds)</b><br><code>alarm_ring_seconds</code></td><td>number</td><td>30</td><td>How long one ring lasts. The screen beeps continuously for this long, rests for the repeat interval, and rings again until the order is accepted.</td></tr>

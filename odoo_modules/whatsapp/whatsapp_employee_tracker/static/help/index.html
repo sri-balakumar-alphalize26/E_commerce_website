@@ -63,6 +63,7 @@
     <div class="step"><div class="num">2</div><div><b>Employee Session:</b> WA Tracker &gt; Configuration &gt; Employee Sessions &gt; New &rarr; pick Employee + WhatsApp Session + phone.</div></div>
     <div class="step"><div class="num">3</div><div>Keep <b>Enable Monitoring</b> ON &rarr; Save.</div></div>
     <div class="step"><div class="num">4</div><div>Turn on <b>Enable Auto-Reply</b> and set the <b>Checkout</b> options (Section 6).</div></div>
+    <div class="tip"><b>Updating:</b> copy the new version of the module onto the server and restart 369ai. The first time the database is opened, the WhatsApp gateway and this module upgrade themselves when the version in their code is newer than the database &mdash; no Apps &gt; Upgrade by hand. If the upgrade fails, the error is in the server log and it is tried again after ten minutes.</div>
   </div>
 
   <div class="card" id="auto">
@@ -110,7 +111,7 @@ Customer: 2   &rarr; Order created &rarr; Delivery &rarr; Payment</div>
       <tr><td>Enable Payment Step</td><td>Show payment options after ordering</td><td>ON</td></tr>
       <tr><td>Enable Cash on Delivery</td><td>Show the COD option</td><td>ON</td></tr>
       <tr><td><b>Automatic Invoice (off = Agent verify)</b></td><td>ON = auto invoice; OFF = agent verifies then sends (Section 8)</td><td>ON</td></tr>
-      <tr><td>Order Company <b>(required)</b></td><td>Which company the order/invoice belongs to. Mandatory &mdash; defaults to your current company.</td><td>current company</td></tr>
+      <tr><td>Order Company <b>(required)</b></td><td>Which company the order/invoice belongs to. Mandatory &mdash; defaults to your current company. An order from a Sales Automation customer group goes to the company set on that WhatsApp group; this one is used only when the group has none.</td><td>current company</td></tr>
     </table>
   </div>
 
@@ -183,7 +184,8 @@ Agent in 369ai: check payment
       <tr><td>No payment options</td><td>Enable Payment Step ON</td></tr>
       <tr><td>Invoice not sent (Agent-verify)</td><td>Agent must Create Invoice &amp; <b>Post</b> it &mdash; posting sends the PDF</td></tr>
       <tr><td>Invoice auto-sent unexpectedly</td><td>Turn the "Automatic Invoice" toggle OFF for agent-verify</td></tr>
-      <tr><td>Wrong company on order</td><td>Set "Order Company" in Checkout settings</td></tr>
+      <tr><td>Wrong company on order</td><td>Set "Order Company" in Checkout settings; for an order from a customer group, the company on that WhatsApp group</td></tr>
+      <tr><td>"500 Internal Server Error" right after copying a new version</td><td>Open the database once so the automatic upgrade runs, then read the server log; or Apps &gt; Upgrade</td></tr>
     </table>
   </div>
 
