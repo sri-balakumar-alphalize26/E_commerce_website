@@ -828,13 +828,24 @@ class StockPicking(models.Model):
             return ''
         if not hasattr(order, '_sa_review_message_line'):
             return ''
-        if not self.env['sa.outbox.guard'].sudo().claim('review|%s' % order.id, 60 * 60 * 24 * 365):
+        guard = self.env['sa.outbox.guard'].sudo()
+        key = self._sa_review_guard_key()
+        if not guard.claim(key, 60 * 60 * 24 * 365):
             return ''
         try:
-            return order._sa_review_message_line(order.sudo())
+            line = order._sa_review_message_line(order.sudo()) or ''
         except Exception as err:  # noqa: BLE001 - the Delivered message matters more
             _logger.info("Delivery: no review link for %s: %s", order.name, err)
-            return ''
+            line = ''
+        if not line:
+            # nothing to offer this time: keep the once-per-order slot free
+            guard.release(key)
+        return line
+
+    def _sa_review_guard_key(self):
+        """The once-per-order key of the review request ('' with no order)."""
+        self.ensure_one()
+        return 'review|%s' % self.sale_id.id if self.sale_id else ''
 
     def sa_track_link_once(self):
         """The tracking URL the first time it is asked for, '' after that.
@@ -886,7 +897,13 @@ class StockPicking(models.Model):
                      "*#%(ref)s*. Please be ready to receive it.%(tail)s",
                      rider=name, ref=self.sa_ref_code or '', tail=tail)
         elif state == 'delivered':
-            body = _("\u2705 Delivered. Thank you! \U0001F64F") + self._sa_review_line()
+            review = self._sa_review_line()
+            sent = self._sa_tell_customer(_("\u2705 Delivered. Thank you! \U0001F64F") + review)
+            if review and not sent:
+                # no phone, no session or the gateway refused: the customer
+                # never saw the link, so it may be offered again (17 Nov 2026)
+                self.env['sa.outbox.guard'].sudo().release(self._sa_review_guard_key())
+            return sent
         else:
             return False
         return self._sa_tell_customer(body)

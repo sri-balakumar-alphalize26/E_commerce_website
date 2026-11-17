@@ -77,8 +77,14 @@ class StockPickingCommonHooks(models.Model):
         link = order._sa_review_link() or ''
         if not link:
             return False
-        if not self.env['sa.outbox.guard'].sudo().claim('review|%s' % order.id, 60 * 60 * 24 * 14):
+        guard = self.env['sa.outbox.guard'].sudo()
+        key = 'review|%s' % order.id
+        if not guard.claim(key, 60 * 60 * 24 * 14):
             return False
-        return self._sa_tell_customer(_(
+        sent = self._sa_tell_customer(_(
             "⭐ How was your order *#%(ref)s*? Rate the products here:\n%(url)s",
             ref=self.sa_ref_code or order.name, url=link), unique=True)
+        if not sent:
+            # not delivered to the customer: free the once-per-order slot
+            guard.release(key)
+        return sent
