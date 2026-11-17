@@ -161,13 +161,13 @@
             options.onFail();
         }
 
-        function make(first) {
+        function make(first, zoom) {
             try {
                 map = new ml.Map({
                     container: options.container,
                     style: options.style,
                     center: lngLat(first),
-                    zoom: 13,
+                    zoom: zoom || 13,
                     maxZoom: 19,
                     scrollZoom: false,
                     dragRotate: false,
@@ -218,11 +218,26 @@
         }
 
         function pin(name, place, text, cls) {
-            if (pins[name] || !known(place)) { return; }
+            if (!known(place)) { return; }
+            // An approximate pin (a looked-up address) is replaced by the
+            // exact one when that arrives, so the pin follows the place.
+            // MapLibre adds its own classes to the element: only `approx` is
+            // toggled here, the rest is left alone.
+            var approx = !!place.approximate;
+            var key = place.latitude + "," + place.longitude + "," + approx;
+            var old = pins[name];
+            if (old) {
+                if (old._saKey === key) { return; }
+                old.setLngLat(lngLat(point(place)));
+                old.getElement().classList.toggle("approx", approx);
+                old._saKey = key;
+                return;
+            }
             var el = document.createElement("span");
-            el.className = "sa-pin " + cls;
+            el.className = "sa-pin " + cls + (approx ? " approx" : "");
             el.textContent = text;
             pins[name] = new ml.Marker({ element: el, anchor: "center" }).setLngLat(lngLat(point(place))).addTo(map);
+            pins[name]._saKey = key;
         }
 
         function fit(points, padding) {
@@ -331,10 +346,12 @@
                 if (broken) { return; }
                 latest = d;
                 if (!map) {
-                    var first = known(d.shop) ? d.shop : known(d.dropoff) ? d.dropoff : null;
+                    // A pin, else the town the server found to centre on, so
+                    // an order with nothing pinned yet still shows a map.
+                    var first = known(d.shop) ? d.shop : known(d.dropoff) ? d.dropoff : known(d.center) ? d.center : null;
                     if (!first) { return; }
                     options.onShown();
-                    make(point(first));
+                    make(point(first), known(d.shop) || known(d.dropoff) ? 13 : 12);
                 } else if (ready) {
                     draw(d);
                 }

@@ -107,6 +107,18 @@ class SaGeocodeCache(models.Model):
         row = self.sudo().search([('key', '=', key)], limit=1)
         if row and row.lat:
             return row.lat, row.lng
+        # A recent miss is remembered (lat 0): the customer's tracking page
+        # asks on every view, and Nominatim allows about one request a second.
+        # "Not found" is kept 6 hours, a service that did not answer 10 minutes.
+        if row and row.write_date:
+            keep = timedelta(minutes=10) if row.short == 'error' else timedelta(hours=6)
+            if fields.Datetime.now() - row.write_date < keep:
+                return None, None
+        # Screens that refresh on their own (the office's live map, every 15 s)
+        # read what is already known and never wait on the address service.
+        if self.env.context.get('sa_geo_cache_only'):
+            return None, None
+        answered = False
         try:
             s = self._settings()
             if s.geocode_provider == 'google' and s.geocode_google_key:
@@ -118,13 +130,24 @@ class SaGeocodeCache(models.Model):
                 r = self._nominatim('search', {'format': 'jsonv2', 'q': text, 'limit': 1})
                 lat = float(r[0]['lat']) if r else None
                 lng = float(r[0]['lon']) if r else None
+            answered = True
         except Exception as err:  # noqa: BLE001
             _logger.info("Geocode forward %r failed: %s", text[:60], err)
-            return None, None
-        if lat and lng:
-            self.sudo().create({'key': key, 'lat': lat, 'lng': lng})
-            return lat, lng
-        return None, None
+            lat = lng = None
+        found = bool(lat and lng)
+        vals = {'lat': lat, 'lng': lng, 'short': False} if found else \
+            {'lat': 0.0, 'lng': 0.0, 'short': 'miss' if answered else 'error'}
+        try:
+            # Never fails the caller: a page served on a read-only cursor
+            # simply does not remember this answer.
+            with self.env.cr.savepoint():
+                if row:
+                    row.sudo().write(vals)
+                else:
+                    self.sudo().create(dict(vals, key=key))
+        except Exception as err:  # noqa: BLE001
+            _logger.debug("Geocode cache for %r not saved: %s", text[:60], err)
+        return (lat, lng) if found else (None, None)
 
 
 # ======================================================================

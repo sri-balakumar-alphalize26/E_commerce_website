@@ -10,14 +10,15 @@
         · <t t-esc="state.counts.waiting"/> order<t t-if="state.counts.waiting !== 1">s</t> waiting
         · refreshes every 15 s
       </span>
-      <select class="sa_fm_shop" t-on-change="onShopChange" t-if="state.shops.length > 1 or state.shopId">
+      <select class="sa_fm_shop" t-on-change="onShopChange" t-if="filterShops.length > 1 or state.shopId">
         <option value="0">All shops</option>
-        <t t-foreach="state.shops" t-as="shop" t-key="shop.id">
+        <t t-foreach="filterShops" t-as="shop" t-key="shop.id">
           <option t-att-value="shop.id" t-att-selected="shop.id === state.shopId"><t t-esc="shop.name"/></option>
         </t>
       </select>
       <span class="sa_fm_legend">
-        <i class="sos"></i> SOS <i class="free"></i> Free <i class="run"></i> On a run <i class="no_signal"></i> No signal <i class="waiting"></i> Waiting order
+        <i class="sos"></i> SOS <i class="free"></i> Free <i class="run"></i> On a run <i class="no_signal"></i> No signal
+        <i class="pin_shop"></i> Shop <i class="waiting"></i> Waiting order
       </span>
     </div>
     <div class="sa_fm_warn" t-if="state.error"><t t-esc="state.error"/></div>

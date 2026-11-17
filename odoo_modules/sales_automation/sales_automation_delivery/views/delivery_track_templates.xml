@@ -156,6 +156,7 @@ details[open] summary::after{transform:rotate(-90deg)}
 .sa-rider.stale{background:#9aa7b1;box-shadow:0 0 0 2px rgba(154,167,177,.4)}
 .sa-pin{width:auto;white-space:nowrap;font:700 11px/1 var(--font);color:#fff;background:var(--navy);padding:5px 8px;border-radius:999px;box-shadow:0 2px 6px rgba(0,0,0,.25);transform:translate(-50%,-50%)}
 .sa-pin.you{background:var(--blue)}
+.sa-pin.approx{opacity:.72;border:1.5px dashed rgba(255,255,255,.9)}
 .maplibregl-marker.sa-pin{display:inline-block;pointer-events:none}
 /* Above the sheet's overlap and the "Updated" pill, so the credits stay readable. */
 #sa_map .maplibregl-ctrl-bottom-right{bottom:44px}
@@ -268,7 +269,7 @@ details[open] summary::after{transform:rotate(-90deg)}
             <section class="card help" id="help">
                 <h2>Something wrong?</h2>
                 <p t-esc="tr['help_text']"/>
-                <a class="btn btn-primary" t-att-href="tr['help_link']" target="_blank" rel="noopener">Message us on WhatsApp</a>
+                <a t-if="tr['help_link']" class="btn btn-primary" t-att-href="tr['help_link']" target="_blank" rel="noopener">Message us on WhatsApp</a>
             </section>
             <p class="live">This page updates by itself &#183; <b id="sa_live">live</b></p>
         </main>
@@ -326,20 +327,35 @@ details[open] summary::after{transform:rotate(-90deg)}
         function pin(lat, lng, text, cls) {
             return L.marker([lat, lng], { icon: L.divIcon({ className: "", html: '&lt;span class="sa-pin ' + cls + '">' + text + '&lt;/span>', iconSize: [0, 0] }), interactive: false });
         }
+        function placePin(old, p, text, cls) {
+            // a pin that later becomes exact (or moves) is redrawn, not kept
+            var c = cls + (p.approximate ? " approx" : "");
+            if (old) {
+                var at = old.getLatLng();
+                if (old._saCls === c) { if (Math.abs(at.lat - p.latitude) &lt; 1e-6) { if (Math.abs(at.lng - p.longitude) &lt; 1e-6) { return old; } } }
+                map.removeLayer(old);
+            }
+            var made = pin(p.latitude, p.longitude, text, c).addTo(map);
+            made._saCls = c;
+            return made;
+        }
         function ensureMap(d) {
             if (freeMap) { freeMap.show(d); return true; }
             if (!window.L) { return false; }
             var pts = [];
             if (d.shop) { if (d.shop.latitude) { pts.push([d.shop.latitude, d.shop.longitude]); } }
             if (d.dropoff) { if (d.dropoff.latitude) { pts.push([d.dropoff.latitude, d.dropoff.longitude]); } }
-            if (!pts.length) { return false; }
+            var center = (d.center &amp;&amp; d.center.latitude) ? [d.center.latitude, d.center.longitude] : null;
+            if (!pts.length &amp;&amp; !center) { return false; }
             if (!map) {
-                map = L.map("sa_map", { zoomControl: false, attributionControl: false }).setView(pts[0], 14);
+                // nothing pinned yet: the customer's town, so there is still a map
+                map = L.map("sa_map", { zoomControl: false, attributionControl: false }).setView(pts.length ? pts[0] : center, pts.length ? 14 : 12);
                 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(map);
                 $("#sa_nomap").style.display = "none";
             }
-            if (d.shop) { if (d.shop.latitude) { if (!shopPin) { shopPin = pin(d.shop.latitude, d.shop.longitude, "Shop", "").addTo(map); } } }
-            if (d.dropoff) { if (d.dropoff.latitude) { if (!youPin) { youPin = pin(d.dropoff.latitude, d.dropoff.longitude, "You", "you").addTo(map); } } }
+            if (!pts.length) { return true; }
+            if (d.shop) { if (d.shop.latitude) { shopPin = placePin(shopPin, d.shop, "Shop", ""); } }
+            if (d.dropoff) { if (d.dropoff.latitude) { youPin = placePin(youPin, d.dropoff, "You", "you"); } }
             if (d.route) { if (d.route.polyline) {
                 var line = decode(d.route.polyline);
                 if (!routeLine) {
