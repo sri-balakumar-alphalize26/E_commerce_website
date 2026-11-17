@@ -589,7 +589,8 @@ class ProductTemplate(models.Model):
             'values': values,
             'photo': ('/web/image/product.template/%s/image_256?unique=%s'
                       % (product.id, product.write_date)
-                      if product and product.image_1920 else ''),
+                      if product and self.env['mart369.serializable']._mart369_has_picture(product, 'image_1920')
+                      else ''),
             'photos': [],
             # ai369_image_server is optional: the Link tile shows only when it
             # is installed and switched on.
@@ -828,7 +829,8 @@ class ProductTemplate(models.Model):
                 'label': label or product.name,
                 'image': ('/web/image/product.product/%s/image_variant_256?unique=%s'
                           % (variant.id, variant.write_date)
-                          if variant.image_variant_1920 else ''),
+                          if self.env['mart369.serializable']._mart369_has_picture(variant, 'image_variant_1920')
+                          else ''),
                 'onHand': on_hand,
                 'counted': counted,
                 'price': round(variant.lst_price, 2),

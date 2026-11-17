@@ -7,3 +7,4 @@ from . import test_product_desk_edit
 from . import test_product_form
 from . import test_variant_reset
 from . import test_variant_media
+from . import test_desk_no_download

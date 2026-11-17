@@ -299,7 +299,7 @@ export function Thumb({ p }) {
 }
 
 /* multi-image view: swipe / arrows / dots. Single image → plain image, no controls. */
-export function Gallery({ p }) {
+export function Gallery({ p, eager = false }) {
   const imgs = p.images?.length ? p.images : p.image ? [p.image] : [];
   const track = useRef(null);
   const [idx, setIdx] = useState(0);
@@ -324,14 +324,15 @@ export function Gallery({ p }) {
   if (count === 0) return <div className="hm-gal-one">{p.art === "" ? null : <ProductArt art={p.art} color={p.color} label={p.label} />}</div>;
   /* A card is about 170px wide, so it draws the small version of each photo. */
   const small = (k) => p.thumbs?.[k] || imgs[k];
-  if (count === 1) return <div className="hm-gal-one"><img src={small(0)} alt={p.name} loading="lazy" decoding="async" /></div>;
+  /* The first cards on screen load their photo at once; the rest wait until they are near. */
+  if (count === 1) return <div className="hm-gal-one"><img src={small(0)} alt={p.name} loading={eager ? "eager" : "lazy"} decoding="async" /></div>;
   return (
     <div className="hm-gal" data-count={count}
       onKeyDown={(e) => { if (e.key === "ArrowRight") go(idx + 1, e); if (e.key === "ArrowLeft") go(idx - 1, e); }}>
       <div className="hm-gal-track" ref={track} onScroll={onScroll} tabIndex={0} aria-roledescription="carousel" aria-label={`${p.name} images`}>
         {imgs.map((src, k) => (
           <div className={"hm-gal-slide" + (k === idx ? " hm-cur" : "")} key={src + k} aria-roledescription="slide" aria-label={`${k + 1} of ${count}`}>
-            <img src={small(k)} alt={k === 0 ? p.name : ""} loading="lazy" decoding="async" draggable="false" />
+            <img src={small(k)} alt={k === 0 ? p.name : ""} loading={eager && k === 0 ? "eager" : "lazy"} decoding="async" draggable="false" />
           </div>
         ))}
       </div>
@@ -368,7 +369,7 @@ export function ProductCard({ p, qty, setQty, i }) {
         open(p, e.currentTarget.querySelector(".hm-card-img")?.getBoundingClientRect());
       }}>
       <div className="hm-card-img">
-        <Gallery p={p} />
+        <Gallery p={p} eager={(i || 0) < 4} />
         <button className={"hm-heart" + (liked ? " hm-liked" : "")} aria-pressed={liked} aria-label={liked ? "Remove from wishlist" : "Save to wishlist"} onClick={setLiked}>
           <Icon n="heart" size={18} />
         </button>
