@@ -16,12 +16,12 @@
 
 | Module | Manual | Pages | Screenshots |
 |---|---|---|---|
-| mart369 | 369_Mart_User_Manual | 5 | 1 |
+| mart369 | 369_Mart_User_Manual | 6 | 1 |
 | mart369_all | 369_Mart_Suite_User_Manual | 2 | 0 (module has none) |
 | mart369_roles | 369_Mart_Roles_User_Manual | 6 | 0 (module has none) |
 | mart369_auth | 369_Mart_Sign_In_User_Manual | 10 | 9 |
 | mart369_address | 369_Mart_Delivery_Addresses_User_Manual | 9 | 10 |
-| mart369_cart | 369_Mart_Delivery_and_Pricing_User_Manual | 14 | 13 |
+| mart369_cart | 369_Mart_Delivery_and_Pricing_User_Manual | 17 | 13 |
 | mart369_catalog | 369_Mart_Catalog_User_Manual | 14 | 13 |
 | mart369_product | 369_Mart_Product_Page_User_Manual | 14 | 12 |
 | mart369_home | 369_Mart_Home_Page_User_Manual | 10 | 5 |
@@ -34,7 +34,9 @@
 | pos_loyalty_card | Loyalty_Card_User_Manual | 11 | 0 (module has none) |
 | mart369_account | 369_Mart_Account_User_Manual | 12 | 12 |
 | mart369_support | 369_Mart_Support_User_Manual | 8 | 6 |
-| mart369_whatsapp_bridge | 369_Mart_WhatsApp_Bridge_User_Manual | 7 | 0 (module has none) |
+| mart369_whatsapp_bridge | 369_Mart_WhatsApp_Bridge_User_Manual | 8 | 0 (module has none) |
+
+- **17 Nov 2026:** updated for the 13–17 Nov code changes: **Delivery and Pricing** (Delivery settings page as Part 1 step 2, delivery sets itself up, slots on/off per company, no delivery line for out-of-stock products, Offers page timer, branch status table), **WhatsApp Bridge** (WhatsApp parts of Delivery settings, automatic delivery shops, delivery slots on the WhatsApp order page, tracking map pins), **369 Mart** (shop logo, updates install themselves) and **Loyalty Card** (one note: updates install themselves). Suite manual unchanged. PDFs re-rendered and checked page by page.
 
 **Checks done:**
 - Every PDF was looked at page by page. There are no stranded headings, split tables or near-empty pages.
@@ -48,6 +50,7 @@
 - **New Orders Board alarm:** its ring and pause settings are under **Delivery → Configuration → Delivery Settings** ("The Shop Counter"). If "Shop Confirms Orders" is off, the Counter stays empty.
 - **Pages module FAQ:** its seeded text says refunds go "back to where you paid from". The Orders module refunds everything to the 369 Wallet.
 - **Roles:** Packer and Accountant currently give only a plain staff login; nothing else checks for them yet. Seller opens no screens yet.
+- **Delivery settings status:** a branch with no address shows the to-do "Add the branch address in Odoo" (the word Odoo is in the on-screen text); the manuals paraphrase it.
 - **Loyalty Card → Card Images:** nothing saves card pictures any more, so this gallery stays empty unless another module saves them.
 
 ## Updating a manual later

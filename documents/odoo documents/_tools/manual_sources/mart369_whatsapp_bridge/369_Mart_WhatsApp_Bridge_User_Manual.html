@@ -118,13 +118,15 @@
     <tr><td>WhatsApp session</td><td>The shop's WhatsApp number as connected on the WhatsApp panel. Messages leave from it.</td></tr>
     <tr><td>Delivery job</td><td>The rider's task for an order, worked in the rider app or on WhatsApp.</td></tr>
     <tr><td>Door code</td><td>A six-digit code the customer gives the rider after receiving the parcel. It proves the delivery.</td></tr>
+    <tr><td>Delivery shop</td><td>The place a WhatsApp delivery job leaves from, with its own map pin. Each branch (warehouse) gets one.</td></tr>
+    <tr><td>Delivery slot</td><td>A delivery time the customer may pick, such as "Today 6 – 8 PM". The slots are set up in Delivery &amp; Pricing.</td></tr>
     <tr><td>Placeholder</td><td>A short code in a message that is replaced by the real detail when it is sent, e.g. the order number.</td></tr>
     <tr><td>369 Wallet</td><td>The customer's money balance in the shop. Refunds are paid into it.</td></tr>
   </tbody>
 </table>
 
 <h2>How the manual is arranged</h2>
-<p><b>Part 1 – Setting Up</b> covers the WhatsApp tab in Settings. <b>Part 2 – Everyday Use</b> covers orders from both channels and everything the shop sends on WhatsApp. <b>Part 3 – Keeping It Secure &amp; In Order</b> covers the Owner alert, who can do what, and what happens if the module is removed.</p>
+<p><b>Part 1 – Setting Up</b> covers the WhatsApp tab in Settings and the WhatsApp parts of the Delivery settings page. <b>Part 2 – Everyday Use</b> covers orders from both channels, everything the shop sends on WhatsApp, delivery slots on the WhatsApp order page and the tracking map. <b>Part 3 – Keeping It Secure &amp; In Order</b> covers the Owner alert, who can do what, and what happens if the module is removed.</p>
 
 <!-- ===================== PART 1 ===================== -->
 <div class="part">Part 1 — Setting Up</div>
@@ -136,6 +138,7 @@
   <li><b>Store <span class="arr">→</span> Settings <span class="arr">→</span> WhatsApp</b> tab — which number speaks, the six update messages and the invoice switch.</li>
   <li><b>Sales <span class="arr">→</span> Orders</b> — a <b>Channel</b> filter and a WhatsApp line on each WhatsApp order.</li>
   <li><b>Store <span class="arr">→</span> Bot answers</b> — one extra answer, <i>Who is delivering their order</i>.</li>
+  <li><b>Store <span class="arr">→</span> Delivery settings</b> — the WhatsApp parts of the one-page delivery settings (step 5).</li>
 </ul>
 <p>The Settings screen needs <b>Website designer</b> or <b>Administrator (Settings)</b> rights, which Managers and Owners have.</p>
 
@@ -166,6 +169,18 @@
 
 <h3 class="step"><span class="n">4</span>The invoice on delivery</h3>
 <p><b>Send the invoice PDF when an order is delivered</b> is on by default. When an order is delivered, the customer also gets the invoice as a PDF, captioned <i>Your 369 Mart invoice</i>. It is sent only if the <b>Delivered</b> switch is on, the customer asked for WhatsApp updates, and the invoice has been confirmed.</p>
+
+<h3 class="step"><span class="n">5</span>Delivery settings: the WhatsApp parts</h3>
+<p>Open <b>Store <span class="arr">→</span> Delivery settings</b> (in the staff console: <b>Delivery <span class="arr">→</span> Settings</b>). The page itself is explained in the Delivery &amp; Pricing manual. This module adds the WhatsApp side, so one <b>Save all</b> sets the website and WhatsApp delivery together:</p>
+<ul class="f">
+  <li><b>Branches</b> — two more columns. <b>WhatsApp shop</b>: <b>made automatically</b>, <b>yes</b> (one a person made), <b>archived</b>, or — (none yet). <b>Riders</b>: how many riders serve the branch, or <b>none</b> in amber. When you save a branch's map pin or Quick, they are written to its WhatsApp delivery shop too, so the branch and its shop never point at two places.</li>
+  <li><b>Fees</b> and <b>Delivery slots</b> — with the WhatsApp Quick or Express module installed, the page shows and saves that module's fee rules and counts its slots, because those are the ones the shop then uses. The website's copy of the fees is kept the same.</li>
+  <li><b>WhatsApp delivery</b> — <b>Promise for WhatsApp orders</b>, what the customer is told when the order is confirmed: <b>Quick within (hours)</b> (1 to 72), <b>If ordered before (hour, 0-23)</b> (after that hour, the next day) and <b>Express in (days)</b> (1 to 60).</li>
+  <li><b>Call a rider automatically when packed</b> — off: the counter presses "Call a rider". On: the nearest free rider is asked the moment the order is packed.</li>
+  <li><b>Ask for a review after delivery</b> — adds one line to the customer's private Delivered message, <i>How was it? Rate your products:</i> with a link, once per order and never in a group. On by default.</li>
+  <li><b>Riders</b> — how many riders there are and how many are on duty, with a <b>Riders &amp; Couriers</b> button. A rider with no branch serves every branch.</li>
+</ul>
+<div class="note good"><span class="lbl">Good to know:</span> When a branch sets itself up, every branch on the map also gets its own <b>WhatsApp delivery shop</b>, made once with the branch's pin. A shop someone made or archived is never changed, except that an empty pin is filled from its branch. A delivery job then leaves from the automatically made shop of the branch its stock leaves from. The branch status adds <i>WhatsApp delivery shop</i> and the riders, and says <b>Needs you</b> with <i>Add a rider for this branch</i> when there is none: riders are the one thing that cannot be made automatically.</div>
 
 <!-- ===================== PART 2 ===================== -->
 <div class="part">Part 2 — Everyday Use</div>
@@ -212,6 +227,20 @@
 <h3 class="step"><span class="n">7</span>"Who is delivering my order?"</h3>
 <p>The support bot gets one new answer, <b>Who is delivering their order</b>, under <b>Store → Bot answers</b>. When a customer asks about the rider, driver or delivery person, the bot replies for the order a rider is on. With no order on the way it says <i>You have no orders on the way right now.</i></p>
 
+<h3 class="step"><span class="n">8</span>Delivery slots on the WhatsApp order page</h3>
+<p>The page a WhatsApp customer opens from the link to sign and pay for an order shows a <b>Delivery slot</b> card, marked <i>optional</i>. It offers <b>No preference</b> (<i>As soon as we can</i>, the default) and the same slots the website checkout offers for that order's Quick or Express delivery.</p>
+<ul class="f">
+  <li><b>No slot fee</b> — picking a slot never changes the order's total, even for a slot that has an extra fee on the website.</li>
+  <li><b>Only before it is settled</b> — the card shows while the order is still a quotation and not paid. After that the slot cannot be changed.</li>
+  <li><b>Slots switched off</b> — when the company does not offer delivery slots, there is no card at all.</li>
+  <li><b>A slot that filled up or closed</b> — the customer is told "That delivery slot is not available any more. Please pick another."</li>
+  <li><b>A saved slot no longer offered</b> — it is cleared from the order, No preference is chosen again, and the card says <i>Your earlier slot "…" is no longer available. Pick another, or leave it as no preference.</i></li>
+</ul>
+
+<h3 class="step"><span class="n">9</span>The tracking map</h3>
+<p>The customer's tracking page and the office's <b>Delivery <span class="arr">→</span> Fleet <span class="arr">→</span> Live Map</b> now always show a map. When the delivery job has no pin for the shop, the map uses the pin of the <b>branch</b> the order leaves from (set on Delivery settings). For the customer it uses the pin on the order's delivery address. With neither, the map shows an approximate place from the address, or centres on the customer's town. The Live Map also shows branches that have a pin but no WhatsApp delivery shop.</p>
+<div class="note good"><span class="lbl">Good to know:</span> These pins are only for the picture. The route, the arrival time, the rider's pay and which rider is called still use the job's real positions.</div>
+
 <!-- ===================== PART 3 ===================== -->
 <div class="part">Part 3 — Keeping It Secure &amp; In Order</div>
 
@@ -224,7 +253,7 @@
   <thead><tr><th style="width:30%">Role</th><th>What they can do</th></tr></thead>
   <tbody>
     <tr><td>Salesperson</td><td>Sees and works orders from both channels on the Orders screens.</td></tr>
-    <tr><td>Website designer (Manager)</td><td>The <b>Store → Settings → WhatsApp</b> tab: session, messages and invoice switch.</td></tr>
+    <tr><td>Website designer (Manager)</td><td>The <b>Store → Settings → WhatsApp</b> tab: session, messages and invoice switch. The <b>Store → Delivery settings</b> page, WhatsApp parts included.</td></tr>
     <tr><td>Administrator (Settings) (Owner)</td><td>Everything above. Owners also receive the sign-in alert.</td></tr>
   </tbody>
 </table>
@@ -263,13 +292,14 @@
 </table>
 
 <h2>Quick tips</h2>
-<ul class="tips">
+<ul class="tips" style="break-inside:avoid; page-break-inside:avoid">
   <li>Press <b>Check now</b> on the WhatsApp tab whenever customers say updates stopped.</li>
   <li>Leave a message box empty to keep the shop's own wording.</li>
   <li>Type placeholders exactly: <b>%(ref)s</b>, <b>%(eta)s</b>, <b>%(link)s</b>.</li>
   <li>Use the <b>Channel</b> picker on the Orders desk to see only WhatsApp orders.</li>
   <li>Publish a product on the website before expecting it in the WhatsApp menu.</li>
   <li>Give every Owner a mobile number so the sign-in alert reaches them.</li>
+  <li>Set a branch's map pin on Delivery settings: its WhatsApp delivery shop follows.</li>
 </ul>
 
 <h2>If something goes wrong</h2>
@@ -284,6 +314,9 @@
     <tr><td>A product is missing from the WhatsApp menu</td><td>It is not published on the website. Publish it, with its website price.</td></tr>
     <tr><td>WhatsApp orders do not show on the Orders desk</td><td>Set the <b>Channel</b> picker to <b>Both channels</b>. Only confirmed WhatsApp orders appear.</td></tr>
     <tr><td>Owners get no sign-in alerts</td><td>The Owner has no mobile number on their contact, or the WhatsApp session is offline.</td></tr>
+    <tr><td>No Delivery slot card on the WhatsApp order page</td><td>The company has slots switched off (Delivery settings, <b>Let customers pick a delivery slot</b>), the order is already confirmed or paid, or no slot is open for its Quick or Express delivery today.</td></tr>
+    <tr><td>A branch says <b>Needs you</b>: <i>Add a rider for this branch</i></td><td>Press <b>Fix</b>, or <b>Riders &amp; Couriers</b> on Delivery settings, and add a rider for that branch (or one with no branch, who serves all).</td></tr>
+    <tr><td>The tracking map shows the shop in the wrong place</td><td>Set the branch's map pin on <b>Store → Delivery settings</b> and press <b>Save all</b>; its WhatsApp delivery shop is moved with it.</td></tr>
   </tbody>
 </table>
 

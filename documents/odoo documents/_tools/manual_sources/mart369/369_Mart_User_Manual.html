@@ -97,8 +97,8 @@
 </div>
 
 <h2>What this does</h2>
-<p><span class="k">369 Mart</span> is the base of the whole suite. On its own it shows very little: it puts the <span class="k">369 Mart menu</span> on the main menu, keeps a few <span class="k">shared settings</span> that every other 369 Mart part reads, and supplies the common pieces the other screens are built from, such as the <span class="k">logo picker</span> used for categories.</p>
-<p>Every other 369 Mart module needs this one, and each can be added or removed on its own. Because everything hangs off it, <b>removing 369 Mart removes the whole suite</b>.</p>
+<p><span class="k">369 Mart</span> is the base of the whole suite. On its own it shows very little: it puts the <span class="k">369 Mart menu</span> on the main menu, keeps a few <span class="k">shared settings</span> that every other 369 Mart part reads (among them the <span class="k">shop logo</span>), and supplies the common pieces the other screens are built from, such as the <span class="k">logo picker</span> used for categories.</p>
+<p>Every other 369 Mart module needs this one, and each can be added or removed on its own. Because everything hangs off it, <b>removing 369 Mart removes the whole suite</b>. It also makes the 369 Mart modules <span class="k">update themselves</span> when a newer version is put on the server.</p>
 <div class="flow">
   <div class="card"><b>1. Install the base</b><span>The 369 Mart menu and its six headings appear</span></div><span class="to">→</span>
   <div class="card"><b>2. Add the parts</b><span>Home page, catalogue, orders… each fills in its own heading</span></div><span class="to">→</span>
@@ -120,7 +120,7 @@
 </table>
 
 <h2>How the manual is arranged</h2>
-<p><b>Part 1 – Setting Up</b> shows where the menu lives and where each shared setting is changed. <b>Part 2 – Everyday Use</b> covers the shared pieces staff meet on other screens: the logo picker, number boxes and the 369 Mart tab on a product. <b>Part 3 – Keeping It Secure &amp; In Order</b> explains who can change the shared settings and which products the shop lists.</p>
+<p><b>Part 1 – Setting Up</b> shows where the menu lives, where each shared setting is changed (the shop logo included) and how updates install themselves. <b>Part 2 – Everyday Use</b> covers the shared pieces staff meet on other screens: the logo picker, number boxes and the 369 Mart tab on a product. <b>Part 3 – Keeping It Secure &amp; In Order</b> explains who can change the shared settings and which products the shop lists.</p>
 
 <div class="part">Part 1 — Setting Up</div>
 <p class="part-intro">Done once by an administrator. If the other 369 Mart parts are already set up, you can skip to Part 2.</p>
@@ -144,14 +144,25 @@
   <li><b>Image address</b> — leave it empty in almost every case. Fill it in (for example with your shop's web address) only when the shop app cannot load images through the backend.</li>
   <li><b>Alert on new orders</b> — on by default. The staff console's bell and sidebar badge count orders waiting to be moved on.</li>
   <li><b>Alert on low stock</b> — on by default. The staff console's bell says how many products are at or below the level where the shop app starts saying "Only N left".</li>
+  <li><b>Shop logo</b> — the logo shown on the website and on every page the shop sends by link: the WhatsApp product page, the sign and pay page, the payment pages and the delivery pages. Empty (the default): the 369 Mart logo that ships with the shop.</li>
 </ul>
-<p>Where to find them:</p>
+<div style="break-inside:avoid; page-break-inside:avoid"><p>Where to find them:</p>
 <ul class="f">
   <li><b>Page building <span class="arr">→</span> Home Page Settings</b> — <b>Remember for (seconds)</b> (under <b>Speed</b>) and <b>Image address</b> (under <b>For whoever sets up the app</b>). This screen comes with the 369 Mart Home Page module.</li>
   <li><b>Store <span class="arr">→</span> Settings <span class="arr">→</span> Alerts</b> — the <b>New orders</b> and <b>Low stock</b> switches. Press <b>Save changes</b>. This screen comes with the 369 Mart Payments &amp; Wallet module.</li>
-</ul>
+  <li><b>In the staff console: Settings <span class="arr">→</span> Store</b> — <b>Shop logo</b>, at the top. Press <b>Upload logo</b> and pick a PNG, JPG or WebP picture under 3 MB (a PNG with a clear background works best), then save. <b>Use the original logo</b> goes back to the logo that ships with the shop.</li>
+</ul></div>
 <div class="note warn"><span class="lbl">Watch out:</span> Remember to put <b>Remember for (seconds)</b> back to 60 after you finish editing. Left at 0, the shop app asks the backend again on every visit, which makes it slower.</div>
 <div class="note good"><span class="lbl">Good to know:</span> The two alerts are for the staff console only. Email and SMS alerts are not set up.</div>
+
+<h3 class="step"><span class="n">3</span>Updates install themselves</h3>
+<p>When whoever looks after your server copies a newer version of the 369 Mart modules onto it and restarts it, each database brings itself up to date the first time it is opened, by a visitor or by a background job. There is no need to upgrade the modules by hand in <b>Apps</b>. This covers every 369 Mart module, the WhatsApp selling and gateway modules and the Loyalty Card, but not the separate image server module.</p>
+<ul class="f">
+  <li><b>What starts it</b> — the module's version number. A new version that adds or changes fields or screens must come with a higher version number, or it is not upgraded.</li>
+  <li><b>Background jobs</b> — the update waits for a running job to finish, and no job starts while it runs.</li>
+  <li><b>If it fails</b> — the error is written to the server log, the shop keeps working on the version it already had, and the same update is tried again after 10 minutes.</li>
+</ul>
+<div class="note tip"><span class="lbl">Tip:</span> If pages show "500 Internal Server Error" after an update, ask whoever looks after the server to read the log for the upgrade error.</div>
 
 <div class="part">Part 2 — Everyday Use</div>
 <p class="part-intro">The shared pieces staff meet on other 369 Mart screens.</p>
@@ -212,6 +223,7 @@
   <li>Install the 369 Mart Suite to get every part in one go.</li>
   <li>Set Remember for (seconds) to 0 while editing, then back to 60.</li>
   <li>Leave Image address empty unless images fail to load in the shop app.</li>
+  <li>Upload the shop logo once in the staff console: the website and every link page follow.</li>
   <li>A sub-category picture should be at least 512 × 512.</li>
   <li>Picking a built-in logo replaces an uploaded one.</li>
   <li>Services and unpublished products never show in shop lists.</li>
@@ -228,6 +240,9 @@
     <tr><td>"Choose a PNG, JPEG, WebP, GIF or SVG picture."</td><td>The logo file is another type. Save it as one of those and upload again.</td></tr>
     <tr><td>"That file is over 15 MB. Choose a smaller one."</td><td>Shrink the picture or pick a smaller file.</td></tr>
     <tr><td>"That picture could not be cropped here."</td><td>Save the picture as a PNG or JPEG and try again.</td></tr>
+    <tr><td>"The logo must be a PNG, JPG or WebP picture."</td><td>Save the logo as one of those types and upload it again under <b>Settings → Store</b> in the staff console.</td></tr>
+    <tr><td>"The logo is too big - please use one under 3 MB."</td><td>Shrink the picture, then upload it again.</td></tr>
+    <tr><td>After a server update, pages show "500 Internal Server Error"</td><td>The automatic update may have failed. The error is in the server log; it is tried again after 10 minutes. Ask whoever looks after the server to check it, and that the new version has a higher version number.</td></tr>
     <tr><td>The 369 Mart tab on a product is empty</td><td>Install the 369 Mart Home Page or Product Page module, which fill it.</td></tr>
   </tbody>
 </table>

@@ -233,9 +233,10 @@
 <ul class="f">
   <li><b>Lasts 10 minutes</b> — then the customer must ask for a new one.</li>
   <li><b>5 tries</b> per code — then "Too many tries. Send a new code."</li>
-  <li><b>3 codes per number per hour</b> (and 10 per device or connection) — then "Too many codes. Try again in N minutes."</li>
+  <li><b>3 codes per number per hour</b> (and 10 per device or connection) — then "Too many codes. Try again in N minutes." A <b>test number</b> is never held back by this limit (see the note below).</li>
   <li><b>A new code cancels the old one.</b> Old codes are cleared daily by the job "369 Mart: clear old sign-in codes".</li>
 </ul>
+<div class="note good"><span class="lbl">Good to know:</span> Your technical team can set aside a few <b>test numbers</b> that all take one fixed code. Nothing is sent to a test number, so testers can sign in before WhatsApp is connected, and as often as they like: the codes-per-hour limit never applies to them.</div>
 <p><b>Staff</b> with the Website designer right can also sign in to the staff console with their own mobile: they need the code <b>and</b> their password. A number that belongs to no staff member gets the same reply but no code, so the page cannot be used to find out who works here.</p>
 
 <h3 class="step"><span class="n">3</span>Who can do what</h3>

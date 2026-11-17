@@ -101,12 +101,12 @@
 <p><span class="k">369 Mart Delivery &amp; Pricing</span> decides what a shopper's basket costs. It holds the <span class="k">delivery fees</span> for each storefront, the <span class="k">delivery slots</span> offered at checkout, the <span class="k">service areas</span> (pincodes) you deliver to, and which <span class="k">branches</span> can do fast Quick delivery. It also runs your two kinds of promotion: <span class="k">coupons</span>, which a customer types at the basket, and <span class="k">deals</span>, which simply make chosen products cheaper for everybody.</p>
 <p>All the sums are done <b>in the backend, not on the customer's phone</b>. The shop app and the website ask the backend for the bill, so a customer can never give themselves a discount, and a change you save is the number the next customer is charged.</p>
 <div class="flow">
-  <div class="card"><b>1. Set the rules</b><span>Fees, slots, pincodes and Quick branches on the Delivery desk</span></div><span class="to">→</span>
+  <div class="card"><b>1. Set the rules</b><span>Fees, slots, branches and Quick on one Delivery settings page</span></div><span class="to">→</span>
   <div class="card"><b>2. Run promotions</b><span>Coupons customers type; deals that lower prices</span></div><span class="to">→</span>
   <div class="card"><b>3. Customer shops</b><span>Picks a pincode, a slot, maybe a coupon</span></div><span class="to">→</span>
   <div class="card"><b>4. Backend adds it up</b><span>Items, delivery fees, slot fee and discount, one total</span></div>
 </div>
-<div class="note start"><span class="lbl">Before you start:</span> The module arrives already holding sensible starting numbers: a Quick and an Express fee, six slots and three pincode areas (all listed in Part 1). Nothing changes for shoppers on the day it is installed. To change delivery you need the <b>Owner</b> or <b>Manager</b> role. Coupons and deals need the <b>Salesperson</b> right. Branches themselves are made in Inventory; this module only switches Quick on for them. A shop starts with <b>no coupons and no deals</b>.</div>
+<div class="note start"><span class="lbl">Before you start:</span> The module arrives already holding sensible starting numbers: a Quick and an Express fee, six slots and three pincode areas (all listed in Part 1). Nothing changes for shoppers on the day it is installed. To change delivery you need the <b>Owner</b> or <b>Manager</b> role. Coupons and deals need the <b>Salesperson</b> right. Branches themselves are made in Inventory; a branch made there later sets itself up for delivery (Part 1, step 3). A shop starts with <b>no coupons and no deals</b>.</div>
 
 <h2>Words you'll see</h2>
 <table class="gloss"><thead><tr><th>Word</th><th>What it means</th></tr></thead><tbody>
@@ -115,48 +115,59 @@
 <tr><td>Service area</td><td>A pincode, or the start of one, that you deliver to. "68" covers every pincode beginning with 68.</td></tr>
 <tr><td>Slot</td><td>A delivery time a customer picks at checkout, shown as a small button (a "chip"), such as "Today 6 – 8 PM".</td></tr>
 <tr><td>Branch</td><td>One of your warehouses. A branch with Quick on serves customers within its <b>reach</b> (in km) of its <b>map pin</b>.</td></tr>
+<tr><td>Quick if possible</td><td>A second, longer distance from a branch. Customers there are promised Express, and the order may still come Quick when a rider is free.</td></tr>
 <tr><td>Coupon</td><td>A code the customer types at the basket, such as WELCOME50, that takes money off the bill.</td></tr>
-<tr><td>Deal</td><td>A price cut on chosen products for a time. The customer types nothing; the price on the product is simply lower.</td></tr>
-<tr><td>Trash</td><td>Where a removed deal waits for a while before it is deleted for good.</td></tr>
+<tr><td>Deal</td><td>A price cut on chosen products for a time. The customer types nothing; the price on the product is simply lower. A removed deal waits in the <b>Trash</b> before it is deleted for good.</td></tr>
 </tbody></table>
 
 <h2>How the manual is arranged</h2>
-<p>This module has a setting-up side and a daily side, and this manual follows them. <b>Part 1 – Setting Up</b> covers the <b>Delivery</b> desk: fees, service areas, slots and Quick branches, usually set once and adjusted now and then. <b>Part 2 – Everyday Use</b> covers the <b>Deals</b> and <b>Coupons</b> desks, what the customer sees, and the full list screens. <b>Part 3 – Keeping It Secure &amp; In Order</b> covers the deals Trash, why delivery records are switched off rather than deleted, and who can do what.</p>
+<p>This module has a setting-up side and a daily side, and this manual follows them. <b>Part 1 – Setting Up</b> covers the <b>Delivery settings</b> page, where every delivery option is saved at once, how a new branch sets itself up, and the <b>Delivery</b> desk for the detail: fees, service areas, slots and Quick branches, usually set once and adjusted now and then. <b>Part 2 – Everyday Use</b> covers the <b>Deals</b> and <b>Coupons</b> desks, what the customer sees, and the full list screens. <b>Part 3 – Keeping It Secure &amp; In Order</b> covers the deals Trash, why delivery records are switched off rather than deleted, and who can do what.</p>
 
 <!-- ===================== PART 1 ===================== -->
 <div class="part">Part 1 — Setting Up</div>
 <p class="part-intro">Done by an Owner or Manager. The starting numbers already work, so change only what differs for your shop.</p>
 
-<h3 class="step"><span class="n">★</span>The quick way: Delivery settings, everything on one page</h3>
-<p>Open <b>Store <span class="arr">→</span> Delivery settings</b> (in the staff console: <b>Delivery <span class="arr">→</span> Settings</b>, the first tab). Both show the same page and save the same records. From top to bottom:</p>
-<ul class="f">
-  <li><b>Status</b> — one pill per branch: <b>Ready</b>, <b>Setting up</b> (the shop is filling it in), <b>Needs you</b> (with what, and a <b>Fix</b> button) or <b>Not delivering</b> (no map pin, so it is not used for delivery). <b>Set up automatically</b> fills in at once what the shop can work out by itself.</li>
-  <li><b>How delivery decides</b> — the settings below, said in plain sentences. Change something, press Save all, and the sentences change.</li>
-  <li><b>How we deliver</b> — <b>One area</b> (each branch delivers near itself; farther goes Express) or <b>Many branches</b> (a branch out of stock is covered by another, and the Between-branches table says how long that takes).</li>
-  <li><b>Branches</b> — one row per warehouse: map pin, Quick on/off, <b>Quick up to</b> (km) and <b>Quick if possible up to</b> (km), its WhatsApp delivery shop and riders. A branch's pin and Quick are written to its WhatsApp delivery shop too, so the two never disagree.</li>
-  <li><b>Between branches</b> (Many branches only) — a table: the row is where the product is, the column is the branch nearest the customer. Each cell says <b>Same day</b>, <b>Next day</b>, <b>In 2-3 days</b>, <b>In 3-4 days</b>, <b>In 5-7 days</b> or <b>Not delivered</b>, with a <b>Cargo</b> tick for long trips. A cell marked <b>auto</b> was worked out from the distance; change it and it is yours.</li>
-  <li><b>Fees</b> — Quick and Express: fee, free above, minimum order, the words the customer reads, the storefront name, and on/off.</li>
-  <li><b>Delivery slots</b> — on or off for the company; <b>Edit slots</b> opens the slot list.</li>
-  <li><b>WhatsApp delivery</b> — the promise for WhatsApp orders (Quick within so many hours if ordered before the cut-off hour; Express in so many days), <b>Call a rider automatically when packed</b>, and <b>Ask for a review after delivery</b>.</li>
-  <li><b>Advanced</b> — service areas (only for addresses with no map pin) and a branch's own fees (only when one basket is split between branches of different companies).</li>
-</ul>
-<p>Change what you need and press <b>Save all</b> at the bottom. Everything is saved together. If any value is wrong, <b>nothing</b> is saved and the page shows the message in red under that box; fix it and press Save all again. <b>Discard</b> puts the page back as it was.</p>
-<div class="note good"><span class="lbl">How delivery decides:</span> The customer's map pin is measured to every branch that has the item in stock. Within a branch's <b>Quick up to</b> distance it comes Quick, in about 10 minutes to pack plus 5 minutes a km. Up to <b>Quick if possible</b> it is promised Express and may still come Quick when a rider is free. Farther, the nearest branch that has it ships it: with Many branches, the Between-branches table says when it arrives; with One area it is plain Express.</div>
-<div class="note tip"><span class="lbl">It sets itself up:</span> Make a new warehouse in Inventory and give its company an address. Within the hour (or at once with <b>Set up automatically</b>) the shop finds its map pin, switches Quick on at 5 km, adds its routes to the other branches from the distance, and makes its WhatsApp delivery shop. It never changes anything a person has set. Riders are the one thing it cannot add: the status asks for one.</div>
-
 <h3 class="step"><span class="n">1</span>Where everything lives</h3>
 <p>Open <b>369 Mart</b> from the main menu. This module adds these entries:</p>
 <ul class="f">
-  <li><b>Store <span class="arr">→</span> Delivery settings</b> — <b>every delivery option on one page with one Save</b>: start here (see "The quick way" below).</li>
+  <li><b>Store <span class="arr">→</span> Delivery settings</b> — <b>every delivery option on one page with one Save</b>. Start here (step 2).</li>
   <li><b>Store <span class="arr">→</span> Delivery</b> — the Delivery desk, with four tabs: <b>Fees</b>, <b>Slots</b>, <b>Service areas</b> and <b>Branches</b>, for the detail (editing a slot, picking a pin on the map, adding service areas).</li>
   <li><b>Sales <span class="arr">→</span> Coupons</b> — the Coupons desk.</li>
   <li><b>Sales <span class="arr">→</span> Deals</b> — the Deals desk, with its Trash.</li>
   <li><b>Advanced <span class="arr">→</span> Delivery &amp; fees (all views)</b>, <b>Service areas (all views)</b>, <b>Delivery slots (all views)</b>, <b>Coupons (all views)</b> and <b>Deals (all views)</b> — plain lists of the same records, for grouping, filtering and export.</li>
 </ul>
-<p>Each desk also has an <b>All views</b> button at the top that opens its full list. The staff console has matching screens. Both read the same records, so a change made in one shows in the other.</p>
-<div class="note good"><span class="lbl">Good to know:</span> A heading such as <b>Store</b> or <b>Sales</b> only appears for someone who can open something inside it. If a member of staff cannot see <b>Delivery</b>, <b>Coupons</b> or <b>Deals</b>, check their role (Part 3).</div>
+<p>Each desk also has an <b>All views</b> button at the top that opens its full list. The staff console has matching screens (its <b>Delivery</b> screen opens on a <b>Settings</b> tab, then <b>Fees</b>, <b>Slots</b>, <b>Service areas</b> and <b>Branches</b>). Both read the same records, so a change made in one shows in the other.</p>
+<div class="note good"><span class="lbl">Good to know:</span> A heading such as <b>Store</b> or <b>Sales</b> only appears for someone who can open something inside it. If a member of staff cannot see <b>Delivery settings</b>, <b>Delivery</b>, <b>Coupons</b> or <b>Deals</b>, check their role (Part 3).</div>
 
-<h3 class="step"><span class="n">2</span>Set the delivery fees</h3>
+<h3 class="step"><span class="n">2</span>Delivery settings: everything on one page</h3>
+<p>Open <b>Store <span class="arr">→</span> Delivery settings</b> (in the staff console: <b>Delivery <span class="arr">→</span> Settings</b>). Both show the same page and save the same records. From top to bottom:</p>
+<ul class="f">
+  <li><b>Status</b> — one pill per branch: <b>Ready</b>, <b>Setting up</b> (the shop is filling it in), <b>Needs you</b> or <b>Not delivering</b> (no map pin, so it is not used for delivery). Under the pills, each thing that needs a person is listed with a <b>Fix</b> button that opens the right screen. <b>Set up automatically</b> runs the automatic setup now (step 3) and says what it filled in.</li>
+  <li><b>How delivery decides, with these settings</b> — the settings below, said in plain sentences. After a change it says "Save all to see this with your changes."</li>
+  <li><b>How we deliver</b> — <b>One area</b> (each branch delivers near itself; anything farther goes Express from wherever it is) or <b>Many branches</b> (a branch that is out of stock is covered by another, and <b>Between branches</b> says how long that takes).</li>
+  <li><b>Branches</b> — one row per warehouse, with its company (and "sets itself up" when step 3 looks after it): <b>Map pin</b>, <b>Quick</b> on/off, <b>Quick up to</b> and <b>Quick if possible</b> (both in km, 0 to 500). Paste a pin as two numbers with a comma, such as 25.2697, 55.3095; to pick it on a map, press <b>Delivery › Branches</b>. "Quick if possible" must be at least the Quick reach. With the WhatsApp Bridge installed, the row also shows the branch's <b>WhatsApp shop</b> and its <b>Riders</b>.</li>
+  <li><b>Between branches</b> (Many branches only, once two branches are on the map) — a table: the row is where the product is, the column is the branch nearest the customer. Each cell says <b>Same day</b>, <b>Next day</b>, <b>In 2-3 days</b>, <b>In 3-4 days</b>, <b>In 5-7 days</b> or <b>Not delivered</b>, with a <b>Cargo</b> tick for long trips. A cell marked <b>auto</b> was worked out from the distance; change it and it is yours.</li>
+  <li><b>Fees</b> — <b>Quick delivery</b> and <b>Express delivery</b>, each with an on/off switch, <b>Fee</b>, <b>Free above</b>, <b>Minimum order</b>, <b>Words the customer reads</b> and <b>Storefront name</b> (neither of the last two may be empty).</li>
+  <li><b>Delivery slots</b> — <b>Let customers pick a delivery slot</b>, on or off for the company, with the number of slots and an <b>Edit slots</b> button (step 6).</li>
+  <li><b>WhatsApp delivery</b> (with the WhatsApp Bridge only) — the promise for WhatsApp orders, calling a rider when packed and asking for a review. The WhatsApp Bridge manual explains it.</li>
+  <li><b>Advanced</b> (folded away) — how many service areas there are, with a <b>Service areas</b> button (they matter only for addresses with no map pin), and <b>A branch charges its own fees</b>: <b>Own fees</b>, <b>Quick fee</b>, <b>Express fee</b> and <b>Free above</b> per branch, only when one basket is split between branches of different companies.</li>
+</ul>
+<p>Change what you need and press <b>Save all</b> at the bottom; the bar there says <b>Unsaved changes</b> or <b>All saved</b>. Everything is saved together. If any value is wrong, <b>nothing</b> is saved: the page says "Nothing was saved. Fix the value marked in red, then Save all again." and shows the message in red under that box. <b>Discard</b> puts the page back as it was.</p>
+<div class="note good"><span class="lbl">How delivery decides:</span> The customer's map pin is measured to every branch that has the item in stock. Within a branch's <b>Quick up to</b> distance it comes Quick, in about 10 minutes to pack plus 5 minutes a km. Up to <b>Quick if possible</b> it is promised Express and may still come Quick when a rider is free. Farther, the nearest branch that has it ships it: with Many branches, the Between-branches table says when it arrives; with One area it is plain Express.</div>
+<div class="note tip"><span class="lbl">Tip:</span> Switching to <b>One area</b> switches the Between-branches routes off without deleting them. Switch back to <b>Many branches</b> and they return, and any pair of branches with no route gets one worked out from the distance.</div>
+
+<h3 class="step"><span class="n">3</span>Let a new branch set itself up</h3>
+<p>Make the new warehouse in Inventory and give it (or its company) an address. The shop then fills in, by itself, everything it can work out:</p>
+<ul class="f">
+  <li><b>Map pin</b> — looked up from the address. If the map cannot find it, the status says so and asks you to pick it on the map.</li>
+  <li><b>Quick</b> — switched on once the pin is known, up to <b>5 km</b>, and "Quick if possible" up to <b>15 km</b>.</li>
+  <li><b>Routes to the other branches</b> (Many branches only) — a missing pair gets a route from the straight-line distance: up to 150 km <b>Next day</b>, up to 400 km <b>In 2-3 days</b>, farther <b>In 3-4 days</b> with <b>Cargo</b>. These show as <b>auto</b>: check them.</li>
+  <li><b>WhatsApp delivery shop</b> — with the WhatsApp Bridge installed, one is made for every branch on the map.</li>
+</ul>
+<p>It runs at once when a warehouse is made or its address changes, again every hour to catch anything missed, and whenever you press <b>Set up automatically</b>.</p>
+<div class="note imp"><span class="lbl">Important:</span> It only fills what is empty or missing, <b>never what a person set</b>. Branches that existed before this arrived are left alone; once someone saves a branch's Quick settings by hand, it is theirs; a route someone switched off counts as a "no" and is never brought back. Riders are the one thing it cannot add: the status asks for one.</div>
+
+<h3 class="step"><span class="n">4</span>Set the delivery fees</h3>
 <p>Open <b>Store <span class="arr">→</span> Delivery</b>. The <b>Fees</b> tab shows one card per storefront, Quick and Express. Each card has an on/off switch (press Save to apply it) and five boxes:</p>
 <ul class="f">
   <li><b>Shown as</b> — the word the app puts on the basket, such as "Quick".</li>
@@ -171,7 +182,7 @@
 <div class="note imp"><span class="lbl">Important:</span> A basket that holds both Quick and Express items can pay <b>both fees</b>, each judged on its own storefront's items. The bill checks the minimum for <b>Quick</b> only: if the Quick items come to less than the Quick minimum, the basket cannot be ordered.</div>
 <div class="note warn"><span class="lbl">Watch out:</span> Turning a storefront's switch off makes the desk warn "<i>… is switched off - nothing from it can be bought.</i>" Use it only when you really mean to stop that storefront.</div>
 
-<h3 class="step"><span class="n">3</span>Mark the places you deliver (Service areas)</h3>
+<h3 class="step"><span class="n">5</span>Mark the places you deliver (Service areas)</h3>
 <p>Open the <b>Service areas</b> tab and press <b>New area</b>, or <b>Edit</b> on a row. Fill in:</p>
 <ul class="f">
   <li><b>Pincode</b> — digits only. A full pincode (682016) or the start of one (68). Spaces are removed for you. Each pincode can be listed only once.</li>
@@ -184,7 +195,7 @@
 <figure class="shot"><img src="screenshots/02-service-areas-tab.png" alt="Service areas tab"><figcaption>Figure 2 — The Service areas tab with the three starting areas: 67 (Quick off, Express on, 2–3 days) and 68 and 69 (both on, 13 mins). Each shows "and everything under it" because it is the start of a pincode.</figcaption></figure>
 <div class="note warn"><span class="lbl">Watch out:</span> Switch both Quick and Express off and that pincode is told "We don't deliver to this pincode yet." With no area on the list at all, <b>every</b> pincode gets that answer, and the desk warns you.</div>
 
-<h3 class="step"><span class="n">4</span>Set up delivery slots</h3>
+<h3 class="step"><span class="n">6</span>Set up delivery slots</h3>
 <p>Open the <b>Slots</b> tab. Each row is one chip on the checkout's slot step, with its <b>Chip</b> wording, <b>Storefront</b>, <b>Kind</b>, <b>When</b>, <b>Fee</b>, <b>Cap</b> (∞ means no limit) and <b>State</b>.</p>
 <figure class="shot"><img src="screenshots/03-slots-tab.png" alt="Slots tab"><figcaption>Figure 3 — The Slots tab with the six starting slots: Standard and Priority for Express, and Now, Today 6 – 8 PM (until 5 PM), Tomorrow 8 – 10 AM and Tomorrow 6 – 8 PM for Quick. Each row has Edit and Switch off.</figcaption></figure>
 <p>Press <b>New slot</b>, or <b>Edit</b> on a row, and fill in:</p>
@@ -203,9 +214,11 @@
   <li><b>Orders per slot</b> — how many orders the slot takes per day. 0 means no limit. Once full, it is no longer offered for that day.</li>
 </ul>
 <figure class="shot"><img src="screenshots/04-slot-dialog.png" style="max-height:100mm" alt="Edit slot dialog"><figcaption>Figure 4 — The Edit slot dialog for the Quick "Today" slot: Detail 6 – 8 PM, Kind Time window, From 18 (6 PM) To 20 (8 PM), Days ahead 0, Stop offering after 17 (5 PM), Extra fee 0, Orders per slot 0.</figcaption></figure>
-<div class="note tip"><span class="lbl">Tip:</span> The desk warns "No slot is open for Quick or Express…" when a storefront has no slot switched on. That storefront then has nothing to offer at checkout, so fix it at once.</div>
+<p><b>Slots on or off for the whole company.</b> Picking a slot is always optional for the customer. To stop offering slots altogether, switch off <b>Let customers pick a delivery slot</b> on the Delivery settings page (the same switch is <b>Offer delivery slots</b> on the company's form, and the <b>Slots on · switch off</b> button on the console's Slots tab). It is on by default. The slots you made are kept for when you switch it back on.</p>
+<div class="note good"><span class="lbl">Good to know:</span> The same slots are offered at the website checkout and on the WhatsApp order page. With slots off, the checkout step is called <b>Delivery</b> instead of <b>Delivery slot</b> and the order is placed with no slot. A storefront with no slot of its own tells the customer "We deliver as soon as we can." (Quick) or "We deliver on the next available day." (Express).</div>
+<div class="note tip"><span class="lbl">Tip:</span> The desk warns "No slot is open for Quick or Express…" when a storefront has no slot switched on. Its customers then get no choice of time, only the message above.</div>
 
-<h3 class="step"><span class="n">5</span>Turn on Quick delivery at your branches</h3>
+<h3 class="step"><span class="n">7</span>Turn on Quick delivery at your branches</h3>
 <p>Open the <b>Branches</b> tab. It lists every warehouse in every company, with its <b>Company</b>, <b>Map pin</b>, <b>Quick</b> state and <b>Reach</b>. <b>Quick on</b> / <b>Quick off</b> flips the switch in one click; <b>Edit</b> opens the full settings.</p>
 <figure class="shot"><img src="screenshots/05-branches-tab.png" alt="Branches tab"><figcaption>Figure 5 — The Branches tab: Ruwi Warehouse (pin set, Quick On, 5 km) and Sohar Warehouse (pin set, Quick On, 3 km); Salalah Warehouse has No pin and Quick Off. The note above the table explains the Quick rule.</figcaption></figure>
 <p>In the <b>Quick delivery from …</b> dialog, set:</p>
@@ -294,8 +307,10 @@
   <li><b>Pincode check</b> — the customer enters a pincode (at least 3 digits). They are told whether you deliver, whether Quick is available, and the delivery promise, or "We don't deliver to this pincode yet."</li>
   <li><b>The basket</b> — items, the MRP saving, each storefront's delivery fee, any coupon and the total. A customer below the Quick minimum cannot order. A product that has gone or been unpublished is listed so the app can say which line vanished.</li>
   <li><b>Coupons</b> — working codes are listed with their title, note and minimum; for each, the basket shows what it would save or how much more to spend.</li>
-  <li><b>Slots</b> — the switched-on slots that are still open today and not full. A chosen slot's extra fee is added to the bill.</li>
+  <li><b>Delivery line</b> — each product card and product page says Quick (with the time) or Express (with the product's own promise). A product with <b>nothing in stock</b> shows no delivery line, only its out-of-stock tag, unless it has its own Express promise, and the website's Quick filter leaves it out.</li>
+  <li><b>Slots</b> — when slots are on for the company, the switched-on slots that are still open today and not full. A chosen slot's extra fee is added to the bill.</li>
   <li><b>Deals</b> — the lower price on the card, in the basket and on the order, with nothing to type.</li>
+  <li><b>The Offers page</b> — the deals, best saving first. Its timer counts down to the moment the first running deal on the products shown ends (in days when more than a day is left); when it reaches zero, ended deals drop off. A deal with no end date never adds a timer, so with none the page shows no timer at all. With no deals it says "No deals right now".</li>
 </ul>
 <div class="note imp"><span class="lbl">Important:</span> A discount can <b>never exceed the bill</b>: no coupon ever hands money back, and the total never goes below zero.</div>
 
@@ -327,8 +342,8 @@
 
 <h3 class="step"><span class="n">3</span>Who can do what</h3>
 <table><thead><tr><th style="width:30%">Role</th><th>What they can do</th></tr></thead><tbody>
-<tr><td>Owner</td><td>Everything on the Delivery desk, plus the delivery, slot and service-area lists under Advanced. Coupons and Deals need the Salesperson right as well.</td></tr>
-<tr><td>Manager</td><td>Opens the Delivery desk: edits the fees, adds and edits slots and areas, and sets Quick on branches. Cannot add a new storefront rule. Coupons and Deals need the Salesperson right as well.</td></tr>
+<tr><td>Owner</td><td>Everything on the Delivery settings page and the Delivery desk, plus the delivery, slot and service-area lists under Advanced. Coupons and Deals need the Salesperson right as well.</td></tr>
+<tr><td>Manager</td><td>Opens the Delivery settings page and the Delivery desk: edits the fees, adds and edits slots and areas, and sets Quick on branches. Cannot add a new storefront rule. Coupons and Deals need the Salesperson right as well.</td></tr>
 <tr><td>Salesperson</td><td>Full use of the Coupons and Deals desks and their lists.</td></tr>
 <tr><td>Packer, Accountant, Rider (any Internal user)</td><td>Can read these records but has no menu here and changes nothing.</td></tr>
 </tbody></table>
@@ -364,26 +379,40 @@
 <tr><td>No pin</td><td>The branch has no map location yet.</td><td><b>Edit</b> and paste its pin.</td></tr>
 </tbody></table>
 
+<h2>Branch status (Delivery settings)</h2>
+<table><thead><tr><th style="width:22%">Status</th><th>Meaning</th><th style="width:32%">How to change it</th></tr></thead><tbody>
+<tr><td>Ready</td><td>Everything for this branch is done.</td><td>—</td></tr>
+<tr><td>Setting up</td><td>The shop is filling something in, such as finding the pin from the address.</td><td>Wait, or press <b>Set up automatically</b>.</td></tr>
+<tr><td>Needs you</td><td>Something only a person can do: an address, a pin the map could not find, a reach, a rider.</td><td>Press <b>Fix</b> beside the line under the pills.</td></tr>
+<tr><td>Not delivering</td><td>The branch has no map pin and is not set up automatically, so it is not used for delivery.</td><td>Paste or pick its pin.</td></tr>
+</tbody></table>
+
 <h2>Quick tips</h2>
 <ul class="tips">
   <li>A mixed basket can pay both the Quick and the Express fee; each is waived on its own free-delivery amount.</li>
+  <li>Use <b>Store → Delivery settings</b> for everyday changes: one page, one Save all.</li>
   <li>For pincodes, the most specific row wins: 6820 beats 68.</li>
   <li>Choose a slot's Key with care; it cannot be changed after the slot is made.</li>
-  <li>Hours are numbers: 18.5 is 6:30 PM, and a cut-off of 24 never hides the slot.</li>
   <li>A branch needs Quick on, a map pin and a reach above 0, or it delivers Quick to nobody.</li>
   <li>The coupon Note is shown to customers, so write it for them.</li>
   <li>Switching a deal off puts every price back at once; nothing was written to the products.</li>
+  <li>Give a deal an end date if you want the Offers page to count down to it.</li>
   <li>Watch the Nearly used up tile: those codes are about to start refusing customers.</li>
 </ul>
 
-<h2>If something goes wrong</h2>
+<h2 style="break-before:page; page-break-before:always">If something goes wrong</h2>
 <table><thead><tr><th style="width:36%">What you see</th><th>What to do</th></tr></thead><tbody>
 <tr><td>A customer says a coupon does not work</td><td>Open <b>Sales → Coupons</b> and read the card's pill: switched off, starts, ended or used up. Also check <b>Only over</b> and <b>Who may use it</b>: the minimum may be measured on Quick or Express items only.</td></tr>
 <tr><td>"There is already a coupon with the code …"</td><td>Codes are unique, switched-off ones included. Pick another code, or edit and switch the existing one back on.</td></tr>
 <tr><td>A coupon will not delete</td><td>It has been used, so it belongs to those orders. Switch it off instead.</td></tr>
 <tr><td>A customer is told "We don't deliver to this pincode yet"</td><td>On <b>Delivery → Service areas</b>, add the pincode (or its start), or make sure its row is on and has Quick or Express switched on.</td></tr>
 <tr><td>Every item ships Express</td><td>On <b>Delivery → Branches</b>, look for <b>Not ready</b> or <b>No pin</b>, and check the reach. The item must also be in stock at the nearby branch. A product with its own delivery promise is always Express.</td></tr>
-<tr><td>A slot is missing at checkout</td><td>It may be off, past its <b>Stop offering after</b> time for today, or full (<b>Orders per slot</b>). Check its row on <b>Delivery → Slots</b>.</td></tr>
+<tr><td>"Nothing was saved. Fix the value marked in red…"</td><td>On <b>Delivery settings</b>, find the red message under a box, correct that value and press <b>Save all</b> again. Nothing else was saved meanwhile.</td></tr>
+<tr><td>A branch shows <b>Needs you</b></td><td>Read the line under the pills and press <b>Fix</b>. If the map could not find the address, paste or pick the pin; if it asks for a rider, add one.</td></tr>
+<tr><td>A new branch did not set itself up</td><td>It needs an address (its own or its company's). A branch that existed before, or one whose Quick someone saved by hand, is never changed automatically: set it on <b>Delivery settings</b>.</td></tr>
+<tr><td>The checkout has no slot step, only "Delivery"</td><td>Slots are switched off for the company. Switch <b>Let customers pick a delivery slot</b> on in <b>Delivery settings</b>.</td></tr>
+<tr><td>The Offers page shows no timer</td><td>No running deal on the products shown has an end date. Give the deal an <b>Ends</b> date.</td></tr>
+<tr><td>A slot is missing at checkout</td><td>Slots may be off for the company, or the slot may be off, past its <b>Stop offering after</b> time for today, or full (<b>Orders per slot</b>). Check its row on <b>Delivery → Slots</b>.</td></tr>
 <tr><td>A deal's price is not showing</td><td>On <b>Sales → Deals</b>, check the pill: Starts …, Finished or Switched off. Make sure the product is in the deal. If two deals cover it, the better price wins.</td></tr>
 <tr><td>"A percentage deal has to be between 1 and 90"</td><td>Deals cannot take more than 90% off. Use a smaller number, or an <b>Amount off</b> with a <b>Never below</b> price.</td></tr>
 <tr><td>A saved fee still shows the old line in the app</td><td>The app may reuse its last answer for a short time, set by <b>Remember for (seconds)</b> in 369 Mart Settings (60 by default). The bill's total is always worked out fresh.</td></tr>
