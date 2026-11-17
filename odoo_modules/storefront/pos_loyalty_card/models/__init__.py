@@ -5,3 +5,4 @@ from . import loyalty_history
 from . import loyalty_rule
 from . import card_render
 from . import res_partner
+from . import auto_upgrade
