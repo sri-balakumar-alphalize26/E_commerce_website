@@ -301,7 +301,7 @@
                                     <ul class="pdk-trust">
                                         <li class="pdk-trust-row pdk-trust-fixed">
                                             <label class="pdk-trust-tick"><input type="checkbox" checked="checked" disabled="disabled"/><b>Delivery time</b></label>
-                                            <small>Always shown - Quick 10–20 mins, or this product's Express delivery time.</small>
+                                            <small>Always shown - Quick 10–20 mins, or this product's Express delivery time. Out of stock: no Quick line, only its own Express time if it has one.</small>
                                         </li>
                                         <li t-foreach="pt.rows" t-as="row" t-key="row.key" t-attf-class="pdk-trust-row {{ row.on ? '' : 'pdk-trust-off' }}">
                                             <label class="pdk-trust-tick">

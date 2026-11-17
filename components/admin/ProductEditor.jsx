@@ -886,7 +886,7 @@ export default function ProductEditor({ productId, currency, onClose, onSaved, f
           <ul className="pdk-trust">
             <li className="pdk-trust-row pdk-trust-fixed">
               <label className="pdk-trust-tick"><input type="checkbox" checked disabled readOnly /><b>Delivery time</b></label>
-              <small>Always shown - Quick 10–20 mins, or this product&apos;s Express delivery time.</small>
+              <small>Always shown - Quick 10–20 mins, or this product&apos;s Express delivery time. Out of stock: no Quick line, only its own Express time if it has one.</small>
             </li>
             {pt.rows.map((row, i) => (
               <li key={row.key} className={"pdk-trust-row" + (row.on ? "" : " pdk-trust-off")}>
