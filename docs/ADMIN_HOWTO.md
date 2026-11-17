@@ -19,6 +19,10 @@ A product shows on the shop and in search only when:
 
 **What worked:** create the product fresh in the 369 Mart **Products** desk, which publishes it automatically. Then archive the old record.
 
+**Out of stock:** a live product with no stock shows its "Out of stock" tag and Notify, and no "Quick" delivery line anywhere on the website, and the Browse "Quick" filter leaves it out. It shows a delivery line only when it has its own Express promise (for example "Express · 2 days").
+
+**Sharing a product link:** a product page link pasted in WhatsApp, Facebook or a browser tab shows the product's name, picture and a line of description. A JPG or PNG picture previews most reliably in WhatsApp. If the shop does not answer within 3 seconds, the page still opens with the plain "369 Mart" title.
+
 ## 3. Why "Go to Website" is blank
 It opens Odoo's built-in website preview. The shop is a separate site, so there is nothing to draw. The product is not broken.
 
@@ -38,6 +42,12 @@ It opens Odoo's built-in website preview. The shop is a separate site, so there 
 
 ## 7. Error "attribute BRAND must have at least one value"
 An attribute line with no value. Add a value or remove the line.
+
+## 8. Shop logo
+**Web console:** `/admin` → Store → **Settings** → **Store** tab → **Shop logo** → **Upload logo** (PNG, JPG or WebP, under 3 MB; a PNG with a clear background works best) → **Save changes**. **Use the original logo** goes back to the logo that ships with the shop.
+
+- Shown on the website and on every page sent by link: the WhatsApp product page, the sign and pay page, the payment pages, the rating page and the delivery tracking page.
+- Kept apart from the company logo Odoo prints on invoices.
 
 ## Known gaps
 - **Published switch.** No 369 Mart screen offers a way to publish an existing product. New products publish automatically; existing unpublished ones must be re-created fresh or edited in developer mode.
