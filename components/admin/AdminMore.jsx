@@ -1100,6 +1100,11 @@ export function SettingsSection({ flash }) {
       /* The rule and the shop-wide switch are Odoo's, shown read-only. */
       const { enabled, redeem, earnOn, settleDays } = draft.loyalty;
       body = { enabled, redeem, earnOn, settleDays };
+    } else if (group === "store" && draft.store.logo === saved.store.logo) {
+      /* Send the logo only when it was changed here: an untouched "" would
+         wipe a logo somebody uploaded on another screen meanwhile. */
+      const { logo, ...rest } = draft.store;
+      body = rest;
     }
     try {
       const res = await api(`/admin/settings/${group}`, { method: "POST", body });

@@ -361,6 +361,11 @@ export class SettingsDesk extends Component {
                 ),
                 codLimit: values.codLimit,
             };
+        } else if (group === "store" && "logo" in values
+                   && values.logo === (this.state.saved.store || {}).logo) {
+            // The logo is uploaded in the console; sending back the one this
+            // screen loaded ("" when there was none) would wipe a newer upload.
+            values = Object.fromEntries(Object.entries(values).filter(([key]) => key !== "logo"));
         }
         this.state.busy = true;
         this.state.error = "";
