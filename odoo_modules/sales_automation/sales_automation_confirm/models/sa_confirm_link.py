@@ -8,6 +8,7 @@ number / one WeChat contact, so "who clicked" is that identity; the address
 and browser of every hit are kept as evidence.
 """
 import base64
+import hashlib
 import hmac
 import logging
 import secrets
@@ -159,33 +160,59 @@ class SaConfirmLink(models.Model):
             refs += [(p, 'image') for p in product.sa_extra_picture_ids.filtered(lambda p: p.source != 'internet').sorted('sequence')]
         return refs
 
-    def _picture_items(self):
-        """The page's pictures, no repeats: the public address of one on the image
-        server (the customer's browser loads it from there; the ERP downloads
-        nothing), the bytes of any other. An enquiry with no picture of its own
-        gets the reference picture."""
+    def _picture_attachment(self, record, field):
+        """The attachment holding `record.field`, or an empty recordset."""
+        return self.env['ir.attachment'].sudo().search(
+            [('res_model', '=', record._name), ('res_id', '=', record.id), ('res_field', '=', field)], limit=1)
+
+    @api.model
+    def _picture_remote_url(self, attachment):
+        """The image server's public address of a picture stored there, or ''."""
+        if attachment and 'imgsrv_url' in attachment._fields and attachment.imgsrv_url \
+                and (attachment.store_fname or '').startswith('imgsrv:'):
+            return attachment.imgsrv_url
+        return ''
+
+    def _picture_entries(self):
+        """The page's pictures, no repeats, without reading a single one (17 Nov
+        2026: the page and every picture request used to decode every full-size
+        photo, which made the page slow on a phone). One dict per picture:
+        {'record', 'field', 'version', 'url'} - `url` the image server's own
+        address when it is stored there - or, for an enquiry with no picture of
+        its own, {'raw', 'version'} with the reference picture's bytes."""
         self.ensure_one()
-        Attachment = self.env['ir.attachment'].sudo()
-        remote = 'imgsrv_url' in Attachment._fields
-        items, seen = [], set()
+        entries, seen = [], set()
         for record, field in self._picture_refs():
-            attachment = Attachment.search([('res_model', '=', record._name), ('res_id', '=', record.id),
-                                            ('res_field', '=', field)], limit=1)
+            attachment = self._picture_attachment(record, field)
             if not attachment:
                 continue
             if attachment.checksum:
                 if attachment.checksum in seen:
                     continue
                 seen.add(attachment.checksum)
-            if remote and attachment.imgsrv_url and (attachment.store_fname or '').startswith('imgsrv:'):
-                items.append(attachment.imgsrv_url)
-            elif record[field]:
-                items.append(base64.b64decode(record[field]))
-        if not items:
+            entries.append({'record': record, 'field': field, 'url': self._picture_remote_url(attachment),
+                            'version': (attachment.checksum or str(attachment.id))[:12]})
+        if not entries:
             main, _mt = self._picture()
             if main:
-                items.append(main)
-        return items[:MAX_PICTURES]
+                entries.append({'raw': main, 'version': hashlib.sha1(main).hexdigest()[:12]})
+        return entries[:MAX_PICTURES]
+
+    def _picture_items(self):
+        """The page's pictures, no repeats: the public address of one on the image
+        server (the customer's browser loads it from there; the ERP downloads
+        nothing), the bytes of any other. An enquiry with no picture of its own
+        gets the reference picture."""
+        self.ensure_one()
+        items = []
+        for entry in self._picture_entries():
+            if 'raw' in entry:
+                items.append(entry['raw'])
+            elif entry['url']:
+                items.append(entry['url'])
+            elif entry['record'][entry['field']]:
+                items.append(base64.b64decode(entry['record'][entry['field']]))
+        return items
 
     def _attribute_rows(self):
         """(label, value) of the chosen variant's attributes, shown under the pictures."""
@@ -332,7 +359,12 @@ class SaConfirmLink(models.Model):
                 price = tmpl.list_price or 0.0
                 out.append({
                     'name': tmpl.name or '',
-                    'image': '/web/image/product.template/%s/image_256' % tmpl.id if tmpl.image_128 else '',
+                    # on the image server: its own address, no stop at Odoo
+                    'image': (self.env['sa.picture'].url(
+                        tmpl, 'image_256', '/web/image/product.template/%s/image_256' % tmpl.id)
+                              if 'sa.picture' in self.env else
+                              ('/web/image/product.template/%s/image_256' % tmpl.id
+                               if tmpl.with_context(bin_size=True).image_128 else '')),
                     'price': self._money(price) if price else '',
                     'url': 'https://wa.me/%s?text=%s' % (number, quote(_('I want %s', tmpl.name or ''))),
                 })

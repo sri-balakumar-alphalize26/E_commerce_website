@@ -21,3 +21,5 @@ from . import test_photos_tab
 from . import test_portal_slots
 from . import test_delivery_autosetup
 from . import test_delivery_settings_page
+from . import test_track_places
+from . import test_fleet_map_browser

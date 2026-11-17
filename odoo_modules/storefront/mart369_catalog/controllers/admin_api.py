@@ -270,7 +270,8 @@ class Mart369SearchAdminApi(http.Controller):
             'mrp': product.compare_list_price if 'compare_list_price' in fields else 0,
             'unit': (product.mart_unit_text or '') if 'mart_unit_text' in fields else '',
             'photo': ('/web/image/product.template/%s/image_512?unique=%s'
-                      % (product.id, unique)) if product.image_1920 else '',
+                      % (product.id, unique))
+                     if request.env['mart369.serializable']._mart369_has_picture(product, 'image_1920') else '',
             'photos': photos,
         })
         return self._json({

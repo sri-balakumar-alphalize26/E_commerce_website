@@ -30,6 +30,8 @@
                 <title t-esc="head_title"/>
                 <link rel="preconnect" href="https://fonts.googleapis.com"/>
                 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous"/>
+                <!-- the image server, when pictures are kept there: connect while the page arrives -->
+                <t t-out="res_company.env['sa.picture'].preconnect_html() if res_company else ''"/>
                 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
                 <style>
 :root{--navy:#0b4a6e;--blue:#0a78ab;--btn-a:#0c86be;--btn-b:#08658f;--orange:#f7931e;--ink:#13212b;--muted:#6b7a86;

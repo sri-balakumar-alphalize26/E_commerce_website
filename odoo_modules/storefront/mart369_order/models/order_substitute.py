@@ -78,7 +78,7 @@ class Mart369OrderSubstitute(models.Model):
             'id': product.id,
             'name': product.display_name,
             'image': (self.env['mart369.serializable']._image_url('image_256', '256x256', product)
-                      if product.image_256 else ''),
+                      if self.env['mart369.serializable']._mart369_has_picture(product, 'image_256') else ''),
             'price': currency.round(each),
             'youPay': currency.round(pays),
             'shopPays': currency.round(max(0.0, each - self.original_price) * self.qty),
@@ -90,7 +90,7 @@ class Mart369OrderSubstitute(models.Model):
         currency = self.currency_id
         shown = self.product_id or self._mart369_options()[:1]
         image = (self.env['mart369.serializable']._image_url('image_256', '256x256', shown)
-                 if shown.image_256 else '')
+                 if self.env['mart369.serializable']._mart369_has_picture(shown, 'image_256') else '')
         return {
             'id': self.id,
             'state': self.state,
@@ -324,7 +324,8 @@ class SaleOrder(models.Model):
             'id': p.id,
             'name': p.display_name,
             'price': currency.round(p.lst_price),
-            'image': '/web/image/product.product/%d/image_128' % p.id if p.image_128 else '',
+            'image': ('/web/image/product.product/%d/image_128' % p.id
+                      if self.env['mart369.serializable']._mart369_has_picture(p, 'image_128') else ''),
             'stock': p.free_qty if 'free_qty' in p._fields else None,
             # What choosing it would mean, per the order's quantity.
             'shopPays': currency.round(max(0.0, p.lst_price - line.price_unit) * line.product_uom_qty),

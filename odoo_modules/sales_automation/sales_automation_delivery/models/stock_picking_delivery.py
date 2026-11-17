@@ -245,6 +245,34 @@ class StockPicking(models.Model):
                 [('active', '=', True)], limit=1)
         return session
 
+    def _sa_help_number(self):
+        """Digits the customer's "Message us on WhatsApp" opens a chat with,
+        or '' when there is none: the shop's own number, else the WhatsApp
+        number this job's messages go out from, else the company phone.
+
+        Without this fallback a job with no shop phone linked to "#", and the
+        button only opened the tracking page again in a new tab."""
+        self.ensure_one()
+        job = self.sudo()
+
+        def digits(raw, least):
+            found = ''.join(ch for ch in (raw or '').split('@')[0] if ch.isdigit())
+            return found if len(found) >= least else ''
+
+        found = digits(job.sa_shop_id.phone if job.sa_shop_id else '', 8)
+        if found:
+            return found
+        try:
+            session = job._sa_session()
+        except Exception:  # noqa: BLE001 - a button is never worth an error
+            session = None
+        for field in ('phone_number', 'authorized_number'):
+            found = digits(getattr(session, field, '') if session else '', 10)
+            if found:
+                return found
+        company = job.company_id or self.env.company
+        return digits(company.phone or company.partner_id.phone, 8)
+
     def _sa_job_body(self):
         """What the rider reads on their phone."""
         self.ensure_one()

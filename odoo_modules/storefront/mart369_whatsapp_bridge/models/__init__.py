@@ -21,3 +21,4 @@ from . import staff_alert
 from . import portal_slots
 from . import delivery_autosetup
 from . import delivery_settings_page
+from . import stock_picking_track_pins

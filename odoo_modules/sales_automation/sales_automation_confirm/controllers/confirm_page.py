@@ -16,14 +16,15 @@ from odoo.addons.web.controllers.home import Home
 from odoo.addons.web.controllers.utils import ensure_db
 from odoo.http import request
 from odoo.tools import html_sanitize
+from odoo.tools.image import image_process
 
 _logger = logging.getLogger(__name__)
 
 _PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5"><meta name="robots" content="noindex">
 <meta name="theme-color" content="#0b4a6e"><title>%(title)s</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>%(image_host)s
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <style>
  /* 13 Nov 2026, design 1 "Shop page": the 369 Mart product page look. Phone first: one column,
     the two answers pinned at the bottom; from 860 px photos left, name/price/answers right. */
@@ -192,9 +193,13 @@ _PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8">
 %(ask)s<main class="wrap">%(body)s</main>
 <div class="ov" id="ov" onclick="closeOv()"><span class="x" role="button" aria-label="Close">&#10005;</span><div class="in"><img id="ovimg" alt="" onclick="event.stopPropagation();this.classList.toggle('z')"></div><div class="tip">Tap the picture to zoom in, then move around</div></div>
 <script>
-function show(i){var m=document.getElementById('main');if(!m)return;m.src='/wa/confirm/'+m.dataset.t+'/image/'+i;m.dataset.i=i;
+function show(i){var m=document.getElementById('main');if(!m)return;var t=document.querySelector('.gal img[data-i="'+i+'"]');
+if(t){m.src=t.dataset.big;m.dataset.full=t.dataset.full}else{m.src='/wa/confirm/'+m.dataset.t+'/image/'+i+'.jpg?s=1024';m.dataset.full=''}m.dataset.i=i;
 document.querySelectorAll('.gal img').forEach(function(t){t.classList.toggle('on',t.dataset.i==i)})}
-function openOv(){var m=document.getElementById('main');if(!m)return;var o=document.getElementById('ovimg');o.classList.remove('z');o.src=m.src;document.getElementById('ov').style.display='flex'}
+function openOv(){var m=document.getElementById('main');if(!m)return;var o=document.getElementById('ovimg');o.classList.remove('z');
+/* the page shows 1024 px; full screen shows the original, loaded only now */
+o.src=m.src;if(m.dataset.full){var big=new Image();big.onload=function(){if(document.getElementById('ov').style.display==='flex')o.src=m.dataset.full};big.src=m.dataset.full}
+document.getElementById('ov').style.display='flex'}
 function closeOv(){document.getElementById('ov').style.display='none'}
 (function(){
  var fine=window.matchMedia&&matchMedia('(hover: hover) and (pointer: fine)').matches;
@@ -224,7 +229,9 @@ def _page(title, body, status=200, ask='', body_class=''):
     # the logo uploaded in the 369 Mart console, else the old setting, else ours
     logo = request.env['sa.brand'].logo_url()
     return request.make_response(_PAGE % {'title': title, 'body': body, 'logo': html.escape(logo),
-                                          'ask': ask, 'body_class': body_class}, status=status,
+                                          'ask': ask, 'body_class': body_class,
+                                          'image_host': (request.env['sa.picture'].preconnect_html()
+                                                         if 'sa.picture' in request.env else '')}, status=status,
                                  headers=[('Content-Type', 'text/html; charset=utf-8'),
                                           ('Cache-Control', 'no-store')])
 
@@ -334,17 +341,39 @@ class SaConfirmPage(http.Controller):
                   zh('请确认此产品' if link.kind == 'customer' else '您有这个产品吗？'),
                   html.escape(req.ref_code or '')))
 
-        pictures = link._picture_items()
+        # Pictures by size (17 Nov 2026): 1024 px on the page, 256 px in the
+        # strip, the original only in the full-screen view. Nothing is read
+        # here - each picture is its own cached request.
+        pictures = link._picture_entries()
+
+        def pic(i, size=None):
+            entry = pictures[i]
+            # On the image server: its own address, so the phone does not
+            # stop at this server first only to be sent there (about a second
+            # each on a slow server). The strip gets the server's thumbnail.
+            if entry.get('url'):
+                direct = ''
+                if size and size <= 256 and '1920' in entry['field']:
+                    sized = entry['field'].replace('1920', '256')
+                    if sized in entry['record']._fields:
+                        direct = link._picture_remote_url(link._picture_attachment(entry['record'], sized))
+                return html.escape(direct or entry['url'])
+            return html.escape('/wa/confirm/%s/image/%d.jpg?%sv=%s' % (
+                link.token, i, ('s=%d&' % size) if size else '', entry['version']))
+
         if pictures:
-            media = ('<div class="picbox"><img class="pic" id="main" data-t="%s" data-i="0" src="/wa/confirm/%s/image/0" alt="%s" onclick="openOv()">'
+            media = ('<div class="picbox"><img class="pic" id="main" data-t="%s" data-i="0" src="%s" data-full="%s" '
+                     'alt="%s" onclick="openOv()" fetchpriority="high" decoding="async">'
                      '<span class="lens" id="lens"></span>'
                      '<span class="zoom"><span class="zh-touch">Tap to zoom%s</span><span class="zh-hover">Hover to zoom · click for full screen%s</span></span></div>'
                      '<div class="zp" id="zp" aria-hidden="true"></div>'
-                     % (link.token, link.token, html.escape(product.name or ''), zh('点击放大'), zh('悬停放大')))
+                     % (link.token, pic(0, 1024), pic(0), html.escape(product.name or ''), zh('点击放大'), zh('悬停放大')))
             if len(pictures) > 1:
                 media += '<div class="gal">' + ''.join(
-                    '<img src="/wa/confirm/%s/image/%d" data-i="%d" class="%s" onclick="show(%d)" alt="">'
-                    % (link.token, i, i, 'on' if i == 0 else '', i) for i in range(len(pictures))) + '</div>'
+                    '<img src="%s" data-big="%s" data-full="%s" data-i="%d" class="%s" onclick="show(%d)" alt="" '
+                    'loading="lazy" decoding="async" width="64" height="64">'
+                    % (pic(i, 256), pic(i, 1024), pic(i), i, 'on' if i == 0 else '', i)
+                    for i in range(len(pictures))) + '</div>'
             if link.image_source == 'generated':
                 media += '<div class="note">Reference picture - the exact unit may differ%s</div>' % zh('参考图片，实物可能不同')
         else:
@@ -488,23 +517,61 @@ class SaConfirmPage(http.Controller):
             _logger.exception("Sales Automation: click log failed for link %s", link.id)
         return self._render(link)
 
-    @http.route(['/wa/confirm/<string:token>/image', '/wa/confirm/<string:token>/image/<int:n>'],
-                type='http', auth='public', methods=['GET'], csrf=False)
-    def image(self, token, n=0, **kw):
+    # `.jpg`: Cloudflare caches by file extension, so the page asks for
+    # /image/<n>.jpg; the addresses without it keep working.
+    @http.route(['/wa/confirm/<string:token>/image', '/wa/confirm/<string:token>/image/<int:n>',
+                 '/wa/confirm/<string:token>/image/<int:n>.jpg'],
+                type='http', auth='public', methods=['GET'], csrf=False, readonly=True)
+    def image(self, token, n=0, s=None, v=None, **kw):
+        """One picture, at the size asked for (17 Nov 2026).
+
+        `s=1024` the main picture, `s=256` a thumbnail, no `s` the original (the
+        zoom view, and older links such as the WeChat file). Only picture `n` is
+        read. `v` is the picture's checksum: an address that carries it never
+        changes content, so phones and Cloudflare keep it for a year instead of
+        coming back to the server for every picture."""
         link = self._link(token)
         if not link:
             return request.not_found()
-        pictures = link._picture_items()
-        raw = pictures[n] if 0 <= n < len(pictures) else b''
-        if isinstance(raw, str):
-            # On the image server: the browser loads it from there.
-            return request.redirect(raw, code=302, local=False)
-        mimetype = 'image/jpeg'
-        if not raw:
+        entries = link._picture_entries()
+        if not 0 <= n < len(entries):
             return request.not_found()
-        return request.make_response(raw, headers=[('Content-Type', mimetype or 'image/jpeg'),
-                                                   ('Content-Length', str(len(raw))),
-                                                   ('Cache-Control', 'private, max-age=600')])
+        entry = entries[n]
+        size = {'1024': 1024, '512': 512, '256': 256}.get(str(s or ''), 0)
+        cache = ('public, max-age=31536000, immutable' if v and v == entry['version']
+                 else 'public, max-age=600')
+        if 'raw' in entry:
+            raw = entry['raw']
+            if size:
+                try:
+                    raw = image_process(raw, size=(size, size))
+                except Exception:  # noqa: BLE001 - the original is still a picture
+                    pass
+            return request.make_response(raw, headers=[('Content-Type', 'image/jpeg'),
+                                                       ('Content-Length', str(len(raw))),
+                                                       ('Cache-Control', cache)])
+        record, field = entry['record'], entry['field']
+        # image.mixin keeps every size ready (image_1024, image_variant_256 ...)
+        sized = field.replace('1920', str(size)) if size and '1920' in field else field
+        if sized not in record._fields:
+            sized = field
+        # On the image server: the browser loads it from there (the smaller
+        # copy's own address when it has one, else the original's - never
+        # downloaded here to be shrunk).
+        remote = link._picture_remote_url(link._picture_attachment(record, sized)) if sized != field else ''
+        remote = remote or (entry['url'] if sized == field else '')
+        if remote:
+            return request.redirect(remote, code=302, local=False)
+        try:
+            stream = request.env['ir.binary'].sudo()._get_image_stream_from(
+                record.sudo(), sized,
+                width=size if sized == field else 0, height=size if sized == field else 0)
+        except Exception:  # noqa: BLE001 - a missing picture is a 404, never a 500
+            _logger.info("Sales Automation: picture %s of link %s not readable", n, link.id, exc_info=True)
+            return request.not_found()
+        response = stream.get_response()
+        response.headers['Cache-Control'] = cache
+        return response
 
     @http.route(['/wa/confirm/<string:token>/accept', '/wa/confirm/<string:token>/reject'],
                 type='http', auth='public', methods=['POST'], csrf=False)

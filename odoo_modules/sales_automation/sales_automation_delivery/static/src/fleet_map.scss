@@ -21,7 +21,8 @@
     }
     .sa_fm_map { flex: 1; min-height: 320px; z-index: 0; }
 
-    .free { background: #1a7f3c; } .run { background: #0a78ab; } .no_signal { background: #8a96a0; } .off { background: #c9d1d8; } .waiting { background: #f7931e; } .sos { background: #b42318; }
+    .free { background: #1a7f3c; } .run { background: #0a78ab; } .no_signal { background: #8a96a0; } .off { background: #c9d1d8; } .waiting { background: #C2410C; } .sos { background: #b42318; }
+    .pin_shop { background: #0F3D2E; }
     .sa_fm_rider.sos { border-color: #b42318; background: #fde7e6; .sa_fm_state { color: #b42318; font-weight: 700; } }
     .sa_fm_dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; flex: 0 0 auto; }
 
@@ -46,13 +47,52 @@
         }
     }
 
-    // map markers
+    // ---- map markers, drawn like the Delivery Partner app ----
+    // pins: a round head with a white border on a short stem
+    .sa_fm_pin {
+        display: flex; flex-direction: column; align-items: center; cursor: pointer;
+        i {
+            display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%;
+            border: 3px solid #fff; box-shadow: 0 2px 6px rgba(15, 23, 42, .35);
+            color: #fff; font: 700 11px/1 Inter, system-ui, sans-serif; font-style: normal;
+        }
+        u { display: block; width: 2px; height: 8px; background: #fff; box-shadow: 0 1px 2px rgba(15, 23, 42, .3); text-decoration: none; }
+        &.shop i { background: #0F3D2E; width: 26px; height: 26px; }
+        &.stop i { background: #C2410C; }
+        &.stop.sel i { box-shadow: 0 0 0 3px rgba(194, 65, 12, .35), 0 2px 6px rgba(15, 23, 42, .35); }
+        &.wait i { background: #fff; color: #C2410C; border-color: #C2410C; font-size: 13px; }
+        &.approx { opacity: .72; i { border-style: dashed; } }
+    }
+    // riders: the scooter seen from above, turned to its heading
+    .sa_fm_rd {
+        position: relative; width: 52px; height: 52px; cursor: pointer;
+        // the state classes colour the legend dots; on the scooter only its label is coloured
+        &, &.free, &.run, &.no_signal, &.off, &.sos { background: transparent; }
+        .ring {
+            position: absolute; left: 50%; top: 50%; width: 26px; height: 26px; margin: -13px 0 0 -13px; border-radius: 50%;
+            background: rgba(15, 23, 42, .22); filter: blur(.4px);
+        }
+        img { position: absolute; inset: 0; width: 52px; height: 52px; object-fit: contain; transition: transform .6s ease; }
+        b {
+            position: absolute; left: 50%; bottom: -6px; transform: translateX(-50%);
+            padding: 2px 6px; border-radius: 999px; color: #fff; font: 700 10px/1.2 Inter, system-ui, sans-serif;
+            background: #0a78ab; border: 2px solid #fff; white-space: nowrap; box-shadow: 0 1px 4px rgba(0, 0, 0, .25);
+        }
+        &.free b { background: #1a7f3c; } &.run b { background: #0a78ab; } &.no_signal b { background: #8a96a0; }
+        &.off b { background: #c9d1d8; color: #334; } &.sos b { background: #b42318; }
+        &.no_signal img, &.off img { opacity: .55; filter: grayscale(.6); }
+        &.sel .ring { background: rgba(10, 120, 171, .35); width: 40px; height: 40px; margin: -20px 0 0 -20px; }
+    }
+    .maplibregl-ctrl-attrib { font-size: 10.5px; }
+
+    // the Leaflet fallback's markers
     .sa_fm_mk {
+        &.approx { opacity: .72; border-style: dashed; }
         display: grid; place-items: center; width: 100%; height: 100%; border-radius: 50%; color: #fff; font: 700 12px/1 Inter, system-ui, sans-serif;
         border: 3px solid #fff; box-shadow: 0 2px 8px rgba(0, 0, 0, .3);
         &.rider.sel { box-shadow: 0 0 0 4px rgba(10, 120, 171, .35), 0 2px 8px rgba(0, 0, 0, .3); }
         &.shop { background: #0b4a6e; font-size: 15px; }
-        &.waiting { background: #f7931e; font-size: 14px; }
+        &.waiting { background: #C2410C; font-size: 14px; }
         &.stop { background: #fff; color: #0a78ab; border-color: #0a78ab; font-size: 11px; &.sel { background: #0a78ab; color: #fff; } }
     }
 }

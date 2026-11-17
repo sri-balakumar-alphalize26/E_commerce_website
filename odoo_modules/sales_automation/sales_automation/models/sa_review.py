@@ -66,8 +66,11 @@ class SaleOrderReview(models.Model):
             items.append({
                 'product': tmpl,
                 'name': tmpl.name or '',
-                'image': '/web/image/product.template/%s/image_256' % tmpl.id if tmpl.image_128 else '',
-                'image_data': tmpl.image_128,
+                # Asked without downloading: on the image server a picture is
+                # linked straight there, anything else is shown as before.
+                'image': self.env['sa.picture'].url(
+                    tmpl, 'image_256', '/web/image/product.template/%s/image_256' % tmpl.id),
+                'picture': self.env['sa.picture'].src(tmpl, 'image_128'),
                 'stars': int(round(existing.rating)) if existing else 0,
                 'text': (existing.feedback or '') if existing else '',
             })

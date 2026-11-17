@@ -214,8 +214,9 @@ class SaDeliveryJob(http.Controller):
         rider = picking.sa_delivery_partner_id
         rider_name = rider.name or 'Your rider'
         initials = ''.join(w[0] for w in rider_name.split()[:2]).upper() or 'R'
-        shop_phone = ''.join(ch for ch in (picking.sa_shop_id.phone or '')
-                             if ch.isdigit())
+        # The shop's number, else the WhatsApp number this order runs on, else
+        # the company's: never "#", which only reopened this page.
+        shop_phone = picking._sa_help_number()
 
         # The promised time reads as the headline while the parcel is moving.
         promised = local(picking.sa_promised_on)
@@ -355,11 +356,12 @@ class SaDeliveryJob(http.Controller):
                 else ('%.*f' % (currency.decimal_places,
                                 picking.sa_cod_amount or 0.0)),
                 currency.name or '')).strip(),
-            'help_text': 'Reply to this order\'s WhatsApp thread, or message the '
-                         'shop directly. Quote #%s.' % (picking.sa_ref_code or ''),
+            'help_text': ('Message us on WhatsApp and quote #%s.' % order_ref) if shop_phone else
+                         ('Reply to this order\'s WhatsApp chat and quote #%s.' % order_ref),
+            # The same reference the top of the page shows. '' hides the
+            # button rather than linking to "#".
             'help_link': ('https://wa.me/%s?text=%s' % (
-                shop_phone, quote_plus('Order #%s: ' % (picking.sa_ref_code or ''))))
-            if shop_phone else '#',
+                shop_phone, quote_plus('Order #%s: ' % order_ref))) if shop_phone else '',
         }
 
     @http.route('/wa/track/<int:picking_id>/pos', type='http', auth='public',
@@ -390,14 +392,24 @@ class SaDeliveryJob(http.Controller):
             'source': picking.sa_live_position().get('source') or '' if live else '',
             # degrees, 0 = north, clockwise; null until the rider has moved
             'heading': (picking.sa_rider_heading or None) if live else None,
-            # the two ends of the trip, for whoever draws their own map
-            'shop': dict(zip(('lat', 'lng'), picking.sa_shop_position()))
-            if hasattr(picking, 'sa_shop_position') else {},
-            'dest': {'lat': picking.partner_id.partner_latitude or None,
-                     'lng': picking.partner_id.partner_longitude or None},
+            # The two ends of the trip, in both spellings: `latitude` is what
+            # this page's map reads (it used to be overwritten here with
+            # `lat` alone, so a known shop pin vanished after the first
+            # poll), `lat` what other clients of this route read.
+            'shop': self._both_spellings(payload.get('shop')),
+            'dest': self._both_spellings(payload.get('dropoff')),
+            'dropoff': self._both_spellings(payload.get('dropoff')),
             'rider': payload['rider'],
         })
         return request.make_json_response(out)
+
+    @staticmethod
+    def _both_spellings(place):
+        place = dict(place or {})
+        lat, lng = place.get('latitude') or None, place.get('longitude') or None
+        place.update({'latitude': lat, 'longitude': lng, 'lat': lat, 'lng': lng,
+                      'approximate': bool(place.get('approximate'))})
+        return place
 
     def _values(self, picking, token):
         partner = picking.partner_id

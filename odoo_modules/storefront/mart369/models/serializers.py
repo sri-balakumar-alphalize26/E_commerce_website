@@ -447,6 +447,14 @@ class Mart369Serializable(models.AbstractModel):
     def _mart369_has_picture(self, record, field='image_512'):
         """Is there a picture? Its size says so. Reading the picture itself
         would download it when it is kept on the image server."""
+        if record and len(record) == 1 and record._name == 'product.product' \
+                and field.startswith('image_') and not field.startswith('image_variant_'):
+            # A variant's image_* is computed from its own picture or the
+            # product's, and computing it downloads the picture even when only
+            # its size is asked for: ask the two stored fields instead.
+            own = field.replace('image_', 'image_variant_', 1)
+            return bool((own in record._fields and record.with_context(bin_size=True)[own])
+                        or record.product_tmpl_id.with_context(bin_size=True)[field])
         return bool(record.with_context(bin_size=True)[field])
 
     @api.model

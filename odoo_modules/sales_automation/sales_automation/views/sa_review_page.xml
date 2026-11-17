@@ -28,7 +28,7 @@
                                 <input type="hidden" name="access_token" t-att-value="token"/>
                                 <div class="sa-rv-hd">
                                     <span class="sa-rv-img">
-                                        <img t-if="it['image_data']" t-att-src="image_data_uri(it['image_data'])" alt=""/>
+                                        <img t-if="it.get('picture')" t-att-src="it['picture']" alt="" decoding="async"/>
                                     </span>
                                     <b t-out="it['name']"/>
                                 </div>

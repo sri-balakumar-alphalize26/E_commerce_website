@@ -106,7 +106,8 @@ class SaGroupRequestConfirm(models.Model):
         self._sa_stamp_asked()
         if text_only:
             self._say(caption)
-            source = 'local' if self.product_id.image_1920 else 'none'
+            # asked by its size: reading it would download it from the image server
+            source = 'local' if self.product_id.with_context(bin_size=True).image_1920 else 'none'
             source = self._sa_confirm_picture(fetch=True)[1] if source == 'none' else source
         else:
             source = self._sa_confirm_send_picture(self._sa_addressed(caption))

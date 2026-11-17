@@ -208,6 +208,106 @@ class StockPickingTrack(models.Model):
         return 20.0
 
     # ------------------------------------------------------------------
+    # Where the customer's map puts things (display only)
+    # ------------------------------------------------------------------
+    # The real positions - sa_shop_position() and _sa_customer_position() -
+    # decide the route, the arrival time, the rider's pay and who is called.
+    # They stay exactly as they are. The map only needs *something* to show
+    # while those are still empty (an order being packed has no customer pin
+    # yet, a database may never have pinned its shop), so these fill the gap
+    # for the picture alone and say when they are approximate.
+
+    @staticmethod
+    def _sa_address_texts(partner, city_only=False):
+        """Address lines to look a partner up by, most precise first."""
+        if not partner:
+            return []
+        p = partner.sudo()
+        if city_only:
+            texts = [', '.join(filter(None, [p.city, p.zip, p.state_id.name, p.country_id.name])),
+                     ', '.join(filter(None, [p.state_id.name, p.country_id.name]))]
+        else:
+            texts = [', '.join(filter(None, [p.street, p.street2, p.city, p.zip, p.state_id.name, p.country_id.name])),
+                     ', '.join(filter(None, [p.street2 or p.street, p.city, p.zip, p.country_id.name]))]
+        out = []
+        for text in texts:
+            if text and len(text) >= 4 and text not in out:
+                out.append(text)
+        return out
+
+    def _sa_track_lookup(self, texts):
+        """(lat, lng) of the first text the address service finds, cached."""
+        Geo = self.env['sa.geocode.cache'].sudo()
+        for text in texts:
+            lat, lng = Geo.sa_forward(text)
+            if lat and lng:
+                return lat, lng
+        return None, None
+
+    def _sa_track_shop_fallback(self):
+        """(lat, lng, approximate) for the shop pin when the job has none."""
+        self.ensure_one()
+        job = self.sudo()
+        partners = [job.sa_shop_id._sa_address() if job.sa_shop_id else None,
+                    job.picking_type_id.warehouse_id.partner_id, job.company_id.partner_id]
+        partners = [p for p in partners if p]
+        for p in partners:
+            if p.partner_latitude and p.partner_longitude:
+                return p.partner_latitude, p.partner_longitude, False
+        texts = []
+        for p in partners:
+            texts += [t for t in self._sa_address_texts(p) if t not in texts]
+        lat, lng = self._sa_track_lookup(texts)
+        return lat, lng, True
+
+    def _sa_track_drop_fallback(self):
+        """(lat, lng, approximate) for the customer pin when the job has none:
+        the typed address looked up, never written onto the contact."""
+        self.ensure_one()
+        lat, lng = self._sa_track_lookup(self._sa_address_texts(self.sudo().partner_id))
+        return lat, lng, True
+
+    def _sa_track_center(self):
+        """(lat, lng) to centre an empty map on: the customer's town, else the shop's."""
+        self.ensure_one()
+        job = self.sudo()
+        texts = self._sa_address_texts(job.partner_id, city_only=True)
+        for p in (job.sa_shop_id._sa_address() if job.sa_shop_id else None,
+                  job.picking_type_id.warehouse_id.partner_id, job.company_id.partner_id):
+            texts += [t for t in self._sa_address_texts(p, city_only=True) if t not in texts]
+        return self._sa_track_lookup(texts)
+
+    def _sa_track_places(self):
+        """{'shop', 'dropoff', 'center'} for the customer's map. Never raises."""
+        self.ensure_one()
+        job = self.sudo()
+
+        def block(lat, lng, approx):
+            return {'latitude': lat or None, 'longitude': lng or None, 'approximate': bool(approx and lat)}
+
+        try:
+            slat, slng = job.sa_shop_position()
+            s_approx = False
+            if not (slat and slng):
+                slat, slng, s_approx = job._sa_track_shop_fallback()
+            dlat, dlng = job._sa_customer_position()
+            d_approx = bool(dlat and job.sa_pin_source in ('geocoded', 'door')
+                            and not (job.sa_drop_lat and job.sa_drop_lng))
+            if not (dlat and dlng):
+                dlat, dlng, d_approx = job._sa_track_drop_fallback()
+            center = None
+            if not (slat and slng) and not (dlat and dlng):
+                clat, clng = job._sa_track_center()
+                if clat and clng:
+                    center = {'latitude': clat, 'longitude': clng}
+            return {'shop': block(slat, slng, s_approx), 'dropoff': block(dlat, dlng, d_approx), 'center': center}
+        except Exception:  # noqa: BLE001 - the page always shows
+            _logger.exception("Tracking: map places for %s failed", job.sa_ref_code or job.id)
+            slat, slng = job.sa_shop_position()
+            dlat, dlng = job._sa_customer_position()
+            return {'shop': block(slat, slng, False), 'dropoff': block(dlat, dlng, False), 'center': None}
+
+    # ------------------------------------------------------------------
     # The one answer
     # ------------------------------------------------------------------
     def sa_track_payload(self):
@@ -252,6 +352,7 @@ class StockPickingTrack(models.Model):
             job.sa_compute_route()
         near = bool(show and rider_block and dlat and
                     Ping._sa_metres(rider_block['latitude'], rider_block['longitude'], dlat, dlng) <= 600)
+        places = job._sa_track_places()
         return {
             'kind': kind, 'state': state, 'ended': ended, 'show_rider': show,
             'rider': rider_block,
@@ -263,8 +364,11 @@ class StockPickingTrack(models.Model):
                        'approximate': bool(job.sa_route_approx)}
                       if job.sa_route_polyline and (on_road or state in ('ready', 'offered', 'accepted', 'to_assign'))
                       and (kind != 'express' or state in _ON_ROAD or state == 'accepted') else None),
-            'shop': {'latitude': slat or None, 'longitude': slng or None},
-            'dropoff': {'latitude': dlat or None, 'longitude': dlng or None},
+            # What the map shows: the real pins when known, else approximate
+            # ones, else a town to centre on (see _sa_track_places).
+            'shop': places['shop'],
+            'dropoff': places['dropoff'],
+            'center': places['center'],
             'show_code': bool(state == 'out_for_delivery' and job.sa_arrived_customer_on),
             'next_poll_seconds': 60 if ended else (10 if (state == 'out_for_delivery' or near) else 20),
         }

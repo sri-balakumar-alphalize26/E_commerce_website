@@ -385,7 +385,8 @@ class ProductTemplate(models.Model):
         self.ensure_one()
         mrp = self.compare_list_price if self.compare_list_price > self.list_price else None
         image = None
-        if self.image_128:
+        # asked by its size: reading it would download it from the image server
+        if self.env['mart369.serializable']._mart369_has_picture(self, 'image_128'):
             image = self.env['mart369.serializable']._image_url(
                 'image_512', '256x256', record=self)
         categ = self.public_categ_ids[:1]
