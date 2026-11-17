@@ -148,7 +148,7 @@
   <li><b>Branches</b> — one row per warehouse, with its company (and "sets itself up" when step 3 looks after it): <b>Map pin</b>, <b>Quick</b> on/off, <b>Quick up to</b> and <b>Quick if possible</b> (both in km, 0 to 500). Paste a pin as two numbers with a comma, such as 25.2697, 55.3095; to pick it on a map, press <b>Delivery › Branches</b>. "Quick if possible" must be at least the Quick reach. With the WhatsApp Bridge installed, the row also shows the branch's <b>WhatsApp shop</b> and its <b>Riders</b>.</li>
   <li><b>Between branches</b> (Many branches only, once two branches are on the map) — a table: the row is where the product is, the column is the branch nearest the customer. Each cell says <b>Same day</b>, <b>Next day</b>, <b>In 2-3 days</b>, <b>In 3-4 days</b>, <b>In 5-7 days</b> or <b>Not delivered</b>, with a <b>Cargo</b> tick for long trips. A cell marked <b>auto</b> was worked out from the distance; change it and it is yours.</li>
   <li><b>Fees</b> — <b>Quick delivery</b> and <b>Express delivery</b>, each with an on/off switch, <b>Fee</b>, <b>Free above</b>, <b>Minimum order</b>, <b>Words the customer reads</b> and <b>Storefront name</b> (neither of the last two may be empty).</li>
-  <li><b>Delivery slots</b> — <b>Let customers pick a delivery slot</b>, on or off for the company, with the number of slots and an <b>Edit slots</b> button (step 6).</li>
+  <li><b>Delivery slots</b> — <b>Let customers pick a delivery slot</b>, on or off for the company, and under it the slot list itself, edited in place (step 6).</li>
   <li><b>WhatsApp delivery</b> (with the WhatsApp Bridge only) — the promise for WhatsApp orders, calling a rider when packed and asking for a review. The WhatsApp Bridge manual explains it.</li>
   <li><b>Advanced</b> (folded away) — how many service areas there are, with a <b>Service areas</b> button (they matter only for addresses with no map pin), and <b>A branch charges its own fees</b>: <b>Own fees</b>, <b>Quick fee</b>, <b>Express fee</b> and <b>Free above</b> per branch, only when one basket is split between branches of different companies.</li>
 </ul>
@@ -196,7 +196,7 @@
 <div class="note warn"><span class="lbl">Watch out:</span> Switch both Quick and Express off and that pincode is told "We don't deliver to this pincode yet." With no area on the list at all, <b>every</b> pincode gets that answer, and the desk warns you.</div>
 
 <h3 class="step"><span class="n">6</span>Set up delivery slots</h3>
-<p>Open the <b>Slots</b> tab. Each row is one chip on the checkout's slot step, with its <b>Chip</b> wording, <b>Storefront</b>, <b>Kind</b>, <b>When</b>, <b>Fee</b>, <b>Cap</b> (∞ means no limit) and <b>State</b>.</p>
+<p>You can change slots in two places: the slot list on the <b>Delivery settings</b> page (explained at the end of this step), or the <b>Slots</b> tab of the Delivery desk, which has a few more boxes. Open the <b>Slots</b> tab. Each row is one chip on the checkout's slot step, with its <b>Chip</b> wording, <b>Storefront</b>, <b>Kind</b>, <b>When</b>, <b>Fee</b>, <b>Cap</b> (∞ means no limit) and <b>State</b>.</p>
 <figure class="shot"><img src="screenshots/03-slots-tab.png" alt="Slots tab"><figcaption>Figure 3 — The Slots tab with the six starting slots: Standard and Priority for Express, and Now, Today 6 – 8 PM (until 5 PM), Tomorrow 8 – 10 AM and Tomorrow 6 – 8 PM for Quick. Each row has Edit and Switch off.</figcaption></figure>
 <p>Press <b>New slot</b>, or <b>Edit</b> on a row, and fill in:</p>
 <ul class="f">
@@ -214,6 +214,16 @@
   <li><b>Orders per slot</b> — how many orders the slot takes per day. 0 means no limit. Once full, it is no longer offered for that day.</li>
 </ul>
 <figure class="shot"><img src="screenshots/04-slot-dialog.png" style="max-height:100mm" alt="Edit slot dialog"><figcaption>Figure 4 — The Edit slot dialog for the Quick "Today" slot: Detail 6 – 8 PM, Kind Time window, From 18 (6 PM) To 20 (8 PM), Days ahead 0, Stop offering after 17 (5 PM), Extra fee 0, Orders per slot 0.</figcaption></figure>
+<p><b>The slot list on Delivery settings.</b> Under the <b>Let customers pick a delivery slot</b> switch, the page shows every slot (switched-off ones too) as a table you edit in place. It is always the list customers are offered. Its columns:</p>
+<ul class="f">
+  <li><b>On</b> — the slot's switch. A slot is never deleted; switch it off and it is kept, greyed.</li>
+  <li><b>Delivery</b> — <b>Quick</b> or <b>Express</b>. <b>Kind</b> — <b>Now</b>, <b>Time window</b> or <b>In a number of days</b>.</li>
+  <li><b>Customer sees</b> — the bold words on the chip, such as Today. Required. <b>Detail</b> — the small line, such as 6 - 8 PM (this column is missing when the slots come from the WhatsApp Quick or Express module).</li>
+  <li><b>Days ahead</b> — 0 today, 1 tomorrow, up to 60 (not used by <b>Now</b>).</li>
+  <li><b>From</b>, <b>To</b> and <b>Order before</b> — hours from 0 to 24, for a <b>Time window</b> only. "To" must be later than "From". <b>Order before</b> hides the slot after that hour on the day; 24 never hides it.</li>
+  <li><b>Extra fee</b> and <b>Orders per slot</b> (0 = no limit) — as on the Slots tab.</li>
+</ul>
+<p><b>Add a slot</b> adds a row ready to edit: Quick, Time window, "Today", 6 - 8 PM, 18 to 20. The slot's key is worked out for you. Nothing is kept until you press <b>Save all</b>, which saves the slots together with the rest of the page: if one value is wrong, nothing is saved and the message (for example "Write the words the customer sees, e.g. Today.") shows in red under that box.</p>
 <p><b>Slots on or off for the whole company.</b> Picking a slot is always optional for the customer. To stop offering slots altogether, switch off <b>Let customers pick a delivery slot</b> on the Delivery settings page (the same switch is <b>Offer delivery slots</b> on the company's form, and the <b>Slots on · switch off</b> button on the console's Slots tab). It is on by default. The slots you made are kept for when you switch it back on.</p>
 <div class="note good"><span class="lbl">Good to know:</span> The same slots are offered at the website checkout and on the WhatsApp order page. With slots off, the checkout step is called <b>Delivery</b> instead of <b>Delivery slot</b> and the order is placed with no slot. A storefront with no slot of its own tells the customer "We deliver as soon as we can." (Quick) or "We deliver on the next available day." (Express).</div>
 <div class="note tip"><span class="lbl">Tip:</span> The desk warns "No slot is open for Quick or Express…" when a storefront has no slot switched on. Its customers then get no choice of time, only the message above.</div>
@@ -388,7 +398,7 @@
 </tbody></table>
 
 <h2>Quick tips</h2>
-<ul class="tips">
+<ul class="tips" style="break-inside:avoid; page-break-inside:avoid">
   <li>A mixed basket can pay both the Quick and the Express fee; each is waived on its own free-delivery amount.</li>
   <li>Use <b>Store → Delivery settings</b> for everyday changes: one page, one Save all.</li>
   <li>For pincodes, the most specific row wins: 6820 beats 68.</li>
@@ -400,7 +410,7 @@
   <li>Watch the Nearly used up tile: those codes are about to start refusing customers.</li>
 </ul>
 
-<h2 style="break-before:page; page-break-before:always">If something goes wrong</h2>
+<h2>If something goes wrong</h2>
 <table><thead><tr><th style="width:36%">What you see</th><th>What to do</th></tr></thead><tbody>
 <tr><td>A customer says a coupon does not work</td><td>Open <b>Sales → Coupons</b> and read the card's pill: switched off, starts, ended or used up. Also check <b>Only over</b> and <b>Who may use it</b>: the minimum may be measured on Quick or Express items only.</td></tr>
 <tr><td>"There is already a coupon with the code …"</td><td>Codes are unique, switched-off ones included. Pick another code, or edit and switch the existing one back on.</td></tr>
@@ -412,7 +422,7 @@
 <tr><td>A new branch did not set itself up</td><td>It needs an address (its own or its company's). A branch that existed before, or one whose Quick someone saved by hand, is never changed automatically: set it on <b>Delivery settings</b>.</td></tr>
 <tr><td>The checkout has no slot step, only "Delivery"</td><td>Slots are switched off for the company. Switch <b>Let customers pick a delivery slot</b> on in <b>Delivery settings</b>.</td></tr>
 <tr><td>The Offers page shows no timer</td><td>No running deal on the products shown has an end date. Give the deal an <b>Ends</b> date.</td></tr>
-<tr><td>A slot is missing at checkout</td><td>Slots may be off for the company, or the slot may be off, past its <b>Stop offering after</b> time for today, or full (<b>Orders per slot</b>). Check its row on <b>Delivery → Slots</b>.</td></tr>
+<tr><td>A slot is missing at checkout</td><td>Slots may be off for the company, or the slot may be off, past its <b>Stop offering after</b> time for today, or full (<b>Orders per slot</b>). Check its row in the slot list on <b>Delivery settings</b> (<b>On</b>, <b>Order before</b>, <b>Orders per slot</b>) or on <b>Delivery → Slots</b>.</td></tr>
 <tr><td>A deal's price is not showing</td><td>On <b>Sales → Deals</b>, check the pill: Starts …, Finished or Switched off. Make sure the product is in the deal. If two deals cover it, the better price wins.</td></tr>
 <tr><td>"A percentage deal has to be between 1 and 90"</td><td>Deals cannot take more than 90% off. Use a smaller number, or an <b>Amount off</b> with a <b>Never below</b> price.</td></tr>
 <tr><td>A saved fee still shows the old line in the app</td><td>The app may reuse its last answer for a short time, set by <b>Remember for (seconds)</b> in 369 Mart Settings (60 by default). The bill's total is always worked out fresh.</td></tr>
