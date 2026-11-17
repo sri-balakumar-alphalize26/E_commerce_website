@@ -31,6 +31,7 @@ their phone and the install is white-labelled: the vendor's name has no
 business in it. Both paths reach the same handler.
 """
 
+import hmac
 import re
 from urllib.parse import parse_qsl, urlsplit
 
@@ -108,9 +109,36 @@ class WhatsAppLinkEntry(Home):
             if key not in RESERVED_PARAMS
         })
 
+        # A pay link goes straight to the order's payment page (17 Nov 2026):
+        # `/wa/pay/<id>` only redirects there, and on a slow server each hop
+        # is a second the customer waits. Same check as that route; anything
+        # it would refuse still goes there and gets its 404.
+        direct = self._wa_pay_portal_url(target.path, params)
+        if direct:
+            return request.redirect(direct, code=303)
+
         # Rebuilt from the matched path, never echoed, so the redirect cannot
         # be steered off this host.
         url = target.path
         if params:
             url = '%s?%s' % (url, url_encode(params))
         return request.redirect(url, code=303)
+
+    @staticmethod
+    def _wa_pay_portal_url(path, params):
+        """The portal page `/wa/pay/<id>?token=` redirects to, or None."""
+        match = re.match(r'^/wa/pay/(\d{1,12})$', path or '')
+        token = (params or {}).get('token') or ''
+        if not match or not token:
+            return None
+        try:
+            order = request.env['sale.order'].sudo().browse(int(match.group(1)))
+            if not order.exists() or not order.access_token \
+                    or not hmac.compare_digest(str(order.access_token), str(token)):
+                return None
+            order._portal_ensure_token()
+            url = order.get_portal_url()
+        except Exception:  # noqa: BLE001 - the old route still answers
+            return None
+        # only a path on this host, never an absolute address
+        return url if url.startswith('/') and not url.startswith('//') else None
