@@ -245,6 +245,30 @@ class SaAiSettings(models.Model):
              "no format rule can tell 691001 from 789655, because both are "
              "shaped like a real Indian pincode.")
 
+    # The private address form link (21 Nov 2026), see sa_address_link.py.
+    address_link_enabled = fields.Boolean(
+        'Send an Address Form Link', default=True,
+        help="A new address, or a change to a saved one (in an order or from "
+             "MORE > CHANGE ADDRESS), is filled in on a form with the same "
+             "fields as the shop's Delivery Address page, sent to the "
+             "customer's private chat. When WhatsApp hides their number the "
+             "link goes to the group and the questions are asked there too. "
+             "On by default; switch it off to keep the questions in the group only.")
+    # Personal links and PDFs in the private chat (21 Nov 2026), see
+    # sa_private_links.py.
+    private_links = fields.Boolean(
+        'Send Links & PDFs Privately', default=True,
+        help="Personal links - product details, sign, pay, live tracking, the "
+             "rider's location - and the invoice and order PDFs go to the "
+             "customer's private chat, with a short note in the group. When "
+             "WhatsApp hides the customer's number, or the private message "
+             "cannot be sent, they go to the group as before. Polls stay in "
+             "the group.")
+    address_link_minutes = fields.Integer(
+        'Address Link Works For (minutes)', default=30,
+        help="How long the address form link can be used. It always works only "
+             "once, and stops as soon as the address is given in the group.")
+
     stale_after_minutes = fields.Integer(
         'Forget a Conversation After (minutes)', default=60,
         help="How long an unanswered question stays live. After this, a YES "

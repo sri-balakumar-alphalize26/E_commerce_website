@@ -304,7 +304,9 @@ class SaGroupRequestDetails(models.Model):
         else:
             tail = _("The goods are being arranged for you; the payment link "
                      "is posted here once they are in.")
-        tail += _("\n\n\U0001F4CD Optional: send your location here (attach > Location) "
+        # "in the group": this message may go to the private chat
+        # (sa_private_links.py), and a location is only read from the group
+        tail += _("\n\n\U0001F4CD Optional: send your location in the group (attach > Location) "
                   "so the rider finds your door faster.")
         self._say(_("✅ Details saved, thank you %(name)s.\n\n"
                     "✍️ Please sign your order *#%(ref)s* here to "
@@ -345,14 +347,18 @@ class SaGroupRequestDetails(models.Model):
                 first = inv.sorted('id')[:1]
                 pdf, _x = self.env['ir.actions.report'].sudo()._render_qweb_pdf(
                     'account.account_invoices', first.ids)
-                self.group_id.session_id.send_document(
-                    self.group_id.group_jid, pdf,
-                    ((first.name or 'Invoice').replace('/', '_')) + '.pdf',
-                    caption=_("\U0001F9FE Invoice %(name)s for order *#%(ref)s* - "
-                              "amount due %(cur)s %(due).2f.",
-                              name=first.name or '', ref=self.ref_code or order.name,
-                              cur=order.currency_id.symbol or '', due=first.amount_residual))
-                inv_line = _("\nYour invoice %s is above.", first.name or '')
+                fname = ((first.name or 'Invoice').replace('/', '_')) + '.pdf'
+                caption = _("\U0001F9FE Invoice %(name)s for order *#%(ref)s* - "
+                            "amount due %(cur)s %(due).2f.",
+                            name=first.name or '', ref=self.ref_code or order.name,
+                            cur=order.currency_id.symbol or '', due=first.amount_residual)
+                session = self.group_id.session_id
+                # privately when allowed (sa_private_links.py); the line below says where
+                where = self._sa_send_doc(
+                    lambda to: session.send_document(to, pdf, fname, caption=caption))
+                inv_line = (_("\nYour invoice %s is in your private chat \U0001F512", first.name or '')
+                            if where == 'private' else
+                            _("\nYour invoice %s is above.", first.name or ''))
             except Exception as err:  # noqa: BLE001 - the words still go out
                 _logger.warning("Flow end: invoice for %s failed: %s", order.name, err)
         self._say(_("\u270d\ufe0f Signed - thank you! Your order *#%(ref)s* is confirmed.%(inv)s\n\n"
@@ -420,10 +426,12 @@ class SaGroupRequestDetails(models.Model):
             pdf, _kind = self.env['ir.actions.report'].sudo()._render_qweb_pdf(
                 'sale.action_report_saleorder', order.ids)
             fname = ((order.name or 'Order').replace('/', '_')) + '.pdf'
-            session.send_document(
-                dest, pdf, fname,
-                caption=_("\U0001F4C4 Order %(name)s - confirmed. Thank you!",
-                          name=order.name or ''))
+            caption = _("\U0001F4C4 Order %(name)s - confirmed. Thank you!", name=order.name or '')
+            # privately when allowed (sa_private_links.py), the group otherwise
+            self._sa_send_doc(
+                lambda to: session.send_document(to, pdf, fname, caption=caption),
+                note=_("\U0001F4C4 Your order %s (PDF) is in your *private chat* \U0001F512")
+                % (order.name or ''))
             return True
         except Exception as err:  # noqa: BLE001 - the words still go out
             _logger.warning("Sales Automation: order PDF for %s not sent to %s: "

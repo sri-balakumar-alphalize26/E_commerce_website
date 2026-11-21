@@ -72,6 +72,21 @@
                                    invisible="group_type != 'customer'"
                                    required="group_type == 'customer' and enabled"/>
                             <field name="group_jid" readonly="1"/>
+                            <label for="invite_url" invisible="group_type != 'customer'"/>
+                            <div class="o_row" invisible="group_type != 'customer'">
+                                <field name="invite_url" widget="url"
+                                       placeholder="https://chat.whatsapp.com/..."/>
+                                <button name="action_sa_get_invite_link" type="object"
+                                        string="Get invite link" icon="fa-link" class="btn-link"
+                                        help="Ask WhatsApp for this group's invite link (the shop's number must be a group admin)."/>
+                            </div>
+                            <div colspan="2" class="text-muted small" invisible="group_type != 'customer'">
+                                <field name="invite_hint" nolabel="1"/>
+                            </div>
+                            <div colspan="2" class="text-danger small"
+                                 invisible="group_type != 'customer' or not invite_error">
+                                <field name="invite_error" nolabel="1"/>
+                            </div>
                             <field name="member_count" readonly="1"/>
                             <field name="active" invisible="1"/>
                         </group>
@@ -169,6 +184,16 @@
                 should answer product enquiries.
             </p>
         </field>
+    </record>
+
+    <!-- Get invite links for the selected groups (21 Nov 2026) -->
+    <record id="action_sa_group_get_invite_links" model="ir.actions.server">
+        <field name="name">Get invite links</field>
+        <field name="model_id" ref="model_sa_sales_group"/>
+        <field name="binding_model_id" ref="model_sa_sales_group"/>
+        <field name="binding_view_types">list</field>
+        <field name="state">code</field>
+        <field name="code">action = records.action_sa_get_invite_link()</field>
     </record>
 
 </odoo>

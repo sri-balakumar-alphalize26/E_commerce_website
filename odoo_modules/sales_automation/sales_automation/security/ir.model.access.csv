@@ -16,3 +16,5 @@ access_sa_human_hold_user,sa.human.hold.user,model_sa_human_hold,group_sa_user,1
 access_sa_human_hold_manager,sa.human.hold.manager,model_sa_human_hold,group_sa_manager,1,1,1,1
 access_sa_qty_bargain_user,sa.qty.bargain.user,model_sa_qty_bargain,group_sa_user,1,0,0,0
 access_sa_qty_bargain_manager,sa.qty.bargain.manager,model_sa_qty_bargain,group_sa_manager,1,1,1,1
+access_sa_address_link_user,sa.address.link.user,model_sa_address_link,group_sa_user,1,0,0,0
+access_sa_address_link_manager,sa.address.link.manager,model_sa_address_link,group_sa_manager,1,1,1,1

@@ -106,12 +106,29 @@ class StockPickingRound2(models.Model):
         tz = self.env['sa.delivery.partner']._sa_company_tz(self.company_id or self.env.company)
         when = fields.Datetime.context_timestamp(self.with_context(tz=tz),
                                                  self.sa_delivered_on or fields.Datetime.now())
-        return self._sa_tell_customer(_(
+        body = _(
             "✅ Your order *#%(order)s* was delivered at %(time)s by *%(rider)s*.\n\n"
             "Thank you for shopping with us! \U0001F64F",
             order=self.sale_id.name or self.sa_ref_code or self.name,
             time=when.strftime('%H:%M'),
-            rider=self.sa_delivery_partner_id.name or _("our rider")))
+            rider=self.sa_delivery_partner_id.name or _("our rider"))
+        # "⭐ Rate your products" (once per order, when the shop asks for
+        # reviews). This message replaced the base one and had left it out,
+        # so the review link never went (21 Nov 2026).
+        review = self._sa_review_line()
+        order = self.sale_id
+        group_order = bool(order and hasattr(order, '_sa_group_enquiry') and order._sa_group_enquiry())
+        if review and group_order:
+            # its own message: the Delivered words stay in the group, the
+            # personal link goes to the private chat (sa_private_links.py)
+            sent = self._sa_tell_customer(body)
+            if not self._sa_tell_customer(review.strip()):
+                self.env['sa.outbox.guard'].sudo().release(self._sa_review_guard_key())
+            return sent
+        sent = self._sa_tell_customer(body + review)
+        if review and not sent:
+            self.env['sa.outbox.guard'].sudo().release(self._sa_review_guard_key())
+        return sent
 
     # ------------------------------------------------------------------
     # Packed before the payment

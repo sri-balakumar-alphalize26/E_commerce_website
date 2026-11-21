@@ -91,6 +91,29 @@ class SaGroupRequestConfirm(models.Model):
                 _logger.warning("Sales Automation: confirm text for %s to %s failed: %s", self.id, destination, err)
         return source
 
+    def _sa_confirm_send_private(self, caption, phone):
+        """The picture + link to the customer's own chat. The picture source
+        when it went, '' when WhatsApp refused it (the caller uses the group)."""
+        self.ensure_one()
+        session = self.group_id.session_id
+        text = caption + self._sa_private_footer()
+        raw, source = self._sa_confirm_picture(fetch=True)
+        guard = self.env['sa.outbox.guard'].sudo()
+        if not guard.claim('confirm_priv|%s|%s|%s' % (self.id, phone, caption[:60]), 300):
+            return source or 'none'
+        try:
+            if raw and session.send_image(phone, raw, caption=text):
+                if hasattr(self, '_sa_mark_private'):
+                    self._sa_mark_private()
+                return source
+            if session.send_message(phone, text):
+                if hasattr(self, '_sa_mark_private'):
+                    self._sa_mark_private()
+                return source or 'none'
+        except Exception as err:  # noqa: BLE001 - the group gets it instead
+            _logger.info("Sales Automation: confirm link for %s not sent privately: %s", self.id, err)
+        return ''
+
     # ------------------------------------------------------------------
     # Customer
     # ------------------------------------------------------------------
@@ -104,6 +127,17 @@ class SaGroupRequestConfirm(models.Model):
                     "%(url)s\n\n_Ref %(ref)s_",
                     product=name, url=link._url(), ref=self.ref_code or self.id)
         self._sa_stamp_asked()
+        # Privately when allowed (sales_automation/models/sa_private_links.py):
+        # the picture and the link to the customer, a note in the group.
+        phone = self._sa_private_target() if (hasattr(self, '_sa_private_target')
+                                              and self._sa_in_group()) else ''
+        if phone and not text_only:
+            source = self._sa_confirm_send_private(caption, phone)
+            if source:
+                self.with_context(sa_no_private=True)._say(self._sa_private_note([link._url()]))
+                link.sudo().write({'sent_on': link.sent_on or fields.Datetime.now(), 'image_source': source})
+                return True
+            # refused privately: the group, as before
         if text_only:
             self._say(caption)
             # asked by its size: reading it would download it from the image server

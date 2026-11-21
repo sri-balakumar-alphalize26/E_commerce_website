@@ -71,6 +71,8 @@ ALLOWED_TARGETS = (
     re.compile(r'^/my/orders/\d{1,12}$'),
     # "Rate your products", sent with the private Delivered message (13 Nov 2026).
     re.compile(r'^/wa/review/\d{1,12}$'),
+    # The private address form link (21 Nov 2026, models/sa_address_link.py).
+    re.compile(r'^/wa/address/[A-Za-z0-9_-]{16,64}$'),
     re.compile(r'^/my/orders/\d{1,12}/[a-z_]{1,32}$'),
     re.compile(r'^/payment/pay$'),
     re.compile(r'^/payment/pay/[a-z_]{1,32}$'),

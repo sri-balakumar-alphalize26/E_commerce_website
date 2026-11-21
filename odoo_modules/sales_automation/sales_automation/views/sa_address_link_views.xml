@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- The private address form links (21 Nov 2026, models/sa_address_link.py) -->
+    <record id="view_sa_address_link_list" model="ir.ui.view">
+        <field name="name">sa.address.link.list</field>
+        <field name="model">sa.address.link</field>
+        <field name="arch" type="xml">
+            <list create="false" decoration-success="used_on" decoration-muted="not active">
+                <field name="create_date" string="Sent"/>
+                <field name="request_id"/>
+                <field name="requester_name"/>
+                <field name="order_id"/>
+                <field name="mode"/>
+                <field name="back"/>
+                <field name="sent_to"/>
+                <field name="open_count"/>
+                <field name="used_on"/>
+                <field name="address_id"/>
+                <field name="expires_on"/>
+                <field name="active" column_invisible="True"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_sa_address_link_form" model="ir.ui.view">
+        <field name="name">sa.address.link.form</field>
+        <field name="model">sa.address.link</field>
+        <field name="arch" type="xml">
+            <form create="false">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="request_id"/>
+                            <field name="requester_name"/>
+                            <field name="order_id"/>
+                            <field name="mode"/>
+                            <field name="back"/>
+                            <field name="target_id"/>
+                            <field name="sent_to"/>
+                            <field name="expires_on"/>
+                            <field name="active"/>
+                        </group>
+                        <group>
+                            <field name="opened_on"/>
+                            <field name="open_count"/>
+                            <field name="used_on"/>
+                            <field name="address_id"/>
+                            <field name="used_ip"/>
+                            <field name="used_ua"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_sa_address_link" model="ir.actions.act_window">
+        <field name="name">Address Form Links</field>
+        <field name="res_model">sa.address.link</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{'active_test': False}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No address form links sent yet</p>
+            <p>Switch them on in Configuration &gt; AI Settings &gt; Delivery Address.
+               When a group order needs a new address, the customer gets a
+               private link to a form; every link sent and filled in shows here.</p>
+        </field>
+    </record>
+
+    <menuitem id="menu_sa_address_link"
+              name="Address Form Links"
+              parent="menu_sa_operations"
+              action="action_sa_address_link"
+              sequence="4"/>
+
+</odoo>

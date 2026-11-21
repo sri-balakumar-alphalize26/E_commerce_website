@@ -11,6 +11,8 @@ from . import sales_group
 from . import sa_vendor_quote
 from . import sa_outbox_guard
 from . import sa_group_request
+# before sa_customer_name: its _say (the USE POINTS poll) wraps ours
+from . import sa_private_links
 from . import sa_group_request_finder
 from . import auto_reply_hooks
 from . import sale_order_link
@@ -21,6 +23,7 @@ from . import sa_group_details
 from . import sa_group_addresses
 from . import sa_qty_bargain
 from . import sa_address_book
+from . import sa_address_link
 from . import sa_self_service
 from . import sa_common_hooks
 from . import sa_customer_name

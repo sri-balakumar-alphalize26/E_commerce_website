@@ -418,14 +418,18 @@ class SaGroupRequestSelfService(models.Model):
         inv = self._sa_ss_invoices(req.order_id)[:1]
         if not inv:
             return _("There is no invoice for this order yet - it comes here as soon as it is made.")
+        session = self.group_id.session_id
+        caption = _("\U0001F9FE Invoice %(name)s for order #%(ref)s",
+                    name=inv.name or '', ref=req.ref_code or req.order_id.name)
         try:
-            self.group_id.session_id.send_odoo_report(
-                self.group_id.group_jid, 'account.account_invoices', inv,
-                caption=_("\U0001F9FE Invoice %(name)s for order #%(ref)s",
-                          name=inv.name or '', ref=req.ref_code or req.order_id.name))
+            # privately when allowed (sa_private_links.py), the group otherwise
+            where = req._sa_send_doc(
+                lambda to: session.send_odoo_report(to, 'account.account_invoices', inv, caption=caption))
         except Exception as err:  # noqa: BLE001
             _logger.warning("Self-service invoice for %s failed: %s", inv.name, err)
             return _("Sorry, the invoice could not be sent just now. Please try again in a minute.")
+        if where == 'private':
+            return _("\U0001F9FE Invoice %s sent to your *private chat* \U0001F512") % (inv.name or '')
         return _("\U0001F9FE Invoice %s is above.") % (inv.name or '')
 
     def _sa_cancel_order(self, key):

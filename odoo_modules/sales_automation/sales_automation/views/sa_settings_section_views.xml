@@ -111,6 +111,10 @@
                                    placeholder="e.g. 691,690,682"/>
                             <field name="stale_after_minutes"/>
                             <field name="max_order_quantity"/>
+                            <field name="address_link_enabled"/>
+                            <field name="address_link_minutes"
+                                   invisible="not address_link_enabled"/>
+                            <field name="private_links"/>
                         </group>
                         <group>
                             <div class="text-muted">
@@ -123,6 +127,14 @@
                                 <b>123456</b> are always refused. To check a
                                 postcode really exists, list the areas you
                                 deliver to.
+                            </div>
+                            <div class="text-muted mt-3" invisible="not address_link_enabled">
+                                <b>Address form link:</b> when a new address is
+                                needed, the customer also gets a private link to
+                                a form like the shop's Delivery Address page. It
+                                works once; when they save it, the group moves on
+                                to the read-back. Typing the answers in the group
+                                still works.
                             </div>
                         </group>
                     </group>

@@ -215,6 +215,11 @@ class WhatsAppWebhookGroups(WhatsAppWebhook):
             if not key.get('fromMe') and self._sa_takeover_gate(
                     session, data, key, remote_jid, 'held'):
                 return
+            # Written in the private chat that only carries a group order's
+            # links and documents: pointed back to the group, not answered by
+            # the salesbot (owner, 21 Nov 2026; models/sa_private_links.py).
+            if not key.get('fromMe') and self._sa_private_redirect(session, remote_jid):
+                return
             return super()._handle_message(session, payload)
 
         if key.get('fromMe'):
@@ -331,6 +336,23 @@ class WhatsAppWebhookGroups(WhatsAppWebhook):
             _logger.warning("Sales Automation: could not answer a %s in %s: %s",
                             kind, remote_jid, err)
         return True
+
+    def _sa_private_redirect(self, session, remote_jid):
+        """True when this private chat was sent a group order's link or
+        document in the last few hours: the customer is asked to answer in
+        the group, and the salesbot never sees the message."""
+        jid = str(remote_jid or '')
+        if not jid.endswith('@s.whatsapp.net'):
+            return False        # a hidden number (@lid) was never written to privately
+        digits = ''.join(c for c in jid.split('@')[0] if c.isdigit())
+        try:
+            req = request.env['sa.group.request'].sudo()._sa_private_reply_request(digits, session)
+            if not req:
+                return False
+            return req._sa_private_redirect_reply(digits)
+        except Exception:  # noqa: BLE001 - the salesbot answers instead, as before
+            _logger.exception("Sales Automation: private reply for %s failed", digits[-4:])
+            return False
 
     def _sa_customer_code_reply(self, session, payload, remote_jid):
         """A customer answering a group enquiry from their own chat.

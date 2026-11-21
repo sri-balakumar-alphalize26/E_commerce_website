@@ -237,9 +237,12 @@ class SaGroupRequestStockConfirm(models.Model):
             pdf, _x = self.env['ir.actions.report'].sudo()._render_qweb_pdf(
                 'account.account_invoices', first.ids)
             fname = ((first.name or 'Invoice').replace('/', '_')) + '.pdf'
-            session.send_document(dest, pdf, fname,
-                                  caption=_("\U0001F9FE Invoice %(name)s - %(paid)s. Thank you!",
-                                            name=first.name or '', paid=paid_word))
+            caption = _("\U0001F9FE Invoice %(name)s - %(paid)s. Thank you!",
+                        name=first.name or '', paid=paid_word)
+            # privately when allowed (sa_private_links.py), the group otherwise
+            self._sa_send_doc(
+                lambda to: session.send_document(to, pdf, fname, caption=caption),
+                note=_("\U0001F9FE Invoice %s sent to your *private chat* \U0001F512") % (first.name or ''))
         except Exception as err:  # noqa: BLE001 - the words still go out
             _logger.warning("Stock confirm: invoice PDF not sent to %s: %s", dest, err)
         job = order.picking_ids.filtered(
