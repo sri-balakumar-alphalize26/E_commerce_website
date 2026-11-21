@@ -438,7 +438,8 @@ class SaAddressLink(models.Model):
         req = link.request_id
         addr = link._save_address(body)
         st = req._sa_book_state()
-        st.update({'back': link.back or st.get('back') or 'order', 'mode': link.mode or 'add',
+        st.update({'from_form': True,     # no read-back after it (sa_address_book._sa_book_finish)
+                   'back': link.back or st.get('back') or 'order', 'mode': link.mode or 'add',
                    'vals': {}, 'target': addr.id})
         link.write({'used_on': fields.Datetime.now(), 'used_ip': (ip or '')[:64],
                     'used_ua': (ua or '')[:250], 'address_id': addr.id})

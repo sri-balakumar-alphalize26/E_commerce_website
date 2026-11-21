@@ -1795,7 +1795,9 @@ class SaGroupRequest(models.Model):
         partner = order.partner_id
         step = self.profile_step
         if not step:
-            step = 'confirm' if self._sa_profile_complete(partner) else 'name'
+            # the name given at the welcome is not asked again (sa_customer_name.py)
+            step = self._sa_profile_first_step(partner) if hasattr(self, '_sa_profile_first_step') \
+                else ('confirm' if self._sa_profile_complete(partner) else 'name')
             self.profile_step = step
         # Every path below returns a question, so this is the moment the form
         # last spoke. `write_date` cannot serve: it is bumped by the form
@@ -1893,6 +1895,20 @@ class SaGroupRequest(models.Model):
         if own:
             own.write({'name': partner.name})
 
+    def _sa_details_confirmed_contact(self, partner):
+        """What a confirmed set of details settles on the contact: a customer
+        (rank), the number they chat from, and their name as given. Shared by
+        YES on the details check and the address form (sa_address_link.py)."""
+        self.ensure_one()
+        partner = partner.sudo()
+        if not partner.phone and self.conversation_id.phone:
+            partner.phone = self.conversation_id.phone
+        if not partner.customer_rank:
+            partner.customer_rank = 1
+        if 'sa_name_confirmed_on' in partner._fields and partner._sa_real_name() \
+                and not partner.sa_name_confirmed_on:
+            partner.sa_name_confirmed_on = fields.Datetime.now()
+
     def _sa_take_profile_answer(self, text, order):
         """Record one answer and move the ladder on."""
         self.ensure_one()
@@ -1926,6 +1942,8 @@ class SaGroupRequest(models.Model):
             if self._sa_looks_like_name(answer):
                 old = partner.name
                 partner.name = answer[:80]
+                if 'sa_name_confirmed_on' in partner._fields:
+                    partner.sa_name_confirmed_on = fields.Datetime.now()
                 self._sa_rename_own_addresses(partner, old)
                 move_on('address')
             else:
@@ -1993,8 +2011,7 @@ class SaGroupRequest(models.Model):
             # it is far more likely to be a quantity typed a beat too late.
             verdict = self._read_yes_no(answer, numbered=False)
             if verdict is True:
-                if not partner.customer_rank:
-                    partner.customer_rank = 1
+                self._sa_details_confirmed_contact(partner)
                 move_on('done')
                 _logger.info("Sales Automation: enquiry %s - customer %s "
                              "confirmed their details", self.id, partner.name)

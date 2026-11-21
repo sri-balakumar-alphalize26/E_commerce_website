@@ -405,3 +405,64 @@ class TestAddressLink(HttpCase):
         links = self.request.with_context(active_test=False).sa_addr_link_ids
         self.assertFalse(add.active, 'the first link stops working')
         self.assertEqual((links - add).mode, 'edit')
+
+    # ------------------- no read-back after the form; sign, then pay (21 Nov 2026)
+    def _form_saved_in_details(self):
+        """An order at its details step whose address comes from the form."""
+        self.request.write({'sa_details_pending': True})
+        link = self._open_book()
+        self.sent.clear()
+        self.url_open(self._path(link), data=self._form())
+        return link
+
+    def test_after_the_form_the_sign_link_comes_without_a_read_back(self):
+        self._form_saved_in_details()
+        self.assertEqual(self.request.profile_step, 'done')
+        self.assertFalse(self.request.sa_details_pending)
+        self.assertTrue(self.request.sa_sign_link_sent_on)
+        everything = '\n'.join(t for to, t in self.sent)
+        self.assertNotIn('Please check your details', everything)
+        self.assertTrue(any('sign' in t.lower() and '%2Fmy%2Forders' in t for to, t in self.sent if to == PHONE),
+                        'the sign link went privately')
+
+    def test_from_the_menu_nothing_is_signed(self):
+        self.request._sa_book_open('menu', force_list=True)
+        link = self.request.sa_addr_link_ids[:1]
+        self.url_open(self._path(link), data=self._form())
+        self.assertFalse(self.request.sa_sign_link_sent_on)
+
+    def _sign(self):
+        import json
+        order = self.order
+        order._portal_ensure_token()
+        png = ('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA'
+               '60e6kgAAAABJRU5ErkJggg==')
+        res = self.url_open('/my/orders/%s/accept?access_token=%s' % (order.id, order.access_token),
+                            data=json.dumps({'jsonrpc': '2.0', 'method': 'call', 'params': {
+                                'name': 'Sri', 'signature': png}}),
+                            headers={'Content-Type': 'application/json'})
+        return res.json().get('result') or {}
+
+    def test_signing_opens_the_payment_when_the_pay_link_went(self):
+        if 'sa.delivery.settings' in self.env:
+            self.env['sa.delivery.settings'].sudo().get_settings().flow_end = 'paid'
+        self._form_saved_in_details()
+        result = self._sign()
+        self.assertFalse(result.get('error'), result)
+        self.assertEqual(self.order.state, 'sale')
+        if not self.request.sa_pay_link_sent_on:
+            self.skipTest('no pay link in this database (flow end / stock rules)')
+        self.assertIn('payment_amount=', result.get('redirect_url', ''))
+        group = [t for to, t in self.sent if to == GROUP]
+        self.assertTrue(any('payment link' in t for t in group), group)
+
+    def test_no_payment_is_opened_when_none_is_asked(self):
+        if 'sa.delivery.settings' not in self.env:
+            self.skipTest('the flow ends at payment without the delivery module')
+        self.env['sa.delivery.settings'].sudo().get_settings().flow_end = 'order'
+        self._form_saved_in_details()
+        result = self._sign()
+        self.assertFalse(result.get('error'), result)
+        self.assertFalse(self.request.sa_pay_link_sent_on)
+        self.assertNotIn('payment_amount=', result.get('redirect_url', ''))
+        self.assertFalse(self.order._sa_portal_status()['pay_url'], 'no Pay button either')

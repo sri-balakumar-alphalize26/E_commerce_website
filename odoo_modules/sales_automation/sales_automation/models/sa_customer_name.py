@@ -31,6 +31,11 @@ class ResPartnerSaName(models.Model):
         'WhatsApp name asked', copy=False,
         help="When the WhatsApp assistant asked this customer their name. "
              "Asked once: a customer who skips is not asked again.")
+    # 21 Nov 2026: the name the customer gave (tapped or typed) is not asked
+    # again when their first order is placed.
+    sa_name_confirmed_on = fields.Datetime(
+        'WhatsApp name confirmed', copy=False, readonly=True,
+        help="When this customer gave or confirmed their name on WhatsApp.")
 
     def _sa_real_name(self):
         """The contact's name, or '' when it is a stand-in: empty, the
@@ -128,6 +133,33 @@ class SaGroupRequestCustomerName(models.Model):
         return self._sa_ss_post('main', _("👋 Welcome! What should we call you?\n\n"
                                           "Tap one, or just type your name 👇"), opts)
 
+    def _sa_name_is_confirmed(self, partner):
+        """The customer already gave or confirmed this name on WhatsApp - on
+        this contact, or on the contact their number answered the welcome
+        with (an order can land on an older contact of the same number)."""
+        self.ensure_one()
+        partner = partner.sudo() if partner else partner
+        if not partner or not partner._sa_real_name():
+            return False
+        if partner.sa_name_confirmed_on:
+            return True
+        welcome = self._sa_address_partner()
+        welcome = welcome.sudo() if welcome else welcome
+        return bool(welcome and welcome != partner and welcome.sa_name_confirmed_on
+                    and ' '.join((welcome.name or '').lower().split())
+                    == ' '.join((partner.name or '').lower().split()))
+
+    def _sa_profile_first_step(self, partner):
+        """Where an order's details start: the check when everything is
+        known, the address when only the name is (asked once, at the
+        welcome), else the name."""
+        self.ensure_one()
+        if self._sa_profile_complete(partner):
+            return 'confirm'
+        if self._sa_name_is_confirmed(partner):
+            return 'address'
+        return 'name'
+
     def _sa_name_save(self, name):
         """Save the name the customer gave, thank them, and show the menu."""
         self.ensure_one()
@@ -135,6 +167,8 @@ class SaGroupRequestCustomerName(models.Model):
         partner = self._sa_name_partner(create=True)
         if partner and not partner._sa_real_name():
             partner.sudo().name = name
+        if partner:
+            partner.sudo().sa_name_confirmed_on = fields.Datetime.now()
         self.write({'sa_name_pending': False, 'requester_name': name})
         self._say(_("🙏 Thanks %s!") % name.split(' ')[0])
         return self._sa_menu_show('main')

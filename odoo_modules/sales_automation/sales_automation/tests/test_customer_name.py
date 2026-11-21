@@ -178,3 +178,37 @@ class TestCustomerName(TransactionCase):
         p = self.Partner.create({'name': 'Sri Bala', 'phone': '+' + PHONE, 'street': '12 Green Park',
                                  'customer_rank': 1})
         self.assertIn('Sri Bala, ', p._sa_addr_title())
+
+    # ------------------------------------- the name is asked once (21 Nov 2026)
+    def _first_order(self, req):
+        """The customer's first order after the welcome, at its details step."""
+        self.env['sa.ai.settings'].get_settings().address_link_enabled = False
+        partner = req._sa_ss_customer()
+        product = self.env['product.product'].create({'name': 'Zz Name Once Mouse', 'list_price': 5.0})
+        order = self.env['sale.order'].create({
+            'partner_id': partner.id,
+            'order_line': [(0, 0, {'product_id': product.id, 'product_uom_qty': 1})]})
+        enquiry = self._req(raw_text='mouse', state='order_created', order_id=order.id)
+        self.said.clear()
+        self.asked.clear()
+        enquiry._sa_group_details_start(order)
+        return enquiry
+
+    def test_the_welcome_name_is_not_asked_again_for_the_order(self):
+        req = self._req()
+        req._sa_menu_show('main')
+        self._tap(req, '✅ Sri Bala')
+        self.assertTrue(req._sa_ss_customer().sa_name_confirmed_on)
+        enquiry = self._first_order(req)
+        texts = [b for b, _t in self.asked] + self.said
+        self.assertFalse([t for t in texts if 'name should it be in' in t], texts)
+        self.assertEqual(enquiry.profile_step, 'address')
+
+    def test_a_skipped_name_is_still_asked_with_the_order(self):
+        req = self._req()
+        req._sa_menu_show('main')
+        self._tap(req, req.NAME_SKIP)
+        enquiry = self._first_order(req)
+        self.assertEqual(enquiry.profile_step, 'name')
+        texts = [b for b, _t in self.asked] + self.said
+        self.assertTrue([t for t in texts if 'name should it be in' in t], texts)

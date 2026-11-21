@@ -541,6 +541,15 @@ class SaGroupRequestAddressBook(models.Model):
                     'profile_retry': 0, 'profile_last_bad': False}
             if st.get('mode') in ('add', 'edit') or addr._sa_landmark():
                 vals['sa_note_step'] = 'done'
+            if st.get('from_form') and self.sa_details_pending and self.state == 'order_created':
+                # The customer has just read every line of it on the address
+                # form: no "please check your details" - straight to the sign
+                # link, exactly as YES on that check does (21 Nov 2026).
+                vals.update({'profile_step': 'done', 'sa_note_step': 'done', 'profile_restarted': False,
+                             'sa_details_pending': False})
+                self.write(vals)
+                self._sa_details_confirmed_contact(order.partner_id)
+                return self._sa_details_done(order)
             self.write(vals)
             return self._sa_details_ask(order)
         # CHANGE ADDRESS from the menu: this address is the default from now
@@ -975,7 +984,8 @@ class SaGroupRequestAddressBook(models.Model):
                        for i, (k, attr) in enumerate(self.FIX_POLL, 1)])
             return True
         if not self.profile_step:
-            self.profile_step = 'confirm' if self._sa_profile_complete(order.partner_id) else 'name'
+            # the name given at the welcome is not asked again (sa_customer_name.py)
+            self.profile_step = self._sa_profile_first_step(order.partner_id)
         step = self.profile_step
         if fix == 'address' or (fix != 'name' and not self.sa_book_done
                                 and step in ('address', 'pin', 'confirm')):

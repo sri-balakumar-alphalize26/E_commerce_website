@@ -137,7 +137,9 @@ class SaGroupRequestPrivateLinks(models.Model):
                 kind = 'review'
             elif '/scoped_app/c' in low or '%2fwa%2fconfirm' in low or '/wa/confirm' in low:
                 kind = 'confirm'
-            elif '%2fwa%2fpay' in low or '/wa/pay' in low or 'payment%2fpay' in low or '/payment/pay' in low:
+            elif ('%2fwa%2fpay' in low or '/wa/pay' in low or 'payment%2fpay' in low or '/payment/pay' in low
+                  or 'payment_amount' in low):
+                # a confirmed order's pay link is its order page with an amount
                 kind = 'pay'
             elif '%2fmy%2forders' in low or '/my/orders' in low:
                 kind = 'sign'

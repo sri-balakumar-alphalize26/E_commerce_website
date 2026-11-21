@@ -63,7 +63,12 @@ class SaleOrderPortalStatus(models.Model):
         else:
             icon, label, tone = '⏳', _("Confirmed · Payment pending"), 'wait'
         pay_url = ''
-        if tone == 'wait' and due > 0.005 and not o._has_to_be_signed():
+        # A WhatsApp group order is paid only once its pay link went out
+        # (21 Nov 2026): not while the goods are being arranged, and never when
+        # the flow ends at the signed order or the invoice.
+        enquiry = o._sa_group_enquiry() if hasattr(o, '_sa_group_enquiry') else False
+        payable = not enquiry or bool(enquiry.sa_pay_link_sent_on)
+        if tone == 'wait' and due > 0.005 and not o._has_to_be_signed() and payable:
             try:
                 pay_url = Req._sa_pay_url(o) or ''
             except Exception:  # noqa: BLE001 - the page must still show
