@@ -112,10 +112,20 @@ class TestCatalog(Mart369BridgeCase):
         self._new_order()
         menu = self._menu()
         self.assertTrue(self.request.sa_menu_ask_at)
-        self.assertIn('\U0001F4C2 ALL CATEGORIES', menu)
-        self.assertEqual(menu['\U0001F4C2 ALL CATEGORIES']['level'], 'categ')
+        # 21 Nov 2026: no POPULAR NOW and no ALL CATEGORIES - type it, or MAIN MENU
+        self.assertNotIn('\U0001F4C2 ALL CATEGORIES', menu)
+        self.assertNotIn('⭐ POPULAR NOW', menu)
+        self.assertIn('\U0001F3E0 MAIN MENU', menu)
         self.assertFalse([k for k, v in menu.items() if v.get('kind') == 'prodpick'],
                          'no products before they say what they want')
+
+    def test_new_order_is_always_a_poll_with_back_and_main_menu(self):
+        self._new_order()
+        menu = self._menu()
+        self.assertIn('⬅️ BACK', menu)
+        self.assertIn('\U0001F3E0 MAIN MENU', menu)
+        self.assertEqual(menu['⬅️ BACK']['level'], 'main')
+        self.assertTrue(self.request.sa_menu_ask_at, 'a typed product is still searched')
 
     def test_typed_category_name_opens_that_category(self):
         self._new_order()

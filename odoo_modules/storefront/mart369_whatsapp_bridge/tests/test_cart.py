@@ -74,8 +74,13 @@ class TestCart(Mart369BridgeCase):
         first = self._item(self.quick_product, 2, 50.0)
         first._on_deal_reply(ADD)
         self.assertEqual(first.state, 'in_cart')
-        self.assertIn('\U0001F4C2 ALL CATEGORIES', json.loads(first.sa_menu_json))
-        self.assertIn('Your cart', self.asked[-1][0])
+        menu = json.loads(first.sa_menu_json)
+        # 21 Nov 2026: NEW ORDER offers no POPULAR NOW / ALL CATEGORIES
+        self.assertNotIn('\U0001F4C2 ALL CATEGORIES', menu)
+        self.assertNotIn('⭐ POPULAR NOW', menu)
+        self.assertIn('\U0001F3E0 MAIN MENU', menu)
+        texts = [b for b, _t in self.asked] + [m for _p, m in self.wa_sent]
+        self.assertTrue([t for t in texts if 'Your cart' in t], texts)
 
     def test_the_next_summary_lists_the_whole_cart(self):
         first = self._item(self.quick_product, 2, 50.0)

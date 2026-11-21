@@ -5,8 +5,9 @@ A shop with many categories cannot fit them in one poll (ten options at
 most), so NEW ORDER asks the customer to type what they want and searches
 the catalogue for it:
 
-  NEW ORDER → 'ask': "type the product name" + ORDER AGAIN / POPULAR NOW /
-              ALL CATEGORIES / MAIN MENU.
+  NEW ORDER → 'ask': "TYPE THE PRODUCT NAME" + ORDER AGAIN / BACK / MAIN
+              MENU (21 Nov 2026: POPULAR NOW and ALL CATEGORIES are no longer
+              offered).
   typed word → a category whose name matches opens ('categ:<id>'); several
               matching categories are offered ('findcat'); otherwise the
               matching products, page by page ('find:<page>'). Nothing found
@@ -256,8 +257,13 @@ class SaGroupRequestMenuCategories(models.Model):
         return ''
 
     def _sa_menu_show_ask(self):
+        # Owner, 21 Nov 2026: the typing line stands out, and the screen is
+        # always a poll - ORDER AGAIN when there is something, then BACK and
+        # MAIN MENU (a poll needs two options). No POPULAR NOW, no ALL
+        # CATEGORIES: the customer types what they want.
         body = _("\U0001F195 *New order* - what are you looking for?\n\n"
-                 "Type the product name, for example *laptop*, *headphones* or *iPhone 15*.\n"
+                 "✍️ *TYPE THE PRODUCT NAME* \U0001F447\n"
+                 "for example *laptop*, *headphones* or *iPhone 15*\n\n"
                  "Or tap one:")
         note = self._sa_menu_ask_note()
         if note:
@@ -265,9 +271,7 @@ class SaGroupRequestMenuCategories(models.Model):
         opts = []
         if self._sa_menu_again_products():
             opts.append((ORDER_AGAIN, {'kind': 'menu', 'level': 'again'}))
-        if self._sa_menu_popular_products():
-            opts.append((POPULAR, {'kind': 'menu', 'level': 'popular'}))
-        opts.append((ALL_CATEGORIES, {'kind': 'menu', 'level': 'categ'}))
+        opts.append((self.MENU_BACK, {'kind': 'menu', 'level': 'main'}))
         opts.append((self.MENU_MAIN, {'kind': 'menu', 'level': 'main'}))
         return self._sa_menu_post('ask', body, opts)
 
@@ -354,7 +358,9 @@ class SaGroupRequestMenuCategories(models.Model):
         categ = self.env['product.category'].sudo().browse(cid).exists()
         if not categ:
             return self._sa_menu_show_ask()
-        up = ('categ:%d' % categ.parent_id.id) if categ.parent_id else 'categ'
+        # a top category goes BACK to "what are you looking for?" - the full
+        # category list is no longer offered (21 Nov 2026)
+        up = ('categ:%d' % categ.parent_id.id) if categ.parent_id else 'ask'
         used, opts = set(), []
         if level.startswith('categ:'):
             subs = self._sa_menu_categories(parent=categ)
