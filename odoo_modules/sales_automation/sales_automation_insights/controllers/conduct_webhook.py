@@ -6,6 +6,9 @@ incoming message are known and before anything reads it. Its own version
 says "not handled". This one checks the list, and when a word hits, records
 the message as blocked, remarks the sender, deletes it in WhatsApp, warns,
 and re-scores - then says "handled" so no enquiry, quote or reply is made of it.
+
+Only in the groups linked under Sales Groups (enabled), and in private chats
+to the shop; every other group the number belongs to is left alone.
 """
 import logging
 
@@ -22,6 +25,14 @@ class ConductWebhook(WhatsAppWebhookGroups):
         env = request.env
         settings = env['sa.ai.settings'].sudo().get_settings()
         if not settings or not settings.conduct_enabled:
+            return False
+        # Only the shop's own groups - the ones linked and ticked under Sales
+        # Groups on this number. The number also sits in family, college and
+        # job groups; removing, remarking and warning people there is none of
+        # the shop's business. Private chats to the shop number are its own.
+        if str(remote_jid).endswith('@g.us') and not env['sa.sales.group'].sudo().search_count([
+                ('session_id', '=', session.id), ('group_jid', '=', remote_jid),
+                ('enabled', '=', True)], limit=1):
             return False
         Remark = env['sa.conduct.remark'].sudo()
         message = data.get('message') or {}

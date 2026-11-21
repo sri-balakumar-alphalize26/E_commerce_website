@@ -16,7 +16,9 @@ class SaAiSettingsConduct(models.Model):
         'Remove abusive messages', default=True,
         help="A customer's or supplier's message containing a listed word is "
              "deleted in WhatsApp, recorded as a remark against them, and "
-             "counted against their rating. The bot never reads it.")
+             "counted against their rating. The bot never reads it. Only in "
+             "the groups linked under Sales Groups (enabled), and in private "
+             "chats to the shop - other groups the number is in are left alone.")
     conduct_words = fields.Text(
         'Words', default=lambda self: _default_conduct_words(),
         help="One per line, any language or script. Whole words only.")
