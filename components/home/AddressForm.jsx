@@ -13,6 +13,7 @@ import Pick from "./Pick";
 import PinPicker from "./PinPicker";
 import { api } from "@/lib/api";
 import { nationalNumber } from "@/lib/address";
+import { cleanMobile, mobileError } from "@/lib/phoneRule";
 
 const LABELS = ["Home", "Work", "Other"];
 
@@ -141,14 +142,16 @@ export default function AddressForm({ initial, meta: startMeta, me, onSave, onCa
 
   const check = () => {
     const x = {};
-    const phoneOk = (v) => (phoneLen ? v.length === phoneLen : /^\d{6,15}$/.test(v));
+    /* The country's own rule: length and first digit (lib/phoneRule.js). */
+    const rule = meta?.phone;
     if (!d.name.trim()) x.name = "Enter the receiver's name";
-    if (!phoneOk(d.phone)) x.phone = phoneLen ? `Enter a ${phoneLen}-digit mobile number` : "Enter a valid mobile number";
-    if (d.alt && !phoneOk(d.alt)) x.alt = phoneLen ? `Enter a ${phoneLen}-digit number, or leave it empty` : "Enter a valid number";
+    if (mobileError(d.phone, rule)) x.phone = mobileError(d.phone, rule);
+    if (d.alt && mobileError(d.alt, rule)) x.alt = `${mobileError(d.alt, rule)}, or leave it empty`;
     if (d.alt && d.alt === d.phone) x.alt = "Use a different number, or leave it empty";
     if (pinLen ? d.pin.length !== pinLen : !/^\d{3,10}$/.test(d.pin)) x.pin = pinLen ? `Enter a ${pinLen}-digit postcode` : "Enter a valid postcode";
     if (!d.line.trim()) x.line = "Enter the house no., building or apartment";
     if (!d.area.trim()) x.area = "Enter the street or area";
+    if (requireLandmark && !d.landmark.trim()) x.landmark = "Enter a landmark the rider can see";
     if (!d.town.trim()) x.town = "Enter the city, district or town";
     if (states.length && !d.state_id) x.state = "Pick a state";
     return x;
@@ -188,12 +191,13 @@ export default function AddressForm({ initial, meta: startMeta, me, onSave, onCa
     }
   };
 
-  const field = (k, label, { digits, ac, prefix } = {}) => (
+  const field = (k, label, { digits, ac, prefix, mobile } = {}) => (
     <label className={"co-field" + (prefix !== undefined ? " af-pre-field" : "") + (err[k] ? " co-err" : "")}
       style={prefix !== undefined ? { "--af-pre": Math.max(prefix.length, 3) } : undefined}>
       {prefix !== undefined && <b className="af-pre" aria-hidden="true">{prefix || "+"}</b>}
       <input value={d[k]} placeholder=" "
-        onChange={(e) => set(k, digits ? e.target.value.replace(/\D/g, "").slice(0, digits) : e.target.value)}
+        onChange={(e) => set(k, mobile ? cleanMobile(e.target.value, meta?.phone)
+          : digits ? e.target.value.replace(/\D/g, "").slice(0, digits) : e.target.value)}
         inputMode={digits ? "numeric" : undefined} autoComplete={ac} aria-invalid={!!err[k]} />
       <span>{label}</span>
       {err[k] && <em key={err[k]}>{err[k]}</em>}
@@ -226,8 +230,8 @@ export default function AddressForm({ initial, meta: startMeta, me, onSave, onCa
           onChange={(c) => c !== code && pickCountry(c)} disabled={!countryOpts.length}
           placeholder="Loading countries…" searchLabel="Search country or code, e.g. +91" error={err.country} />
         {field("name", "Full name", { ac: "name" })}
-        {field("phone", "Mobile number", { digits: phoneLen || 15, ac: "tel-national", prefix: dial })}
-        {field("alt", "Alternate mobile (optional)", { digits: phoneLen || 15, ac: "off", prefix: dial })}
+        {field("phone", "Mobile number", { digits: phoneLen || 15, ac: "tel-national", prefix: dial, mobile: true })}
+        {field("alt", "Alternate mobile (optional)", { digits: phoneLen || 15, ac: "off", prefix: dial, mobile: true })}
         <div className="af-pin">
           {field("pin", "Postcode", { digits: pinLen || 10, ac: "postal-code" })}
           {look?.busy && <span className="af-hint"><i className="af-spin" />Finding your area…</span>}

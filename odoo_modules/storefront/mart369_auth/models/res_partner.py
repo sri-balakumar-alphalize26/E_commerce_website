@@ -25,6 +25,37 @@ def _digits(number):
     return ''.join(c for c in (number or '') if c.isdigit())
 
 
+_STARTS = {}
+
+
+def _mobile_starts(region, length):
+    """The digits a mobile may start with in `region` ('6789' for India), read
+    off libphonenumber by trying numbers of the right length; '' when it
+    cannot tell (any digit then). Kept per region: the rule does not move."""
+    key = (region, length)
+    if key in _STARTS:
+        return _STARTS[key]
+    hits = {}
+    if length >= 3:
+        for first in '0123456789':
+            for second in '0123456789':
+                for tail in ('0', '1', '5', '9'):
+                    number = first + second + tail * (length - 2)
+                    try:
+                        parsed = phonenumbers.parse(number, region)
+                    except phonenumbers.NumberParseException:
+                        continue
+                    if phonenumbers.is_valid_number(parsed) and \
+                            phonenumbers.number_type(parsed) in _MOBILE_TYPES:
+                        hits[first] = hits.get(first, 0) + 1
+    # A digit only a rare special series uses (India's 1600...) is not where
+    # people's mobiles start: keep the digits with a real share of numbers.
+    top = max(hits.values()) if hits else 0
+    found = ''.join(d for d in '0123456789' if hits.get(d, 0) * 4 >= top and hits.get(d))
+    _STARTS[key] = found if len(found) < 10 else ''
+    return _STARTS[key]
+
+
 class ResPartner(models.Model):
     _inherit = 'res.partner'
 
@@ -99,6 +130,8 @@ class ResPartner(models.Model):
             'dial': '+%s' % dial,
             'length': len(national),
             'example': national,
+            # The first digit a mobile may have ('6789' in India); '' = any.
+            'starts': _mobile_starts(region, len(national)),
             'country': label,
         }
 

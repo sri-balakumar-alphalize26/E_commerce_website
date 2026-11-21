@@ -21,6 +21,7 @@ import { money, setCurrency, useCurrency } from "@/lib/money";
 import { useResource } from "@/lib/useFetch";
 import { Thumb, firstImage } from "@/components/home/shared";
 import CountryPicker from "./CountryPicker";
+import { cleanMobile, fetchMobileRule, mobileError, mobileHint } from "@/lib/phoneRule";
 import "@/components/admin/staff-signin.css";
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -113,15 +114,18 @@ function PasswordInput({ id, value, onChange, autoComplete, shake, invalid, onCa
 
 /* Country chip + number. The chip opens a searchable list in the shop's own
    look (CountryPicker): type "india" or "91", Enter picks it. */
-export function PhoneInput({ id, countries, country, onCountry, home, value, onChange, shake, invalid, placeholder, autoFocus }) {
+export function PhoneInput({ id, countries, country, onCountry, home, value, onChange, shake, invalid, placeholder, autoFocus, rule }) {
   const input = useRef(null);
+  /* With the country's rule (lib/phoneRule.js) the box takes only what a
+     mobile there can be: digits, the right first digit, the right length. */
+  const clean = (v) => (rule ? cleanMobile(v, rule) : v.replace(/[^\d\s+()-]/g, ""));
   return (
     <div className={"si-phone si-input" + (shake ? " si-shake" : "")}>
       <CountryPicker countries={countries} value={country} onChange={onCountry} home={home}
         onPicked={() => input.current?.focus()} />
-      <input ref={input} id={id} type="tel" inputMode="tel" autoComplete="tel-national" autoFocus={autoFocus}
-        aria-invalid={invalid || undefined} placeholder={placeholder}
-        value={value} onChange={(e) => onChange(e.target.value.replace(/[^\d\s+()-]/g, ""))} />
+      <input ref={input} id={id} type="tel" inputMode={rule ? "numeric" : "tel"} autoComplete="tel-national" autoFocus={autoFocus}
+        aria-invalid={invalid || undefined} placeholder={placeholder} maxLength={rule?.length ? rule.length + 6 : undefined}
+        value={value} onChange={(e) => onChange(clean(e.target.value))} />
     </div>
   );
 }
@@ -242,6 +246,20 @@ export function SignInCard({
     return () => { live = false; };
   }, [onPhoneForm]);
 
+  /* The picked country's own rule (the first one comes with the form): the
+     box then takes only a mobile that country can have. */
+  useEffect(() => {
+    if (!country || hint?.region === country) return;
+    let live = true;
+    fetchMobileRule(country).then((r) => {
+      if (!live || !r) return;
+      setHint(r);
+      setPhone((p) => cleanMobile(p, r));
+    });
+    return () => { live = false; };
+  }, [country]); // eslint-disable-line
+  const rule = hint && hint.region === country ? hint : null;
+
   const emailOk = EMAIL_RE.test(email.trim());
 
   useEffect(() => {
@@ -277,6 +295,7 @@ export function SignInCard({
   async function submitPhone(e) {
     e.preventDefault();
     if (!phone.trim()) return fail("phone", "Enter your mobile number.");
+    if (rule && mobileError(phone.trim(), rule)) return fail("phone", mobileError(phone.trim(), rule) + ".");
     const r = await sendCode("signin");
     if (!r?.ok) {
       if (r?.signup) setNotice("signup");
@@ -290,6 +309,7 @@ export function SignInCard({
     e.preventDefault();
     if (name.trim().length < 2) return fail("name", "Enter your name as it should appear on deliveries.");
     if (!phone.trim()) return fail("phone", "Enter your mobile number.");
+    if (rule && mobileError(phone.trim(), rule)) return fail("phone", mobileError(phone.trim(), rule) + ".");
     if (!agree) return fail("agree", "Accept the Terms to create an account.");
     const r = await sendCode("signup");
     if (!r?.ok) {
@@ -375,10 +395,10 @@ export function SignInCard({
 
   const phoneField = (autoFocus, label = "Mobile number") => (
     <Field id="si-phone" label={label} error={errFor("phone")}
-      hint={countries.length ? "We'll send a 6-digit code to this number on WhatsApp." : ""}>
+      hint={countries.length ? `${rule ? mobileHint(rule) + ". " : ""}We'll send a 6-digit code to this number on WhatsApp.` : ""}>
       <PhoneInput id="si-phone" key={shakeK("phone")} countries={countries.length ? countries : [{ code: country, dial: "" }]}
         country={country} home={home} onCountry={(c) => { setCountry(c); clear(); }}
-        value={phone} onChange={(v) => { setPhone(v); clear(); setNotice(""); }}
+        value={phone} onChange={(v) => { setPhone(v); clear(); setNotice(""); }} rule={rule}
         shake={error.field === "phone"} invalid={!!errFor("phone")} placeholder={phonePlaceholder} autoFocus={autoFocus} />
     </Field>
   );
