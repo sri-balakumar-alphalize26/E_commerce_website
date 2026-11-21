@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ➕ New customer: a customer added by staff with their mobile number
+         signs in on the website with a code (no sign-up), and the WhatsApp
+         bot already knows them. -->
+    <record id="view_mart369_new_customer_form" model="ir.ui.view">
+        <field name="name">mart369.new.customer.form</field>
+        <field name="model">mart369.new.customer</field>
+        <field name="arch" type="xml">
+            <form string="New customer">
+                <sheet>
+                    <div class="text-muted mb-3">
+                        They sign in on the website with this mobile number and a code - no sign-up.
+                        On WhatsApp the bot already knows them: it does not ask their name again,
+                        and a saved address skips the address questions.
+                    </div>
+                    <group>
+                        <group string="Customer">
+                            <field name="name" placeholder="Full name"/>
+                            <field name="country_id" options="{'no_create': True}"/>
+                            <field name="mobile" placeholder="Mobile number"/>
+                            <field name="email" placeholder="Optional"/>
+                        </group>
+                        <group string="Delivery address (optional)">
+                            <field name="label"/>
+                            <field name="line" placeholder="Flat 12, Park View Apartments"/>
+                            <field name="area" placeholder="Main Street, City Centre"/>
+                            <field name="landmark" placeholder="Next to the pharmacy"/>
+                            <field name="town"/>
+                            <field name="zip"/>
+                            <field name="state_id" options="{'no_create': True}"/>
+                            <field name="alt" placeholder="Optional"/>
+                        </group>
+                    </group>
+                </sheet>
+                <footer>
+                    <button name="action_create" type="object" string="Create customer" class="btn-primary"/>
+                    <button string="Cancel" special="cancel" class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_mart369_new_customer" model="ir.actions.act_window">
+        <field name="name">New customer</field>
+        <field name="res_model">mart369.new.customer</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <!-- The shop's own popup (static/src/new_customer), laid over whatever
+         screen is open - the menu and the button below open this one. The
+         form above stays only for an old link that still points at it. -->
+    <record id="action_mart369_new_customer_popup" model="ir.actions.client">
+        <field name="name">New customer</field>
+        <field name="tag">mart369_new_customer</field>
+    </record>
+
+    <menuitem id="menu_mart369_new_customer"
+              name="New customer"
+              parent="mart369.menu_mart369_sales"
+              action="action_mart369_new_customer_popup"
+              groups="base.group_system,website.group_website_designer"
+              sequence="31"/>
+
+    <!-- The same button on the Customers list. -->
+    <record id="view_mart369_customer_list_new" model="ir.ui.view">
+        <field name="name">res.users.list.mart369.customer.new</field>
+        <field name="model">res.users</field>
+        <field name="inherit_id" ref="mart369_auth.view_mart369_customer_list"/>
+        <field name="arch" type="xml">
+            <xpath expr="//list" position="inside">
+                <header>
+                    <button name="%(action_mart369_new_customer_popup)d" type="action"
+                            string="➕ New customer" class="btn-primary" display="always"/>
+                </header>
+            </xpath>
+        </field>
+    </record>
+</odoo>

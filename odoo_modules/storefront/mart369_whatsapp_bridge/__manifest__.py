@@ -1,6 +1,6 @@
 {
     'name': '369 Mart: WhatsApp Bridge',
-    'version': '19.0.1.9.0',
+    'version': '19.0.1.11.0',
     'category': 'Website',
     'summary': 'One shop across the website and the WhatsApp selling flow',
     'description': """
@@ -43,9 +43,11 @@ What it does:
         'sales_automation_confirm',
     ],
     'data': [
+        'security/ir.model.access.csv',
         'views/sale_order_views.xml',
         'views/product_photos_views.xml',
         'data/bot_rules_rider.xml',
+        'views/new_customer_views.xml',
     ],
     'assets': {
         'web.assets_backend': [

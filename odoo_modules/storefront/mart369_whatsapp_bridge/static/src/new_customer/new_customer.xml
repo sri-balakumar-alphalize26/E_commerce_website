@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="mart369_whatsapp_bridge.NewCustomerPopup">
+        <div class="o_m369nc" t-on-click.self="() => !state.busy and props.close()">
+            <section class="o_m369nc_card" role="dialog" aria-modal="true" aria-label="New customer">
+                <header class="o_m369nc_head">
+                    <span class="o_m369nc_icon">+</span>
+                    <div>
+                        <h3>New customer</h3>
+                        <small>They sign in with this number - no sign-up</small>
+                    </div>
+                    <button class="o_m369nc_x" t-on-click="() => props.close()" aria-label="Close">×</button>
+                </header>
+
+                <div class="o_m369nc_body">
+                    <p class="o_m369nc_note">On the website they sign in with this mobile number and a code.
+                        On WhatsApp the bot already knows them: it does not ask their name again, and a saved
+                        address skips the address questions.</p>
+
+                    <div t-if="state.loading and !state.meta" class="o_m369nc_dim">Loading…</div>
+                    <t t-if="state.meta">
+                        <div class="o_m369nc_grid">
+                            <label t-att-class="'o_m369nc_field' + (state.errors.name ? ' o_m369nc_err' : '')">
+                                <span>Full name</span>
+                                <input t-att-value="state.name" t-on-input="onName" placeholder="Asha Menon" autocomplete="off"/>
+                                <em t-if="state.errors.name" t-esc="state.errors.name"/>
+                            </label>
+
+                            <div t-att-class="'o_m369nc_field' + (state.errors.mobile ? ' o_m369nc_err' : '')">
+                                <span>Mobile number <small t-if="mobileHint" t-esc="'· ' + mobileHint"/></span>
+                                <div class="o_m369nc_phone">
+                                    <span class="o_m369nc_cp" t-ref="cpBox">
+                                        <button type="button" class="o_m369nc_cp_chip" aria-haspopup="listbox"
+                                                t-att-aria-expanded="state.cpOpen ? 'true' : 'false'"
+                                                t-att-aria-label="'Country code: ' + (currentCountry.name or currentCountry.code) + ' ' + (currentCountry.dial or '')"
+                                                t-on-click="() => this.toggleCountries()">
+                                            <span class="o_m369nc_cp_flag" t-esc="flag(currentCountry.code)"/>
+                                            <span t-esc="currentCountry.dial or dial or '+'"/>
+                                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+                                        </button>
+                                        <div t-if="state.cpOpen" class="o_m369nc_cp_panel">
+                                            <input t-ref="cpSearch" class="o_m369nc_cp_search" type="search"
+                                                   placeholder="Search country or code, e.g. India or 91"
+                                                   t-att-value="state.cpQ" t-on-input="onCpSearch" t-on-keydown="onCpKeys"/>
+                                            <ul class="o_m369nc_cp_list" role="listbox" aria-label="Country code">
+                                                <t t-foreach="shownCountries" t-as="c" t-key="c.code">
+                                                    <li role="option" t-att-data-i="c_index"
+                                                        t-att-aria-selected="c.code === state.country ? 'true' : 'false'"
+                                                        t-att-class="(c_index === state.cpHi ? 'o_m369nc_cp_hi ' : '') + (c.code === state.country ? 'o_m369nc_cp_on' : '')"
+                                                        t-on-pointerenter="() => state.cpHi = c_index"
+                                                        t-on-click="() => this.pickCountry(c)">
+                                                        <span class="o_m369nc_cp_flag" t-esc="flag(c.code)"/>
+                                                        <span class="o_m369nc_cp_name" t-esc="c.name"/>
+                                                        <span class="o_m369nc_cp_dial" t-esc="c.dial"/>
+                                                    </li>
+                                                </t>
+                                                <li t-if="!shownCountries.length" class="o_m369nc_cp_none">No country matches “<t t-esc="state.cpQ"/>”</li>
+                                            </ul>
+                                        </div>
+                                    </span>
+                                    <input inputmode="numeric" t-att-value="state.mobile" t-on-input="onMobile"
+                                           t-att-placeholder="state.rule and state.rule.example or 'Mobile number'"
+                                           t-att-maxlength="state.rule and state.rule.length ? state.rule.length + 6 : 20"/>
+                                </div>
+                                <em t-if="state.errors.mobile" t-esc="state.errors.mobile"/>
+                            </div>
+
+                            <label t-att-class="'o_m369nc_field' + (state.errors.email ? ' o_m369nc_err' : '')">
+                                <span>Email (optional)</span>
+                                <input type="email" t-att-value="state.email" t-on-input="onEmail" autocomplete="off"/>
+                                <em t-if="state.errors.email" t-esc="state.errors.email"/>
+                            </label>
+                        </div>
+
+                        <label class="o_m369nc_check">
+                            <input type="checkbox" t-att-checked="state.withAddress" t-on-change="onWithAddress"/>
+                            <span>Save a delivery address
+                                <small t-if="state.withAddress">- every line below is needed</small>
+                                <small t-else="">- they can add it later</small>
+                            </span>
+                        </label>
+
+                        <div t-if="state.withAddress" class="o_m369nc_addr">
+                            <div class="o_m369nc_chips" role="radiogroup" aria-label="Address type">
+                                <t t-foreach="labels" t-as="l" t-key="l">
+                                    <button type="button" role="radio" t-att-aria-checked="state.addr.label === l"
+                                            t-att-class="state.addr.label === l ? 'o_m369nc_on' : ''"
+                                            t-on-click="() => this.setLabel(l)" t-esc="l"/>
+                                </t>
+                            </div>
+                            <div class="o_m369nc_grid">
+                                <label t-att-class="'o_m369nc_field' + (state.errors.line ? ' o_m369nc_err' : '')">
+                                    <span>House / flat / building</span>
+                                    <input t-att-value="state.addr.line" t-on-input="(ev) => this.onAddr('line', ev)" placeholder="Flat 12, Park View Apartments"/>
+                                    <em t-if="state.errors.line" t-esc="state.errors.line"/>
+                                </label>
+                                <label t-att-class="'o_m369nc_field' + (state.errors.pin ? ' o_m369nc_err' : '')">
+                                    <span>Postcode</span>
+                                    <input inputmode="numeric" t-att-value="state.addr.pin" t-on-input="(ev) => this.onAddr('pin', ev)"
+                                           t-att-placeholder="pinLength ? pinLength + ' digits' : ''"/>
+                                    <em t-if="state.errors.pin" t-esc="state.errors.pin"/>
+                                    <i t-if="state.pinBusy and !state.errors.pin" class="o_m369nc_ok">Finding the area…</i>
+                                    <i t-if="state.place and !state.errors.pin and !state.pinBusy" class="o_m369nc_ok" t-esc="'✓ ' + state.place"/>
+                                </label>
+                                <label t-att-class="'o_m369nc_field o_m369nc_span2' + (state.errors.area ? ' o_m369nc_err' : '')">
+                                    <span>Street or area</span>
+                                    <input t-att-value="state.addr.area" t-on-input="(ev) => this.onAddr('area', ev)" placeholder="Main Street, City Centre"/>
+                                    <em t-if="state.errors.area" t-esc="state.errors.area"/>
+                                    <span t-if="state.areas.length" class="o_m369nc_areas">
+                                        <t t-foreach="state.areas.slice(0, 6)" t-as="a" t-key="a">
+                                            <button type="button" t-on-click="() => this.pickArea(a)" t-esc="a"/>
+                                        </t>
+                                    </span>
+                                </label>
+                                <label t-att-class="'o_m369nc_field' + (state.errors.town ? ' o_m369nc_err' : '')">
+                                    <span>City / town</span>
+                                    <input t-att-value="state.addr.town" t-on-input="(ev) => this.onAddr('town', ev)"/>
+                                    <em t-if="state.errors.town" t-esc="state.errors.town"/>
+                                </label>
+                                <label t-if="state.meta.states.length" t-att-class="'o_m369nc_field' + (state.errors.state ? ' o_m369nc_err' : '')">
+                                    <span>State</span>
+                                    <select t-on-change="(ev) => this.onAddr('state_id', ev)">
+                                        <option value="">Pick a state</option>
+                                        <t t-foreach="state.meta.states" t-as="st" t-key="st.id">
+                                            <option t-att-value="st.id" t-att-selected="isState(st)" t-esc="st.name"/>
+                                        </t>
+                                    </select>
+                                    <em t-if="state.errors.state" t-esc="state.errors.state"/>
+                                </label>
+                                <label t-att-class="'o_m369nc_field' + (state.errors.landmark ? ' o_m369nc_err' : '')">
+                                    <span>Landmark</span>
+                                    <input t-att-value="state.addr.landmark" t-on-input="(ev) => this.onAddr('landmark', ev)" placeholder="Next to the pharmacy"/>
+                                    <em t-if="state.errors.landmark" t-esc="state.errors.landmark"/>
+                                </label>
+                                <label t-att-class="'o_m369nc_field' + (state.errors.alt ? ' o_m369nc_err' : '')">
+                                    <span>Other number (optional)</span>
+                                    <div class="o_m369nc_phone o_m369nc_phone_plain">
+                                        <b t-esc="dial or '+'"/>
+                                        <input inputmode="numeric" t-att-value="state.addr.alt" t-on-input="(ev) => this.onAddr('alt', ev)"/>
+                                    </div>
+                                    <em t-if="state.errors.alt" t-esc="state.errors.alt"/>
+                                </label>
+                            </div>
+                        </div>
+                        <p t-if="state.formError" class="o_m369nc_formerr" role="alert" t-esc="state.formError"/>
+                    </t>
+                </div>
+
+                <footer class="o_m369nc_foot">
+                    <button class="o_m369nc_btn" t-on-click="() => props.close()" t-att-disabled="state.busy">Cancel</button>
+                    <button class="o_m369nc_btn o_m369nc_primary" t-on-click="() => this.save()" t-att-disabled="state.busy or !state.meta">
+                        <t t-if="state.busy">Adding…</t><t t-else="">Create customer</t>
+                    </button>
+                </footer>
+            </section>
+        </div>
+    </t>
+</templates>

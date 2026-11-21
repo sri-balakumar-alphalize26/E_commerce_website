@@ -1,0 +1,3 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_mart369_new_customer_system,mart369.new.customer system,model_mart369_new_customer,base.group_system,1,1,1,1
+access_mart369_new_customer_designer,mart369.new.customer designer,model_mart369_new_customer,website.group_website_designer,1,1,1,1
