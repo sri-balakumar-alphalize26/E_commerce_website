@@ -114,7 +114,6 @@
                             <field name="address_link_enabled"/>
                             <field name="address_link_minutes"
                                    invisible="not address_link_enabled"/>
-                            <field name="private_links"/>
                         </group>
                         <group>
                             <div class="text-muted">
@@ -284,6 +283,57 @@
             </form>
         </field>
     </record>
+
+    <!-- ============ Customer Links (21 Nov 2026) ============ -->
+    <record id="view_sa_settings_links_form" model="ir.ui.view">
+        <field name="name">sa.settings.links.form</field>
+        <field name="model">sa.ai.settings</field>
+        <field name="priority">47</field>
+        <field name="arch" type="xml">
+            <form string="Customer Links">
+                <sheet>
+                    <div class="text-muted mb-3">
+                        Where each link goes. <b>Private chat</b>: the customer's own
+                        chat, with a short note in the group. <b>Group</b>: posted in
+                        the group, marked "only for" the customer. When the private
+                        chat is not possible (WhatsApp hides the number, or refuses
+                        the message) it goes to the group the same way. Polls always
+                        stay in the group. Also on the 369 Mart console, WhatsApp tab.
+                    </div>
+                    <group>
+                        <group string="Send to">
+                            <field name="link_confirm" widget="radio" options="{'horizontal': true}"/>
+                            <field name="link_address" widget="radio" options="{'horizontal': true}"/>
+                            <field name="link_sign" widget="radio" options="{'horizontal': true}"/>
+                            <field name="link_pay" widget="radio" options="{'horizontal': true}"/>
+                            <field name="link_track" widget="radio" options="{'horizontal': true}"/>
+                            <field name="link_map" widget="radio" options="{'horizontal': true}"/>
+                            <field name="link_review" widget="radio" options="{'horizontal': true}"/>
+                            <field name="link_web" widget="radio" options="{'horizontal': true}"/>
+                            <field name="link_docs" widget="radio" options="{'horizontal': true}"/>
+                            <field name="link_shop" widget="radio" options="{'horizontal': true}"/>
+                        </group>
+                        <group string="Around it">
+                            <field name="link_group_note"/>
+                            <field name="link_reply_hours"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    <record id="action_sa_settings_links" model="ir.actions.server">
+        <field name="name">Customer Links</field>
+        <field name="model_id" ref="model_sa_ai_settings"/>
+        <field name="state">code</field>
+        <field name="code">
+action = {'type': 'ir.actions.act_window', 'name': 'Customer Links', 'res_model': 'sa.ai.settings',
+          'res_id': model.get_settings().id, 'view_mode': 'form', 'target': 'current',
+          'views': [[env.ref('sales_automation.view_sa_settings_links_form').id, 'form']]}
+        </field>
+    </record>
+    <menuitem id="menu_sa_settings_links" name="Customer Links"
+              parent="menu_sa_config" action="action_sa_settings_links" sequence="33"/>
 
     <!-- ============ Openers: the singleton, one form each ============ -->
     <record id="action_sa_settings_counter" model="ir.actions.server">

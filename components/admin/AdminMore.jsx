@@ -1068,6 +1068,47 @@ function ShopLogoField({ value, onChange, onError }) {
   );
 }
 
+/* Where each WhatsApp group-order link goes (21 Nov 2026). Private chat or
+   Group - one is always chosen. */
+const LINK_ICON = {
+  confirm: "camera", address: "store", sign: "shield", pay: "card", track: "live",
+  map: "live", review: "bell", web: "store", docs: "layers", shop: "store",
+};
+
+function WhatsAppLinks({ value, onChange }) {
+  const setTo = (key, to) => onChange({ ...value, rows: value.rows.map((r) => (r.key === key ? { ...r, to } : r)) });
+  const n = value.rows.length;
+  return (
+    <div className="ad-rows">
+      <p className="ad-hint"><Icon n="info" size={14} />Where each link of a WhatsApp group order goes. <b>Private chat</b>: the customer&rsquo;s own chat, with a short note in the group. <b>Group</b>: posted in the group, marked for the customer. If the private chat is not possible, it goes to the group. Polls always stay in the group.</p>
+      {value.rows.map((r, i) => (
+        <div key={r.key} className="ad-row-set" style={{ "--i": i }}>
+          <span className="ad-row-ic"><Icon n={LINK_ICON[r.key] || "info"} size={18} /></span>
+          <span className="ad-row-txt"><b>{r.label}</b>
+            <small>{r.to === "private" ? "Sent to the customer’s private chat" : "Posted in the group, marked for the customer"}</small></span>
+          <div className="ad-seg" role="radiogroup" aria-label={r.label}>
+            {[["private", "Private chat"], ["group", "Group"]].map(([v, label]) => (
+              <button key={v} type="button" role="radio" aria-checked={r.to === v}
+                className={r.to === v ? "ad-on" : ""} onClick={() => setTo(r.key, v)}>{label}</button>
+            ))}
+          </div>
+        </div>
+      ))}
+      <div className="ad-row-set" style={{ "--i": n }}>
+        <span className="ad-row-ic"><Icon n="bell" size={18} /></span>
+        <span className="ad-row-txt"><b>Tell the group</b><small>After a private send: &ldquo;I&rsquo;ve sent your payment link to your private chat 🔒&rdquo;</small></span>
+        <Switch on={!!value.note} onChange={(on) => onChange({ ...value, note: on })} label="Tell the group" />
+      </div>
+      <div className="ad-row-set" style={{ "--i": n + 1 }}>
+        <span className="ad-row-ic"><Icon n="shield" size={18} /></span>
+        <span className="ad-row-txt"><b>Point private replies to the group</b><small>For this many hours after a private send, a message typed in the private chat is answered &ldquo;please answer in the group&rdquo;. 0 turns it off.</small></span>
+        <span className="ad-field-in ad-narrow"><input value={value.replyHours} inputMode="numeric" aria-label="Hours"
+          onChange={(e) => onChange({ ...value, replyHours: Math.min(72, parseInt(e.target.value.replace(/\D/g, ""), 10) || 0) })} /><em>h</em></span>
+      </div>
+    </div>
+  );
+}
+
 export function SettingsSection({ flash }) {
   const [tab, setTab] = useState("store");
   const { data, loading, error, reload } = useResource("/admin/settings");
@@ -1100,6 +1141,11 @@ export function SettingsSection({ flash }) {
       /* The rule and the shop-wide switch are Odoo's, shown read-only. */
       const { enabled, redeem, earnOn, settleDays } = draft.loyalty;
       body = { enabled, redeem, earnOn, settleDays };
+    } else if (group === "whatsapp") {
+      /* Only the Customer Links card: where each WhatsApp link goes. The
+         sessions, wording and switches of this group are not on this tab. */
+      const l = draft.whatsapp.links;
+      body = { links: { to: Object.fromEntries(l.rows.map((r) => [r.key, r.to])), note: !!l.note, replyHours: +l.replyHours || 0 } };
     } else if (group === "store" && draft.store.logo === saved.store.logo) {
       /* Send the logo only when it was changed here: an untouched "" would
          wipe a logo somebody uploaded on another screen meanwhile. */
@@ -1130,7 +1176,7 @@ export function SettingsSection({ flash }) {
     <div className="ad-stack">
       <section className="ad-card">
         <div className="ad-toolbar">
-          <Tabs value={tab} onChange={(t) => { setTab(t); setErr(""); }} tabs={[["store", "Store"], ...(pay ? [["payments", "Payments"]] : []), ...(draft.customers ? [["customers", "Customers"]] : []), ...(draft.orders ? [["orders", "Orders"]] : []), ...(draft.reviews ? [["reviews", "Reviews"]] : []), ...(draft.loyalty ? [["loyalty", "Loyalty"]] : []), ["alerts", "Alerts"]]} />
+          <Tabs value={tab} onChange={(t) => { setTab(t); setErr(""); }} tabs={[["store", "Store"], ...(pay ? [["payments", "Payments"]] : []), ...(draft.customers ? [["customers", "Customers"]] : []), ...(draft.orders ? [["orders", "Orders"]] : []), ...(draft.reviews ? [["reviews", "Reviews"]] : []), ...(draft.loyalty ? [["loyalty", "Loyalty"]] : []), ...(draft.whatsapp?.links?.rows?.length ? [["whatsapp", "WhatsApp"]] : []), ["alerts", "Alerts"]]} />
           <div className="ad-toolbar-right">
             {dirty && <span className="ad-dim">Unsaved changes</span>}
             <button className="ad-btn" disabled={!dirty || busy} onClick={() => { setDraft(saved); setErr(""); }}>Reset</button>
@@ -1250,6 +1296,14 @@ export function SettingsSection({ flash }) {
         {/* Loyalty points on online orders - the store's loyalty card, earned
             and spent in the app too (mart369_loyalty config.py). */}
         {tab === "loyalty" && draft.loyalty && <LoyaltySettings value={draft.loyalty} set={(key) => set("loyalty", key)} />}
+
+        {/* Customer Links: where each link of a WhatsApp group order goes -
+            the customer's private chat or the group. The same settings as
+            Odoo's Sales Automation > Configuration > Customer Links. */}
+        {tab === "whatsapp" && draft.whatsapp?.links?.rows && (
+          <WhatsAppLinks value={draft.whatsapp.links}
+            onChange={(links) => setDraft((d) => ({ ...d, whatsapp: { ...d.whatsapp, links } }))} />
+        )}
 
         {tab === "alerts" && (
           <div className="ad-rows">

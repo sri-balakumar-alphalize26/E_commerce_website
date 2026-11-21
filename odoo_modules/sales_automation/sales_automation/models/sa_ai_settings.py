@@ -18,6 +18,23 @@ from odoo import _, api, fields, models
 
 _logger = logging.getLogger(__name__)
 
+# Customer links and where each one goes (21 Nov 2026): the field is
+# `link_<kind>` on these settings. Shared with sa_private_links.py and the
+# 369 Mart console (mart369_whatsapp_bridge/models/config.py).
+LINK_ROUTES = [('private', 'Private chat'), ('group', 'Group')]
+LINK_KINDS = [
+    ('confirm', 'Product details page'),
+    ('address', 'Address form'),
+    ('sign', 'Sign the order'),
+    ('pay', 'Payment'),
+    ('track', 'Live tracking'),
+    ('map', 'Rider location'),
+    ('review', 'Rate your products'),
+    ('web', 'Website order page'),
+    ('docs', 'Order & invoice PDFs'),
+    ('shop', 'Shop online link'),
+]
+
 DEFAULT_CHAT_MODEL = {
     # Not the newest: gemini-3.7-flash and gemini-flash-latest both answered
     # 503 "high demand", and 3.6-flash worked but took 22.9s - over the 20s
@@ -258,7 +275,8 @@ class SaAiSettings(models.Model):
     # sa_private_links.py.
     private_links = fields.Boolean(
         'Send Links & PDFs Privately', default=True,
-        help="Personal links - product details, sign, pay, live tracking, the "
+        help="Replaced by Customer Links (one choice per link); kept for old data. "
+             "Personal links - product details, sign, pay, live tracking, the "
              "rider's location - and the invoice and order PDFs go to the "
              "customer's private chat, with a short note in the group. When "
              "WhatsApp hides the customer's number, or the private message "
@@ -268,6 +286,39 @@ class SaAiSettings(models.Model):
         'Address Link Works For (minutes)', default=30,
         help="How long the address form link can be used. It always works only "
              "once, and stops as soon as the address is given in the group.")
+
+    # ---- Customer links: where each one is sent (owner, 21 Nov 2026) ----
+    # One choice per link, always set: the customer's private chat or the
+    # group. Private that cannot be done (number hidden, WhatsApp refused)
+    # falls back to the group, marked for the customer. Polls always stay in
+    # the group. Edited here and on the 369 Mart console (WhatsApp tab).
+    link_confirm = fields.Selection(LINK_ROUTES, 'Product details page', required=True, default='private')
+    link_address = fields.Selection(LINK_ROUTES, 'Address form', required=True, default='private')
+    link_sign = fields.Selection(LINK_ROUTES, 'Sign the order', required=True, default='private')
+    link_pay = fields.Selection(LINK_ROUTES, 'Payment', required=True, default='private')
+    link_track = fields.Selection(LINK_ROUTES, 'Live tracking', required=True, default='private')
+    link_map = fields.Selection(LINK_ROUTES, 'Rider location', required=True, default='private')
+    link_review = fields.Selection(LINK_ROUTES, 'Rate your products', required=True, default='private')
+    link_web = fields.Selection(LINK_ROUTES, 'Website order page', required=True, default='private')
+    link_docs = fields.Selection(LINK_ROUTES, 'Order & invoice PDFs', required=True, default='private')
+    link_shop = fields.Selection(LINK_ROUTES, 'Shop online link', required=True, default='group')
+    link_group_note = fields.Boolean(
+        'Tell the Group', default=True,
+        help="After a link or PDF goes to the private chat, say so in the group "
+             "(\"I've sent your payment link to your private chat\").")
+    link_reply_hours = fields.Integer(
+        'Point Private Replies to the Group (hours)', default=6,
+        help="For this many hours after something went to a customer's private "
+             "chat, what they type there is answered with \"please answer in the "
+             "group\". 0 switches it off.")
+
+    def _sa_link_route(self, kind):
+        """'private' or 'group' for a kind of link (see LINK_KINDS)."""
+        self.ensure_one()
+        field = 'link_%s' % kind
+        if field in self._fields:
+            return self[field] or ('group' if kind == 'shop' else 'private')
+        return 'private'
 
     stale_after_minutes = fields.Integer(
         'Forget a Conversation After (minutes)', default=60,

@@ -82,8 +82,56 @@ class Mart369Config(models.Model):
             'on': {state: config._mart369_wa_on(state) for state in WA_STATES},
             'texts': {state: config._mart369_wa_text(state)
                       for state in WA_STATES},
+            # Customer Links (21 Nov 2026): where each WhatsApp group-order
+            # link goes - the same settings as Odoo's Sales Automation >
+            # Configuration > Customer Links.
+            'links': self._mart369_wa_links(),
         }
         return groups
+
+    @api.model
+    def _mart369_wa_links(self):
+        """{'rows': [{key, label, to}], 'note', 'replyHours'} or {} without
+        the WhatsApp group-order module."""
+        if 'sa.ai.settings' not in self.env:
+            return {}
+        settings = self.env['sa.ai.settings'].sudo().get_settings()
+        try:
+            from odoo.addons.sales_automation.models.sa_ai_settings import LINK_KINDS
+        except ImportError:
+            return {}
+        return {
+            'rows': [{'key': key, 'label': label, 'to': settings._sa_link_route(key)}
+                     for key, label in LINK_KINDS if 'link_%s' % key in settings._fields],
+            'note': bool(settings.link_group_note),
+            'replyHours': settings.link_reply_hours or 0,
+        }
+
+    @api.model
+    def _mart369_wa_links_save(self, links):
+        if not isinstance(links, dict) or 'sa.ai.settings' not in self.env:
+            return
+        settings = self.env['sa.ai.settings'].sudo().get_settings()
+        vals = {}
+        for key, to in (links.get('to') or {}).items():
+            field = 'link_%s' % key
+            if field not in settings._fields:
+                continue
+            if to not in ('private', 'group'):
+                raise UserError(_('Choose Private chat or Group for every link.'))
+            vals[field] = to
+        if 'note' in links:
+            vals['link_group_note'] = bool(links['note'])
+        if 'replyHours' in links:
+            try:
+                hours = int(links['replyHours'] or 0)
+            except (TypeError, ValueError):
+                raise UserError(_('The reply window is a number of hours.'))
+            if not 0 <= hours <= 72:
+                raise UserError(_('The reply window is 0 to 72 hours.'))
+            vals['link_reply_hours'] = hours
+        if vals:
+            settings.write(vals)
 
     # ------------------------------------------------------------- writing
 
@@ -124,6 +172,8 @@ class Mart369Config(models.Model):
                     text if text != MESSAGES.get(state, '') else False)
         if vals:
             config.write(vals)
+        if 'links' in values:
+            self._mart369_wa_links_save(values['links'])
         return True
 
     # ----------------------------------------------------------- check now

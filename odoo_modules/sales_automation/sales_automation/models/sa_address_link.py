@@ -125,8 +125,16 @@ class SaAddressLink(models.Model):
 
     @api.model
     def _phone_rule(self, country):
-        """{'dial': '+91', 'length': 10} - from the phone library when it knows
-        the country, else the dial code alone (any 6-15 digits)."""
+        """{'dial': '+91', 'length': 10, 'starts': '6789', 'country': 'India'}
+        - the shop's own rule when installed (mart369_auth `_mart369_phone_hint`,
+        the same everywhere a mobile is typed), else the phone library's
+        length, else the dial code alone (any 6-15 digits)."""
+        partner = self.env['res.partner'].sudo()
+        if hasattr(partner, '_mart369_phone_hint') and country.code:
+            try:
+                return partner._mart369_phone_hint(region=country.code)
+            except Exception:  # noqa: BLE001 - our own below
+                pass
         dial = ('+%s' % country.phone_code) if country.phone_code else ''
         try:
             import phonenumbers
@@ -316,6 +324,47 @@ class SaAddressLink(models.Model):
             pass
         return body
 
+    # ---- a mobile number: the same rule as every mobile box of the shop ----
+    @staticmethod
+    def _starts_text(starts):
+        """'6789' -> '6, 7, 8 or 9'; '5' -> '5'."""
+        digits = list(starts or '')
+        if len(digits) <= 1:
+            return ''.join(digits)
+        return '%s or %s' % (', '.join(digits[:-1]), digits[-1])
+
+    @staticmethod
+    def _clean_mobile(value, rule):
+        """Digits only; a dial code or leading zeros typed in front of a
+        too-long number dropped; a first digit no mobile has dropped; cut at
+        the length (lib/phoneRule.js cleanMobile)."""
+        digits = re.sub(r'\D', '', value or '')
+        length = rule.get('length') or 0
+        code = re.sub(r'\D', '', rule.get('dial') or '')
+        if length and len(digits) > length and code and digits.startswith(code):
+            digits = digits[len(code):]
+        if length and len(digits) > length:
+            digits = digits.lstrip('0')
+        starts = rule.get('starts') or ''
+        if starts:
+            while digits and digits[0] not in starts:
+                digits = digits[1:]
+        return digits[:length or 15]
+
+    def _mobile_error(self, digits, rule, meta):
+        """The message for a wrong mobile number, or ''."""
+        length = rule.get('length') or 0
+        starts = rule.get('starts') or ''
+        if starts and digits[:1] not in starts:
+            country = rule.get('country') or (meta.get('country') or {}).get('name') or ''
+            return _("%(country)s mobile numbers start with %(digits)s",
+                     country=country, digits=self._starts_text(starts)).strip()
+        if length and len(digits) != length:
+            return _("Enter a %s-digit mobile number") % length
+        if not length and not re.fullmatch(r'\d{6,15}', digits):
+            return _("Enter a valid mobile number")
+        return ''
+
     def _check(self, post):
         """(body, {field: message}) - the shop form's checks, word for word,
         then the shop's own server rules where they are installed."""
@@ -323,20 +372,25 @@ class SaAddressLink(models.Model):
         body = self._body(post)
         meta = self._meta(body['country_id'] or None)
         body['country_id'] = meta['country']['code'] or body['country_id']
-        phone_len = (meta.get('phone') or {}).get('length') or 0
+        rule = meta.get('phone') or {}
         pin_len = meta.get('pin_length') or 0
-        ok = (lambda v: len(v) == phone_len) if phone_len else (lambda v: bool(re.fullmatch(r'\d{6,15}', v)))
+        body['phone'] = self._clean_mobile(body['phone'], rule)
+        body['alt'] = self._clean_mobile(body['alt'], rule)
         x = {}
         if not body['name']:
             x['name'] = _("Enter the receiver's name")
-        if not ok(body['phone']):
-            x['phone'] = (_("Enter a %s-digit mobile number") % phone_len) if phone_len \
-                else _("Enter a valid mobile number")
-        if body['alt'] and not ok(body['alt']):
-            x['alt'] = (_("Enter a %s-digit number, or leave it empty") % phone_len) if phone_len \
-                else _("Enter a valid number")
-        if body['alt'] and body['alt'] == body['phone']:
-            x['alt'] = _("Use a different number, or leave it empty")
+        if not body['phone']:
+            x['phone'] = _("Enter the mobile number")
+        else:
+            bad = self._mobile_error(body['phone'], rule, meta)
+            if bad:
+                x['phone'] = bad
+        if body['alt']:
+            bad = self._mobile_error(body['alt'], rule, meta)
+            if bad:
+                x['alt'] = _("%s, or leave it empty") % bad
+            elif body['alt'] == body['phone']:
+                x['alt'] = _("Use a different number, or leave it empty")
         if (len(body['pin']) != pin_len) if pin_len else not re.fullmatch(r'\d{3,10}', body['pin']):
             x['pin'] = (_("Enter a %s-digit postcode") % pin_len) if pin_len else _("Enter a valid postcode")
         if not body['line']:
@@ -601,7 +655,8 @@ class SaGroupRequestAddressLink(models.Model):
             link.unlink()   # never leave a link nobody was given
             raise
         what, order = self._sa_addr_link_words(link)
-        phone = self._sa_dm_target()
+        # private or group: Customer Links > Address form (sa_private_links.py)
+        phone = self._sa_private_target('address')
         sent = False
         if phone:
             head = (_("✏️ Change your *%s* address") % link.target_id.sudo()._sa_label()) \

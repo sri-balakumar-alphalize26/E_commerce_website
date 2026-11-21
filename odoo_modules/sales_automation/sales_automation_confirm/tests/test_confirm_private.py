@@ -53,7 +53,8 @@ class TestConfirmPrivate(TransactionCase):
         super().setUp()
         self.sent.clear()
         self.images.clear()
-        self.env['sa.ai.settings'].sudo().get_settings().private_links = True
+        self.env['sa.ai.settings'].sudo().get_settings().write({
+            'link_confirm': 'private', 'link_group_note': True})
         self.request = self.env['sa.group.request'].sudo().create({
             'group_id': self.group.id, 'requester_phone': PHONE, 'requester_name': 'Sri',
             'raw_text': 'mouse', 'product_id': self.product.id})
@@ -72,3 +73,12 @@ class TestConfirmPrivate(TransactionCase):
         self.request.write({'requester_is_lid': True, 'requester_lid': '77@lid'})
         self.request._sa_confirm_customer_send()
         self.assertEqual([p for p, c in self.images], [GROUP])
+
+    def test_product_page_set_to_group_goes_to_the_group(self):
+        settings = self.env['sa.ai.settings'].sudo().get_settings()
+        settings.link_confirm = 'group'
+        try:
+            self.request._sa_confirm_customer_send()
+            self.assertEqual([p for p, c in self.images], [GROUP])
+        finally:
+            settings.link_confirm = 'private'

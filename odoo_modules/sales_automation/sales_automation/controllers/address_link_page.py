@@ -335,7 +335,10 @@ class SaAddressLinkPage(http.Controller):
             't': {
                 'name': _("Enter the receiver's name"),
                 'phoneN': _("Enter a %s-digit mobile number"), 'phone': _("Enter a valid mobile number"),
-                'altN': _("Enter a %s-digit number, or leave it empty"), 'alt': _("Enter a valid number"),
+                'mobileEmpty': _("Enter the mobile number"),
+                'startsN': _("%(country)s mobile numbers start with %(digits)s"),
+                'orEmpty': _("%s, or leave it empty"), 'or': _(" or "),
+                'hintN': _("%(len)s digits, starts with %(digits)s"), 'hintLen': _("%s digits"),
                 'altSame': _("Use a different number, or leave it empty"),
                 'pinN': _("Enter a %s-digit postcode"), 'pin': _("Enter a valid postcode"),
                 'line': _("Enter the house no., building or apartment"),
@@ -370,10 +373,32 @@ var fmt=function(s,v){return s.replace('%s',v)};
 var get=function(u){return fetch(C.base+u,{credentials:'same-origin'}).then(function(r){return r.json()})};
 var auto={town:false,state:false},lastPin=($('f_pin')||{}).value||'',mismatchPin=null,look=null;
 function phoneLen(){return (M.phone&&M.phone.length)||0}
+function phoneStarts(){return (M.phone&&M.phone.starts)||''}
 function pinLen(){return M.pin_length||0}
+/* a mobile number: the same rule as every mobile box of the shop (lib/phoneRule.js) */
+function startsText(s){s=String(s||'').split('');return s.length<=1?s.join(''):s.slice(0,-1).join(', ')+T.or+s[s.length-1]}
+function startsMsg(){return T.startsN.replace('%(country)s',(M.phone&&M.phone.country)||'').replace('%(digits)s',startsText(phoneStarts())).trim()}
+function cleanMobile(v){var d=String(v||'').replace(/\D/g,''),len=phoneLen(),st=phoneStarts(),
+    code=((M.phone&&M.phone.dial)||'').replace(/\D/g,'');
+  if(len&&d.length>len&&code&&d.indexOf(code)===0)d=d.slice(code.length);
+  if(len&&d.length>len)d=d.replace(/^0+/,'');
+  if(st)while(d&&st.indexOf(d.charAt(0))<0)d=d.slice(1);
+  return d.slice(0,len||15);}
+function mobileErr(d){var len=phoneLen(),st=phoneStarts();
+  if(st&&st.indexOf(d.charAt(0))<0)return startsMsg();
+  if(len&&d.length!==len)return fmt(T.phoneN,len);
+  if(!len&&!/^\d{6,15}$/.test(d))return T.phone;return ''}
+function phoneHint(){var h=$('phonehint');if(!h)return;var len=phoneLen(),st=phoneStarts();
+  h.textContent=len&&st?T.hintN.replace('%(len)s',len).replace('%(digits)s',startsText(st)):len?fmt(T.hintLen,len):''}
+['phone','alt'].forEach(function(k){var el=$('f_'+k);if(!el)return;
+  el.addEventListener('input',function(){var raw=el.value.replace(/\D/g,''),d=cleanMobile(el.value);
+    if(d!==el.value)el.value=d;
+    if(raw&&phoneStarts()&&phoneStarts().indexOf(raw.charAt(0))<0&&!d)
+      setTimeout(function(){setErr(k,k==='alt'?T.orEmpty.replace('%s',startsMsg()):startsMsg())},0);});});
+(function(){var box=$('f_phone')&&$('f_phone').closest('.f');if(!box)return;var h=document.createElement('div');
+  h.className='hint';h.id='phonehint';box.insertAdjacentElement('afterend',h);phoneHint();})();
 function digits(id,max){var el=$(id);if(!el)return;el.addEventListener('input',function(){
   var v=el.value.replace(/\D/g,'');if(max())v=v.slice(0,max());if(v!==el.value)el.value=v;});}
-digits('f_phone',function(){return phoneLen()||15});digits('f_alt',function(){return phoneLen()||15});
 digits('f_pin',function(){return pinLen()||10});
 function setErr(k,msg){var el=$('f_'+(k==='state'?'state_id':k));if(!el)return;var box=el.closest('.f'),wrap=box.parentNode;
   var e=wrap.querySelector(':scope > .err');if(msg){box.classList.add('bad');if(!e){e=document.createElement('div');e.className='err';
@@ -385,7 +410,8 @@ $('f_state_id').addEventListener('change',function(){setErr('state','');auto.sta
 function applyMeta(m){M=m;var dial=(m.phone&&m.phone.dial)||'+';document.querySelectorAll('.dial').forEach(function(b){b.textContent=dial});
   var s=$('f_state_id');s.innerHTML='<option value=""></option>';s.options[0].textContent=s.dataset.ph||'';
   (m.states||[]).forEach(function(x){var o=document.createElement('option');o.value=x.id;o.textContent=x.name;s.appendChild(o)});
-  $('statebox').style.display=(m.states&&m.states.length)?'':'none';}
+  $('statebox').style.display=(m.states&&m.states.length)?'':'none';
+  ['phone','alt'].forEach(function(k){var el=$('f_'+k);if(el&&el.value)el.value=cleanMobile(el.value)});phoneHint();}
 $('f_state_id').dataset.ph=$('f_state_id').options[0].textContent;
 $('f_country').addEventListener('change',function(){var code=this.value;
   get('/meta?country='+encodeURIComponent(code)).then(function(m){if(!m||!m.ok)return;applyMeta(m);
@@ -408,11 +434,10 @@ $('f_pin').addEventListener('input',function(){var pin=this.value;
   }).catch(function(){h.textContent=''});});
 /* the shop form's own checks, word for word */
 function check(){var x={},pl=phoneLen(),nl=pinLen(),v=function(k){return ($('f_'+k).value||'').trim()};
-  var ok=function(s){return pl?s.length===pl:/^\d{6,15}$/.test(s)};
   if(!v('name'))x.name=T.name;
-  if(!ok(v('phone')))x.phone=pl?fmt(T.phoneN,pl):T.phone;
-  if(v('alt')&&!ok(v('alt')))x.alt=pl?fmt(T.altN,pl):T.alt;
-  if(v('alt')&&v('alt')===v('phone'))x.alt=T.altSame;
+  if(!v('phone'))x.phone=T.mobileEmpty;else{var pe=mobileErr(v('phone'));if(pe)x.phone=pe;}
+  if(v('alt')){var ae=mobileErr(v('alt'));if(ae)x.alt=T.orEmpty.replace('%s',ae);
+    else if(v('alt')===v('phone'))x.alt=T.altSame;}
   if(nl?v('pin').length!==nl:!/^\d{3,10}$/.test(v('pin')))x.pin=nl?fmt(T.pinN,nl):T.pin;
   if(!v('line'))x.line=T.line;if(!v('area'))x.area=T.area;if(!v('town'))x.town=T.town;
   if((M.states||[]).length&&!$('f_state_id').value)x.state=T.state;return x;}

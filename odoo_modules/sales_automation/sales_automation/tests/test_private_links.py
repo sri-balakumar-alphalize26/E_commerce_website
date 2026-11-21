@@ -75,7 +75,11 @@ class TestPrivateLinks(TransactionCase):
         self.docs.clear()
         self.polls.clear()
         self.refuse.clear()
-        self.env['sa.ai.settings'].get_settings().private_links = True
+        # Customer Links as shipped: every personal link private, the shop link in the group
+        self.settings = self.env['sa.ai.settings'].get_settings()
+        self.settings.write(dict({'link_%s' % k: 'private' for k in (
+            'confirm', 'address', 'sign', 'pay', 'track', 'map', 'review', 'web', 'docs')},
+            link_shop='group', link_group_note=True, link_reply_hours=6))
         self.order = self.env['sale.order'].create({
             'partner_id': self.customer.id,
             'order_line': [(0, 0, {'product_id': self.product.product_variant_id.id,
@@ -123,11 +127,13 @@ class TestPrivateLinks(TransactionCase):
         self.assertFalse(self._to(PHONE))
         self.assertTrue(any(PAY in t for t in self._to(GROUP)))
 
-    def test_switched_off_the_link_stays_in_the_group(self):
-        self.env['sa.ai.settings'].get_settings().private_links = False
+    def test_payment_set_to_group_stays_in_the_group_marked(self):
+        self.settings.link_pay = 'group'
         self.request._say("Pay here: %s" % PAY)
         self.assertFalse(self._to(PHONE))
-        self.assertTrue(any(PAY in t for t in self._to(GROUP)))
+        group = [t for t in self._to(GROUP) if PAY in t]
+        self.assertTrue(group)
+        self.assertIn('Only for Sri', group[0])
 
     def test_a_refused_private_message_falls_back_to_the_group(self):
         self.refuse.add(PHONE)
@@ -252,3 +258,61 @@ class TestPrivateLinks(TransactionCase):
     def test_the_group_screen_loads(self):
         views = self.env['sa.sales.group'].get_views([(False, 'form'), (False, 'list')])
         self.assertIn('action_sa_get_invite_link', views['views']['form']['arch'])
+
+    # ------------------------------------- Customer Links, one row each (21 Nov)
+    def test_each_link_follows_its_own_row(self):
+        self.settings.link_track = 'group'
+        self.request._say("Follow it live: %s" % TRACK)
+        self.request._say("Pay here: %s" % PAY)
+        self.assertTrue(any(TRACK in t for t in self._to(GROUP)), 'tracking: group')
+        self.assertTrue(any(PAY in t for t in self._to(PHONE)), 'payment: private')
+
+    def test_pdfs_set_to_group(self):
+        self.settings.link_docs = 'group'
+        self.request._sa_send_order_pdf(self.order)
+        self.assertEqual([d[0] for d in self.docs], [GROUP])
+
+    def test_no_group_note_when_switched_off(self):
+        self.settings.link_group_note = False
+        self.request._say("Pay here: %s" % PAY)
+        self.assertTrue(self._to(PHONE))
+        self.assertFalse([t for t in self._to(GROUP) if 'private chat' in t])
+
+    def test_the_shop_link_can_go_privately(self):
+        self.settings.link_shop = 'private'
+        self.request._say("\U0001F6D2 Shop online: https://shop.test/shop")
+        self.assertTrue(any('https://shop.test/shop' in t for t in self._to(PHONE)))
+        self.assertTrue(any('shop link' in t for t in self._to(GROUP)))
+
+    def test_the_kinds_are_told_apart(self):
+        kind = self.request._sa_link_kind_of
+        self.assertEqual(kind(PAY), 'pay')
+        self.assertEqual(kind(SIGN), 'sign')
+        self.assertEqual(kind(TRACK), 'track')
+        self.assertEqual(kind('https://shop.test/scoped_app/wa-link?db=x&to=%2Fmy%2Forders%2F7%3Fpayment_amount%3D5'), 'pay')
+        self.assertEqual(kind('https://shop.test/scoped_app/c?db=x&t=abc'), 'confirm')
+        self.assertEqual(kind('https://shop.test/scoped_app/wa-link?db=x&to=%2Fwa%2Faddress%2Fabc'), 'address')
+        self.assertEqual(kind('https://shop.test/scoped_app/wa-link?db=x&to=%2Fwa%2Freview%2F7'), 'review')
+        self.assertEqual(kind('https://maps.google.com/?q=1,2'), 'map')
+        self.assertEqual(kind('https://shop.test/track/369M-1'), 'web')
+        self.assertEqual(kind('https://shop.test/shop'), 'shop')
+
+    def test_reply_window_zero_turns_the_answer_off(self):
+        self.request._say("Pay here: %s" % PAY)
+        self.settings.link_reply_hours = 0
+        self.assertFalse(self.env['sa.group.request']._sa_private_reply_request(
+            PHONE, self.group.session_id))
+
+    def test_the_storefront_console_reads_and_saves_the_rows(self):
+        if 'mart369.config' not in self.env:
+            self.skipTest('no 369 Mart console here')
+        Config = self.env['mart369.config']
+        links = Config._mart369_wa_links()
+        self.assertEqual(len(links['rows']), 10)
+        self.assertEqual({r['key']: r['to'] for r in links['rows']}['pay'], 'private')
+        Config._mart369_admin_save_group('whatsapp', {'links': {'to': {'pay': 'group'}, 'replyHours': 3}})
+        self.assertEqual(self.settings.link_pay, 'group')
+        self.assertEqual(self.settings.link_reply_hours, 3)
+        from odoo.exceptions import UserError
+        with self.assertRaises(UserError):
+            Config._mart369_admin_save_group('whatsapp', {'links': {'to': {'pay': 'nowhere'}}})

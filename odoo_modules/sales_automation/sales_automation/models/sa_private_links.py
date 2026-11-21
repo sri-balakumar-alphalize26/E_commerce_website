@@ -1,23 +1,27 @@
 # -*- coding: utf-8 -*-
-"""Personal links and PDFs go to the customer's private chat (owner, 21 Nov 2026).
+"""Customer links: each one goes where the admin chose (owner, 21 Nov 2026).
 
-A group order used to post every personal link in the shared group: the
-product details page, the sign link, the payment link, live tracking, the
-rider's location, the shop's order page - and the invoice and order PDFs.
-Anyone in the group could see them and open them.
+A group order sends the customer links - the product details page, the address
+form, the sign link, the payment link, live tracking, the rider's location, the
+review link, the website's order page, the shop link - and the order and
+invoice PDFs. For each of them the admin picks one place, in Sales Automation >
+Configuration > Customer Links or on the 369 Mart console (WhatsApp tab):
 
-Now, when the setting "Send links & PDFs privately" is on (the default) and
-WhatsApp shows the customer's number, the whole message goes to their private
-chat and the group gets one short line - "💳 I've sent your payment link to
-your private chat 🔒". Polls and taps stay in the group, where the order
-conversation runs. With the number hidden, or the private message refused,
-everything goes to the group exactly as before.
+* **Private chat** - the whole message goes to the customer's own chat and the
+  group gets one short line ("💳 I've sent your payment link to your private
+  chat 🔒", switchable);
+* **Group** - it is posted in the group, marked "only for <name>".
+
+Private that cannot be done (WhatsApp hides the number, or refuses the message)
+falls back to the group the same way. Polls and taps always stay in the group,
+where the order conversation runs.
 
 It is decided in one place, `_say`, which every group message of this flow
-passes through - including the delivery modules' messages for group orders -
-so a new link anywhere follows the rule without being listed here. The
-pictures (product details) and PDFs are not texts and use `_sa_doc_dest`.
-The generic shop link (`sa.shop_url`) is the same for everyone and stays.
+passes through - including the delivery modules' messages for group orders.
+Each link's kind is read from its address (`_sa_link_kind_of`) - the one table
+here - so a new message carrying a known link follows the setting without
+being listed. Pictures (product details) and PDFs are not texts and use
+`_sa_private_target(kind)` / `_sa_send_doc`.
 """
 import logging
 import re
@@ -27,11 +31,7 @@ from odoo import _, api, fields, models
 
 _logger = logging.getLogger(__name__)
 
-# For this long after a link or document went to the customer's private chat,
-# what they type there is answered with "please answer in the group" instead
-# of the one-to-one salesbot (owner, 21 Nov 2026). After it, as before.
-PRIVATE_REPLY_HOURS = 6
-PRIVATE_REPLY_EVERY = 300   # seconds: at most one such answer per number
+PRIVATE_REPLY_EVERY = 300   # seconds: at most one "answer in the group" per number
 
 # links hold "_" (scoped_app, access_token): cut only WhatsApp's bold/italic
 # marks and punctuation off the end
@@ -49,6 +49,47 @@ class SaGroupRequestPrivateLinks(models.Model):
              "type there is pointed back to the group.")
 
     # ------------------------------------------------------------------
+    # The admin's choice per kind of link
+    # ------------------------------------------------------------------
+    def _sa_link_settings(self):
+        return self.env['sa.ai.settings'].sudo().get_settings()
+
+    def _sa_link_route(self, kind):
+        """'private' or 'group' for this kind of link (Customer Links)."""
+        try:
+            return self._sa_link_settings()._sa_link_route(kind)
+        except Exception:  # noqa: BLE001 - before the fields exist (upgrade)
+            return 'group' if kind == 'shop' else 'private'
+
+    def _sa_shop_url_param(self):
+        return (self.env['ir.config_parameter'].sudo().get_param('sa.shop_url', '') or '').strip().rstrip('/')
+
+    def _sa_link_kind_of(self, url):
+        """Which customer link an address is - the one table of them."""
+        low = (url or '').lower()
+        shop = self._sa_shop_url_param().lower()
+        if '%2fwa%2freview' in low or '/wa/review' in low:
+            return 'review'
+        if '/scoped_app/c?' in low or '%2fwa%2fconfirm' in low or '/wa/confirm' in low:
+            return 'confirm'
+        if '%2fwa%2faddress' in low or '/wa/address' in low:
+            return 'address'
+        if ('%2fwa%2fpay' in low or '/wa/pay' in low or 'payment%2fpay' in low or '/payment/pay' in low
+                or 'payment_amount' in low):
+            return 'pay'            # a confirmed order's pay link: its order page with an amount
+        if '%2fmy%2forders' in low or '/my/orders' in low:
+            return 'sign'
+        if '%2fwa%2ftrack' in low or '/wa/track' in low:
+            return 'track'
+        if 'maps.google' in low or 'google.com/maps' in low:
+            return 'map'
+        if '/track/' in low or '/order/' in low:
+            return 'web'            # the 369 Mart website's own order page (before the shop: same host)
+        if shop and low.rstrip('/').startswith(shop):
+            return 'shop'
+        return 'link'
+
+    # ------------------------------------------------------------------
     # The private chat answers "please answer in the group"
     # ------------------------------------------------------------------
     def _sa_mark_private(self):
@@ -57,11 +98,17 @@ class SaGroupRequestPrivateLinks(models.Model):
     @api.model
     def _sa_private_reply_request(self, digits, session):
         """The enquiry this number was sent something privately for, in the
-        last few hours, on this WhatsApp session - else empty."""
+        last few hours (Customer Links), on this WhatsApp session - else empty."""
         digits = ''.join(c for c in (digits or '') if c.isdigit())
         if len(digits) < 8 or not session:
             return self.browse()
-        since = fields.Datetime.now() - timedelta(hours=PRIVATE_REPLY_HOURS)
+        try:
+            hours = self.env['sa.ai.settings'].sudo().get_settings().link_reply_hours
+        except Exception:  # noqa: BLE001 - before the field exists
+            hours = 6
+        if not hours or hours <= 0:
+            return self.browse()
+        since = fields.Datetime.now() - timedelta(hours=hours)
         return self.sudo().search([
             ('requester_phone', 'like', digits[-9:]),
             ('sa_private_sent_on', '>=', since),
@@ -90,15 +137,13 @@ class SaGroupRequestPrivateLinks(models.Model):
     # ------------------------------------------------------------------
     # Where it can go
     # ------------------------------------------------------------------
-    def _sa_private_target(self):
-        """The customer's own number, when personal things go privately."""
+    def _sa_private_target(self, kind=None):
+        """The customer's own number when this kind of link goes privately
+        (and can: WhatsApp shows the number); '' means the group."""
         self.ensure_one()
         if self.env.context.get('sa_no_private'):
             return ''
-        try:
-            if not self._settings().private_links:
-                return ''
-        except Exception:  # noqa: BLE001 - before the field exists (upgrade)
+        if kind and self._sa_link_route(kind) != 'private':
             return ''
         return self._sa_dm_target() or ''
 
@@ -109,48 +154,40 @@ class SaGroupRequestPrivateLinks(models.Model):
     def _sa_private_footer(self):
         return _("\n\n_Only for you · answer in the group_")
 
+    def _sa_group_marker(self):
+        """The line under a personal link posted in the group."""
+        self.ensure_one()
+        who = (self.requester_name or '').strip() or _("the customer")
+        return _("\n\n_\U0001F512 Only for %s_") % who
+
     def _sa_private_ref(self):
         self.ensure_one()
         return self.ref_code or (self.order_id.name if self.order_id else '') or ''
+
+    def _sa_group_note_on(self):
+        try:
+            return bool(self._sa_link_settings().link_group_note)
+        except Exception:  # noqa: BLE001
+            return True
 
     # ------------------------------------------------------------------
     # Texts
     # ------------------------------------------------------------------
     def _sa_customer_links(self, body):
-        """The personal links in a text: every web link but the shop's own."""
-        shop = (self.env['ir.config_parameter'].sudo().get_param('sa.shop_url', '') or '').strip().rstrip('/')
-        links = []
+        """Every web link in a text, with its kind: [(url, kind)]."""
+        out = []
         for url in _URL.findall(body or ''):
             url = url.rstrip(_URL_TAIL)
-            if shop and url.rstrip('/').lower().startswith(shop.lower()):
-                continue
-            links.append(url)
-        return links
+            out.append((url, self._sa_link_kind_of(url)))
+        return out
 
     def _sa_private_note(self, links):
-        """The line the group sees instead, by what the link is for."""
+        """The line the group sees instead, by what the links are for.
+        `links`: urls, or (url, kind) pairs."""
         self.ensure_one()
         kinds = []
-        for url in links:
-            low = url.lower()
-            if '%2fwa%2freview' in low or '/wa/review' in low:
-                kind = 'review'
-            elif '/scoped_app/c' in low or '%2fwa%2fconfirm' in low or '/wa/confirm' in low:
-                kind = 'confirm'
-            elif ('%2fwa%2fpay' in low or '/wa/pay' in low or 'payment%2fpay' in low or '/payment/pay' in low
-                  or 'payment_amount' in low):
-                # a confirmed order's pay link is its order page with an amount
-                kind = 'pay'
-            elif '%2fmy%2forders' in low or '/my/orders' in low:
-                kind = 'sign'
-            elif '%2fwa%2ftrack' in low or '/wa/track' in low or '/track/' in low:
-                kind = 'track'
-            elif 'maps.google' in low or 'google.com/maps' in low:
-                kind = 'map'
-            elif '%2fwa%2faddress' in low or '/wa/address' in low:
-                kind = 'address'
-            else:
-                kind = 'link'
+        for item in links:
+            kind = item[1] if isinstance(item, (list, tuple)) else self._sa_link_kind_of(item)
             if kind not in kinds:
                 kinds.append(kind)
         ref = self._sa_private_ref()
@@ -167,18 +204,24 @@ class SaGroupRequestPrivateLinks(models.Model):
             'address': _("\U0001F4E9 I've sent you a form%s in your *private chat* \U0001F512") % order,
             'review': _("⭐ I've sent you a link to rate your products%s to your *private chat* "
                         "\U0001F512") % order,
+            'web': _("\U0001F310 I've sent your order page%s to your *private chat* \U0001F512") % order,
+            'shop': _("\U0001F6D2 I've sent you our shop link in your *private chat* \U0001F512"),
             'link': _("\U0001F512 I've sent you a link%s in your *private chat* \U0001F4E9") % order,
         }
-        return '\n'.join(lines[k] for k in kinds)
+        return '\n'.join(lines.get(k, lines['link']) for k in kinds)
 
     def _sa_private_route(self, body):
         """Send `body` privately and the note to the group. True when done;
-        False leaves the message to the group, as before."""
+        False leaves the message to the group."""
         self.ensure_one()
         if not body or not self.group_id or not self._sa_in_group():
             return False
         links = self._sa_customer_links(body)
         if not links:
+            return False
+        # Private when any of its links is set to the private chat
+        private_kinds = [k for _u, k in links if self._sa_link_route(k) == 'private']
+        if not private_kinds:
             return False
         phone = self._sa_private_target()
         if not phone:
@@ -194,8 +237,9 @@ class SaGroupRequestPrivateLinks(models.Model):
             return False
         self._sa_stamp_asked()
         self._sa_mark_private()
-        _logger.info("Sales Automation: enquiry %s - link sent privately", self.id)
-        self.with_context(sa_no_private=True)._say(self._sa_private_note(links))
+        _logger.info("Sales Automation: enquiry %s - %s link sent privately", self.id, ','.join(private_kinds))
+        if self._sa_group_note_on():
+            self.with_context(sa_no_private=True)._say(self._sa_private_note(links))
         return True
 
     def _say(self, body, addressed=True):
@@ -205,31 +249,37 @@ class SaGroupRequestPrivateLinks(models.Model):
                     return True
             except Exception:  # noqa: BLE001 - never lose the message
                 _logger.exception("Sales Automation: enquiry %s - private route failed", self.id)
+            # A personal link that stays in the group says whose it is
+            try:
+                if body and self.group_id and self._sa_in_group() and 'Only for ' not in body and any(
+                        k not in ('shop', 'link') for _u, k in self._sa_customer_links(body)):
+                    body = body + self._sa_group_marker()
+            except Exception:  # noqa: BLE001 - the words still go out
+                pass
         return super()._say(body, addressed=addressed)
 
     # ------------------------------------------------------------------
     # PDFs and pictures
     # ------------------------------------------------------------------
     def _sa_doc_dest(self):
-        """(where, private): the customer's number when PDFs go privately,
-        else the group."""
+        """(where, private) for the order and invoice PDFs (Customer Links)."""
         self.ensure_one()
-        phone = self._sa_private_target()
+        phone = self._sa_private_target('docs')
         if phone:
             return phone, True
         return self.group_id.group_jid, False
 
     def _sa_send_doc(self, send, note=''):
         """Run `send(destination)` privately when allowed, falling back to the
-        group. Posts `note` in the group after a private send. Returns
-        'private', 'group' or False."""
+        group. Posts `note` in the group after a private send (when the group
+        note is on). Returns 'private' or 'group'."""
         self.ensure_one()
         dest, private = self._sa_doc_dest()
         if private:
             try:
                 if send(dest):
                     self._sa_mark_private()
-                    if note:
+                    if note and self._sa_group_note_on():
                         self.with_context(sa_no_private=True)._say(note)
                     return 'private'
             except Exception as err:  # noqa: BLE001 - the group gets it instead

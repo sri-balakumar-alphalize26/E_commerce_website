@@ -129,12 +129,14 @@ class SaGroupRequestConfirm(models.Model):
         self._sa_stamp_asked()
         # Privately when allowed (sales_automation/models/sa_private_links.py):
         # the picture and the link to the customer, a note in the group.
-        phone = self._sa_private_target() if (hasattr(self, '_sa_private_target')
-                                              and self._sa_in_group()) else ''
+        # Customer Links > Product details page: private chat or group
+        phone = self._sa_private_target('confirm') if (hasattr(self, '_sa_private_target')
+                                                       and self._sa_in_group()) else ''
         if phone and not text_only:
             source = self._sa_confirm_send_private(caption, phone)
             if source:
-                self.with_context(sa_no_private=True)._say(self._sa_private_note([link._url()]))
+                if not hasattr(self, '_sa_group_note_on') or self._sa_group_note_on():
+                    self.with_context(sa_no_private=True)._say(self._sa_private_note([link._url()]))
                 link.sudo().write({'sent_on': link.sent_on or fields.Datetime.now(), 'image_source': source})
                 return True
             # refused privately: the group, as before

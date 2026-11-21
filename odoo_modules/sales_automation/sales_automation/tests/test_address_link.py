@@ -79,6 +79,10 @@ class TestAddressLink(HttpCase):
         settings = env['sa.ai.settings'].get_settings()
         settings.write({'address_link_enabled': True, 'address_link_minutes': 30,
                         'pincode_prefixes': False, 'pincode_country_id': cls.india.id})
+        # Customer Links as shipped, whatever this database chose
+        settings.write(dict({'link_%s' % k: 'private' for k in (
+            'confirm', 'address', 'sign', 'pay', 'track', 'map', 'review', 'web', 'docs')},
+            link_shop='group', link_group_note=True, link_reply_hours=6))
 
     def setUp(self):
         super().setUp()
@@ -466,3 +470,32 @@ class TestAddressLink(HttpCase):
         self.assertFalse(self.request.sa_pay_link_sent_on)
         self.assertNotIn('payment_amount=', result.get('redirect_url', ''))
         self.assertFalse(self.order._sa_portal_status()['pay_url'], 'no Pay button either')
+
+    def test_address_form_set_to_group_is_posted_in_the_group(self):
+        self.env['sa.ai.settings'].get_settings().link_address = 'group'
+        link = self._open_book()
+        self.assertEqual(link.sent_to, 'group')
+        self.assertFalse([1 for to, t in self.sent if to == PHONE])
+        self.assertTrue(any(link.sudo().token in t and 'Only for' in t for to, t in self.sent if to == GROUP))
+        self.env['sa.ai.settings'].get_settings().link_address = 'private'
+
+    # ------------------- mobile numbers follow the country (21 Nov 2026)
+    def test_an_empty_mobile_says_so(self):
+        self.assertIn('Enter the mobile number', self._errors(phone=''))
+
+    def test_a_mobile_typed_with_the_dial_code_is_accepted(self):
+        link = self._open_book()
+        res = self.url_open(self._path(link), data=self._form(phone='+91 ' + PHONE[-10:]))
+        self.assertIn('Address saved', res.text)
+
+    def test_the_other_number_says_or_leave_it_empty(self):
+        self.assertIn('or leave it empty', self._errors(alt='98000'))
+
+    def test_the_mobile_rule_comes_from_the_country(self):
+        link = self._open_book()
+        rule = link._phone_rule(self.india)
+        self.assertEqual(rule.get('length'), 10)
+        self.assertEqual(link._clean_mobile('+91 98000 22233', rule), '9800022233')
+        if rule.get('starts'):
+            self.assertEqual(link._clean_mobile('5', rule), '', 'no Indian mobile starts with 5')
+            self.assertIn('start with 6, 7, 8 or 9', link._mobile_error('5800022233', rule, {}))
