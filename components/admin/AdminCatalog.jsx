@@ -9,6 +9,8 @@ import { useResource } from "@/lib/useFetch";
 import { Avatar, Drawer, Empty, Icon, Search, Select, SortMenu, Switch, Tabs } from "./AdminUI";
 import ProductEditor, { PhotoViewer } from "./ProductEditor";
 import AddressForm from "../home/AddressForm";
+import { PhoneInput } from "../signin/SignIn";
+import { cleanMobile, fetchMobileRule, mobileError, mobileHint } from "@/lib/phoneRule";
 import { pointsText } from "../home/points";
 import { RIDERS, clock, groupIN, isToday } from "./adminData";
 import { dateShort, dateYear, since } from "./format";
@@ -362,6 +364,7 @@ export function CustomersSection({ initialQ = "", onOpenTicket }) {
   const [tag, setTag] = useState("");
   const [limit, setLimit] = useState(50);
   const [open, setOpen] = useState(null);
+  const [adding, setAdding] = useState(false);
   /* The full profile, by customer id. In the address bar as ?customer=<id>, so
      a profile can be reloaded or sent to a colleague. */
   const [profile, setProfileState] = useState(() => {
@@ -418,6 +421,7 @@ export function CustomersSection({ initialQ = "", onOpenTicket }) {
         <div className="ad-toolbar">
           <Tabs value={tab} onChange={setTab} tabs={[["all", "All", counts.all ?? 0], ["active", "Active", counts.active ?? 0], ["new", "New", counts.new ?? 0], ["dormant", "Dormant", counts.dormant ?? 0]]} />
           <div className="ad-toolbar-right">
+            <button className="ad-btn ad-primary" onClick={() => setAdding(true)}><Icon n="plus" size={16} />New customer</button>
             <Search value={term} onChange={setTerm} placeholder="Name, email, phone or area" />
             <Select value={area} onChange={setArea} label="Area" options={[["", "All areas"], ...(data?.areas || []).map((a) => [a, a])]} />
             <Select value={joined} onChange={setJoined} label="Joined" options={[["", "Any time"], ["month", "This month"], ["3m", "Last 3 months"], ["year", "This year"]]} />
@@ -466,6 +470,8 @@ export function CustomersSection({ initialQ = "", onOpenTicket }) {
 
       {open && <CustomerDrawer row={open} currency={currency} onClose={() => setOpen(null)} onChanged={reload}
         onProfile={(id) => { setOpen(null); setProfile(id); }} />}
+      {adding && <NewCustomer onClose={() => setAdding(false)}
+        onCreated={(r) => { setAdding(false); api.invalidate?.(path); reload(); if (r?.id) setProfile(r.id); }} />}
     </div>
   );
 }
@@ -712,6 +718,120 @@ export function CustomerDrawer({ row, currency, onClose, onChanged, onProfile })
           </ul>
         )}
       </section>
+    </Drawer>
+  );
+}
+
+/* ============================ a new customer ============================ */
+/* Added by staff with their mobile number (the backend's "New customer" does
+   the same - mart369_whatsapp_bridge/wizard/new_customer.py). They then sign
+   in on the website with that number and a code, no sign-up, and the WhatsApp
+   bot already knows them. The address is the shop's own form, optional. */
+const CUSTOMER_FIELDS = { name: 1, mobile: 1, email: 1 };
+function NewCustomer({ onClose, onCreated }) {
+  const { data: meta, error: metaError } = useResource("/addresses/form");
+  const [d, setD] = useState({ name: "", mobile: "", email: "" });
+  const [err, setErr] = useState({});
+  const [withAddress, setWithAddress] = useState(true);
+  const [busy, setBusy] = useState(false);
+  /* The country code first, then the number - typed by that country's rule
+     (lib/phoneRule.js): India takes ten digits starting 6, 7, 8 or 9. */
+  const [country, setCountry] = useState("");
+  const [rule, setRule] = useState(null);
+  useEffect(() => { if (!country && meta?.country?.code) setCountry(meta.country.code); }, [meta, country]);
+  useEffect(() => {
+    if (!country) return;
+    let live = true;
+    fetchMobileRule(country).then((r) => {
+      if (!live || !r) return;
+      setRule(r);
+      setD((x) => ({ ...x, mobile: cleanMobile(x.mobile, r) }));
+    });
+    return () => { live = false; };
+  }, [country]);
+  const dial = rule?.dial || (meta?.countries || []).find((c) => c.code === country)?.dial || "";
+  const set = (k, v) => { setD((x) => ({ ...x, [k]: v })); setErr((e) => ({ ...e, [k]: undefined, form: undefined })); };
+
+  const check = () => {
+    const x = {};
+    if (d.name.trim().length < 2) x.name = "Enter the customer's name";
+    const m = mobileError(d.mobile, rule);
+    if (m) x.mobile = m;
+    setErr(x);
+    return !Object.keys(x).length;
+  };
+  /* {error} for AddressForm when it saves; the customer's own fields show
+     their message here, beside the field. */
+  const post = async (address) => {
+    const body = { name: d.name.trim(), mobile: d.mobile, country, email: d.email.trim(), ...(address ? { address } : {}) };
+    let r;
+    try {
+      r = await api("/admin/customers", { method: "POST", body });
+    } catch (e) {
+      r = { ok: false, field: e.field, error: e.message || "Could not add the customer. Try again." };
+    }
+    if (r?.ok === false) {
+      if (r.field in CUSTOMER_FIELDS) setErr({ [r.field]: r.error });
+      return { error: { field: r.field in CUSTOMER_FIELDS ? "form" : r.field, message: r.error } };
+    }
+    onCreated?.(r);
+    return r;
+  };
+  const createOnly = async () => {
+    if (!check()) return;
+    setBusy(true);
+    const r = await post(null);
+    setBusy(false);
+    if (r?.error && !(r.error.field in CUSTOMER_FIELDS)) setErr((e) => ({ ...e, form: r.error.message }));
+  };
+  const field = (k, label, { digits, type, prefix } = {}) => (
+    <label className={"co-field" + (prefix !== undefined ? " af-pre-field" : "") + (err[k] ? " co-err" : "")}
+      style={prefix !== undefined ? { "--af-pre": Math.max(prefix.length, 3) } : undefined}>
+      {prefix !== undefined && <b className="af-pre" aria-hidden="true">{prefix || "+"}</b>}
+      <input value={d[k]} placeholder=" " type={type || "text"}
+        onChange={(e) => set(k, digits ? e.target.value.replace(/\D/g, "").slice(0, digits) : e.target.value)}
+        inputMode={digits ? "numeric" : undefined} aria-invalid={!!err[k]} />
+      <span>{label}</span>
+      {err[k] && <em key={err[k]}>{err[k]}</em>}
+    </label>
+  );
+
+  return (
+    <Drawer title="New customer" sub="They sign in with this number - no sign-up" onClose={onClose} wide
+      foot={withAddress ? undefined : (close) => (
+        <>
+          <button className="ad-btn" onClick={close}>Cancel</button>
+          <button className="ad-btn ad-primary" disabled={busy} onClick={createOnly}>{busy ? "Adding…" : "Create customer"}</button>
+        </>
+      )}>
+      <p className="ad-hint"><Icon n="info" size={14} />On the website they sign in with this mobile number and a code. On WhatsApp the bot already knows them: it does not ask their name again, and a saved address skips the address questions.</p>
+      {metaError && <p className="ad-dim">{metaError.message}</p>}
+      <div className="co-form-grid">
+        {field("name", "Full name")}
+        <div className={"ad-newcust-phone" + (err.mobile ? " co-err" : "")}>
+          <small>Mobile number{rule ? ` · ${mobileHint(rule)}` : ""}</small>
+          <PhoneInput id="nc-mobile" countries={meta?.countries || []} country={country} home={meta?.country?.code}
+            onCountry={(c) => { setCountry(c); setErr((e) => ({ ...e, mobile: undefined })); }}
+            value={d.mobile} onChange={(v) => set("mobile", v)} rule={rule}
+            invalid={!!err.mobile} placeholder={rule?.example || "Mobile number"} />
+          {err.mobile && <em>{err.mobile}</em>}
+        </div>
+        {field("email", "Email (optional)", { type: "email" })}
+      </div>
+      {err.form && <p className="ad-dim" role="alert">{err.form}</p>}
+      {/* Ticked by default: the address is saved with the customer, every
+          line needed. Untick to add them without one (they add it later). */}
+      <label className="ad-newcust-check">
+        <input type="checkbox" checked={withAddress} onChange={(e) => setWithAddress(e.target.checked)} />
+        <span>Save a delivery address <small>{withAddress ? "- every line below is needed" : "- they can add it later"}</small></span>
+      </label>
+      {withAddress && meta && (
+        <div className="ad-cust-addform">
+          <AddressForm meta={meta} me={{ name: d.name.trim(), phone: dial + d.mobile }} requireLandmark
+            onSave={(body) => (check() ? post(body) : Promise.resolve({ error: { field: "form", message: "Fill in the customer's name and mobile first." } }))}
+            onCancel={onClose} saveLabel="Create customer" />
+        </div>
+      )}
     </Drawer>
   );
 }

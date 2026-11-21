@@ -1530,3 +1530,12 @@ html.ad-lock { overflow: hidden; }
   .ds-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ds-status-row .ad-btn { width: 100%; }
 }
+
+/* New customer: the country code + mobile row (PhoneInput from sign-in). */
+.ad-newcust-phone { display: flex; flex-direction: column; gap: 6px; }
+.ad-newcust-phone > small { color: var(--ad-muted, #6b7280); font-size: 12px; }
+.ad-newcust-phone > em { color: #b42318; font-size: 12px; font-style: normal; }
+.ad-newcust-phone.co-err .si-phone { border-color: #b42318; }
+.ad-newcust-check { display: flex; align-items: center; gap: 10px; margin: 14px 0 6px; font-weight: 600; cursor: pointer; }
+.ad-newcust-check input { width: 18px; height: 18px; accent-color: #17703a; cursor: pointer; }
+.ad-newcust-check small { font-weight: 400; color: var(--ad-muted, #6b7280); }

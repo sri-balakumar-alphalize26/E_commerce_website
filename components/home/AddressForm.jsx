@@ -45,7 +45,9 @@ function draftFrom(a = {}, me, dial) {
 /* The shop names a field in its error; a few of its names differ from ours. */
 const FIELD = { city: "town", state_id: "state", country_id: "country" };
 
-export default function AddressForm({ initial, meta: startMeta, me, onSave, onCancel, saveLabel = "Save address" }) {
+/* `requireLandmark`: staff adding a customer save every line (the admin
+   console's New customer); shoppers keep the landmark optional. */
+export default function AddressForm({ initial, meta: startMeta, me, onSave, onCancel, saveLabel = "Save address", requireLandmark = false }) {
   /* The country being filled in, and the shop's rules for it. A saved address
      opens in its own country; a new one where the shop says to start. */
   const [code, setCode] = useState(initial?.country_code || startMeta?.country?.code || "");
@@ -253,7 +255,7 @@ export default function AddressForm({ initial, meta: startMeta, me, onSave, onCa
             disabled={!meta} placeholder={meta ? "Select state" : "Loading…"} searchLabel="Search state"
             error={err.state} />
         ) : <span />}
-        <div className="co-span2">{field("landmark", "Landmark (optional)", { ac: "off" })}</div>
+        <div className="co-span2">{field("landmark", requireLandmark ? "Landmark" : "Landmark (optional)", { ac: "off" })}</div>
         <div className="co-span2 af-spot">
           {picking ? (
             <PinPicker start={spot} pincode={d.pin}
