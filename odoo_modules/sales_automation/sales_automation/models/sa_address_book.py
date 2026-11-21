@@ -415,10 +415,10 @@ class SaGroupRequestAddressBook(models.Model):
                 opts)
         texts = {
             'label_other': _("What should we call this address? (like *Parents* or *Shop*)"),
-            'line': _("\U0001F3E2 House / flat / building?\n(like *No. 12, Green Park Apartments*)"),
-            'area': _("\U0001F6E3 Road, area or colony?\n(like *MG Road, Gandhi Nagar*)"),
-            'landmark': _("\U0001F4CD A landmark the rider can see?\n(like *near the bus stand*)"),
-            'pin': _("\U0001F4EE Pincode?"),
+            'line': _("\U0001F3E2 House / flat / building?\n(like *Flat 12, Park View Apartments*)"),
+            'area': _("\U0001F6E3 Street or area?\n(like *Main Street, City Centre*)"),
+            'landmark': _("\U0001F4CD A landmark the rider can see?\n(like *next to the pharmacy*)"),
+            'pin': _("\U0001F4EE Postcode?"),
             'city': _("\U0001F3D9 City / town?"),
             'state': _("\U0001F5FA Which state? Reply with its number or name from the list above."),
             'alt': _("\U0001F4DE Another number to call if %s doesn't answer?") % (customer.phone or _("yours")),
@@ -426,7 +426,7 @@ class SaGroupRequestAddressBook(models.Model):
                           "tap \U0001F4CE \u2192 *Location* \u2192 *Send your current location*."),
         }
         if step == 'pin' and bad:
-            sorry = _("*%(bad)s* is not a pincode here - I need %(hint)s.\n\n",
+            sorry = _("*%(bad)s* is not a postcode here - I need %(hint)s.\n\n",
                       bad=bad, hint=self._sa_pincode_hint(self._sa_book_pin_partner(st)))
         typed = _("\n\n\u270D\uFE0F Type your answer, or tap below \U0001F447") \
             if step in self._SA_TYPED_STEPS or step in ('landmark', 'alt') else \

@@ -187,7 +187,7 @@ class ResPartner(models.Model):
         for key, field, message in (
             ('name', 'name', 'Enter the name this is delivered to.'),
             ('line', 'street', 'Enter the house no., building or apartment.'),
-            ('area', 'street2', 'Enter the road name, area or colony.'),
+            ('area', 'street2', 'Enter the street or area.'),
         ):
             if (creating or key in body) and not _text(body, key):
                 return None, (message, key)
@@ -210,10 +210,10 @@ class ResPartner(models.Model):
         if creating or joined or 'pin' in body:
             length = self._mart369_pin_length(country)
             if not pin:
-                return None, ('Enter the pincode.', 'pin')
+                return None, ('Enter the postcode.', 'pin')
             if not re.fullmatch(r'\d{%d}' % length if length else r'\d{3,10}', pin):
-                return None, ('Enter a %d-digit pincode.' % length if length
-                              else 'Enter a valid pincode.', 'pin')
+                return None, ('Enter a %d-digit postcode.' % length if length
+                              else 'Enter a valid postcode.', 'pin')
             values['zip'] = pin
 
         has_states = bool(country.state_ids)

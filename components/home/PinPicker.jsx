@@ -46,7 +46,7 @@ export default function PinPicker({
         if (spot?.known) {
           center = [spot.lng, spot.lat];
           zoom = AREA_ZOOM;
-          setNote(`Showing ${spot.place || `pincode ${pincode}`}. Zoom in and move the map to your door.`);
+          setNote(`Showing ${spot.place || `postcode ${pincode}`}. Zoom in and move the map to your door.`);
         }
       }
       if (!center) { center = [78.9629, 22.5937]; zoom = WIDE_ZOOM; }

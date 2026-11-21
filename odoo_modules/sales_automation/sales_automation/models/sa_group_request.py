@@ -1853,7 +1853,7 @@ class SaGroupRequest(models.Model):
                 return (_("*%(bad)s* is not a postcode. I need %(hint)s.",
                           bad=bad or '-',
                           hint=self._sa_pincode_hint(partner)), 'await_address')
-            return (_("\U0001F4EE And your pincode?"), 'await_address')
+            return (_("\U0001F4EE And your postcode?"), 'await_address')
         summary = self._sa_profile_summary(partner)
         if again:
             summary = _("Sorry, I didn't understand *%(bad)s*.\n\n%(summary)s",

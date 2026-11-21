@@ -146,9 +146,9 @@ export default function AddressForm({ initial, meta: startMeta, me, onSave, onCa
     if (!phoneOk(d.phone)) x.phone = phoneLen ? `Enter a ${phoneLen}-digit mobile number` : "Enter a valid mobile number";
     if (d.alt && !phoneOk(d.alt)) x.alt = phoneLen ? `Enter a ${phoneLen}-digit number, or leave it empty` : "Enter a valid number";
     if (d.alt && d.alt === d.phone) x.alt = "Use a different number, or leave it empty";
-    if (pinLen ? d.pin.length !== pinLen : !/^\d{3,10}$/.test(d.pin)) x.pin = pinLen ? `Enter a ${pinLen}-digit pincode` : "Enter a valid pincode";
+    if (pinLen ? d.pin.length !== pinLen : !/^\d{3,10}$/.test(d.pin)) x.pin = pinLen ? `Enter a ${pinLen}-digit postcode` : "Enter a valid postcode";
     if (!d.line.trim()) x.line = "Enter the house no., building or apartment";
-    if (!d.area.trim()) x.area = "Enter the road name, area or colony";
+    if (!d.area.trim()) x.area = "Enter the street or area";
     if (!d.town.trim()) x.town = "Enter the city, district or town";
     if (states.length && !d.state_id) x.state = "Pick a state";
     return x;
@@ -229,15 +229,15 @@ export default function AddressForm({ initial, meta: startMeta, me, onSave, onCa
         {field("phone", "Mobile number", { digits: phoneLen || 15, ac: "tel-national", prefix: dial })}
         {field("alt", "Alternate mobile (optional)", { digits: phoneLen || 15, ac: "off", prefix: dial })}
         <div className="af-pin">
-          {field("pin", "Pincode", { digits: pinLen || 10, ac: "postal-code" })}
+          {field("pin", "Postcode", { digits: pinLen || 10, ac: "postal-code" })}
           {look?.busy && <span className="af-hint"><i className="af-spin" />Finding your area…</span>}
           {!err.pin && place && <span className="af-hint af-good">{place}</span>}
         </div>
         <div className="co-span2">{field("line", "House no., building, apartment", { ac: "address-line1" })}</div>
         <div className="co-span2">
-          {field("area", "Road name, area, colony", { ac: "address-line2" })}
+          {field("area", "Street or area", { ac: "address-line2" })}
           {look?.areas?.length > 0 && !look.areas.includes(d.area) && (
-            <div className="af-areas" role="group" aria-label="Areas for this pincode">
+            <div className="af-areas" role="group" aria-label="Areas for this postcode">
               <small>Areas in {d.pin}</small>
               {look.areas.map((a) => <button type="button" key={a} onClick={() => set("area", a)}>{a}</button>)}
             </div>
@@ -276,10 +276,10 @@ export default function AddressForm({ initial, meta: startMeta, me, onSave, onCa
       {err.form && <p className="co-error" key={err.form}>{err.form}</p>}
       {mismatch && mismatch.pin === d.pin && (
         <div className="af-mismatch" role="alert">
-          <b>Is the pincode right?</b>
+          <b>Is the postcode right?</b>
           <span>
-            Pincode {mismatch.pin}{mismatch.place ? ` is in ${mismatch.place}` : ""}, about {mismatch.km} km
-            from where your map pin is. Please check the pincode, or save anyway if it's right.
+            Postcode {mismatch.pin}{mismatch.place ? ` is in ${mismatch.place}` : ""}, about {mismatch.km} km
+            from where your map pin is. Please check the postcode, or save anyway if it's right.
           </span>
         </div>
       )}

@@ -1,6 +1,6 @@
 {
     'name': '369 Mart Delivery Addresses',
-    'version': '19.0.1.4.0',
+    'version': '19.0.1.4.1',
     'category': 'Website',
     'summary': "Customers' delivery addresses, found from their live location.",
     'description': """
