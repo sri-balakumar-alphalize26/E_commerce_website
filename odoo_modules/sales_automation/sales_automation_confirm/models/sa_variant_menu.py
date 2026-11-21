@@ -18,6 +18,7 @@ from odoo import _, api, fields, models
 _logger = logging.getLogger(__name__)
 
 ANY = "\u270F\uFE0F TYPE IT / OTHER"
+OTHER = "\u270F\uFE0F OTHER"
 GENERIC = ('intel', 'amd', 'the', 'and', 'with', 'for', 'inch', 'ssd', 'ram', 'core')
 ANY_WORDS = ("any", "anything", "no", "skip", "not sure", "dont know", "don't know", "whatever", "ok")
 
@@ -86,12 +87,58 @@ class SaGroupRequestVariant(models.Model):
         self.ensure_one()
         return bool(self.product_id and not self.sa_variant_id and self._sa_attr_lines())
 
+    VARIANT_POLL_MAX = 8
+
+    def _sa_variant_sellable(self, variant):
+        """Same rule as the menu's products: a variant that may not be sold
+        short and has none free is not offered."""
+        tmpl = variant.product_tmpl_id
+        if 'allow_out_of_stock_order' not in tmpl._fields or 'free_qty' not in variant._fields:
+            return True
+        if not getattr(tmpl, 'is_storable', False) or tmpl.allow_out_of_stock_order:
+            return True
+        return (variant.sudo().free_qty or 0.0) > 0
+
+    def _sa_variant_poll(self):
+        """Every variant in one poll ("8GB · 256GB") when there are only a few,
+        instead of one question per attribute. False when it does not apply."""
+        self.ensure_one()
+        product = self.product_id
+        lines = self._sa_attr_lines(product)
+        if not lines:
+            return False
+        variants = product.product_variant_ids.filtered(lambda v: v.active and self._sa_variant_sellable(v))
+        if not 2 <= len(variants) <= self.VARIANT_POLL_MAX:
+            return False
+        menu, used = {}, set()
+        for v in variants:
+            values = v.product_template_attribute_value_ids.filtered(
+                lambda x: x.attribute_line_id in lines).sorted(lambda x: (x.attribute_id.sequence, x.attribute_id.id))
+            label = ' · '.join(values.mapped('name'))[:50] or v.display_name[:50]
+            base, n = label, 2
+            while label in used:
+                label = '%s (%d)' % (base[:45], n)
+                n += 1
+            used.add(label)
+            menu[label] = {'kind': 'variant', 'target': v.id}
+        menu[OTHER] = {'kind': 'attr_steps'}
+        for item in menu.values():
+            item['req'] = self.id
+            item['parent'] = 'attr'
+        self.sa_menu_json = json.dumps(menu)
+        self._ask(_("\U0001F4E6 *%(product)s* - which one? Tap one:", product=product.name),
+                  [{'id': 'sa_var_%d' % i, 'title': label} for i, label in enumerate(menu)])
+        return True
+
     def _sa_attr_ask(self, chosen=None, skipped=None):
         """Poll the next unanswered attribute. `chosen` = ptav ids so far,
         `skipped` = attribute ids the customer left open."""
         self.ensure_one()
         chosen = [int(c) for c in (chosen or []) if c]
         skipped = sorted({int(a) for a in (skipped or [])})
+        if not chosen and not skipped and not self.env.context.get('sa_attr_steps') \
+                and self._sa_variant_poll():
+            return True
         product = self.product_id
         chosen_attr_ids = {ptav.attribute_id.id for ptav in
                            self.env['product.template.attribute.value'].sudo().browse(chosen)}
@@ -139,6 +186,14 @@ class SaGroupRequestVariant(models.Model):
 
     def _sa_menu_tapped(self, item):
         self.ensure_one()
+        if item.get('kind') == 'variant':
+            v = self.env['product.product'].sudo().browse(int(item.get('target') or 0)).exists()
+            if v and v.product_tmpl_id == self.product_id:
+                return self._sa_attr_done(v.product_template_attribute_value_ids.ids)
+            return self._sa_attr_ask([], [])
+        if item.get('kind') == 'attr_steps':
+            # OTHER on the variant poll: one question per attribute, as before.
+            return self.with_context(sa_attr_steps=True)._sa_attr_ask([], [])
         if item.get('kind') == 'attr':
             chosen = list(item.get('chosen') or [])
             skipped = list(item.get('skipped') or [])
@@ -276,16 +331,25 @@ class SaGroupRequestVariant(models.Model):
         """The order line carries the exact variant, not the template's first one."""
         self.ensure_one()
         res = super()._place_order()
+        self._sa_variant_pin_line(self.order_id)
+        return res
+
+    def _sa_variant_pin_line(self, order):
+        """Put the exact variant on this enquiry's own order line - the first
+        line of the product. A cart can hold the same product again in another
+        variant, and that line already carries its own."""
+        self.ensure_one()
         try:
-            order = self.order_id.sudo()
+            order = order.sudo()
             v = self.sa_variant_id
             if order and v:
-                for line in order.order_line.filtered(lambda l: l.product_id and l.product_id.product_tmpl_id == v.product_tmpl_id):
+                lines = order.order_line.filtered(
+                    lambda l: l.product_id and l.product_id.product_tmpl_id == v.product_tmpl_id).sorted('id')[:1]
+                for line in lines:
                     if line.product_id != v:
                         line.write({'product_id': v.id})
         except Exception as err:  # noqa: BLE001 - the order stands either way
             _logger.warning("Sales Automation: variant on order line for enquiry %s skipped: %s", self.id, err)
-        return res
 
     # ------------------------------------------------------------------
     # Picture for the exact variant
