@@ -54,6 +54,12 @@ class SaGroupRequestCatalog(models.Model):
             order='name', offset=page * self.PAGE, limit=self.PAGE + 1)
         return rows[:self.PAGE], len(rows) > self.PAGE
 
+    @api.model
+    def _sa_menu_product_domain(self):
+        """NEW ORDER's search, ORDER AGAIN and POPULAR offer what the website
+        sells too - the same shelf as the category pages above."""
+        return super()._sa_menu_product_domain() + [('is_published', '=', True)]
+
     # ---------------------------------------------------- search and price
 
     @api.model

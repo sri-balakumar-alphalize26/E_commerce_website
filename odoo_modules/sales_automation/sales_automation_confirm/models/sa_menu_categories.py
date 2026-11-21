@@ -1,20 +1,45 @@
 # -*- coding: utf-8 -*-
-"""NEW ORDER in the welcome menu opens the catalogue as polls.
+"""NEW ORDER in the welcome menu: "what are you looking for?" first.
 
-NEW ORDER → the top-level categories (Laptop, Mobile, Computer parts …) plus
-NOT LISTED. A category → its sub-categories, or its products, plus NOT
-LISTED. A product → a fresh enquiry for it, straight to the picture + page
-confirmation. NOT LISTED → "tell me what you need" and the typed flow as
-before. Levels are 'categ:<id>' and 'prod:<id>'; BACK walks up.
+A shop with many categories cannot fit them in one poll (ten options at
+most), so NEW ORDER asks the customer to type what they want and searches
+the catalogue for it:
+
+  NEW ORDER → 'ask': "type the product name" + ORDER AGAIN / POPULAR NOW /
+              ALL CATEGORIES / MAIN MENU.
+  typed word → a category whose name matches opens ('categ:<id>'); several
+              matching categories are offered ('findcat'); otherwise the
+              matching products, page by page ('find:<page>'). Nothing found
+              → the message goes on to the ordinary typed enquiry, which asks
+              the vendors.
+  ALL CATEGORIES → the category tree, every level paged with MORE, so no
+              category is ever left out ('categ', 'categp:<page>',
+              'categ:<id>[:<page>]', 'prod:<id>[:<page>]').
+  A product → a fresh enquiry for it, straight to the picture + page
+              confirmation. NOT LISTED → "tell me what you need" and the
+              typed flow as before.
+
+Typed words count as a search while the customer is on one of these screens
+(`sa_menu_ask_at`, 15 minutes); after that typing is the ordinary flow again.
 """
 import json
 import logging
+from datetime import timedelta
 
 from odoo import _, api, fields, models
 
 _logger = logging.getLogger(__name__)
 
 NOT_LISTED = "✏️ NOT LISTED"
+MORE = "➡️ MORE"
+ORDER_AGAIN = "\U0001F501 ORDER AGAIN"
+POPULAR = "⭐ POPULAR NOW"
+ALL_CATEGORIES = "\U0001F4C2 ALL CATEGORIES"
+
+# Levels drawn here. Anything else goes up the stack (main, orders, more ...).
+CATALOG_LEVELS = ('ask', 'categ', 'prod:', 'find', 'again', 'popular')
+# How long after the last catalogue screen typed words are read as a search.
+SEARCH_MINUTES = 15
 
 
 class ProductCategoryMenu(models.Model):
@@ -29,9 +54,22 @@ class ProductCategoryMenu(models.Model):
 class SaGroupRequestMenuCategories(models.Model):
     _inherit = 'sa.group.request'
 
+    sa_menu_term = fields.Char(
+        'Last menu search', readonly=True, copy=False,
+        help="What the customer last typed after NEW ORDER - kept so MORE "
+             "can page through the results.")
+    sa_menu_ask_at = fields.Datetime(
+        'Menu search open since', readonly=True, copy=False,
+        help="Set while the customer is on a NEW ORDER screen: what they type "
+             "then is searched in the catalogue. Cleared when they leave it.")
+
     # ------------------------------------------------------------------
     # What to list
     # ------------------------------------------------------------------
+    PAGE = 6            # products per page
+    CATEG_PAGE = 6      # top-level categories per page
+    SUB_PAGE = 5        # sub-categories per page (an "All ... products" row may follow)
+
     @api.model
     def _sa_menu_categories(self, parent=None):
         """Categories worth showing: with sale products (or vendors) below them."""
@@ -46,8 +84,6 @@ class SaGroupRequestMenuCategories(models.Model):
                 out.append(c)
         return out
 
-    PAGE = 6
-
     @api.model
     def _sa_menu_products(self, categ, page=0):
         """(products on this page, more pages after it)"""
@@ -57,6 +93,112 @@ class SaGroupRequestMenuCategories(models.Model):
         rows = Prod.search([('categ_id', 'child_of', categ.id), ('sale_ok', '=', True)] + self._sa_unsellable_domain(),
                            order='name', offset=page * self.PAGE, limit=self.PAGE + 1)
         return rows[:self.PAGE], len(rows) > self.PAGE
+
+    @api.model
+    def _sa_menu_product_domain(self):
+        """What the search, ORDER AGAIN and POPULAR may offer. The storefront
+        bridge narrows it to published products."""
+        return [('sale_ok', '=', True), ('active', '=', True)] + self._sa_unsellable_domain()
+
+    def _sa_menu_company_domain(self):
+        company = self._company_for(self.group_id) if self.group_id else self.env.company
+        return ['|', ('company_id', '=', False), ('company_id', '=', company.id)]
+
+    def _sa_menu_find_products(self, term, page=0):
+        """(products matching the typed words on this page, more after it).
+
+        Every word has to appear in the name, the internal reference or the
+        category, so "hp laptop" finds HP laptops and not every HP product.
+        Nothing that way → the spacing-blind search ("powerbank" finds
+        "Power Bank"), which has no pages.
+        """
+        self.ensure_one()
+        Prod = self.env['product.template'].sudo()
+        base = self._sa_menu_product_domain() + self._sa_menu_company_domain()
+        words = sorted(self._sa_words(term))
+        if words:
+            domain = list(base)
+            for w in words:
+                domain += ['|', '|', ('name', 'ilike', w), ('default_code', 'ilike', w),
+                           ('categ_id.complete_name', 'ilike', w)]
+            rows = Prod.search(domain, order='name', offset=page * self.PAGE, limit=self.PAGE + 1)
+            if rows or page:
+                return rows[:self.PAGE], len(rows) > self.PAGE
+        loose = self._search_products_loose(term)
+        if loose:
+            loose = Prod.search([('id', 'in', loose.ids)] + base, order='name', limit=self.PAGE)
+        return loose, False
+
+    @api.model
+    def _sa_menu_find_categories(self, term):
+        """Listed categories whose name is the typed word ("laptop",
+        "laptops", "mobile cover"). An exact name comes alone."""
+        term = ' '.join((term or '').split())
+        if len(term) < 3 or len(term) > 40:
+            return self.env['product.category']
+        Categ = self.env['product.category'].sudo()
+        names = [term]
+        if term.lower().endswith('s') and len(term) > 3:
+            names.append(term[:-1])
+        domain = ['|'] * (len(names) - 1) + [('name', 'ilike', n) for n in names]
+        hits = Categ.search([('sa_menu_hide', '=', False)] + domain, order='sa_menu_sequence, name', limit=30)
+        Prod = self.env['product.template'].sudo()
+        prod_domain = self._sa_menu_product_domain()
+        listed = Categ
+        for c in hits:
+            # A hidden parent hides the whole branch.
+            if Categ.search_count([('id', 'parent_of', c.id), ('sa_menu_hide', '=', True)]):
+                continue
+            if getattr(c, 'sa_vendor_ids', False) or Prod.search_count(
+                    [('categ_id', 'child_of', c.id)] + prod_domain, limit=1):
+                listed |= c
+        exact = listed.filtered(lambda c: (c.name or '').strip().lower() in [n.lower() for n in names])
+        return exact[:1] if len(exact) == 1 else listed
+
+    def _sa_menu_sender_domain(self):
+        digits = ''.join(c for c in (self.requester_phone or '') if c.isdigit())
+        tail = digits[-9:] if len(digits) >= 9 else ''
+        lid = self.requester_lid or ''
+        if tail and lid:
+            return ['|', ('requester_phone', 'like', tail), ('requester_lid', '=', lid)]
+        if tail:
+            return [('requester_phone', 'like', tail)]
+        if lid:
+            return [('requester_lid', '=', lid)]
+        return None
+
+    def _sa_menu_again_products(self):
+        """What this customer ordered before, newest first, once each."""
+        self.ensure_one()
+        who = self._sa_menu_sender_domain()
+        if who is None:
+            return self.env['product.template']
+        past = self.sudo().search([('group_id', '=', self.group_id.id), ('state', '=', 'order_created'),
+                                   ('product_id', '!=', False)] + who, order='id desc', limit=60)
+        seen = []
+        for r in past:
+            if r.product_id.id not in seen:
+                seen.append(r.product_id.id)
+        if not seen:
+            return self.env['product.template']
+        Prod = self.env['product.template'].sudo()
+        ok = set(Prod.search([('id', 'in', seen)] + self._sa_menu_product_domain()).ids)
+        return Prod.browse([pid for pid in seen if pid in ok][:self.PAGE])
+
+    def _sa_menu_popular_products(self):
+        """The most-ordered products of the last 60 days."""
+        self.ensure_one()
+        since = fields.Datetime.now() - timedelta(days=60)
+        groups = self.sudo()._read_group(
+            [('state', '=', 'order_created'), ('product_id', '!=', False), ('create_date', '>=', since)],
+            groupby=['product_id'], aggregates=['__count'], order='__count desc', limit=40)
+        ranked = [product.id for product, __ in groups]
+        if not ranked:
+            return self.env['product.template']
+        Prod = self.env['product.template'].sudo()
+        ok = set(Prod.search([('id', 'in', ranked)] + self._sa_menu_product_domain()
+                             + self._sa_menu_company_domain()).ids)
+        return Prod.browse([pid for pid in ranked if pid in ok][:self.PAGE])
 
     @staticmethod
     def _sa_menu_clean(label, used):
@@ -71,51 +213,8 @@ class SaGroupRequestMenuCategories(models.Model):
     # ------------------------------------------------------------------
     # Levels
     # ------------------------------------------------------------------
-    def _sa_menu_show(self, level):
-        self.ensure_one()
-        if not (level or '').startswith(('categ', 'prod:')):
-            return super()._sa_menu_show(level)
-        opts, used = [], set()
-        parent_level = 'main'
-        if level == 'categ':
-            body = _("\U0001F195 *New order* - what are you looking for? Tap a category:")
-            for c in self._sa_menu_categories()[:8]:
-                opts.append((self._sa_menu_clean(c.name, used), {'kind': 'menu', 'level': 'categ:%d' % c.id}))
-        else:
-            bits = level.split(':')
-            cid = int(bits[1] or 0)
-            page = int(bits[2]) if len(bits) > 2 and bits[2].isdigit() else 0
-            categ = self.env['product.category'].sudo().browse(cid).exists()
-            if not categ:
-                return super()._sa_menu_show('main')
-            parent_level = ('categ:%d' % categ.parent_id.id) if categ.parent_id and level.startswith('categ:') else 'categ'
-            if level.startswith('categ:'):
-                subs = self._sa_menu_categories(parent=categ)
-                if subs:
-                    body = _("*%s* - tap a type:") % categ.name
-                    for c in subs[:6]:
-                        opts.append((self._sa_menu_clean(c.name, used), {'kind': 'menu', 'level': 'categ:%d' % c.id}))
-                    direct = self.env['product.template'].sudo().search_count([('categ_id', '=', categ.id), ('sale_ok', '=', True)])
-                    if direct:
-                        opts.append((self._sa_menu_clean(_("All %s products") % categ.name, used), {'kind': 'menu', 'level': 'prod:%d' % categ.id}))
-                else:
-                    level = 'prod:%d' % categ.id
-            if level.startswith('prod:'):
-                body = _("*%s* - tap the product you want:") % categ.name
-                products, more = self._sa_menu_products(categ, page)
-                if page and not products:
-                    return self._sa_menu_show('prod:%d' % categ.id)
-                for p in products:
-                    opts.append((self._sa_menu_clean(p.name, used), {'kind': 'prodpick', 'target': p.id}))
-                if more:
-                    opts.append((_("➡️ MORE"), {'kind': 'menu', 'level': 'prod:%d:%d' % (categ.id, page + 1)}))
-                parent_level = ('prod:%d:%d' % (categ.id, page - 1)) if page else (
-                    ('categ:%d' % categ.parent_id.id) if categ.parent_id else 'categ')
-        opts.append((NOT_LISTED, {'kind': 'new'}))
-        if level != 'categ':
-            # The top level's "back" is the main menu itself.
-            opts.append((self.MENU_BACK, {'kind': 'menu', 'level': parent_level}))
-        opts.append((self.MENU_MAIN, {'kind': 'menu', 'level': 'main'}))
+    def _sa_menu_post(self, level, body, opts):
+        """Keep the options (by label) and post the poll - ten options at most."""
         menu = {}
         for label, item in opts[:10]:
             item = dict(item)
@@ -126,6 +225,172 @@ class SaGroupRequestMenuCategories(models.Model):
         self._ask(body, [{'id': 'sa_menu_%d' % i, 'title': label} for i, label in enumerate(menu)])
         return True
 
+    def _sa_menu_show(self, level):
+        self.ensure_one()
+        level = level or ''
+        if level == 'main':
+            # "...or just type the product you need": a word typed at the main
+            # menu is searched straight away, no NEW ORDER tap needed.
+            self.sudo().write({'sa_menu_ask_at': fields.Datetime.now()})
+            return super()._sa_menu_show(level)
+        if not level.startswith(CATALOG_LEVELS):
+            # Off the catalogue: typed words are no longer a search.
+            if self.sa_menu_ask_at:
+                self.sudo().write({'sa_menu_ask_at': False})
+            return super()._sa_menu_show(level)
+        self.sudo().write({'sa_menu_ask_at': fields.Datetime.now()})
+        if level == 'ask':
+            return self._sa_menu_show_ask()
+        if level == 'categ' or level.startswith('categp:'):
+            return self._sa_menu_show_top(int(level.split(':')[1]) if ':' in level else 0)
+        if level.startswith('find:'):
+            return self._sa_menu_show_find(int(level.split(':')[1] or 0))
+        if level == 'findcat':
+            return self._sa_menu_show_findcat()
+        if level in ('again', 'popular'):
+            return self._sa_menu_show_shortlist(level)
+        return self._sa_menu_show_branch(level)
+
+    def _sa_menu_ask_note(self):
+        """A line above "what are you looking for?" (the cart says what is in it)."""
+        return ''
+
+    def _sa_menu_show_ask(self):
+        body = _("\U0001F195 *New order* - what are you looking for?\n\n"
+                 "Type the product name, for example *laptop*, *headphones* or *iPhone 15*.\n"
+                 "Or tap one:")
+        note = self._sa_menu_ask_note()
+        if note:
+            body = '%s\n\n%s' % (note, body)
+        opts = []
+        if self._sa_menu_again_products():
+            opts.append((ORDER_AGAIN, {'kind': 'menu', 'level': 'again'}))
+        if self._sa_menu_popular_products():
+            opts.append((POPULAR, {'kind': 'menu', 'level': 'popular'}))
+        opts.append((ALL_CATEGORIES, {'kind': 'menu', 'level': 'categ'}))
+        opts.append((self.MENU_MAIN, {'kind': 'menu', 'level': 'main'}))
+        return self._sa_menu_post('ask', body, opts)
+
+    def _sa_menu_show_top(self, page):
+        level = 'categp:%d' % page if page else 'categ'
+        cats = self._sa_menu_categories()
+        start = page * self.CATEG_PAGE
+        if page and start >= len(cats):
+            return self._sa_menu_show_top(0)
+        used, opts = set(), []
+        for c in cats[start:start + self.CATEG_PAGE]:
+            opts.append((self._sa_menu_clean(c.name, used), {'kind': 'menu', 'level': 'categ:%d' % c.id}))
+        if len(cats) > start + self.CATEG_PAGE:
+            opts.append((MORE, {'kind': 'menu', 'level': 'categp:%d' % (page + 1)}))
+        opts.append((NOT_LISTED, {'kind': 'new'}))
+        back = ('categp:%d' % (page - 1) if page > 1 else 'categ') if page else 'ask'
+        opts.append((self.MENU_BACK, {'kind': 'menu', 'level': back}))
+        opts.append((self.MENU_MAIN, {'kind': 'menu', 'level': 'main'}))
+        pages = (len(cats) + self.CATEG_PAGE - 1) // self.CATEG_PAGE
+        body = _("\U0001F4C2 *Categories* - tap one (or just type what you need):")
+        if pages > 1:
+            body = _("\U0001F4C2 *Categories* (%(page)d/%(pages)d) - tap one (or just type what you need):",
+                     page=page + 1, pages=pages)
+        return self._sa_menu_post(level, body, opts)
+
+    def _sa_menu_product_opts(self, products, used):
+        return [(self._sa_menu_clean(p.name, used), {'kind': 'prodpick', 'target': p.id}) for p in products]
+
+    def _sa_menu_show_find(self, page):
+        term = self.sa_menu_term or ''
+        products, more = self._sa_menu_find_products(term, page)
+        if page and not products:
+            return self._sa_menu_show_find(0)
+        used = set()
+        opts = self._sa_menu_product_opts(products, used)
+        if more:
+            opts.append((MORE, {'kind': 'menu', 'level': 'find:%d' % (page + 1)}))
+        opts.append((NOT_LISTED, {'kind': 'new'}))
+        if page:
+            opts.append((self.MENU_BACK, {'kind': 'menu', 'level': 'find:%d' % (page - 1)}))
+        opts.append((self.MENU_MAIN, {'kind': 'menu', 'level': 'main'}))
+        body = _("\U0001F50E Found for *%s* - tap the one you want (or type another word):") % term
+        return self._sa_menu_post('find:%d' % page, body, opts)
+
+    def _sa_menu_show_findcat(self):
+        term = self.sa_menu_term or ''
+        cats = self._sa_menu_find_categories(term)
+        if not cats:
+            return self._sa_menu_show_find(0)
+        used, opts = set(), []
+        for c in cats[:6]:
+            opts.append((self._sa_menu_clean(c.complete_name or c.name, used),
+                         {'kind': 'menu', 'level': 'categ:%d' % c.id}))
+        if self._sa_menu_find_products(term, 0)[0]:
+            opts.append((self._sa_menu_clean(_("\U0001F50E ALL \"%s\" PRODUCTS") % term.upper()[:30], used),
+                         {'kind': 'menu', 'level': 'find:0'}))
+        opts.append((NOT_LISTED, {'kind': 'new'}))
+        opts.append((self.MENU_BACK, {'kind': 'menu', 'level': 'ask'}))
+        opts.append((self.MENU_MAIN, {'kind': 'menu', 'level': 'main'}))
+        body = _("\U0001F50E *%s* - which one? Tap it (or type another word):") % term
+        return self._sa_menu_post('findcat', body, opts)
+
+    def _sa_menu_show_shortlist(self, level):
+        if level == 'again':
+            products = self._sa_menu_again_products()
+            body = _("\U0001F501 *Order again* - tap the product you want:")
+        else:
+            products = self._sa_menu_popular_products()
+            body = _("⭐ *Popular now* - tap the product you want:")
+        if not products:
+            return self._sa_menu_show_ask()
+        opts = self._sa_menu_product_opts(products, set())
+        opts.append((NOT_LISTED, {'kind': 'new'}))
+        opts.append((self.MENU_BACK, {'kind': 'menu', 'level': 'ask'}))
+        opts.append((self.MENU_MAIN, {'kind': 'menu', 'level': 'main'}))
+        return self._sa_menu_post(level, body, opts)
+
+    def _sa_menu_show_branch(self, level):
+        """'categ:<id>[:<page>]' (its sub-categories, or its products) and
+        'prod:<id>[:<page>]' (its products)."""
+        bits = level.split(':')
+        cid = int(bits[1]) if len(bits) > 1 and bits[1].isdigit() else 0
+        page = int(bits[2]) if len(bits) > 2 and bits[2].isdigit() else 0
+        categ = self.env['product.category'].sudo().browse(cid).exists()
+        if not categ:
+            return self._sa_menu_show_ask()
+        up = ('categ:%d' % categ.parent_id.id) if categ.parent_id else 'categ'
+        used, opts = set(), []
+        if level.startswith('categ:'):
+            subs = self._sa_menu_categories(parent=categ)
+            start = page * self.SUB_PAGE
+            if page and start >= len(subs):
+                return self._sa_menu_show_branch('categ:%d' % categ.id)
+            if subs:
+                body = _("*%s* - tap a type:") % categ.name
+                for c in subs[start:start + self.SUB_PAGE]:
+                    opts.append((self._sa_menu_clean(c.name, used), {'kind': 'menu', 'level': 'categ:%d' % c.id}))
+                if not page:
+                    direct = self.env['product.template'].sudo().search_count(
+                        [('categ_id', '=', categ.id), ('sale_ok', '=', True)])
+                    if direct:
+                        opts.append((self._sa_menu_clean(_("All %s products") % categ.name, used),
+                                     {'kind': 'menu', 'level': 'prod:%d' % categ.id}))
+                if len(subs) > start + self.SUB_PAGE:
+                    opts.append((MORE, {'kind': 'menu', 'level': 'categ:%d:%d' % (categ.id, page + 1)}))
+                back = ('categ:%d:%d' % (categ.id, page - 1)) if page else up
+                level = 'categ:%d:%d' % (categ.id, page) if page else 'categ:%d' % categ.id
+            else:
+                level, page = 'prod:%d' % categ.id, 0
+        if level.startswith('prod:'):
+            body = _("*%s* - tap the product you want:") % categ.name
+            products, more = self._sa_menu_products(categ, page)
+            if page and not products:
+                return self._sa_menu_show_branch('prod:%d' % categ.id)
+            opts += self._sa_menu_product_opts(products, used)
+            if more:
+                opts.append((MORE, {'kind': 'menu', 'level': 'prod:%d:%d' % (categ.id, page + 1)}))
+            back = ('prod:%d:%d' % (categ.id, page - 1)) if page else up
+        opts.append((NOT_LISTED, {'kind': 'new'}))
+        opts.append((self.MENU_BACK, {'kind': 'menu', 'level': back}))
+        opts.append((self.MENU_MAIN, {'kind': 'menu', 'level': 'main'}))
+        return self._sa_menu_post(level, body, opts)
+
     # ------------------------------------------------------------------
     # Taps
     # ------------------------------------------------------------------
@@ -134,13 +399,17 @@ class SaGroupRequestMenuCategories(models.Model):
         kind = item.get('kind')
         parent = item.get('parent') or 'main'
         if kind == 'new' and parent == 'main':
-            # NEW ORDER on the main menu: the catalogue first.
+            # NEW ORDER on the main menu: "what are you looking for?" first.
             self._sa_close_open_deals()
-            return self._sa_menu_show('categ')
+            return self._sa_menu_show('ask')
+        if kind == 'new':
+            # NOT LISTED: what they type next is the ordinary enquiry, which
+            # asks the vendors - not another catalogue search.
+            self.sudo().write({'sa_menu_ask_at': False})
         if kind == 'prodpick':
             product = self.env['product.template'].sudo().browse(item.get('target') or 0).exists()
             if not product:
-                return self._sa_menu_show('categ')
+                return self._sa_menu_show('ask')
             self._sa_close_open_deals()
             return self._sa_menu_start_enquiry(product)
         return super()._sa_menu_tapped(item)
@@ -157,6 +426,109 @@ class SaGroupRequestMenuCategories(models.Model):
             'raw_text': product.name, 'ai_search_term': product.name,
             'product_id': product.id, 'state': 'new',
         })
-        self.sudo().write({'sa_menu_json': False})
+        self.sudo().write({'sa_menu_json': False, 'sa_menu_ask_at': False})
         _logger.info("Sales Automation: menu pick -> enquiry %s for %r", req.id, product.name)
         return req.with_context(sa_reply_to=self.env.context.get('sa_reply_to'))._ask_confirmation()
+
+    # ------------------------------------------------------------------
+    # Typed words while on a NEW ORDER screen
+    # ------------------------------------------------------------------
+    @api.model
+    def _sa_typed_answer_hook(self, group, message, text):
+        """A word typed on a NEW ORDER screen is searched in the catalogue."""
+        res = super()._sa_typed_answer_hook(group, message, text)
+        if res is not None:
+            return res
+        since = fields.Datetime.now() - timedelta(minutes=SEARCH_MINUTES)
+        open_ = self.sudo().search([('group_id', '=', group.id), ('sa_menu_ask_at', '>=', since)],
+                                   order='sa_menu_ask_at desc, id desc', limit=10)
+        for req in open_:
+            if req._sa_asked_of(message):
+                return req._sa_menu_typed(text)
+        return None
+
+    def _sa_menu_typed(self, text):
+        """True when the words were answered from the catalogue; None hands
+        them on to the ordinary typed enquiry."""
+        self.ensure_one()
+        # A poll option typed out (the poll id went missing) is that tap.
+        label = self._sa_menu_label(text)
+        if label:
+            return self._sa_menu_tapped(json.loads(self.sa_menu_json)[label])
+        if self._sa_is_bare_answer(text) or self._sa_is_greeting(text):
+            return None
+        term = ' '.join((text or '').split())[:80]
+        shown = self._sa_menu_search_show(term)
+        if shown is not None:
+            return shown
+        # A typo ("latop"): the nearest words the shop sells, once.
+        fixed = self._sa_menu_spell(term)
+        if fixed:
+            shown = self._sa_menu_search_show(fixed)
+            if shown is not None:
+                _logger.info("Sales Automation: menu search %r read as %r", term, fixed)
+                return shown
+        # Not in the catalogue: the ordinary enquiry takes it from here.
+        _logger.info("Sales Automation: menu search %r found nothing - typed enquiry", term)
+        self.sudo().write({'sa_menu_ask_at': False})
+        return None
+
+    def _sa_menu_search_show(self, term):
+        """Show what `term` finds - a category, a choice of categories, or the
+        products. None when it finds nothing."""
+        self.ensure_one()
+        self.sudo().write({'sa_menu_term': term})
+        cats = self._sa_menu_find_categories(term)
+        if len(cats) == 1:
+            _logger.info("Sales Automation: menu search %r -> category %s", term, cats.name)
+            return self._sa_menu_show('categ:%d' % cats.id)
+        if cats:
+            return self._sa_menu_show('findcat')
+        if self._sa_menu_find_products(term, 0)[0]:
+            return self._sa_menu_show('find:0')
+        return None
+
+    def _sa_menu_spell(self, term):
+        """`term` with misspelt words replaced by the closest word the shop
+        sells ("latop" → "laptop"); '' when nothing changed."""
+        self.ensure_one()
+        import difflib
+        words = (term or '').split()
+        if not words:
+            return ''
+        vocab = set(self._sa_catalog_vocabulary())
+        for c in self._sa_menu_find_categories_all():
+            vocab |= {w for w in self._sa_words(c.name or '') if len(w) >= 4}
+        if not vocab:
+            return ''
+        vocab = sorted(vocab)
+        out, changed = [], False
+        for word in words:
+            bare = word.strip('.,!?:;()*_-/').lower()
+            if len(bare) >= 4 and bare not in vocab:
+                hit = difflib.get_close_matches(bare, vocab, n=1, cutoff=0.75)
+                if hit:
+                    out.append(hit[0])
+                    changed = True
+                    continue
+            out.append(word)
+        return ' '.join(out) if changed else ''
+
+    def _sa_name_typed_ok(self, text, pending):
+        """"What should we call you?" answered with a product - misspelt too
+        ("latop") - is an enquiry, not a name."""
+        ok = super()._sa_name_typed_ok(text, pending)
+        if ok and pending == 'ask':
+            clean = ' '.join((text or '').split())
+            try:
+                if self._sa_menu_find_categories(clean) or self._sa_menu_spell(clean):
+                    return False
+            except Exception as err:  # noqa: BLE001 - the name question still works
+                _logger.info("Sales Automation: name check for %r skipped: %s", clean, err)
+        return ok
+
+    @api.model
+    def _sa_menu_find_categories_all(self):
+        """Every category the menu could list, at any level (for spelling)."""
+        Categ = self.env['product.category'].sudo()
+        return Categ.search([('sa_menu_hide', '=', False)], limit=500)

@@ -577,8 +577,10 @@ class SaGroupRequestSelfService(models.Model):
                 push = (self.requester_name or '').strip()
                 name = push if push and self._sa_looks_like_name(push) else ''
             name = name.split(' ')[0]
-            body = _("Hi %s \U0001F44B What would you like to do? Tap one:") % name if name \
-                else _("Hi \U0001F44B What would you like to do? Tap one:")
+            body = _("Hi %s \U0001F44B What would you like to do? Tap one, "
+                     "or just type the product you need:") % name if name \
+                else _("Hi \U0001F44B What would you like to do? Tap one, "
+                       "or just type the product you need:")
             opts = []
             req, step, words = self._sa_resume_candidate()
             if req:
