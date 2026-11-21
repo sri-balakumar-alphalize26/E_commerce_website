@@ -236,6 +236,24 @@ def _page(title, body, status=200, ask='', body_class=''):
                                           ('Cache-Control', 'no-store')])
 
 
+def _back_button(link):
+    """After the answer: straight back to the WhatsApp group the customer
+    came from (its invite link opens the chat for a member), or WhatsApp
+    itself when the group's link is not known."""
+    group = link.sudo().request_id.group_id
+    url = 'whatsapp://'
+    try:
+        if group and hasattr(group, '_sa_back_url'):
+            url = group._sa_back_url() or url
+    except Exception as err:  # noqa: BLE001 - the page must still render
+        _logger.info("Confirm page: back link for %s unavailable: %s", link.id, err)
+    label = ('Back to WhatsApp group' if url.startswith('https://chat.whatsapp.com/')
+             else 'Open WhatsApp')
+    return ('<a class="btn ok back" href="%s" style="display:block;text-decoration:none;'
+            'margin-top:12px;padding-top:15px">&#8617;&#65039; %s</a>'
+            % (html.escape(url, quote=True), label))
+
+
 def _trust_html(badges):
     """The shop's badges under the price: [{key, text}] → a row of chips."""
     if not badges:
@@ -437,6 +455,8 @@ class SaConfirmPage(http.Controller):
             if outcome == 'again':
                 info += '<div class="foot">Your answer was already recorded and cannot be changed.%s</div>' % zh('您的回复已记录，无法更改。')
             info += '<div class="foot">Your answer is saved. We will carry on in WhatsApp.%s</div>' % zh('您的回复已保存。')
+            if link.kind == 'customer' and (link.channel or 'whatsapp') == 'whatsapp':
+                info += _back_button(link)
             bar, body_class = '', ''
         else:
             # saving() greys both buttons after the first press: a second tap

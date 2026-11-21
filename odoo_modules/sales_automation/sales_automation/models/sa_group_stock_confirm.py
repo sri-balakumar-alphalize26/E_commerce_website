@@ -86,8 +86,11 @@ class SaGroupRequestStockConfirm(models.Model):
     def _sa_order_summary(self, order):
         lines = order.order_line.filtered(lambda l: not l.display_type)
         first = lines[:1]
+        products = lines.filtered('product_id')
         return {
-            'product': (first.product_id.display_name if first else (self.product_id.display_name or '')),
+            # A cart order names every item, not only the first.
+            'product': (', '.join(products.mapped('product_id.display_name')) if len(products) > 1
+                        else first.product_id.display_name if first else (self.product_id.display_name or '')),
             'qty': sum(lines.mapped('product_uom_qty')) or 0.0,
             'price': first.price_unit if first else (self.agreed_price or self.quoted_price or 0.0),
             'total': order.amount_total,
@@ -101,11 +104,19 @@ class SaGroupRequestStockConfirm(models.Model):
         if not order or not self.group_id or not self.group_id.group_jid:
             return False
         s = self._sa_order_summary(order)
-        body = _("✅ *Good news* - *%(product)s* for your order *#%(ref)s* is now in stock.\n\n"
-                 "%(qty)s x %(price).2f = *%(cur)s %(total).2f*\n\n"
-                 "Shall we go ahead? Confirm your order.",
-                 product=s['product'], ref=self.ref_code or order.name,
-                 qty=('%g' % s['qty']), price=s['price'], cur=s['cur'], total=s['total'])
+        if len(order.order_line.filtered(lambda l: not l.display_type and l.product_id)) > 1:
+            # A cart order: every line, then the total.
+            body = _("✅ *Good news* - the items for your order *#%(ref)s* are now in stock.\n\n"
+                     "%(lines)s\n*Total: %(cur)s %(total).2f*\n\n"
+                     "Shall we go ahead? Confirm your order.",
+                     ref=self.ref_code or order.name, lines=self._sa_order_lines_text(order),
+                     cur=s['cur'], total=s['total'])
+        else:
+            body = _("✅ *Good news* - *%(product)s* for your order *#%(ref)s* is now in stock.\n\n"
+                     "%(qty)s x %(price).2f = *%(cur)s %(total).2f*\n\n"
+                     "Shall we go ahead? Confirm your order.",
+                     product=s['product'], ref=self.ref_code or order.name,
+                     qty=('%g' % s['qty']), price=s['price'], cur=s['cur'], total=s['total'])
         if repeat:
             body = _("Please tap CONFIRM or CANCEL for order *#%(ref)s*.",
                      ref=self.ref_code or order.name)

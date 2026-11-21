@@ -2453,6 +2453,11 @@ class SaGroupRequest(models.Model):
             _logger.warning("Sales Automation: could not pin the agreed price "
                             "on %s: %s", order.name, err)
 
+        # Items the customer put in their cart before this one join the same
+        # order (sales_automation_confirm/models/sa_cart.py) - before the stock
+        # check, the "Done!" and the details, so all of them see every line.
+        self._sa_order_extra_lines(order)
+
         # The group hears everything; the email bridge's private PDF copy of
         # the order is held back for orders born here.
         if 'auto_wa_sent_at_confirm' in order._fields:
@@ -2469,10 +2474,20 @@ class SaGroupRequest(models.Model):
                                 order.name, err)
 
         self.write({'order_id': order.id, 'state': 'order_created'})
-        done = _("\u2705 Done! Your order *%(ref)s* is placed.\n\n"
-                 "%(qty)s x %(product)s\n*Total: %(total).2f*",
-                 ref=order.name, qty=int(qty) if float(qty).is_integer() else qty,
-                 product=product.name, total=price * qty)
+        product_lines = order.order_line.filtered(lambda l: not l.display_type and l.product_id)
+        if len(product_lines) > 1:
+            # A cart: every item, and the order's own total.
+            done = _("\u2705 Done! Your order *%(ref)s* is placed.\n\n"
+                     "%(lines)s\n*Total: %(total).2f*",
+                     ref=order.name, lines=self._sa_order_lines_text(order),
+                     # Before tax, like the summary just tapped and the
+                     # one-item "Done!" - the pay link carries the taxed total.
+                     total=order.amount_untaxed)
+        else:
+            done = _("\u2705 Done! Your order *%(ref)s* is placed.\n\n"
+                     "%(qty)s x %(product)s\n*Total: %(total).2f*",
+                     ref=order.name, qty=int(qty) if float(qty).is_integer() else qty,
+                     product=self._sa_done_item_name(), total=price * qty)
         # In stock: the pay link follows at once, here in the group. Not in
         # stock: the goods are bought in first, and the customer is asked to
         # confirm again when they arrive (see sa_group_stock_confirm).
@@ -2487,6 +2502,17 @@ class SaGroupRequest(models.Model):
         _logger.info("Sales Automation: enquiry %s became %s at %.2f x %s",
                      self.id, order.name, price, qty)
         return True
+
+    def _sa_done_item_name(self):
+        """What the one-item "Done!" calls the product. The confirmation
+        module names the exact variant the customer picked."""
+        self.ensure_one()
+        return self.product_id.name
+
+    def _sa_order_extra_lines(self, order):
+        """More lines for the order `_place_order` just raised. Nothing here:
+        the confirmation module's cart adds the items waiting in it."""
+        return False
 
     # Words that mean stop, as opposed to "no" - which at the order summary
     # means "change something". Conflating the two is why CANCEL there moved
