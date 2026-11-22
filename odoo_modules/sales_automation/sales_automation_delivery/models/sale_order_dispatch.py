@@ -99,6 +99,8 @@ class SaleOrder(models.Model):
             lambda p: p.sa_delivery_state not in ('none', False))
         if jobs:
             jobs.sudo().sa_refresh_cod()
+            # A tracking link held until payment goes out now (22 Nov 2026).
+            jobs.sudo()._sa_track_send_held()
         return True
 
     def _sa_amount_to_collect(self):

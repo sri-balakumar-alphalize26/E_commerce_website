@@ -121,6 +121,10 @@ class StockPicking(models.Model):
 
     sa_job_url = fields.Char('Job Link', compute='_compute_sa_job_url')
     sa_track_url = fields.Char('Tracking Link', compute='_compute_sa_job_url')
+    sa_track_held = fields.Boolean(
+        'Tracking Link Owed', copy=False,
+        help="The live tracking link was due but held: the order is to be paid "
+             "online and is not paid yet. It is sent when the payment lands.")
 
     def sa_amount_due(self):
         """What the rider should collect at the door, as of now.
@@ -853,14 +857,75 @@ class StockPicking(models.Model):
         The customer gets one link and the page keeps itself current, so a
         second message carrying the same URL is only noise - and on WhatsApp
         a repeated link is what makes a thread look like spam.
+
+        An order that is to be paid online gets it only once paid (owner, 22
+        Nov 2026: "after payment only send the track live link"): until then
+        '' is returned, nothing is claimed and the job remembers that the link
+        is owed - `_sa_track_send_held` sends it the moment the payment lands.
+        Cash on delivery is not held: like any online shop, it is tracked
+        straight away.
         """
         self.ensure_one()
         if not self.sa_track_url:
             return ''
+        if self._sa_track_waits_payment():
+            if not self.sa_track_held:
+                self.sudo().write({'sa_track_held': True})
+                _logger.info("Delivery: tracking link for %s held until the order is paid",
+                             self.sa_ref_code or self.id)
+            return ''
         if self.env['sa.outbox.guard'].sudo().claim(
                 'tracklink|%s' % self.id, 60 * 60 * 24 * 14):
+            if self.sa_track_held:
+                self.sudo().write({'sa_track_held': False})
             return self.sa_track_url
         return ''
+
+    def _sa_track_waits_payment(self):
+        """True while this job's order still waits for an online payment.
+
+        Paid: no. Cash on delivery (a cash-on-delivery payment waiting at the
+        door, or a WhatsApp order that was never sent a pay link): no. A
+        WhatsApp order sent a pay link, or a web order with an online payment
+        still open: yes. Anything else keeps the old behaviour (no)."""
+        self.ensure_one()
+        order = self.sale_id
+        if not order or self.sa_is_paid:
+            return False
+        txs = order.sudo().transaction_ids
+
+        def cash(tx):
+            provider = tx.provider_id
+            return 'custom_mode' in provider._fields and provider.custom_mode == 'cash_on_delivery'
+        if txs.filtered(lambda t: t.state in ('draft', 'pending', 'authorized') and cash(t)):
+            return False
+        req = order._sa_group_enquiry() if hasattr(order, '_sa_group_enquiry') else False
+        if req and getattr(req, 'sa_pay_link_sent_on', False):
+            return True
+        return bool(txs.filtered(lambda t: t.state in ('draft', 'pending', 'authorized') and not cash(t)))
+
+    def _sa_track_send_held(self):
+        """The payment landed: a job whose tracking link was held gets it now,
+        in its own short message. A job packed before payment is left to the
+        Store's own "Payment received" message, which carries the link."""
+        for picking in self.filtered('sa_track_held'):
+            if picking.sa_delivery_state in ('none', False, 'delivered', 'returning', 'returned',
+                                             'cancelled', 'failed'):
+                continue
+            if getattr(picking, 'sa_packed_unpaid_on', False):
+                continue
+            link = picking.sa_track_link_once()
+            if not link:
+                continue
+            sent = picking._sa_tell_customer(_(
+                "✅ Payment received for order *#%(ref)s*.\n\nFollow it live here - "
+                "this one link keeps itself up to date:\n%(url)s",
+                ref=picking.sa_ref_code or '-', url=link))
+            if not sent:
+                # the message did not leave: the link is still owed
+                self.env['sa.outbox.guard'].sudo().release('tracklink|%s' % picking.id)
+                picking.sudo().write({'sa_track_held': True})
+        return True
 
     def _sa_notify_customer(self, state):
         """What the customer hears at each step.
