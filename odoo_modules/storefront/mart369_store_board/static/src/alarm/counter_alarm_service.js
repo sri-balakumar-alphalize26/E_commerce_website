@@ -34,6 +34,9 @@ const MAX_FAILURES = 3;
 /* Unlike the package it does not stop asking: it slows down, and the moment
    the server answers again the count - and the sound - are true again. */
 const BACKOFF_MS = [10000, 20000, 30000, 60000];
+/* "Open the Counter" (the note and the top-bar pill) opens Store > New
+   Orders - the screen the counter works from. */
+export const STORE_NEW_ORDERS = "sales_automation_store.action_sa_store_screen";
 
 export const counterAlarmService = {
     dependencies: ["orm", "bus_service", "notification", "action"],
@@ -102,9 +105,11 @@ export const counterAlarmService = {
                     buttons: [{
                         name: _t("Open the Counter"),
                         primary: true,
+                        // The Store app's New Orders - where Accept, Call a
+                        // Rider and Dispatch are (369 Mart > Sales > Orders
+                        // stays one menu away).
                         onClick: () => action.doAction(
-                            "mart369_store_board.action_mart369_orders_board",
-                            { clearBreadcrumbs: true }),
+                            STORE_NEW_ORDERS, { clearBreadcrumbs: true }),
                     }],
                     onClose: () => {
                         closeNotification = null;

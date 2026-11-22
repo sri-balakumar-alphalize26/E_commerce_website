@@ -9,6 +9,7 @@
 import { Component, useState } from "@odoo/owl";
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
+import { STORE_NEW_ORDERS } from "./counter_alarm_service";
 
 export class CounterAlarmSystray extends Component {
     static template = "mart369_store_board.CounterAlarmSystray";
@@ -22,9 +23,7 @@ export class CounterAlarmSystray extends Component {
 
     open() {
         this.alarm.arm();
-        return this.action.doAction("mart369_store_board.action_mart369_orders_board", {
-            clearBreadcrumbs: true,
-        });
+        return this.action.doAction(STORE_NEW_ORDERS, { clearBreadcrumbs: true });
     }
 }
 
