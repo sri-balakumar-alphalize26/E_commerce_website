@@ -120,8 +120,17 @@ def _page(title, body, ref='', script='', status=200):
 
 
 def _back_url(link):
-    """The group's invite link when the shop gave one, else WhatsApp itself."""
+    """The group's invite link when the shop gave one, else a chat with the
+    shop's number (both work on a computer too)."""
     return link.request_id.sudo().group_id._sa_back_url()
+
+
+def _back_label(link):
+    """"Back to <group name>" when the button opens the group (22 Nov 2026)."""
+    group = link.request_id.sudo().group_id
+    if _back_url(link).startswith('https://chat.whatsapp.com/') and (group.name or '').strip():
+        return _("Back to %s", group.name.strip()[:40])
+    return _("Back to WhatsApp")
 
 
 def _gone(link):
@@ -129,7 +138,7 @@ def _gone(link):
             '<a class="btn primary wide" href="%s">%s</a></div>') % (
         _e(_("This link can't be used any more")),
         _e(_("It was already used, it expired, or the address was given in the group.")),
-        _e(_back_url(link)), _e(_("Back to WhatsApp group")))
+        _e(_back_url(link)), _e(_back_label(link)))
     return _page(_("Link expired"), body, ref='#%s' % link.request_id.sudo()._sa_book_ref(), status=410)
 
 
@@ -145,7 +154,7 @@ def _saved(link):
         't': _e(_("Address updated") if link.mode == 'edit' else _("Address saved")), 'addr': _e(text),
         'loc': _e(_("Location on map: set") if has_pin else _("Location on map: not set")),
         'href': _e(_back_url(link)),
-        'open': _e(_("Back to WhatsApp group")),
+        'open': _e(_back_label(link)),
         'once': _e(_("This link can't be used again.")),
     }
     return _page(_("Address updated") if link.mode == 'edit' else _("Address saved"), body,

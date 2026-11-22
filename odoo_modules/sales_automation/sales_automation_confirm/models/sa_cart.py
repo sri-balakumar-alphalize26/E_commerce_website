@@ -14,15 +14,19 @@ the "Done!" and the details).
 
 A cart item is kept for six hours; a cancel before CONFIRM clears the cart.
 """
+import json
 import logging
 from datetime import timedelta
 
-from odoo import _, fields, models
+from odoo import _, api, fields, models
 
 _logger = logging.getLogger(__name__)
 
 ADD_ITEM = "➕ ADD ANOTHER ITEM"
 CART_HOURS = 6
+CART_REMOVE = "➖ REMOVE AN ITEM"
+CART_ALL = "✅ ALL ITEMS"
+CART_BACK = "⬅ BACK"
 
 
 class SaGroupRequestCart(models.Model):
@@ -30,6 +34,11 @@ class SaGroupRequestCart(models.Model):
 
     state = fields.Selection(selection_add=[('in_cart', 'In Cart')],
                              ondelete={'in_cart': 'set default'})
+    sa_cart_queue = fields.Char(
+        'Cart Items Still to Change', copy=False,
+        help="ALL ITEMS on CHANGE QUANTITY / BETTER PRICE: the summary rows "
+             "still to ask, as JSON lists of enquiry ids.")
+    sa_cart_act = fields.Char('Cart Change Under Way', copy=False)
 
     # ------------------------------------------------------------------
     # The cart
@@ -90,6 +99,19 @@ class SaGroupRequestCart(models.Model):
         if self.order_id:
             # The "goods arrived" confirm of an existing order keeps its own.
             return super()._ask_order_confirm()
+        if self.sa_cart_queue:
+            # ALL ITEMS: this item is done, the next one is asked first.
+            try:
+                queue = json.loads(self.sa_cart_queue) or []
+            except ValueError:
+                queue = []
+            self.sudo().write({'sa_cart_queue': False})
+            if queue:
+                act = self.sa_cart_act
+                self.sudo().write({'state': 'in_cart', 'sa_cart_act': False})
+                return self._sa_cart_focus_from(queue, act)
+        if self.sa_cart_act:
+            self.sudo().write({'sa_cart_act': False})
         items = self._sa_cart_items()
         price, qty = self._sa_cart_price(), self.qty or 1
         if items:
@@ -122,7 +144,62 @@ class SaGroupRequestCart(models.Model):
     def _on_deal_reply(self, text):
         if self.state == 'awaiting_order_confirm' and not self.order_id and self._sa_is_cart_add(text):
             return self._sa_cart_add()
+        if not self.order_id and self._sa_is_step_back(text):
+            if self.state == 'awaiting_qty':
+                return self._sa_back_to_price()
+            if self.state in ('quoted', 'negotiating'):
+                return self._sa_back_to_search()
         return super()._on_deal_reply(text)
+
+    # ------------------------------------------------------------------
+    # ⬅ BACK on every step (owner, 22 Nov 2026)
+    # ------------------------------------------------------------------
+    def _sa_is_step_back(self, text):
+        return self._sa_menu_key(text) in (self._sa_menu_key(self.MENU_BACK), 'back', 'goback')
+
+    def _sa_deal_options(self, allow_bargain=True):
+        """ACCEPT / BETTER PRICE / CANCEL, and ⬅ BACK to choose another
+        product."""
+        options = super()._sa_deal_options(allow_bargain=allow_bargain)
+        if not self.order_id:
+            options.append({'id': 'sa_back', 'title': self.MENU_BACK})
+        return options
+
+    def _sa_ask_qty_poll(self, body):
+        """1-6 / Other amount, and ⬅ BACK to the price."""
+        self.ensure_one()
+        if self.order_id:
+            return super()._sa_ask_qty_poll(body)
+        opts = [{'id': 'sa_qty_%d' % n, 'title': str(n)} for n in range(1, 7)]
+        opts.append({'id': 'sa_qty_other', 'title': self.QTY_OTHER})
+        opts.append({'id': 'sa_qty_back', 'title': self.MENU_BACK})
+        self.state = 'awaiting_qty'
+        return self._ask(body, opts)
+
+    def _sa_back_to_price(self):
+        """BACK on "how many?": the price again, with its answers."""
+        self.ensure_one()
+        price = self.agreed_price or self.quoted_price
+        name = self._sa_cart_name()
+        self.state = 'quoted'
+        self._ask(_("\U0001F4E6 *%(product)s*\n\U0001F4B0 *%(price).2f*", product=name, price=price),
+                  self._sa_deal_options())
+        return True
+
+    def _sa_back_to_search(self):
+        """BACK on a product's own steps: this one is left, and the customer
+        chooses again ("what are you looking for?"); the cart stays."""
+        self.ensure_one()
+        _logger.info("Sales Automation: enquiry %s - BACK, choosing another product", self.id)
+        # The enquiry itself becomes the NEW ORDER screen again (a menu holder
+        # is an enquiry in state 'new', as NEW ORDER from the main menu).
+        vals = {'state': 'new', 'product_id': False, 'qty': 0, 'quoted_price': 0.0,
+                'agreed_price': 0.0, 'bargain_count': 0, 'sa_menu_json': False,
+                'sa_change_pending': False}
+        if 'sa_variant_id' in self._fields:
+            vals['sa_variant_id'] = False
+        self.sudo().write(vals)
+        return self._sa_menu_show('ask')
 
     def _sa_cart_add(self):
         """This item waits in the cart; ask for the next one."""
@@ -220,6 +297,170 @@ class SaGroupRequestCart(models.Model):
                 line.write({'price_unit': price})
 
     # ------------------------------------------------------------------
+    # CHANGE with several items (owner, 22 Nov 2026): which item?
+    # ------------------------------------------------------------------
+    # The summary lists the whole cart, but CHANGE QUANTITY and BETTER PRICE
+    # used to act on the last item only, and CANCEL ORDER was the only way
+    # to drop one. With two or more items: "Which item?" (each item, ALL
+    # ITEMS, BACK), and ➖ REMOVE AN ITEM. Each item is its own enquiry: the
+    # one being changed becomes the active one (the others wait `in_cart`),
+    # so the usual quantity and price steps run on it unchanged, and its
+    # summary lists the whole cart again. ALL ITEMS walks them in turn
+    # (`sa_cart_queue`). A single item works exactly as before.
+
+    def _sa_cart_rows(self):
+        """The summary's rows: [{'name', 'qty', 'price', 'ids'}], the same
+        variant at the same price being one row (as `_ask_order_confirm`)."""
+        self.ensure_one()
+        rows = {}
+        for r in list(self._sa_cart_items()) + [self]:
+            row = rows.setdefault(r._sa_cart_key(), {'name': r._sa_cart_name(), 'qty': 0.0,
+                                                     'price': r._sa_cart_price(), 'ids': []})
+            row['qty'] += r.qty or 1
+            row['ids'].append(r.id)
+        return list(rows.values())
+
+    def _sa_can_bargain(self):
+        """Whether BETTER PRICE may still lower this item (the CHANGE menu's own rule)."""
+        self.ensure_one()
+        settings = self._settings()
+        can = bool(settings.bargain_enabled)
+        if can and hasattr(self, '_sa_qty_bargain_allowed'):
+            can = self._sa_qty_bargain_allowed()
+        if can and not (hasattr(self, '_sa_qty_tiered') and self._sa_qty_tiered()):
+            can = self.bargain_count < (settings.bargain_max_steps or 0)
+        return can
+
+    def _sa_change_menu(self):
+        self.ensure_one()
+        if self.order_id or len(self._sa_cart_rows()) < 2:
+            return super()._sa_change_menu()
+        options = [self.CHANGE_QTY]
+        if self._settings().bargain_enabled:
+            options.append(self.CHANGE_PRICE)
+        options += [CART_REMOVE, self.CHANGE_KEEP, self.CHANGE_CANCEL]
+        self.write({'state': 'negotiating', 'sa_change_pending': True})
+        self._ask(_("What would you like to change?"),
+                  [{'id': 'sa_chg_%d' % i, 'title': o} for i, o in enumerate(options)])
+        return True
+
+    def _sa_change_answer(self, text):
+        self.ensure_one()
+        if not self.order_id and len(self._sa_cart_rows()) >= 2:
+            key = self._sa_menu_key(text)
+            act = {self._sa_menu_key(self.CHANGE_QTY): 'qty',
+                   self._sa_menu_key(self.CHANGE_PRICE): 'price',
+                   self._sa_menu_key(CART_REMOVE): 'remove'}.get(key)
+            if act:
+                self.sa_change_pending = False
+                return self._sa_cart_which(act)
+        return super()._sa_change_answer(text)
+
+    def _sa_cart_which(self, act):
+        """"Which item?" - each row, ALL ITEMS (quantity and price), BACK."""
+        self.ensure_one()
+        menu = {}
+        for i, row in enumerate(self._sa_cart_rows()[:8], 1):
+            label = '%d. %s x %s' % (i, (row['name'] or '')[:40], self._sa_cart_qty(row['qty']))
+            menu[label] = {'kind': 'cart_pick', 'act': act, 'ids': row['ids']}
+        if act in ('qty', 'price'):
+            menu[CART_ALL] = {'kind': 'cart_all', 'act': act}
+        menu[CART_BACK] = {'kind': 'cart_back'}
+        self.write({'state': 'negotiating', 'sa_change_pending': False, 'sa_menu_json': json.dumps(menu)})
+        body = {'qty': _("\U0001F522 Change the quantity of which item?"),
+                'price': _("\U0001F4B0 A better price for which item?"),
+                'remove': _("➖ Which item should I remove?")}[act]
+        self._ask(body, [{'id': 'sa_cartw_%d' % i, 'title': label} for i, label in enumerate(menu)])
+        return True
+
+    def _sa_menu_tapped(self, item):
+        kind = item.get('kind')
+        if kind not in ('cart_pick', 'cart_all', 'cart_back'):
+            return super()._sa_menu_tapped(item)
+        self.ensure_one()
+        self.sudo().write({'sa_menu_json': False})
+        if kind == 'cart_back':
+            return self._ask_order_confirm()
+        act = item.get('act')
+        if kind == 'cart_all':
+            rows = [r['ids'] for r in self._sa_cart_rows()]
+            return self._sa_cart_focus(rows[0], act, rows[1:])
+        ids = [i for i in (item.get('ids') or []) if isinstance(i, int)]
+        if not ids:
+            return self._ask_order_confirm()
+        if act == 'remove':
+            return self._sa_cart_remove(ids)
+        return self._sa_cart_focus(ids, act, [])
+
+    def _sa_cart_focus(self, ids, act, queue):
+        """Make the item `ids` (one summary row) the active enquiry and ask
+        its new quantity or a better price; `queue` holds the rows still to
+        do for ALL ITEMS."""
+        self.ensure_one()
+        rows = self.browse(ids).sudo().exists()
+        if not rows:
+            return self._sa_cart_next_or_summary(act, queue)
+        target, dups = rows[:1], rows[1:]
+        if dups:
+            # One row was several enquiries of the same item: one carries it.
+            target.qty = sum((r.qty or 1) for r in rows)
+            dups.write({'state': 'dropped', 'drop_reason': 'stale', 'sa_menu_json': False})
+        if target != self:
+            self.sudo().write({'state': 'in_cart', 'sa_change_pending': False, 'sa_menu_json': False,
+                               'sa_cart_queue': False, 'sa_cart_act': False})
+        target.write({'sa_cart_queue': json.dumps(queue) if queue else False, 'sa_cart_act': act,
+                      'sa_change_pending': False, 'sa_menu_json': False})
+        name = target._sa_cart_name()
+        if act == 'qty':
+            target.qty = 0
+            return target._sa_ask_qty_poll(_("\U0001F522 How many *%(item)s* do you need? Tap one \U0001F447",
+                                             item=name))
+        if not target._sa_can_bargain():
+            target._say(_("\U0001F4B0 *%(item)s*: this is already our best price.", item=name))
+            target.state = 'awaiting_order_confirm'
+            return target._sa_cart_next_or_summary(act, queue)
+        target.state = 'negotiating'
+        return target._ask_their_price()
+
+    def _sa_cart_focus_from(self, queue, act):
+        """The next row of ALL ITEMS, asked from an item that is done (it is
+        already back in the cart)."""
+        self.ensure_one()
+        first = self.browse(queue[0]).sudo().exists()[:1]
+        if not first:
+            return self._sa_cart_focus_from(queue[1:], act) if queue[1:] else self._ask_order_confirm()
+        first.write({'state': 'negotiating'})
+        return first._sa_cart_focus(queue[0], act, queue[1:])
+
+    def _sa_cart_next_or_summary(self, act, queue):
+        self.ensure_one()
+        if queue:
+            return self._sa_cart_focus(queue[0], act, queue[1:])
+        self.sudo().write({'sa_cart_queue': False, 'sa_cart_act': False})
+        return self._ask_order_confirm()
+
+    def _sa_cart_remove(self, ids):
+        """Take one row out of the order; the summary shows what is left."""
+        self.ensure_one()
+        gone = self.browse(ids).sudo().exists()
+        name = gone[:1]._sa_cart_name() if gone else _("item")
+        others = gone - self
+        if others:
+            others.write({'state': 'dropped', 'drop_reason': 'not_confirmed',
+                          'sa_menu_json': False, 'sa_menu_ask_at': False})
+        self._say(_("➖ Removed *%(item)s* from your order.", item=name))
+        if self not in gone:
+            return self._ask_order_confirm()
+        rest = self._sa_cart_items()
+        if not rest:
+            return self._sa_cancel_deal()
+        self.sudo().write({'state': 'dropped', 'drop_reason': 'not_confirmed', 'sa_menu_json': False,
+                           'sa_change_pending': False, 'sa_cart_queue': False, 'sa_cart_act': False})
+        lead = rest[-1]
+        lead.write({'state': 'awaiting_order_confirm'})
+        return lead._ask_order_confirm()
+
+    # ------------------------------------------------------------------
     # Cancel before CONFIRM clears the cart too
     # ------------------------------------------------------------------
     def _sa_cancel_deal(self):
@@ -251,7 +492,37 @@ class SaSalesGroupInviteFetch(models.Model):
         if parent:
             return parent()
         url = (group.invite_url or '').strip() if group and 'invite_url' in group._fields else ''
-        return url if url.startswith('https://chat.whatsapp.com/') else 'whatsapp://'
+        return url if url.startswith('https://chat.whatsapp.com/') else 'https://wa.me/'
+
+    def write(self, vals):
+        """Switching sales automation on fetches the group's invite link
+        right away, so "Back to <group>" works from the first order instead
+        of after a slow first try on the customer's page (22 Nov 2026)."""
+        res = super().write(vals)
+        if vals.get('enabled') and not self.env.context.get('sa_no_invite_fetch'):
+            self._sa_prefetch_invites()
+        return res
+
+    def _sa_prefetch_invites(self):
+        for group in self:
+            try:
+                if 'invite_url' in group._fields and not (group.invite_url or '').strip() \
+                        and group.group_jid and group.session_id:
+                    url = group._sa_fetch_invite_url()
+                    if url:
+                        group.sudo().with_context(sa_no_invite_fetch=True).write({'invite_url': url})
+            except Exception as err:  # noqa: BLE001 - never block switching a group on
+                _logger.info("Sales Automation: invite link for group %s not fetched: %s", group.id, err)
+        return True
+
+    @api.model
+    def _sa_cron_fetch_invites(self):
+        """Once a day: switched-on customer groups still without an invite
+        link try again (the shop's number may have been made admin since)."""
+        groups = self.sudo().search([('enabled', '=', True), ('group_type', '=', 'customer'),
+                                     ('invite_url', 'in', (False, ''))], limit=200)
+        groups._sa_prefetch_invites()
+        return True
 
     def _sa_fetch_invite_url(self):
         """The group's invite link from WhatsApp (works when the shop's number

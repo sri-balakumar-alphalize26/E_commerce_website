@@ -122,6 +122,7 @@ class SaGroupRequestVariant(models.Model):
             used.add(label)
             menu[label] = {'kind': 'variant', 'target': v.id}
         menu[OTHER] = {'kind': 'attr_steps'}
+        menu[self.MENU_BACK] = {'kind': 'step_back'}        # 22 Nov 2026: choose again
         for item in menu.values():
             item['req'] = self.id
             item['parent'] = 'attr'
@@ -150,6 +151,8 @@ class SaGroupRequestVariant(models.Model):
             for ptav in ptavs[:8]:
                 opts.append((ptav.name[:50], {'kind': 'attr', 'val': ptav.id, 'chosen': chosen, 'skipped': skipped, 'attr': line.attribute_id.id}))
             opts.append((ANY, {'kind': 'attr', 'val': 0, 'chosen': chosen, 'skipped': skipped, 'attr': line.attribute_id.id}))
+            # ⬅ BACK (22 Nov 2026): the previous question, or choose another product.
+            opts.append((self.MENU_BACK, {'kind': 'attr_back', 'chosen': chosen, 'skipped': skipped}))
             menu = {}
             for label, item in opts:
                 item = dict(item)
@@ -191,6 +194,13 @@ class SaGroupRequestVariant(models.Model):
             if v and v.product_tmpl_id == self.product_id:
                 return self._sa_attr_done(v.product_template_attribute_value_ids.ids)
             return self._sa_attr_ask([], [])
+        if item.get('kind') == 'step_back':
+            return self._sa_back_to_search()
+        if item.get('kind') == 'attr_back':
+            chosen = list(item.get('chosen') or [])
+            if chosen:
+                return self.with_context(sa_attr_steps=True)._sa_attr_ask(chosen[:-1], [])
+            return self._sa_back_to_search()
         if item.get('kind') == 'attr_steps':
             # OTHER on the variant poll: one question per attribute, as before.
             return self.with_context(sa_attr_steps=True)._sa_attr_ask([], [])

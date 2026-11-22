@@ -238,19 +238,31 @@ def _page(title, body, status=200, ask='', body_class=''):
 
 def _back_button(link):
     """After the answer: straight back to the WhatsApp group the customer
-    came from (its invite link opens the chat for a member), or WhatsApp
-    itself when the group's link is not known."""
+    came from - "Back to <group name>" (its invite link opens the chat for a
+    member) - or a chat with the shop's number when the group's link is not
+    known. Both open on a phone and on a computer (WhatsApp Web / Desktop).
+
+    The tap opens WhatsApp and then this tab tries to close itself; a
+    browser only lets a page close a tab a script opened, so when it stays
+    open the page says it is done instead (22 Nov 2026)."""
     group = link.sudo().request_id.group_id
-    url = 'whatsapp://'
+    url = 'https://wa.me/'
     try:
         if group and hasattr(group, '_sa_back_url'):
             url = group._sa_back_url() or url
     except Exception as err:  # noqa: BLE001 - the page must still render
         _logger.info("Confirm page: back link for %s unavailable: %s", link.id, err)
-    label = ('Back to WhatsApp group' if url.startswith('https://chat.whatsapp.com/')
-             else 'Open WhatsApp')
-    return ('<a class="btn ok back" href="%s" style="display:block;text-decoration:none;'
-            'margin-top:12px;padding-top:15px">&#8617;&#65039; %s</a>'
+    if url.startswith('https://chat.whatsapp.com/'):
+        label = 'Back to %s' % html.escape((group.name or '').strip()[:40] or 'WhatsApp group')
+    else:
+        label = 'Back to WhatsApp'
+    return ('<a class="btn ok back" href="%s" target="_blank" rel="noopener" onclick="saBack()" '
+            'style="display:block;text-decoration:none;margin-top:12px;padding-top:15px">'
+            '&#8617;&#65039; %s</a>'
+            '<p id="sa-done" style="display:none;text-align:center;margin:10px 0 0;color:#2e7d32">'
+            '&#9989; Done - you can close this tab.</p>'
+            '<script>function saBack(){setTimeout(function(){try{window.close();}catch(e){}'
+            'var p=document.getElementById("sa-done");if(p){p.style.display="block";}},700);}</script>'
             % (html.escape(url, quote=True), label))
 
 

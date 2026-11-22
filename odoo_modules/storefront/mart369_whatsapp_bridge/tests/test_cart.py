@@ -200,10 +200,90 @@ class TestCart(Mart369BridgeCase):
         self.wa_group.invite_url = 'https://chat.whatsapp.com/BridgeTestInvite'
         html = self._page_button()
         self.assertIn('https://chat.whatsapp.com/BridgeTestInvite', html)
-        self.assertIn('Back to WhatsApp group', html)
+        self.assertIn('Back to %s' % self.wa_group.name, html)
+        self.assertIn('window.close', html, 'the tab tries to close itself')
 
     def test_without_an_invite_link_it_opens_whatsapp(self):
         self.wa_group.invite_url = False
         html = self._page_button()
-        self.assertIn('whatsapp://', html)
-        self.assertIn('Open WhatsApp', html)
+        self.assertIn('https://wa.me/', html, 'works on a computer too')
+        self.assertIn('Back to WhatsApp', html)
+
+    # ------------------------- CHANGE on several items (22 Nov 2026)
+    def _two_items(self):
+        speaker = self._item(self.quick_product, 3, 1.0)
+        speaker.state = 'in_cart'
+        jack = self._item(self.second, 2, 120.0)
+        return speaker, jack
+
+    def _tap(self, req, label_part):
+        menu = json.loads(req.sa_menu_json or '{}')
+        label = [k for k in menu if label_part in k][0]
+        return req._sa_menu_tapped(menu[label])
+
+    def test_change_on_two_items_offers_remove_an_item(self):
+        speaker, jack = self._two_items()
+        jack._sa_change_menu()
+        self.assertIn('➖ REMOVE AN ITEM', self.asked[-1][1])
+        self.assertIn('❌ CANCEL ORDER', self.asked[-1][1])
+
+    def test_a_single_item_keeps_the_old_change_menu(self):
+        only = self._item(self.second, 2, 30.0)
+        only._sa_change_menu()
+        self.assertNotIn('➖ REMOVE AN ITEM', self.asked[-1][1])
+
+    def test_change_quantity_asks_which_item_then_only_that_one(self):
+        speaker, jack = self._two_items()
+        jack._sa_change_menu()
+        jack._sa_change_answer('🔢 CHANGE QUANTITY')
+        options = self.asked[-1][1]
+        self.assertTrue(any(self.quick_product.name in o for o in options))
+        self.assertTrue(any(self.second.name in o for o in options))
+        self.assertIn('✅ ALL ITEMS', options)
+        self.assertIn('⬅ BACK', options)
+        self._tap(jack, self.quick_product.name)
+        # the speaker is now the one asked; the jack waits in the cart
+        self.assertEqual(speaker.state, 'awaiting_qty')
+        self.assertEqual(jack.state, 'in_cart')
+        self.assertIn(self.quick_product.name, self.asked[-1][0])
+        speaker._on_deal_reply('5')
+        self.assertEqual(speaker.qty, 5)
+        self.assertEqual(jack.qty, 2, 'the other item is untouched')
+        self.assertEqual(speaker.state, 'awaiting_order_confirm')
+        self.assertIn(self.second.name, self.asked[-1][0], 'the summary lists the whole cart')
+
+    def test_change_quantity_of_all_items_asks_each_in_turn(self):
+        speaker, jack = self._two_items()
+        jack._sa_change_answer('🔢 CHANGE QUANTITY')
+        self._tap(jack, 'ALL ITEMS')
+        first = self.env['sa.group.request'].browse(
+            [r.id for r in (speaker, jack) if r.state == 'awaiting_qty'])
+        self.assertEqual(len(first), 1)
+        first._on_deal_reply('4')
+        second = (speaker | jack) - first
+        self.assertEqual(second.state, 'awaiting_qty', 'then the next item is asked')
+        second._on_deal_reply('6')
+        self.assertEqual((first.qty, second.qty), (4, 6))
+        self.assertEqual(second.state, 'awaiting_order_confirm')
+
+    def test_remove_an_item_keeps_the_rest(self):
+        speaker, jack = self._two_items()
+        jack._sa_change_answer('➖ REMOVE AN ITEM')
+        self.assertNotIn('✅ ALL ITEMS', self.asked[-1][1])
+        self._tap(jack, self.quick_product.name)
+        self.assertEqual(speaker.state, 'dropped')
+        self.assertEqual(jack.state, 'awaiting_order_confirm')
+        self.assertTrue(self._said('Removed'))
+
+    def test_removing_the_last_added_item_hands_the_order_to_the_other(self):
+        speaker, jack = self._two_items()
+        jack._sa_change_answer('➖ REMOVE AN ITEM')
+        self._tap(jack, self.second.name)
+        self.assertEqual(jack.state, 'dropped')
+        self.assertEqual(speaker.state, 'awaiting_order_confirm', 'the speaker is the order now')
+
+    def test_back_returns_to_the_summary(self):
+        speaker, jack = self._two_items()
+        jack._sa_change_answer('🔢 CHANGE QUANTITY')
+        self._tap(jack, 'BACK')
+        self.assertEqual(self.asked[-1][1][1], ADD, 'the summary again')

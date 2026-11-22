@@ -533,11 +533,19 @@ class SaSalesGroupInvite(models.Model):
                                       "(the shop's number must be a group admin), or paste the link.")
 
     def _sa_back_url(self):
-        """Where "Back to WhatsApp group" goes: this group, or WhatsApp itself."""
-        url = (self[:1].invite_url or '').strip()
+        """Where "Back to WhatsApp group" goes: this group (its invite link),
+        else a chat with the shop's own number (https://wa.me/<number>), else
+        WhatsApp's own page. All three open on a phone AND on a computer
+        (WhatsApp Web / Desktop); the bare `whatsapp://` used before did
+        nothing in a computer's browser (22 Nov 2026)."""
+        group = self[:1]
+        url = (group.invite_url or '').strip()
         if url.startswith('https://chat.whatsapp.com/'):
             return url
-        return 'whatsapp://'
+        session = group.session_id.sudo() if group else False
+        digits = ''.join(c for c in ((session.phone_number or session.authorized_number or '')
+                                     if session else '') if c.isdigit())
+        return 'https://wa.me/%s' % digits if digits else 'https://wa.me/'
 
     def _sa_invite_from_gateway(self):
         """(url, error) - the group's invite link asked from WhatsApp. Only a

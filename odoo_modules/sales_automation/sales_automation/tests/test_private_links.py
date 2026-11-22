@@ -170,11 +170,11 @@ class TestPrivateLinks(TransactionCase):
 
     # ------------------------------------------------------------- back button
     def test_back_to_the_group_uses_the_invite_link(self):
-        self.assertEqual(self.group._sa_back_url(), 'whatsapp://')
+        self.assertTrue(self.group._sa_back_url().startswith('https://wa.me/'))
         self.group.invite_url = 'https://chat.whatsapp.com/AbCdEf'
         self.assertEqual(self.group._sa_back_url(), 'https://chat.whatsapp.com/AbCdEf')
         self.group.invite_url = 'https://evil.example/x'
-        self.assertEqual(self.group._sa_back_url(), 'whatsapp://')
+        self.assertTrue(self.group._sa_back_url().startswith('https://wa.me/'))
 
     # ------------------------------------------- answers typed in the private chat
     def test_a_private_send_points_later_private_messages_to_the_group(self):
@@ -252,7 +252,7 @@ class TestPrivateLinks(TransactionCase):
         self.assertIn('admin', self.group.invite_error)
         self.assertIn('not-admin', self.group.invite_error)
         self.assertEqual(action['params']['type'], 'warning')
-        self.assertEqual(self.group._sa_back_url(), 'whatsapp://')
+        self.assertTrue(self.group._sa_back_url().startswith('https://wa.me/'))
         self.assertIn('Get invite link', self.group.invite_hint)
 
     def test_the_group_screen_loads(self):

@@ -357,7 +357,8 @@ class TestCatalog(Mart369BridgeCase):
         req._sa_confirm_customer_send()
         req._sa_menu_tapped(json.loads(req.sa_menu_json)['✏️ OTHER'])
         menu = json.loads(req.sa_menu_json or '{}')
-        self.assertTrue(all(v['kind'] == 'attr' for v in menu.values()))
+        self.assertTrue(all(v['kind'] in ('attr', 'attr_back') for v in menu.values()))
+        self.assertIn('attr_back', [v['kind'] for v in menu.values()], 'BACK on every question')
 
     def test_many_variants_keep_one_question_per_attribute(self):
         product = self._variant_product(['%dGB' % (2 ** i) for i in range(9)])
@@ -365,7 +366,8 @@ class TestCatalog(Mart369BridgeCase):
         req._sa_confirm_customer_send()
         menu = json.loads(req.sa_menu_json or '{}')
         self.assertTrue(menu)
-        self.assertTrue(all(v['kind'] == 'attr' for v in menu.values()))
+        self.assertTrue(all(v['kind'] in ('attr', 'attr_back') for v in menu.values()))
+        self.assertIn('attr_back', [v['kind'] for v in menu.values()], 'BACK on every question')
 
     # --------------------------------------------------- search and price
 

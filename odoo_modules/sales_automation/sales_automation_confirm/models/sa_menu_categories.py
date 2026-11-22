@@ -311,8 +311,9 @@ class SaGroupRequestMenuCategories(models.Model):
         if more:
             opts.append((MORE, {'kind': 'menu', 'level': 'find:%d' % (page + 1)}))
         opts.append((NOT_LISTED, {'kind': 'new'}))
-        if page:
-            opts.append((self.MENU_BACK, {'kind': 'menu', 'level': 'find:%d' % (page - 1)}))
+        # ⬅ BACK on the first page too (22 Nov 2026): back to "what are you
+        # looking for?".
+        opts.append((self.MENU_BACK, {'kind': 'menu', 'level': 'find:%d' % (page - 1) if page else 'ask'}))
         opts.append((self.MENU_MAIN, {'kind': 'menu', 'level': 'main'}))
         body = _("\U0001F50E Found for *%s* - tap the one you want (or type another word):") % term
         return self._sa_menu_post('find:%d' % page, body, opts)
