@@ -147,10 +147,88 @@ class TestCatalog(Mart369BridgeCase):
         self._type('backroom widget')
         self.assertNotIn(self.hidden.name, self._menu())
 
-    def test_nothing_found_goes_to_the_ordinary_enquiry(self):
+    def _settings(self):
+        return self.env['sa.ai.settings'].sudo().get_settings()
+
+    def test_a_product_we_do_not_list_is_told_we_dont_have_it(self):
+        """22 Nov 2026: not in the catalogue at all - no vendor, a reply."""
+        self._settings().write({'unlisted_action': 'sorry', 'shop_contact_phone': '+91 98765 43210'})
+        self._new_order()
+        sent = len(self.wa_sent)
+        self.assertTrue(self._type('zqxv blorptastic'))
+        self.assertFalse(self.request.sa_menu_ask_at)
+        said = ' '.join(m for _p, m in self.wa_sent[sent:])
+        self.assertIn("we don't have *zqxv blorptastic*", said)
+        self.assertIn('+91 98765 43210', said)
+
+    def test_nothing_found_goes_to_the_ordinary_enquiry_when_vendors_are_asked(self):
+        self._settings().unlisted_action = 'vendors'
         self._new_order()
         self.assertIsNone(self._type('zqxv blorptastic'))
         self.assertFalse(self.request.sa_menu_ask_at)
+
+    def test_a_listed_product_out_of_stock_still_goes_to_the_vendors(self):
+        """In the catalogue but not offered (here: unpublished, so the menu
+        search skips it): the ordinary enquiry - the vendors - takes it."""
+        self._settings().unlisted_action = 'sorry'
+        self._new_order()
+        self.assertTrue(self.request._sa_catalog_has('Backroom Widget'))
+        self.assertIsNone(self._type('Backroom Widget'))
+
+    def test_the_contact_number_falls_back_to_the_whatsapp_number(self):
+        self._settings().shop_contact_phone = False
+        self.session.sudo().write({'phone_number': '919876543210'})
+        self.assertEqual(self.request._sa_contact_number(), '+919876543210')
+
+    # ------------------- a typed word goes through the shop's categories
+
+    def _shelf_product(self, name, categ):
+        return self.env['product.template'].sudo().create({
+            'name': name, 'sale_ok': True, 'is_published': True, 'type': 'consu',
+            'list_price': 10.0, 'categ_id': categ.id})
+
+    def _typed_enquiry(self, text):
+        return self.env['sa.group.request'].sudo().create({
+            'group_id': self.wa_group.id, 'requester_phone': '+919876500011',
+            'raw_text': text, 'ai_search_term': text})
+
+    def test_a_category_with_sub_categories_asks_which_one(self):
+        """22 Nov 2026: Toner › Canon / HP - the brands are the shop's own
+        sub-categories, asked first; no "Other brands" guess."""
+        Categ = self.env['product.category'].sudo()
+        toner = Categ.create({'name': 'Bridge Tonerz', 'sa_menu_sequence': 3})
+        for brand in ('Canonz', 'Hpz'):
+            sub = Categ.create({'name': brand, 'parent_id': toner.id})
+            self._shelf_product('Bridge %s Cartridge' % brand, sub)
+        req = self._typed_enquiry('Bridge Tonerz')
+        self.assertTrue(req._finder_start())
+        labels = ' | '.join(json.loads(req.sa_menu_json or '{}'))
+        self.assertIn('Canonz', labels)
+        self.assertIn('Hpz', labels)
+        self.assertNotIn('Other brands', labels)
+        self.assertNotEqual(req.state, 'finding', "the old brand finder was not used")
+
+    def test_a_category_without_sub_categories_lists_its_products(self):
+        Categ = self.env['product.category'].sudo()
+        inks = Categ.create({'name': 'Bridge Inkz', 'sa_menu_sequence': 4})
+        bottle = self._shelf_product('Bridge Ink Bottle Blue', inks)
+        req = self._typed_enquiry('Bridge Inkz')
+        self.assertTrue(req._finder_start())
+        menu = json.loads(req.sa_menu_json or '{}')
+        self.assertIn(bottle.name, menu)
+
+    def test_no_category_but_product_names_lists_the_products(self):
+        speaker = self._shelf_product('Bridge Zonkbox Speaker', self.shelf)
+        req = self._typed_enquiry('zonkbox')
+        self.assertTrue(req._finder_start())
+        self.assertIn(speaker.name, json.loads(req.sa_menu_json or '{}'))
+
+    def test_only_a_short_name_of_a_thing_counts(self):
+        req = self.request
+        self.assertTrue(req._sa_unlisted_candidate('headphone'))
+        self.assertTrue(req._sa_unlisted_candidate('wireless headphone'))
+        for text in ('hi', 'thanks', 'ok', 'yes', 'have a nice day guys', 'S23', 'see you later'):
+            self.assertFalse(req._sa_unlisted_candidate(text), text)
 
     def test_typing_after_the_window_is_the_ordinary_flow(self):
         self._new_order()
@@ -239,6 +317,9 @@ class TestCatalog(Mart369BridgeCase):
         self.assertTrue(self.request._sa_name_typed_ok('Karthik Raja', 'ask'))
 
     def test_a_word_nothing_like_the_shop_is_not_forced(self):
+        # Not forced onto a product: with "ask vendors" it is the ordinary
+        # enquiry; by default it is "we don't have it" (22 Nov 2026).
+        self._settings().unlisted_action = 'vendors'
         self._new_order()
         self.assertIsNone(self._type('xylophonez'))
 

@@ -341,6 +341,16 @@ class SaGroupRequestFinder(models.Model):
         out.append((NAV_BACK, {'nav': 'back'}))
         return out
 
+    def _finder_brand_skippable(self):
+        """True when the shop's own products for this search name no brand -
+        the brand poll would be a single "Other brands" row. Brands are not
+        guessed from the internet for it (owner, 22 Nov 2026: brands come
+        from the shop's own categories)."""
+        self.ensure_one()
+        narrow = [w for w in self._finder_keywords()[1:]]
+        products = self._finder_catalog_products([self.finder_seed], narrow)
+        return bool(products) and not any(self._finder_brand_of(p) for p in products)
+
     def _finder_options_model(self):
         Classifier = self.env['sa.ai.classifier'].sudo()
         narrow = [w for w in self._finder_keywords()[1:]]
@@ -422,6 +432,11 @@ class SaGroupRequestFinder(models.Model):
         options = self._finder_clean_labels(options)
 
         real = [o for o in options if 'nav' not in o[1]]
+        if step == 'brand' and self._finder_brand_skippable():
+            # 22 Nov 2026: none of our products names a brand, so the poll
+            # would only say "Other brands ✓ in stock". Show them directly.
+            self.write({'finder_brand': '__other__'})
+            return self._finder_ask('model')
         if step == 'brand' and not real:
             # Nothing to choose a brand from: let them name the model.
             return self._finder_want_typed()
@@ -566,10 +581,11 @@ class SaGroupRequestFinder(models.Model):
             self.write({'finder_model': False, 'finder_kind': False,
                         'finder_company_id': False})
             return self._finder_ask('model')
-        if step in ('model', 'model_text'):
+        if step in ('model', 'model_text') and not self._finder_brand_skippable():
             self.write({'finder_brand': False})
             return self._finder_ask('brand')
-        if step == 'brand':
+        if step in ('brand', 'model', 'model_text'):
+            # (the brand step was skipped: back goes where its back would)
             if self.finder_type:
                 self.write({'finder_type': False, 'finder_type_keywords': False})
                 types = self.env['sa.ai.classifier'].sudo().suggest_types(

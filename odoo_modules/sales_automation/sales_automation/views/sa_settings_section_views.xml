@@ -318,6 +318,12 @@
                             <field name="link_reply_hours"/>
                         </group>
                     </group>
+                    <group>
+                        <group string="A product we don't sell">
+                            <field name="unlisted_action" widget="radio"/>
+                            <field name="shop_contact_phone" placeholder="+91 98765 43210"/>
+                        </group>
+                    </group>
                 </sheet>
             </form>
         </field>

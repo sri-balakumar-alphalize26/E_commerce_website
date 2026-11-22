@@ -312,6 +312,21 @@ class SaAiSettings(models.Model):
              "chat, what they type there is answered with \"please answer in the "
              "group\". 0 switches it off.")
 
+    # ---- A product we do not sell (owner, 22 Nov 2026) ----
+    shop_contact_phone = fields.Char(
+        'Shop Contact Number',
+        help="Given to a customer who asks for something the shop does not "
+             "sell: \"Sorry, we don't have it - please contact us on ...\". "
+             "Empty: the WhatsApp number, else the company phone.")
+    unlisted_action = fields.Selection([
+        ('sorry', "Say we don't have it"),
+        ('vendors', 'Ask vendors for products we don\'t list'),
+    ], string='A Product We Don\'t List', default='sorry', required=True,
+        help="A product in the catalogue is sold, or - out of stock - sourced "
+             "from the vendors. For a product that is not in the catalogue at "
+             "all: tell the customer we don't have it (with the Shop Contact "
+             "Number), or ask the vendors for it as before.")
+
     def _sa_link_route(self, kind):
         """'private' or 'group' for a kind of link (see LINK_KINDS)."""
         self.ensure_one()

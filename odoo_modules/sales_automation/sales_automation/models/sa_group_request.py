@@ -31,6 +31,23 @@ from odoo.addons.whatsapp_gateway.models.whatsapp_session import WhatsAppQueued
 
 _logger = logging.getLogger(__name__)
 
+# Everyday group words that are never the name of a thing to buy: a short
+# message with any of them is conversation, not "we don't have <it>" (22 Nov
+# 2026). The classifier's own pleasantries are checked as well.
+_NOT_A_THING = frozenset("""
+the and for you are can will was were has have had not but all any our your
+his her its they them their this that these those what when where which who
+why how here there now then today tomorrow yesterday later soon wait waiting
+done noted fine great nice cool super sure right correct wrong true false
+come coming came going gone see seen send sent call called check checked ask
+asked tell told give gave take took get got need want like love know think
+pls plz thx tnx tks welcome congrats congratulations happy birthday wishes
+guys team everyone friends brother sister anna akka bhai dear all lol haha hehe
+hmm wow omg yes yeah yup okay done cancel stop price rate cost order orders
+delivery status payment paid photo photos image images pic pics video videos
+message msg reply answer please morning evening night afternoon goodnight
+""".split())
+
 _YES = {'yes', 'y', 'ok', 'okay', 'yeah', 'yep', 'correct', 'right', 'confirm',
         'confirmed', 'sure', 'haan', 'han', 'ha', 'sari', 'sim', 'aye'}
 _NO = {'no', 'n', 'nope', 'wrong', 'not', 'incorrect', 'cancel', 'nahi', 'nai'}
@@ -345,6 +362,7 @@ class SaGroupRequest(models.Model):
         ('no_employee_session', 'No Employee Session on Group'),
         ('duplicate', 'Already Being Priced'),
         ('need_clarification', 'Waiting for the Exact Product Name'),
+        ('not_stocked', 'We Do Not Sell It'),
         ('stale', 'Abandoned'),
         ('customer_timeout', 'Customer Did Not Reply'),
         ('error', 'Error'),
@@ -2707,7 +2725,16 @@ class SaGroupRequest(models.Model):
             fixed = self._sa_correct_spelling(self.raw_text)
             if not fixed:
                 # Not a near-miss of anything we sell. Stay quiet: most
-                # messages in a sales group really are ordinary conversation.
+                # messages in a sales group really are ordinary conversation -
+                # except a short name of a thing we do not sell ("headphone"),
+                # which is told so instead of met with silence (22 Nov 2026).
+                # Only when no AI judged it: an AI that read it as chatter is
+                # trusted, and it calls "headphone" a product anyway.
+                if verdict.get('source') in ('prefilter', 'catalog') \
+                        and self._sa_unlisted_candidate(self.raw_text) \
+                        and not self._sa_catalog_has(self.raw_text) \
+                        and self._sa_say_not_stocked(self.raw_text):
+                    return self._drop('not_stocked')
                 return self._drop('not_product')
 
             _logger.info("Sales Automation: enquiry %s - read %r as %r",
@@ -2726,6 +2753,12 @@ class SaGroupRequest(models.Model):
             # The constraint on sa.sales.group stops this being reachable
             # through the UI, but a group enabled by data import could get here.
             return self._drop('no_employee_session')
+
+        # Not in the catalogue at all: say so, and ask no vendor (22 Nov 2026).
+        # In the catalogue but out of stock goes on as before - to the vendors.
+        asked = (verdict['search_term'] or self.raw_text or '').strip()
+        if not self._sa_catalog_has(asked) and self._sa_say_not_stocked(asked):
+            return self._drop('not_stocked')
 
         # A generic word - "headphone" - is not something to guess at or to
         # put to a supplier. The finder walks the customer to one model in
@@ -5092,6 +5125,111 @@ class SaGroupRequest(models.Model):
         if reason in ('not_product', 'low_confidence'):
             self._sa_acknowledge_chatter()
         return False
+
+    # ----------------------------------------------------------
+    # A product the shop does not sell at all (owner, 22 Nov 2026)
+    # ----------------------------------------------------------
+    # The rule: a product in the catalogue is sold (in stock) or sourced from
+    # the vendors (out of stock); a product that is not in the catalogue at all
+    # gets "Sorry, we don't have it - contact us on ..." and no vendor is
+    # asked. "Ask vendors for products we don't list" keeps the old way.
+
+    def _sa_catalog_has(self, term):
+        """True when anything the shop lists - in stock or not - answers
+        `term`: every word in a product's name, reference or category, a
+        spacing-blind match, one of our categories, or a near-miss spelling of
+        a catalogue word. Unsure ('' or odd input) counts as yes, which keeps
+        the old flow."""
+        self.ensure_one()
+        import difflib
+        import re
+        term = ' '.join((term or '').split())[:80]
+        words = [w for w in re.findall(r'[^\W_]+', term.lower()) if len(w) >= 3]
+        if not words:
+            return True
+        Prod = self.env['product.template'].sudo()
+        company = self._company_for(self.group_id) if self.group_id else self.env.company
+        base = [('sale_ok', '=', True), '|', ('company_id', '=', False), ('company_id', '=', company.id)]
+        domain = list(base)
+        for w in words:
+            stem = w[:-1] if len(w) > 4 and w.endswith('s') else w     # "headphones" / "headphone"
+            domain += ['|', '|', ('name', 'ilike', stem), ('default_code', 'ilike', stem),
+                       ('categ_id.complete_name', 'ilike', stem)]
+        if Prod.search_count(domain, limit=1):
+            return True
+        squashed = ''.join(c for c in term.lower() if c.isalnum())
+        if len(squashed) >= 4:
+            for name in Prod.search(base, limit=3000).mapped('name'):
+                flat = ''.join(c for c in (name or '').lower() if c.isalnum())
+                if flat and (squashed in flat or flat in squashed):
+                    return True
+        if self._sa_looks_like_category(term):
+            return True
+        vocabulary = self._sa_catalog_vocabulary()
+        if vocabulary and all(difflib.get_close_matches(w, vocabulary, n=1, cutoff=0.8)
+                              for w in words if len(w) >= 4) and any(len(w) >= 4 for w in words):
+            return True
+        return False
+
+    def _sa_unlisted_candidate(self, text):
+        """A short message that reads like the name of a thing ("headphone",
+        "wireless mouse") - not a greeting, a yes/no, small talk or a
+        sentence. Only these get "we don't have it" when the classifier calls
+        them chatter: answering every message in a group would be noise."""
+        self.ensure_one()
+        import re
+        from .sa_ai_classifier import _CHATTER_WORDS
+        clean = ' '.join((text or '').split())
+        words = clean.split()
+        if not 1 <= len(words) <= 3:
+            return False
+        if not all(re.fullmatch(r'[A-Za-z][A-Za-z\-]{2,}', w) for w in words):
+            return False
+        if self._sa_is_greeting(clean) or self._sa_is_bare_answer(clean):
+            return False
+        if any(w.lower() in _CHATTER_WORDS or w.lower() in _NOT_A_THING for w in words):
+            return False
+        return True
+
+    def _sa_contact_number(self):
+        """The number customers are told to call: Shop Contact Number in the
+        settings, else the WhatsApp number, else the company phone."""
+        self.ensure_one()
+        settings = self._settings()
+        number = (getattr(settings, 'shop_contact_phone', '') or '').strip()
+        session = self.group_id.session_id if self.group_id else False
+        if not number and session:
+            number = (session.phone_number or session.authorized_number or '').strip()
+        if not number:
+            company = self._company_for(self.group_id) if self.group_id else self.env.company
+            number = (company.phone or '').strip()
+        if number and number.isdigit():
+            number = '+' + number
+        return number
+
+    def _sa_say_not_stocked(self, term):
+        """"Sorry, we don't have <term>" - True when the customer was answered
+        (or already was, a minute ago), False when the old way applies."""
+        self.ensure_one()
+        settings = self._settings()
+        if (getattr(settings, 'unlisted_action', 'sorry') or 'sorry') != 'sorry':
+            return False
+        term = ' '.join((term or '').split())[:60]
+        if not term:
+            return False
+        who = self.requester_phone or self.requester_lid or 'anon'
+        key = 'notstocked|%s|%s|%s' % (self.group_id.id, who, term.lower())
+        if not self.env['sa.outbox.guard'].sudo().claim(key, 300):
+            return True         # said a moment ago: once is enough
+        contact = self._sa_contact_number()
+        body = _("\U0001F614 Sorry, we don't have *%(term)s* right now.", term=term)
+        if contact:
+            body += _("\n\nFor anything else, please contact us on *%(phone)s*.", phone=contact)
+        body += _("\n\n_Ref %(ref)s_", ref=self.ref_code or self.id)
+        self._say(body)
+        _logger.info("Sales Automation: enquiry %s - %r is not in the catalogue, told the customer",
+                     self.id, term)
+        return True
 
     def _sa_acknowledge_chatter(self):
         """Answer small talk, if this database has asked for that.

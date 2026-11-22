@@ -1,6 +1,6 @@
 {
     'name': 'Sales Automation (WhatsApp Groups)',
-    'version': '19.0.173.21.0',
+    'version': '19.0.173.22.0',
     'category': 'Sales',
     'summary': 'Turn WhatsApp group enquiries into sale orders',
     'description': """

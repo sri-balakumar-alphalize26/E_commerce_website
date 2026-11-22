@@ -11,8 +11,9 @@ the catalogue for it:
   typed word → a category whose name matches opens ('categ:<id>'); several
               matching categories are offered ('findcat'); otherwise the
               matching products, page by page ('find:<page>'). Nothing found
-              → the message goes on to the ordinary typed enquiry, which asks
-              the vendors.
+              → listed but out of stock: the ordinary typed enquiry, which asks
+              the vendors; not listed at all: "Sorry, we don't have it -
+              contact us on ..." (22 Nov 2026).
   ALL CATEGORIES → the category tree, every level paged with MORE, so no
               category is ever left out ('categ', 'categp:<page>',
               'categ:<id>[:<page>]', 'prod:<id>[:<page>]').
@@ -474,10 +475,42 @@ class SaGroupRequestMenuCategories(models.Model):
             if shown is not None:
                 _logger.info("Sales Automation: menu search %r read as %r", term, fixed)
                 return shown
-        # Not in the catalogue: the ordinary enquiry takes it from here.
-        _logger.info("Sales Automation: menu search %r found nothing - typed enquiry", term)
         self.sudo().write({'sa_menu_ask_at': False})
+        # Nothing the shop lists at all: "Sorry, we don't have it" (22 Nov
+        # 2026). Listed but out of stock - or the old "ask vendors" setting -
+        # goes on to the ordinary enquiry, which sources it from the vendors.
+        if not self._sa_catalog_has(term) and self._sa_say_not_stocked(term):
+            _logger.info("Sales Automation: menu search %r - not in the catalogue, told the customer", term)
+            return True
+        _logger.info("Sales Automation: menu search %r found nothing - typed enquiry", term)
         return None
+
+    def _finder_start(self):
+        """A typed word goes through the shop's own categories first (owner,
+        22 Nov 2026), for any word - laptop, toner, CCTV, mouse:
+        a category with sub-categories (Laptop › Dell / HP) is a poll of
+        those, one without is its products, and with no category the
+        products whose names match are listed directly. No brand is guessed
+        from product names. The guided finder (brand, then model) stays the
+        fallback for what these screens cannot show - a product that is out
+        of stock, or nothing on the shelf at all."""
+        self.ensure_one()
+        term = ' '.join((self.ai_search_term or self.raw_text or '').split())[:80]
+        if self.group_id and len(term) >= 3:
+            cats = self._sa_menu_find_categories(term)
+            stocked = cats.filtered(lambda c: self._sa_menu_products(c)[0]) if cats else cats
+            if stocked or self._sa_menu_find_products(term, 0)[0]:
+                self._ensure_conversation()
+                self.sudo().write({'sa_menu_ask_at': fields.Datetime.now()})
+                self._say(_("Hi! You asked about *%(term)s* in *%(group)s* \U0001F447\n"
+                            "Just tap the options. _(Ref %(ref)s)_",
+                            term=term, group=self.group_id.name, ref=self.ref_code or self.id))
+                if self._sa_menu_search_show(term) is not None:
+                    _logger.info("Sales Automation: enquiry %s - %r shown from the shop's categories",
+                                 self.id, term)
+                    return True
+                self.sudo().write({'sa_menu_ask_at': False})
+        return super()._finder_start()
 
     def _sa_menu_search_show(self, term):
         """Show what `term` finds - a category, a choice of categories, or the
