@@ -129,3 +129,26 @@ class TestConfirmPictures(TransactionCase):
         for name in ('_sa_search_pictures', '_sa_fetch_picture_from_internet', '_sa_picture_candidates'):
             self.assertFalse(hasattr(self.Product, name), name)
         self.assertFalse(hasattr(self.env['sa.confirm.link'], '_ensure_pictures'))
+
+    def test_a_product_the_finder_picked_shows_its_photo_before_accept(self):
+        """A word like "laptop" picks one of the shop's products as the
+        candidate; the page shows it, photo and all, before ACCEPT."""
+        product = self.Product.create({'name': 'Zz Pictures Finder Pick', 'image_1920': png(60)})
+        request = self.env['sa.group.request'].sudo().create({
+            'group_id': self.group.id, 'requester_phone': '+96890000078', 'raw_text': 'laptop',
+            'finder_kind': 'ours', 'finder_model': product.name,
+            'candidate_product_ids': [(6, 0, [product.id])]})
+        self.assertFalse(request.product_id)
+        link = self.env['sa.confirm.link'].sudo().create({'request_id': request.id, 'kind': 'customer'})
+        self.assertEqual(link._product(), product)
+        self.assertEqual(link._picture_items()[0], base64.b64decode(product.image_1920))
+        labels = [row[0] for row in link._details_rows()]
+        self.assertNotIn('Asked for', labels)
+        self.assertEqual(link._details_rows()[0][2], product.name)
+
+    def test_a_market_pick_still_has_no_product(self):
+        request = self.env['sa.group.request'].sudo().create({
+            'group_id': self.group.id, 'requester_phone': '+96890000079', 'raw_text': 'laptop',
+            'finder_kind': 'market', 'finder_model': 'Some Market Laptop'})
+        link = self.env['sa.confirm.link'].sudo().create({'request_id': request.id, 'kind': 'customer'})
+        self.assertFalse(link._product())

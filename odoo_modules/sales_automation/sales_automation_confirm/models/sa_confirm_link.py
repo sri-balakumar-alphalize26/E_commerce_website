@@ -131,8 +131,18 @@ class SaConfirmLink(models.Model):
     # The page's content
     # ------------------------------------------------------------------
     def _product(self):
+        """The product this page is about. A word like "laptop" goes through
+        the guided finder, which picks one of the shop's own products but only
+        keeps it as the candidate until ACCEPT (`_finder_finish` sets
+        `product_id`). The page shows that candidate from the first open - its
+        photos, details and price - instead of "No photo yet" (22 Nov 2026)."""
         self.ensure_one()
-        return self.request_id.product_id
+        req = self.request_id
+        if req.product_id:
+            return req.product_id
+        if getattr(req, 'finder_kind', '') == 'ours' and 'candidate_product_ids' in req._fields:
+            return req.candidate_product_ids[:1]
+        return req.product_id
 
     def _picture(self):
         """(bytes, mimetype) of the main picture shown on the page, or (b'', '')."""
