@@ -7,6 +7,7 @@ Nothing is sent: the gateway is mocked.
 """
 from unittest.mock import patch
 
+from odoo import fields
 from odoo.tests import TransactionCase, tagged
 
 GROUP = '120363000000000066@g.us'
@@ -177,25 +178,23 @@ class TestPrivateLinks(TransactionCase):
         self.assertTrue(self.group._sa_back_url().startswith('https://wa.me/'))
 
     # ------------------------------------------- answers typed in the private chat
-    def test_a_private_send_points_later_private_messages_to_the_group(self):
+    def test_a_private_text_is_kept_and_not_answered(self):
+        """No group name, no link, for anybody (owner, 23 Nov 2026)."""
         self.request._say("Pay here: %s" % PAY)
         self.assertTrue(self.request.sa_private_sent_on)
         Request = self.env['sa.group.request']
-        found = Request._sa_private_reply_request(PHONE, self.group.session_id)
-        self.assertEqual(found, self.request)
+        self.assertEqual(Request._sa_private_reply_request(PHONE, self.group.session_id), self.request)
         self.sent.clear()
-        self.assertTrue(found._sa_private_redirect_reply(PHONE))
-        reply = self._to(PHONE)
-        self.assertEqual(len(reply), 1)
-        self.assertIn('answer in the group', reply[0])
-        self.assertIn(self.group.name, reply[0])
-
-    def test_the_group_invite_link_is_in_the_answer(self):
-        self.group.invite_url = 'https://chat.whatsapp.com/ZzInvite'
-        self.request._say("Pay here: %s" % PAY)
-        self.sent.clear()
-        self.request._sa_private_redirect_reply(PHONE)
-        self.assertIn('https://chat.whatsapp.com/ZzInvite', self._to(PHONE)[0])
+        self.assertFalse(hasattr(self.request, '_sa_private_redirect_reply'))
+        # and the salesbot starts nothing with them while the order runs
+        employee = self.env['hr.employee'].create({'name': 'Zz quiet'})
+        es = self.env['wa.employee.session'].search([('session_id', '=', self.group.session_id.id)], limit=1) or \
+            self.env['wa.employee.session'].create({'employee_id': employee.id, 'session_id': self.group.session_id.id,
+                                                    'phone_number': '+97150000000'})
+        conv = self.env['wa.conversation']._get_or_create(es, PHONE)
+        self.assertTrue(self.env['wa.auto.reply']._sa_private_quiet(conv, es))
+        self.assertIsNone(self.env['wa.auto.reply']._check_conversation(conv, es, fields.Datetime.now()))
+        self.assertEqual(self.sent, [])
 
     def test_nothing_sent_privately_means_the_salesbot_answers(self):
         Request = self.env['sa.group.request']
@@ -296,12 +295,6 @@ class TestPrivateLinks(TransactionCase):
         self.assertEqual(kind('https://maps.google.com/?q=1,2'), 'map')
         self.assertEqual(kind('https://shop.test/track/369M-1'), 'web')
         self.assertEqual(kind('https://shop.test/shop'), 'shop')
-
-    def test_reply_window_zero_turns_the_answer_off(self):
-        self.request._say("Pay here: %s" % PAY)
-        self.settings.link_reply_hours = 0
-        self.assertFalse(self.env['sa.group.request']._sa_private_reply_request(
-            PHONE, self.group.session_id))
 
     def test_the_storefront_console_reads_and_saves_the_rows(self):
         if 'mart369.config' not in self.env:

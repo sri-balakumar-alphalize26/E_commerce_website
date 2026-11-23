@@ -427,15 +427,14 @@ class SaGroupRequestDetails(models.Model):
         end = self._sa_flow_end()
         if end in ('order', 'invoice'):
             mode = 'stop'
-        elif end != 'delivery' or self._sa_lines_in_stock(order):
-            # No delivery job when the flow ends at the payment: the pay link
-            # goes out at the signature, in stock or not (no counter step).
-            mode = 'pay'
+        elif self._sa_pay_link_when(order) == 'sign':
+            # the admin's rule for goods in stock / not in stock (sa_pay_link_rule.py)
+            mode = 'pay' if self._sa_lines_in_stock(order) else 'pay_goods'
             self.write({'sa_pay_link_sent_on': fields.Datetime.now(),
                         'sa_stock_confirmed': True,
                         'sa_pay_remind_count': 0, 'sa_pay_reminded_on': False})
         else:
-            mode = 'wait'
+            mode = 'wait' if self._sa_lines_in_stock(order) else 'wait_goods'
         Task._queue(self, order, 'signed', mode)
         return True
 
@@ -443,7 +442,13 @@ class SaGroupRequestDetails(models.Model):
         """"Signed - thank you!" with the pay link, or that the goods are being
         arranged."""
         self.ensure_one()
-        if mode != 'pay':
+        if mode == 'wait':
+            return _("✍️ Signed - thank you! Order *#%(ref)s* is with the shop; "
+                     "we will write here about the payment.", ref=self.ref_code or order.name)
+        if mode == 'wait_goods' and self._settings().pay_link_no_stock == 'never':
+            return _("✍️ Signed - thank you! We are arranging the goods for order *#%(ref)s* "
+                     "and will write here when they are in.", ref=self.ref_code or order.name)
+        if mode not in ('pay', 'pay_goods'):
             return _("✍️ Signed - thank you! We are arranging the "
                      "goods for order *#%(ref)s*; the payment link will be "
                      "posted here as soon as they are in.",
@@ -455,7 +460,8 @@ class SaGroupRequestDetails(models.Model):
                  "%(order)s\n%(lines)s\n*Total: %(cur)s %(total).2f*\n\n%(pay)s\n\n%(after)s",
                  order=order.name, lines=self._sa_order_lines_text(order),
                  cur=order.currency_id.symbol or '', total=order.amount_total,
-                 pay=self._sa_pay_link_any_state(order), after=after)
+                 pay=((_("We are arranging the goods. You can pay now to have them reserved for you.\n\n")
+                       if mode == 'pay_goods' else '') + self._sa_pay_link_any_state(order)), after=after)
 
     def _sa_send_order_pdf(self, order):
         """The signed, confirmed order as a PDF in the group. Never raises."""

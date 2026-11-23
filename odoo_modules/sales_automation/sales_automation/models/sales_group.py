@@ -20,6 +20,8 @@ import logging
 from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError
 
+from odoo.addons.whatsapp_employee_tracker.models.phone_digits import same_number
+
 _logger = logging.getLogger(__name__)
 
 
@@ -190,7 +192,7 @@ class SalesGroup(models.Model):
         EmployeeSession = self.env['wa.employee.session']
         for rec in self:
             current = rec.employee_session_id
-            if current and current.session_id == rec.session_id:
+            if current and current.active and current.session_id == rec.session_id:
                 continue  # a deliberate override, leave it alone
             rec.employee_session_id = EmployeeSession.search(
                 [('session_id', '=', rec.session_id.id)], limit=1)
@@ -205,14 +207,21 @@ class SalesGroup(models.Model):
         employee called "Shop Counter" unless a session already exists.
         """
         self.ensure_one()
-        if self.employee_session_id:
+        if self.employee_session_id.active:
             return self.employee_session_id
         EmployeeSession = self.env['wa.employee.session'].sudo()
         session = self.session_id
         if not session:
             return EmployeeSession
-        found = EmployeeSession.with_context(active_test=False).search(
-            [('session_id', '=', session.id)], limit=1)
+        found = EmployeeSession.search([('session_id', '=', session.id)], limit=1)
+        if not found:
+            # an old one only for the number the session is now (23 Nov 2026)
+            number = session.authorized_number or session.phone_number
+            found = EmployeeSession.with_context(active_test=False).search(
+                [('session_id', '=', session.id)], order='until desc, id desc').filtered(
+                    lambda r: not number or r._number_now() == number or same_number(r.own_number, number))[:1]
+            if found and EmployeeSession.search_count([('employee_id', '=', found.employee_id.id)], limit=1):
+                found = EmployeeSession          # that employee has another number now
         if found:
             if not found.active:
                 found.active = True
@@ -223,7 +232,8 @@ class SalesGroup(models.Model):
             found = EmployeeSession.create({
                 'employee_id': employee.id,
                 'session_id': session.id,
-                'phone_number': session.phone_number or session.name or 'shop',
+                'phone_number': ('+' + session.authorized_number if session.authorized_number
+                                 else session.phone_number or session.name or 'shop'),
             })
             _logger.info("Sales Automation: created employee session %s "
                          "(Shop Counter) for WhatsApp session %s", found.id,

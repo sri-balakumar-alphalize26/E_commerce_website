@@ -1,6 +1,6 @@
 {
     'name': 'Sales Automation (WhatsApp Groups)',
-    'version': '19.0.173.33.0',
+    'version': '19.0.173.39.0',
     'category': 'Sales',
     'summary': 'Turn WhatsApp group enquiries into sale orders',
     'description': """
@@ -48,6 +48,7 @@
         'views/sa_portal_brand.xml',
         'views/sa_payment_brand.xml',
         'views/sa_review_page.xml',
+        'views/sa_pay_link_views.xml',
         'views/sa_group_picker_views.xml',
         'views/sa_ai_settings_views.xml',
         # menu.xml before the settings sections: they hang under menu_sa_config

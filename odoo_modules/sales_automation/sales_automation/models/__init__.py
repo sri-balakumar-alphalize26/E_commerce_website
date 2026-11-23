@@ -39,3 +39,9 @@ from . import sa_brand
 from . import sa_review
 from . import sa_picture
 from . import auto_upgrade
+from . import wa_connect_groups
+from . import wa_chat_history
+from . import sa_only_listed
+from . import sa_send_once
+from . import sa_vendor_window
+from . import sa_pay_link_rule

@@ -5,7 +5,7 @@
         <field name="name">sa.sales.group.list</field>
         <field name="model">sa.sales.group</field>
         <field name="arch" type="xml">
-            <list string="WhatsApp Groups" editable="bottom" create="false"
+            <list string="WhatsApp Groups" editable="bottom" create="false" open_form_view="True"
                   decoration-info="group_type == 'vendor'">
                 <field name="enabled" widget="boolean_toggle" string="On"/>
                 <field name="name" readonly="1"/>
@@ -14,6 +14,8 @@
                        groups="base.group_multi_company"/>
                 <field name="session_id" readonly="1"/>
                 <field name="employee_session_id" optional="show"/>
+                <field name="invite_url" string="Invite Link" optional="show"
+                       placeholder="https://chat.whatsapp.com/..."/>
                 <field name="member_count" readonly="1" optional="hide"/>
                 <field name="markup_percent" string="Margin %" optional="show"/>
                 <field name="auto_confirm_order" optional="hide"/>

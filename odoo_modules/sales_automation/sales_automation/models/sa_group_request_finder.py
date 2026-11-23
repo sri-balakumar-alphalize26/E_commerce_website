@@ -649,30 +649,8 @@ class SaGroupRequestFinder(models.Model):
                 raw = _b64.b64decode(product.image_1920)
                 session.send_image(phone, raw, caption=caption)
                 return True
-            Suggest = self.env['sa.ai.suggestion'].sudo()
-            key = Suggest._key(name)
-            cached = Suggest.recall('image', key)
-            picture = cached[0] if cached else b''
-            if not picture:
-                prompt = (
-                    "Clean studio product photograph of the %s (%s %s), whole "
-                    "device visible, centred on a plain white background, soft "
-                    "lighting, no text, no logo overlays, no watermark, no people."
-                    % (name, (self.finder_type or '').lower(),
-                       self.finder_seed or ''))
-                picture, mimetype = self.env['sa.ai.classifier'].sudo(
-                    )._call_gemini_image(prompt)
-                if picture:
-                    Suggest.store('image', key, image=picture,
-                                  mimetype=mimetype or 'image/jpeg')
-            if picture:
-                session.send_image(phone, picture, caption=_(
-                    "🖼 Reference image of *%(name)s* — the exact unit may "
-                    "differ (Ref %(ref)s)", name=name, ref=ref))
-            else:
-                self._say(_("*%(name)s* — I don't have a photo to hand, but I "
-                            "can check it for you. (Ref %(ref)s)",
-                            name=name, ref=ref))
+            # no picture of ours: none is drawn or looked up (23 Nov 2026)
+            self._say(_("*%(name)s* — I don't have a photo to hand. (Ref %(ref)s)", name=name, ref=ref))
         except Exception as err:  # noqa: BLE001 - a picture is not worth the flow
             _logger.warning("Sales Automation: finder picture for %s failed: %s",
                             self.id, err)

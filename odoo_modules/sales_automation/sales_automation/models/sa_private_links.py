@@ -31,7 +31,8 @@ from odoo import _, api, fields, models
 
 _logger = logging.getLogger(__name__)
 
-PRIVATE_REPLY_EVERY = 300   # seconds: at most one "answer in the group" per number
+# the salesbot starts nothing in a private chat this long after a group order's link
+PRIVATE_QUIET_HOURS = 6
 
 # links hold "_" (scoped_app, access_token): cut only WhatsApp's bold/italic
 # marks and punctuation off the end
@@ -90,7 +91,7 @@ class SaGroupRequestPrivateLinks(models.Model):
         return 'link'
 
     # ------------------------------------------------------------------
-    # The private chat answers "please answer in the group"
+    # What somebody types in the private chat is kept and not answered
     # ------------------------------------------------------------------
     def _sa_mark_private(self):
         self.sudo().write({'sa_private_sent_on': fields.Datetime.now()})
@@ -102,37 +103,12 @@ class SaGroupRequestPrivateLinks(models.Model):
         digits = ''.join(c for c in (digits or '') if c.isdigit())
         if len(digits) < 8 or not session:
             return self.browse()
-        try:
-            hours = self.env['sa.ai.settings'].sudo().get_settings().link_reply_hours
-        except Exception:  # noqa: BLE001 - before the field exists
-            hours = 6
-        if not hours or hours <= 0:
-            return self.browse()
-        since = fields.Datetime.now() - timedelta(hours=hours)
+        since = fields.Datetime.now() - timedelta(hours=PRIVATE_QUIET_HOURS)
         return self.sudo().search([
             ('requester_phone', 'like', digits[-9:]),
             ('sa_private_sent_on', '>=', since),
             ('group_id.session_id', '=', session.id),
         ], order='sa_private_sent_on desc, id desc', limit=1)
-
-    def _sa_private_redirect_reply(self, digits):
-        """Answer a message typed in the private chat: this chat only carries
-        links and documents, the conversation is in the group. Once every few
-        minutes at most; True either way (the salesbot stays out)."""
-        self.ensure_one()
-        if not self.env['sa.outbox.guard'].sudo().claim('privreply|%s' % digits, PRIVATE_REPLY_EVERY):
-            return True
-        group = self.group_id.sudo()
-        invite = group._sa_back_url() if hasattr(group, '_sa_back_url') else ''
-        invite = ('\n\U0001F449 %s' % invite) if invite.startswith('https://chat.whatsapp.com/') else ''
-        text = _("\U0001F512 This chat only sends you your links and documents.\n"
-                 "Please answer in the group *%(group)s* \U0001F64F%(invite)s",
-                 group=group.name or _("your WhatsApp group"), invite=invite)
-        try:
-            group.session_id.send_message(digits, text)
-        except Exception as err:  # noqa: BLE001 - nothing else to do with it
-            _logger.info("Sales Automation: enquiry %s - private reply not sent: %s", self.id, err)
-        return True
 
     # ------------------------------------------------------------------
     # Where it can go
@@ -286,3 +262,20 @@ class SaGroupRequestPrivateLinks(models.Model):
                 _logger.info("Sales Automation: enquiry %s - private document refused: %s", self.id, err)
         send(self.group_id.group_jid)
         return 'group'
+
+
+class AutoReplyNotInAGroupOrder(models.Model):
+    _inherit = 'wa.auto.reply'
+
+    def _sa_private_quiet(self, conv, session):
+        return bool(self.env['sa.group.request'].sudo()._sa_private_reply_request(conv.phone or '', session.session_id))
+
+    def _check_conversation(self, conv, session, cutoff_time):
+        if self._sa_private_quiet(conv, session):
+            return None
+        return super()._check_conversation(conv, session, cutoff_time)
+
+    def _check_conversation_for_message(self, conv, session, cutoff, trigger_log=None):
+        if self._sa_private_quiet(conv, session):
+            return None
+        return super()._check_conversation_for_message(conv, session, cutoff, trigger_log)

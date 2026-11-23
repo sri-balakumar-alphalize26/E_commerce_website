@@ -9,6 +9,8 @@
                   decoration-success="is_best"
                   decoration-warning="matched_by == 'newest_open'">
                 <field name="create_date" string="Received"/>
+                <field name="sa_rank" string="#" optional="show"/>
+                <field name="sa_late" widget="boolean" optional="show"/>
                 <field name="group_id"/>
                 <field name="vendor_name"/>
                 <field name="vendor_phone" optional="show"/>
@@ -37,9 +39,12 @@
         <field name="arch" type="xml">
             <form string="Vendor Quote" create="false">
                 <header>
+                    <button name="action_sa_use_late" type="object" string="Use This Better Price" class="btn-primary"
+                            invisible="not sa_late or is_best"
+                            confirm="The customer gets this lower price instead. Go on?"/>
                     <button name="action_make_best" type="object"
                             string="Use This Price" class="btn-primary"
-                            invisible="is_best"
+                            invisible="is_best or sa_late"
                             confirm="Quote the customer from this price instead?"/>
                 </header>
                 <sheet>
@@ -64,6 +69,10 @@
                             <field name="response_minutes"/>
                             <field name="matched_by"/>
                             <field name="is_best"/>
+                            <field name="sa_rank"/>
+                            <field name="sa_in_window"/>
+                            <field name="sa_late"/>
+                            <field name="sa_sell_price"/>
                             <field name="request_id"/>
                             <field name="product_id"/>
                         </group>

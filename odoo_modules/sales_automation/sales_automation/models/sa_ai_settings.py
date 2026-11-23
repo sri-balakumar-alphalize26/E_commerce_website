@@ -313,11 +313,6 @@ class SaAiSettings(models.Model):
         'Tell the Group', default=True,
         help="After a link or PDF goes to the private chat, say so in the group "
              "(\"I've sent your payment link to your private chat\").")
-    link_reply_hours = fields.Integer(
-        'Point Private Replies to the Group (hours)', default=6,
-        help="For this many hours after something went to a customer's private "
-             "chat, what they type there is answered with \"please answer in the "
-             "group\". 0 switches it off.")
 
     # ---- A product we do not sell (owner, 22 Nov 2026) ----
     shop_contact_phone = fields.Char(
@@ -325,14 +320,6 @@ class SaAiSettings(models.Model):
         help="Given to a customer who asks for something the shop does not "
              "sell: \"Sorry, we don't have it - please contact us on ...\". "
              "Empty: the WhatsApp number, else the company phone.")
-    unlisted_action = fields.Selection([
-        ('sorry', "Say we don't have it"),
-        ('vendors', 'Ask vendors for products we don\'t list'),
-    ], string='A Product We Don\'t List', default='sorry', required=True,
-        help="A product in the catalogue is sold, or - out of stock - sourced "
-             "from the vendors. For a product that is not in the catalogue at "
-             "all: tell the customer we don't have it (with the Shop Contact "
-             "Number), or ask the vendors for it as before.")
 
     def _sa_link_route(self, kind):
         """'private' or 'group' for a kind of link (see LINK_KINDS)."""
@@ -396,6 +383,11 @@ class SaAiSettings(models.Model):
         help="Sent once per person per minute at most.")
 
     # ---- Guided finder ----
+    # No longer used (23 Nov 2026): only our own products are offered, and a
+    # private chat gets no automatic answer. Kept for the 369 Mart console.
+    unlisted_action = fields.Selection([('sorry', "Say we don't have it"), ('vendors', 'Not used any more')],
+                                       default='sorry', required=True)
+    link_reply_hours = fields.Integer(default=0)
     finder_enabled = fields.Boolean(
         'Guided Finder', default=True,
         help="A generic word - headphone, laptop, charger - opens a tap-only "

@@ -365,3 +365,50 @@ class TestAfterOrder(HttpCase):
             'partner_id': self.customer.id, 'order_line': [(0, 0, {'product_id': self.product.id})]})
         order._send_payment_succeeded_for_order_mail()
         self.assertEqual(self._kinds(), ['mail'])
+
+    # ------------------------------------------------------------ 23 Nov, S00019
+    def _locked(self, task):
+        with patch.object(self.env.cr, 'rollback', lambda: None), patch.object(self.env.cr, 'commit', lambda: None):
+            return task._run_locked()
+
+    def test_the_invoice_follows_the_signed_task_at_once(self):
+        self._stock(8)
+        order, req = self._order()
+        self._sign(order)
+        done = []
+        real = type(req)._sa_after_signed_work
+
+        def signed(rec, o, mode):
+            done.append('signed')
+            self.env['sa.after.task']._queue(req, order, 'paid')     # paid while the PDF goes out
+            return real(rec, o, mode)
+
+        def paid(rec, o):
+            done.append('paid')
+            return True
+        with patch.object(self.env.registry['sa.group.request'], '_sa_after_signed_work', signed), \
+                patch.object(self.env.registry['sa.group.request'], '_sa_group_confirmed', paid):
+            self.assertTrue(self._locked(self._task(req, 'signed')))
+        self.assertEqual(done, ['signed', 'paid'])
+        self.assertEqual(self._task(req, 'paid').state, 'done')
+
+    def test_a_signed_task_that_waits_holds_the_invoice(self):
+        self._stock(8)
+        order, req = self._order()
+        self._sign(order)
+        self.env['sa.after.task']._queue(req, order, 'paid')
+        self.fail.append('doc')
+        paid = []
+        with patch.object(self.env.registry['sa.group.request'], '_sa_group_confirmed', lambda rec, o: paid.append(1) or True):
+            self._locked(self._task(req, 'signed'))
+        self.assertFalse(paid, 'the sales order first')
+        self.assertEqual(self._task(req, 'paid').state, 'todo')
+
+    def test_another_order_is_not_touched(self):
+        self._stock(16)
+        order, req = self._order()
+        self._sign(order)
+        other, req2 = self._order()
+        self._sign(other)
+        self._locked(self._task(req, 'signed'))
+        self.assertEqual(self._task(req2, 'signed').state, 'todo')

@@ -25,4 +25,15 @@
         </field>
     </record>
 
+    <record id="view_whatsapp_session_list_sa_groups" model="ir.ui.view">
+        <field name="name">whatsapp.session.list.sa.groups</field>
+        <field name="model">whatsapp.session</field>
+        <field name="inherit_id" ref="whatsapp_gateway.view_whatsapp_session_list"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='status']" position="before">
+                <field name="sa_group_count"/>
+            </xpath>
+        </field>
+    </record>
+
 </odoo>

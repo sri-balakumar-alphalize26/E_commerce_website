@@ -2752,8 +2752,15 @@ class SaGroupRequest(models.Model):
         # Not in the catalogue at all: say so, and ask no vendor (22 Nov 2026).
         # In the catalogue but out of stock goes on as before - to the vendors.
         asked = (verdict['search_term'] or self.raw_text or '').strip()
-        if not self._sa_catalog_has(asked) and self._sa_say_not_stocked(asked):
-            return self._drop('not_stocked')
+        if not self._sa_catalog_has(asked):
+            fixed = self._sa_spell_listed(asked)
+            if fixed:
+                _logger.info("Sales Automation: enquiry %s - read %r as %r", self.id, asked[:40], fixed[:40])
+                self.ai_search_term = fixed
+                verdict = dict(verdict, search_term=fixed)
+            else:
+                self._sa_say_not_stocked(asked)
+                return self._drop('not_stocked')
 
         # A generic word - "headphone" - is not something to guess at or to
         # put to a supplier. The finder walks the customer to one model in
@@ -2782,8 +2789,11 @@ class SaGroupRequest(models.Model):
         term = verdict['search_term'] or self.raw_text
         products = self.env['wa.auto.reply'].sudo()._search_products(
             term, group.max_products or 5)
+        # Every word they typed, or it is not what they asked for (23 Nov 2026).
+        listed = self._sa_listed_ids(term)
+        products = products.filtered(lambda prod: prod.id in set(listed))
         if not products:
-            products = self._search_products_loose(term)
+            products = self.env['product.template'].sudo().browse(listed[:group.max_products or 5])
         # Another company's product would be quoted from a price list this
         # business does not own and reserved against stock it does not have.
         # A product with no company belongs to all of them, which is how most
@@ -2791,9 +2801,6 @@ class SaGroupRequest(models.Model):
         company = self._company_for(group)
         products = products.filtered(
             lambda prod: not prod.company_id or prod.company_id == company)
-        products = products.filtered(
-            lambda prod: self._sa_match_is_plausible(prod, term))
-
         # Offering something the same person turned down minutes ago is worse
         # than offering nothing: it reads as not having listened. One tester
         # was asked "Did you mean SATEST Laptop Charger?" three times running
@@ -2806,8 +2813,10 @@ class SaGroupRequest(models.Model):
                              "already-rejected suggestion(s)", self.id,
                              len(products) - len(still_open))
             products = still_open
-        if products:
-            self.product_id = products[0].id
+        if not products:
+            self._sa_say_not_stocked(term)
+            return self._drop('not_stocked')
+        self.product_id = products[0].id
 
         # ---- 3. Confirm before spending anyone's time ----
         # Keyword matching is loose - it matches on substrings, so "Single"
@@ -4036,17 +4045,6 @@ class SaGroupRequest(models.Model):
         if not self.env['sa.outbox.guard'].sudo().claim(
                 'askprice|%s|%s' % (self.id, phone), 3600):
             return False
-        # They have just committed to pricing it. Closing the window on them
-        # thirty seconds later - which a one-minute window did - is how the
-        # customer came to be quoted from a price list instead. Restart it,
-        # but only while the enquiry is still genuinely waiting; a stalled
-        # one is the shopkeeper's now, and a late price is handled on
-        # arrival.
-        if self.state == 'sourcing' and not self.sa_price_stalled:
-            window = max(1, self._settings().sourcing_window_minutes or 10)
-            fresh = fields.Datetime.add(fields.Datetime.now(), minutes=window)
-            if not self.sourcing_deadline or self.sourcing_deadline < fresh:
-                self.write({'sourcing_deadline': fresh})
         try:
             session.send_message(phone, body)
             # a swipe-reply to this message names the enquiry
@@ -5181,41 +5179,10 @@ class SaGroupRequest(models.Model):
     # asked. "Ask vendors for products we don't list" keeps the old way.
 
     def _sa_catalog_has(self, term):
-        """True when anything the shop lists - in stock or not - answers
-        `term`: every word in a product's name, reference or category, a
-        spacing-blind match, one of our categories, or a near-miss spelling of
-        a catalogue word. Unsure ('' or odd input) counts as yes, which keeps
-        the old flow."""
+        """True when something of ours - in stock or not - has every word of
+        `term`, or it is one of our categories (sa_only_listed.py)."""
         self.ensure_one()
-        import difflib
-        import re
-        term = ' '.join((term or '').split())[:80]
-        words = [w for w in re.findall(r'[^\W_]+', term.lower()) if len(w) >= 3]
-        if not words:
-            return True
-        Prod = self.env['product.template'].sudo()
-        company = self._company_for(self.group_id) if self.group_id else self.env.company
-        base = [('sale_ok', '=', True), '|', ('company_id', '=', False), ('company_id', '=', company.id)]
-        domain = list(base)
-        for w in words:
-            stem = w[:-1] if len(w) > 4 and w.endswith('s') else w     # "headphones" / "headphone"
-            domain += ['|', '|', ('name', 'ilike', stem), ('default_code', 'ilike', stem),
-                       ('categ_id.complete_name', 'ilike', stem)]
-        if Prod.search_count(domain, limit=1):
-            return True
-        squashed = ''.join(c for c in term.lower() if c.isalnum())
-        if len(squashed) >= 4:
-            for name in Prod.search(base, limit=3000).mapped('name'):
-                flat = ''.join(c for c in (name or '').lower() if c.isalnum())
-                if flat and (squashed in flat or flat in squashed):
-                    return True
-        if self._sa_looks_like_category(term):
-            return True
-        vocabulary = self._sa_catalog_vocabulary()
-        if vocabulary and all(difflib.get_close_matches(w, vocabulary, n=1, cutoff=0.8)
-                              for w in words if len(w) >= 4) and any(len(w) >= 4 for w in words):
-            return True
-        return False
+        return bool(self._sa_listed_ids(term, 1)) or self._sa_looks_like_category(term)
 
     def _sa_unlisted_candidate(self, text):
         """A short message that reads like the name of a thing ("headphone",
@@ -5257,9 +5224,6 @@ class SaGroupRequest(models.Model):
         """"Sorry, we don't have <term>" - True when the customer was answered
         (or already was, a minute ago), False when the old way applies."""
         self.ensure_one()
-        settings = self._settings()
-        if (getattr(settings, 'unlisted_action', 'sorry') or 'sorry') != 'sorry':
-            return False
         term = ' '.join((term or '').split())[:60]
         if not term:
             return False
@@ -5505,4 +5469,5 @@ class SaGroupRequest(models.Model):
     def action_close_sourcing_now(self):
         """Stop waiting and quote from whatever has arrived."""
         self.ensure_one()
+        self.write({'sourcing_deadline': fields.Datetime.now()})
         return self._close_sourcing()

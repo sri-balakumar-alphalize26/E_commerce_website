@@ -14,6 +14,13 @@ from . import test_sign_page_address
 from . import test_order_page_flow
 from . import test_after_order
 from . import test_vendor_money
+from . import test_connect_number
+from . import test_number_off
+from . import test_scanned_numbers
+from . import test_chat_history
+from . import test_only_listed
+from . import test_send_once
+from . import test_vendor_window
 from . import test_vendor_all_in
 from . import test_order_currency
 from . import test_portal_location

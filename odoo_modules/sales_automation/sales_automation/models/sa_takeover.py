@@ -16,7 +16,8 @@ next message is handled as usual.
 import logging
 from datetime import timedelta
 
-from odoo import api, fields, models
+from odoo import _, api, fields, models
+from odoo.exceptions import ValidationError
 
 _logger = logging.getLogger(__name__)
 
@@ -58,6 +59,14 @@ class SaAiSettingsTakeover(models.Model):
                 '%s - until %s (%s)' % (h.chat_label or h.chat_key,
                                         fields.Datetime.context_timestamp(rec, h.until).strftime('%H:%M:%S'),
                                         h.set_by or '') for h in live) or 'none right now'
+
+    @api.constrains('takeover_numbers')
+    def _check_takeover_numbers(self):
+        for rec in self:
+            for line in (rec.takeover_numbers or '').splitlines():
+                text = line.split('#')[0].strip()
+                if text and not (set(text) <= set('+0123456789 -().') and 7 <= len(_digits(text)) <= 15):
+                    raise ValidationError(_("\"%s\" is not a phone number. One number per line, with the country code.", line.strip()))
 
     def _takeover_tails(self):
         self.ensure_one()

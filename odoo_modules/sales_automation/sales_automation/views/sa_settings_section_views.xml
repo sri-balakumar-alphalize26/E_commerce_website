@@ -65,8 +65,7 @@
                         <group>
                             <field name="sourcing_window_minutes"/>
                             <field name="customer_reply_minutes"/>
-                            <field name="price_escalation_phone"
-                                   placeholder="968 7712 3456"/>
+                            <field name="price_escalation_phone" widget="wa_phone"/>
                             <field name="price_approval_enabled"/>
                             <field name="price_approval_tolerance_percent"
                                    invisible="not price_approval_enabled"/>
@@ -264,19 +263,12 @@
                             <field name="finder_enabled"/>
                             <field name="finder_max_options"
                                    invisible="not finder_enabled"/>
-                            <field name="finder_cache_days"
-                                   invisible="not finder_enabled"/>
                         </group>
                         <group>
-                            <field name="finder_image_model"
-                                   invisible="not finder_enabled"/>
-                            <field name="finder_image_fallback_model"
-                                   invisible="not finder_enabled"/>
                             <div class="text-muted" colspan="2">
-                                A generic word opens a tap-only finder in the
-                                customer's private chat - kind, brand, model,
-                                picture, confirm. Every question is a poll, so
-                                it works on WhatsApp Web as well as the phone.
+                                A generic word opens a tap-only finder in the group:
+                                the brands and products of this database, one poll
+                                after the other. Nothing comes from the internet.
                             </div>
                         </group>
                     </group>
@@ -316,13 +308,13 @@
                         </group>
                         <group string="Around it">
                             <field name="link_group_note"/>
-                            <field name="link_reply_hours"/>
                         </group>
                     </group>
                     <group>
                         <group string="A product we don't sell">
-                            <field name="unlisted_action" widget="radio"/>
-                            <field name="shop_contact_phone" placeholder="+91 98765 43210"/>
+                            <div colspan="2" class="text-muted">Only products of this database are offered. For anything else the
+                                customer is told we don't have it, with this number. A product without stock goes to the vendors.</div>
+                            <field name="shop_contact_phone" widget="wa_phone" options="{'plus': True, 'landline': True}"/>
                         </group>
                     </group>
                 </sheet>
@@ -339,6 +331,38 @@ action = {'type': 'ir.actions.act_window', 'name': 'Customer Links', 'res_model'
           'views': [[env.ref('sales_automation.view_sa_settings_links_form').id, 'form']]}
         </field>
     </record>
+    <record id="view_sa_settings_payments_form" model="ir.ui.view">
+        <field name="name">sa.settings.payments.form</field>
+        <field name="model">sa.ai.settings</field>
+        <field name="priority">48</field>
+        <field name="arch" type="xml">
+            <form string="Payments">
+                <sheet>
+                    <group string="When the payment link is sent">
+                        <field name="pay_link_in_stock" widget="radio" options="{'horizontal': true}"/>
+                        <field name="pay_link_no_stock" widget="radio" options="{'horizontal': true}"/>
+                        <field name="pay_link_words" nolabel="1" colspan="2" class="alert alert-info"/>
+                    </group>
+                    <div class="text-muted">Send payment link on the counter and on the sales order works in every case.
+                        Not used when the flow ends at the order or at the invoice (Delivery Settings).</div>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_sa_settings_payments" model="ir.actions.server">
+        <field name="name">Payments</field>
+        <field name="model_id" ref="model_sa_ai_settings"/>
+        <field name="state">code</field>
+        <field name="code">
+action = {'type': 'ir.actions.act_window', 'name': 'Payments', 'res_model': 'sa.ai.settings',
+          'res_id': model.get_settings().id, 'view_mode': 'form', 'target': 'current',
+          'views': [[env.ref('sales_automation.view_sa_settings_payments_form').id, 'form']]}
+        </field>
+    </record>
+
+    <menuitem id="menu_sa_settings_payments" name="Payments"
+              parent="menu_sa_config" action="action_sa_settings_payments" sequence="32"/>
     <menuitem id="menu_sa_settings_links" name="Customer Links"
               parent="menu_sa_config" action="action_sa_settings_links" sequence="33"/>
 

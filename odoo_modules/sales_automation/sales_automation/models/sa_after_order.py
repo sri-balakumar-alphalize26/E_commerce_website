@@ -35,6 +35,7 @@ RETRY_MINUTES = (1, 2, 5, 10, 30)
 WAIT_MINUTES = 2            # WhatsApp not connected
 GIVE_UP_HOURS = 24          # ... for this long
 CLASH_SECONDS = (0.3, 0.7, 1.5, 3, 4)     # two jobs at the same record: again at once
+LOCK_WAIT_SECONDS = 45
 LOCK_SPACE = 369021         # pg advisory lock: one runner per order
 
 
@@ -118,18 +119,39 @@ class SaAfterTask(models.Model):
         cr, key = self.env.cr, self.request_id.id
         cr.execute('SELECT pg_try_advisory_lock(%s, %s)', (LOCK_SPACE, key))
         if not cr.fetchone()[0]:
-            return False
+            return None             # somebody runs this order's tasks now
         try:
             # a fresh snapshot: the runner before us may have finished it
             cr.commit()
             self.env.invalidate_all()
-            return self._run(commit=True)
+            res = self._run(commit=True)
+            self._run_rest()
+            return res
         except Exception:
             cr.rollback()           # the unlock below needs a clean transaction
             raise
         finally:
             cr.execute('SELECT pg_advisory_unlock(%s, %s)', (LOCK_SPACE, key))
             cr.commit()
+
+    def _run_rest(self):
+        """What came for the same enquiry meanwhile - the payment, while the
+        signed order's PDF went out. It used to wait for the next scheduled
+        run (S00019, 23 Nov 2026: the invoice 74 s after paying)."""
+        self.ensure_one()
+        cr, request, seen = self.env.cr, self.request_id.id, [self.id]
+        while True:
+            cr.commit()
+            self.env.invalidate_all()
+            if self.sudo().search_count([('id', 'in', seen), ('state', '=', 'todo')], limit=1):
+                return              # not finished: in its own time, and the rest after it
+            task = self.sudo().search([('request_id', '=', request), ('state', '=', 'todo'), ('id', 'not in', seen),
+                                       '|', ('next_on', '=', False), ('next_on', '<=', fields.Datetime.now())],
+                                      order='id', limit=1)
+            if not task:
+                return
+            seen.append(task.id)
+            task._run(commit=True)
 
     def _run(self, commit=False):
         """One attempt. True when the task is finished."""
@@ -267,7 +289,15 @@ def _run_in_thread(dbname, ids):
         with Registry(dbname).cursor() as cr:
             env = api.Environment(cr, SUPERUSER_ID, {})
             for task in env['sa.after.task'].browse(ids).exists():
-                task._run_locked()
+                # the order's other task runs: it usually takes this one along
+                for _second in range(LOCK_WAIT_SECONDS):
+                    if task._run_locked() is not None:
+                        break
+                    cr.commit()
+                    env.invalidate_all()
+                    if task.state != 'todo':
+                        break
+                    time.sleep(1)
     except Exception as err:  # noqa: BLE001 - the cron takes it
         _logger.warning("After-order task %s not started at once (%s) - the scheduled job takes it", ids, err)
 
@@ -360,7 +390,7 @@ class SaGroupRequestAfter(models.Model):
             note=_("\U0001F4C4 Your order %s (PDF) is in your *private chat* \U0001F512") % (order.name or ''))), sends=True)
         if mode == 'stop':
             self._sa_after_part('words', lambda: self._sa_signed_stop(order, self._sa_flow_end()), sends=True)
-        elif not (mode == 'pay' and (self.sa_paid_on or self._sa_order_is_paid(order))):
+        elif not (mode in ('pay', 'pay_goods') and (self.sa_paid_on or self._sa_order_is_paid(order))):
             # paid meanwhile: "pay here" would be wrong, the invoice follows
             self._sa_after_part('words', lambda: self._sa_must_send(
                 lambda: self._say(self._sa_after_again(self._sa_signed_words(order, mode)))), sends=True)
