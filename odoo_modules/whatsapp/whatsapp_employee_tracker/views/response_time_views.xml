@@ -52,6 +52,7 @@
                   decoration-danger="response_minutes &gt;= 15">
                 <field name="reply_date" string="Reply Time"/>
                 <field name="employee_id" string="Employee"/>
+                <field name="employee_session_id" string="Number" optional="show"/>
                 <field name="department_id" string="Department" optional="hide"/>
                 <field name="phone" string="Customer"/>
                 <field name="customer_msg_date" string="Customer Sent At"/>

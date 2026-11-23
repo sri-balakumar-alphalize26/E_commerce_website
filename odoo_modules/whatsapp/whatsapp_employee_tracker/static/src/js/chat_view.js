@@ -16,24 +16,18 @@ class WaChatView extends Component {
             selectedConvId: null,
             searchQuery: "",
             loading: false,
-            employeeSessionId: null,
-            employeeSessions: [],
+            employees: [],
+            employeeId: null,       // null: everybody
+            numberId: null,         // an employee session; null: all numbers
         });
 
         // Priority: context > localStorage
-        const contextId = (this.props.action && this.props.action.context && this.props.action.context.active_employee_session_id) || null;
-        let savedId = null;
-        try { savedId = localStorage.getItem("wa_tracker_emp_session"); } catch(e) {}
-        let savedConv = null;
-        try { savedConv = localStorage.getItem("wa_tracker_conv_id"); } catch(e) {}
-
-        this.state.employeeSessionId = contextId || (savedId ? parseInt(savedId) : null);
-        this._pendingConvId = savedConv ? parseInt(savedConv) : null;
-
-        // If opened from dashboard, save the employee session
-        if (contextId) {
-            try { localStorage.setItem("wa_tracker_emp_session", String(contextId)); } catch(e) {}
-        }
+        const context = (this.props.action && this.props.action.context) || {};
+        this._openSession = context.active_employee_session_id || null;
+        this._openAll = !!context.wa_all_numbers;
+        this._saved = { employee: this._read("wa_tracker_employee"), number: this._read("wa_tracker_number"),
+                        conv: this._read("wa_tracker_conv_id") };
+        this._pendingConvId = parseInt(this._saved.conv) || null;
 
         onWillStart(async () => {
             await this.loadEmployeeSessions();
@@ -50,13 +44,18 @@ class WaChatView extends Component {
         });
     }
 
+    _read(key) {
+        try {
+            return localStorage.getItem(key) || "";
+        } catch {
+            return "";
+        }
+    }
+
     _saveState() {
         try {
-            if (this.state.employeeSessionId) {
-                localStorage.setItem("wa_tracker_emp_session", String(this.state.employeeSessionId));
-            } else {
-                localStorage.removeItem("wa_tracker_emp_session");
-            }
+            localStorage.setItem("wa_tracker_employee", String(this.state.employeeId || ""));
+            localStorage.setItem("wa_tracker_number", this.state.employeeId && !this.state.numberId ? "all" : String(this.state.numberId || ""));
             if (this.state.selectedConvId) {
                 localStorage.setItem("wa_tracker_conv_id", String(this.state.selectedConvId));
             } else {
@@ -87,13 +86,23 @@ class WaChatView extends Component {
     async loadEmployeeSessions() {
         try {
             const result = await this._jsonRpc("/wa_tracker/employee_sessions", {});
-            this.state.employeeSessions = result || [];
-
-            // Auto-select if only one session exists
-            if (!this.state.employeeSessionId && this.state.employeeSessions.length === 1) {
-                this.state.employeeSessionId = this.state.employeeSessions[0].id;
-                this._saveState();
+            const people = (this.state.employees = result || []);
+            const owner = (id) => people.find((p) => p.numbers.some((n) => n.id === id));
+            if (this._openSession && owner(this._openSession)) {
+                this.state.employeeId = owner(this._openSession).id;
+                this.state.numberId = this._openAll ? null : this._openSession;
+            } else if (people.find((p) => p.id === parseInt(this._saved.employee))) {
+                this.state.employeeId = parseInt(this._saved.employee);
+                const number = parseInt(this._saved.number) || null;
+                const mine = this.selectedEmployee.numbers.find((n) => n.id === number);
+                // a choice that no longer exists falls back to the number of now
+                this.state.numberId = this._saved.number === "all" ? null : mine ? number : this._currentNumber();
+            } else if (people.length === 1) {
+                this.state.employeeId = people[0].id;
+                this.state.numberId = this._currentNumber();
             }
+            this._openSession = null;
+            this._saveState();
         } catch (e) {
             console.error("Failed to load employee sessions:", e);
         }
@@ -102,7 +111,8 @@ class WaChatView extends Component {
     async loadConversations() {
         try {
             const result = await this._jsonRpc("/wa_tracker/conversations", {
-                employee_session_id: this.state.employeeSessionId,
+                employee_session_id: this.state.numberId,
+                employee_id: this.state.employeeId,
             });
             this.state.conversations = result || [];
         } catch (e) {
@@ -112,11 +122,42 @@ class WaChatView extends Component {
 
     async onEmployeeChange(ev) {
         const val = ev.target.value;
-        this.state.employeeSessionId = val ? parseInt(val) : null;
+        this.state.employeeId = val ? parseInt(val) : null;
+        this.state.numberId = this._currentNumber();
+        await this._changed();
+    }
+
+    async onNumberChange(ev) {
+        this.state.numberId = parseInt(ev.target.value) || null;
+        await this._changed();
+    }
+
+    async _changed() {
         this.state.selectedConvId = null;
         this.state.messages = [];
         this._saveState();
         await this.loadConversations();
+    }
+
+    get selectedEmployee() {
+        return this.state.employees.find((p) => p.id === this.state.employeeId) || { numbers: [] };
+    }
+    _currentNumber() {
+        const numbers = this.selectedEmployee.numbers;
+        const now = numbers.find((n) => n.current) || numbers[0];
+        return now ? now.id : null;
+    }
+    numberLabel(n) {
+        if (n.current) {
+            return n.number + " (now)";
+        }
+        const day = (text) => this.formatDay(text);
+        const from = day(n.first), to = day(n.last);
+        return n.number + (from ? " (" + (from === to ? from : from + " - " + to) + ")" : "");
+    }
+    formatDay(text) {
+        const d = text ? new Date(text.replace(" ", "T")) : null;
+        return d && !isNaN(d.getTime()) ? d.toLocaleDateString([], { day: "numeric", month: "short" }) : "";
     }
 
     async selectConversation(convId) {
@@ -165,6 +206,11 @@ class WaChatView extends Component {
     get selectedConvPhone() {
         const conv = this.state.conversations.find(c => c.id === this.state.selectedConvId);
         return conv ? conv.phone : "";
+    }
+
+    get selectedConvOwn() {
+        const conv = this.state.conversations.find(c => c.id === this.state.selectedConvId);
+        return conv ? conv.own_number : "";
     }
 
     get selectedConvEmployee() {

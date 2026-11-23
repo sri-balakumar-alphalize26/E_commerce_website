@@ -48,10 +48,14 @@
         <field name="model">wa.employee.session</field>
         <field name="arch" type="xml">
             <list string="Employee WhatsApp Sessions">
+                <header>
+                    <button name="action_connect_new" type="object" display="always"
+                            string="+ Connect a number" class="btn-primary" groups="base.group_system"/>
+                </header>
                 <field name="employee_id"/>
                 <field name="department_id"/>
                 <field name="job_title"/>
-                <field name="phone_number"/>
+                <field name="phone_number" widget="wa_phone" readonly="1"/>
                 <field name="session_id"/>
                 <field name="session_status"/>
                 <field name="today_sent" string="Sent Today"/>
@@ -80,6 +84,10 @@
                             type="object"
                             class="btn-primary"
                             icon="fa-refresh"/>
+                    <button name="action_full_history" string="Full history" type="object" icon="fa-comments"/>
+                    <button name="action_other_employee" string="Other employee" type="object"
+                            invisible="not active" groups="base.group_system"
+                            confirm="The chats until now stay with this employee. From now on the number is somebody else's. Go on?"/>
                 </header>
                 <sheet>
                     <div class="oe_button_box" name="button_box">
@@ -111,14 +119,21 @@
 
                     <group>
                         <group string="Employee Details">
-                            <field name="employee_id"/>
+                            <field name="has_chats" invisible="1"/>
+                            <field name="employee_id" readonly="has_chats"/>
+                            <field name="since"/>
+                            <field name="until" invisible="not until"/>
                             <field name="department_id"/>
                             <field name="manager_id"/>
                             <field name="job_title"/>
                         </group>
                         <group string="WhatsApp Assignment">
-                            <field name="session_id"/>
-                            <field name="phone_number" widget="phone"/>
+                            <field name="session_number" invisible="1"/>
+                            <field name="free_session_ids" invisible="1"/>
+                            <field name="session_id" readonly="has_chats" domain="[('id', 'in', free_session_ids)]"
+                                   context="{'wa_number_in_name': True}" options="{'no_create': True}"/>
+                            <field name="phone_number" widget="wa_phone" options="{'plus': True}"
+                                   readonly="session_number or has_chats" force_save="1"/>
                             <field name="session_status"/>
                             <field name="monitoring_enabled"/>
                             <field name="active" invisible="1"/>
@@ -182,6 +197,36 @@
         </field>
     </record>
 
+    <record id="view_wa_employee_session_search" model="ir.ui.view">
+        <field name="name">wa.employee.session.search</field>
+        <field name="model">wa.employee.session</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="employee_id"/>
+                <field name="phone_number"/>
+                <filter name="with_old" string="Old numbers too" domain="['|', ('active', '=', True), ('active', '=', False)]"/>
+                <filter name="only_old" string="Old numbers" domain="[('active', '=', False)]"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_wa_employee_handover_form" model="ir.ui.view">
+        <field name="name">wa.employee.handover.form</field>
+        <field name="model">wa.employee.handover</field>
+        <field name="arch" type="xml">
+            <form string="Other employee">
+                <group>
+                    <field name="session_id"/>
+                    <field name="employee_id" options="{'no_create_edit': True}"/>
+                </group>
+                <footer>
+                    <button name="action_do" type="object" string="From now on" class="btn-primary"/>
+                    <button string="Cancel" special="cancel" class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
     <!-- ============================================================ -->
     <!-- Action -->
     <!-- ============================================================ -->
@@ -189,6 +234,7 @@
         <field name="name">Employee Sessions</field>
         <field name="res_model">wa.employee.session</field>
         <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_wa_employee_session_search"/>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
                 Assign WhatsApp sessions to employees

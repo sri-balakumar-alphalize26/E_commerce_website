@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_whatsapp_session_list_employee" model="ir.ui.view">
+        <field name="name">whatsapp.session.list.employee</field>
+        <field name="model">whatsapp.session</field>
+        <field name="inherit_id" ref="whatsapp_gateway.view_whatsapp_session_list"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='authorized_number']" position="after">
+                <field name="wa_employee_id" options="{'no_open': True}"/>
+            </xpath>
+            <xpath expr="//button[@name='action_connect_screen']" position="before">
+                <button name="action_give_number" type="object" string="Give to an employee"
+                        class="btn-primary" invisible="wa_employee_id or not active" groups="base.group_system"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

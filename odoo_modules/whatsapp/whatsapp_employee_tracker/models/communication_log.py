@@ -1,6 +1,8 @@
 import logging
 from odoo import models, fields, api
 
+from .phone_digits import same_number
+
 _logger = logging.getLogger(__name__)
 
 
@@ -30,6 +32,7 @@ class CommunicationLog(models.Model):
         'whatsapp.message', string='Original Message',
         required=True, ondelete='cascade', index=True,
     )
+    own_phone = fields.Char(related='employee_session_id.phone_number', string='Number')
     phone = fields.Char('Contact Phone', index=True)
     partner_id = fields.Many2one(
         'res.partner', string='Contact',
@@ -120,17 +123,43 @@ class CommunicationLog(models.Model):
 
         total_new = 0
         for emp_session in emp_sessions:
-            # Find messages not yet in log
+            total_new += self._sync_for(emp_session)
+
+        if total_new:
+            _logger.info(
+                "📊 WA Tracker: Synced %d new messages to communication log.",
+                total_new,
+            )
+            # Immediately run auto-reply check after syncing new messages.
+            # This ensures the configured timeout is respected without waiting
+            # for a separate cron cycle (which could add up to 1 extra minute).
+            self.env['wa.auto.reply']._cron_check_auto_reply()
+
+        emp_sessions._compute_stats()
+        # Also refresh quality scores
+        self.env['wa.quality.score']._cron_compute_scores()
+
+    @api.model
+    def _sync_for(self, emp_session):
+        """What is not in the log yet of this employee on this number: theirs,
+        or of nobody yet. Never another number's, never another person's."""
+        total_new = 0
+        if emp_session.monitoring_enabled:
             existing_msg_ids = self.search([
                 ('employee_session_id', '=', emp_session.id),
             ]).mapped('message_id.id')
-
             new_messages = self.env['whatsapp.message'].search([
                 ('session_id', '=', emp_session.session_id.id),
                 ('id', 'not in', existing_msg_ids),
+                ('employee_session_id', 'in', [emp_session.id, False]),
             ], order='create_date asc')
+            new_messages = new_messages.filtered(
+                lambda m: m.employee_session_id or not m.own_number
+                or same_number(m.own_number, emp_session._number_now()))
 
             for msg in new_messages:
+                if not msg.employee_session_id:
+                    msg.employee_session_id = emp_session.id
                 # Get or create conversation
                 conversation = self.env['wa.conversation']._get_or_create(
                     emp_session, msg.phone, msg.partner_id,
@@ -168,16 +197,4 @@ class CommunicationLog(models.Model):
                 self.env['wa.message.tone'].create_or_update_for_message(
                     log_entry.id,
                 )
-
-        if total_new:
-            _logger.info(
-                "📊 WA Tracker: Synced %d new messages to communication log.",
-                total_new,
-            )
-            # Immediately run auto-reply check after syncing new messages.
-            # This ensures the configured timeout is respected without waiting
-            # for a separate cron cycle (which could add up to 1 extra minute).
-            self.env['wa.auto.reply']._cron_check_auto_reply()
-
-        # Also refresh quality scores
-        self.env['wa.quality.score']._cron_compute_scores()
+        return total_new

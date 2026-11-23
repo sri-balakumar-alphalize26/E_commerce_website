@@ -2,7 +2,7 @@ import logging
 from datetime import timedelta
 
 from odoo import models, fields, api, _
-from odoo.exceptions import UserError
+from odoo.exceptions import UserError, ValidationError
 
 _logger = logging.getLogger(__name__)
 
@@ -16,7 +16,7 @@ class EmployeeWhatsAppSession(models.Model):
 
     employee_id = fields.Many2one(
         'hr.employee', string='Employee',
-        required=True, ondelete='cascade', index=True,
+        required=True, ondelete='restrict', index=True,
     )
     session_id = fields.Many2one(
         'whatsapp.session', string='WhatsApp Session',
@@ -132,38 +132,75 @@ class EmployeeWhatsAppSession(models.Model):
         compute='_compute_today_stats', string='Received Today',
     )
 
-    _employee_unique = models.Constraint(
-        'UNIQUE (employee_id)',
-        'Each employee can only have one WhatsApp session assignment.',
-    )
-    _session_unique = models.Constraint(
-        'UNIQUE (session_id)',
-        'Each WhatsApp session can only be assigned to one employee.',
-    )
+    # One employee on one number. Several per employee over time, one now:
+    # the old ones are archived and keep their chats (23 Nov 2026).
+    own_number = fields.Char('Number (digits)', compute='_compute_own_number', store=True, index=True)
+    since = fields.Datetime('From', default=fields.Datetime.now, readonly=True, copy=False)
+    until = fields.Datetime('Until', readonly=True, copy=False)
+    has_chats = fields.Boolean(compute='_compute_has_chats')
+
+    _employee_now_unique = models.UniqueIndex(
+        '(employee_id) WHERE active IS TRUE', 'Each employee can only have one WhatsApp number at a time.')
+    _session_now_unique = models.UniqueIndex(
+        '(session_id) WHERE active IS TRUE', 'Each WhatsApp session can only be assigned to one employee.')
+
+    session_number = fields.Char(compute='_compute_session_number')
+    free_session_ids = fields.Many2many('whatsapp.session', compute='_compute_free_sessions')
+
+    @api.depends('session_id')
+    def _compute_session_number(self):
+        for rec in self:
+            rec.session_number = rec.sudo().session_id.authorized_number or ''
+
+    @api.depends('session_id')
+    def _compute_free_sessions(self):
+        taken = self.env['wa.employee.session'].sudo().search([]).session_id
+        free = self.env['whatsapp.session'].search([('active', '=', True)]) - taken
+        for rec in self:
+            rec.free_session_ids = free | rec.session_id
+
+    @api.onchange('session_id')
+    def _onchange_session_number(self):
+        if self.session_number:
+            self.phone_number = '+' + self.session_number
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            if not vals.get('phone_number') and vals.get('session_id'):
+                number = self.env['whatsapp.session'].sudo().browse(vals['session_id']).authorized_number
+                if number:
+                    vals['phone_number'] = '+' + number
+        return super().create(vals_list)
+
+    def action_connect_new(self):
+        return self.env['whatsapp.session'].action_connect_new()
+
+    @api.constrains('phone_number', 'session_id')
+    def _check_phone_is_the_sessions(self):
+        """The Assigned Phone is the session's own number, once the panel has
+        told it (23 Nov 2026)."""
+        digits = lambda text: ''.join(c for c in (text or '') if c.isdigit())  # noqa: E731
+        for rec in self:
+            number = digits(rec.session_id.authorized_number)
+            if rec.active and number and digits(rec.phone_number)[-9:] != number[-9:]:
+                raise ValidationError(_(
+                    "The session '%(session)s' is the number +%(number)s; the Assigned Phone is %(phone)s.",
+                    session=rec.session_id.name, number=number, phone=rec.phone_number or '-'))
 
     # ----------------------------------------------------------
     # Computed Fields
     # ----------------------------------------------------------
     @api.depends('session_id')
     def _compute_stats(self):
+        Message = self.env['whatsapp.message']
         for rec in self:
-            if rec.session_id:
-                messages = self.env['whatsapp.message'].search([
-                    ('session_id', '=', rec.session_id.id),
-                ])
-                rec.total_messages = len(messages)
-                rec.total_sent = len(messages.filtered(
-                    lambda m: m.direction == 'outgoing'
-                ))
-                rec.total_received = len(messages.filtered(
-                    lambda m: m.direction == 'incoming'
-                ))
-                rec.unique_contacts = len(set(messages.mapped('phone')))
-            else:
-                rec.total_messages = 0
-                rec.total_sent = 0
-                rec.total_received = 0
-                rec.unique_contacts = 0
+            mine = [('employee_session_id', '=', rec.id)] if isinstance(rec.id, int) else [('id', '=', 0)]
+            counts = {direction: n for direction, n in Message._read_group(mine, ['direction'], ['__count'])}
+            rec.total_messages = sum(counts.values())
+            rec.total_sent = counts.get('outgoing', 0)
+            rec.total_received = counts.get('incoming', 0)
+            rec.unique_contacts = Message._read_group(mine, [], ['phone:count_distinct'])[0][0] or 0
 
     def _compute_alert_count(self):
         for rec in self:
@@ -193,7 +230,7 @@ class EmployeeWhatsAppSession(models.Model):
         for rec in self:
             if rec.session_id:
                 last_msg = self.env['whatsapp.message'].search([
-                    ('session_id', '=', rec.session_id.id),
+                    ('employee_session_id', '=', rec.id),
                 ], order='create_date desc', limit=1)
                 rec.last_activity = last_msg.create_date if last_msg else False
             else:
@@ -218,7 +255,7 @@ class EmployeeWhatsAppSession(models.Model):
         for rec in self:
             if rec.session_id:
                 domain = [
-                    ('session_id', '=', rec.session_id.id),
+                    ('employee_session_id', '=', rec.id),
                     ('create_date', '>=', today_start),
                 ]
                 rec.today_sent = self.env['whatsapp.message'].search_count(
@@ -242,7 +279,7 @@ class EmployeeWhatsAppSession(models.Model):
             'name': _('Messages - %s', self.employee_id.name),
             'res_model': 'whatsapp.message',
             'view_mode': 'list,form',
-            'domain': [('session_id', '=', self.session_id.id)],
+            'domain': [('employee_session_id', '=', self.id)],
             'context': {'search_default_group_direction': 1},
         }
 
@@ -265,6 +302,16 @@ class EmployeeWhatsAppSession(models.Model):
             'tag': 'wa_chat_split_view',
             'name': _('Chats - %s', self.employee_id.name),
             'context': {'active_employee_session_id': self.id},
+        }
+
+    def action_full_history(self):
+        """Every number this employee ever had."""
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'wa_chat_split_view',
+            'name': _('All chats - %s', self.employee_id.name),
+            'context': {'active_employee_session_id': self.id, 'wa_all_numbers': True},
         }
 
     def action_view_conversations(self):

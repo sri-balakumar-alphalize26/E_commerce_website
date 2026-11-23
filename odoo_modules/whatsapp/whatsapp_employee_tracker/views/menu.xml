@@ -125,6 +125,14 @@
               parent="menu_wa_tracker_root"
               sequence="10"/>
 
+    <!-- 23 Nov 2026: the numbers of this database, administrators only -->
+    <menuitem id="menu_wa_numbers"
+              name="WhatsApp Numbers"
+              parent="menu_wa_tracker_config"
+              action="whatsapp_gateway.action_whatsapp_session"
+              groups="base.group_system"
+              sequence="0"/>
+
     <menuitem id="menu_wa_employee_sessions"
               name="Employee Sessions"
               parent="menu_wa_tracker_config"

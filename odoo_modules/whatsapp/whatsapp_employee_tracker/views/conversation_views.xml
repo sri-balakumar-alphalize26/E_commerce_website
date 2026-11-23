@@ -93,6 +93,7 @@
                    default_order="last_message_date desc">
                 <field name="contact_name" string="Name"/>
                 <field name="phone" string="Phone"/>
+                <field name="own_phone" string="Our number" widget="wa_phone" readonly="1"/>
                 <field name="total_messages" string="Msgs"/>
                 <field name="sent_count" string="Sent"/>
                 <field name="received_count" string="Recv"/>
@@ -146,6 +147,7 @@
                             <field name="phone" widget="phone"/>
                             <field name="partner_id"/>
                             <field name="employee_id"/>
+                            <field name="own_phone" string="Our number" widget="wa_phone" readonly="1"/>
                             <field name="department_id"/>
                         </group>
                         <group string="Conversation Stats">
@@ -189,6 +191,25 @@
         </field>
     </record>
 
+
+    <record id="view_wa_conversation_search" model="ir.ui.view">
+        <field name="name">wa.conversation.search</field>
+        <field name="model">wa.conversation</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="contact_name"/>
+                <field name="phone"/>
+                <field name="employee_id"/>
+                <filter name="current" string="Current numbers" domain="[('employee_session_id.active', '=', True)]"/>
+                <filter name="old" string="Old numbers" domain="[('employee_session_id.active', '=', False)]"/>
+                <group>
+                    <filter name="g_employee" string="Employee" context="{'group_by': 'employee_id'}"/>
+                    <filter name="g_number" string="Number" context="{'group_by': 'employee_session_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
     <!-- ============================================================ -->
     <!-- Action: Conversations (Kanban first) -->
     <!-- ============================================================ -->
@@ -196,6 +217,7 @@
         <field name="name">Conversations</field>
         <field name="res_model">wa.conversation</field>
         <field name="view_mode">kanban,list,form</field>
+        <field name="context">{'search_default_current': 1}</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
                 No conversations tracked yet

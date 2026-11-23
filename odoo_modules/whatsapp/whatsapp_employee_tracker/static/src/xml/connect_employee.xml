@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="whatsapp_employee_tracker.ConnectNumberExtra" t-inherit="whatsapp_gateway.ConnectNumberExtra" t-inherit-mode="extension">
+        <xpath expr="//div[hasclass('o_wa_extra')]" position="inside">
+            <label class="o_wa_label" for="wa_employee">Employee</label>
+            <select id="wa_employee" class="form-select" t-model="state.values.employee_id">
+                <option value="0">Choose the employee</option>
+                <option t-foreach="employeeOptions" t-as="e" t-key="e.id" t-att-value="e.id" t-att-disabled="!!e.taken" t-esc="e.text"/>
+                <option value="new">+ New employee…</option>
+            </select>
+            <input t-if="state.values.employee_id === 'new'" type="text" class="form-control mt-2" maxlength="80"
+                   placeholder="Name of the employee" t-model="state.values.employee_name"/>
+        </xpath>
+    </t>
+</templates>

@@ -302,6 +302,7 @@ class Conversation(models.Model):
         related='employee_session_id.department_id',
         store=True, string='Department',
     )
+    own_phone = fields.Char(related='employee_session_id.phone_number', string='Number')
     phone = fields.Char('Contact Phone', required=True, index=True)
     partner_id = fields.Many2one(
         'res.partner', string='Contact',

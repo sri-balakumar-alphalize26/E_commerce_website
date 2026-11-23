@@ -136,6 +136,7 @@ class KeywordAlertLog(models.Model):
         ('incoming', 'Incoming'),
         ('outgoing', 'Outgoing'),
     ], string='Direction')
+    own_phone = fields.Char(related='employee_session_id.phone_number', string='Number')
     phone = fields.Char('Contact Phone')
     partner_id = fields.Many2one('res.partner', string='Contact')
     message_date = fields.Datetime('Message Date')

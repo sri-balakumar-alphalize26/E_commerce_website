@@ -24,12 +24,20 @@
                             t-on-change="onEmployeeChange"
                             style="border-radius:8px; border:none; font-size:13px; background:#f0f2f5;">
                         <option value="">All Employees</option>
-                        <t t-foreach="state.employeeSessions" t-as="emp" t-key="emp.id">
+                        <t t-foreach="state.employees" t-as="emp" t-key="emp.id">
                             <option t-att-value="emp.id"
-                                    t-att-selected="state.employeeSessionId === emp.id">
+                                    t-att-selected="state.employeeId === emp.id">
                                 <t t-esc="emp.name"/>
                             </option>
                         </t>
+                    </select>
+                    <select t-if="state.employeeId" class="form-select form-select-sm mt-1 wa-number-select"
+                            t-on-change="onNumberChange" aria-label="Number"
+                            style="border-radius:8px; border:none; font-size:13px; background:#f0f2f5;">
+                        <t t-foreach="selectedEmployee.numbers" t-as="n" t-key="n.id">
+                            <option t-att-value="n.id" t-att-selected="state.numberId === n.id"><t t-esc="numberLabel(n)"/></option>
+                        </t>
+                        <option t-if="selectedEmployee.numbers.length > 1" value="" t-att-selected="!state.numberId">All numbers (full history)</option>
                     </select>
                 </div>
 
@@ -75,6 +83,9 @@
                                     <span class="text-truncate" style="font-size:13px; color:#667781;">
                                         <t t-esc="conv.last_message_preview or conv.phone"/>
                                     </span>
+                                    <t t-if="!state.numberId and conv.own_number">
+                                        <small class="flex-shrink-0 ms-2 wa-own-number" t-att-style="'font-size:11px; color:' + (conv.own_current ? '#008069' : '#8a6d3b')"><t t-esc="conv.own_number"/></small>
+                                    </t>
                                     <t t-if="conv.total_messages > 0">
                                         <span class="badge rounded-pill flex-shrink-0 ms-2"
                                               style="background-color:#25d366; color:white; font-size:11px; min-width:20px;">
@@ -112,7 +123,7 @@
                             <small style="font-size:13px; color:#667781;">
                                 <t t-esc="selectedConvPhone"/>
                                 <t t-if="selectedConvEmployee">
-                                    <span class="ms-2">· Employee: <t t-esc="selectedConvEmployee"/></span>
+                                    <span class="ms-2">· <t t-esc="selectedConvEmployee"/><t t-if="selectedConvOwn"> on <t t-esc="selectedConvOwn"/></t></span>
                                 </t>
                             </small>
                         </div>

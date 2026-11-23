@@ -15,6 +15,7 @@
                    decoration-danger="is_flagged == True">
                 <field name="message_date" widget="datetime"/>
                 <field name="employee_id" widget="many2one_avatar_employee"/>
+                <field name="own_phone" string="Our number" widget="wa_phone" readonly="1" optional="show"/>
                 <field name="department_id" optional="hide"/>
                 <field name="direction"
                        widget="badge"
@@ -88,6 +89,25 @@
     <!-- ============================================================ -->
     
 
+
+    <record id="view_wa_communication_log_search" model="ir.ui.view">
+        <field name="name">wa.communication.log.search</field>
+        <field name="model">wa.communication.log</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="phone"/>
+                <field name="message_text"/>
+                <field name="employee_id"/>
+                <filter name="current" string="Current numbers" domain="[('employee_session_id.active', '=', True)]"/>
+                <filter name="old" string="Old numbers" domain="[('employee_session_id.active', '=', False)]"/>
+                <group>
+                    <filter name="g_employee" string="Employee" context="{'group_by': 'employee_id'}"/>
+                    <filter name="g_number" string="Number" context="{'group_by': 'employee_session_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
     <!-- ============================================================ -->
     <!-- Communication Log: Pivot View -->
     <!-- ============================================================ -->
@@ -124,7 +144,7 @@
         <field name="name">Communication Log</field>
         <field name="res_model">wa.communication.log</field>
         <field name="view_mode">list,form,pivot,graph</field>
-        <field name="context">{'list_view_default_order': 'message_date desc, id desc'}</field>
+        <field name="context">{'list_view_default_order': 'message_date desc, id desc', 'search_default_current': 1}</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
                 No messages tracked yet

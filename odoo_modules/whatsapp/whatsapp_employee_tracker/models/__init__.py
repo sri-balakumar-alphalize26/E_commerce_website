@@ -1,4 +1,7 @@
 from . import employee_session
+from . import whatsapp_connect
+from . import whatsapp_number_off
+from . import whatsapp_session_owner
 from . import communication_log
 from . import keyword_alert
 from . import conversation
@@ -16,3 +19,4 @@ from . import payment_transaction_inherit
 from . import account_move_inherit
 
 from . import res_partner_phone
+from . import employee_number

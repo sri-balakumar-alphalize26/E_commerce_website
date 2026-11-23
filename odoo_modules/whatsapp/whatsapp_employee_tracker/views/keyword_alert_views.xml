@@ -92,6 +92,7 @@
                        widget="badge"
                        decoration-info="message_direction == 'outgoing'"
                        decoration-success="message_direction == 'incoming'"/>
+                <field name="own_phone" string="Our number" widget="wa_phone" readonly="1" optional="show"/>
                 <field name="phone"/>
                 <field name="message_text" widget="text"/>
                 <field name="status"

@@ -1,5 +1,7 @@
 import logging
+
 from odoo import http
+from odoo.exceptions import AccessError
 from odoo.http import request
 
 _logger = logging.getLogger(__name__)
@@ -7,29 +9,48 @@ _logger = logging.getLogger(__name__)
 
 class WaChatController(http.Controller):
 
+    def _staff(self):
+        # auth='user' lets a customer's portal login in as well
+        if not request.env.user._is_internal():
+            raise AccessError("Only for employees.")
+
     @http.route('/wa_tracker/employee_sessions', type='jsonrpc', auth='user')
     def get_employee_sessions(self):
-        """Get list of employee sessions for filter dropdown."""
-        sessions = request.env['wa.employee.session'].sudo().search([])
-        result = []
+        """Every employee with the numbers they have and had."""
+        self._staff()
+        Log = request.env['wa.communication.log'].sudo()
+        pretty = request.env['whatsapp.connect'].sudo()._pretty
+        sessions = request.env['wa.employee.session'].sudo().with_context(active_test=False).search([])
+        stats = {s.id: (count, first, last) for s, count, first, last in Log._read_group(
+            [('employee_session_id', 'in', sessions.ids)], ['employee_session_id'],
+            ['__count', 'message_date:min', 'message_date:max'])}
+        people = {}
         for s in sessions:
-            result.append({
-                'id': s.id,
-                'name': s.employee_id.name or s.session_id.name or ('Session %s' % s.id),
-                'phone': s.phone_number or '',
-            })
-        return result
+            count, first, last = stats.get(s.id, (0, None, None))
+            if not s.active and not count:
+                continue
+            person = people.setdefault(s.employee_id.id, {'id': s.employee_id.id, 'name': s.employee_id.name or '', 'numbers': []})
+            person['numbers'].append({
+                'id': s.id, 'number': pretty(s.own_number) or s.phone_number or '', 'current': s.active, 'count': count,
+                'first': str(first) if first else '', 'last': str(last) if last else ''})
+        for person in people.values():
+            person['numbers'].sort(key=lambda n: (n['current'], n['last']), reverse=True)
+        return sorted(people.values(), key=lambda p: p['name'].lower())
 
     @http.route('/wa_tracker/conversations', type='jsonrpc', auth='user')
-    def get_conversations(self, employee_session_id=None):
+    def get_conversations(self, employee_session_id=None, employee_id=None):
         """Get conversations list for the chat panel."""
-        domain = []
+        self._staff()
+        domain = [('total_messages', '>', 0)]
         if employee_session_id:
             domain.append(('employee_session_id', '=', int(employee_session_id)))
+        elif employee_id:
+            domain.append(('employee_id', '=', int(employee_id)))
 
-        convs = request.env['wa.conversation'].sudo().search(
+        convs = request.env['wa.conversation'].sudo().with_context(active_test=False).search(
             domain, order='last_message_date desc'
         )
+        pretty = request.env['whatsapp.connect'].sudo()._pretty
         # Pre-fetch push_names for all phones in one query
         phones = [c.phone for c in convs if c.phone]
         push_name_map = {}
@@ -54,6 +75,7 @@ class WaChatController(http.Controller):
             # Format phone: extract digits and add + prefix
             phone_digits = ''.join(filter(str.isdigit, raw_phone))
             formatted_phone = ('+' + phone_digits) if phone_digits else raw_phone
+            own = c.employee_session_id
             result.append({
                 'id': c.id,
                 'contact_name': contact_name,
@@ -66,13 +88,16 @@ class WaChatController(http.Controller):
                 'is_active_today': c.is_active_today,
                 'last_message_preview': c.last_message_preview or '',
                 'employee_name': c.employee_id.name or '',
-                'employee_session_id': c.employee_session_id.id if c.employee_session_id else None,
+                'employee_session_id': own.id or None,
+                'own_number': pretty(own.own_number) or own.phone_number or '',
+                'own_current': own.active,
             })
         return result
 
     @http.route('/wa_tracker/messages', type='jsonrpc', auth='user')
     def get_messages(self, conversation_id):
         """Get messages for a conversation."""
+        self._staff()
         logs = request.env['wa.communication.log'].sudo().search([
             ('conversation_id', '=', int(conversation_id)),
         ], order='message_date asc')

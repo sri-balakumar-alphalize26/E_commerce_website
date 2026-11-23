@@ -22,7 +22,8 @@ class WhatsAppMessageInherit(models.Model):
 
     employee_session_id = fields.Many2one(
         'wa.employee.session', string='Employee Session',
-        compute='_compute_employee_session', store=True, index=True,
+        index=True, readonly=True, copy=False, ondelete='set null',
+        help='Set when the message is stored; a later change of employee or number does not touch it.',
     )
     employee_id = fields.Many2one(
         related='employee_session_id.employee_id',
@@ -34,21 +35,15 @@ class WhatsAppMessageInherit(models.Model):
     voice_language = fields.Char('Detected Language', help='ISO language code detected by Whisper e.g. en, ar, ml, hi')
     voice_translation = fields.Text('English Translation')
 
-    def _compute_employee_session(self):
-        """Link message to employee session if mapped."""
-        for rec in self:
-            if rec.session_id:
-                emp_session = self.env['wa.employee.session'].search([
-                    ('session_id', '=', rec.session_id.id),
-                ], limit=1)
-                rec.employee_session_id = emp_session.id if emp_session else False
-            else:
-                rec.employee_session_id = False
-
     @api.model_create_multi
     def create(self, vals_list):
         """Override create to instantly sync messages to WA Tracker."""
         records = super().create(vals_list)
+        Owner = self.env['wa.employee.session']
+        for rec in records.filtered(lambda r: r.session_id and not r.employee_session_id):
+            owner = Owner._of_message(rec.session_id, rec.own_number)
+            if owner:
+                rec.sudo().employee_session_id = owner.id
         try:
             self._instant_sync_to_tracker(records)
         except Exception as e:
@@ -74,19 +69,14 @@ class WhatsAppMessageInherit(models.Model):
         CommLog = self.env['wa.communication.log']
         Conversation = self.env['wa.conversation']
         AlertLog = self.env['wa.keyword.alert.log']
-        touched_emp_sessions = self.env['wa.employee.session']
 
         for msg in messages:
             if not msg.session_id:
                 continue
 
             # Find the employee session for this WhatsApp session
-            emp_session = self.env['wa.employee.session'].search([
-                ('session_id', '=', msg.session_id.id),
-                ('monitoring_enabled', '=', True),
-            ], limit=1)
-
-            if not emp_session:
+            emp_session = msg.employee_session_id
+            if not emp_session or not emp_session.monitoring_enabled:
                 continue
 
             # Check if already in log (avoid duplicates)
@@ -147,7 +137,7 @@ class WhatsAppMessageInherit(models.Model):
             # Schedule auto-reply (incoming only). Fast-path: if the customer
             # message already matches products in catalog, fire near-instantly
             # instead of waiting the full configured timeout.
-            if msg.direction == 'incoming' and emp_session.auto_reply_enabled:
+            if msg.direction == 'incoming' and emp_session.auto_reply_enabled and emp_session.active:
                 timeout = emp_session.auto_reply_timeout or 120
                 try:
                     AutoReply = self.env['wa.auto.reply']
@@ -181,12 +171,9 @@ class WhatsAppMessageInherit(models.Model):
                 msg.direction, msg.phone, emp_session.employee_id.name or 'Unknown',
             )
 
-            touched_emp_sessions |= emp_session
-
-        if touched_emp_sessions:
-            touched_emp_sessions._compute_stats()
-            touched_emp_sessions._compute_today_stats()
-            touched_emp_sessions._compute_last_activity()
+        # The counters on the employee session are written by the minute job
+        # (communication_log.py): written here, two messages at the same moment
+        # collided on them and one was handled - and sent - again (23 Nov 2026).
 
     def _instant_update_tracker(self, vals):
         """Update tracker log when message status changes."""
