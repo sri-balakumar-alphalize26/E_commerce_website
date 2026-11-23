@@ -128,6 +128,11 @@
                         <div class="muted"><t t-esc="row.group"/></div>
                     </div>
 
+                    <div class="sa_pending sa_yes" t-if="row.held and row.held.length">
+                        &#128176; gave a price:
+                        <b t-esc="row.held.join(', ')"/>
+                        (<t t-esc="row.held_why"/>)
+                    </div>
                     <div class="sa_pending sa_yes" t-if="row.said_yes.length">
                         &#9989; said yes, no price yet:
                         <t t-esc="row.said_yes.join(', ')"/>

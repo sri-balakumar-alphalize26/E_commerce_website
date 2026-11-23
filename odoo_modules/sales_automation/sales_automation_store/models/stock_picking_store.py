@@ -676,12 +676,16 @@ class StockPicking(models.Model):
             '\u2022 *%s* x %s' % (m.product_id.name, int(m.product_uom_qty))
             for m in job.move_ids.filtered(
                 lambda m: m.state not in ('done', 'cancel')))
-        body = _("\U0001F50E *Price check* \u2014 *#%(ref)s*\n\n"
-                 "%(lines)s\n\n"
-                 "Best price *and delivery time* please.\n\n"
-                 "\U0001F449 *Just reply with the amount* \u2014 like *450*\n"
-                 "With the days if you can: *450 3 days*",
-                 ref=job.sa_ref_code or job.name, lines=lines)
+        # Only the amount, in the supplier's own currency (owner, 22 Nov
+        # 2026) - worked out per supplier below.
+        Request = self.env['sa.group.request'].sudo()
+
+        def body_for(partner):
+            currency = Request._sa_partner_currency(partner, partner.phone, job.company_id)
+            return _("\U0001F50E *Price check* \u2014 *#%(ref)s*\n\n"
+                     "%(lines)s\n\n%(amount)s",
+                     ref=job.sa_ref_code or job.name, lines=lines,
+                     amount=Request._sa_type_amount_line(currency, 450))
 
         guard = self.env['sa.outbox.guard'].sudo()
         sent = self.env['res.partner']
@@ -691,7 +695,7 @@ class StockPicking(models.Model):
                 sent |= partner
                 continue
             try:
-                session.send_message(partner.phone, body)
+                session.send_message(partner.phone, body_for(partner))
                 sent |= partner
             except Exception as err:  # noqa: BLE001 - one bad number is not
                 _logger.warning(     # a reason to skip the rest

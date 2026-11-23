@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Sales Automation: Store Screen',
-    'version': '19.0.9.0.2',
+    'version': '19.0.9.0.4',
     'summary': 'New paid orders alert the shop, who pack them and call a rider',
     'description': """
 Puts the shop between the payment and the rider.

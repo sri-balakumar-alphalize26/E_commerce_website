@@ -178,6 +178,8 @@ class SaGroupRequest(models.Model):
                 'group': request.group_id.name or '',
                 'silent': silent[:6],
                 'said_yes': yes[:6],
+                'held': request._sa_held_lines()[:6],
+                'held_why': request._sa_held_why(),
                 'said_no': no[:6],
                 'hint_cost': hint,
                 'hint_vendor': seller.partner_id.name if seller else '',
