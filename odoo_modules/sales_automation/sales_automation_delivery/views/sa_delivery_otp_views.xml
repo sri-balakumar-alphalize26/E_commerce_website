@@ -145,7 +145,7 @@
                             </div>
                         </group>
                         <group string="SOS alerts" colspan="2">
-                            <field name="sos_phone"/>
+                            <field name="sos_phone" widget="wa_phone"/>
                             <div colspan="2" class="text-muted">
                                 A rider holds the red SOS button in the app: the alert is stored under the rider
                                 (Delivery &#9656; Fleet &#9656; SOS Alerts), the delivery managers get a notification,

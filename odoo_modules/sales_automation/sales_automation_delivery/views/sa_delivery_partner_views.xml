@@ -49,7 +49,7 @@
                     <group>
                         <group>
                             <field name="kind" widget="radio"/>
-                            <field name="phone" placeholder="96891234567"/>
+                            <field name="phone" widget="wa_phone"/>
                             <field name="partner_id"/>
                         </group>
                         <group>
