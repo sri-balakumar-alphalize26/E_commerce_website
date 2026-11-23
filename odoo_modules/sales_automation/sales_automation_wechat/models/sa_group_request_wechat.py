@@ -166,15 +166,3 @@ class SaGroupRequestWeChat(models.Model):
                 self.env['sa.wechat.message']._sa_queue(self, vendor, self._sa_wechat_ask_text(ask), step='ask')
                 _logger.info("WeChat: price check for enquiry %s queued to %s", self.id, remark)
         return not on_whatsapp
-
-    def _sa_wechat_extend_window(self):
-        """They have it: keep the window open long enough for the price,
-        exactly as `_sa_ask_vendor_price` does for WhatsApp."""
-        self.ensure_one()
-        from odoo import fields
-        if self.state == 'sourcing' and not self.sa_price_stalled:
-            window = max(1, self._settings().sourcing_window_minutes or 10)
-            fresh = fields.Datetime.add(fields.Datetime.now(), minutes=window)
-            if not self.sourcing_deadline or self.sourcing_deadline < fresh:
-                self.write({'sourcing_deadline': fresh})
-        return True
