@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Sales Automation: Store Screen',
-    'version': '19.0.9.0.4',
+    'version': '19.0.9.1.0',
     'summary': 'New paid orders alert the shop, who pack them and call a rider',
     'description': """
 Puts the shop between the payment and the rider.
@@ -27,6 +27,9 @@ a person with their hands full actually needs.
     ],
     'assets': {
         'web.assets_backend': [
+            'sales_automation_store/static/src/board.js',
+            'sales_automation_store/static/src/board.xml',
+            'sales_automation_store/static/src/board.scss',
             'sales_automation_store/static/src/store_screen.js',
             'sales_automation_store/static/src/browser_tz_service.js',
             'sales_automation_store/static/src/store_screen.xml',

@@ -17,6 +17,9 @@ import { Component, onMounted, onWillStart, onWillUnmount, useState } from "@odo
 // One definition of every alarm tone, shared with the enquiry desk, so
 // four alarms on two screens cannot drift into sounding alike.
 import { SUPPLY_TONE } from "./enquiry_alarm_shared";
+import {
+    ColourKey, ORDER_TABS, byDay, dayKey, matches, orderMain, orderPath, orderPills, orderProblem, orderStep, remember, remembered, timeOf,
+} from "./board";
 
 /**
  * The alarm.
@@ -406,6 +409,7 @@ class SupplyDialog extends Component {
 
 export class StoreScreen extends Component {
     static template = "sales_automation_store.StoreScreen";
+    static components = { ColourKey };
     // client action: 369ai 19 passes action / actionId / updateActionState / className
     static props = { "*": true };
 
@@ -436,6 +440,9 @@ export class StoreScreen extends Component {
             ring: 30,
             waitingSupply: 0,
             supplyRinging: 0,
+            // the list (23 Nov 2026)
+            view: remembered("sa_orders_view", "list"),
+            tab: "new", sel: 0, search: "", when: "all", done: [], detailOpen: false,
         });
 
         this._timer = null;
@@ -516,6 +523,8 @@ export class StoreScreen extends Component {
         const data = await this.orm.call(
             "stock.picking", "sa_store_queue", [this.state.shopId || null]);
         this.state.rows = data.rows;
+        this.state.done = data.done || [];
+        this._keepSelection();
         this.state.isManager = !!data.is_manager;
         this.state.ringing = data.ringing;
         this.state.packing = data.packing;
@@ -665,6 +674,8 @@ export class StoreScreen extends Component {
             const data = await this.orm.call(
                 "stock.picking", "sa_store_act", [row.id, action], extra);
             this.state.rows = data.rows;
+            this.state.done = data.done || this.state.done;
+            this._follow(row.id);
             this.state.ringing = data.ringing;
             this.state.packing = data.packing;
             this.state.waitingSupply = data.waiting_supply || 0;
@@ -792,6 +803,102 @@ export class StoreScreen extends Component {
             type: "ir.actions.client", tag: "sales_automation_delivery.fleet_map", name: "Live map",
             context: { sa_shop_id: this.state.shopId || 0, sa_focus_rider: (row && row.rider_id) || 0 },
         });
+    }
+
+    // ------------------------------------------------------------ the list
+    get allOrders() {
+        return this.state.rows.concat(this.state.done);
+    }
+    get orderTabs() {
+        return ORDER_TABS.map(([key, name]) => {
+            const mine = this.allOrders.filter((r) => orderStep(r) === key);
+            return { key, name, count: mine.length, problem: mine.some(orderProblem) };
+        });
+    }
+    get orderDays() {
+        const days = { today: 0, yesterday: 1 }[this.state.when];
+        let wanted = null;
+        if (days !== undefined) {
+            const d = new Date();
+            d.setDate(d.getDate() - days);
+            wanted = dayKey(d.toISOString());
+        }
+        const rows = this.allOrders.filter((r) => (this.state.search.trim() ? matches(r, this.state.search) : orderStep(r) === this.state.tab)
+            && (!wanted || dayKey(r.at) === wanted));
+        return byDay(rows, orderProblem);
+    }
+    get selected() {
+        return this.allOrders.find((r) => r.id === this.state.sel) || null;
+    }
+    _keepSelection() {
+        if (!this.selected) {
+            const first = this.orderDays[0];
+            this.state.sel = first ? first.rows[0].id : 0;
+            this.state.detailOpen = false;
+        }
+    }
+    /** The order just worked on stays in front, in its new tab. */
+    _follow(id) {
+        const row = this.allOrders.find((r) => r.id === id);
+        if (row) {
+            this.state.sel = id;
+            this.state.tab = orderStep(row);
+        } else {
+            this._keepSelection();
+        }
+    }
+    openTab(key) {
+        this.state.tab = key;
+        this.state.search = "";
+        this.state.detailOpen = false;
+        const first = this.orderDays[0];
+        this.state.sel = first ? first.rows[0].id : 0;
+    }
+    select(row) {
+        this.state.sel = row.id;
+        this.state.detailOpen = true;
+    }
+    closeDetail() {
+        this.state.detailOpen = false;
+    }
+    onRowKey(ev, row) {
+        if (ev.target === ev.currentTarget && (ev.key === "Enter" || ev.key === " ")) {
+            ev.preventDefault();
+            this.select(row);
+        }
+    }
+    toggleView() {
+        this.state.view = this.state.view === "list" ? "cards" : "list";
+        remember("sa_orders_view", this.state.view);
+    }
+    pills(row) {
+        return orderPills(row);
+    }
+    path(row) {
+        return orderPath(row);
+    }
+    mainOf(row) {
+        return orderMain(row);
+    }
+    timeOf(iso) {
+        return timeOf(iso);
+    }
+    money(row) {
+        return row.total ? `${row.total.toFixed(2)} ${row.currency}` : "";
+    }
+    runMain(row, key) {
+        this.state.sel = row.id;
+        return {
+            accept: () => this.onAccept(row),
+            supply_arrived: () => this.act(row, "supply_arrived"),
+            ready: () => this.act(row, "ready"),
+            pay_link: () => this.act(row, "send_pay_link"),
+            call: () => this.onCallRider(row),
+            dispatch: () => this.onDispatch(row),
+            near: () => this.act(row, "near"),
+            reached: () => this.act(row, "reached"),
+            delivered: () => this.onOtp(row, "delivery"),
+        }[key]();
     }
 
     stageLabel(row) {

@@ -5,7 +5,7 @@ import logging
 
 import pytz
 
-from odoo import models
+from odoo import api, models
 
 _logger = logging.getLogger(__name__)
 
@@ -13,6 +13,7 @@ _logger = logging.getLogger(__name__)
 class ResUsersBrowserTz(models.Model):
     _inherit = 'res.users'
 
+    @api.model
     def sa_set_browser_tz(self, zone):
         """Set the current user's timezone to the browser's zone. Own record
         only, a real IANA zone only."""

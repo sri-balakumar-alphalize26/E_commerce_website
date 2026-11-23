@@ -2,7 +2,7 @@
 <templates xml:space="preserve">
 
 <t t-name="sales_automation_store.StoreScreen">
-  <div class="sa_store">
+  <div class="sa_store" t-att-class="{ sa_board: state.view === 'list' }">
 
     <div class="sa_store_bar">
       <div class="sa_store_counts">
@@ -11,6 +11,14 @@
         </span>
         <span class="sa_pill sa_pill_pack"><t t-esc="state.packing"/> packing</span>
       </div>
+
+      <t t-if="state.view === 'list'">
+        <input class="sa_search" type="search" placeholder="Search #ref, name or product" aria-label="Search" t-model="state.search"/>
+        <select class="sa_search" style="max-width:150px" aria-label="Date" t-model="state.when">
+          <option value="all">All days</option><option value="today">Today</option><option value="yesterday">Yesterday</option>
+        </select>
+      </t>
+      <button class="btn btn-secondary btn-sm" t-on-click="toggleView"><t t-if="state.view === 'list'">Cards</t><t t-else="">List</t></button>
 
       <select class="sa_store_shop" t-on-change="onShopChange"
               t-if="state.shops.length > 1">
@@ -46,6 +54,8 @@
       This browser blocked the sound - tap "Turn on the alarm" once.
     </div>
 
+    <t t-if="state.view === 'list'" t-call="sales_automation_store.OrderBoard"/>
+    <t t-else="">
     <div class="sa_store_empty" t-if="!state.loading and !state.rows.length">
       <div class="sa_store_empty_mark">✓</div>
       <div>Nothing waiting. New orders appear here on their own.</div>
@@ -53,7 +63,267 @@
 
     <div class="sa_store_grid">
       <t t-foreach="state.rows" t-as="row" t-key="row.id">
-        <div class="sa_card" t-att-class="'sa_card_' + row.state">
+        <t t-call="sales_automation_store.OrderCard"/>
+      </t>
+    </div>
+    </t>
+  </div>
+</t>
+
+<t t-name="sales_automation_store.OtpDialog">
+  <Dialog title="props.title" size="'sm'">
+    <p class="sa_cd_lead"><t t-esc="props.hint"/></p>
+    <div class="alert alert-danger" t-if="state.error"><t t-esc="state.error"/></div>
+    <t t-if="props.riders">
+      <label class="sa_lbl">Rider collecting</label>
+      <select class="form-select mb-2" t-model="state.rider">
+        <option value="">- pick the rider -</option>
+        <option t-foreach="props.riders" t-as="r" t-key="r.id" t-att-value="r.id"><t t-esc="r.name"/></option>
+      </select>
+    </t>
+    <input type="text" inputmode="numeric" maxlength="6" class="form-control"
+           style="font-size:28px;letter-spacing:10px;text-align:center;font-family:monospace"
+           placeholder="6 digits" t-model="state.code"/>
+    <t t-set-slot="footer">
+      <button class="btn btn-primary" t-on-click="confirm">Confirm</button>
+      <button class="btn btn-secondary" t-on-click="() => props.close()">Cancel</button>
+    </t>
+  </Dialog>
+</t>
+
+<t t-name="sales_automation_store.DispatchCodeDialog">
+  <Dialog title="props.title" size="'md'">
+    <t t-if="state.done">
+      <div class="sa_code_done">&#10004; Collected - the rider typed the code.</div>
+    </t>
+    <t t-else="">
+      <p class="sa_cd_lead">
+        Read this code to <b t-esc="props.rider"/>. The rider types it in the rider app;
+        this window closes by itself when the code is accepted.
+      </p>
+      <div class="alert alert-warning" t-if="!props.arrived">
+        The rider has not signalled arrival yet. Hand the parcel only to the rider named above.
+      </div>
+      <div class="sa_code_big">
+        <span t-foreach="digits" t-as="d" t-key="d_index" t-esc="d"/>
+      </div>
+      <div class="sa_code_left" t-if="state.left"><t t-esc="state.left"/></div>
+    </t>
+    <t t-set-slot="footer">
+      <button class="btn btn-secondary" t-if="!state.done" t-att-disabled="state.busy"
+              title="Makes a new code; the old one stops working."
+              t-on-click="newCode">New code</button>
+      <button class="btn btn-primary" t-on-click="() => props.close()">Close</button>
+    </t>
+  </Dialog>
+</t>
+
+<t t-name="sales_automation_store.CallRiderDialog">
+  <Dialog title="props.title" size="'lg'">
+    <p class="sa_cd_lead">
+      <t t-if="props.mode === 'manual'">
+        Tick the riders for this order. They are called <b>one at a time</b>, the nearest
+        free rider first; if one does not answer in the time limit, the next ticked rider
+        is called. Nobody else is called.
+      </t>
+      <t t-else="">
+        Press <b>Auto</b> to call the nearest free rider, or tick the riders yourself.
+        One rider is called at a time, never all.
+      </t>
+    </p>
+    <div class="alert alert-danger" t-if="state.error"><t t-esc="state.error"/></div>
+    <div class="sa_cand_tabs">
+      <button t-att-class="{ 'sa_cand_tab': true, 'sa_cand_tab_on': state.tab === 'free' }"
+              t-on-click="() => { state.tab = 'free'; }">
+        Available (<t t-esc="free.length"/>)
+      </button>
+      <button t-att-class="{ 'sa_cand_tab': true, 'sa_cand_tab_on': state.tab === 'other' }"
+              t-on-click="() => { state.tab = 'other'; }">
+        Not available (<t t-esc="others.length"/>)
+      </button>
+    </div>
+
+    <t t-if="state.tab === 'free'">
+      <table class="sa_cand_table" t-if="free.length">
+        <thead>
+          <tr>
+            <th class="sa_cand_chk">
+              <input type="checkbox" title="Tick every available rider"
+                     t-att-checked="allFreeTicked" t-on-change="toggleAll"/>
+            </th>
+            <th>#</th><th>Rider</th><th>Distance</th><th>Idle</th><th>Where</th>
+          </tr>
+        </thead>
+        <tbody>
+          <t t-foreach="free" t-as="c" t-key="c.id">
+            <tr t-att-class="{ 'sa_cand_sel': state.picked[c.id] }" t-on-click="() => this.toggle(c)">
+              <td class="sa_cand_chk"><input type="checkbox" t-att-checked="!!state.picked[c.id]"/></td>
+              <td><t t-esc="rank(c)"/></td>
+              <td><b t-esc="c.name"/><div class="sa_cand_sub" t-esc="c.phone"/></td>
+              <td>
+                <t t-if="c.distance_km !== null"><t t-esc="c.distance_km"/> km</t>
+                <t t-else="">no position</t>
+              </td>
+              <td><t t-esc="idle(c)"/></td>
+              <td>
+                <t t-esc="c.address_short or '-'"/>
+                <div class="sa_cand_sub" t-if="c.fix_age_min !== null">seen <t t-esc="c.fix_age_min"/> min ago</div>
+              </td>
+            </tr>
+          </t>
+        </tbody>
+      </table>
+      <p class="sa_cd_lead" t-else="">
+        No rider can be called right now.
+        <t t-if="others.length">See <b>Not available</b> for who is on a delivery or off duty.</t>
+        <t t-else="">Riders go on duty from the rider app.</t>
+      </p>
+    </t>
+
+    <t t-else="">
+      <p class="sa_cd_lead">These riders cannot be called for this order now.</p>
+      <table class="sa_cand_table sa_cand_readonly" t-if="others.length">
+        <thead><tr><th>Rider</th><th>Why</th><th>Where</th></tr></thead>
+        <tbody>
+          <t t-foreach="others" t-as="c" t-key="c.id">
+            <tr class="sa_cand_dim">
+              <td><b t-esc="c.name"/><div class="sa_cand_sub" t-esc="c.phone"/></td>
+              <td>
+                <span class="sa_badge sa_badge_busy" t-if="c.busy and !c.declined"><t t-esc="why(c)"/></span>
+                <span class="sa_badge sa_badge_miss" t-elif="c.declined"><t t-esc="why(c)"/></span>
+                <span class="sa_badge sa_badge_off" t-else=""><t t-esc="why(c)"/></span>
+              </td>
+              <td>
+                <t t-esc="c.address_short or '-'"/>
+                <div class="sa_cand_sub" t-if="c.fix_age_min !== null">seen <t t-esc="c.fix_age_min"/> min ago</div>
+              </td>
+            </tr>
+          </t>
+        </tbody>
+      </table>
+      <p class="sa_cd_lead" t-else="">Nobody: every rider of this shop is available.</p>
+    </t>
+    <t t-set-slot="footer">
+      <button class="btn btn-primary" t-att-disabled="!count" t-on-click="() => this.confirm(false)">
+        Call selected (<t t-esc="count"/>)
+      </button>
+      <button class="btn btn-warning" t-if="props.mode !== 'manual'" t-on-click="() => this.confirm(true)">
+        Auto - nearest free rider
+      </button>
+      <button class="btn btn-secondary" t-on-click="() => props.close()">Cancel</button>
+    </t>
+  </Dialog>
+</t>
+
+<t t-name="sales_automation_store.CompanyDialog">
+  <Dialog title="props.title" size="'md'">
+    <p class="sa_cd_lead">
+      Pick the company whose stock this order comes from. Only a company that
+      has every line on its shelf can be chosen.
+    </p>
+    <div class="sa_cd_list">
+      <t t-foreach="props.options" t-as="co" t-key="co.id">
+        <button class="sa_cd_option" t-att-class="{ 'sa_cd_ok': co.ok, 'sa_cd_no': !co.ok, 'sa_cd_current': co.current }"
+                t-att-disabled="!co.ok"
+                t-on-click="() => this.pick(co)">
+          <div class="sa_cd_head">
+            <span class="sa_cd_name"><t t-esc="co.name"/></span>
+            <span class="sa_cd_wh"><t t-esc="co.warehouse"/></span>
+            <span class="sa_cd_tag" t-if="co.current">booked here now</span>
+          </div>
+          <ul class="sa_cd_lines">
+            <li t-foreach="co.lines" t-as="ln" t-key="ln_index"
+                t-att-class="{ 'sa_cd_short': !ln.found or ln.have &lt; ln.need }">
+              <span><t t-esc="ln.name"/></span>
+              <b t-if="ln.found"><t t-esc="ln.have"/> in stock · need <t t-esc="ln.need"/></b>
+              <b t-else="">not sold here</b>
+            </li>
+          </ul>
+        </button>
+      </t>
+    </div>
+    <t t-set-slot="footer">
+      <!-- The dead end this screen used to be: with every company short of
+           stock all four buttons above are disabled and Back was the only
+           thing left. -->
+      <button class="btn btn-warning sa_cd_supply" t-if="stuck"
+              t-on-click="supply">
+        No stock anywhere - order from supplier
+      </button>
+      <button class="btn btn-secondary" t-on-click="props.close">Back</button>
+    </t>
+  </Dialog>
+</t>
+
+<t t-name="sales_automation_store.SupplyDialog">
+  <Dialog title="'Order #' + props.row.ref + ' from a supplier'" size="'md'">
+    <div class="sa_supply_dlg">
+      <p class="sa_cd_lead">
+        Nothing on any shelf. Ask a supplier what they want for it, then put
+        the amount and the day it will be here.
+      </p>
+
+      <div class="alert alert-warning" t-if="props.noCateg">
+        This product has no category, so suppliers cannot be routed - every
+        supplier is offered instead. Worth fixing on the product.
+      </div>
+      <div class="alert alert-danger" t-if="state.error">
+        <t t-esc="state.error"/>
+      </div>
+
+      <label class="sa_lbl">Who should we ask?</label>
+      <div class="sa_cd_list">
+        <div class="sa_cd_option sa_supply_vendor" t-foreach="props.vendors"
+             t-as="v" t-key="v.id"
+             t-att-class="{ sa_cd_no: !v.ok, sa_supply_on: isPicked(v) }"
+             t-on-click="() => this.toggle(v)">
+          <input type="checkbox" t-att-checked="isPicked(v)"
+                 t-att-disabled="!v.ok"/>
+          <span class="sa_cd_name"><t t-esc="v.name"/></span>
+          <span class="sa_cd_wh" t-if="v.ok"><t t-esc="v.phone"/></span>
+          <span class="sa_cd_wh" t-else="">no number</span>
+        </div>
+      </div>
+      <button class="btn btn-secondary sa_supply_ask" t-on-click="ask">
+        <t t-if="state.asked">Ask again</t>
+        <t t-else="">Ask these suppliers</t>
+      </button>
+
+      <label class="sa_lbl">What do we pay?</label>
+      <input type="text" inputmode="decimal" class="form-control sa_supply_cost"
+             placeholder="900" t-model="state.cost"/>
+
+      <label class="sa_lbl">Which supplier? (optional)</label>
+      <select class="form-select" t-model="state.partner">
+        <option value="">Not saying</option>
+        <option t-foreach="props.vendors" t-as="v" t-key="v.id"
+                t-att-value="v.id"><t t-esc="v.name"/></option>
+      </select>
+
+      <label class="sa_lbl">When will it be here?</label>
+      <div class="sa_supply_when">
+        <input type="date" class="form-control" t-model="state.day"/>
+        <span class="sa_supply_kind"><t t-esc="kindLabel"/></span>
+      </div>
+      <p class="sa_supply_note">
+        The customer keeps the price they already agreed - this is only what
+        it costs us. They are not sent a new message.
+      </p>
+    </div>
+
+    <t t-set-slot="footer">
+      <button class="btn btn-primary" t-on-click="save">
+        Accept and order it in
+      </button>
+      <button class="btn btn-secondary" t-on-click="() => props.close()">
+        Cancel
+      </button>
+    </t>
+  </Dialog>
+</t>
+
+<t t-name="sales_automation_store.OrderCard">
+<div class="sa_card" t-att-class="'sa_card_' + row.state">
 
           <div class="sa_card_top">
             <span class="sa_ref">#<t t-esc="row.ref"/></span>
@@ -321,261 +591,6 @@
             </div>
           </div>
         </div>
-      </t>
-    </div>
-  </div>
-</t>
-
-<t t-name="sales_automation_store.OtpDialog">
-  <Dialog title="props.title" size="'sm'">
-    <p class="sa_cd_lead"><t t-esc="props.hint"/></p>
-    <div class="alert alert-danger" t-if="state.error"><t t-esc="state.error"/></div>
-    <t t-if="props.riders">
-      <label class="sa_lbl">Rider collecting</label>
-      <select class="form-select mb-2" t-model="state.rider">
-        <option value="">- pick the rider -</option>
-        <option t-foreach="props.riders" t-as="r" t-key="r.id" t-att-value="r.id"><t t-esc="r.name"/></option>
-      </select>
-    </t>
-    <input type="text" inputmode="numeric" maxlength="6" class="form-control"
-           style="font-size:28px;letter-spacing:10px;text-align:center;font-family:monospace"
-           placeholder="6 digits" t-model="state.code"/>
-    <t t-set-slot="footer">
-      <button class="btn btn-primary" t-on-click="confirm">Confirm</button>
-      <button class="btn btn-secondary" t-on-click="() => props.close()">Cancel</button>
-    </t>
-  </Dialog>
-</t>
-
-<t t-name="sales_automation_store.DispatchCodeDialog">
-  <Dialog title="props.title" size="'md'">
-    <t t-if="state.done">
-      <div class="sa_code_done">&#10004; Collected - the rider typed the code.</div>
-    </t>
-    <t t-else="">
-      <p class="sa_cd_lead">
-        Read this code to <b t-esc="props.rider"/>. The rider types it in the rider app;
-        this window closes by itself when the code is accepted.
-      </p>
-      <div class="alert alert-warning" t-if="!props.arrived">
-        The rider has not signalled arrival yet. Hand the parcel only to the rider named above.
-      </div>
-      <div class="sa_code_big">
-        <span t-foreach="digits" t-as="d" t-key="d_index" t-esc="d"/>
-      </div>
-      <div class="sa_code_left" t-if="state.left"><t t-esc="state.left"/></div>
-    </t>
-    <t t-set-slot="footer">
-      <button class="btn btn-secondary" t-if="!state.done" t-att-disabled="state.busy"
-              title="Makes a new code; the old one stops working."
-              t-on-click="newCode">New code</button>
-      <button class="btn btn-primary" t-on-click="() => props.close()">Close</button>
-    </t>
-  </Dialog>
-</t>
-
-<t t-name="sales_automation_store.CallRiderDialog">
-  <Dialog title="props.title" size="'lg'">
-    <p class="sa_cd_lead">
-      <t t-if="props.mode === 'manual'">
-        Tick the riders for this order. They are called <b>one at a time</b>, the nearest
-        free rider first; if one does not answer in the time limit, the next ticked rider
-        is called. Nobody else is called.
-      </t>
-      <t t-else="">
-        Press <b>Auto</b> to call the nearest free rider, or tick the riders yourself.
-        One rider is called at a time, never all.
-      </t>
-    </p>
-    <div class="alert alert-danger" t-if="state.error"><t t-esc="state.error"/></div>
-    <div class="sa_cand_tabs">
-      <button t-att-class="{ 'sa_cand_tab': true, 'sa_cand_tab_on': state.tab === 'free' }"
-              t-on-click="() => { state.tab = 'free'; }">
-        Available (<t t-esc="free.length"/>)
-      </button>
-      <button t-att-class="{ 'sa_cand_tab': true, 'sa_cand_tab_on': state.tab === 'other' }"
-              t-on-click="() => { state.tab = 'other'; }">
-        Not available (<t t-esc="others.length"/>)
-      </button>
-    </div>
-
-    <t t-if="state.tab === 'free'">
-      <table class="sa_cand_table" t-if="free.length">
-        <thead>
-          <tr>
-            <th class="sa_cand_chk">
-              <input type="checkbox" title="Tick every available rider"
-                     t-att-checked="allFreeTicked" t-on-change="toggleAll"/>
-            </th>
-            <th>#</th><th>Rider</th><th>Distance</th><th>Idle</th><th>Where</th>
-          </tr>
-        </thead>
-        <tbody>
-          <t t-foreach="free" t-as="c" t-key="c.id">
-            <tr t-att-class="{ 'sa_cand_sel': state.picked[c.id] }" t-on-click="() => this.toggle(c)">
-              <td class="sa_cand_chk"><input type="checkbox" t-att-checked="!!state.picked[c.id]"/></td>
-              <td><t t-esc="rank(c)"/></td>
-              <td><b t-esc="c.name"/><div class="sa_cand_sub" t-esc="c.phone"/></td>
-              <td>
-                <t t-if="c.distance_km !== null"><t t-esc="c.distance_km"/> km</t>
-                <t t-else="">no position</t>
-              </td>
-              <td><t t-esc="idle(c)"/></td>
-              <td>
-                <t t-esc="c.address_short or '-'"/>
-                <div class="sa_cand_sub" t-if="c.fix_age_min !== null">seen <t t-esc="c.fix_age_min"/> min ago</div>
-              </td>
-            </tr>
-          </t>
-        </tbody>
-      </table>
-      <p class="sa_cd_lead" t-else="">
-        No rider can be called right now.
-        <t t-if="others.length">See <b>Not available</b> for who is on a delivery or off duty.</t>
-        <t t-else="">Riders go on duty from the rider app.</t>
-      </p>
-    </t>
-
-    <t t-else="">
-      <p class="sa_cd_lead">These riders cannot be called for this order now.</p>
-      <table class="sa_cand_table sa_cand_readonly" t-if="others.length">
-        <thead><tr><th>Rider</th><th>Why</th><th>Where</th></tr></thead>
-        <tbody>
-          <t t-foreach="others" t-as="c" t-key="c.id">
-            <tr class="sa_cand_dim">
-              <td><b t-esc="c.name"/><div class="sa_cand_sub" t-esc="c.phone"/></td>
-              <td>
-                <span class="sa_badge sa_badge_busy" t-if="c.busy and !c.declined"><t t-esc="why(c)"/></span>
-                <span class="sa_badge sa_badge_miss" t-elif="c.declined"><t t-esc="why(c)"/></span>
-                <span class="sa_badge sa_badge_off" t-else=""><t t-esc="why(c)"/></span>
-              </td>
-              <td>
-                <t t-esc="c.address_short or '-'"/>
-                <div class="sa_cand_sub" t-if="c.fix_age_min !== null">seen <t t-esc="c.fix_age_min"/> min ago</div>
-              </td>
-            </tr>
-          </t>
-        </tbody>
-      </table>
-      <p class="sa_cd_lead" t-else="">Nobody: every rider of this shop is available.</p>
-    </t>
-    <t t-set-slot="footer">
-      <button class="btn btn-primary" t-att-disabled="!count" t-on-click="() => this.confirm(false)">
-        Call selected (<t t-esc="count"/>)
-      </button>
-      <button class="btn btn-warning" t-if="props.mode !== 'manual'" t-on-click="() => this.confirm(true)">
-        Auto - nearest free rider
-      </button>
-      <button class="btn btn-secondary" t-on-click="() => props.close()">Cancel</button>
-    </t>
-  </Dialog>
-</t>
-
-<t t-name="sales_automation_store.CompanyDialog">
-  <Dialog title="props.title" size="'md'">
-    <p class="sa_cd_lead">
-      Pick the company whose stock this order comes from. Only a company that
-      has every line on its shelf can be chosen.
-    </p>
-    <div class="sa_cd_list">
-      <t t-foreach="props.options" t-as="co" t-key="co.id">
-        <button class="sa_cd_option" t-att-class="{ 'sa_cd_ok': co.ok, 'sa_cd_no': !co.ok, 'sa_cd_current': co.current }"
-                t-att-disabled="!co.ok"
-                t-on-click="() => this.pick(co)">
-          <div class="sa_cd_head">
-            <span class="sa_cd_name"><t t-esc="co.name"/></span>
-            <span class="sa_cd_wh"><t t-esc="co.warehouse"/></span>
-            <span class="sa_cd_tag" t-if="co.current">booked here now</span>
-          </div>
-          <ul class="sa_cd_lines">
-            <li t-foreach="co.lines" t-as="ln" t-key="ln_index"
-                t-att-class="{ 'sa_cd_short': !ln.found or ln.have &lt; ln.need }">
-              <span><t t-esc="ln.name"/></span>
-              <b t-if="ln.found"><t t-esc="ln.have"/> in stock · need <t t-esc="ln.need"/></b>
-              <b t-else="">not sold here</b>
-            </li>
-          </ul>
-        </button>
-      </t>
-    </div>
-    <t t-set-slot="footer">
-      <!-- The dead end this screen used to be: with every company short of
-           stock all four buttons above are disabled and Back was the only
-           thing left. -->
-      <button class="btn btn-warning sa_cd_supply" t-if="stuck"
-              t-on-click="supply">
-        No stock anywhere - order from supplier
-      </button>
-      <button class="btn btn-secondary" t-on-click="props.close">Back</button>
-    </t>
-  </Dialog>
-</t>
-
-<t t-name="sales_automation_store.SupplyDialog">
-  <Dialog title="'Order #' + props.row.ref + ' from a supplier'" size="'md'">
-    <div class="sa_supply_dlg">
-      <p class="sa_cd_lead">
-        Nothing on any shelf. Ask a supplier what they want for it, then put
-        the amount and the day it will be here.
-      </p>
-
-      <div class="alert alert-warning" t-if="props.noCateg">
-        This product has no category, so suppliers cannot be routed - every
-        supplier is offered instead. Worth fixing on the product.
-      </div>
-      <div class="alert alert-danger" t-if="state.error">
-        <t t-esc="state.error"/>
-      </div>
-
-      <label class="sa_lbl">Who should we ask?</label>
-      <div class="sa_cd_list">
-        <div class="sa_cd_option sa_supply_vendor" t-foreach="props.vendors"
-             t-as="v" t-key="v.id"
-             t-att-class="{ sa_cd_no: !v.ok, sa_supply_on: isPicked(v) }"
-             t-on-click="() => this.toggle(v)">
-          <input type="checkbox" t-att-checked="isPicked(v)"
-                 t-att-disabled="!v.ok"/>
-          <span class="sa_cd_name"><t t-esc="v.name"/></span>
-          <span class="sa_cd_wh" t-if="v.ok"><t t-esc="v.phone"/></span>
-          <span class="sa_cd_wh" t-else="">no number</span>
-        </div>
-      </div>
-      <button class="btn btn-secondary sa_supply_ask" t-on-click="ask">
-        <t t-if="state.asked">Ask again</t>
-        <t t-else="">Ask these suppliers</t>
-      </button>
-
-      <label class="sa_lbl">What do we pay?</label>
-      <input type="text" inputmode="decimal" class="form-control sa_supply_cost"
-             placeholder="900" t-model="state.cost"/>
-
-      <label class="sa_lbl">Which supplier? (optional)</label>
-      <select class="form-select" t-model="state.partner">
-        <option value="">Not saying</option>
-        <option t-foreach="props.vendors" t-as="v" t-key="v.id"
-                t-att-value="v.id"><t t-esc="v.name"/></option>
-      </select>
-
-      <label class="sa_lbl">When will it be here?</label>
-      <div class="sa_supply_when">
-        <input type="date" class="form-control" t-model="state.day"/>
-        <span class="sa_supply_kind"><t t-esc="kindLabel"/></span>
-      </div>
-      <p class="sa_supply_note">
-        The customer keeps the price they already agreed - this is only what
-        it costs us. They are not sent a new message.
-      </p>
-    </div>
-
-    <t t-set-slot="footer">
-      <button class="btn btn-primary" t-on-click="save">
-        Accept and order it in
-      </button>
-      <button class="btn btn-secondary" t-on-click="() => props.close()">
-        Cancel
-      </button>
-    </t>
-  </Dialog>
 </t>
 
 </templates>

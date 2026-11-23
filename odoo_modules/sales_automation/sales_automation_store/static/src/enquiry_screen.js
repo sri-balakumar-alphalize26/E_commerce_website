@@ -23,6 +23,7 @@ import { Alarm } from "./store_screen";
 import {
     ENQUIRY_TONE, STALLED_TONE, presence,
 } from "./enquiry_alarm_shared";
+import { ColourKey, ENQUIRY_TABS, byDay, dayKey, enquiryPill, matches, remember, remembered, timeOf } from "./board";
 const TICK_MS = 1000;
 
 /** m:ss, or h:mm:ss once it has been going a while. */
@@ -188,6 +189,7 @@ export class PriceDialog extends Component {
 
 export class EnquiryScreen extends Component {
     static template = "sales_automation_store.EnquiryScreen";
+    static components = { ColourKey };
     // client action: 369ai 19 passes action / actionId / updateActionState / className
     static props = { "*": true };
 
@@ -219,6 +221,10 @@ export class EnquiryScreen extends Component {
             stalledRing: 30,
             stalledRepeat: 120,
             stalledMaxMinutes: 10,
+            // the list (23 Nov 2026)
+            view: remembered("sa_enquiries_view", "list"),
+            tab: "needs", sel: 0, search: "", days: 30, detail: null, detailOpen: false,
+            old: [], counts: {}, more: false,
         });
 
         this._timer = null;
@@ -240,6 +246,7 @@ export class EnquiryScreen extends Component {
             // Vendor replies do not go through the bus, so the tracking half
             // needs a slow poll of its own.
             this._poll = setInterval(() => this.refresh(), 20000);
+            await this.loadOld();
         });
 
         // The alarm is on by default (owner, 29 Sep 2026): a browser only
@@ -324,7 +331,12 @@ export class EnquiryScreen extends Component {
         this.state.stalledRepeat =
             data.stalled_repeat || this.state.stalledRepeat;
         this.state.stalledMaxMinutes = data.stalled_max_minutes;
+        this.state.counts = data.counts || this.state.counts;
         this.state.loading = false;
+        this._keepSelection();
+        if (this.state.sel && this.state.view === "list") {
+            this.loadDetail();
+        }
         if (this.state.ringing > wasRinging) {
             this._stopAlarm();          // a new arrival restarts the clock
         }
@@ -470,6 +482,126 @@ export class EnquiryScreen extends Component {
         return clock(row.seconds_left);
     }
 
+    // ------------------------------------------------------------ the list
+    get boardRows() {
+        const kind = (rows, k) => rows.map((r) => Object.assign(r, { kind: typeof k === "function" ? k(r) : k, key: r.id }));
+        switch (this.state.tab) {
+            case "needs":
+                return kind(this.state.rows, "pick").concat(kind(this.state.stalled, (r) => (r.choice ? "choice" : "price")));
+            case "vendors":
+                return kind(this.state.tracking.filter((r) => r.state === "sourcing"), "vendors");
+            case "sent":
+                return kind(this.state.tracking.filter((r) => r.state !== "sourcing"), "sent");
+        }
+        return kind(this.state.old, this.state.tab);
+    }
+    get enquiryTabs() {
+        const c = this.state.counts;
+        const n = { needs: this.state.rows.length + this.state.stalled.length,
+                    vendors: this.state.tracking.filter((r) => r.state === "sourcing").length,
+                    sent: this.state.tracking.filter((r) => r.state !== "sourcing").length, ordered: c.ordered || 0, closed: c.closed || 0 };
+        return ENQUIRY_TABS.map(([key, name]) => ({ key, name, count: n[key] }));
+    }
+    get enquiryDays() {
+        const since = new Date();
+        since.setHours(0, 0, 0, 0);
+        since.setDate(since.getDate() - (this.state.days - 1));
+        return byDay(this.boardRows.filter((r) => matches(r, this.state.search) && (!r.at || new Date(r.at) >= since)), () => false);
+    }
+    get selected() {
+        return this.boardRows.find((r) => r.id === this.state.sel) || null;
+    }
+    _keepSelection() {
+        if (!this.selected) {
+            const first = this.enquiryDays[0];
+            this.state.sel = first ? first.rows[0].id : 0;
+            this.state.detail = null;
+            this.state.detailOpen = false;
+        }
+    }
+    async openTab(key) {
+        this.state.tab = key;
+        this.state.sel = 0;
+        this.state.detail = null;
+        this.state.detailOpen = false;
+        await this.loadOld();
+        this._keepSelection();
+        await this.loadDetail();
+    }
+    async loadOld(more = false) {
+        if (!["ordered", "closed"].includes(this.state.tab)) {
+            this.state.more = false;
+            return;
+        }
+        const data = await this.orm.call("sa.group.request", "sa_enquiry_board", [this.state.tab, this.state.search.trim(), this.state.days,
+            more ? this.state.old.length : 0]);
+        this.state.old = more ? this.state.old.concat(data.rows) : data.rows;
+        this.state.counts = data.counts;
+        this.state.more = data.more;
+    }
+    loadMore() {
+        return this.loadOld(true);
+    }
+    async onWhen(ev) {
+        this.state.days = parseInt(ev.target.value, 10) || 30;
+        await this.loadOld();
+        this._keepSelection();
+    }
+    async select(row) {
+        this.state.sel = row.id;
+        this.state.detailOpen = true;
+        await this.loadDetail();
+    }
+    async loadDetail() {
+        const id = this.state.sel;
+        if (!id) {
+            this.state.detail = null;
+            return;
+        }
+        try {
+            const detail = await this.orm.silent.call("sa.group.request", "sa_enquiry_detail", [id]);
+            if (id === this.state.sel) {
+                this.state.detail = detail;
+            }
+        } catch {
+            /* gone meanwhile: the list is read again in a moment */
+        }
+    }
+    closeDetail() {
+        this.state.detailOpen = false;
+    }
+    onRowKey(ev, row) {
+        if (ev.target === ev.currentTarget && (ev.key === "Enter" || ev.key === " ")) {
+            ev.preventDefault();
+            this.select(row);
+        }
+    }
+    toggleView() {
+        this.state.view = this.state.view === "list" ? "cards" : "list";
+        remember("sa_enquiries_view", this.state.view);
+    }
+    pill(row) {
+        return enquiryPill(row);
+    }
+    timeOf(iso) {
+        return timeOf(iso);
+    }
+    talk(d) {
+        return d.messages.concat(d.vendor_messages).sort((a, b) => String(a.at).localeCompare(String(b.at)));
+    }
+    useLate(row, better) {
+        this.dialog.add(ConfirmationDialog, {
+            title: "Use this price?",
+            body: "The customer gets the lower price now, instead of the one they were told.",
+            confirmLabel: "Use this price",
+            confirm: async () => {
+                await this.orm.call("sa.group.request", "sa_enquiry_use_late", [row.id, better.quote_id]);
+                await this.refresh();
+            },
+            cancel: () => {},
+        });
+    }
+
     onPick(row) {
         this.dialog.add(VendorDialog, {
             row,
@@ -495,6 +627,8 @@ export class EnquiryScreen extends Component {
             this.state.ringing = data.ringing;
             this.state.stalled = data.stalled || [];
             this.state.stalledRinging = data.stalled_ringing || 0;
+            this.state.counts = data.counts || this.state.counts;
+            this._keepSelection();
             this._syncAlarm();
             this._syncStalledAlarm();
         } finally {

@@ -1,0 +1,51 @@
+.sa_store.sa_board { display: flex; flex-direction: column; gap: 10px; overflow: hidden; background: $o-gray-100;
+    --sa-new: #0f5e8c; --sa-new-soft: #e1eef6; --sa-warn: #935500; --sa-warn-soft: #fdeed6; --sa-good: #1c7245; --sa-good-soft: #dff2e7;
+    --sa-bad: #b1271b; --sa-bad-soft: #fbe3e0; --sa-calm: #5b6875; --sa-calm-soft: #e7ecf0;
+    .sa_search { flex: 1 1 180px; max-width: 320px; min-height: 40px; border: 1px solid $border-color; border-radius: 9px; padding: 6px 11px; background: $o-white; color: inherit; }
+    .sa_tabs { display: flex; gap: 6px; overflow-x: auto; padding: 3px; flex: none; }
+    .sa_tab { flex: none; min-height: 42px; border: 1px solid transparent; background: transparent; border-radius: 9px; padding: 6px 13px; font-weight: 600; color: $text-muted; display: flex; gap: 8px; align-items: center; white-space: nowrap;
+        &.on { background: $o-white; border-color: $border-color; color: $body-color; }
+        .sa_n { min-width: 24px; text-align: center; border-radius: 99px; padding: 0 7px; background: var(--sa-calm-soft); color: var(--sa-calm); font-size: 13px; font-weight: 700; }
+        &.hot .sa_n { background: var(--sa-new); color: #fff; } &.bad .sa_n { background: var(--sa-bad-soft); color: var(--sa-bad); } }
+    .sa_split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 14px; flex: 1 1 auto; min-height: 0; }
+    .sa_list { overflow: auto; min-height: 0; display: flex; flex-direction: column; gap: 8px; padding: 2px; }
+    .sa_day { font-size: 12.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: $text-muted; margin: 8px 2px 0; }
+    .sa_row { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; gap: 2px 12px; align-items: center; background: $o-white; border: 1px solid $border-color; border-radius: 9px; padding: 10px 12px; cursor: pointer;
+        &:hover { border-color: var(--sa-new); } &.sel { border-color: var(--sa-new); box-shadow: 0 0 0 1px var(--sa-new); }
+        &:focus-visible { outline: 3px solid var(--sa-new); } }
+    .sa_row_time { align-self: start; font-variant-numeric: tabular-nums; small { display: block; color: $text-muted; } }
+    .sa_row_what { font-weight: 650; overflow-wrap: anywhere; } .sa_row_who { color: $text-muted; font-size: 13.5px; overflow-wrap: anywhere; }
+    .sa_row_right { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; } .sa_row_money { white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .sa_states { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+    .sa_state { border-radius: 99px; padding: 2px 10px; font-size: 12.5px; font-weight: 600; background: var(--sa-calm-soft); color: var(--sa-calm); white-space: nowrap;
+        &.new { background: var(--sa-new-soft); color: var(--sa-new); } &.warn { background: var(--sa-warn-soft); color: var(--sa-warn); }
+        &.good { background: var(--sa-good-soft); color: var(--sa-good); } &.bad { background: var(--sa-bad-soft); color: var(--sa-bad); } }
+    .sa_detail { background: $o-white; border: 1px solid $border-color; border-radius: 9px; overflow: auto; min-height: 0; padding: 14px 16px;
+        .sa_card { border: 0; box-shadow: none; padding: 0; max-width: none; } }
+    .sa_dtitle { font-size: 18px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    .sa_back { display: none; margin-bottom: 10px; }
+    .sa_none { color: $text-muted; padding: 34px 12px; text-align: center; }
+    .sa_path { list-style: none; margin: 0 0 12px; padding: 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px;
+        li { font-size: 12.5px; font-weight: 600; color: $text-muted; border-top: 4px solid $border-color; padding-top: 6px; }
+        li.past { border-color: var(--sa-good); color: var(--sa-good); } li.now { border-color: var(--sa-new); color: $body-color; } }
+    .sa_sum { background: var(--sa-calm-soft); border-radius: 9px; padding: 10px 14px; margin: 10px 0; &.sa_sum_new { background: var(--sa-new-soft); } }
+    .sa_vendors { tr.best td { background: var(--sa-good-soft); } tr.late td { color: $text-muted; } }
+    .sa_talk { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+    .sa_line { border-radius: 9px; padding: 6px 10px; background: var(--sa-calm-soft); white-space: pre-wrap; overflow-wrap: anywhere; small { color: $text-muted; } &.us { background: var(--sa-good-soft); } }
+    .sa_key { position: fixed; right: 0; top: 50%; transform: translateY(-50%); z-index: 15; display: flex; align-items: center; }
+    .sa_key_btn { writing-mode: vertical-rl; border: 1px solid $border-color; border-right: 0; border-radius: 9px 0 0 9px; background: $o-white; color: inherit; padding: 12px 7px; font-weight: 700; font-size: 13px; display: flex; align-items: center; gap: 8px; }
+    .sa_dot { width: 9px; height: 9px; border-radius: 50%; background: var(--sa-calm); &.new { background: var(--sa-new); } &.warn { background: var(--sa-warn); } &.good { background: var(--sa-good); } &.bad { background: var(--sa-bad); } }
+    .sa_key_panel { display: none; background: $o-white; border: 1px solid $border-color; border-radius: 9px 0 0 9px; padding: 14px 16px; box-shadow: 0 10px 30px rgba(0, 0, 0, .2); max-width: 290px;
+        div { display: flex; gap: 10px; align-items: center; margin-top: 8px; } .sa_state { min-width: 66px; text-align: center; } }
+    .sa_key:hover .sa_key_panel, .sa_key.on .sa_key_panel { display: block; }
+}
+@media (max-width: 820px) {
+    .sa_store.sa_board { overflow: auto; display: block;
+        .sa_split { grid-template-columns: minmax(0, 1fr); display: block; }
+        .sa_list, .sa_detail { overflow: visible; } .sa_detail { display: none; margin-top: 8px; }
+        .sa_split.sa_open { .sa_list { display: none; } .sa_detail { display: block; } }
+        .sa_back { display: inline-block; } .sa_path { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        .sa_key { top: auto; bottom: 90px; transform: none; }
+    }
+}
+@media (max-width: 480px) { .sa_store.sa_board .sa_row { grid-template-columns: 48px minmax(0, 1fr); .sa_row_right { grid-column: 2; flex-direction: row; justify-content: space-between; width: 100%; } } }

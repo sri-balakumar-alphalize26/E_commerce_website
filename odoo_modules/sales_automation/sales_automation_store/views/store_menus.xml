@@ -4,7 +4,7 @@
     <!-- The screen itself. A client action rather than a list view: it has to
          listen, redraw on its own and make a noise, none of which a list does. -->
     <record id="action_sa_store_screen" model="ir.actions.client">
-        <field name="name">New Orders</field>
+        <field name="name">Orders</field>
         <field name="tag">sales_automation_store.screen</field>
     </record>
 
@@ -16,7 +16,7 @@
               sequence="16"/>
 
     <menuitem id="menu_sa_store_screen"
-              name="New Orders"
+              name="Orders"
               parent="menu_sa_store_root"
               action="action_sa_store_screen"
               sequence="1"/>

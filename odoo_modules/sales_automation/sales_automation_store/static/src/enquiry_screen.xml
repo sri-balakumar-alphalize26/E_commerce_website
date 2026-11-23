@@ -2,7 +2,7 @@
 <templates xml:space="preserve">
 
     <t t-name="sales_automation_store.EnquiryScreen">
-        <div class="sa_store sa_enq">
+        <div class="sa_store sa_enq" t-att-class="{ sa_board: state.view === 'list' }">
 
             <div class="sa_store_bar">
                 <span class="sa_chip sa_chip_new"
@@ -18,6 +18,13 @@
                     <t t-esc="state.stalled.length"/> need a price
                 </span>
 
+                <t t-if="state.view === 'list'">
+                    <input class="sa_search" type="search" placeholder="Search #ref, product, customer" aria-label="Search" t-model="state.search" t-on-change="() => this.loadOld()"/>
+                    <select class="sa_search" style="max-width:150px" aria-label="Date" t-on-change="onWhen">
+                        <option value="30" t-att-selected="state.days === 30">30 days</option><option value="1" t-att-selected="state.days === 1">Today</option><option value="7" t-att-selected="state.days === 7">7 days</option>
+                    </select>
+                </t>
+                <button class="btn btn-secondary btn-sm" t-on-click="toggleView"><t t-if="state.view === 'list'">Cards</t><t t-else="">List</t></button>
                 <span class="sa_spacer"/>
 
                 <button class="btn btn-warning sa_store_sound"
@@ -37,6 +44,8 @@
                 This browser blocked the sound - tap "Turn on the alarm" once.
             </div>
 
+            <t t-if="state.view === 'list'" t-call="sales_automation_store.EnquiryBoard"/>
+            <t t-else="">
             <!-- ============ waiting for the shop ============ -->
             <h4 class="sa_sect" t-if="state.rows.length">Choose the vendors</h4>
 
@@ -50,54 +59,7 @@
             </div>
 
             <div class="sa_store_grid" t-if="state.rows.length">
-                <div class="sa_card sa_card_enq" t-foreach="state.rows"
-                     t-as="row" t-key="row.id">
-                    <div class="sa_card_top">
-                        <span class="sa_ref">#<t t-esc="row.ref"/></span>
-                        <span class="sa_stage">Choose a vendor</span>
-                        <span class="sa_wait"><t t-esc="row.waiting"/> min</span>
-                    </div>
-
-                    <div class="sa_prod">
-                        <t t-esc="row.product"/>
-                        <span class="sa_qty" t-if="row.qty"> x <t t-esc="row.qty"/></span>
-                    </div>
-
-                    <div class="sa_who">
-                        <div><t t-esc="row.customer"/></div>
-                        <div class="muted"><t t-esc="row.group"/></div>
-                    </div>
-
-                    <div class="sa_categ" t-if="!row.no_categ and row.category">
-                        <t t-esc="row.category"/>
-                    </div>
-                    <div class="sa_categ sa_categ_missing" t-if="row.no_categ">
-                        No category on this product - vendors cannot be routed,
-                        so every supplier is offered. Worth fixing.
-                    </div>
-
-                    <div class="sa_auto">
-                        Asking everyone in <b><t t-esc="countdown(row)"/></b>
-                    </div>
-
-                    <div class="sa_actions">
-                        <button class="btn btn-primary sa_big"
-                                t-att-disabled="state.busy === row.id"
-                                t-on-click="() => this.onPick(row)">
-                            Choose vendors (<t t-esc="row.vendors.length"/>)
-                        </button>
-                        <button class="btn btn-secondary"
-                                t-att-disabled="state.busy === row.id"
-                                t-on-click="() => this.act(row, 'send_all')">
-                            Ask all
-                        </button>
-                        <button class="btn btn-link sa_undo"
-                                t-att-disabled="state.busy === row.id"
-                                t-on-click="() => this.act(row, 'skip')">
-                            Skip
-                        </button>
-                    </div>
-                </div>
+                <t t-foreach="state.rows" t-as="row" t-key="row.id" t-call="sales_automation_store.EnquiryPickCard"/>
             </div>
 
             <!-- ======== nobody answered: a person has to price it ======== -->
@@ -106,102 +68,7 @@
             </h4>
 
             <div class="sa_store_grid" t-if="state.stalled.length">
-                <div class="sa_card sa_card_stall" t-foreach="state.stalled"
-                     t-as="row" t-key="row.id">
-                    <div class="sa_card_top">
-                        <span class="sa_ref">#<t t-esc="row.ref"/></span>
-                        <span class="sa_stage">Call the supplier</span>
-                        <span class="sa_wait">
-                            <t t-esc="row.waiting"/> min waiting
-                        </span>
-                    </div>
-
-                    <div class="sa_prod">
-                        <t t-esc="row.product"/>
-                        <span class="sa_qty" t-if="row.qty">
-                            x <t t-esc="row.qty"/>
-                        </span>
-                    </div>
-
-                    <div class="sa_who">
-                        <div><t t-esc="row.customer"/></div>
-                        <div class="muted"><t t-esc="row.group"/></div>
-                    </div>
-
-                    <div class="sa_pending sa_yes" t-if="row.held and row.held.length">
-                        &#128176; gave a price:
-                        <b t-esc="row.held.join(', ')"/>
-                        (<t t-esc="row.held_why"/>)
-                    </div>
-                    <div class="sa_pending sa_yes" t-if="row.said_yes.length">
-                        &#9989; said yes, no price yet:
-                        <t t-esc="row.said_yes.join(', ')"/>
-                    </div>
-                    <div class="sa_pending" t-if="row.said_no.length">
-                        &#10060; said no:
-                        <t t-esc="row.said_no.join(', ')"/>
-                    </div>
-                    <div class="sa_pending" t-if="row.silent.length">
-                        &#128263; silent:
-                        <t t-esc="row.silent.join(', ')"/>
-                    </div>
-                    <div class="sa_pending" t-if="row.no_vendors">
-                        &#9888; no vendor with a WhatsApp/WeChat tick on
-                        <b><t t-esc="row.categ || 'this category'"/></b>
-                        - add one on the category, or type the price
-                    </div>
-                    <div class="sa_hint" t-if="row.hint_cost and !row.choice">
-                        &#128161; price list says <b><t t-esc="row.hint_cost"/></b>
-                        (<t t-esc="row.hint_vendor"/>) - check before using
-                    </div>
-
-                    <div class="sa_choice" t-if="row.choice">
-                        <div class="sa_choice_title">&#9878; Two prices - approve one</div>
-                        <div>&#127991; Product page: <b><t t-esc="row.choice.page.toFixed(2)"/> <t t-esc="row.currency"/></b></div>
-                        <div>&#128666; Vendor <t t-esc="row.choice.vendor_name"/>:
-                            <t t-esc="row.choice.cost.toFixed(2)"/> + <t t-esc="row.margin"/>% =
-                            <b><t t-esc="row.choice.vendor.toFixed(2)"/> <t t-esc="row.currency"/></b></div>
-                    </div>
-
-                    <div class="sa_auto">
-                        The customer has been told we are still checking.
-                    </div>
-
-                    <div class="sa_actions" t-if="row.choice">
-                        <button class="btn btn-primary sa_big"
-                                t-att-disabled="state.busy === row.id"
-                                t-on-click="() => this.onApprovePrice(row, 'page')">
-                            Use page price <t t-esc="row.choice.page.toFixed(2)"/>
-                        </button>
-                        <button class="btn btn-outline-primary sa_big"
-                                t-att-disabled="state.busy === row.id"
-                                t-on-click="() => this.onApprovePrice(row, 'vendor')">
-                            Use vendor price <t t-esc="row.choice.vendor.toFixed(2)"/>
-                        </button>
-                        <button class="btn btn-secondary"
-                                t-att-disabled="state.busy === row.id"
-                                t-on-click="() => this.onApprovePrice(row, 'typed')">
-                            Type another
-                        </button>
-                        <button class="btn btn-link sa_undo"
-                                t-att-disabled="state.busy === row.id"
-                                t-on-click="() => this.onTrack(row)">
-                            History
-                        </button>
-                    </div>
-                    <div class="sa_actions" t-if="!row.choice">
-                        <button class="btn btn-primary sa_big"
-                                t-att-disabled="state.busy === row.id"
-                                t-on-click="() => this.onSetPrice(row)">
-                            Type the price
-                        </button>
-                        <button class="btn btn-link sa_undo"
-                                t-att-disabled="state.busy === row.id"
-                                t-on-click="() => this.onTrack(row)">
-                            History
-                        </button>
-                    </div>
-                </div>
+                <t t-foreach="state.stalled" t-as="row" t-key="row.id" t-call="sales_automation_store.EnquiryPriceCard"/>
             </div>
 
             <!-- ============ waiting for the vendors ============ -->
@@ -247,6 +114,7 @@
                     <div class="sa_openhint">Click to see every reply</div>
                 </div>
             </div>
+            </t>
         </div>
     </t>
 
@@ -467,6 +335,154 @@
                 </button>
             </t>
         </Dialog>
+    </t>
+
+    <t t-name="sales_automation_store.EnquiryPickCard">
+<div class="sa_card sa_card_enq">
+                    <div class="sa_card_top">
+                        <span class="sa_ref">#<t t-esc="row.ref"/></span>
+                        <span class="sa_stage">Choose a vendor</span>
+                        <span class="sa_wait"><t t-esc="row.waiting"/> min</span>
+                    </div>
+
+                    <div class="sa_prod">
+                        <t t-esc="row.product"/>
+                        <span class="sa_qty" t-if="row.qty"> x <t t-esc="row.qty"/></span>
+                    </div>
+
+                    <div class="sa_who">
+                        <div><t t-esc="row.customer"/></div>
+                        <div class="muted"><t t-esc="row.group"/></div>
+                    </div>
+
+                    <div class="sa_categ" t-if="!row.no_categ and row.category">
+                        <t t-esc="row.category"/>
+                    </div>
+                    <div class="sa_categ sa_categ_missing" t-if="row.no_categ">
+                        No category on this product - vendors cannot be routed,
+                        so every supplier is offered. Worth fixing.
+                    </div>
+
+                    <div class="sa_auto">
+                        Asking everyone in <b><t t-esc="countdown(row)"/></b>
+                    </div>
+
+                    <div class="sa_actions">
+                        <button class="btn btn-primary sa_big"
+                                t-att-disabled="state.busy === row.id"
+                                t-on-click="() => this.onPick(row)">
+                            Choose vendors (<t t-esc="row.vendors.length"/>)
+                        </button>
+                        <button class="btn btn-secondary"
+                                t-att-disabled="state.busy === row.id"
+                                t-on-click="() => this.act(row, 'send_all')">
+                            Ask all
+                        </button>
+                        <button class="btn btn-link sa_undo"
+                                t-att-disabled="state.busy === row.id"
+                                t-on-click="() => this.act(row, 'skip')">
+                            Skip
+                        </button>
+                    </div>
+                </div>
+    </t>
+
+    <t t-name="sales_automation_store.EnquiryPriceCard">
+<div class="sa_card sa_card_stall">
+                    <div class="sa_card_top">
+                        <span class="sa_ref">#<t t-esc="row.ref"/></span>
+                        <span class="sa_stage">Call the supplier</span>
+                        <span class="sa_wait">
+                            <t t-esc="row.waiting"/> min waiting
+                        </span>
+                    </div>
+
+                    <div class="sa_prod">
+                        <t t-esc="row.product"/>
+                        <span class="sa_qty" t-if="row.qty">
+                            x <t t-esc="row.qty"/>
+                        </span>
+                    </div>
+
+                    <div class="sa_who">
+                        <div><t t-esc="row.customer"/></div>
+                        <div class="muted"><t t-esc="row.group"/></div>
+                    </div>
+
+                    <div class="sa_pending sa_yes" t-if="row.held and row.held.length">
+                        &#128176; gave a price:
+                        <b t-esc="row.held.join(', ')"/>
+                        (<t t-esc="row.held_why"/>)
+                    </div>
+                    <div class="sa_pending sa_yes" t-if="row.said_yes.length">
+                        &#9989; said yes, no price yet:
+                        <t t-esc="row.said_yes.join(', ')"/>
+                    </div>
+                    <div class="sa_pending" t-if="row.said_no.length">
+                        &#10060; said no:
+                        <t t-esc="row.said_no.join(', ')"/>
+                    </div>
+                    <div class="sa_pending" t-if="row.silent.length">
+                        &#128263; silent:
+                        <t t-esc="row.silent.join(', ')"/>
+                    </div>
+                    <div class="sa_pending" t-if="row.no_vendors">
+                        &#9888; no vendor with a WhatsApp/WeChat tick on
+                        <b><t t-esc="row.categ || 'this category'"/></b>
+                        - add one on the category, or type the price
+                    </div>
+                    <div class="sa_hint" t-if="row.hint_cost and !row.choice">
+                        &#128161; price list says <b><t t-esc="row.hint_cost"/></b>
+                        (<t t-esc="row.hint_vendor"/>) - check before using
+                    </div>
+
+                    <div class="sa_choice" t-if="row.choice">
+                        <div class="sa_choice_title">&#9878; Two prices - approve one</div>
+                        <div>&#127991; Product page: <b><t t-esc="row.choice.page.toFixed(2)"/> <t t-esc="row.currency"/></b></div>
+                        <div>&#128666; Vendor <t t-esc="row.choice.vendor_name"/>:
+                            <t t-esc="row.choice.cost.toFixed(2)"/> + <t t-esc="row.margin"/>% =
+                            <b><t t-esc="row.choice.vendor.toFixed(2)"/> <t t-esc="row.currency"/></b></div>
+                    </div>
+
+                    <div class="sa_auto">
+                        The customer has been told we are still checking.
+                    </div>
+
+                    <div class="sa_actions" t-if="row.choice">
+                        <button class="btn btn-primary sa_big"
+                                t-att-disabled="state.busy === row.id"
+                                t-on-click="() => this.onApprovePrice(row, 'page')">
+                            Use page price <t t-esc="row.choice.page.toFixed(2)"/>
+                        </button>
+                        <button class="btn btn-outline-primary sa_big"
+                                t-att-disabled="state.busy === row.id"
+                                t-on-click="() => this.onApprovePrice(row, 'vendor')">
+                            Use vendor price <t t-esc="row.choice.vendor.toFixed(2)"/>
+                        </button>
+                        <button class="btn btn-secondary"
+                                t-att-disabled="state.busy === row.id"
+                                t-on-click="() => this.onApprovePrice(row, 'typed')">
+                            Type another
+                        </button>
+                        <button class="btn btn-link sa_undo"
+                                t-att-disabled="state.busy === row.id"
+                                t-on-click="() => this.onTrack(row)">
+                            History
+                        </button>
+                    </div>
+                    <div class="sa_actions" t-if="!row.choice">
+                        <button class="btn btn-primary sa_big"
+                                t-att-disabled="state.busy === row.id"
+                                t-on-click="() => this.onSetPrice(row)">
+                            Type the price
+                        </button>
+                        <button class="btn btn-link sa_undo"
+                                t-att-disabled="state.busy === row.id"
+                                t-on-click="() => this.onTrack(row)">
+                            History
+                        </button>
+                    </div>
+                </div>
     </t>
 
 </templates>
