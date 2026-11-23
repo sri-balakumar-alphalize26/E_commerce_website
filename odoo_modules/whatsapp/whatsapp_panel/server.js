@@ -543,14 +543,16 @@ const COUNTRIES = require('./countries.json');
 
 /** Country picker + digits box. The whole number goes out as `name`. */
 function phoneField(name, label, opts = {}) {
+  const value = String(opts.value || '').trim();
+  if (value) opts = { ...opts, like: digits(value) };
   const known = opts.like ? [...COUNTRIES].sort((a, b) => b[2].length - a[2].length).find(c => opts.like.startsWith(c[2])) : null;
   const first = (known && (COUNTRIES.find(c => c[0] === ({ 91: 'IN', 971: 'AE', 968: 'OM', 1: 'US', 44: 'GB', 7: 'RU' })[known[2]]) || known))
     || COUNTRIES.find(c => c[0] === 'AE') || COUNTRIES[0];
   return `<div class="phone">
       <label>${label}
         <select class="ph-country" name="${name}_country" aria-label="Country">${COUNTRIES.map(c => `<option value="${c[0]}" data-d="${c[2]}" data-a="${c[3]}" data-b="${c[4]}" data-z="${c[5]}" data-e="${c[6]}" ${c === first ? 'selected' : ''}>${esc(c[1])} (+${c[2]})</option>`).join('')}</select></label>
-      <div class="ph-box"><span class="ph-dial">+${first[2]}</span><input class="ph-num" type="text" inputmode="numeric" autocomplete="off" ${opts.required ? 'required' : ''} aria-label="Phone number"><span class="ph-count"></span></div>
-      <input type="hidden" name="${name}" class="ph-all">
+      <div class="ph-box"><span class="ph-dial">+${first[2]}</span><input class="ph-num" value="${known && value ? esc(digits(value).slice(known[2].length)) : ''}" type="text" inputmode="numeric" autocomplete="off" ${opts.required ? 'required' : ''} aria-label="Phone number"><span class="ph-count"></span></div>
+      <input type="hidden" name="${name}" class="ph-all" value="${esc(value)}" data-was="${esc(value)}">
       <span class="muted ph-hint"></span>
     </div>`;
 }
@@ -573,8 +575,17 @@ document.querySelectorAll('.phone').forEach(function (box) {
     hint.textContent = !v ? (r.a === r.b ? r.b : r.a + ' to ' + r.b) + ' digits' : good ? '\\u2713 +' + r.d + ' ' + v : (r.a === r.b ? r.b : r.a + ' to ' + r.b) + ' digits, ' + v.length + ' typed';
     num.setCustomValidity(!v || good ? '' : 'This country has ' + (r.a === r.b ? r.b : r.a + ' to ' + r.b) + ' digits.');
   }
+  // what is saved stays as it is until somebody types
+  var was = all.dataset.was || '', has = was.replace(/[^0-9]/g, '');
+  function first() {
+    clean();
+    if (!was) { return; }
+    var same = all.value === has && num.checkValidity();
+    all.value = was;
+    if (!same) { num.value = ''; num.required = false; num.setCustomValidity(''); count.textContent = ''; box.classList.remove('good'); hint.textContent = 'Saved now: ' + was; }
+  }
   num.addEventListener('keydown', function (e) { if (e.key.length === 1 && !/[0-9]/.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); } });
-  num.addEventListener('input', clean); sel.addEventListener('change', clean); clean();
+  num.addEventListener('input', clean); sel.addEventListener('change', function () { if (was && all.value === was && !num.value) { var r = rule(); dial.textContent = '+' + r.d; num.placeholder = r.e; return; } clean(); }); first();
 });
 </script>`;
 
@@ -613,6 +624,12 @@ function phoneWrong(b, name) {
   const own = n.startsWith(c[2]) ? n.slice(c[2].length) : '';
   if (own.length >= c[3] && own.length <= c[4]) return '';
   return `A number in ${c[1]} has ${c[3] === c[4] ? c[4] : c[3] + ' to ' + c[4]} digits after +${c[2]}.`;
+}
+
+/** "+971501234567"; what is no plain number stays as typed. */
+function plusNumber(value) {
+  const text = String(value || '').trim();
+  return /^[0-9]+$/.test(text) ? '+' + text : text;
 }
 
 function digits(value) {
@@ -979,12 +996,20 @@ let addingNumber = Promise.resolve();
  *        Asked again for a number of this database that no Odoo session uses
  *        yet (its first answer was lost), it gets a fresh key.
  */
+const FREE_NUMBERS = `SELECT n.* FROM wap_number n WHERE n.active AND n.company_id IS NOT DISTINCT FROM $1
+        AND NOT EXISTS (SELECT 1 FROM wap_database x WHERE x.number_id = n.id)
+      ORDER BY (n.pair_state = 'open') DESC, n.label`;
+
 app.get('/v1/numbers', async (req, res) => {
   const who = await identify(req);
   if (who.error) return res.status(403).json({ error: 'Refused', detail: who.error });
   const all = await siblings(who.row);
+  const max = Math.max(0, ...all.map(x => x.own_numbers_max));
+  // of this vendor and in no database, as on the panel page; only for who may add
+  const free = max ? (await pool.query(FREE_NUMBERS, [who.row.company_id])).rows : [];
   res.json({
-    may_add: Math.max(0, ...all.map(x => x.own_numbers_max)),
+    may_add: max,
+    free: free.filter(x => x.authorized_number).map(x => ({ label: x.label, authorized_number: x.authorized_number, state: x.pair_state })),
     numbers: all.filter(x => x.number_id).map(x => ({
       label: x.number_label, authorized_number: x.authorized_number, state: x.pair_state, in_use: !!x.odoo_webhook_url })),
   });
@@ -1261,6 +1286,7 @@ function nav(req) {
 }
 
 function page(req, res, title, body, status = 200) {
+  if (body.includes('class="phone"')) body += PHONE_SCRIPT;
   res.status(status).send(layout(title, body, nav(req)));
 }
 
@@ -1681,7 +1707,7 @@ app.get('/me', requireLogin, async (req, res) => {
       <h2>Opted out (this database)</h2>
       <div class="card narrow">
         <form method="post" action="/blocked/optout" class="row gap">
-          <input name="phone" placeholder="96890000000" required>
+          ${phoneField('phone', 'Country', { required: true, like: (mine.map(x => x.n && x.n.authorized_number).find(Boolean)) || '' })}
           <input name="reason" placeholder="why">
           <button class="primary">Add</button>
         </form>
@@ -1869,8 +1895,8 @@ app.get('/database/new', requireLogin, requireAdmin, async (req, res) => {
       <label>Sends as<input name="tenant_label" placeholder="Danat Spa"></label>
       <label class="check"><input type="checkbox" name="sign_messages" checked> Add the automatic no-reply footer (optional)</label>
       <span class="muted">Adds to every WhatsApp message and e-mail: <i>"This is an automated notification. Please do not reply."</i> and, when a support number is given below, a tap-to-chat link to it. Untick to send messages exactly as Odoo writes them.</span>
-      <label>WhatsApp Support number (optional)<input name="contact_number" placeholder="+91 98765 43210">
-        <span class="muted">Shown in that footer as the number to contact. Leave empty for no number.</span></label>
+      ${phoneField('contact_number', 'WhatsApp Support number (optional)')}
+      <span class="muted">Shown in that footer as the number to contact. Leave empty for no number.</span>
       <div class="row gap">
         <label style="flex:1">Daily cap<input name="daily_cap" type="number" value="500"></label>
         <label style="flex:1">Messages per minute<input name="per_minute" type="number" value="20"></label>
@@ -1893,7 +1919,7 @@ app.get('/database/new', requireLogin, requireAdmin, async (req, res) => {
       <label>From name<input name="from_name" placeholder="Shop name"></label>
       ${smtpFields(null)}
       <button class="primary">Register database</button> <a class="btn" href="/">Cancel</a>
-    </form>${SMTP_SCRIPT}${PHONE_SCRIPT}`);
+    </form>${SMTP_SCRIPT}`);
 });
 
 app.post('/database/new', requireLogin, requireAdmin, async (req, res) => {
@@ -1921,6 +1947,7 @@ app.post('/database/new', requireLogin, requireAdmin, async (req, res) => {
     if (await usernameTaken(clientUser, companyId, 0)) return back(`Username ${clientUser} is already used under this vendor.`);
   }
   const newNumber = digits(b.new_number);
+  if (phoneWrong(b, 'contact_number')) return back('Support number: ' + phoneWrong(b, 'contact_number'));
   if (newNumber) {
     if (phoneWrong(b, 'new_number')) return back(phoneWrong(b, 'new_number'));
     const dup = await pool.query('SELECT label FROM wap_number WHERE authorized_number = $1', [newNumber]);
@@ -1940,7 +1967,7 @@ app.post('/database/new', requireLogin, requireAdmin, async (req, res) => {
                                  token, daily_cap, per_minute)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id`,
       [serverId, companyId, newNumber ? null : numberId, dbName,
-       String(b.tenant_label || '').trim(), String(b.contact_number || '').trim(), token(),
+       String(b.tenant_label || '').trim(), plusNumber(b.contact_number), token(),
        Number(b.daily_cap || 0), Number(b.per_minute || 0)]);
     dbId = rows[0].id;
     await client.query('UPDATE wap_database SET sign_messages = $1 WHERE id = $2', [!!b.sign_messages, dbId]);
@@ -1995,10 +2022,7 @@ app.get('/database/:id', requireLogin, scopeDatabase('id'), async (req, res) => 
   }
   const anyActive = rowsOfDb.some(x => x.active);
   const companies = isAdmin ? await pool.query('SELECT * FROM wap_company ORDER BY name') : { rows: [] };
-  const numbers = isAdmin ? await pool.query(
-    `SELECT n.* FROM wap_number n WHERE n.active AND n.company_id IS NOT DISTINCT FROM $1
-        AND NOT EXISTS (SELECT 1 FROM wap_database x WHERE x.number_id = n.id)
-      ORDER BY (n.pair_state = 'open') DESC, n.label`, [d.company_id]) : { rows: [] };
+  const numbers = isAdmin ? await pool.query(FREE_NUMBERS, [d.company_id]) : { rows: [] };
   const freeNumbers = numbers.rows;         // this vendor's, in no database yet
   const logs = await pool.query('SELECT * FROM wap_log WHERE database_id = ANY($1::int[]) ORDER BY created_at DESC LIMIT 40', [rowsOfDb.map(x => x.id)]);
   const msg = q.ok ? `<p class="ok-msg">${esc(q.ok)}</p>` : q.bad ? `<p class="bad">${esc(q.bad)}</p>` : '';
@@ -2102,7 +2126,7 @@ app.get('/database/:id', requireLogin, scopeDatabase('id'), async (req, res) => 
         <span class="muted">numbers, and adds them itself under "Connect a number". 0 = only you add numbers here.</span>
         <button>Save</button>
       </form>` : ''}
-    </div>${isAdmin ? PHONE_SCRIPT : ''}`;
+    </div>`;
 
   const emailCard = canEdit ? `
     <form method="post" action="/database/${d.id}/email" class="card narrow">
@@ -2168,8 +2192,8 @@ app.get('/database/:id', requireLogin, scopeDatabase('id'), async (req, res) => 
       <label>Sends as<input name="tenant_label" value="${esc(d.tenant_label)}"></label>
       <label class="check"><input type="checkbox" name="sign_messages" ${d.sign_messages ? 'checked' : ''}> Add the automatic no-reply footer (optional)</label>
       <span class="muted">Adds to every WhatsApp message and e-mail: <i>"This is an automated notification. Please do not reply."</i> and, when a support number is given below, a tap-to-chat link to it. Untick to send messages exactly as Odoo writes them.</span>
-      <label>WhatsApp Support number (optional)<input name="contact_number" value="${esc(d.contact_number || '')}" placeholder="+91 98765 43210">
-        <span class="muted">Shown in that footer as the number to contact.</span></label>
+      ${phoneField('contact_number', 'WhatsApp Support number (optional)', { value: d.contact_number })}
+      <span class="muted">Shown in that footer as the number to contact.</span>
       <button class="primary">Save</button> <a class="btn" href="/">Back</a>
     </form>` : `
     <div class="card narrow"><h2>Settings</h2><table class="plain">
@@ -2201,9 +2225,12 @@ app.post('/database/:id', requireLogin, requireVendorOrAdmin, scopeDatabase('id'
   const d = req.db;
   const b = req.body || {};
   const isAdmin = req.session.role === 'admin';
+  // a number saved before the country was asked is only checked when it changes
+  const same = String(b.contact_number || '').trim() === String(d.contact_number || '').trim();
+  if (!same && phoneWrong(b, 'contact_number')) return res.redirect(`/database/${d.id}?bad=` + encodeURIComponent('Support number: ' + phoneWrong(b, 'contact_number')));
   await pool.query(
     `UPDATE wap_database SET tenant_label=$1, contact_number=$2, sign_messages=$4 WHERE id = ANY($3::int[])`,
-    [String(b.tenant_label || '').trim(), String(b.contact_number || '').trim(),
+    [String(b.tenant_label || '').trim(), same ? String(d.contact_number || '').trim() : plusNumber(b.contact_number),
      (await siblings(d)).map(x => x.id), !!b.sign_messages]);
   if (isAdmin) {
     const companyId = Number(b.company_id) || d.company_id;
@@ -2445,7 +2472,7 @@ app.get('/numbers/new', requireLogin, requireAdmin, async (req, res) => {
       ${phoneField('authorized_number', 'Country', { required: true })}
       <span class="muted">This is the ONLY phone that may scan the QR. Databases are attached afterwards.</span>
       <p><button class="primary">Create</button> <a class="btn" href="/numbers">Cancel</a></p>
-    </form>${PHONE_SCRIPT}`);
+    </form>`);
 });
 
 /**
@@ -2542,8 +2569,8 @@ app.get('/number/:id', requireLogin, requireVendorOrAdmin, scopeNumber('id'), as
     <form method="post" action="/number/${n.id}" class="card narrow">
       <h2>Settings</h2>
       <label>Label<input name="label" value="${esc(n.label)}" required></label>
-      <label>Authorized phone number<input name="authorized_number" value="${esc(n.authorized_number)}" placeholder="96891234567">
-        <span class="muted">Digits with the country code. Changing it while another phone is paired logs that phone out.</span></label>
+      ${phoneField('authorized_number', 'Authorized phone number', { value: n.authorized_number })}
+      <span class="muted">Changing it while another phone is paired logs that phone out.</span>
       <label class="check"><input type="checkbox" name="active" ${n.active ? 'checked' : ''}> Allowed to send</label>
       <button class="primary">Save</button>
     </form>
@@ -2583,6 +2610,7 @@ app.post('/number/:id', requireLogin, requireAdmin, scopeNumber('id'), async (re
   const label = String(req.body.label || '').trim() || n.label;
   const number = digits(req.body.authorized_number);
   const bad = msg => res.redirect(`/number/${n.id}?bad=` + encodeURIComponent(msg));
+  if (number !== n.authorized_number && phoneWrong(req.body, 'authorized_number')) return bad(phoneWrong(req.body, 'authorized_number'));
   if (number && (number.length < 8 || number.length > 15)) return bad('The phone number needs 8 to 15 digits.');
   const dup = await pool.query('SELECT label FROM wap_number WHERE authorized_number = $1 AND id <> $2 AND $1 <> \'\'', [number, n.id]);
   if (dup.rows.length) return bad(`+${number} is already used by "${dup.rows[0].label}".`);
@@ -2936,7 +2964,7 @@ app.get('/blocked', requireLogin, async (req, res) => {
           ${companies.rows.map(c => `<option value="c${c.id}">${esc(c.name)} — all databases</option>`).join('')}
           ${targets.rows.map(d => `<option value="d${d.id}">${esc(d.company_name)} — ${esc(d.db_name)}</option>`).join('')}
         </select>
-        <input name="phone" placeholder="96890000000" required>
+        ${phoneField('phone', 'Country', { required: true })}
         <input name="reason" placeholder="why">
         <button class="primary">Add</button>
       </form>
@@ -2962,6 +2990,7 @@ app.post('/blocked/optout', requireLogin, async (req, res) => {
   const s = req.session;
   const phone = digits(req.body.phone);
   const reason = String(req.body.reason || '').trim();
+  if (phoneWrong(req.body, 'phone')) return page(req, res, 'Opted out', `<div class="card narrow"><p class="bad">${esc(phoneWrong(req.body, 'phone'))}</p><a class="btn" href="${s.role === 'client' ? '/me' : '/blocked'}">Back</a></div>`);
   let companyId = null, databaseId = null;
   if (s.role === 'client') {
     databaseId = s.databaseId; companyId = s.companyId;
