@@ -82,7 +82,7 @@
                             </div>
                         </section>
 
-                        <section t-if="sa_pg['address']" class="sa-card sa-dl">
+                        <section t-if="sa_pg['address']" class="sa-card sa-dl" id="sa_address">
                             <span class="sa-ic">
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="1.8"/><circle cx="17" cy="18" r="1.8"/></svg>
                             </span>
@@ -90,6 +90,60 @@
                                 <b>Delivery to <t t-out="sa_pg['address']"/></b>
                                 <small t-if="sa_st['delivery']" t-out="sa_st['delivery']"/>
                             </span>
+                        </section>
+
+                        <!-- 23 Nov 2026: the map location, added here instead of in the group.
+                             The script shows the button and swaps the two states. -->
+                        <t t-set="sa_loc" t-value="sale_order._sa_portal_location()"/>
+                        <section t-if="sa_loc['open']" class="sa-card sa-loc" id="sa_location" t-att-data-has="'1' if sa_loc['has'] else '0'">
+                            <div class="sa-loc-no"><i aria-hidden="true">!</i><span><b>Location not added</b><small>Add it so the rider finds your door.</small></span></div>
+                            <div class="sa-loc-yes"><i aria-hidden="true">&#10003;</i><span><b>Location added</b></span><button type="button" class="sa-link sa-loc-change">Change</button></div>
+                            <div class="sa-loc-acts">
+                                <form method="post" class="sa-loc-form" t-attf-action="/my/orders/#{sale_order.id}/location" hidden="hidden">
+                                    <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                    <input type="hidden" name="access_token" t-att-value="sale_order.access_token"/>
+                                    <button type="submit" class="sa-addr-btn">&#128205; Use my current location</button>
+                                </form>
+                                <form t-if="sa_loc['edit']" method="post" t-attf-action="/my/orders/#{sale_order.id}/address" class="sa-loc-map">
+                                    <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                    <input type="hidden" name="access_token" t-att-value="sale_order.access_token"/>
+                                    <input type="hidden" name="do" value="edit"/>
+                                    <button type="submit" class="sa-addr-btn" name="address_id" t-att-value="sa_loc['edit']">&#128506; Pick on map</button>
+                                </form>
+                            </div>
+                        </section>
+
+                        <!-- 23 Nov 2026: until it is signed, another saved address, an edit
+                             or a new one. No script needed: plain forms. -->
+                        <t t-set="sa_addr" t-value="sale_order._sa_portal_addresses() if sa_pg['step'] == 'sign' else {'open': False, 'rows': []}"/>
+                        <section t-if="sa_addr['open']" class="sa-card sa-addr">
+                            <p t-if="request.params.get('addr_error')" class="sa-note" t-out="request.params.get('addr_error')"/>
+                            <details t-att-open="'open' if request.params.get('addr_error') else None">
+                                <summary>Change delivery address</summary>
+                                <div t-foreach="sa_addr['rows']" t-as="a" t-attf-class="sa-addr-row #{'on' if a['chosen'] else ''}">
+                                    <form method="post" t-attf-action="/my/orders/#{sale_order.id}/address">
+                                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                        <input type="hidden" name="access_token" t-att-value="sale_order.access_token"/>
+                                        <input type="hidden" name="do" value="use"/>
+                                        <button type="submit" class="sa-addr-pick" name="address_id" t-att-value="a['id']"
+                                                t-att-aria-pressed="'true' if a['chosen'] else 'false'">
+                                            <b><t t-out="a['icon']"/> <t t-out="a['label']"/><small t-if="a['default']"> ★ default</small></b>
+                                            <span t-out="a['text']"/>
+                                        </button>
+                                    </form>
+                                    <form method="post" t-attf-action="/my/orders/#{sale_order.id}/address">
+                                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                        <input type="hidden" name="access_token" t-att-value="sale_order.access_token"/>
+                                        <input type="hidden" name="do" value="edit"/>
+                                        <button type="submit" class="sa-addr-btn" name="address_id" t-att-value="a['id']">Edit</button>
+                                    </form>
+                                </div>
+                                <form method="post" t-attf-action="/my/orders/#{sale_order.id}/address">
+                                    <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                    <input type="hidden" name="access_token" t-att-value="sale_order.access_token"/>
+                                    <button type="submit" class="sa-addr-btn" name="do" value="add">+ Add new address</button>
+                                </form>
+                            </details>
                         </section>
                     </div>
 

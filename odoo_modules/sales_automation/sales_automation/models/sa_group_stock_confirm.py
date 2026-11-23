@@ -205,46 +205,19 @@ class SaGroupRequestStockConfirm(models.Model):
         if self.sa_paid_told_on:
             return False
         order = order.sudo()
-        inv = order.invoice_ids.filtered(lambda m: m.move_type == 'out_invoice'
-                                         and m.state != 'cancel')
-        if not inv:
-            inv = order._create_invoices()
-        if 'auto_wa_sent_at_post' in inv._fields:
-            inv.write({'auto_wa_sent_at_post': True})          # no private invoice PDF
-        inv.filtered(lambda m: m.state == 'draft').with_context(wa_skip_autosend=True).action_post()
-        # The money arrived before the invoice existed, so the payment sits
-        # unmatched. Match it now, before the PDF is made - otherwise the
-        # document the customer gets still says the full amount is due.
-        first = inv.sorted('id')[:1]
-        try:
-            for tx in order.transaction_ids.filtered(lambda t: t.state == 'done'):
-                if first not in tx.invoice_ids:
-                    tx.sudo().write({'invoice_ids': [(4, first.id)]})
-                pay = tx.payment_id
-                if pay and pay.move_id:
-                    for line in pay.move_id.line_ids.filtered(
-                            lambda l: l.account_id.account_type == 'asset_receivable'
-                            and not l.reconciled):
-                        if first.state == 'posted' and first.amount_residual:
-                            first.js_assign_outstanding_line(line.id)
-            first.invalidate_recordset(['payment_state', 'amount_residual'])
-        except Exception as err:  # noqa: BLE001 - an unmatched payment is a bookkeeping job, not a lost message
-            _logger.warning("Stock confirm: could not match the payment to %s: %s", first.name, err)
-        paid_word = _("PAID") if first.payment_state in ('paid', 'in_payment') else _("payment received")
-        session = self.group_id.session_id
-        dest = self.group_id.group_jid
-        try:
-            pdf, _x = self.env['ir.actions.report'].sudo()._render_qweb_pdf(
-                'account.account_invoices', first.ids)
-            fname = ((first.name or 'Invoice').replace('/', '_')) + '.pdf'
-            caption = _("\U0001F9FE Invoice %(name)s - %(paid)s. Thank you!",
-                        name=first.name or '', paid=paid_word)
-            # privately when allowed (sa_private_links.py), the group otherwise
-            self._sa_send_doc(
-                lambda to: session.send_document(to, pdf, fname, caption=caption),
-                note=_("\U0001F9FE Invoice %s sent to your *private chat* \U0001F512") % (first.name or ''))
-        except Exception as err:  # noqa: BLE001 - the words still go out
-            _logger.warning("Stock confirm: invoice PDF not sent to %s: %s", dest, err)
+        if 'auto_wa_sent_at_confirm' in order._fields and not order.auto_wa_sent_at_confirm:
+            order.write({'auto_wa_sent_at_confirm': True})
+        self._sa_after_part('invoice', lambda: self._sa_paid_invoice(order))
+        first = order.invoice_ids.filtered(
+            lambda m: m.move_type == 'out_invoice' and m.state != 'cancel').sorted('id')[:1]
+        if self.env.context.get('sa_after_task'):
+            self._sa_after_part('invoice_pdf', lambda: self._sa_must_send(
+                lambda: self._sa_paid_send_invoice(first)), sends=True)
+        else:
+            try:
+                self._sa_paid_send_invoice(first)
+            except Exception as err:  # noqa: BLE001 - the words still go out
+                _logger.warning("Stock confirm: invoice PDF not sent for %s: %s", order.name, err)
         job = order.picking_ids.filtered(
             lambda p: p.state != 'cancel' and getattr(p, 'sa_delivery_state', 'none') not in ('none', False, 'cancelled')
         ).sorted('id')[:1]
@@ -275,9 +248,62 @@ class SaGroupRequestStockConfirm(models.Model):
                      "Invoice %(inv)s is above.\n\nYour order is complete. We will "
                      "contact you about the handover.",
                      ref=self.ref_code or order.name, inv=first.name or '')
-        self._say(body)
+        # signed and paid: now the order is placed (owner, 23 Nov 2026)
+        done = _("✅ Done! Your order *%(order)s* is placed.\n\n%(lines)s\n*Total: %(cur)s %(total).2f*",
+                 order=order.name, lines=self._sa_order_lines_text(order),
+                 cur=order.currency_id.symbol or '', total=order.amount_total)
+        text = '%s\n\n%s' % (done, body)
+        if self.env.context.get('sa_after_task'):
+            self._sa_after_part('words', lambda: self._sa_must_send(
+                lambda: self._say(self._sa_after_again(text))), sends=True)
+        else:
+            self._say(text)
         self.write({'sa_paid_told_on': fields.Datetime.now()})
         return True
+
+    def _sa_paid_invoice(self, order):
+        """The invoice of a paid order: made once, posted, the payment matched."""
+        self.ensure_one()
+        inv = order.invoice_ids.filtered(lambda m: m.move_type == 'out_invoice'
+                                         and m.state != 'cancel')
+        if not inv:
+            inv = order._create_invoices()
+        if 'auto_wa_sent_at_post' in inv._fields:
+            inv.write({'auto_wa_sent_at_post': True})          # no private invoice PDF
+        inv.filtered(lambda m: m.state == 'draft').with_context(wa_skip_autosend=True).action_post()
+        # The money arrived before the invoice existed, so the payment sits
+        # unmatched. Match it now, before the PDF is made - otherwise the
+        # document the customer gets still says the full amount is due.
+        first = inv.sorted('id')[:1]
+        try:
+            with self.env.cr.savepoint():
+                for tx in order.transaction_ids.filtered(lambda t: t.state == 'done'):
+                    if first not in tx.invoice_ids:
+                        tx.sudo().write({'invoice_ids': [(4, first.id)]})
+                    pay = tx.payment_id
+                    if pay and pay.move_id:
+                        for line in pay.move_id.line_ids.filtered(
+                                lambda l: l.account_id.account_type == 'asset_receivable'
+                                and not l.reconciled):
+                            if first.state == 'posted' and first.amount_residual:
+                                first.js_assign_outstanding_line(line.id)
+                first.invalidate_recordset(['payment_state', 'amount_residual'])
+        except Exception as err:  # noqa: BLE001 - an unmatched payment is a bookkeeping job, not a lost message
+            _logger.warning("Stock confirm: could not match the payment to %s: %s", first.name, err)
+        return first
+
+    def _sa_paid_send_invoice(self, first):
+        """The invoice PDF: privately when allowed, the group otherwise."""
+        self.ensure_one()
+        paid_word = _("PAID") if first.payment_state in ('paid', 'in_payment') else _("payment received")
+        session = self.group_id.session_id
+        pdf, _x = self.env['ir.actions.report'].sudo()._render_qweb_pdf('account.account_invoices', first.ids)
+        fname = ((first.name or 'Invoice').replace('/', '_')) + '.pdf'
+        caption = _("\U0001F9FE Invoice %(name)s - %(paid)s. Thank you!",
+                    name=first.name or '', paid=paid_word)
+        return self._sa_send_doc(
+            lambda to: session.send_document(to, pdf, fname, caption=caption),
+            note=_("\U0001F9FE Invoice %s sent to your *private chat* \U0001F512") % (first.name or ''))
 
 
 class SaleOrderGroupEnquiry(models.Model):

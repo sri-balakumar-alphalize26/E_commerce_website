@@ -57,6 +57,7 @@ class SaQuoteEntry(http.Controller):
         seller, hint = enquiry._sa_price_hint()
         values.update({
             'said_yes': yes, 'said_no': no, 'silent': silent,
+            'held': enquiry._sa_held_lines(), 'held_why': enquiry._sa_held_why(),
             'hint_price': hint,
             'hint_vendor': seller.partner_id.name if seller else '',
         })

@@ -176,6 +176,13 @@ class SaAiSettings(models.Model):
              "vendor price list when nobody answers: "
              "quoted = cost x (1 + margin / 100).",
     )
+    vendor_money = fields.Selection([
+        ('company', "The order company's currency"),
+        ('country', "The vendor's own country's currency"),
+    ], 'Vendors price in', default='company', required=True,
+        help="What a vendor is asked to type the amount in - page, WhatsApp and WeChat. A currency they "
+             "write themselves (like INR 100) always counts. Another currency than the company's needs a "
+             "rate in Odoo, at most a week old.")
     # Bargaining lives beside the margin because it is the margin it spends.
     # It was per-group, which meant the same three numbers copied into every
     # customer group and no single place to answer "how far can the price

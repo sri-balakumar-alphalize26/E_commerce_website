@@ -1,6 +1,6 @@
 {
     'name': 'Sales Automation (WhatsApp Groups)',
-    'version': '19.0.173.22.0',
+    'version': '19.0.173.33.0',
     'category': 'Sales',
     'summary': 'Turn WhatsApp group enquiries into sale orders',
     'description': """
@@ -63,6 +63,7 @@
         # sits under .sa-page, so the rest of the website is untouched
         'web.assets_frontend': [
             'sales_automation/static/src/css/sa_portal.css',
+            'sales_automation/static/src/js/sa_portal_order.js',
         ],
     },
     'installable': True,

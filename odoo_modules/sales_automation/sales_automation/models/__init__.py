@@ -28,6 +28,13 @@ from . import sa_self_service
 from . import sa_common_hooks
 from . import sa_customer_name
 from . import sa_portal_status
+from . import sa_portal_address
+from . import sa_portal_location
+from . import sa_link_expiry
+from . import sa_after_order
+from . import sa_vendor_money
+from . import sa_vendor_all_in
+from . import sa_order_currency
 from . import sa_brand
 from . import sa_review
 from . import sa_picture

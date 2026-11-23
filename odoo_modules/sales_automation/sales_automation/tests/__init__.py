@@ -7,3 +7,13 @@ from . import test_wa_link_entry
 from . import test_sa_picture
 from . import test_address_link
 from . import test_private_links
+from . import test_vendor_amount_only
+from . import test_link_no_poll
+from . import test_reminders_quiet
+from . import test_sign_page_address
+from . import test_order_page_flow
+from . import test_after_order
+from . import test_vendor_money
+from . import test_vendor_all_in
+from . import test_order_currency
+from . import test_portal_location

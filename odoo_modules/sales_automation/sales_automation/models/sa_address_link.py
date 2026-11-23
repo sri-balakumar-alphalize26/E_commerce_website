@@ -22,6 +22,7 @@ from datetime import timedelta
 import requests
 
 from odoo import _, api, fields, models
+from odoo.exceptions import UserError
 
 _logger = logging.getLogger(__name__)
 
@@ -53,7 +54,8 @@ class SaAddressLink(models.Model):
     # and works from the menu's CHANGE ADDRESS, outside an order.
     mode = fields.Selection([('add', 'New address'), ('edit', 'Change an address')], 'For',
                             default='add', readonly=True)
-    back = fields.Selection([('order', 'An order'), ('menu', 'Change address (menu)')], 'From',
+    back = fields.Selection([('order', 'An order'), ('menu', 'Change address (menu)'),
+                             ('page', 'The sign page')], 'From',
                             default='order', readonly=True)
     target_id = fields.Many2one('res.partner', 'Address changed', readonly=True, ondelete='set null',
                                 help="The saved address this form changes (Change an address).")
@@ -79,9 +81,13 @@ class SaAddressLink(models.Model):
         self.ensure_one()
         req = self.request_id.sudo()
         if not (self.active and not self.used_on and self.expires_on
-                and self.expires_on > fields.Datetime.now() and req.sa_book_step):
+                and self.expires_on > fields.Datetime.now()):
             return False
         if self.mode == 'edit' and not self.target_id.exists():
+            return False
+        if self.back == 'page':         # from the sign page: until it is signed
+            return bool(req.order_id and req.order_id._sa_addr_open())
+        if not req.sa_book_step:
             return False
         if self.back == 'order':
             return bool(req.order_id and req.order_id.state != 'cancel')
@@ -456,10 +462,13 @@ class SaAddressLink(models.Model):
                     lambda a: a != customer and req._sa_addr_dedupe_key(a) == req._sa_addr_dedupe_key(probe))[:1]
                 if same and hasattr(same, '_mart369_revise'):
                     addr = same._mart369_revise(values)
+                    req._sa_move_open_orders(same, addr)
                 else:
                     addr = customer._mart369_add_address(values)
             if pin:
                 addr.write(pin)     # after the address lines: Odoo clears a pin written before them
+            if target and target != customer:
+                req._sa_move_open_orders(target, addr)
             return addr
         # Without the shop: the WhatsApp address book's own save, same fields.
         country = self.env['res.country'].sudo().search([('code', '=', body['country_id'])], limit=1)
@@ -491,6 +500,14 @@ class SaAddressLink(models.Model):
             return self.env['res.partner'], errors
         req = link.request_id
         addr = link._save_address(body)
+        if link.back == 'page':
+            # nothing is said in the chat: they are on the sign page
+            error = req.order_id.sudo()._sa_portal_use_address(addr)
+            if error:
+                raise UserError(error)
+            link.write({'used_on': fields.Datetime.now(), 'used_ip': (ip or '')[:64],
+                        'used_ua': (ua or '')[:250], 'address_id': addr.id})
+            return addr, {}
         st = req._sa_book_state()
         st.update({'from_form': True,     # no read-back after it (sa_address_book._sa_book_finish)
                    'back': link.back or st.get('back') or 'order', 'mode': link.mode or 'add',
@@ -515,7 +532,7 @@ class SaSalesGroupInvite(models.Model):
         help="The group's invite link (WhatsApp > group info > Invite via link), "
              "like https://chat.whatsapp.com/AbCd... The \"Back to WhatsApp group\" "
              "button on the pages sent privately (address form) opens this group. "
-             "Empty: the button opens WhatsApp.")
+             "Empty: no button, the page says to go back to the group.")
 
     invite_checked_on = fields.Datetime('Invite Link Checked', readonly=True)
     invite_error = fields.Char(
@@ -529,7 +546,7 @@ class SaSalesGroupInvite(models.Model):
             if (group.invite_url or '').strip().startswith('https://chat.whatsapp.com/'):
                 group.invite_hint = _("The “Back to WhatsApp group” button opens this group.")
             else:
-                group.invite_hint = _("Empty: the button opens WhatsApp. Press Get invite link "
+                group.invite_hint = _("Empty: no button, the page says to go back to the group. Press Get invite link "
                                       "(the shop's number must be a group admin), or paste the link.")
 
     def _sa_back_url(self):
@@ -615,7 +632,7 @@ class SaGroupRequestAddressLink(models.Model):
     def _sa_addr_link_live(self):
         self.ensure_one()
         links = self.env['sa.address.link'].sudo().search(
-            [('request_id', '=', self.id), ('used_on', '=', False)])
+            [('request_id', '=', self.id), ('used_on', '=', False), ('back', '!=', 'page')])
         return links.filtered(lambda l: l._alive())[:1]
 
     def _sa_addr_links_close(self):
@@ -652,6 +669,13 @@ class SaGroupRequestAddressLink(models.Model):
                 'addrlink|%s|%s|%s' % (self.id, mode, target.id or 0), 120):
             return False
         minutes = max(5, self._settings().address_link_minutes or 30)
+        # The order's sign-link token now, not when the form is saved: a save
+        # retried after a serialization failure made a new token each time,
+        # so "Details saved - sign here" went out twice with different links
+        # (S00013, 22 Nov 2026). Same token, same text: `_say`'s guard drops
+        # the replay.
+        if self.order_id:
+            self.order_id.sudo()._portal_ensure_token()
         link = self.env['sa.address.link'].sudo().create({
             'request_id': self.id, 'mode': mode, 'back': back,
             'target_id': target.id or False,
@@ -686,9 +710,11 @@ class SaGroupRequestAddressLink(models.Model):
         else:
             link.write({'sent_to': 'group'})
             who = (self.requester_name or '').strip() or _("you")
+            # Link only here too (owner, 22 Nov 2026): no "or answer here",
+            # no questions after it - what they change comes from the form.
             self._say(_("\U0001F4DD A form to %(what)s \U0001F449 %(url)s\n\n"
-                        "_Only for %(who)s · works once · %(min)s min_\n\n"
-                        "Or answer here \U0001F447", what=what, url=url, who=who, min=minutes))
+                        "_Only for %(who)s · works once · %(min)s min_",
+                        what=what, url=url, who=who, min=minutes))
         return link
 
     def _sa_addr_form_wait(self, st, link):
@@ -717,6 +743,9 @@ class SaGroupRequestAddressLink(models.Model):
         if live:
             self.sudo().write({'sa_book_asked_on': fields.Datetime.now()})
             what, order = self._sa_addr_link_words(live)
+            if live.sent_to == 'group':
+                return self._say(_("\U0001F446 Please use the form link above to %(what)s%(order)s.",
+                                   what=what, order=order))
             return self._say(_("\U0001F512 Please use the form in your *private chat* to %(what)s%(order)s.",
                                what=what, order=order))
         self._sa_addr_links_close()
@@ -728,7 +757,7 @@ class SaGroupRequestAddressLink(models.Model):
                                            st.get('back') or 'order')
         except Exception:  # noqa: BLE001 - the group questions instead
             _logger.exception("Sales Automation: enquiry %s - new address link failed", self.id)
-        if link and link.sent_to == 'private':
+        if link:
             return self._sa_addr_form_wait(st, link)
         return self._sa_addr_form_questions(st)
 
@@ -750,7 +779,8 @@ class SaGroupRequestAddressLink(models.Model):
                 link = self._sa_addr_link_send(mode, target, back)
             except Exception:  # noqa: BLE001 - the group questions still go out
                 _logger.exception("Sales Automation: enquiry %s - address link failed", self.id)
-        if link and link.sent_to == 'private':
+        if link:
+            # privately or in the group: the form only, no group questions
             return self._sa_addr_form_wait(st, link)
         return None
 

@@ -71,6 +71,7 @@
                             <field name="price_approval_tolerance_percent"
                                    invisible="not price_approval_enabled"/>
                             <field name="margin_percent"/>
+                            <field name="vendor_money"/>
                             <field name="unlisted_vendor_ids"
                                    widget="many2many_tags"
                                    options="{'no_create': True}"

@@ -178,7 +178,8 @@ class SaleOrderPortalStatus(models.Model):
         sign_inline = bool(has_sign and not payment_amount)
         pay_inline = bool(not sign_inline and (
             (not has_sign and o._has_to_be_paid())
-            or (payment_amount and o.state != 'cancel')))
+            # an old pay address opened again (phone's Back) shows Paid, not Pay
+            or (payment_amount and o.state != 'cancel' and not st['paid'])))
         paid, delivered = st['paid'], st['delivered']
         if o.state == 'cancel':
             step = 'cancel'

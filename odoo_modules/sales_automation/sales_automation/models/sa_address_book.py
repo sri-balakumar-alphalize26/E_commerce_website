@@ -645,6 +645,19 @@ class SaGroupRequestAddressBook(models.Model):
                      self.id, addr.id, customer.name)
         return addr
 
+    def _sa_move_open_orders(self, old, new):
+        """An edited address became a new record: WhatsApp orders nobody has
+        signed yet go to the new one (S00012 kept the archived 13a). Signed
+        and confirmed orders keep the address they were signed with."""
+        if not old or not new or old == new:
+            return
+        orders = self.env['sale.order'].sudo().search([
+            ('partner_shipping_id', '=', old.id), ('state', 'in', ('draft', 'sent')),
+            ('signed_on', '=', False)])
+        for order in orders.filtered(lambda o: o._sa_group_enquiry()):
+            order._sa_group_enquiry()._sa_use_address(order, new)
+            order._sa_addr_redecide()
+
     def _sa_address_in_use(self, addr):
         """A confirmed order or a finished delivery already went there."""
         order = self.order_id
@@ -674,6 +687,7 @@ class SaGroupRequestAddressBook(models.Model):
             fresh = target.copy({'name': target.name, 'parent_id': target.parent_id.id,
                                  'type': 'other' if shop else 'delivery'})
             self._sa_book_write(fresh, vals)
+            self._sa_move_open_orders(target, fresh)
             off = {'active': False}
             if shop:
                 off.update({'mart369_default': False, 'type': 'other'})
@@ -961,6 +975,42 @@ class SaGroupRequestAddressBook(models.Model):
         self.write({'sa_book_done': False, 'sa_book_step': False, 'sa_book_json': False})
         return super()._sa_group_details_start(order)
 
+    def _sa_default_address(self, customer, order=None):
+        """The address an order goes to unless the customer says otherwise:
+        the one they set as default, else the one of their latest order, else
+        the first saved one. Only addresses a rider can use."""
+        book = self._sa_address_book(customer).filtered(
+            lambda a: (a.street or '').strip() and (a.zip or not self._sa_pincode_wanted(a)))
+        if not book:
+            return book
+        if customer._sa_shop_book():
+            default = book.filtered(lambda a: a != customer and a.mart369_default)[:1]
+            if default:
+                return default
+        dom = [('partner_id', '=', customer.id), ('state', '!=', 'cancel'),
+               ('partner_shipping_id', 'in', book.ids)]
+        if order:
+            dom.append(('id', '!=', order.id))
+        last = self.env['sale.order'].sudo().search(dom, order='id desc', limit=1)
+        return last.partner_shipping_id or book[:1]
+
+    def _sa_details_known(self, order):
+        """Name known and an address saved: no address poll, no landmark
+        question, no read-back (owner, 23 Nov 2026). The order takes the
+        default; the sign page shows it with Change / Edit / Add."""
+        order = order.sudo()
+        customer = order.partner_id.sudo()
+        if not customer or not self._sa_profile_complete(customer):
+            return False
+        addr = self._sa_default_address(customer, order)
+        if not addr:
+            return False
+        self._sa_use_address(order, addr)
+        self.write({'profile_step': 'done', 'sa_book_done': True, 'sa_note_step': 'done',
+                    'sa_details_fix': False, 'sa_details_pending': False})
+        self._sa_details_confirmed_contact(customer)
+        return True
+
     NOTE_SKIP = '1 \u23ED Skip'
     NOTE_BACK = '2 \u2B05\uFE0F Back'
     DETAILS_POLL = [('yes', 'DETAILS_YES'), ('no', 'DETAILS_NO'), ('cancel', 'DETAILS_CANCEL')]
@@ -970,6 +1020,10 @@ class SaGroupRequestAddressBook(models.Model):
         """The address part of the ladder is the address book; the polls get
         their numbers; the landmark question ends with "1. ⏭ Skip"."""
         self.ensure_one()
+        # every details question counts as asked now - the landmark and the
+        # change menu do not pass `_sa_profile_question` (30-minute window,
+        # sa_group_details._sa_details_waiting)
+        self.sudo().write({'profile_asked_on': fields.Datetime.now()})
         if self.sa_book_step:
             return self._sa_book_ask()
         # brought back after an old poll was tapped: a note on top, and an

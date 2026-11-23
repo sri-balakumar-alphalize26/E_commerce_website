@@ -2061,14 +2061,13 @@ class SaGroupRequest(models.Model):
         product = self.product_id
         cost = 0.0
         if product:
-            priced = product.with_company(self.finder_company_id
-                                          or self._company_for(self.group_id))
+            priced = self._sa_priced(product)
             cost = priced.standard_price or 0.0
         if cost > 0:
             floor = cost * margin
-            top = self.quoted_price or product.list_price or floor
+            top = self.quoted_price or priced.list_price or floor
             return min(floor, top) if top else floor
-        return self.product_id.list_price or self.quoted_price or 0.0
+        return (self._sa_priced(product).list_price if product else 0.0) or self.quoted_price or 0.0
 
     @api.model
     def _parse_quantity(self, text):
@@ -2411,9 +2410,18 @@ class SaGroupRequest(models.Model):
             storable = lines.filtered(lambda l: getattr(l.product_id, 'is_storable', False))
             if not storable:
                 return True
-            for l in storable:
-                free = l.product_id.sudo().with_company(order.company_id).free_qty or 0.0
-                if float(free) < float(l.product_uom_qty or 0.0):
+            for product in storable.product_id:
+                own = storable.filtered(lambda l: l.product_id == product)
+                need = sum(own.mapped('product_uom_qty'))
+                free = product.sudo().with_company(order.company_id).free_qty or 0.0
+                # Once confirmed, what this order reserved for itself is no
+                # longer "free" - but it is here (S00016: 8 on hand, its own 3
+                # reserved, 0 free, told "we are arranging the goods").
+                held = sum(
+                    m.product_uom._compute_quantity(m.quantity, product.uom_id, rounding_method='HALF-UP')
+                    for m in own.sudo().move_ids
+                    if m.state in ('assigned', 'partially_available') and m.picking_code == 'outgoing')
+                if float(free) + held + 0.0001 < float(need):
                     return False
             return True
         except Exception:  # noqa: BLE001 - when in doubt, buy in first
@@ -2509,20 +2517,8 @@ class SaGroupRequest(models.Model):
                                 order.name, err)
 
         self.write({'order_id': order.id, 'state': 'order_created'})
-        product_lines = order.order_line.filtered(lambda l: not l.display_type and l.product_id)
-        if len(product_lines) > 1:
-            # A cart: every item, and the order's own total.
-            done = _("\u2705 Done! Your order *%(ref)s* is placed.\n\n"
-                     "%(lines)s\n*Total: %(total).2f*",
-                     ref=order.name, lines=self._sa_order_lines_text(order),
-                     # Before tax, like the summary just tapped and the
-                     # one-item "Done!" - the pay link carries the taxed total.
-                     total=order.amount_untaxed)
-        else:
-            done = _("\u2705 Done! Your order *%(ref)s* is placed.\n\n"
-                     "%(qty)s x %(product)s\n*Total: %(total).2f*",
-                     ref=order.name, qty=int(qty) if float(qty).is_integer() else qty,
-                     product=self._sa_done_item_name(), total=price * qty)
+        # "Done! Your order is placed" comes once it is signed and paid (owner,
+        # 23 Nov 2026, `_sa_group_confirmed`); the sign message carries the items.
         # In stock: the pay link follows at once, here in the group. Not in
         # stock: the goods are bought in first, and the customer is asked to
         # confirm again when they arrive (see sa_group_stock_confirm).
@@ -2530,7 +2526,6 @@ class SaGroupRequest(models.Model):
         # read-back with their phone come first, in the group; then the
         # signature; the pay link follows the signature (in stock) or the
         # goods (not in stock). See sa_group_details.py.
-        self._say(done)
         self._sa_group_details_start(order)
         if in_stock:
             self.write({'sa_stock_confirmed': True})
@@ -3573,8 +3568,7 @@ class SaGroupRequest(models.Model):
     def _sa_has_sale_price(self, product):
         """True when the catalogue can price this product on its own."""
         self.ensure_one()
-        priced = product.with_company(self.finder_company_id
-                                      or self._company_for(self.group_id))
+        priced = self._sa_priced(product)
         return bool((priced.list_price or 0.0) > 0
                     or (getattr(priced, 'wa_retail_price', 0.0) or 0.0) > 0)
 
@@ -3582,8 +3576,7 @@ class SaGroupRequest(models.Model):
         """The sale price, for a product not on the shelf right now."""
         self.ensure_one()
         conversation = self._ensure_conversation()
-        priced = product.with_company(self.finder_company_id
-                                      or self._company_for(self.group_id))
+        priced = self._sa_priced(product)
         price = self._catalog_price(priced, self._is_existing_contact(conversation))
         self.quoted_price = price
         self._announce_price(product.name, price, _("🛒 Available to order"))
@@ -3596,8 +3589,7 @@ class SaGroupRequest(models.Model):
     def _quote_from_stock(self, product):
         self.ensure_one()
         conversation = self._ensure_conversation()
-        priced = product.with_company(self.finder_company_id
-                                      or self._company_for(self.group_id))
+        priced = self._sa_priced(product)
         price = self._catalog_price(priced, self._is_existing_contact(conversation))
         self.quoted_price = price
         self._announce_price(product.name, price, "📦 In stock")
@@ -3641,29 +3633,25 @@ class SaGroupRequest(models.Model):
         name = self.product_id.name or self.ai_search_term or self.raw_text
         qty = self.qty or 0
 
-        # Ask for the amount and nothing else. The reply router already
-        # matches a bare number to the only price check a supplier has open,
-        # so making them type the code was ceremony - and a supplier copying
-        # `#HG 450` by hand is a supplier who might not bother next time.
+        # Ask for the amount and nothing else (owner, 22 Nov 2026: "only the
+        # amount typeable, highlighted, in their own country's currency - no
+        # days"). The reply router matches a bare number to the only price
+        # check a supplier has open, and a swipe-reply to this message names
+        # the enquiry when they have several (group_webhook.py).
         #
-        # The code still rides in the header: it is what a supplier quotes
-        # when they answer days later with three of our questions in their
-        # chat, and it is what `_sa_ask_which` asks for when a bare number
-        # could belong to more than one. It is offered as the exception now,
-        # in small print, instead of being the instruction.
+        # The code stays in the header as a reference only; typing it still
+        # works for whoever is used to it.
         #
         # No wa.me link either. The supplier was messaged privately, so the
         # link opens the chat they are already reading.
-        ask = _("\U0001F50E *Price check* \u2014 *#%(ref)s*"
-                "\n\n*%(product)s*%(qty)s"
-                "\n\nBest price *and delivery time* please."
-                "\n\n\U0001F449 *Just reply with the amount* \u2014 like "
-                "*450*"
-                "\nWith the days if you can: *450 3 days*"
-                "\n\n_Answering about something else? Put its code first: "
-                "#%(ref)s 450_",
-                ref=self.ref_code, product=name,
-                qty=(_("\nQuantity: %s", int(qty)) if qty else ''))
+        def ask_in(currency):
+            return _("\U0001F50E *Price check* \u2014 *#%(ref)s*"
+                     "\n\n*%(product)s*%(qty)s"
+                     "\n\n%(amount)s",
+                     ref=self.ref_code, product=name,
+                     qty=(_("\nQuantity: %s", int(qty)) if qty else ''),
+                     amount=self._sa_type_amount_line(currency, 450))
+        ask = ask_in(self._sa_vendor_currency(False))
 
         session = group.employee_session_id.session_id or group.session_id
         asked = self.env['res.partner']
@@ -3675,6 +3663,7 @@ class SaGroupRequest(models.Model):
         # messages have finished going out.
         posted = self._sa_ask_vendor_groups(session, ask, guard, trigger)
         for vendor in vendors:
+            ask = ask_in(self._sa_vendor_currency(vendor.phone, vendor))
             try:
                 # Another channel first (WeChat): asked there, or already
                 # asked there, and the WhatsApp poll is skipped.
@@ -3686,6 +3675,7 @@ class SaGroupRequest(models.Model):
                 # the same price check three times over.
                 if not guard.claim('%s|ask|%s|%s' % (trigger, vendor.phone,
                                                      ask)):
+                    self._sa_vendor_asked_before(vendor)
                     asked |= vendor
                     continue
                 # The picture + page link when the confirmation module is
@@ -3722,6 +3712,10 @@ class SaGroupRequest(models.Model):
         _logger.info("Sales Automation: enquiry %s asked %d vendor(s), closing "
                      "in %d min", self.id, len(asked), window)
         return True
+
+    def _sa_vendor_asked_before(self, vendor):
+        """Hook: a repeated request met a vendor whose message is already out."""
+        self.ensure_one()
 
     def _last_outgoing_id(self, vendor_group):
         """The WhatsApp id of the message we just sent to the vendor group.
@@ -3897,6 +3891,10 @@ class SaGroupRequest(models.Model):
         yes, no, silent = self._sa_vendor_lists()
         seller, hint = self._sa_price_hint()
         lines = []
+        held = self._sa_held_lines()
+        if held:
+            lines.append(_("\U0001F4B0 Gave a price: %(who)s (%(why)s)",
+                           who=', '.join(held), why=self._sa_held_why()))
         if yes:
             lines.append(_("\u2705 Said YES, no price yet: %s", ', '.join(yes)))
         if no:
@@ -4023,19 +4021,18 @@ class SaGroupRequest(models.Model):
     def _sa_ask_vendor_price(self, session, phone):
         """Step two: they have it, so what do they want for it?
 
-        The code is spelled out in the example here, unlike the one-step ask:
-        this arrives as a reply to a question they answered a moment ago, and
-        a bare number in a chat with three of our questions in it is exactly
-        what `_sa_ask_which` has to go back and disambiguate.
+        Only the amount, in their currency (owner, 22 Nov 2026). A bare
+        number goes to their only open price check; with several open, a
+        swipe-reply to this message names the enquiry (it is tagged below),
+        and `_sa_ask_which` asks only when neither tells.
         """
         self.ensure_one()
         name = (self.product_id.name or self.ai_search_term
                 or self.raw_text or _("this item"))
         body = _("\U0001F44D Good - what is your best price for "
-                 "*%(product)s*?"
-                 "\n\n\U0001F449 Reply *#%(ref)s 500* - change the number"
-                 "\nWith the days if you can: *#%(ref)s 500 3 days*",
-                 product=name, ref=self.ref_code)
+                 "*%(product)s*?\n\n%(amount)s",
+                 product=name,
+                 amount=self._sa_type_amount_line(self._sa_vendor_currency(phone), 500))
         if not self.env['sa.outbox.guard'].sudo().claim(
                 'askprice|%s|%s' % (self.id, phone), 3600):
             return False
@@ -4052,6 +4049,8 @@ class SaGroupRequest(models.Model):
                 self.write({'sourcing_deadline': fresh})
         try:
             session.send_message(phone, body)
+            # a swipe-reply to this message names the enquiry
+            self._sa_tag_last_outgoing(phone)
         except WhatsAppQueued:
             pass
         except Exception as err:  # noqa: BLE001
@@ -4072,6 +4071,54 @@ class SaGroupRequest(models.Model):
             return self.env['res.partner']
         return self.sourcing_vendor_ids.filtered(
             lambda v: ''.join(ch for ch in (v.phone or '') if ch.isdigit()).endswith(tail))[:1]
+
+    def _sa_vendor_currency(self, phone, vendor=None):
+        """The currency code this enquiry's supplier prices in (see
+        `_sa_partner_currency`); the group company's when unknown."""
+        self.ensure_one()
+        vendor = vendor or (self._sa_vendor_by_phone(phone) if phone else self.env['res.partner'])
+        company = self._company_for(self.group_id) if self.group_id else self.env.company
+        # the order company's, unless vendors are to price in their own
+        if self._settings().vendor_money != 'country':
+            return company.currency_id.name or ''
+        return self._sa_partner_currency(vendor, phone, company)
+
+    @api.model
+    def _sa_partner_currency(self, partner, phone=None, company=None):
+        """A supplier's currency code: their country's - the contact's
+        country, a country named in their address, or their phone's dialling
+        code - else `company`'s. Never the customer's number or the postcode
+        default (owner, 22 Nov 2026: "type your amount in their country's
+        currency")."""
+        if company and self.env['sa.ai.settings'].sudo().get_settings().vendor_money != 'country':
+            return company.currency_id.name or ''      # owner, 23 Nov 2026
+        partner = partner or self.env['res.partner']
+        country = partner.country_id
+        if not country and partner.street:
+            country = self._sa_country_in_address(partner.street) or self.env['res.country']
+        if not country:
+            digits = ''.join(c for c in (phone or partner.phone or '') if c.isdigit())
+            if len(digits) > 7:
+                for length in (3, 2, 1):
+                    code = self._SA_DIAL_CODES.get(digits[:length])
+                    if code:
+                        country = self.env['res.country'].sudo().search([('code', '=', code)], limit=1)
+                        if country:
+                            break
+        currency = country.currency_id if country else False
+        if not currency:
+            currency = (company or self.env.company).currency_id
+        return currency.name or ''
+
+    @api.model
+    def _sa_type_amount_line(self, currency, example):
+        """"✍️ *TYPE YOUR AMOUNT IN AED* 👇 / like *500*" - the one thing a
+        supplier is asked to type."""
+        if currency:
+            head = _("\u270D\uFE0F *TYPE YOUR AMOUNT IN %s* \U0001F447", currency)
+        else:
+            head = _("\u270D\uFE0F *TYPE YOUR AMOUNT* \U0001F447")
+        return head + _("\nlike *%s*", example)
 
     def _sa_vendor_confirmed(self, phone):
         """True once this vendor said they have it - YES to the poll here,
@@ -4215,8 +4262,7 @@ class SaGroupRequest(models.Model):
         product = self.product_id
         if not product or not self._sa_has_sale_price(product):
             return None
-        priced = product.with_company(self.finder_company_id
-                                      or self._company_for(self.group_id))
+        priced = self._sa_priced(product)
         page = self._catalog_price(priced, self._is_existing_contact(
             self.conversation_id))
         margin = settings.margin_percent or 0.0
@@ -5368,7 +5414,12 @@ class SaGroupRequest(models.Model):
     def _sa_unsellable_domain(self):
         """Domain on product.template that leaves out products which may not
         be sold short and have no free stock. Empty when the website's
-        out-of-stock switch is not installed, so nothing changes elsewhere."""
+        out-of-stock switch is not installed, so nothing changes elsewhere.
+        Empty too under `sa_menu_all_stock`: the NEW ORDER screens list
+        out-of-stock products, and tapping one asks the vendors (owner, 22 Nov
+        2026)."""
+        if self.env.context.get('sa_menu_all_stock'):
+            return []
         Tmpl = self.env['product.template']
         if 'allow_out_of_stock_order' not in Tmpl._fields or 'free_qty' not in self.env['product.product']._fields:
             return []

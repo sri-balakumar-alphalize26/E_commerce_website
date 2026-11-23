@@ -17,6 +17,8 @@ import logging
 from odoo import _, http
 from odoo.http import request
 
+from .link_expired import expired_page
+
 _logger = logging.getLogger(__name__)
 
 MAPLIBRE = 'https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl'
@@ -80,6 +82,9 @@ font:inherit;font-size:14px;cursor:pointer}
 margin-top:12px;font-size:14px}.mismatch b{display:block;margin-bottom:2px}
 .formerr{color:var(--bad);font-size:14px;margin-top:12px}
 .actions{margin-top:16px}
+.backlink{display:inline-block;margin:0 0 10px;color:var(--blue);font-weight:600;font-size:14px;text-decoration:none}
+.leave{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;padding:12px;border:1px solid var(--line);border-radius:12px}
+.leave[hidden]{display:none}.leave b{flex:1 1 auto;width:100px}
 .done{text-align:center;padding:30px 18px}.done .big{font-size:54px;line-height:1}
 .done h1{margin:12px 0 6px}.done .addr{background:var(--bg);border-radius:12px;padding:12px 14px;text-align:left;
 margin:16px 0;white-space:pre-line;font-size:15px}
@@ -121,25 +126,44 @@ def _page(title, body, ref='', script='', status=200):
 
 def _back_url(link):
     """The group's invite link when the shop gave one, else a chat with the
-    shop's number (both work on a computer too)."""
+    shop's number (both work on a computer too). The sign page when the form
+    was opened there."""
+    if link.back == 'page':
+        return '%s#sa_address' % link.order_id.sudo().get_portal_url()
     return link.request_id.sudo().group_id._sa_back_url()
 
 
 def _back_label(link):
     """"Back to <group name>" when the button opens the group (22 Nov 2026)."""
+    if link.back == 'page':
+        return _("Back to your order")
     group = link.request_id.sudo().group_id
     if _back_url(link).startswith('https://chat.whatsapp.com/') and (group.name or '').strip():
         return _("Back to %s", group.name.strip()[:40])
     return _("Back to WhatsApp")
 
 
+def _back_html(link):
+    """The button back: to the order (opened from its sign page) or to the
+    group by its invite link. No link: only the words - never a private chat
+    with the shop's number (owner, 23 Nov 2026)."""
+    url = _back_url(link)
+    if link.back == 'page':
+        return '<a class="btn primary wide" href="%s" data-sa-back="1">%s</a>' % (_e(url), _e(_back_label(link)))
+    if url.startswith('https://chat.whatsapp.com/'):
+        return '<a class="btn primary wide" href="%s">%s</a>' % (_e(url), _e(_back_label(link)))
+    name = (link.request_id.sudo().group_id.name or '').strip()[:40]
+    return '<p class="muted">%s</p>' % (
+        _e(_("Go back to the %s group in WhatsApp.", name)) if name else _e(_("Go back to the group in WhatsApp.")))
+
+
 def _gone(link):
-    body = ('<div class="card done"><div class="big">&#8987;</div><h1>%s</h1><p class="muted">%s</p>'
-            '<a class="btn primary wide" href="%s">%s</a></div>') % (
+    body = ('<div class="card done"><div class="big">&#8987;</div><h1>%s</h1><p class="muted">%s</p>%s</div>') % (
         _e(_("This link can't be used any more")),
         _e(_("It was already used, it expired, or the address was given in the group.")),
-        _e(_back_url(link)), _e(_back_label(link)))
-    return _page(_("Link expired"), body, ref='#%s' % link.request_id.sudo()._sa_book_ref(), status=410)
+        _back_html(link))
+    return _page(_("Link expired"), body, ref='#%s' % link.request_id.sudo()._sa_book_ref(), status=410,
+                 script=_BACK_JS if link.back == 'page' else '')
 
 
 def _saved(link):
@@ -149,12 +173,11 @@ def _saved(link):
     # owner, 21 Nov 2026: a button back to the group instead of a line of text
     body = ('<div class="card done"><div class="big green">&#10004;</div><h1>%(t)s</h1>'
             '<div class="addr">%(addr)s\n&#128506; %(loc)s</div>'
-            '<a class="btn primary wide" href="%(href)s">%(open)s</a>'
+            '%(back)s'
             '<p class="muted" style="margin-top:14px">%(once)s</p></div>') % {
         't': _e(_("Address updated") if link.mode == 'edit' else _("Address saved")), 'addr': _e(text),
         'loc': _e(_("Location on map: set") if has_pin else _("Location on map: not set")),
-        'href': _e(_back_url(link)),
-        'open': _e(_back_label(link)),
+        'back': _back_html(link),
         'once': _e(_("This link can't be used again.")),
     }
     return _page(_("Address updated") if link.mode == 'edit' else _("Address saved"), body,
@@ -178,6 +201,8 @@ class SaAddressLinkPage(http.Controller):
         link = self._link(token)
         if not link:
             return request.not_found()
+        if link._result_expired():
+            return expired_page()
         if link.used_on and link.address_id:
             return _saved(link)
         if not link._alive():
@@ -192,7 +217,7 @@ class SaAddressLinkPage(http.Controller):
                 request.env.cr.rollback()
                 errors = {'form': _("Could not save that address. Try again.")}
             if not errors:
-                return _saved(link)
+                return request.redirect(_back_url(link)) if link.back == 'page' else _saved(link)
         else:
             link._note_open()
         return self._form(link, post if errors else {}, errors)
@@ -266,7 +291,7 @@ class SaAddressLinkPage(http.Controller):
         has_pin = bool(values.get('lat') and values.get('lng'))
 
         body = """
-<div class="card">
+<div class="card">%(back_top)s
 <h1>%(h)s</h1><p class="sub">%(sub)s</p>
 <form method="post" id="addr" novalidate>
 <div class="chips" role="radiogroup">%(chips)s</div>
@@ -302,8 +327,18 @@ class SaAddressLinkPage(http.Controller):
 <div class="formerr" id="formerr">%(form_err)s</div>
 <div class="mismatch" id="mismatch" style="display:none"><b>%(t_right)s</b><span id="mismatchtxt"></span></div>
 <div class="actions"><button type="submit" class="btn primary wide" id="save">%(t_save)s</button></div>
+%(back_bottom)s
 <p class="muted" style="text-align:center;margin:12px 0 0">%(t_once)s</p>
 </form></div>""" % {
+            # from the sign page only: back to it without saving (23 Nov 2026)
+            'back_top': ('<a class="backlink" href="%s" data-sa-back="1">&#8592; %s</a>' % (
+                _e(_back_url(link)), _e(_back_label(link)))) if link.back == 'page' else '',
+            'back_bottom': ('<a class="btn wide" style="margin-top:10px" href="%s" data-sa-back="1">%s</a>'
+                            '<div class="leave" id="leave" hidden><b>%s</b>'
+                            '<button type="button" class="btn" id="leave_stay">%s</button>'
+                            '<a class="btn primary" id="leave_go" href="%s">%s</a></div>' % (
+                                _e(_back_url(link)), _e(_back_label(link)), _e(_("Leave without saving?")),
+                                _e(_("Stay")), _e(_back_url(link)), _e(_("Leave")))) if link.back == 'page' else '',
             'h': _e(_("Change address") if ctx['edit'] else _("Delivery address")),
             'sub': _e(_("Fill it in once and save.") if ctx['menu'] else
                       _("For order #%s. Fill it in once and save.") % ctx['ref']),
@@ -371,9 +406,36 @@ class SaAddressLinkPage(http.Controller):
         }
         script = '<script>window.SA_ADDR=%s;</script><script>%s</script>' % (
             json.dumps(cfg).replace('</', '<\\/'), _JS)
+        if link.back == 'page':
+            script = _BACK_JS + script
         return _page(_("Change address") if ctx['edit'] else _("Delivery address"), body,
                      ref='#%s' % ctx['ref'], script=script)
 
+
+# Only on a form opened from the sign page: Back and Save go one step back in
+# the phone's history instead of adding a page to it, so the next Back leaves.
+# Without script, or opened another way, the links and the redirect still work.
+_BACK_JS = r"""<script>
+(function(){
+var dirty=false;
+function came(){try{return sessionStorage.getItem('saAddrFrom')==='1'&&history.length>1}catch(e){return false}}
+function leave(url){if(came()){try{sessionStorage.removeItem('saAddrFrom')}catch(e){}history.back()}else{location.replace(url)}}
+window.saSave=function(form){
+  if(!window.fetch||!window.FormData){form.submit();return}
+  fetch(form.action||location.href,{method:'POST',body:new URLSearchParams(new FormData(form)),credentials:'same-origin'}).then(function(r){
+    if(r.redirected&&/\/my\/orders\/\d+/.test(new URL(r.url).pathname)){leave(r.url);return}
+    return r.text().then(function(t){document.open();document.write(t);document.close()});
+  }).catch(function(){form.submit()});};
+document.addEventListener('input',function(){dirty=true});
+document.addEventListener('click',function(e){
+  var a=e.target.closest?e.target.closest('[data-sa-back],#leave_go,#leave_stay'):null;if(!a)return;
+  var box=document.getElementById('leave');
+  if(a.id==='leave_stay'){box.hidden=true;return}
+  e.preventDefault();
+  if(a.id!=='leave_go'&&dirty&&box){box.hidden=false;box.scrollIntoView({block:'center'});return}
+  leave(a.href);});
+})();
+</script>"""
 
 _JS = r"""
 (function(){
@@ -455,7 +517,7 @@ form.addEventListener('submit',function(ev){if(saving)return;ev.preventDefault()
   var x=check();['name','phone','alt','pin','line','area','town','state'].forEach(function(k){setErr(k,x[k]||'')});
   var keys=Object.keys(x);if(keys.length){var first=$('f_'+(keys[0]==='state'?'state_id':keys[0]));if(first)first.focus();return;}
   var pin=$('f_pin').value,lat=$('f_lat').value,lng=$('f_lng').value,btn=$('save');
-  var go=function(){saving=true;btn.disabled=true;btn.textContent=T.saving;form.submit();};
+  var go=function(){saving=true;btn.disabled=true;btn.textContent=T.saving;if(window.saSave){window.saSave(form)}else{form.submit()}};
   if(lat&&lng&&mismatchPin!==pin){btn.disabled=true;
     get('/pin-check?pin='+encodeURIComponent(pin)+'&lat='+lat+'&lng='+lng).then(function(m){btn.disabled=false;
       if(m&&m.known&&!m.match){mismatchPin=pin;$('mismatchtxt').textContent=' '+T.mismatch.replace('%(pin)s',pin)

@@ -258,20 +258,24 @@ class SaVendorQuote(models.Model):
                          "request - ignored.", price, group.name)
             return False
 
-        quote = self.sudo().create({
-            'request_id': request.id,
+        # in the currency they wrote, else their own (sa_vendor_money.py)
+        partner = self.env['res.partner'].sudo().browse(self._find_partner(message.participant_phone) or [])
+        code = self._sa_currency_in(self._strip_reference(message.message), request._sa_vendor_currency(
+            message.participant_phone, partner))
+        quote = self._sa_take_price(request, price, code, {
             'group_id': group.id,
             'message_id': message.id,
+            'message_ref': message.id,
             'vendor_phone': message.participant_phone or '',
             'vendor_name': message.push_name or '',
-            'partner_id': self._find_partner(message.participant_phone),
-            'price': price,
-            'currency_id': request.currency_id.id,
+            'partner_id': partner.id or False,
             'raw_text': message.message,
             'delay_days': self._parse_delay(message.message) or 0,
             'response_minutes': request._minutes_since_broadcast(),
             'matched_by': matched_by,
         })
+        if not quote:
+            return False
         _logger.info("Sales Automation: quote %.2f from %s on enquiry %s (%s)",
                      price, quote.vendor_name or quote.vendor_phone,
                      request.id, matched_by)
@@ -294,20 +298,25 @@ class SaVendorQuote(models.Model):
         partner = request.sourcing_vendor_ids.filtered(
             lambda v: (v.phone or '').replace(' ', '').endswith(
                 (message.participant_phone or '')[-9:]))[:1]
-        quote = self.sudo().create({
-            'request_id': request.id,
+        partner = partner or request._sa_vendor_by_phone(message.participant_phone)
+        known = partner or self.env['res.partner'].sudo().browse(
+            self._find_partner(message.participant_phone) or [])
+        # in the currency they wrote, else their own (sa_vendor_money.py)
+        code = self._sa_currency_in(self._strip_reference(text), request._sa_vendor_currency(
+            message.participant_phone, known))
+        quote = self._sa_take_price(request, price, code, {
             'message_id': message.id,
+            'message_ref': message.id,
             'vendor_phone': message.participant_phone or '',
             'vendor_name': partner.name or message.push_name or '',
-            'partner_id': partner.id or self._find_partner(
-                message.participant_phone),
-            'price': price,
-            'currency_id': request.currency_id.id,
+            'partner_id': known.id or False,
             'raw_text': message.message,
             'delay_days': self._parse_delay(text) or 0,
             'response_minutes': request._minutes_since_broadcast(),
             'matched_by': 'direct',
         })
+        if not quote:
+            return False
         _logger.info("Sales Automation: quote %.2f from %s on enquiry %s "
                      "(private reply)", price,
                      quote.vendor_name or quote.vendor_phone, request.id)

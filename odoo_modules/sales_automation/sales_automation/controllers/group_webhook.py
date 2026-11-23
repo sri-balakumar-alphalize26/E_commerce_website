@@ -523,8 +523,22 @@ class WhatsAppWebhookGroups(WhatsAppWebhook):
                 "customer reply.", digits[-9:], mine_as_customer.id)
             return False
 
+        # 0. A swipe-reply to one of our messages names the question: the
+        #    price checks carry no code to type any more (owner, 22 Nov
+        #    2026), and the message they replied to is tagged with its
+        #    enquiry (`_sa_tag_last_outgoing`).
+        open_request = Request.browse()
+        quoted = self._sa_quoted_id(data.get('message') or {})
+        if quoted:
+            sent = env['whatsapp.message'].sudo().search(
+                [('wa_message_id', '=', quoted), ('direction', '=', 'outgoing'),
+                 ('sa_request_id', '!=', False)], order='id desc', limit=1)
+            if sent and sent.sa_request_id in askable:
+                open_request = sent.sa_request_id.sudo()
+
         # 1. A code names the question outright.
-        open_request = self._sa_request_by_ref(Request, text, mine)
+        if not open_request:
+            open_request = self._sa_request_by_ref(Request, text, mine)
 
         # 2. Failing that, the product named in the reply.
         if not open_request:
@@ -602,16 +616,15 @@ class WhatsAppWebhookGroups(WhatsAppWebhook):
             return True
         quote = env['sa.vendor.quote'].sudo()._capture_direct(
             message, open_request)
-        if quote and open_request.sa_price_stalled:
-            # Late, but real. The close cron stopped watching this enquiry
-            # when it stalled (deadline cleared); re-arm it so the next
-            # minute quotes the customer from this price. If the shopkeeper
-            # typed one first the enquiry is already `quoted` and the cron's
-            # `state='sourcing'` domain never sees it.
-            open_request.sudo().write(
-                {'sourcing_deadline': odoo_fields.Datetime.now()})
-            _logger.info("Sales Automation: late price on stalled enquiry %s "
-                         "- closing on it", open_request.id)
+        # Late, but real: an enquiry the shop was told about closes on it.
+        open_request._sa_vendor_price_in(quote)
+        # In a currency with no current rate: the counter has it, and the
+        # supplier hears that it arrived (sa_vendor_money.py).
+        held = {} if quote else next(
+            (h for h in open_request._sa_held().values() if h.get('ref') == str(message.id)), {})
+        if held:
+            self._sa_thank_vendor(session, digits, open_request, quote, held=held, message=message)
+            return True
         if quote:
             # Tell them it landed. A supplier who answers a price check and
             # hears nothing back has no idea whether it arrived, and the next
@@ -626,7 +639,7 @@ class WhatsAppWebhookGroups(WhatsAppWebhook):
         return True
 
     @staticmethod
-    def _sa_thank_vendor(session, phone, request, quote):
+    def _sa_thank_vendor(session, phone, request, quote, held=None, message=None):
         """Short acknowledgement of a price. Never raises."""
         name = (request.product_id.name or request.ai_search_term
                 or _('this item'))
@@ -634,15 +647,17 @@ class WhatsAppWebhookGroups(WhatsAppWebhook):
         # repeating it says nothing, and the price is echoed only so a
         # mis-parsed number is caught by the person who quoted it. Nothing is
         # promised - whether we buy is the sales team's call, not the bot's.
-        body = _("\U0001F44D Okay, noted *%(price).2f* for *%(product)s* "
+        body = _("\U0001F44D Okay, noted *%(price)s* for *%(product)s* "
                  "\u2014 our salesman will contact you soon.",
-                 price=quote.price, product=name)
+                 price=('%s %.2f' % (held['code'], held['amount'])) if held else quote._sa_typed_text(),
+                 product=name)
         # Keyed on WhatsApp's own id for the supplier's message, which is
         # the same on every attempt when Odoo replays the request after a
         # serialization failure. Without it the same "Thanks, noted 4500.00"
         # went out twice, seconds apart, off one reply.
         trigger = (quote.message_id.wa_message_id
-                   or 'q%s' % quote.id) if quote else 'q0'
+                   or 'q%s' % quote.id) if quote else (
+                       (message.wa_message_id or 'm%s' % message.id) if message else 'q0')
         if not request.env['sa.outbox.guard'].sudo().claim(
                 '%s|thanks|%s' % (trigger, phone)):
             return

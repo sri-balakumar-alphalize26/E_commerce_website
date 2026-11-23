@@ -31,6 +31,8 @@
                 <div class="err" t-if="error"><t t-esc="error"/></div>
 
                 <div class="muted" style="margin:10px 0;">
+                    <div t-if="held">&#128176; Gave a price: <b><t t-esc="', '.join(held)"/></b>
+                        (<t t-esc="held_why"/>)</div>
                     <div t-if="said_yes">&#9989; Said YES, no price yet:
                         <b><t t-esc="', '.join(said_yes)"/></b></div>
                     <div t-if="said_no">&#10060; Said NO:

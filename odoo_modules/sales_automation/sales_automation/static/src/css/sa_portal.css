@@ -299,3 +299,37 @@ html.sa-noscroll, html.sa-noscroll body { overflow: hidden; }
 .sa-slotchip.on { border-color: #0a78ab; background: #f2f9fd; box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.12); }
 .sa-slotchip.on b { color: #0b4a6e; }
 .sa-side > .sa-slot { animation: sa-rise 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) 0.1s backwards; }
+
+/* 23 Nov 2026: the delivery address on the sign page */
+.sa-addr form { margin: 0; }
+.sa-addr summary { cursor: pointer; font-size: 14.5px; font-weight: 700; color: #0a78ab; }
+.sa-addr-row { display: flex; gap: 8px; align-items: stretch; margin-top: 10px; }
+.sa-addr-row form:first-child { flex: 1; min-width: 0; }
+.sa-addr-pick { width: 100%; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 10px 12px; border: 1.5px solid #d5dee5; border-radius: 12px; background: #fff; color: #13212b; font: inherit; text-align: left; cursor: pointer; }
+.sa-addr-pick b { font-size: 14px; font-weight: 700; }
+.sa-addr-pick small { font-size: 12px; font-weight: 600; color: #52616d; }
+.sa-addr-pick span { font-size: 13px; color: #52616d; overflow-wrap: anywhere; }
+.sa-addr-row.on .sa-addr-pick { border-color: #0a78ab; background: #f2f9fd; box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.12); }
+.sa-addr-btn { height: 100%; min-height: 40px; padding: 8px 14px; border: 1.5px solid #d5dee5; border-radius: 12px; background: #fff; color: #0a78ab; font: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer; }
+.sa-addr details > form { margin-top: 10px; }
+
+/* 23 Nov 2026: the slot highlight slides; nothing to pay once it is paid */
+.sa-slot-chips { position: relative; }
+.sa-slot-glide { position: absolute; pointer-events: none; box-sizing: border-box; border: 1.5px solid #0a78ab; border-radius: 12px; background: rgba(10, 120, 171, 0.08); box-shadow: 0 0 0 3px rgba(10, 120, 171, 0.12); transition: left 0.24s ease, top 0.24s ease, width 0.24s ease, height 0.24s ease; }
+.sa-page[data-step="done"] #sa_action_slot { display: none; }
+
+/* 23 Nov 2026: the map location of the order */
+.sa-loc { padding: 14px 16px; }
+.sa-loc form { margin: 0; }
+.sa-loc-no, .sa-loc-yes { display: flex; align-items: center; gap: 10px; }
+.sa-loc-no i, .sa-loc-yes i { flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-style: normal; font-weight: 800; font-size: 15px; }
+.sa-loc-no i { background: #b45309; }
+.sa-loc-yes i { background: #1a7f3c; }
+.sa-loc b { font-size: 14.5px; }
+.sa-loc small { display: block; font-size: 13px; color: #52616d; }
+.sa-loc-change { margin-left: auto; border: 0; background: none; font: inherit; font-size: 13.5px; font-weight: 700; color: #0a78ab; cursor: pointer; min-height: 40px; }
+.sa-loc-acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.sa-loc[data-has="1"] .sa-loc-no, .sa-loc[data-has="0"] .sa-loc-yes { display: none; }
+.sa-loc[data-has="1"]:not(.open) .sa-loc-acts { display: none; }
+.sa-loc-acts button[disabled] { opacity: 0.6; cursor: progress; }
+.sa-loc [hidden] { display: none; }

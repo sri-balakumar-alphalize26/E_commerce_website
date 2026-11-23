@@ -5,6 +5,8 @@ own portal token is the whole credential. See models/sa_review.py."""
 from odoo import http
 from odoo.http import request
 
+from .link_expired import expired_page, visit_expired
+
 
 class SaReviewPage(http.Controller):
 
@@ -17,6 +19,8 @@ class SaReviewPage(http.Controller):
         order = self._order(order_id, access_token)
         if not order:
             return request.not_found()
+        if visit_expired(order):
+            return expired_page()
         return request.render('sales_automation.sa_review_page', {
             'order': order,
             'token': access_token,
@@ -29,6 +33,8 @@ class SaReviewPage(http.Controller):
                 methods=['POST'], website=True, sitemap=False)
     def save(self, order_id, product_id, access_token=None, stars=None, text=None, **kw):
         order = self._order(order_id, access_token)
+        if order and visit_expired(order):
+            return expired_page()
         if not order or not order._sa_review_open():
             return request.not_found()
         product = request.env['product.template'].sudo().browse(product_id).exists()

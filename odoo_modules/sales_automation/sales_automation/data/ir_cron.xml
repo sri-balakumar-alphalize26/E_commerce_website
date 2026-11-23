@@ -79,6 +79,17 @@
             <field name="active">True</field>
         </record>
 
+        <!-- After a signature or a payment: what the thread after the commit missed. -->
+        <record id="cron_sa_after_order" model="ir.cron">
+            <field name="name">Sales Automation: after a signature or payment</field>
+            <field name="model_id" ref="model_sa_after_task"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_run()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">minutes</field>
+            <field name="active">True</field>
+        </record>
+
         <!-- A pay link went out and nothing came back: remind in the group. -->
         <record id="cron_sa_pay_remind" model="ir.cron">
             <field name="name">Sales Automation: remind unpaid group orders</field>
@@ -87,6 +98,17 @@
             <field name="code">model._cron_pay_remind()</field>
             <field name="interval_number">10</field>
             <field name="interval_type">minutes</field>
+            <field name="active">True</field>
+        </record>
+
+        <!-- Links used over a week ago keep a short proof only. -->
+        <record id="cron_sa_links_clean" model="ir.cron">
+            <field name="name">Sales Automation: clean up old links</field>
+            <field name="model_id" ref="model_sa_address_link"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_links_clean()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
             <field name="active">True</field>
         </record>
 </data>

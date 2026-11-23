@@ -18,3 +18,4 @@ access_sa_qty_bargain_user,sa.qty.bargain.user,model_sa_qty_bargain,group_sa_use
 access_sa_qty_bargain_manager,sa.qty.bargain.manager,model_sa_qty_bargain,group_sa_manager,1,1,1,1
 access_sa_address_link_user,sa.address.link.user,model_sa_address_link,group_sa_user,1,0,0,0
 access_sa_address_link_manager,sa.address.link.manager,model_sa_address_link,group_sa_manager,1,1,1,1
+access_sa_after_task_manager,sa.after.task.manager,model_sa_after_task,group_sa_manager,1,0,0,0

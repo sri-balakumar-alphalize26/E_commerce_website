@@ -140,13 +140,66 @@ class TestAddressLink(HttpCase):
         self.assertFalse(self.polls, 'no poll in the group')
         self.assertEqual(self.request.sa_book_step, 'form')
 
-    def test_a_hidden_number_gets_the_link_and_the_questions_in_the_group(self):
+    def test_a_hidden_number_gets_only_the_link_in_the_group(self):
+        """Owner, 22 Nov 2026: link only - no "or answer here", no questions,
+        no poll after it; what they change comes from the form."""
         self.request.write({'requester_is_lid': True, 'requester_lid': '1234@lid'})
         link = self._open_book()
         self.assertEqual(link.sent_to, 'group')
         self.assertFalse([1 for to, t in self.sent if to == PHONE])
-        self.assertTrue(any(link.sudo().token in t for to, t in self.sent if to == GROUP))
-        self.assertEqual(self.request.sa_book_step, 'label', 'the group questions as before')
+        group = [t for to, t in self.sent if to == GROUP]
+        self.assertEqual(len(group), 1, group)
+        self.assertIn(link.sudo().token, group[0])
+        self.assertNotIn('answer here', group[0].lower())
+        self.assertFalse(self.polls, 'no poll after the link')
+        self.assertEqual(self.request.sa_book_step, 'form')
+
+    def test_editing_an_address_in_the_group_is_the_link_only(self):
+        self.request.write({'requester_is_lid': True, 'requester_lid': '1234@lid'})
+        home = self.env['res.partner'].create({
+            'name': 'Sri', 'parent_id': self.customer.id, 'type': 'delivery',
+            'street': '13a, beach road', 'zip': '691001'})
+        st = self.request._sa_book_state()
+        st.update({'back': 'order'})
+        self.request._sa_book_start_edit(st, home)
+        group = [t for to, t in self.sent if to == GROUP]
+        self.assertEqual(len(group), 1, group)
+        self.assertIn('/wa/', group[0].replace('%2F', '/'))
+        self.assertFalse(any('Changing' in t or 'What do you want to change' in t for t in group))
+        self.assertFalse(self.polls)
+        self.assertEqual(self.request.sa_book_step, 'form')
+
+    def test_writing_in_the_group_meanwhile_points_at_the_link_above(self):
+        self.request.write({'requester_is_lid': True, 'requester_lid': '1234@lid'})
+        link = self._open_book()
+        self.sent.clear()
+        self.request._sa_book_take('15/2 Adiyanuthu')
+        group = [t for to, t in self.sent if to == GROUP]
+        self.assertTrue(any('form link above' in t for t in group), group)
+        self.assertFalse(self.polls)
+        self.assertEqual(self.request.sa_book_step, 'form')
+        self.assertEqual(self.request.sa_addr_link_ids, link, 'the same link, not a new one')
+
+    def test_an_expired_group_form_gets_a_new_link_and_no_questions(self):
+        self.request.write({'requester_is_lid': True, 'requester_lid': '1234@lid'})
+        old = self._open_book()
+        old.expires_on = fields.Datetime.now() - timedelta(minutes=1)
+        self.sent.clear()
+        self.request._sa_book_take('hello?')
+        new = self.request.with_context(active_test=False).sa_addr_link_ids - old
+        self.assertEqual(len(new), 1)
+        self.assertEqual(new.sent_to, 'group')
+        self.assertFalse(self.polls)
+        self.assertEqual(self.request.sa_book_step, 'form')
+
+    def test_the_sign_link_token_is_made_with_the_address_link(self):
+        """A retried form save must build the same "sign here" text."""
+        self._open_book()
+        token = self.order.access_token
+        self.assertTrue(token)
+        first = self.request._sa_portal_link(self.order)
+        self.assertEqual(self.request._sa_portal_link(self.order), first)
+        self.assertIn(token, first)
 
     def test_writing_in_the_group_meanwhile_points_at_the_private_chat(self):
         link = self._open_book()
@@ -205,7 +258,8 @@ class TestAddressLink(HttpCase):
         res = self.url_open(self._path(link), data=self._form())
         self.assertEqual(res.status_code, 200)
         self.assertIn('Address saved', res.text)
-        self.assertIn('WhatsApp group', res.text)
+        self.assertIn('group in WhatsApp', res.text)
+        self.assertNotIn('wa.me', res.text, 'never a private chat')
         addr = self.order.partner_shipping_id
         self.assertEqual(addr.street, '15/2')
         self.assertEqual(addr.street2, 'Adiyanuthu Road')
@@ -457,6 +511,15 @@ class TestAddressLink(HttpCase):
         if not self.request.sa_pay_link_sent_on:
             self.skipTest('no pay link in this database (flow end / stock rules)')
         self.assertIn('payment_amount=', result.get('redirect_url', ''))
+        # the messages follow in the background (sa_after_order.py)
+        group = [t for to, t in self.sent if to == GROUP]
+        self.assertFalse(any('payment link' in t for t in group), 'nothing sent while they wait')
+        task = self.env['sa.after.task'].search([('request_id', '=', self.request.id), ('step', '=', 'signed')])
+        session = self.group.session_id
+        session.status = 'connected'
+        with patch.object(type(session), '_refresh_state', lambda rec, force=False: None), \
+                patch.object(type(self.request), '_sa_send_doc', lambda rec, send, note='': 'group'):
+            self.assertTrue(task._run(), task.error)
         group = [t for to, t in self.sent if to == GROUP]
         self.assertTrue(any('payment link' in t for t in group), group)
 

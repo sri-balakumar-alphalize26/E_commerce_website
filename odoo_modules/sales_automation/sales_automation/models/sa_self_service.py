@@ -148,12 +148,17 @@ class SaGroupRequestSelfService(models.Model):
             job = self._sa_ss_job(o)
             dstate = job.sa_delivery_state if job else False
             paid = r._sa_order_is_paid(o)
-            needs_sign = bool(o.state in ('draft', 'sent') and o._has_to_be_signed()
+            # name / address still open: no SIGN and no PAY before them
+            needs_details = bool(o.state in ('draft', 'sent') and r.state == 'order_created'
+                                 and r.sa_details_pending)
+            needs_sign = bool(not needs_details and o.state in ('draft', 'sent') and o._has_to_be_signed()
                               and r.sa_sign_link_sent_on)
             delivered = dstate == 'delivered'
             in_flight = dstate in IN_FLIGHT
             if dstate and dstate in STATUS_WORDS:
                 status = _(STATUS_WORDS[dstate])
+            elif needs_details:
+                status = _("Waiting for your details")
             elif needs_sign:
                 status = _("Waiting for your signature")
             elif not paid and (r.sa_pay_link_sent_on or o.state in ('draft', 'sent')):
@@ -173,7 +178,8 @@ class SaGroupRequestSelfService(models.Model):
                 'in_flight': in_flight,
                 'delivered': delivered,
                 'needs_sign': needs_sign,
-                'can_pay': bool(not paid and not needs_sign and not delivered
+                'needs_details': needs_details,
+                'can_pay': bool(not paid and not needs_details and not needs_sign and not delivered
                                 and (r.sa_pay_link_sent_on or o.state in ('draft', 'sent'))),
                 'can_cancel': bool(not paid and not delivered and dstate not in ('picked',) + ON_THE_ROAD),
                 'can_return': bool(delivered and done_on
@@ -358,6 +364,7 @@ class SaGroupRequestSelfService(models.Model):
         o = req.order_id.sudo()
         job = self._sa_ss_job(o)
         money = (_("✅ Paid") if row['paid'] else
+                 _("\U0001F4CB Waiting for your details") if row.get('needs_details') else
                  _("✍️ Waiting for your signature") if row['needs_sign'] else
                  _("\U0001F4B5 To pay"))
         lines = [_("*Order #%(ref)s* (%(name)s)", ref=row['ref'], name=o.name),
@@ -624,6 +631,8 @@ class SaGroupRequestSelfService(models.Model):
                 opts.append((_("\U0001F511 DOOR CODE"), {'kind': 'ss_code', 'key': key}))
             if row['has_invoice']:
                 opts.append((_("\U0001F9FE INVOICE"), {'kind': 'ss_invoice', 'key': key}))
+            if row.get('needs_details'):
+                opts.append((_("▶️ CONTINUE"), {'kind': 'ss_resume', 'target': req.id, 'step': 'details'}))
             if row['needs_sign']:
                 opts.append((_("✍️ SIGN"), {'kind': 'sign', 'target': req.id}))
             if row['can_pay']:
@@ -654,15 +663,15 @@ class SaGroupRequestSelfService(models.Model):
         if kind == 'ss_track_any':
             live = [r for r in self._sa_customer_orders() if r['in_flight']]
             if len(live) == 1:
-                self._say(self._sa_track_text(live[0]['key']))
-                return self._sa_nav('main')
+                return self._sa_say_link_or_nav(self._sa_track_text(live[0]['key']), 'main')
             return self._sa_menu_show('orders_live' if live else 'orders')
         if kind == 'ss_resume':
             return self._sa_resume_tap(item)
         say = None
         if kind == 'ss_track':
-            say = self._sa_track_text(key)
-        elif kind == 'ss_code':
+            # the tracking link is all they need: no poll after it
+            return self._sa_say_link_or_nav(self._sa_track_text(key), parent)
+        if kind == 'ss_code':
             say = self._sa_resend_door_code(key)
         elif kind == 'ss_invoice':
             say = self._sa_send_invoice(key)
