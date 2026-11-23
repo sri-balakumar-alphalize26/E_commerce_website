@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="sales_automation_store.NoticePanel">
+        <t t-if="data.allowed">
+            <aside t-if="data.panel" class="sa_side" aria-label="Sales notifications">
+                <header class="sa_side_head">
+                    <i class="fa fa-bell sa_side_bell" role="img" aria-hidden="true"/>
+                    <div class="sa_side_title"><b>Notifications</b>
+                        <small t-if="count"><t t-esc="count"/> need your look</small><small t-else="">All read</small></div>
+                    <button type="button" class="sa_side_x" t-on-click="() => this.notice.fold()" aria-label="Fold to the side" title="Fold">&#10005;</button>
+                </header>
+
+                <div class="sa_side_list">
+                    <section t-foreach="sections" t-as="s" t-key="s.key" class="sa_side_section">
+                        <button type="button" class="sa_side_sect" t-on-click="() => this.toggle(s.key)" t-att-aria-expanded="state.shut[s.key] ? 'false' : 'true'">
+                            <span><i class="fa" t-att-class="state.shut[s.key] ? 'fa-caret-right' : 'fa-caret-down'" role="img" aria-hidden="true"/> <t t-esc="s.name"/></span>
+                            <span class="sa_side_n" t-esc="s.count"/>
+                        </button>
+                        <t t-if="!state.shut[s.key]">
+                            <article t-foreach="s.waiting" t-as="w" t-key="w.id" class="sa_side_note amber">
+                                <span class="sa_side_icon"><i class="fa" t-att-class="icon(w)" role="img" aria-hidden="true"/></span>
+                                <div class="sa_side_text">
+                                    <div class="sa_side_top"><b t-esc="words(w)"/><small t-esc="when(w.at)"/></div>
+                                    <div class="sa_side_body">Ref <t t-esc="w.ref"/> &#183; <t t-esc="w.product"/> &#215; <t t-esc="w.qty"/><t t-if="w.customer"> &#183; <t t-esc="w.customer"/></t></div>
+                                    <div class="sa_side_do"><button type="button" class="btn btn-sm btn-primary" t-on-click="() => this.notice.openEnquiry(w.id)">Open</button></div>
+                                </div>
+                            </article>
+                            <article t-foreach="s.rows" t-as="row" t-key="row.id" class="sa_side_note" t-att-class="row.level">
+                                <span class="sa_side_icon"><i class="fa" t-att-class="icon(row)" role="img" aria-hidden="true"/></span>
+                                <div class="sa_side_text">
+                                    <div class="sa_side_top"><b t-esc="row.title"/><small t-esc="when(row.at)"/></div>
+                                    <div class="sa_side_body" t-esc="row.body"/>
+                                    <div class="sa_side_do">
+                                        <button type="button" class="btn btn-sm btn-outline-primary" t-on-click="() => this.notice.open(row.id)">Open</button>
+                                        <button type="button" class="btn btn-sm btn-link" t-on-click="() => this.notice.seen([row.id])">Mark as read</button>
+                                    </div>
+                                </div>
+                            </article>
+                            <button t-if="s.rows.length > 1" type="button" class="btn btn-link btn-sm sa_side_all" t-on-click="() => this.readAll(s)">Mark these as read</button>
+                        </t>
+                    </section>
+                    <div t-if="!count" class="sa_side_none"><i class="fa fa-check-circle" role="img" aria-hidden="true"/><br/>Nothing new. You are up to date.</div>
+                </div>
+            </aside>
+
+            <button t-else="" type="button" class="sa_side_tab" t-att-class="{ hot: count }" t-on-click="() => this.notice.unfold()"
+                    t-att-aria-label="'Open notifications, ' + count + ' new'" title="Notifications">
+                <span aria-hidden="true">&lt;</span><span t-if="count" class="sa_side_n" t-esc="count"/>
+            </button>
+        </t>
+    </t>
+</templates>

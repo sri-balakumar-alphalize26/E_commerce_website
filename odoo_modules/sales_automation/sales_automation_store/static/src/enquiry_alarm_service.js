@@ -24,6 +24,7 @@ import { registry } from "@web/core/registry";
 import { _t } from "@web/core/l10n/translation";
 import { Alarm } from "./store_screen";
 import { ENQUIRY_TONE, STALLED_TONE, presence } from "./enquiry_alarm_shared";
+import { onShared, shared, sharedChanged } from "./notice_shared";
 
 const POLL_MS = 20000;
 /** Give up after this many consecutive RPC failures rather than hammer. */
@@ -133,7 +134,15 @@ export const enquiryAlarmService = {
         /** A sticky note, because a sound alone does not say what to do. */
         function tellThem() {
             const waiting = state.pick + state.stalled;
-            if (!waiting) {
+            if (shared.pick !== state.pick || shared.stalled !== state.stalled) {
+                shared.pick = state.pick;
+                shared.stalled = state.stalled;
+                sharedChanged();
+            }
+            if (!shared.known) {
+                return;                 // told when the side panel answered
+            }
+            if (!waiting || shared.on) {
                 if (closeNotification) {
                     closeNotification();
                     closeNotification = null;
@@ -189,6 +198,16 @@ export const enquiryAlarmService = {
         }
 
         armOnFirstGesture();
+        let was = null;
+        onShared(() => {
+            const now = `${shared.known}${shared.on}`;
+            if (now !== was) {
+                was = now;
+                if (state) {
+                    tellThem();
+                }
+            }
+        });
         bus_service.addChannel("sa_store_0");
         bus_service.subscribe("sa_enquiry/refresh", () => poll());
         const poller = setInterval(poll, POLL_MS);

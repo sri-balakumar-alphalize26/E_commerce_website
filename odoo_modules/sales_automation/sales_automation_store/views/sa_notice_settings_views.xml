@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_sa_settings_notify_form" model="ir.ui.view">
+        <field name="name">sa.settings.notify.form</field>
+        <field name="model">sa.ai.settings</field>
+        <field name="priority">51</field>
+        <field name="arch" type="xml">
+            <form string="Side Notifications">
+                <sheet>
+                    <group>
+                        <field name="notice_on" widget="boolean_toggle" string="Side panel"/>
+                    </group>
+                    <div class="alert alert-success" role="status" invisible="not notice_on"><b>On.</b> New orders, vendor prices, cheaper vendors,
+                        payments and WhatsApp problems come in a panel on the right of every page. &#10005; folds it to &lt;.</div>
+                    <div class="alert alert-secondary" role="status" invisible="notice_on"><b>Off.</b> Only the "Enquiries need you" note, as before.
+                        No panel, no bell, and nothing is kept.</div>
+                    <div class="sa_notice_preview">
+                        <div class="sa_pv on" invisible="not notice_on">
+                            <b>How it looks now</b>
+                            <div class="sa_pv_screen"><div class="sa_pv_panel"><b>Notifications</b> &#10005;
+                                <div class="sa_pv_row r"/><div class="sa_pv_row"/><div class="sa_pv_row g"/></div></div>
+                        </div>
+                        <div class="sa_pv on" invisible="notice_on">
+                            <b>How it looks now</b>
+                            <div class="sa_pv_screen"><div class="sa_pv_toast"><b>Enquiries need you</b><br/>1 waiting for vendors<br/><u>Open Enquiries</u></div></div>
+                        </div>
+                    </div>
+                    <div class="text-muted mt-3">A click only opens; nothing is accepted or ordered. Reload the page after changing this.</div>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_sa_settings_notify" model="ir.actions.server">
+        <field name="name">Side Notifications</field>
+        <field name="model_id" ref="sales_automation.model_sa_ai_settings"/>
+        <field name="state">code</field>
+        <field name="code">
+action = {'type': 'ir.actions.act_window', 'name': 'Side Notifications', 'res_model': 'sa.ai.settings',
+          'res_id': model.get_settings().id, 'view_mode': 'form', 'target': 'current',
+          'views': [[env.ref('sales_automation_store.view_sa_settings_notify_form').id, 'form']]}
+        </field>
+    </record>
+
+    <menuitem id="menu_sa_settings_notify" name="Side Notifications"
+              parent="sales_automation.menu_sa_config" action="action_sa_settings_notify" sequence="35"/>
+</odoo>

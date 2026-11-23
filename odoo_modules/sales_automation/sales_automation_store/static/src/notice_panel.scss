@@ -1,0 +1,38 @@
+.sa_side { --sa-blue: #0f5e8c; --sa-green: #1c7245; --sa-red: #b1271b; --sa-amber: #935500;
+    position: fixed; top: 60px; right: 0; z-index: 1030; width: 330px; max-width: calc(100vw - 32px); max-height: calc(100vh - 120px); display: flex; flex-direction: column;
+    background: $o-white; color: $body-color; border: 1px solid $border-color; border-right: 0; border-radius: 14px 0 0 14px; box-shadow: 0 14px 40px rgba(0, 0, 0, .2); overflow: hidden; animation: sa_side_in .18s ease-out;
+    .sa_side_head { display: flex; align-items: center; gap: 10px; padding: 10px 6px 10px 14px; background: $o-gray-100; border-bottom: 1px solid $border-color; }
+    .sa_side_bell { color: var(--sa-blue); font-size: 17px; }
+    .sa_side_title { flex: 1 1 auto; line-height: 1.2; small { display: block; color: $text-muted; } }
+    .sa_side_x { border: 0; background: transparent; color: inherit; min-width: 42px; min-height: 40px; border-radius: 10px; font-size: 15px; &:hover, &:focus-visible { background: $o-gray-200; } }
+    .sa_side_list { overflow: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+    .sa_side_section { display: flex; flex-direction: column; gap: 8px; & + .sa_side_section { margin-top: 6px; } }
+    .sa_side_sect { display: flex; justify-content: space-between; align-items: center; border: 0; background: transparent; color: inherit; padding: 4px 2px; min-height: 34px; font-weight: 700; text-align: start; border-radius: 8px; &:hover, &:focus-visible { background: $o-gray-100; } .fa { width: 12px; } }
+    .sa_side_all { align-self: center; }
+    .sa_side_note { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 10px; border: 1px solid $border-color; border-radius: 11px; padding: 10px;
+        .sa_side_icon { width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: #e1eef6; color: var(--sa-blue); }
+        &.amber { border-color: #eac48c; background: #fff7e8; color: #4b2c00; .sa_side_icon { background: #fbe3bd; color: var(--sa-amber); } .sa_side_top small { color: inherit; } }
+        &.green .sa_side_icon { background: #dff2e7; color: var(--sa-green); }
+        &.red { border-color: #e7b1ab; background: #fdf3f2; .sa_side_icon { background: #fbe3e0; color: var(--sa-red); } .sa_side_top b { color: var(--sa-red); } } }
+    .sa_side_top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; small { color: $text-muted; white-space: nowrap; } }
+    .sa_side_body { overflow-wrap: anywhere; margin-top: 1px; }
+    .sa_side_do { display: flex; gap: 6px; margin-top: 7px; .btn { min-height: 32px; } }
+    .sa_side_none { padding: 28px 10px; text-align: center; color: $text-muted; .fa { font-size: 26px; color: var(--sa-green); margin-bottom: 6px; } }
+}
+.sa_side_n { display: inline-block; min-width: 20px; padding: 0 5px; border-radius: 99px; background: #b1271b; color: #fff; font-size: 12px; font-weight: 700; line-height: 20px; text-align: center; font-variant-numeric: tabular-nums; }
+.sa_side_tab { position: fixed; top: 120px; right: 0; z-index: 1030; min-width: 34px; min-height: 54px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; padding: 8px 6px;
+    background: $o-white; color: $body-color; border: 1px solid $border-color; border-right: 0; border-radius: 12px 0 0 12px; font-weight: 700; font-size: 16px; box-shadow: 0 4px 16px rgba(0, 0, 0, .16); transition: padding .12s;
+    &:hover, &:focus-visible { background: $o-gray-100; padding-right: 12px; } &.hot { border-color: #b1271b; } }
+@keyframes sa_side_in { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .sa_side { animation: none; } .sa_side_tab { transition: none; } }
+@media (max-width: 480px) { .sa_side { top: 52px; width: calc(100vw - 24px); } }
+@media print { .sa_side, .sa_side_tab { display: none; } }
+
+// the preview on the settings page
+.sa_notice_preview { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; margin-top: 14px; max-width: 720px;
+    .sa_pv { border: 1px solid $border-color; border-radius: 12px; padding: 12px; background: $o-white; &.on { border-color: #1c7245; box-shadow: 0 0 0 1px #1c7245; } }
+    .sa_pv_screen { position: relative; height: 130px; border: 1px solid $border-color; border-radius: 8px; background: $o-gray-100; margin-top: 8px; overflow: hidden; }
+    .sa_pv_panel { position: absolute; right: 0; top: 10px; width: 108px; height: 106px; background: $o-white; border: 1px solid $border-color; border-right: 0; border-radius: 8px 0 0 8px; padding: 6px; font-size: 10px; }
+    .sa_pv_row { height: 18px; border-radius: 5px; margin-top: 5px; background: #e1eef6; &.g { background: #dff2e7; } &.r { background: #fbe3e0; } }
+    .sa_pv_toast { position: absolute; right: 8px; top: 10px; width: 120px; background: #fff7e8; border: 1px solid #eac48c; border-radius: 6px; padding: 6px; font-size: 10px; color: #4b2c00; }
+}

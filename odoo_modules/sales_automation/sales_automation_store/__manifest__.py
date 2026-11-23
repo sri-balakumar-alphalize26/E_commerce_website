@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Sales Automation: Store Screen',
-    'version': '19.0.9.2.0',
+    'version': '19.0.9.3.0',
     'summary': 'New paid orders alert the shop, who pack them and call a rider',
     'description': """
 Puts the shop between the payment and the rider.
@@ -19,11 +19,13 @@ a person with their hands full actually needs.
     'category': 'Sales',
     'depends': ['sales_automation_delivery', 'bus'],
     'data': [
+        'security/sa_notice_security.xml',
         'security/ir.model.access.csv',
         'data/ir_cron.xml',
         'views/store_views.xml',
         'views/sale_order_store_views.xml',
         'views/store_menus.xml',
+        'views/sa_notice_settings_views.xml',
     ],
     'assets': {
         'web.assets_backend': [
@@ -34,11 +36,19 @@ a person with their hands full actually needs.
             'sales_automation_store/static/src/browser_tz_service.js',
             'sales_automation_store/static/src/store_screen.xml',
             'sales_automation_store/static/src/store_screen.scss',
+            'sales_automation_store/static/src/notice_shared.js',
             'sales_automation_store/static/src/enquiry_alarm_shared.js',
             'sales_automation_store/static/src/enquiry_screen.js',
             'sales_automation_store/static/src/enquiry_alarm_service.js',
             'sales_automation_store/static/src/enquiry_screen.xml',
             'sales_automation_store/static/src/enquiry_screen.scss',
+            'sales_automation_store/static/src/notice_service.js',
+            'sales_automation_store/static/src/notice_bell.js',
+            'sales_automation_store/static/src/notice_bell.xml',
+            'sales_automation_store/static/src/notice_bell.scss',
+            'sales_automation_store/static/src/notice_panel.js',
+            'sales_automation_store/static/src/notice_panel.xml',
+            'sales_automation_store/static/src/notice_panel.scss',
         ],
     },
     'installable': True,

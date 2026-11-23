@@ -1,0 +1,13 @@
+.sa_bell { position: relative; display: flex; align-items: center;
+    .sa_bell_btn { position: relative; border: 0; background: transparent; color: inherit; padding: 0 12px; min-height: 40px; }
+    .sa_bell_n { position: absolute; top: 2px; right: 2px; min-width: 17px; padding: 0 4px; border-radius: 99px; background: #b1271b; color: #fff; font-size: 11px; font-weight: 700; line-height: 17px; text-align: center; }
+    .sa_bell_panel { position: absolute; top: 100%; right: 0; z-index: 1050; width: 340px; max-width: calc(100vw - 16px); max-height: 70vh; overflow: auto;
+        background: $o-white; color: $body-color; border: 1px solid $border-color; border-radius: 9px; box-shadow: 0 10px 30px rgba(0, 0, 0, .2); }
+    .sa_bell_head { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-bottom: 1px solid $border-color; }
+    .sa_bell_row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; width: 100%; padding: 9px 12px; border: 0; border-bottom: 1px solid $border-color; background: transparent; color: inherit; text-align: start;
+        &:hover, &:focus-visible { background: $o-gray-100; } &.unread { font-weight: 600; background: #f3f8fb; } small { color: $text-muted; white-space: nowrap; } }
+    .sa_bell_text { overflow-wrap: anywhere; }
+    .sa_bell_dot { width: 9px; height: 9px; border-radius: 50%; margin-top: 6px; background: #0f5e8c; &.green { background: #1c7245; } &.red { background: #b1271b; } }
+    .sa_bell_none { padding: 22px 12px; text-align: center; color: $text-muted; }
+}
+@media (max-width: 480px) { .sa_bell .sa_bell_panel { position: fixed; top: 46px; left: 8px; right: 8px; width: auto; } }

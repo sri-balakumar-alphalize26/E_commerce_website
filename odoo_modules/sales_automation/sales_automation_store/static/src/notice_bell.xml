@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="sales_automation_store.Bell">
+        <div class="sa_bell" t-ref="root" t-att-class="{ 'd-none': !data.allowed }">
+            <button type="button" class="sa_bell_btn" t-on-click="toggle" aria-label="Sales notifications"
+                    t-att-aria-expanded="state.open ? 'true' : 'false'">
+                <i class="fa fa-bell" role="img" aria-hidden="true"/>
+                <span t-if="data.unread" class="sa_bell_n" t-esc="data.unread"/>
+            </button>
+            <div t-if="state.open" class="sa_bell_panel">
+                <div class="sa_bell_head">
+                    <b>Notifications</b>
+                    <button t-if="data.unread" type="button" class="btn btn-link btn-sm p-0" t-on-click="() => this.notice.seen()">Mark all as read</button>
+                </div>
+                <button t-foreach="data.rows" t-as="row" t-key="row.id" type="button" class="sa_bell_row"
+                        t-att-class="{ unread: !row.seen }" t-on-click="() => this.go(row)">
+                    <i class="sa_bell_dot" t-att-class="row.level"/>
+                    <span class="sa_bell_text"><b t-esc="row.title"/><br/><t t-esc="row.body"/></span>
+                    <small t-esc="when(row.at)"/>
+                </button>
+                <div t-if="!data.rows.length" class="sa_bell_none">No notifications yet.</div>
+            </div>
+        </div>
+    </t>
+</templates>
