@@ -112,18 +112,12 @@ class TestConfirmPictures(TransactionCase):
 
     def test_no_photo_makes_no_search(self):
         product = self.Product.create({'name': 'Zz Pictures None'})
-        settings = self.env['sa.ai.settings'].sudo().get_settings()
-        settings.confirm_fetch_images = True
         link = self._link(product)
         with patch('requests.get', side_effect=AssertionError('internet search')), \
-                patch('requests.post', side_effect=AssertionError('internet search')), \
-                patch.object(type(self.env['sa.ai.classifier']), '_call_gemini_image',
-                             return_value=(base64.b64decode(png(8)), 'image/png')) as drawn:
+                patch('requests.post', side_effect=AssertionError('internet search')):
             raw, source = link.request_id._sa_confirm_picture(fetch=True)
-        self.assertEqual(source, 'generated')
-        self.assertTrue(raw)
-        drawn.assert_called_once()
-        self.assertFalse(product.image_1920, "An AI drawing is never saved on the product")
+        self.assertEqual((raw, source), (b'', 'none'), 'nothing is drawn either (23 Nov 2026)')
+        self.assertFalse(product.image_1920)
 
     def test_the_search_is_gone(self):
         for name in ('_sa_search_pictures', '_sa_fetch_picture_from_internet', '_sa_picture_candidates'):

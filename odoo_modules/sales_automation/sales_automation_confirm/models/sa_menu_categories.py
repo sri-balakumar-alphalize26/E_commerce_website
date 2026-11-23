@@ -489,13 +489,6 @@ class SaGroupRequestMenuCategories(models.Model):
         # Nothing found (out-of-stock products are listed, so this is not in
         # the catalogue): "couldn't find - type the correct product name, or
         # hi" (owner, 22 Nov 2026). The search stays open for the next try.
-        # The old "Ask vendors for products we don't list" setting still
-        # hands it to the ordinary enquiry, which asks the vendors.
-        settings = self._settings()
-        if (getattr(settings, 'unlisted_action', 'sorry') or 'sorry') != 'sorry':
-            self.sudo().write({'sa_menu_ask_at': False})
-            _logger.info("Sales Automation: menu search %r found nothing - typed enquiry", term)
-            return None
         # In the catalogue but not on the menu (not published on the website):
         # the ordinary enquiry, which asks the vendors. Between 22 and 23 Nov
         # 2026 these were told "couldn't find" (5,849 of 8,067 products).
@@ -511,15 +504,7 @@ class SaGroupRequestMenuCategories(models.Model):
         reference or category. Stricter than `_sa_catalog_has` on purpose: a
         near miss or a sentence stays "couldn't find"."""
         self.ensure_one()
-        words = [w for w in self._sa_words(term or '') if len(w) >= 2]
-        if not words:
-            return False
-        domain = [('sale_ok', '=', True), ('active', '=', True), ('type', '!=', 'service')] \
-            + self._sa_menu_company_domain()
-        for w in words:
-            domain += ['|', '|', ('name', 'ilike', w), ('default_code', 'ilike', w),
-                       ('categ_id.complete_name', 'ilike', w)]
-        return bool(self.env['product.template'].sudo().search_count(domain, limit=1))
+        return bool(self._sa_listed_ids(term, 1))
 
     def _finder_start(self):
         """A typed word goes through the shop's own categories first (owner,
@@ -539,9 +524,6 @@ class SaGroupRequestMenuCategories(models.Model):
             if stocked or self._sa_menu_find_products(term, 0)[0]:
                 self._ensure_conversation()
                 self.sudo().write({'sa_menu_ask_at': fields.Datetime.now()})
-                self._say(_("Hi! You asked about *%(term)s* in *%(group)s* \U0001F447\n"
-                            "Just tap the options. _(Ref %(ref)s)_",
-                            term=term, group=self.group_id.name, ref=self.ref_code or self.id))
                 if self._sa_menu_search_show(term) is not None:
                     _logger.info("Sales Automation: enquiry %s - %r shown from the shop's categories",
                                  self.id, term)

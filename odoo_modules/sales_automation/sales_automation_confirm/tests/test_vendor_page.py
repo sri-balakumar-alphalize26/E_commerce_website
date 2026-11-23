@@ -198,9 +198,10 @@ class TestVendorPage(VendorCase):
         self.assertEqual((self.req.quote_ids.price, self.req.quote_ids.currency_id, self.req.quote_ids.sa_typed_currency),
                          (12.5, cur, cur.name))
 
-    def test_accept_restarts_the_window(self):
+    def test_accept_leaves_the_window_as_it_is(self):
+        before = self.req.sourcing_deadline
         self._press('accept')
-        self.assertGreater(self.req.sourcing_deadline, fields.Datetime.now() + timedelta(minutes=8))
+        self.assertEqual(self.req.sourcing_deadline, before, 'the window is what the setting says (23 Nov 2026)')
 
     def test_one_price(self):
         self._press('accept')

@@ -85,7 +85,11 @@ class SaConfirmLinkVendor(models.Model):
         is read in the chat: waiting, or given up for want of an answer."""
         self.ensure_one()
         req = self.request_id.sudo()
-        return req.state == 'sourcing' or (req.state == 'dropped' and req.drop_reason == 'no_vendor_reply')
+        if req.state == 'sourcing' or (req.state == 'dropped' and req.drop_reason == 'no_vendor_reply'):
+            return True
+        # late: kept and shown, for a day (owner, 23 Nov 2026)
+        return bool(req.sa_evaluated_on and req.sa_evaluated_on > fields.Datetime.now() - timedelta(days=1)
+                    and req.state in ('quoted', 'negotiating', 'awaiting_order_confirm', 'order_created', 'handed_off'))
 
     def _vendor_currency(self):
         self.ensure_one()
@@ -335,16 +339,6 @@ class SaGroupRequestVendorPage(models.Model):
         if not Link.search_count([('request_id', '=', self.id)] + mine, limit=1):
             self._sa_confirm_new_link({'kind': 'vendor', 'channel': 'whatsapp', 'partner_id': vendor.id,
                                        'phone': phone, 'sent_on': fields.Datetime.now()}, mine)
-
-    def _sa_vendor_window_again(self):
-        """They have it: the window starts again, as `_sa_ask_vendor_price` does."""
-        self.ensure_one()
-        if self.state == 'sourcing' and not self.sa_price_stalled:
-            window = max(1, self._settings().sourcing_window_minutes or 10)
-            fresh = fields.Datetime.add(fields.Datetime.now(), minutes=window)
-            if not self.sourcing_deadline or self.sourcing_deadline < fresh:
-                self.write({'sourcing_deadline': fresh})
-        return True
 
     def _sa_vendor_confirmed(self, phone):
         """ACCEPT on either of this vendor's pages."""

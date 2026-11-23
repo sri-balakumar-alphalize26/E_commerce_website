@@ -162,6 +162,8 @@ class SaGroupRequestConfirm(models.Model):
     def _on_confirmed(self):
         """Gate: nothing is priced or sourced until the page's ACCEPT."""
         self.ensure_one()
+        if not self._sa_need_listed():
+            return True
         settings = self._sa_confirm_settings()
         if not settings.confirm_enabled or not (self.product_id or self._sa_confirm_name()) \
                 or self.sa_confirm_accepted_on or self.env.context.get('sa_confirm_accepted'):
@@ -197,8 +199,6 @@ class SaGroupRequestConfirm(models.Model):
             if finder:
                 self._say(_("Noted - that is not it. Pick again below.\n\n_Ref %(ref)s_", ref=self.ref_code or self.id))
                 return self._finder_back()
-            self._say(_("Noted - that is not it. Checking what you asked for instead.\n\n_Ref %(ref)s_",
-                        ref=self.ref_code or self.id))
             if self.state == 'awaiting_confirm':
                 return self.with_context(sa_confirm_accepted=True)._reject_match()
             return True

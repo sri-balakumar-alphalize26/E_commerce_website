@@ -17,6 +17,7 @@ from urllib.parse import quote
 
 from odoo import _, api, fields, models
 from odoo.tools import html2plaintext, html_sanitize
+from odoo.addons.whatsapp_gateway.models import send_memo
 
 _logger = logging.getLogger(__name__)
 
@@ -59,7 +60,10 @@ class SaConfirmLink(models.Model):
     def create(self, vals_list):
         for vals in vals_list:
             if not vals.get('token') and vals.get('request_id'):
-                vals['token'] = self._sa_token_for(vals)
+                memo = send_memo.current(self.env)
+                kind = 'confirm|%s|%s|%s' % (vals.get('kind'), vals.get('channel'), vals.get('partner_id') or vals.get('phone'))
+                vals['token'] = (memo.value(kind, lambda v=vals: self._sa_token_for(v)) if memo is not None
+                                 else self._sa_token_for(vals))
         return super().create(vals_list)
     sent_on = fields.Datetime('Sent', readonly=True)
     reminded_on = fields.Datetime('Reminded', readonly=True)
