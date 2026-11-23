@@ -12,6 +12,8 @@ import pytz
 from odoo import http, fields
 from odoo.http import request
 
+from odoo.addons.sales_automation.controllers.link_expired import expired_page, visit_expired
+
 _logger = logging.getLogger(__name__)
 
 _NEXT = {
@@ -132,6 +134,8 @@ class SaDeliveryJob(http.Controller):
         picking = self._tracked(picking_id, token)
         if not picking:
             return request.not_found()
+        if picking.sale_id and visit_expired(picking.sale_id):
+            return expired_page()
         partner = picking.partner_id
         company = picking.company_id
         return request.render('sales_automation_delivery.delivery_track_page', {
@@ -369,7 +373,7 @@ class SaDeliveryJob(http.Controller):
     def track_position(self, picking_id, token=None, **kw):
         """What the customer's map polls for."""
         picking = self._tracked(picking_id, token)
-        if not picking:
+        if not picking or (picking.sale_id and visit_expired(picking.sale_id)):
             return request.make_json_response({'ok': False}, status=404)
         state = picking.sa_delivery_state
         # One answer, decided on the server: who may see the rider, the stop
