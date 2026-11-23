@@ -3,7 +3,8 @@
 
 `sales_automation` calls `_sa_conduct_gate` once the text and sender of an
 incoming message are known and before anything reads it. Its own version
-says "not handled". This one checks the list, and when a word hits, records
+says "not handled". This one checks the list, and when a listed word hits (exact
+matches only, no AI - owner, 22 Nov 2026), records
 the message as blocked, remarks the sender, deletes it in WhatsApp, warns,
 and re-scores - then says "handled" so no enquiry, quote or reply is made of it.
 
@@ -46,64 +47,21 @@ class ConductWebhook(WhatsAppWebhookGroups):
             extra = ' '.join(str(node.get(k) or '') for k in ('caption', 'fileName', 'title'))
             local_text = (text + ' ' + extra).strip()
 
-        # Tier 1 - the local list: certain, no model.
+        # The local list: whole listed words and phrases (and the same word
+        # disguised - "fuuuck", "f4ck"), and the adult-link list.
         if local_text.strip():
             hits = Remark.match_words(local_text, settings)
             if not hits:
                 hits = Remark.match_links(local_text, settings)
                 hit_type = 'link'
 
-        # Tier 2 - doubt: ask the model, and only then.
-        doubt_score, doubt_why = (0, [])
-        ask_later = None
-        if not hits and local_text.strip():
-            doubt_score, doubt_why = Remark.find_doubt(local_text, settings)
-            if settings.conduct_model_mode == 'all' and doubt_score < 50:
-                doubt_score, doubt_why = 50, doubt_why or ['every message']
-            if doubt_score >= max(1, settings.conduct_doubt_min or 50):
-                near = [w for w in doubt_why if '~' in w]
-                hint = '; '.join('"%s" looks like the banned word "%s"' % tuple(w.split('~', 1))
-                                 for w in near)
-                if getattr(settings, 'conduct_doubt_action', 'delete_first') == 'delete_first' \
-                        and settings.conduct_model_mode != 'all':
-                    # Removed now; the model grades the remark afterwards
-                    # (see the tail of this method). Waiting for it left a
-                    # rude word in the group for the whole model timeout.
-                    hits, hit_type = ['doubt: %s' % ', '.join(doubt_why)], 'doubt'
-                    decided_by, confidence = 'local', doubt_score
-                    ask_later = (local_text, hint)
-                    verdict = 'later'
-                else:
-                    verdict = Remark.classify_text(local_text, settings, hint=hint)
-                if verdict == 'later':
-                    pass
-                elif verdict is None:
-                    # Doubtful and nobody to ask: removed, as the owner asked.
-                    hits, hit_type = ['doubt: %s' % ', '.join(doubt_why)], 'doubt'
-                    decided_by, confidence = 'model_down', doubt_score
-                else:
-                    abusive, conf, reason = verdict
-                    if abusive and conf >= (settings.conduct_llm_min_confidence or 60):
-                        hits, hit_type = ['doubt: %s' % ', '.join(doubt_why)], 'doubt'
-                        decided_by, confidence = 'model', conf
-                    else:
-                        _logger.info("Conduct: doubtful but kept (%s, model %s%% %s): %r",
-                                     ', '.join(doubt_why), conf, reason, local_text[:60])
-
-        # Tier 3 - pictures and videos: always the model; when it is down,
-        # removed only if the words around it already looked wrong.
-        if not hits and node is not None and settings.conduct_media:
-            b64, mime = Remark.picture_of(session, data, kind, node, self._fetch_media)
-            if b64:
-                verdict = Remark.classify_image(b64, mime, settings)
-                if verdict is None and doubt_score >= max(1, settings.conduct_doubt_min or 50):
-                    hits, hit_type = ['doubt: %s %s' % (kind, ', '.join(doubt_why))], 'media'
-                    decided_by, confidence = 'model_down', doubt_score
-                elif verdict:
-                    hits, hit_type = ['sexual %s' % kind], 'media'
-                    decided_by, confidence = 'model', 100
-            if hits and not text.strip():
-                text = '[%s]%s' % (kind, (' ' + local_text) if local_text.strip() else '')
+        # Only the lists decide (owner, 22 Nov 2026: "no need AI, just only a
+        # perfect match for words"). The look-alike guess removed "poren"
+        # (Tamil "I'm going") as porno and "VAN SALE" as saala, and every
+        # doubtful message cost a model call. No look-alikes, no model for
+        # text or pictures - so no tokens.
+        if hits and node is not None and not text.strip():
+            text = '[%s]%s' % (kind, (' ' + local_text) if local_text.strip() else '')
         if not hits:
             return False
 
@@ -155,24 +113,6 @@ class ConductWebhook(WhatsAppWebhookGroups):
         remark._try_delete()
         remark._try_warn(settings.conduct_warn or 'off',
                          settings.conduct_warn_text or '')
-        if ask_later:
-            # The message is gone; this only grades the remark, so a model
-            # that disagrees lowers its weight instead of restoring anything.
-            try:
-                verdict = Remark.classify_text(ask_later[0], settings, hint=ask_later[1])
-            except Exception as err:  # noqa: BLE001 - never 500 the webhook
-                _logger.info("Conduct: late model grade failed: %s", err)
-                verdict = None
-            if verdict is not None:
-                abusive, conf, reason = verdict
-                vals = {'decided_by': 'model', 'confidence': conf, 'reason': reason}
-                if not (abusive and conf >= (settings.conduct_llm_min_confidence or 60)):
-                    vals.update({'note': 'Removed on the local doubt score; the model '
-                                         'did not call it abusive (%s%%).' % conf})
-                try:
-                    remark.write(vals)
-                except Exception as err:  # noqa: BLE001
-                    _logger.info("Conduct: could not grade remark %s: %s", remark.id, err)
         try:
             # A savepoint: two fast messages re-scoring the same row can
             # collide, and without it that error poisons the whole request
