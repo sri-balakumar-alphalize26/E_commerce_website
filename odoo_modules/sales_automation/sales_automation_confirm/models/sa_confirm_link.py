@@ -301,7 +301,7 @@ class SaConfirmLink(models.Model):
             out['price'] = self._money(price)
             # The website's rule: the "compare to" price, else the list price,
             # struck through when the customer pays less than it.
-            mrp = getattr(product, 'compare_list_price', 0.0) or product.list_price or 0.0
+            mrp = getattr(product, 'compare_list_price', 0.0) or req._sa_priced(product).list_price or 0.0
             if mrp > price + 0.001:
                 out['mrp'] = self._money(mrp)
                 out['off'] = int(round((mrp - price) * 100 / mrp))
@@ -366,7 +366,7 @@ class SaConfirmLink(models.Model):
             items = (items - rejected - product)[:limit]
             out = []
             for tmpl in items:
-                price = tmpl.list_price or 0.0
+                price = req._sa_priced(tmpl).list_price or 0.0
                 out.append({
                     'name': tmpl.name or '',
                     # on the image server: its own address, no stop at Odoo
@@ -471,8 +471,10 @@ class SaConfirmLink(models.Model):
             self.sudo().write({'opened_on': self.opened_on or fields.Datetime.now(), 'open_count': self.open_count + 1})
         return True
 
-    def _decide(self, action, ip='', user_agent=''):
-        """The first ACCEPT / REJECT is final. Returns the outcome key for the page."""
+    def _decide(self, action, ip='', user_agent='', later=False):
+        """The first ACCEPT / REJECT is final. Returns the outcome key for the page.
+        `later`: a customer's price and messages follow after the page moved on
+        (the "accepted" task of sales_automation)."""
         self.ensure_one()
         if action not in ('accept', 'reject'):
             self._record_click('open', ip, user_agent)
@@ -482,12 +484,20 @@ class SaConfirmLink(models.Model):
         # runs it again, where it finds the answer recorded (31 Oct 2026).
         self.env.cr.execute('SELECT id FROM %s WHERE id = %%s FOR UPDATE' % self._table, (self.id,))
         self.invalidate_recordset(['decided'])
-        if self.decided:
+        # a vendor asked on WhatsApp and on WeChat answers once
+        if self.decided or (self.kind == 'vendor' and self._vendor_state() != 'ask'):
             self._record_click('again', ip, user_agent)
             return 'again'
         self.sudo().write({'decided': action, 'decided_on': fields.Datetime.now(),
                            'decided_ip': (ip or '')[:64], 'decided_ua': (user_agent or '')[:300]})
         self._record_click(action, ip, user_agent)
+        if later and self.kind == 'customer':
+            req = self.request_id.sudo()
+            if action == 'accept':
+                # the reminders see at once that this customer is active
+                req.write({'sa_confirm_accepted_on': fields.Datetime.now()})
+            self.env['sa.after.task'].sudo()._queue(req, False, 'accepted', mode=action, ref=self.id)
+            return action
         try:
             # savepoint: a failed follow-up must not break the page that follows
             with self.env.cr.savepoint():

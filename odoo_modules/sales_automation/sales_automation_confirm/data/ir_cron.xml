@@ -11,6 +11,27 @@
             <field name="active">True</field>
             <field name="priority">40</field>
         </record>
+        <!-- 23 Nov 2026: a vendor who has not answered, or given no price -->
+        <record id="cron_sa_vendor_remind" model="ir.cron">
+            <field name="name">Sales Automation: Remind Vendors of a Price Check</field>
+            <field name="model_id" ref="model_sa_confirm_link"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_vendor_remind()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">minutes</field>
+            <field name="active">True</field>
+            <field name="priority">45</field>
+        </record>
+        <record id="cron_sa_confirm_links_clean" model="ir.cron">
+            <field name="name">Sales Automation: Clean Up Old Product Links</field>
+            <field name="model_id" ref="model_sa_confirm_link"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_links_clean()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+            <field name="active">True</field>
+            <field name="priority">70</field>
+        </record>
         <!-- 22 Nov 2026: "Back to <group>" needs the group's invite link -->
         <record id="cron_sa_fetch_group_invites" model="ir.cron">
             <field name="name">Sales Automation: Fetch WhatsApp Group Invite Links</field>

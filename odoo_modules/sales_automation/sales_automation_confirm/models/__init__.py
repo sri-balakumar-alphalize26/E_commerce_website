@@ -3,6 +3,7 @@ from . import sa_settings_confirm
 from . import product_image_fetch
 from . import sa_group_request_confirm
 from . import sa_wechat_confirm
+from . import sa_vendor_page
 from . import sa_group_request_store_confirm
 from . import sa_insight_confirm
 from . import sa_finder_confirm

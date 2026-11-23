@@ -10,10 +10,10 @@ the catalogue for it:
               offered).
   typed word → a category whose name matches opens ('categ:<id>'); several
               matching categories are offered ('findcat'); otherwise the
-              matching products, page by page ('find:<page>'). Nothing found
-              → listed but out of stock: the ordinary typed enquiry, which asks
-              the vendors; not listed at all: "Sorry, we don't have it -
-              contact us on ..." (22 Nov 2026).
+              matching products, page by page ('find:<page>'), out-of-stock
+              ones included and not marked (a tap on one asks the vendors).
+              Nothing found → "Sorry, we couldn't find anything for X - type
+              the correct product name, or hi" (22 Nov 2026).
   ALL CATEGORIES → the category tree, every level paged with MORE, so no
               category is ever left out ('categ', 'categp:<page>',
               'categ:<id>[:<page>]', 'prod:<id>[:<page>]').
@@ -227,8 +227,15 @@ class SaGroupRequestMenuCategories(models.Model):
         self._ask(body, [{'id': 'sa_menu_%d' % i, 'title': label} for i, label in enumerate(menu)])
         return True
 
+    def _sa_all_stock(self):
+        """These screens list out-of-stock products too; a tap on one asks the
+        vendors (owner, 22 Nov 2026). Nothing says "in stock" or "out of
+        stock" next to the names."""
+        return self.with_context(sa_menu_all_stock=True)
+
     def _sa_menu_show(self, level):
         self.ensure_one()
+        self = self._sa_all_stock()
         level = level or ''
         if level == 'main':
             # "...or just type the product you need": a word typed at the main
@@ -433,6 +440,9 @@ class SaGroupRequestMenuCategories(models.Model):
             'requester_partner_id': self.requester_partner_id.id or False,
             'raw_text': product.name, 'ai_search_term': product.name,
             'product_id': product.id, 'state': 'new',
+            # picked from the menu: out of stock is sourced, not refused
+            # (`_assess_availability` below)
+            'ai_source': 'menu',
         })
         self.sudo().write({'sa_menu_json': False, 'sa_menu_ask_at': False})
         _logger.info("Sales Automation: menu pick -> enquiry %s for %r", req.id, product.name)
@@ -476,15 +486,40 @@ class SaGroupRequestMenuCategories(models.Model):
             if shown is not None:
                 _logger.info("Sales Automation: menu search %r read as %r", term, fixed)
                 return shown
-        self.sudo().write({'sa_menu_ask_at': False})
-        # Nothing the shop lists at all: "Sorry, we don't have it" (22 Nov
-        # 2026). Listed but out of stock - or the old "ask vendors" setting -
-        # goes on to the ordinary enquiry, which sources it from the vendors.
-        if not self._sa_catalog_has(term) and self._sa_say_not_stocked(term):
-            _logger.info("Sales Automation: menu search %r - not in the catalogue, told the customer", term)
-            return True
-        _logger.info("Sales Automation: menu search %r found nothing - typed enquiry", term)
-        return None
+        # Nothing found (out-of-stock products are listed, so this is not in
+        # the catalogue): "couldn't find - type the correct product name, or
+        # hi" (owner, 22 Nov 2026). The search stays open for the next try.
+        # The old "Ask vendors for products we don't list" setting still
+        # hands it to the ordinary enquiry, which asks the vendors.
+        settings = self._settings()
+        if (getattr(settings, 'unlisted_action', 'sorry') or 'sorry') != 'sorry':
+            self.sudo().write({'sa_menu_ask_at': False})
+            _logger.info("Sales Automation: menu search %r found nothing - typed enquiry", term)
+            return None
+        # In the catalogue but not on the menu (not published on the website):
+        # the ordinary enquiry, which asks the vendors. Between 22 and 23 Nov
+        # 2026 these were told "couldn't find" (5,849 of 8,067 products).
+        if self._sa_listed_unshown(term):
+            self.sudo().write({'sa_menu_ask_at': False})
+            _logger.info("Sales Automation: menu search %r is not on the menu - typed enquiry", term)
+            return None
+        self.sudo().write({'sa_menu_ask_at': fields.Datetime.now()})
+        return self._sa_say_not_found(term)
+
+    def _sa_listed_unshown(self, term):
+        """A sellable product of this company has every typed word in its name,
+        reference or category. Stricter than `_sa_catalog_has` on purpose: a
+        near miss or a sentence stays "couldn't find"."""
+        self.ensure_one()
+        words = [w for w in self._sa_words(term or '') if len(w) >= 2]
+        if not words:
+            return False
+        domain = [('sale_ok', '=', True), ('active', '=', True), ('type', '!=', 'service')] \
+            + self._sa_menu_company_domain()
+        for w in words:
+            domain += ['|', '|', ('name', 'ilike', w), ('default_code', 'ilike', w),
+                       ('categ_id.complete_name', 'ilike', w)]
+        return bool(self.env['product.template'].sudo().search_count(domain, limit=1))
 
     def _finder_start(self):
         """A typed word goes through the shop's own categories first (owner,
@@ -496,6 +531,7 @@ class SaGroupRequestMenuCategories(models.Model):
         fallback for what these screens cannot show - a product that is out
         of stock, or nothing on the shelf at all."""
         self.ensure_one()
+        self = self._sa_all_stock()
         term = ' '.join((self.ai_search_term or self.raw_text or '').split())[:80]
         if self.group_id and len(term) >= 3:
             cats = self._sa_menu_find_categories(term)
@@ -517,6 +553,7 @@ class SaGroupRequestMenuCategories(models.Model):
         """Show what `term` finds - a category, a choice of categories, or the
         products. None when it finds nothing."""
         self.ensure_one()
+        self = self._sa_all_stock()
         self.sudo().write({'sa_menu_term': term})
         cats = self._sa_menu_find_categories(term)
         if len(cats) == 1:
@@ -561,11 +598,85 @@ class SaGroupRequestMenuCategories(models.Model):
         if ok and pending == 'ask':
             clean = ' '.join((text or '').split())
             try:
-                if self._sa_menu_find_categories(clean) or self._sa_menu_spell(clean):
+                if self._sa_all_stock()._sa_menu_find_categories(clean) or self._sa_menu_spell(clean):
                     return False
             except Exception as err:  # noqa: BLE001 - the name question still works
                 _logger.info("Sales Automation: name check for %r skipped: %s", clean, err)
         return ok
+
+    # ------------------------------------------------------------------
+    # While an order waits for its details (sa_group_details.py)
+    # ------------------------------------------------------------------
+    @api.model
+    def _sa_details_menu_newer(self, waiting, message):
+        """This sender opened the menu / NEW ORDER (or was shown the
+        catalogue) after the details question went out, in the last
+        SEARCH_MINUTES: what they type is a search, not an answer."""
+        floor = fields.Datetime.now() - timedelta(minutes=SEARCH_MINUTES)
+        if waiting.profile_asked_on and waiting.profile_asked_on > floor:
+            floor = waiting.profile_asked_on
+        rows = self.sudo().search([('group_id', '=', waiting.group_id.id),
+                                   ('sa_menu_ask_at', '>', floor)],
+                                  order='sa_menu_ask_at desc, id desc', limit=10)
+        return any(r._sa_asked_of(message) for r in rows)
+
+    def _sa_menu_host(self):
+        """A row of this customer's to post catalogue screens from - never the
+        waiting order itself: every screen is a poll, and the order keeps only
+        its last few poll ids, so its YES / NO poll would be pushed out. Like
+        the first-hello row of `_sa_returning_menu`: closed, so nothing reads
+        it as a request."""
+        self.ensure_one()
+        who = self._sa_menu_sender_domain()
+        if who is not None:
+            since = fields.Datetime.now() - timedelta(days=1)
+            host = self.sudo().search([('group_id', '=', self.group_id.id), ('state', '=', 'dropped'),
+                                       ('order_id', '=', False), ('create_date', '>=', since)] + who,
+                                      order='id desc', limit=1)
+            if host:
+                return host
+        return self.sudo().create({
+            'group_id': self.group_id.id,
+            'requester_phone': self.requester_phone or '',
+            'requester_lid': self.requester_lid or '',
+            'requester_name': self.requester_name or '',
+            'requester_is_lid': self.requester_is_lid,
+            'requester_partner_id': self.requester_partner_id.id or False,
+            'raw_text': self.raw_text or '',
+            'currency_id': self._company_for(self.group_id).currency_id.id,
+            'state': 'dropped', 'drop_reason': 'not_product', 'ai_source': 'prefilter',
+        })
+
+    def _sa_details_catalog_show(self, term):
+        """A product word typed on the details read-back: its catalogue
+        screens, from the customer's menu row; the order keeps waiting."""
+        self.ensure_one()
+        host = self._sa_menu_host().with_context(sa_reply_to=self.env.context.get('sa_reply_to'),
+                                                  sa_trigger_msg=self.env.context.get('sa_trigger_msg'))
+        if self._sa_is_bare_answer(term) or self._sa_is_greeting(term):
+            return None
+        shown = host._sa_menu_search_show(term)
+        if shown is not None:
+            return shown
+        fixed = host._sa_menu_spell(term)
+        if fixed:
+            shown = host._sa_menu_search_show(fixed)
+            if shown is not None:
+                _logger.info("Sales Automation: details-time search %r read as %r", term, fixed)
+                return shown
+        # the retry ("type the correct product name") is a search too
+        host.sudo().write({'sa_menu_ask_at': fields.Datetime.now()})
+        return None
+
+    def _assess_availability(self, product, fresh=False):
+        """Picked from the menu and out of stock: sellable - it is bought in
+        from the vendors (owner, 22 Nov 2026), not refused."""
+        sellable = super()._assess_availability(product, fresh=fresh)
+        if not sellable and self.ai_source == 'menu':
+            _logger.info("Sales Automation: enquiry %s - %s is out of stock, the vendors are asked",
+                         self.id, product.display_name)
+            return True
+        return sellable
 
     @api.model
     def _sa_menu_find_categories_all(self):

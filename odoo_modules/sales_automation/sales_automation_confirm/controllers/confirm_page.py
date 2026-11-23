@@ -11,7 +11,8 @@ the picture, `/wa/confirm/<token>/accept|reject` the decision (POST only).
 import html
 import logging
 
-from odoo import http
+from odoo import fields, http
+from odoo.addons.sales_automation.controllers.link_expired import expired_page
 from odoo.addons.web.controllers.home import Home
 from odoo.addons.web.controllers.utils import ensure_db
 from odoo.http import request
@@ -111,6 +112,15 @@ _PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8">
  .done b{display:block;font-size:16px}.done small{display:block;font-size:12.5px;font-weight:500;margin-top:2px;overflow-wrap:anywhere}
  .done.acc{background:var(--ok-bg);color:#17703a}.done.acc i{background:var(--ok)}
  .done.rej{background:var(--err-bg);color:var(--err)}.done.rej i{background:var(--err)}
+ .res{width:100%%;max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+ .vp label{display:block;font-size:13px;font-weight:800;letter-spacing:.02em;color:var(--navy);margin:12px 0 6px}
+ .vp p{margin:0;font-size:16px}
+ .vp .amt{display:flex;align-items:stretch;border:2px solid #b9c7d2;border-radius:12px;overflow:hidden;background:#fff}
+ .vp .amt:focus-within{border-color:var(--blue)}
+ .vp .amt b{display:grid;place-items:center;padding:0 14px;background:var(--soft);border-right:1px solid var(--line);color:var(--navy)}
+ .vp .amt input{flex:1;min-width:0;border:0;outline:0;padding:14px;font:inherit;font-size:22px;font-weight:700}
+ .vp .btn{margin-top:12px}
+ .vp .verr{color:var(--err);font-weight:600;font-size:14px;margin-top:8px;min-height:0}
  .lower{display:grid;gap:14px;grid-template-columns:minmax(0,1fr)}
  .top{grid-template-columns:minmax(0,1fr)}
  .top>*,.lower>*{min-width:0}
@@ -222,6 +232,7 @@ function closeOv(){document.getElementById('ov').style.display='none'}
   zp.style.backgroundPosition=(lw<w?-(lx-x)*Z:(pw-w*Z)/2)+'px '+(lh<h?-(ly-y)*Z:(ph-h*Z)/2)+'px';
  });
 })();
+window.addEventListener('pageshow',function(e){if(e.persisted)location.reload()});
 </script></body></html>"""
 
 
@@ -237,33 +248,24 @@ def _page(title, body, status=200, ask='', body_class=''):
 
 
 def _back_button(link):
-    """After the answer: straight back to the WhatsApp group the customer
-    came from - "Back to <group name>" (its invite link opens the chat for a
-    member) - or a chat with the shop's number when the group's link is not
-    known. Both open on a phone and on a computer (WhatsApp Web / Desktop).
-
-    The tap opens WhatsApp and then this tab tries to close itself; a
-    browser only lets a page close a tab a script opened, so when it stays
-    open the page says it is done instead (22 Nov 2026)."""
+    """After the answer: back to the WhatsApp group the customer came from -
+    "Back to <group name>", in this tab, by its invite link. Without that link
+    only the words: never a private chat with the shop's number (owner,
+    23 Nov 2026)."""
     group = link.sudo().request_id.group_id
-    url = 'https://wa.me/'
+    url = ''
     try:
         if group and hasattr(group, '_sa_back_url'):
-            url = group._sa_back_url() or url
+            url = group._sa_back_url() or ''
     except Exception as err:  # noqa: BLE001 - the page must still render
         _logger.info("Confirm page: back link for %s unavailable: %s", link.id, err)
+    name = html.escape((group.name or '').strip()[:40])
     if url.startswith('https://chat.whatsapp.com/'):
-        label = 'Back to %s' % html.escape((group.name or '').strip()[:40] or 'WhatsApp group')
-    else:
-        label = 'Back to WhatsApp'
-    return ('<a class="btn ok back" href="%s" target="_blank" rel="noopener" onclick="saBack()" '
-            'style="display:block;text-decoration:none;margin-top:12px;padding-top:15px">'
-            '&#8617;&#65039; %s</a>'
-            '<p id="sa-done" style="display:none;text-align:center;margin:10px 0 0;color:#2e7d32">'
-            '&#9989; Done - you can close this tab.</p>'
-            '<script>function saBack(){setTimeout(function(){try{window.close();}catch(e){}'
-            'var p=document.getElementById("sa-done");if(p){p.style.display="block";}},700);}</script>'
-            % (html.escape(url, quote=True), label))
+        return ('<a class="btn ok back" href="%s" rel="noopener" '
+                'style="display:block;text-decoration:none;margin-top:12px;padding-top:15px">'
+                '&#8617;&#65039; Back to %s</a>' % (html.escape(url, quote=True), name or 'WhatsApp group'))
+    return ('<p style="text-align:center;margin:14px 0 0;color:#2e7d32">&#9989; Done. Go back to %s in WhatsApp.</p>'
+            % ('the <b>%s</b> group' % name if name else 'the group'))
 
 
 def _trust_html(badges):
@@ -358,6 +360,8 @@ class SaConfirmPage(http.Controller):
         """Design 1 of 13 Nov 2026, "Shop page": photos, name, price and the
         two answers like the 369 Mart product page, the details underneath.
         On a phone the answers are pinned to the bottom of the screen."""
+        if link.decided or (link.kind == 'vendor' and link._vendor_state() != 'ask'):
+            return self._render_result(link, outcome)
         req = link.request_id
         product = req.product_id
         # 13 Nov 2026, owner: English only, supplier links too (they used to
@@ -450,45 +454,30 @@ class SaConfirmPage(http.Controller):
         parts = link._shop_sections()
         info += _trust_html(parts.get('trust'))
 
-        if link.decided:
-            when = link.decided_on
-            stamp = (when.strftime('%d %b %Y %H:%M') + ' UTC') if when else ''
-            accepted = link.decided == 'accept'
-            # "fresh": the answer was given just now - the tick / cross draws itself.
-            fresh = ' fresh' if outcome in ('accept', 'reject') else ''
-            icon = ('<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" '
-                    'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="%s"/></svg>'
-                    % ('M5 12l5 5L20 7' if accepted else 'M6 6l12 12M18 6L6 18'))
-            info = ('<div class="done %s%s" role="status"><i>%s</i><span><b>%s%s</b><small>%s</small></span></div>'
-                    % ('acc' if accepted else 'rej', fresh, icon,
-                       'You accepted this product' if accepted else 'You rejected this product',
-                       zh('已确认' if accepted else '已拒绝'),
-                       html.escape(' · '.join(p for p in (stamp, link.identity or '') if p)))) + info
-            if outcome == 'again':
-                info += '<div class="foot">Your answer was already recorded and cannot be changed.%s</div>' % zh('您的回复已记录，无法更改。')
-            info += '<div class="foot">Your answer is saved. We will carry on in WhatsApp.%s</div>' % zh('您的回复已保存。')
-            if link.kind == 'customer' and (link.channel or 'whatsapp') == 'whatsapp':
-                info += _back_button(link)
-            bar, body_class = '', ''
-        else:
-            # saving() greys both buttons after the first press: a second tap
-            # would send the answer again while the first is still saving.
-            # The same words the chat and the manual use: "tap ✔ ACCEPT".
-            yes = '&#10004; ACCEPT'
-            # The pressed button spins while it saves, the other one fades back.
-            bar = ('<div class="bar"><script>function saving(f){if(window.__sent)return false;window.__sent=true;'
-                   'var me=f.querySelector(".btn");document.querySelectorAll(".btn").forEach(function(b){'
-                   'b.classList.add(b===me?"busy":"dim");b.disabled=true});'
-                   'me.innerHTML="Saving&hellip;";return true}</script>'
-                   '<div class="acts">'
-                   '<form class="f-no" method="post" action="/wa/confirm/%(t)s/reject" onsubmit="return confirm(\'Reject this product?\') &amp;&amp; saving(this)">'
-                   '<button class="btn no" type="submit">&#10008; REJECT%(r)s</button></form>'
-                   '<form class="f-ok" method="post" action="/wa/confirm/%(t)s/accept" onsubmit="return saving(this)">'
-                   '<button class="btn ok" type="submit">%(y)s%(a)s</button></form></div>'
-                   '<div class="foot">One answer only - the first tap is final.%(o)s</div></div>'
-                   % {'t': link.token, 'y': yes, 'a': zh('接受'), 'r': zh('拒绝'),
-                      'o': zh('只能回复一次，首次点击即为最终答复。')})
-            body_class = 'open'
+        # saving() greys both buttons after the first press: a second tap
+        # would send the answer again while the first is still saving.
+        # The same words the chat and the manual use: "tap ✔ ACCEPT".
+        yes = '&#10004; ACCEPT'
+        # The pressed button spins while it saves, the other one fades back.
+        bar = ('<div class="bar"><script>function saving(f){if(window.__sent)return false;window.__sent=true;'
+               'var me=f.querySelector(".btn");document.querySelectorAll(".btn").forEach(function(b){'
+               'b.classList.add(b===me?"busy":"dim");b.disabled=true});'
+               'me.innerHTML="Saving&hellip;";'
+               # One entry in the phone's history: the answer goes in the
+               # background and the page is replaced, so Back leaves it.
+               'if(!window.fetch)return true;'
+               'fetch(f.action,{method:"POST",credentials:"same-origin",redirect:"manual"}).then(function(r){'
+               'if(r.type==="opaqueredirect"||r.ok){location.replace("/wa/confirm/%(t)s?done=1")}else{f.submit()}'
+               '}).catch(function(){f.submit()});return false}</script>'
+               '<div class="acts">'
+               '<form class="f-no" method="post" action="/wa/confirm/%(t)s/reject" onsubmit="return confirm(\'Reject this product?\') &amp;&amp; saving(this)">'
+               '<button class="btn no" type="submit">&#10008; REJECT%(r)s</button></form>'
+               '<form class="f-ok" method="post" action="/wa/confirm/%(t)s/accept" onsubmit="return saving(this)">'
+               '<button class="btn ok" type="submit">%(y)s%(a)s</button></form></div>'
+               '<div class="foot">One answer only - the first tap is final.%(o)s</div></div>'
+               % {'t': link.token, 'y': yes, 'a': zh('接受'), 'r': zh('拒绝'),
+                  'o': zh('只能回复一次，首次点击即为最终答复。')})
+        body_class = 'open'
 
         rows = ''.join('<tr><td>%s%s</td><td>%s</td></tr>' % (html.escape(en), zh(html.escape(cn)) if cn != en else '',
                                                              html.escape(str(val)).replace('\n', '<br>'))
@@ -508,24 +497,89 @@ class SaConfirmPage(http.Controller):
                        % (ex['rating'], '&#9733;' * int(round(ex['rating'])) + '&#9734;' * (5 - int(round(ex['rating']))),
                           ex['rating_count'], '' if ex['rating_count'] == 1 else 's',
                           ('<ul class="rv">%s</ul>' % items) if items else ''))
-        # After Reject: products like it, each a WhatsApp "I want ..." link (13 Nov 2026).
-        similar = ''
-        if link.kind == 'customer' and link.decided == 'reject':
-            items = link._similar_after_reject()
-            if items:
-                cards = ''.join(
-                    '<a class="sim-item" href="%s" target="_blank" rel="noopener">%s<b>%s</b>%s<em>Ask on WhatsApp</em></a>'
-                    % (html.escape(i['url']),
-                       ('<img src="%s" alt="" loading="lazy">' % html.escape(i['image'])) if i['image'] else '<span class="sim-noimg"></span>',
-                       html.escape(i['name']), ('<small>%s</small>' % html.escape(i['price'])) if i['price'] else '')
-                    for i in items)
-                similar = ('<section class="card sec wide sim"><h2>Not this one?</h2>'
-                           '<p class="sim-sub">Tap one of these to ask us on WhatsApp. We are also looking for the right one for you.</p>'
-                           '<div class="sim-grid">%s</div></section>' % cards)
         body = ('<div class="top"><div class="media">%s</div><div class="info">%s%s</div></div>'
-                '<div class="lower">%s%s%s%s</div>'
-                % (media, info, bar, similar, details, reviews, _shop_sections_html(parts, shown, zh)))
+                '<div class="lower">%s%s%s</div>'
+                % (media, info, bar, details, reviews, _shop_sections_html(parts, shown, zh)))
         return _page(title, body, ask=ask, body_class=body_class)
+
+    def _similar_html(self, link):
+        """After Reject: products like it, each a WhatsApp "I want ..." link (13 Nov 2026)."""
+        items = link._similar_after_reject()
+        if not items:
+            return ''
+        cards = ''.join(
+            '<a class="sim-item" href="%s" target="_blank" rel="noopener">%s<b>%s</b>%s<em>Ask on WhatsApp</em></a>'
+            % (html.escape(i['url']),
+               ('<img src="%s" alt="" loading="lazy">' % html.escape(i['image'])) if i['image'] else '<span class="sim-noimg"></span>',
+               html.escape(i['name']), ('<small>%s</small>' % html.escape(i['price'])) if i['price'] else '')
+            for i in items)
+        return ('<section class="card sec wide sim"><h2>Not this one?</h2>'
+                '<p class="sim-sub">Tap one of these to ask us on WhatsApp. We are also looking for the right one for you.</p>'
+                '<div class="sim-grid">%s</div></section>' % cards)
+
+    def _render_result(self, link, outcome=None, error=''):
+        """A used link (owner, 23 Nov 2026): only what was done - no pictures, no
+        details, no ACCEPT. For a vendor who accepted: the price, once."""
+        req = link.request_id
+        vendor = link.kind == 'vendor'
+        state = link._vendor_state() if vendor else ('accepted' if link.decided == 'accept' else 'rejected')
+        accepted = state != 'rejected'
+        when = link.decided_on or (link._vendor_links().filtered('decided').sorted('decided_on')[:1].decided_on
+                                   if vendor else False)
+        stamp = (when.strftime('%d %b %Y %H:%M') + ' UTC') if when else ''
+        product = link._product()
+        name = (req._sa_confirm_name() if getattr(req, 'sa_variant_id', False) else '') or product.name \
+            or req._sa_confirm_name() or ''
+        fresh = ' fresh' if outcome in ('accept', 'reject') else ''
+        tick = ('<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" '
+                'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="%s"/></svg>')
+        box = '<div class="done %s%s" role="status"><i>%s</i><span><b>%s</b><small>%s</small></span></div>'
+        out = box % ('acc' if accepted else 'rej', fresh,
+                     tick % ('M5 12l5 5L20 7' if accepted else 'M6 6l12 12M18 6L6 18'),
+                     'You accepted this product' if accepted else 'You rejected this product', html.escape(stamp))
+        out += '<section class="card"><h1 class="nm">%s</h1><div class="foot" style="text-align:left">Ref #%s</div></section>' % (
+            html.escape(str(name)), html.escape(req.ref_code or ''))
+        if vendor and state == 'priced':
+            amount, cur = link._vendor_money()
+            out += box % ('acc', '', tick % 'M5 12l5 5L20 7',
+                          html.escape(('Your price %s %s was received' % (cur, '%.2f' % amount)).replace('  ', ' ')),
+                          'Our salesman will contact you soon. Thank you!')
+        elif vendor and state == 'accepted':
+            out += self._price_form(link, name, error) if link._vendor_price_open() else (
+                '<section class="card">This price check is already closed. Thank you.</section>')
+        elif not vendor:
+            if outcome == 'again':
+                out += '<div class="foot">Your answer was already recorded and cannot be changed.</div>'
+            out += '<div class="foot">Your answer is saved. We will carry on in WhatsApp.</div>'
+            if (link.channel or 'whatsapp') == 'whatsapp':
+                out += _back_button(link)
+            if outcome == 'reject' and when and (fields.Datetime.now() - when).total_seconds() < 600:
+                out += self._similar_html(link)
+        return _page('Ref #%s' % html.escape(req.ref_code or ''), '<div class="res">%s</div>' % out)
+
+    def _price_form(self, link, name, error=''):
+        cur = html.escape(link._vendor_currency() or '')
+        qty = int(link.request_id.qty or 0)
+        return (
+            '<section class="card vp"><p>&#128077; Good - what is your best price for <b>%(name)s</b>?%(qty)s</p>'
+            '<form method="post" action="/wa/confirm/%(t)s/price" onsubmit="return sendPrice(this)">'
+            '<label for="amount">&#9997;&#65039; TYPE YOUR AMOUNT IN %(cur)s</label>'
+            '<div class="amt"><b>%(cur)s</b><input id="amount" name="amount" type="text" inputmode="decimal" '
+            'autocomplete="off" maxlength="14" required placeholder="like 500"></div>'
+            '<div class="verr" id="verr" role="alert">%(err)s</div>'
+            '<button class="btn ok" type="submit">Send price</button></form>'
+            '<script>function sendPrice(f){var b=f.querySelector(".btn"),e=document.getElementById("verr");'
+            'if(b.disabled)return false;e.textContent="";b.disabled=true;b.classList.add("busy");'
+            'if(!window.fetch)return true;'
+            # one entry in the phone's history, and no second send
+            'var d=new URLSearchParams();d.set("amount",f.amount.value);'
+            'fetch(f.action,{method:"POST",body:d,credentials:"same-origin",headers:{"X-Requested-With":"fetch"}})'
+            '.then(function(r){return r.json()}).then(function(a){if(a.ok){location.replace("/wa/confirm/%(t)s?done=1")}'
+            'else{b.disabled=false;b.classList.remove("busy");e.textContent=a.error}})'
+            '.catch(function(){b.disabled=false;b.classList.remove("busy");'
+            'e.textContent="Not sent. Please check your internet and press Send price again."});return false}</script></section>'
+            % {'name': html.escape(str(name)), 't': link.token, 'cur': cur, 'err': html.escape(error or ''),
+               'qty': ('<br>Quantity: <b>%d</b>' % qty) if qty else ''})
 
     @http.route('/wa/confirm/<string:token>', type='http', auth='public', methods=['GET'], csrf=False)
     def page(self, token, **kw):
@@ -541,6 +595,10 @@ class SaConfirmPage(http.Controller):
                              '<script>setTimeout(function(){location.replace("/wa/confirm/%s?r=%d")},3000)</script>'
                              % (html.escape(token), tries + 1))
             return _not_found()
+        if link._link_expired():
+            return expired_page()
+        if link.decided and kw.get('done') in ('1', 'again'):
+            return self._render(link, outcome='again' if kw.get('done') == 'again' else link.decided)
         ip, ua = _client()
         try:
             with request.env.cr.savepoint():
@@ -563,7 +621,7 @@ class SaConfirmPage(http.Controller):
         changes content, so phones and Cloudflare keep it for a year instead of
         coming back to the server for every picture."""
         link = self._link(token)
-        if not link:
+        if not link or link._link_expired():
             return request.not_found()
         entries = link._picture_entries()
         if not 0 <= n < len(entries):
@@ -611,7 +669,28 @@ class SaConfirmPage(http.Controller):
         link = self._link(token)
         if not link:
             return _not_found()
+        if link._link_expired():
+            return expired_page()
         action = 'accept' if request.httprequest.path.endswith('/accept') else 'reject'
         ip, ua = _client()
-        outcome = link._decide(action, ip, ua)
-        return self._render(link, outcome=outcome)
+        # the price and the messages follow once the page has moved on
+        outcome = link._decide(action, ip, ua, later=True)
+        # shown by a page of its own address: reloading or Back never answers again
+        return request.redirect('/wa/confirm/%s?done=%s' % (
+            link.token, 'again' if outcome == 'again' else '1'), code=303)
+
+    @http.route('/wa/confirm/<string:token>/price', type='http', auth='public', methods=['POST'], csrf=False)
+    def price(self, token, amount=None, **kw):
+        """The vendor's price, typed on the page after ACCEPT. One answer."""
+        link = self._link(token)
+        quiet = request.httprequest.headers.get('X-Requested-With') == 'fetch'
+        if not link or link.kind != 'vendor':
+            return request.make_json_response({'ok': False, 'error': 'This link is not valid.'}, status=404) if quiet else _not_found()
+        if link._link_expired():
+            return request.make_json_response({'ok': False, 'error': 'This link has expired.'}, status=410) if quiet else expired_page()
+        error = str(link._vendor_price(amount) or '')
+        if quiet:
+            return request.make_json_response({'ok': not error, 'error': error})
+        if error:
+            return self._render_result(link, error=error) if link._vendor_state() != 'ask' else self._render(link)
+        return request.redirect('/wa/confirm/%s?done=1' % link.token, code=303)

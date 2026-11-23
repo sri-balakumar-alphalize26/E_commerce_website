@@ -185,7 +185,8 @@ class SaGroupRequestConfirm(models.Model):
         if link.kind == 'customer':
             finder = self.state == 'finding' and self.finder_step == 'confirm'
             if action == 'accept':
-                self.sudo().write({'sa_confirm_accepted_on': fields.Datetime.now()})
+                if not self.sa_confirm_accepted_on:
+                    self.sudo().write({'sa_confirm_accepted_on': fields.Datetime.now()})
                 self._say(_("✅ Confirmed - getting your price now.\n\n_Ref %(ref)s_",
                             ref=self.ref_code or self.id))
                 if finder:
@@ -207,9 +208,12 @@ class SaGroupRequestConfirm(models.Model):
         session = self.group_id.employee_session_id.session_id or self.group_id.session_id
         phone = ''.join(ch for ch in (link.phone or link.partner_id.phone or '') if ch.isdigit())
         if action == 'accept':
+            # the price is asked on the page itself (sa_vendor_page.py)
             if link.partner_id and link.partner_id not in self.sa_vendor_yes_ids:
                 self.sudo().write({'sa_vendor_yes_ids': [(4, link.partner_id.id)]})
-            return self._sa_ask_vendor_price(session, phone)
+            self._sa_vendor_window_again()
+            self._sa_enquiry_notify()
+            return True
         return self._sa_vendor_has_none(session, phone, link.partner_id)
 
     # ------------------------------------------------------------------
@@ -277,5 +281,5 @@ class SaGroupRequestConfirm(models.Model):
             return super()._sa_vendor_confirm_first_text(phone)
         return _("⚠️ Please check the product first and tap "
                  "*✔ ACCEPT* if you have this exact product:\n%(url)s\n\n"
-                 "Then send your price, for example *#%(ref)s 450*.",
-                 url=link._url(), ref=self.ref_code)
+                 "Your price is asked on the same page.",
+                 url=link._url())

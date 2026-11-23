@@ -12,6 +12,8 @@
                             <field name="confirm_enabled"/>
                             <field name="confirm_vendor_enabled"/>
                             <field name="confirm_remind_minutes"/>
+                            <field name="vendor_remind_minutes" invisible="not confirm_vendor_enabled"/>
+                            <field name="vendor_remind_max" invisible="not confirm_vendor_enabled"/>
                         </group>
                         <group string="Pictures">
                             <field name="confirm_fetch_images"/>
