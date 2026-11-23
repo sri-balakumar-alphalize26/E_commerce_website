@@ -7,7 +7,7 @@ digit: step 1 asks whether they have it (1 / 2), step 2 asks the price
 """
 import logging
 
-from odoo import _, models
+from odoo import _, fields, models
 
 _logger = logging.getLogger(__name__)
 
@@ -49,14 +49,25 @@ class SaGroupRequestWeChat(models.Model):
                 "1 = 有货\n"
                 "2 = 没有" % {'ref': ref, 'name': name, 'qty': qty_n or 1})
 
-    def _sa_wechat_price_text(self):
-        """Step 2: the price, a number only."""
+    def _sa_wechat_price_text(self, partner=None):
+        """Step 2: the price, a number only, in the vendor's currency (the
+        same as on WhatsApp, 23 Nov 2026)."""
         self.ensure_one()
-        return ("Your price?\n"
+        cur = self._sa_vendor_currency(partner.phone, partner) if partner else ''
+        return ("Your price%(en)s?\n"
                 "Reply the number only, e.g. 45\n"
                 "\n"
-                "单价？\n"
-                "只回复数字，例如 45")
+                "单价%(zh)s？\n"
+                "只回复数字，例如 45" % {'en': (' in %s' % cur) if cur else '', 'zh': ('（%s）' % cur) if cur else ''})
+
+    def _sa_partner_currency(self, partner, phone=None, company=None):
+        """A WeChat vendor with neither a country nor a phone prices in CNY."""
+        partner = partner or self.env['res.partner']
+        if (partner and partner._sa_wechat_reachable() and not partner.country_id
+                and not (phone or partner.phone)
+                and not (partner.street and self._sa_country_in_address(partner.street))):
+            return 'CNY'
+        return super()._sa_partner_currency(partner, phone, company)
 
     def _sa_wechat_days_text(self, sorry=False):
         """Step 3: delivery time as a numbered menu."""
@@ -76,9 +87,9 @@ class SaGroupRequestWeChat(models.Model):
                 "3 = 4-7天\n"
                 "4 = 7天以上")
 
-    def _sa_wechat_thanks_text(self, price, days, label=None):
+    def _sa_wechat_thanks_text(self, price, days, label=None, cur=None):
         self.ensure_one()
-        cur = self.currency_id.symbol or ''
+        cur = cur or self.currency_id.symbol or ''
         if label:
             en, zh = label
         elif days:
@@ -144,10 +155,14 @@ class SaGroupRequestWeChat(models.Model):
         on_whatsapp = vendor._sa_whatsapp_reachable()
         if on_wechat:
             remark = (vendor.sa_wechat_name or '').strip()
-            # Keyed on the remark, never the phone: WeChat-only vendors have
-            # no phone, and one empty key would make every one of them
-            # "already asked".
-            if guard.claim('%s|ask|wx:%s|%s' % (trigger, remark, ask)):
+            # The row itself says whether they were asked: it is undone with
+            # a request that is repeated, where the outbox guard was not - the
+            # repeat then asked nobody (23 Nov 2026).
+            Msg = self.env['sa.wechat.message'].sudo()
+            if not Msg.search_count([
+                    ('request_id', '=', self.id), ('partner_id', '=', vendor.id), ('direction', '=', 'out'),
+                    ('wx_step', '=', 'ask'),
+                    ('create_date', '>=', fields.Datetime.subtract(fields.Datetime.now(), seconds=60))], limit=1):
                 self.env['sa.wechat.message']._sa_queue(self, vendor, self._sa_wechat_ask_text(ask), step='ask')
                 _logger.info("WeChat: price check for enquiry %s queued to %s", self.id, remark)
         return not on_whatsapp

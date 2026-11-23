@@ -14,7 +14,9 @@ the pay and delivery links use.
 import html
 import logging
 
-from odoo import http
+from datetime import timedelta
+
+from odoo import fields, http
 from odoo.addons.web.controllers.home import Home
 from odoo.addons.web.controllers.utils import ensure_db
 from odoo.http import request
@@ -81,6 +83,15 @@ def _row(token):
         [('wx_token', '=', token), ('direction', '=', 'out')], limit=1)
 
 
+def _expired(row):
+    """A price-check link works for a week (23 Nov 2026)."""
+    return bool(row.create_date and row.create_date < fields.Datetime.now() - timedelta(days=7))
+
+
+def _expired_page():
+    return _page('Expired', '<div class="ok">This link has expired.<br><span class="zh">此链接已过期。</span></div>', 410)
+
+
 class WeChatVendorPageEntry(Home):
     """Doorway: bind the database from `?db=`, then send the vendor to the
     page. A cold public route on a multi-database server cannot find its
@@ -106,7 +117,10 @@ class WeChatVendorPage(http.Controller):
         row = _row(token)
         if not row or not row.request_id or not row.partner_id:
             return _page('Not found', '<div class="ok">This link is not valid.<br><span class="zh">此链接无效。</span></div>', 404)
+        if _expired(row):
+            return _expired_page()
         req = row.request_id
+        cur = req._sa_vendor_currency(row.partner_id.phone, row.partner_id)
         name, qty = req._sa_wechat_item()
         quote = request.env['sa.vendor.quote'].sudo().search(
             [('request_id', '=', req.id), ('partner_id', '=', row.partner_id.id)], order='id desc', limit=1)
@@ -114,7 +128,8 @@ class WeChatVendorPage(http.Controller):
         if quote:
             already = ('<div class="sub">Already answered: %s %.2f. You can send a new answer below.'
                        '<br><span class="zh">已回复：%s %.2f。可在下方重新回复。</span></div>'
-                       % (req.currency_id.symbol or '', quote.price, req.currency_id.symbol or '', quote.price))
+                       % ((html.escape(quote.sa_typed_currency or req.currency_id.name or ''),
+                           quote.sa_typed_amount or quote.price) * 2))
         elif row.partner_id in req.sa_vendor_no_ids:
             already = '<div class="sub">Already answered: no stock. You can change it below.<br><span class="zh">已回复：没有。可在下方修改。</span></div>'
         if req.state not in ('sourcing',) and not req.sa_price_stalled:
@@ -122,7 +137,7 @@ class WeChatVendorPage(http.Controller):
         body = _FORM % {
             'ref': html.escape(req.ref_code or ''), 'shop': html.escape(request.env.company.name or ''),
             'name': html.escape(name), 'qty': html.escape(qty.replace(' x ', '') or '1'),
-            'cur': html.escape(req.currency_id.symbol or req.currency_id.name or ''),
+            'cur': html.escape(cur or req.currency_id.name or ''),
             'action': '/sa/wx/%s/answer' % token, 'already': already,
         }
         return _page('Price check #%s' % (req.ref_code or ''), body)
@@ -132,6 +147,8 @@ class WeChatVendorPage(http.Controller):
         row = _row(token)
         if not row or not row.request_id or not row.partner_id:
             return _page('Not found', '<div class="ok">This link is not valid.<br><span class="zh">此链接无效。</span></div>', 404)
+        if _expired(row):
+            return _expired_page()
         try:
             result = request.env['sa.wechat.message'].sudo()._sa_page_answer(
                 row, post.get('answer'), post.get('price'), post.get('days'))

@@ -118,23 +118,33 @@ class SaWeChatMessage(models.Model):
         days = opt[0] if opt else None
         if opt:
             # Record with the days, and make the thanks name the range.
-            quote = Quote.create({
-                'request_id': req.id, 'vendor_phone': partner.phone or '', 'vendor_name': partner.name or row.wechat_name,
-                'partner_id': partner.id, 'price': price_f, 'currency_id': req.currency_id.id,
-                'raw_text': text, 'delay_days': days,
-                'response_minutes': req._minutes_since_broadcast(), 'matched_by': 'wechat',
-            })
-            row.write({'quote_id': quote.id, 'error': False})
-            self._sa_queue(req, partner, req._sa_wechat_thanks_text(price_f, days, label=(opt[1], opt[2])), step='info')
-            if req.sa_price_stalled:
-                req.write({'sourcing_deadline': fields.Datetime.now()})
+            quote, cur = self._sa_new_quote(row, req, partner, text, price_f, days)
+            self._sa_queue(req, partner, req._sa_wechat_thanks_text(price_f, days, label=(opt[1], opt[2]), cur=cur), step='info')
             self._sa_notify(req)
-            _logger.info("WeChat page: quote %.2f from %s on enquiry %s", price_f, partner.name, req.id)
+            _logger.info("WeChat page: quote %.2f %s from %s on enquiry %s", price_f, cur, partner.name, req.id)
             return {'ok': True, 'result': 'quoted', 'price': price_f, 'days': days,
-                    'days_en': opt[1], 'days_zh': opt[2], 'cur': req.currency_id.symbol or ''}
+                    'days_en': opt[1], 'days_zh': opt[2], 'cur': cur}
         res = self._sa_record_quote(row, req, partner, text, price_f, None)
-        res.update({'days_en': '', 'days_zh': '', 'cur': req.currency_id.symbol or ''})
+        res.update({'days_en': '', 'days_zh': ''})
         return res
+
+    @api.model
+    def _sa_new_quote(self, row, req, partner, text, price, days):
+        """(quote, currency code) for a WeChat price: in the currency written,
+        else the vendor's own, converted by `_sa_take_price`. An empty quote:
+        no current rate, held for the counter."""
+        Quote = self.env['sa.vendor.quote'].sudo()
+        # the page's own words carry no currency
+        said = '' if (text or '').startswith('[page]') else _REF.sub(' ', text or '')
+        cur = Quote._sa_currency_in(said, req._sa_vendor_currency(partner.phone, partner))
+        quote = Quote._sa_take_price(req, price, cur, {
+            'vendor_phone': partner.phone or '', 'vendor_name': partner.name or row.wechat_name,
+            'partner_id': partner.id, 'raw_text': text, 'delay_days': days or 0,
+            'response_minutes': req._minutes_since_broadcast(), 'matched_by': 'wechat',
+            'message_ref': 'wx%s' % row.id})
+        row.write({'quote_id': quote.id or False, 'error': False})
+        req._sa_vendor_price_in(quote)
+        return quote, cur
 
     @api.model
     def _claim_outbox(self, limit=20, peek=False, bridge_id=''):
@@ -288,7 +298,7 @@ class SaWeChatMessage(models.Model):
         if vals:
             req.write(vals)
         req._sa_wechat_extend_window()
-        self._sa_queue(req, partner, req._sa_wechat_price_text(), step='price')
+        self._sa_queue(req, partner, req._sa_wechat_price_text(partner), step='price')
         row.error = False
         self._sa_notify(req)
         return {'ok': True, 'id': row.id, 'result': 'has_it'}
@@ -354,55 +364,45 @@ class SaWeChatMessage(models.Model):
         quote = Quote.search([('request_id', '=', req.id), ('partner_id', '=', partner.id)], order='id desc', limit=1)
         if not quote:
             # Nothing to attach the days to: read it as a fresh step-2 answer.
-            self._sa_queue(req, partner, req._sa_wechat_price_text(), step='price')
+            self._sa_queue(req, partner, req._sa_wechat_price_text(partner), step='price')
             row.error = 'days without a quote'
             return {'ok': True, 'id': row.id, 'result': 'retry'}
         opt = req._WX_DAYS.get(low)
         if opt:
             quote.write({'delay_days': opt[0]})
             row.write({'quote_id': quote.id, 'error': False})
-            self._sa_queue(req, partner, req._sa_wechat_thanks_text(quote.price, opt[0], label=(opt[1], opt[2])), step='info')
+            typed, cur = quote.sa_typed_amount or quote.price, quote.sa_typed_currency or None
+            self._sa_queue(req, partner, req._sa_wechat_thanks_text(typed, opt[0], label=(opt[1], opt[2]), cur=cur), step='info')
             self._sa_notify(req)
-            return {'ok': True, 'id': row.id, 'result': 'quoted', 'price': quote.price, 'days': opt[0]}
+            return {'ok': True, 'id': row.id, 'result': 'quoted', 'price': typed, 'days': opt[0]}
         if delay is not None:
             quote.write({'delay_days': delay})
             row.write({'quote_id': quote.id, 'error': False})
-            self._sa_queue(req, partner, req._sa_wechat_thanks_text(quote.price, delay), step='info')
+            typed, cur = quote.sa_typed_amount or quote.price, quote.sa_typed_currency or None
+            self._sa_queue(req, partner, req._sa_wechat_thanks_text(typed, delay, cur=cur), step='info')
             self._sa_notify(req)
-            return {'ok': True, 'id': row.id, 'result': 'quoted', 'price': quote.price, 'days': delay}
+            return {'ok': True, 'id': row.id, 'result': 'quoted', 'price': typed, 'days': delay}
         if is_no or self._sa_says_no(low):
             quote.unlink()
             return self._sa_record_no(row, req, partner)
         if price and not (low.isdigit() and len(low) <= 1):
-            quote.write({'price': price, 'raw_text': text})
-            row.write({'quote_id': quote.id, 'error': False})
-            self._sa_queue(req, partner, req._sa_wechat_days_text(), step='days')
-            return {'ok': True, 'id': row.id, 'result': 'quoted', 'price': price, 'days': 0}
+            quote.unlink()
+            return self._sa_record_quote(row, req, partner, text, price, None)
         self._sa_queue(req, partner, req._sa_wechat_retry_text('days'), step='days')
         row.error = 'unreadable at step 3'
         return {'ok': True, 'id': row.id, 'result': 'retry'}
 
     @api.model
     def _sa_record_quote(self, row, req, partner, text, price, delay):
-        Quote = self.env['sa.vendor.quote'].sudo()
-        quote = Quote.create({
-            'request_id': req.id, 'vendor_phone': partner.phone or '', 'vendor_name': partner.name or row.wechat_name,
-            'partner_id': partner.id, 'price': price, 'currency_id': req.currency_id.id,
-            'raw_text': text, 'delay_days': delay or 0,
-            'response_minutes': req._minutes_since_broadcast(), 'matched_by': 'wechat',
-        })
-        row.write({'quote_id': quote.id, 'error': False})
-        if delay is None:
+        quote, cur = self._sa_new_quote(row, req, partner, text, price, delay)
+        if delay is None and quote:
             # Price only: the delivery time comes from the step-3 menu.
             self._sa_queue(req, partner, req._sa_wechat_days_text(), step='days')
         else:
-            self._sa_queue(req, partner, req._sa_wechat_thanks_text(price, delay or 0), step='info')
-        if req.sa_price_stalled:
-            # Same re-arm as a late WhatsApp reply: the cron closes it next run.
-            req.write({'sourcing_deadline': fields.Datetime.now()})
+            self._sa_queue(req, partner, req._sa_wechat_thanks_text(price, delay or 0, cur=cur), step='info')
         self._sa_notify(req)
-        _logger.info("WeChat: quote %.2f from %s on enquiry %s", price, partner.name, req.id)
-        return {'ok': True, 'id': row.id, 'result': 'quoted', 'price': price, 'days': delay or 0}
+        _logger.info("WeChat: quote %.2f %s from %s on enquiry %s", price, cur, partner.name, req.id)
+        return {'ok': True, 'id': row.id, 'result': 'quoted', 'price': price, 'days': delay or 0, 'cur': cur}
 
     @api.model
     def _sa_notify(self, req):
