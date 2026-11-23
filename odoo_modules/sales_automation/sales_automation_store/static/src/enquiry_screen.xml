@@ -391,7 +391,7 @@
 <div class="sa_card sa_card_stall">
                     <div class="sa_card_top">
                         <span class="sa_ref">#<t t-esc="row.ref"/></span>
-                        <span class="sa_stage">Call the supplier</span>
+                        <span class="sa_stage"><t t-if="row.choice">Choose the price</t><t t-else="">Call the supplier</t></span>
                         <span class="sa_wait">
                             <t t-esc="row.waiting"/> min waiting
                         </span>
@@ -435,6 +435,19 @@
                         &#128161; price list says <b><t t-esc="row.hint_cost"/></b>
                         (<t t-esc="row.hint_vendor"/>) - check before using
                     </div>
+
+                    <table class="table table-sm mb-2" t-if="row.prices and row.prices.length">
+                        <thead><tr><th>Vendor</th><th class="text-end">Vendor price</th><th class="text-end">+ <t t-esc="row.margin"/>%</th></tr></thead>
+                        <tbody>
+                            <tr t-foreach="row.prices" t-as="p" t-key="p.id" t-att-class="{ 'fw-bold': p.lowest and row.prices.length > 1 }">
+                                <td><t t-if="p.lowest and row.prices.length > 1">&#9733; </t><t t-esc="p.vendor"/>
+                                    <span t-if="p.lowest and row.prices.length > 1" class="small text-success ms-1">lowest</span>
+                                    <span t-if="p.late" class="small text-muted ms-1">late</span></td>
+                                <td class="text-end"><t t-esc="p.price.toFixed(2)"/> <t t-esc="row.currency"/></td>
+                                <td class="text-end"><t t-esc="p.sell.toFixed(2)"/> <t t-esc="row.currency"/></td>
+                            </tr>
+                        </tbody>
+                    </table>
 
                     <div class="sa_choice" t-if="row.choice">
                         <div class="sa_choice_title">&#9878; Two prices - approve one</div>

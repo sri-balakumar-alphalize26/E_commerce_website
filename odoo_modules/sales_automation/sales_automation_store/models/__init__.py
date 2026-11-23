@@ -7,3 +7,4 @@ from . import stock_picking_group_chat
 from . import stock_picking_oos_gate
 from . import res_users_tz
 from . import sa_boards
+from . import sa_enquiry_prices

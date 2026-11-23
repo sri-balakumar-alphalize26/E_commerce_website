@@ -93,11 +93,19 @@
                             <div class="sa_row_what">#<t t-esc="row.ref"/> &#183; <t t-esc="row.product"/><t t-if="row.qty"> &#215; <t t-esc="row.qty"/></t></div>
                             <div class="sa_row_who"><t t-esc="row.customer"/><t t-if="row.group"> &#183; <t t-esc="row.group"/></t></div>
                             <div class="sa_states"><span class="sa_state" t-att-class="pill(row)[0]" t-esc="pill(row)[1]"/>
+                                <span t-if="row.kind === 'vendors' and row.asked" class="sa_state" t-att-class="{ good: row.prices.length }"><t t-esc="row.prices.length"/> of <t t-esc="row.asked"/> gave a price</span>
                                 <span t-if="row.kind === 'vendors' and !row.closed" class="sa_state">closes in <t t-esc="countdown(row)"/></span></div>
                         </div>
                         <div class="sa_row_right">
                             <b class="sa_row_money" t-if="row.sell"><t t-esc="row.sell.toFixed(2)"/> <t t-esc="row.currency"/></b>
-                            <small t-if="row.best_price" class="text-muted">best <t t-esc="row.best_price.toFixed(2)"/><t t-if="row.best_vendor"> &#183; <t t-esc="row.best_vendor"/></t></small>
+                            <t t-if="row.prices and row.prices.length">
+                                <small t-foreach="row.prices.slice(0, 4)" t-as="p" t-key="p.id" class="d-block"
+                                       t-att-class="p.lowest and row.prices.length > 1 ? 'text-success fw-bold' : 'text-muted'">
+                                    <t t-if="p.lowest and row.prices.length > 1">&#9733; </t><t t-esc="p.vendor"/> &#183; <t t-esc="p.price.toFixed(2)"/>
+                                </small>
+                                <small t-if="row.prices.length > 4" class="text-muted">+<t t-esc="row.prices.length - 4"/> more</small>
+                            </t>
+                            <small t-elif="row.best_price" class="text-muted">best <t t-esc="row.best_price.toFixed(2)"/><t t-if="row.best_vendor"> &#183; <t t-esc="row.best_vendor"/></t></small>
                         </div>
                     </div>
                 </t>
@@ -133,7 +141,8 @@
                                 <tr t-foreach="d.vendors" t-as="v" t-key="v_index" t-att-class="{ best: v.is_best, late: v.late }">
                                     <td><t t-if="v.is_best">&#9733;</t><t t-elif="v.rank" t-esc="v.rank"/></td>
                                     <td><b t-esc="v.name"/><div class="small text-muted" t-if="v.text" t-esc="v.text"/></td>
-                                    <td class="text-end"><t t-if="v.replied"><t t-esc="v.price.toFixed(2)"/> <t t-esc="d.currency"/></t></td>
+                                    <td class="text-end"><t t-if="v.replied"><t t-esc="v.price.toFixed(2)"/> <t t-esc="d.currency"/>
+                                        <div t-if="v.lowest" class="small text-success fw-bold">lowest</div></t></td>
                                     <td>
                                         <span t-if="v.late" class="sa_state warn">late</span>
                                         <span t-elif="v.replied" class="sa_state good">in time</span>
