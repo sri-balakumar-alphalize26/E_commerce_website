@@ -26,3 +26,4 @@ from . import test_order_currency
 from . import test_portal_location
 from . import test_session_easy
 from . import test_settings_easy
+from . import test_poll_rule

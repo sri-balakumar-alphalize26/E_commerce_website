@@ -179,6 +179,11 @@ class WhatsAppWebhookGroups(WhatsAppWebhook):
                     if self._sa_vendor_poll_vote(session, data, remote_jid,
                                                  choice):
                         return
+                    # An old poll of ours: nothing (models/sa_poll_rule.py).
+                    if request.env['sa.group.request'].sudo()._sa_poll_is_old(
+                            self._sa_poll_ref(message)):
+                        _logger.info("Sales Automation: a tap on an old poll in a private chat - nothing done")
+                        return
                     # A tap on one of the finder's polls is the finder's to
                     # answer; the tracker must never see the label.
                     if self._sa_finder_vote(session, data, remote_jid, choice):
@@ -290,7 +295,9 @@ class WhatsAppWebhookGroups(WhatsAppWebhook):
 
         try:
             request.env['sa.group.request'].sudo().with_context(
-                sa_poll_ref=poll_ref)._on_group_message(message)
+                sa_poll_ref=poll_ref,
+                sa_is_poll_vote=bool((data.get('message') or {}).get('pollUpdateMessage')),
+            )._on_group_message(message)
         except Exception as err:  # noqa: BLE001 - the webhook must answer 200
             _logger.exception("Sales Automation: group message %s failed: %s",
                               message.id, err)
@@ -728,7 +735,7 @@ class WhatsAppWebhookGroups(WhatsAppWebhook):
                 ('requester_phone', 'like', digits[-9:]),
                 '|', ('state', '=', 'finding'), ('finder_locked', '=', True),
             ], order='id desc', limit=1)
-        if not finder:
+        if not finder and not Request._sa_poll_known(poll_ref):
             finder = Request.search([
                 ('requester_phone', 'like', digits[-9:]),
                 ('state', '=', 'finding'),

@@ -11,3 +11,4 @@ from . import sa_menu_categories
 from . import sa_variant_menu
 from . import sa_variant_media
 from . import sa_cart
+from . import sa_poll_search
