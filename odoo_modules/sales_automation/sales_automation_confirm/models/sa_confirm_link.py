@@ -15,7 +15,10 @@ import secrets
 from datetime import timedelta
 from urllib.parse import quote
 
+import psycopg2
+
 from odoo import _, api, fields, models
+from odoo.tools import config
 from odoo.tools import html2plaintext, html_sanitize
 from odoo.addons.whatsapp_gateway.models import send_memo
 
@@ -521,15 +524,44 @@ class SaConfirmLink(models.Model):
         links = self.sudo().search([('kind', '=', 'customer'), ('decided', '=', False), ('reminded_on', '=', False),
                                     ('sent_on', '!=', False), ('sent_on', '<=', cutoff),
                                     ('request_id.state', '=', 'awaiting_confirm')], limit=50)
-        for link in links:
+        for link in self.browse(links.ids):
+            # Kept first: what went out is never sent again. On its own, so a
+            # customer choosing something else meanwhile is seen (Ref 1GC,
+            # 23 Nov 2026: reminded of a monitor while taking a power bank,
+            # and never recorded).
+            try:
+                with self.env.cr.savepoint():
+                    link.sudo().write({'reminded_on': fields.Datetime.now()})
+                if not config['test_enable']:
+                    self.env.cr.commit()
+            except psycopg2.OperationalError as err:
+                _logger.info("Sales Automation: confirm link %s is being changed - not reminded now (%s)",
+                             link.id, str(err).split('\n')[0])
+                if not config['test_enable']:
+                    self.env.cr.rollback()
+                continue
+            self.env.invalidate_all()
+            if not link.sudo()._sa_still_asked():
+                continue
             try:
                 link.request_id._say(_("Still waiting for you \U0001F642 Please open the link and press "
                                        "ACCEPT if this is the product you want:\n%(url)s\n\n_Ref %(ref)s_",
                                        url=link._url(), ref=link.request_id.ref_code or link.request_id.id))
             except Exception as err:  # noqa: BLE001
                 _logger.warning("Sales Automation: confirm reminder for link %s failed: %s", link.id, err)
-            link.write({'reminded_on': fields.Datetime.now()})
         return True
+
+    def _sa_still_asked(self):
+        """Still this customer's last word: not answered, and nothing newer of
+        theirs in this group (another product, or a hi)."""
+        self.ensure_one()
+        request = self.request_id
+        if self.decided or request.state != 'awaiting_confirm':
+            return False
+        who = request._sa_menu_sender_domain()
+        if who is None:
+            return True
+        return not request.search_count([('group_id', '=', request.group_id.id), ('id', '>', request.id)] + who, limit=1)
 
 
 class SaConfirmPicture(models.Model):
