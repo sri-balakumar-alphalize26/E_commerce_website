@@ -22,6 +22,11 @@
                         groups="sales_automation.group_sa_manager"
                         help="Fetch every group this number has joined, then tick the ones that should answer product enquiries."/>
             </xpath>
+            <xpath expr="//div[@name='setup_buttons']" position="inside">
+                <button name="action_sa_sync_groups" type="object" string="Sync Groups"
+                        class="btn-primary" invisible="setup_next != 'groups'"
+                        groups="sales_automation.group_sa_manager"/>
+            </xpath>
         </field>
     </record>
 

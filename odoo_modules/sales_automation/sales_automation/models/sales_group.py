@@ -298,12 +298,43 @@ class SalesGroup(models.Model):
             # vendor group never talks to anyone, so it needs nobody assigned.
             if rec.enabled and rec.group_type == 'customer' \
                     and not rec.employee_session_id:
-                raise ValidationError(_(
-                    "Group '%(name)s' has no employee session, so there is "
-                    "nobody to continue the conversation. Assign one before "
-                    "enabling sales automation.",
-                    name=rec.name,
-                ))
+                raise ValidationError(rec._sa_no_employee_text())
+
+    def _sa_no_employee_text(self):
+        """Why this group cannot be switched on, and what to press."""
+        self.ensure_one()
+        session = self.session_id
+        lines = [
+            _("\"%s\" cannot be turned on yet: no employee is chosen to answer "
+              "its customers.", self.name),
+            _("It uses the WhatsApp session \"%s\", and nobody is linked to "
+              "that session.", session.name),
+        ]
+        # The same number in a second session that does have an employee: the
+        # group belongs there, linking one more employee would not help.
+        number = session.sudo().authorized_number
+        other = self.env['wa.employee.session'].sudo().search([
+            ('session_id.active', '=', True),
+            ('session_id', '!=', session.id),
+            ('session_id.authorized_number', '=', number),
+        ], limit=1) if number else False
+        if other:
+            lines.append(_(
+                "What to do: the session \"%(other)s\" has the same WhatsApp "
+                "number and already has %(employee)s. Open that session, press "
+                "Sync Groups, and turn on \"%(group)s\" there. Turn off the "
+                "session \"%(session)s\": one number needs only one session.",
+                other=other.session_id.name, employee=other.employee_id.name,
+                group=self.name, session=session.name))
+        else:
+            lines.append(_(
+                "What to do: in WhatsApp Numbers, press Give to an employee "
+                "beside \"%(session)s\" and choose the employee. Then turn on "
+                "\"%(group)s\" again.",
+                session=session.name, group=self.name))
+        lines.append(_("If this is a group of suppliers, change its Group Type "
+                       "to Vendor Group; it needs no employee."))
+        return '\n\n'.join(lines)
 
     @api.constrains('is_fallback_vendor_group', 'session_id', 'group_type')
     def _check_single_fallback(self):
