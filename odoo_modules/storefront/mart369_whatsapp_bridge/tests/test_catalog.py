@@ -175,7 +175,19 @@ class TestCatalog(Mart369BridgeCase):
         self.assertTrue(self.request._sa_catalog_has('Backroom Widget'))
         self.assertIsNone(self._type('Backroom Widget'))
 
+    def test_the_contact_number_is_the_companys(self):
+        """23 Nov 2026: the company phone, before the WhatsApp number."""
+        company = self.request._company_for(self.request.group_id) or self.env.company
+        company.sudo().phone = '+968 2470 0000'
+        self.session.sudo().write({'phone_number': '919876543210'})
+        self._settings().shop_contact_phone = False
+        self.assertEqual(self.request._sa_contact_number(), '+968 2470 0000')
+        self._settings().shop_contact_phone = '+91 98765 43210'
+        self.assertEqual(self.request._sa_contact_number(), '+91 98765 43210')
+
     def test_the_contact_number_falls_back_to_the_whatsapp_number(self):
+        company = self.request._company_for(self.request.group_id) or self.env.company
+        company.sudo().phone = False
         self._settings().shop_contact_phone = False
         self.session.sudo().write({'phone_number': '919876543210'})
         self.assertEqual(self.request._sa_contact_number(), '+919876543210')

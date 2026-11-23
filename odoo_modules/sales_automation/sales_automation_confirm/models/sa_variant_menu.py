@@ -288,8 +288,9 @@ class SaGroupRequestVariant(models.Model):
                 if line.attribute_id.id == attr_id:
                     matched_open = True
         # A typed value with a unit that belongs to another still-open attribute
-        # ("64gb" when the capacities listed are 8/16/32GB): remembered in the
-        # customer's words for that attribute, no further question about it.
+        # ("64gb" when the capacities listed are 8/16/32GB): we do not have it.
+        # It is said, and asked with what there is (owner, 23 Nov 2026); it
+        # used to go into the name and to the vendors.
         unit_of = {}
         for line in self._sa_attr_lines(product):
             if line.attribute_id.id in chosen_attr_ids or line.attribute_id.id in skipped:
@@ -298,30 +299,20 @@ class SaGroupRequestVariant(models.Model):
                 m = re.match(r'\s*\d+(?:\.\d+)?\s*([a-z]+)', val.name.lower())
                 if m:
                     unit_of.setdefault(m.group(1), set()).add(line.attribute_id.id)
-        extra_notes = []
+        missing = []
         for m in re.finditer(r'(\d+(?:\.\d+)?)\s*([a-z]+)', low):
             unit = m.group(2)
             attrs = unit_of.get(unit) or set()
             if len(attrs) == 1:
                 aid = next(iter(attrs))
                 if aid != attr_id or matched_open:
-                    a2 = self.env['product.attribute'].sudo().browse(aid)
-                    extra_notes.append('%s: %s%s' % (a2.name, m.group(1), unit.upper() if len(unit) <= 3 else unit))
-                    noted.add(aid)
-                    skipped.append(aid)
+                    missing.append('%s%s' % (m.group(1), unit.upper() if len(unit) <= 3 else unit))
                     del unit_of[unit]
-        if extra_notes:
-            self.sudo().write({'sa_attr_notes': '; '.join(filter(None, [self.sa_attr_notes] + extra_notes))})
-            self._say(_("Noted: *%(note)s* 👍", note=', '.join(n.split(': ', 1)[-1] for n in extra_notes)))
         if not matched_open:
-            # their own words for this attribute: kept in the item's name, the attribute left open
-            attr = self.env['product.attribute'].sudo().browse(attr_id)
-            short = re.split(r'[,;(\n]', typed, 1)[0].strip()[:40]
-            note = '%s: %s' % (attr.name, short) if attr else short
-            noted.add(attr_id)
-            skipped.append(attr_id)
-            self.sudo().write({'sa_attr_notes': '; '.join(filter(None, [self.sa_attr_notes, note]))})
-            self._say(_("Noted: *%(note)s* \U0001F44D", note=typed[:40]))
+            missing.insert(0, re.split(r'[,;(\n]', typed, maxsplit=1)[0].strip()[:40])
+        if missing:
+            self._say(_("\U0001F614 Sorry, we don't have *%(what)s*. Please choose from these \U0001F447",
+                        what=', '.join(dict.fromkeys(missing))))
         self.sudo().write({'sa_attr_typing': json.dumps({'noted': sorted(noted)})})
         return self._sa_attr_ask(chosen, skipped)
 

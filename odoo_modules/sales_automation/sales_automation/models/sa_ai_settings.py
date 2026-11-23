@@ -319,7 +319,7 @@ class SaAiSettings(models.Model):
         'Shop Contact Number',
         help="Given to a customer who asks for something the shop does not "
              "sell: \"Sorry, we don't have it - please contact us on ...\". "
-             "Empty: the WhatsApp number, else the company phone.")
+             "Empty: the company phone, else the WhatsApp number.")
 
     def _sa_link_route(self, kind):
         """'private' or 'group' for a kind of link (see LINK_KINDS)."""

@@ -108,6 +108,31 @@ class SaGroupRequestOnlyListed(models.Model):
             return True
         return super()._start_sourcing(vendors)
 
+    def _finder_confirm(self, payload):
+        """A model typed after "Not listed" is looked up like any typed
+        product; it never gets a page of its own (owner, 23 Nov 2026)."""
+        self.ensure_one()
+        product = self.env['product.template']
+        if payload.get('kind') == 'ours' and payload.get('product_id'):
+            product = product.sudo().browse(int(payload['product_id'])).exists()
+        if product:
+            return super()._finder_confirm(payload)
+        return self._sa_offer_listed(payload.get('name') or '')
+
+    def _sa_offer_listed(self, name):
+        """What of ours is called that, else sorry."""
+        self.ensure_one()
+        ids = [i for i in self._sa_listed_ids(name, 20) if i not in self.rejected_product_ids.ids]
+        found = self.env['product.template'].browse(ids[:3])
+        self.write({'finder_step': 'done', 'ai_search_term': name or self.ai_search_term})
+        if len(found) > 1:
+            return self._ask_choice(found)
+        if found:
+            return self._sa_offer_one(found)
+        self._sa_say_not_stocked(name)
+        self._drop('not_stocked')
+        return True
+
     def _unlisted_vendors(self):
         return self.env['res.partner']
 

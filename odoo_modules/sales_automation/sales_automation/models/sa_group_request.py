@@ -5206,16 +5206,17 @@ class SaGroupRequest(models.Model):
 
     def _sa_contact_number(self):
         """The number customers are told to call: Shop Contact Number in the
-        settings, else the WhatsApp number, else the company phone."""
+        settings, else the company phone, else the WhatsApp number (owner,
+        23 Nov 2026)."""
         self.ensure_one()
         settings = self._settings()
         number = (getattr(settings, 'shop_contact_phone', '') or '').strip()
+        if not number:
+            company = (self._company_for(self.group_id) if self.group_id else False) or self.env.company
+            number = (company.sudo().phone or '').strip()
         session = self.group_id.session_id if self.group_id else False
         if not number and session:
             number = (session.phone_number or session.authorized_number or '').strip()
-        if not number:
-            company = self._company_for(self.group_id) if self.group_id else self.env.company
-            number = (company.phone or '').strip()
         if number and number.isdigit():
             number = '+' + number
         return number
