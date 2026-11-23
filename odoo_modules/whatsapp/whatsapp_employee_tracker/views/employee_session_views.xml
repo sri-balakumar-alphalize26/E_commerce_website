@@ -47,25 +47,30 @@
         <field name="name">wa.employee.session.list</field>
         <field name="model">wa.employee.session</field>
         <field name="arch" type="xml">
-            <list string="Employee WhatsApp Sessions">
+            <list string="Employee WhatsApp Sessions" decoration-muted="not session_active">
                 <header>
                     <button name="action_connect_new" type="object" display="always"
                             string="+ Connect a number" class="btn-primary" groups="base.group_system"/>
                 </header>
+                <field name="session_active" column_invisible="True"/>
                 <field name="employee_id"/>
-                <field name="department_id"/>
-                <field name="job_title"/>
+                <field name="department_id" optional="hide"/>
+                <field name="job_title" optional="hide"/>
                 <field name="phone_number" widget="wa_phone" readonly="1"/>
                 <field name="session_id"/>
-                <field name="session_status"/>
-                <field name="today_sent" string="Sent Today"/>
-                <field name="today_received" string="Recv Today"/>
-                <field name="total_messages"/>
-                <field name="unique_contacts"/>
-                <field name="alert_count"/>
-                <field name="quality_score"/>
-                <field name="last_activity"/>
-                <field name="monitoring_enabled"/>
+                <field name="session_status" widget="badge"
+                       decoration-success="session_status == 'connected'"
+                       decoration-warning="session_status in ('connecting', 'waiting_qr')"
+                       decoration-danger="session_status in ('wrong_number', 'error', 'disconnected')"/>
+                <field name="link_text" string="To do" optional="show"/>
+                <field name="today_sent" string="Sent Today" optional="show"/>
+                <field name="today_received" string="Recv Today" optional="show"/>
+                <field name="total_messages" optional="show"/>
+                <field name="unique_contacts" optional="hide"/>
+                <field name="alert_count" optional="hide"/>
+                <field name="quality_score" optional="hide"/>
+                <field name="last_activity" optional="show"/>
+                <field name="monitoring_enabled" optional="hide"/>
             </list>
         </field>
     </record>
@@ -115,6 +120,10 @@
                                 icon="fa-star">
                             <field name="quality_score" widget="statinfo" string="Quality"/>
                         </button>
+                    </div>
+
+                    <div invisible="not link_text" class="alert alert-warning" role="status">
+                        <field name="link_text" readonly="1" nolabel="1"/>
                     </div>
 
                     <group>
@@ -204,6 +213,9 @@
             <search>
                 <field name="employee_id"/>
                 <field name="phone_number"/>
+                <filter name="not_connected" string="Not connected" domain="[('session_id.status', '!=', 'connected')]"/>
+                <filter name="session_off" string="WhatsApp session off" domain="[('session_id.active', '=', False)]"/>
+                <separator/>
                 <filter name="with_old" string="Old numbers too" domain="['|', ('active', '=', True), ('active', '=', False)]"/>
                 <filter name="only_old" string="Old numbers" domain="[('active', '=', False)]"/>
             </search>

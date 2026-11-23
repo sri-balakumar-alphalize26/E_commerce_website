@@ -14,4 +14,15 @@
             </xpath>
         </field>
     </record>
+    <record id="view_whatsapp_session_form_employee" model="ir.ui.view">
+        <field name="name">whatsapp.session.form.employee</field>
+        <field name="model">whatsapp.session</field>
+        <field name="inherit_id" ref="whatsapp_gateway.view_whatsapp_session_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//div[@name='setup_buttons']" position="inside">
+                <button name="action_give_number" type="object" string="Choose the employee"
+                        class="btn-primary" invisible="setup_next != 'employee'" groups="base.group_system"/>
+            </xpath>
+        </field>
+    </record>
 </odoo>

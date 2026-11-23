@@ -20,3 +20,4 @@ from . import account_move_inherit
 
 from . import res_partner_phone
 from . import employee_number
+from . import employee_session_easy

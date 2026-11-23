@@ -1,6 +1,6 @@
 {
     'name': 'Employee Tracker & Sales Agent',
-    'version': '19.0.1.4.1',
+    'version': '19.0.1.4.2',
     'category': 'Human Resources',
     'summary': 'Track & monitor employee WhatsApp communications on company numbers',
     'description': """
