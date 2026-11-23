@@ -46,3 +46,4 @@ from . import sa_send_once
 from . import sa_vendor_window
 from . import sa_pay_link_rule
 from . import sa_group_employee
+from . import sa_settings_easy

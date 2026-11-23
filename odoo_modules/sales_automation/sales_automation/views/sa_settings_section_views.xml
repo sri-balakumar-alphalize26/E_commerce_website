@@ -61,34 +61,61 @@
         <field name="arch" type="xml">
             <form string="Vendors &amp; Customer Replies">
                 <sheet>
+                    <div class="alert alert-info" role="status">
+                        <b>What happens with the settings below</b>
+                        <field name="easy_example" readonly="1" nolabel="1"/>
+                    </div>
                     <group>
-                        <group>
-                            <field name="sourcing_window_minutes"/>
-                            <field name="customer_reply_minutes"/>
-                            <field name="price_escalation_phone" widget="wa_phone"/>
-                            <field name="price_approval_enabled"/>
-                            <field name="price_approval_tolerance_percent"
+                        <group string="1. Asking the vendors">
+                            <label for="sourcing_window_minutes" string="Wait for vendor prices"/>
+                            <div><field name="sourcing_window_minutes" class="oe_inline"/> minutes
+                                <div class="text-muted small">Then the lowest price is taken. All have answered: no more waiting. Usually 5 to 15.</div></div>
+                            <label for="vendor_money" string="Vendors type the price in"/>
+                            <div><field name="vendor_money" widget="radio"/>
+                                <div class="text-muted small">Another currency than yours needs a rate in Odoo, at most a week old.</div></div>
+                            <label for="price_escalation_phone" string="Nobody answers: tell this number"/>
+                            <div><field name="price_escalation_phone" widget="wa_phone"/>
+                                <div class="text-muted small">Gets a WhatsApp with a link to type the price. Empty: it only waits on Store &gt; Enquiries.</div></div>
+                            <label for="easy_vendors" string="Who is asked"/>
+                            <div><field name="easy_vendors" readonly="1" class="d-inline"/>
+                                <button name="action_sa_open_categories" type="object" string="Set the vendors" class="btn-link p-0 ms-2"/>
+                                <div class="text-muted small">On each product category, under WhatsApp Sourcing.</div></div>
+                        </group>
+                        <group string="2. The price for the customer">
+                            <label for="margin_percent" string="Your margin"/>
+                            <div><field name="margin_percent" class="oe_inline"/> %
+                                <div class="text-muted small">Added to the lowest vendor price. 20 makes 100 into 120.</div></div>
+                            <label for="price_approval_enabled" string="Ask me first when the prices differ"/>
+                            <div><field name="price_approval_enabled" widget="boolean_toggle"/>
+                                <div class="text-muted small">On: when the product page has another price, you choose on Store &gt; Enquiries.
+                                    Off: the customer gets the vendor price plus your margin at once.</div></div>
+                            <label for="price_approval_tolerance_percent" string="Ignore small differences"
                                    invisible="not price_approval_enabled"/>
-                            <field name="margin_percent"/>
-                            <field name="vendor_money"/>
-                            <field name="unlisted_vendor_ids"
-                                   widget="many2many_tags"
-                                   options="{'no_create': True}"
-                                   placeholder="Who to ask for something not in the catalog"/>
-                            <field name="new_product_category_id"
-                                   options="{'no_create': True}"/>
-                            <field name="pay_remind_minutes"/>
-                            <field name="pay_remind_max"/>
+                            <div invisible="not price_approval_enabled"><field name="price_approval_tolerance_percent" class="oe_inline"/> %
+                                <div class="text-muted small">0 asks you always. 5 does not ask while the two are within 5%.</div></div>
                         </group>
-                        <group>
-                            <div class="text-muted">
-                                Vendors are set on each <b>Product Category</b>,
-                                under WhatsApp Sourcing. Every vendor listed
-                                there is messaged privately for a price, and the
-                                cheapest reply plus this margin is what the
-                                customer is quoted.
-                            </div>
+                    </group>
+                    <group>
+                        <group string="3. Waiting for the customer">
+                            <label for="customer_reply_minutes" string="Customer must answer within"/>
+                            <div><field name="customer_reply_minutes" class="oe_inline"/> minutes
+                                <div class="text-muted small">Then the enquiry is closed and the customer is told. 0: a whole day. Starts again with every message we send.</div></div>
                         </group>
+                        <group string="4. Orders not paid yet">
+                            <label for="pay_remind_minutes" string="Remind after"/>
+                            <div><field name="pay_remind_minutes" class="oe_inline"/> minutes
+                                <div class="text-muted small">In the group, and again after the same time. 0: never.</div></div>
+                            <label for="pay_remind_max" string="How many reminders"/>
+                            <div><field name="pay_remind_max" class="oe_inline"/> at most</div>
+                        </group>
+                    </group>
+                    <group string="Rarely needed">
+                        <div class="text-muted small mb-2" colspan="2">Only products of your own catalogue are offered to customers, so an enquiry normally
+                            needs neither of these.</div>
+                        <field name="unlisted_vendor_ids" string="Extra vendors (not by category)" widget="many2many_tags"
+                               options="{'no_create': True}" placeholder="Leave empty"/>
+                        <field name="new_product_category_id" string="Category of a product made from an enquiry"
+                               options="{'no_create': True}"/>
                     </group>
                 </sheet>
             </form>
