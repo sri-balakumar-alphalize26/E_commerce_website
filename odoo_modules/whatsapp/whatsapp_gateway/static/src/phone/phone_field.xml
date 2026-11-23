@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="whatsapp_gateway.PhoneField">
+        <div class="o_wa_phone" t-ref="root">
+            <t t-if="props.readonly">
+                <a t-if="valueOf(props)" class="o_form_uri" dir="ltr" t-att-href="href" t-on-click.stop="" t-esc="state.pretty || valueOf(props)"/>
+            </t>
+            <t t-elif="state.plain">
+                <div class="o_wa_phone_row">
+                    <input class="o_input" type="text" t-att-id="props.id" t-att-value="valueOf(props)" t-att-placeholder="props.placeholder"
+                           autocomplete="off" t-on-change="onPlain"/>
+                    <button t-if="state.countries.length" type="button" class="btn btn-link btn-sm p-0 ms-2" t-on-click="useCountry">New number</button>
+                </div>
+            </t>
+            <t t-else="">
+                <div class="o_wa_phone_row">
+                    <button type="button" class="o_wa_phone_country" t-on-click="openCountries" t-att-aria-expanded="state.open ? 'true' : 'false'"
+                            t-att-title="state.country ? state.country.name : ''" aria-label="Country">
+                        <t t-if="state.country"><t t-esc="state.country.code"/> +<t t-esc="state.country.dial"/></t><t t-else="">Country</t>
+                        <i class="fa fa-chevron-down"/>
+                    </button>
+                    <input class="o_input" type="text" inputmode="numeric" dir="ltr" autocomplete="off" t-att-id="props.id" t-att-value="state.number"
+                           t-att-placeholder="state.country ? state.country.example : ''" t-on-keydown="onKey" t-on-input="onNumber"/>
+                    <span class="o_wa_phone_count" t-if="state.number and state.country"><t t-esc="state.number.length"/>/<t t-esc="max"/></span>
+                </div>
+                <div t-if="state.error" class="text-danger small" t-esc="state.error"/>
+                <div t-if="state.open" class="o_wa_phone_menu" t-att-style="state.style">
+                    <input type="text" class="o_input" placeholder="Search a country" t-model="state.search" t-on-keydown="onMenuKey" aria-label="Search a country"/>
+                    <div class="o_wa_phone_options">
+                        <button type="button" t-foreach="shownCountries" t-as="c" t-key="c.id" t-on-click="() => this.pickCountry(c)">
+                            <span t-esc="c.name"/><span class="text-muted">+<t t-esc="c.dial"/></span>
+                        </button>
+                        <div t-if="!shownCountries.length" class="text-muted p-2">No country found.</div>
+                    </div>
+                </div>
+            </t>
+        </div>
+    </t>
+
+</templates>

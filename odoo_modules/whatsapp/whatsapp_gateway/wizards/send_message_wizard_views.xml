@@ -10,7 +10,7 @@
                     <group>
                         <field name="session_id" required="1"/>
                         <field name="partner_id"/>
-                        <field name="phone"/>
+                        <field name="phone" widget="wa_phone" options="{'plus': True}"/>
                     </group>
                     <group>
                         <field name="attachment"

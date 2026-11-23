@@ -15,6 +15,8 @@ class WhatsAppMessage(models.Model):
         'whatsapp.session', string='Session',
         required=True, ondelete='cascade', index=True,
     )
+    # which of OUR numbers it was on; a session can become another number
+    own_number = fields.Char('Our Number', index=True, readonly=True, copy=False)
     channel = fields.Selection([
         ('whatsapp', 'WhatsApp'),
         ('email', 'Email'),
@@ -72,6 +74,22 @@ class WhatsAppMessage(models.Model):
     is_group = fields.Boolean(
         'Group Message', compute='_compute_is_group', store=True,
     )
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        numbers = {}
+        for vals in vals_list:
+            if 'own_number' in vals or vals.get('channel', 'whatsapp') != 'whatsapp' or not vals.get('session_id'):
+                continue
+            number = self.env.context.get('wa_own_number') if vals.get('direction') == 'incoming' else ''
+            if not number:
+                sid = vals['session_id']
+                if sid not in numbers:
+                    session = self.env['whatsapp.session'].sudo().browse(sid)
+                    numbers[sid] = ''.join(c for c in (session.authorized_number or '') if c.isdigit())
+                number = numbers[sid]
+            vals['own_number'] = number or False
+        return super().create(vals_list)
 
     # ----------------------------------------------------------
     # Computed Fields

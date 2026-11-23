@@ -1,6 +1,6 @@
 {
     'name': 'WhatsApp & Email Connector',
-    'version': '19.0.3.1.2',
+    'version': '19.0.3.1.7',
     'category': 'Tools',
     'summary': 'Send and receive WhatsApp through an Evolution API gateway',
     'description': """
@@ -43,6 +43,7 @@
         'security/whatsapp_security.xml',
         'security/ir.model.access.csv',
         'views/whatsapp_session_views.xml',
+        'views/whatsapp_number_off_views.xml',
         'views/whatsapp_optout_views.xml',
         'views/whatsapp_message_views.xml',
         'views/whatsapp_config_views.xml',
@@ -53,6 +54,17 @@
     ],
     # No external_dependencies. `requests` ships with Odoo, and neonize,
     # qrcode and Pillow are no longer used - the gateway owns all of that.
+    'assets': {
+        'web.assets_backend': [
+            'whatsapp_gateway/static/src/phone/phone_data.js',
+            'whatsapp_gateway/static/src/phone/phone_field.scss',
+            'whatsapp_gateway/static/src/phone/phone_field.xml',
+            'whatsapp_gateway/static/src/phone/phone_field.js',
+            'whatsapp_gateway/static/src/connect/connect.scss',
+            'whatsapp_gateway/static/src/connect/connect.xml',
+            'whatsapp_gateway/static/src/connect/connect.js',
+        ],
+    },
     'images': ['static/description/icon.png'],
     'installable': True,
     'application': True,

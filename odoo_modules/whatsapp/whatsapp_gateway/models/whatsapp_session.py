@@ -32,7 +32,11 @@ import uuid
 import requests
 
 from odoo import _, api, fields, models
-from odoo.exceptions import UserError
+from odoo.exceptions import UserError, ValidationError
+
+from odoo.tools import config
+
+from . import send_memo
 
 _logger = logging.getLogger(__name__)
 
@@ -331,10 +335,40 @@ class WhatsAppSession(models.Model):
         self._apply_panel_config(config)
         return config
 
+    @api.constrains('gateway_api_key', 'active')
+    def _check_key_once(self):
+        """One key is one number. The panel sends a key's incoming messages to
+        one session only: the same key in a second session would take the first
+        one's messages (23 Nov 2026)."""
+        for session in self.sudo():
+            key = (session.gateway_api_key or '').strip()
+            if not session.active or not key:
+                continue
+            mine = self._decode_setup_key(key)[1] or key
+            for other in self.sudo().search([('active', '=', True), ('id', '!=', session.id),
+                                             ('gateway_api_key', '!=', False)]):
+                theirs = (other.gateway_api_key or '').strip()
+                if (self._decode_setup_key(theirs)[1] or theirs) == mine:
+                    raise ValidationError(_(
+                        "This key already belongs to session '%(name)s'%(number)s. Every number has its own "
+                        "key: copy the key of the new number from the panel.",
+                        name=other.name,
+                        number=(' (+%s)' % other.authorized_number) if other.authorized_number else ''))
+
     def _apply_panel_config(self, config):
         """What the panel decided for this database, copied onto the record
         so it can be read without a round trip. All read-only in the form."""
         self.ensure_one()
+        instance = (config or {}).get('instance') or ''
+        if instance:
+            twin = self.sudo().search([('active', '=', True), ('id', '!=', self.id),
+                                       ('instance_name', '=', instance)], limit=1)
+            if twin:
+                raise UserError(_(
+                    "The panel gives this key the number of session '%s'. Every number has its own key and "
+                    "its own session.", twin.name))
+            if instance != self.instance_name:
+                self._check_number_change(instance)
         wa = (config or {}).get('whatsapp') or {}
         email = (config or {}).get('email') or {}
         vals = {}
@@ -358,8 +392,17 @@ class WhatsAppSession(models.Model):
         sessions._apply_setup_key()
         return sessions
 
+    def _number_changed(self, old, new):
+        """Hook: this session was the number `old` and is `new` now (digits)."""
+
     def write(self, vals):
+        digits = lambda t: ''.join(c for c in (t or '') if c.isdigit())  # noqa: E731
+        before = {s.id: digits(s.authorized_number) for s in self} if 'authorized_number' in vals else {}
         result = super().write(vals)
+        for session in self if before else ():
+            new = digits(session.authorized_number)
+            if before[session.id] and new and new != before[session.id]:
+                session._number_changed(before[session.id], new)
         # Only when the key itself was touched, or unpacking on every write
         # would fight with the values it just wrote.
         if 'gateway_api_key' in vals:
@@ -393,6 +436,17 @@ class WhatsAppSession(models.Model):
         }
         if extra_headers:
             headers.update(extra_headers)
+        memo = key = None
+        if method == 'POST' and path.startswith(('/message/', '/email/')):
+            # a conflict with somebody else's change shows now, not after sending
+            self.env.flush_all()
+            memo = send_memo.current(self.env)
+            if memo is not None:
+                key = send_memo.send_key(self, path, payload)
+                found, answer = memo.take(key)
+                if found:
+                    _logger.info("WhatsApp: this request sent it before it was repeated - not sent again")
+                    return answer
         try:
             response = requests.request(
                 method, url, headers=headers, json=payload, timeout=timeout)
@@ -446,9 +500,24 @@ class WhatsAppSession(models.Model):
                 code=response.status_code, detail=detail,
             ))
         try:
-            return response.json()
+            answer = response.json()
         except ValueError:
-            return {}
+            answer = {}
+        if memo is not None:
+            memo.put(key, answer)
+        return answer
+
+    def _check_number_change(self, instance):
+        """Hook: may this session become another number?"""
+
+    def action_connect_screen(self):
+        """The QR of this session's own number (administrators)."""
+        self.ensure_one()
+        return {'type': 'ir.actions.client', 'tag': 'whatsapp_gateway.connect', 'name': _("Connect a number"),
+                'params': {'session_id': self.id}}
+
+    def action_connect_new(self):
+        return {'type': 'ir.actions.client', 'tag': 'whatsapp_gateway.connect', 'name': _("Connect a number")}
 
     def _refresh_state(self, force=False):
         """Ask the gateway whether the number is actually linked.
@@ -479,8 +548,33 @@ class WhatsAppSession(models.Model):
                 # than leaving a stale 'connected' behind for callers to trip on.
                 vals['status'] = 'error'
                 vals['error_message'] = str(err)
-            session.sudo().write(vals)
+            session._save_state(vals)
         return True
+
+    def _save_state(self, vals):
+        """Into the database in a moment of its own. Written with the message's
+        own transaction, the status job and every other message collided on
+        this one row, and the message was sent again (23 Nov 2026)."""
+        self.ensure_one()
+        session = self.sudo()
+        if config['test_enable'] and not self.env.context.get('wa_own_cursor'):
+            session.write(vals)
+            return
+        try:
+            with self.env.registry.cursor() as cr:
+                cr.execute('SELECT 1 FROM whatsapp_session WHERE id = %s', [session.id])
+                if not cr.fetchone():
+                    session.write(vals)            # made in this very transaction
+                    return
+                cr.execute('SELECT 1 FROM whatsapp_session WHERE id = %s FOR UPDATE SKIP LOCKED', [session.id])
+                if cr.fetchone():
+                    names = sorted(vals)
+                    cr.execute('UPDATE whatsapp_session SET %s WHERE id = %%s' % ', '.join('"%s" = %%s' % n for n in names),
+                               [vals[n] or None for n in names] + [session.id])
+        except Exception as err:  # noqa: BLE001 - the state is asked again in a moment
+            _logger.info("WhatsApp: state of %s not saved now: %s", session.id, err)
+        for name, value in vals.items():
+            session._fields[name]._update_cache(session, session._fields[name].convert_to_cache(value, session))
 
     # ----------------------------------------------------------
     # The screens show the gateway's answer, not an old saved one

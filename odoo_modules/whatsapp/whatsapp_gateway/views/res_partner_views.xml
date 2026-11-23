@@ -27,4 +27,23 @@
         </field>
     </record>
 
+    <!-- country + number on the contact (23 Nov 2026); last, after phone_validation's own change -->
+    <record id="view_partner_wa_phone_form" model="ir.ui.view">
+        <field name="name">res.partner.wa.phone.form</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="priority">99</field>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='phone'][@widget='phone']" position="attributes">
+                <attribute name="widget">wa_phone</attribute>
+                <attribute name="options">{'plus': True, 'landline': True}</attribute>
+            </xpath>
+            <!-- the same words again: the contact's people, in their pop-up -->
+            <xpath expr="//field[@name='child_ids']//field[@name='phone'][@widget='phone']" position="attributes">
+                <attribute name="widget">wa_phone</attribute>
+                <attribute name="options">{'plus': True, 'landline': True}</attribute>
+            </xpath>
+        </field>
+    </record>
+
 </odoo>

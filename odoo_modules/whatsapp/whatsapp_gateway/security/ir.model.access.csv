@@ -10,3 +10,4 @@ access_whatsapp_owner_number_user,whatsapp.owner.number.user,model_whatsapp_owne
 access_whatsapp_owner_number_manager,whatsapp.owner.number.manager,model_whatsapp_owner_number,group_whatsapp_manager,1,1,1,1
 access_whatsapp_optout_user,whatsapp.optout.user,model_whatsapp_optout,group_whatsapp_user,1,0,1,0
 access_whatsapp_optout_manager,whatsapp.optout.manager,model_whatsapp_optout,group_whatsapp_manager,1,1,1,1
+access_whatsapp_number_off_system,whatsapp.number.off.system,model_whatsapp_number_off,base.group_system,1,1,1,1

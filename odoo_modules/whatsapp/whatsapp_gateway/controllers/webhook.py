@@ -20,6 +20,7 @@ own instance is what lets its replies reach its own database.
 """
 
 import json
+import re
 import logging
 
 from odoo import http
@@ -126,6 +127,13 @@ class WhatsAppWebhook(http.Controller):
         event = payload.get('event') or ''
         if event not in HANDLED_EVENTS:
             return request.make_json_response({'ok': True, 'ignored': event})
+
+        # The number it arrived on: one that waited in the panel while the
+        # session became another number still belongs to the old one.
+        own = re.search(r'-([0-9]{8,15})$', str(payload.get('instance') or ''))
+        if own:
+            request.update_context(wa_own_number=own.group(1))
+            session = session.with_env(request.env(su=True))
 
         try:
             self._handle_message(session, payload)

@@ -7,7 +7,7 @@
         <field name="arch" type="xml">
             <list>
                 <field name="create_date" string="Opted Out"/>
-                <field name="phone"/>
+                <field name="phone" widget="wa_phone" readonly="1"/>
                 <field name="partner_id"/>
                 <field name="source"/>
                 <field name="reason"/>
@@ -23,7 +23,7 @@
                 <sheet>
                     <div class="oe_title">
                         <label for="phone"/>
-                        <h1><field name="phone" placeholder="968XXXXXXXX"/></h1>
+                        <div class="fs-3"><field name="phone" widget="wa_phone"/></div>
                     </div>
                     <group>
                         <group>

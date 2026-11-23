@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_whatsapp_number_off_form" model="ir.ui.view">
+        <field name="name">whatsapp.number.off.form</field>
+        <field name="model">whatsapp.number.off</field>
+        <field name="arch" type="xml">
+            <form string="WhatsApp number">
+                <field name="do" invisible="1"/>
+                <div class="fs-3 fw-bold mb-3"><field name="number" readonly="1" nolabel="1"/></div>
+                <div invisible="do != 'off'">
+                    <p>Its groups get no answer and nothing is sent until you turn it on again.
+                    The phone stays linked, and the other numbers go on.</p>
+                </div>
+                <div invisible="do != 'on'">
+                    <p>Its groups answer again, the same ones as before.</p>
+                </div>
+                <div invisible="do != 'remove'">
+                    <p>Its key goes and its employee is free for another number.
+                    <b>Groups, customers, orders, invoices and messages stay.</b>
+                    Connect the same number again later and its history is there.</p>
+                </div>
+                <div class="alert alert-warning" role="status" invisible="not open_text">
+                    Open now: <b><field name="open_text" readonly="1" nolabel="1" class="oe_inline"/></b>
+                </div>
+                <footer>
+                    <button name="action_do" type="object" string="Turn off" class="btn-primary" invisible="do != 'off'"/>
+                    <button name="action_do" type="object" string="Turn on" class="btn-primary" invisible="do != 'on'"/>
+                    <button name="action_do" type="object" string="Remove" class="btn-danger" invisible="do != 'remove'"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

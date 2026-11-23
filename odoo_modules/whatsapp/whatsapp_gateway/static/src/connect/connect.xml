@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="whatsapp_gateway.ConnectNumber">
+        <div class="o_wa_connect">
+            <div class="o_wa_card">
+                <div class="o_wa_head">
+                    <h2>Connect a number</h2>
+                    <button class="btn btn-link" t-on-click="close">Close</button>
+                </div>
+
+                <ol class="o_wa_steps" t-if="state.step !== 'done'">
+                    <li t-foreach="steps" t-as="s" t-key="s.key" t-attf-class="#{stepState(s.key)}">
+                        <span class="o_wa_dot"><t t-if="stepState(s.key) === 'past'">&#10003;</t><t t-else="" t-esc="s.n"/></span>
+                        <span t-esc="s.name"/>
+                    </li>
+                </ol>
+
+                <div t-if="!state.ready" class="o_wa_wait"><i class="fa fa-spinner fa-spin"/> One moment…</div>
+
+                <div t-if="state.error" class="alert alert-danger" role="alert" t-esc="state.error"/>
+
+                <!-- 1 -->
+                <form t-if="state.ready and state.step === 'number'" t-on-submit.prevent="next1" autocomplete="off">
+                    <div t-if="scanned.length" class="o_wa_scanned">
+                        <label class="o_wa_label">Already scanned</label>
+                        <div t-foreach="scanned" t-as="r" t-key="r.id" class="o_wa_srow">
+                            <div><b t-esc="r.pretty"/> <span class="text-muted" t-esc="r.label"/>
+                                <div class="small" t-att-class="r.connected ? 'text-success' : 'text-muted'"><t t-if="r.connected">connected, no scan needed</t><t t-else="">not linked now, scan once</t></div></div>
+                            <button type="button" class="btn btn-secondary" t-on-click="() => this.pick(r)">Use</button>
+                        </div>
+                        <div class="o_wa_or">Or a new number</div>
+                    </div>
+                    <div t-if="state.picked" class="o_wa_srow o_wa_picked">
+                        <div><b t-esc="state.picked.pretty"/> <span class="text-muted" t-esc="state.picked.label"/></div>
+                        <button type="button" class="btn btn-link" t-on-click="() => this.pick(null)">Change</button>
+                    </div>
+
+                    <t t-call="whatsapp_gateway.ConnectNumberExtra"/>
+
+                    <t t-if="!state.picked">
+                    <label class="o_wa_label">Country</label>
+                    <div class="o_wa_country">
+                        <button type="button" class="o_wa_pick" t-on-click="openCountries" t-att-aria-expanded="state.countryOpen ? 'true' : 'false'">
+                            <span t-if="state.country"><b t-esc="state.country.name"/> <span class="text-muted">+<t t-esc="state.country.dial"/></span></span>
+                            <span t-else="" class="text-muted">Choose the country</span>
+                            <i class="fa fa-chevron-down"/>
+                        </button>
+                        <div t-if="state.countryOpen" class="o_wa_menu">
+                            <input type="text" class="form-control" placeholder="Search a country" t-model="state.countrySearch"/>
+                            <div class="o_wa_options">
+                                <button type="button" t-foreach="countries" t-as="c" t-key="c.id" t-on-click="() => this.pickCountry(c)">
+                                    <span t-esc="c.name"/><span class="text-muted">+<t t-esc="c.dial"/></span>
+                                </button>
+                                <div t-if="!countries.length" class="text-muted p-2">No country found.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <label class="o_wa_label" for="wa_number">WhatsApp number</label>
+                    <div class="o_wa_number" t-att-class="{ bad: state.checkError, good: state.check }">
+                        <span class="o_wa_dial">+<t t-esc="state.country ? state.country.dial : ''"/></span>
+                        <input id="wa_number" type="text" inputmode="numeric" t-att-value="state.number"
+                               t-att-disabled="!state.country" t-att-placeholder="state.country and state.country.example or ''"
+                               t-on-keydown="onNumberKey" t-on-input="onNumber"/>
+                        <span class="o_wa_count" t-if="state.country"><t t-esc="state.number.length"/>/<t t-esc="state.country.max"/></span>
+                    </div>
+                    <div class="o_wa_hint">
+                        <span t-if="state.checkError" class="text-danger" t-esc="state.checkError"/>
+                        <span t-elif="state.check" class="text-success">&#10003; <t t-esc="state.check"/></span>
+                        <span t-elif="state.country" class="text-muted"><t t-esc="wanted"/>, digits only</span>
+                    </div>
+                    </t>
+
+                    <t t-if="(state.data.companies || []).length > 1 and !(state.picked and state.picked.session_id)">
+                        <label class="o_wa_label" for="wa_company">Company</label>
+                        <select id="wa_company" class="form-select" t-model="state.company">
+                            <option t-foreach="state.data.companies" t-as="c" t-key="c.id" t-att-value="c.id" t-esc="c.name"/>
+                        </select>
+                    </t>
+
+                    <label t-if="!(state.picked and state.picked.session_id)" class="o_wa_label" for="wa_label">Area <span class="text-muted">(optional)</span></label>
+                    <input t-if="!(state.picked and state.picked.session_id)" id="wa_label" type="text" class="form-control" maxlength="60" placeholder="Deira" t-model="state.label"/>
+
+                    <t t-if="needsKey">
+                        <div class="alert alert-warning mt-3 mb-2" role="status">
+                            <t t-if="!state.data.has_session">The first number of this database needs its key from the WhatsApp panel, once.</t>
+                            <t t-elif="state.data.may_add">This database has all <t t-esc="state.data.may_add"/> numbers it may have. The panel administrator can allow more.</t>
+                            <t t-else="">Adding numbers from here is off. The panel administrator switches it on: the database's page, "Odoo may have, at most". <t t-esc="state.data.why"/></t>
+                        </div>
+                        <label class="o_wa_label" for="wa_key">Key of this number, from the panel</label>
+                        <input id="wa_key" type="password" class="form-control" autocomplete="new-password" placeholder="wa1_…" t-model="state.key"/>
+                    </t>
+
+                    <button type="submit" class="btn btn-primary o_wa_go" t-att-disabled="!ready1">
+                        <i t-if="state.busy" class="fa fa-spinner fa-spin me-2"/>
+                        <t t-if="state.busy">Preparing the number…</t><t t-elif="state.picked and state.picked.connected">Next: groups</t><t t-else="">Next: scan</t>
+                    </button>
+                </form>
+
+                <!-- 2 -->
+                <div t-if="state.step === 'scan'" class="o_wa_scan">
+                    <p>Scan with the phone that has</p>
+                    <p class="o_wa_big" t-esc="state.session.number"/>
+                    <div t-if="state.session.wrong" class="alert alert-danger" role="alert">
+                        Another phone was scanned and was logged out. Only <b t-esc="state.session.number"/> can be connected here.
+                    </div>
+                    <div t-if="state.session.error" class="alert alert-warning" role="alert" t-esc="state.session.error"/>
+                    <div class="o_wa_qr">
+                        <img t-if="state.session.qr" t-att-src="state.session.qr" alt="WhatsApp QR code"/>
+                        <div t-else="" class="o_wa_wait"><i class="fa fa-spinner fa-spin"/> Getting the QR code…</div>
+                    </div>
+                    <ol class="o_wa_how">
+                        <li>Open WhatsApp on that phone</li>
+                        <li><b>Linked devices</b> → <b>Link a device</b></li>
+                        <li>Point it at this code</li>
+                    </ol>
+                    <p class="text-muted small">The code renews itself. This page goes on when the phone is connected.</p>
+                </div>
+
+                <!-- 3 -->
+                <div t-if="state.step === 'groups'">
+                    <div class="alert alert-success" role="status">&#10003; <b t-esc="state.session.number"/> is connected<t t-if="state.session.employee"> for <t t-esc="state.session.employee"/></t>.</div>
+                    <p>Tick the groups this number answers. The others stay silent.</p>
+                    <div t-if="state.groupsError" class="alert alert-warning" role="alert">
+                        <t t-esc="state.groupsError"/> <button class="btn btn-sm btn-secondary ms-2" t-on-click="toGroups">Try again</button>
+                    </div>
+                    <div t-if="state.busy and !state.groups.length" class="o_wa_wait"><i class="fa fa-spinner fa-spin"/> Reading the groups…</div>
+                    <input t-if="state.groups.length > 8" type="text" class="form-control mb-2" placeholder="Search a group" t-model="state.groupSearch"/>
+                    <div class="o_wa_groups">
+                        <label t-foreach="shownGroups" t-as="g" t-key="g.id" t-att-class="{ taken: g.taken, on: g.chosen and !g.taken }">
+                            <input type="checkbox" t-att-checked="g.chosen and !g.taken" t-att-disabled="!!g.taken or g.enabled" t-on-change="() => this.toggleGroup(g)"/>
+                            <span class="o_wa_gname" t-esc="g.name"/>
+                            <span class="text-muted small">
+                                <t t-if="g.taken">already on: <t t-esc="g.taken"/></t>
+                                <t t-elif="g.enabled">already on</t>
+                                <t t-else=""><t t-esc="g.members"/> members</t>
+                            </span>
+                        </label>
+                        <div t-if="!state.busy and !state.groups.length and !state.groupsError" class="text-muted p-3">This number is in no group yet.</div>
+                    </div>
+                    <button class="btn btn-primary o_wa_go" t-att-disabled="state.busy" t-on-click="finish">
+                        <i t-if="state.busy" class="fa fa-spinner fa-spin me-2"/>
+                        <t t-if="chosenCount">Finish with <t t-esc="chosenCount"/> group(s)</t><t t-else="">Finish without groups</t>
+                    </button>
+                </div>
+
+                <!-- done -->
+                <div t-if="state.step === 'done'" class="o_wa_done">
+                    <h3>Ready</h3>
+                    <ul>
+                        <li t-foreach="state.done" t-as="l" t-key="l_index" t-att-class="l.ok ? 'ok' : 'not'">
+                            <span t-esc="l.ok ? '✓' : '!'"/> <t t-esc="l.text"/>
+                        </li>
+                    </ul>
+                    <div class="o_wa_after">
+                        <button class="btn btn-primary" t-on-click="another">Connect another number</button>
+                        <button class="btn btn-secondary" t-on-click="close">All numbers</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </t>
+
+    <!-- other modules put their fields here -->
+    <t t-name="whatsapp_gateway.ConnectNumberExtra"><div class="o_wa_extra"/></t>
+
+</templates>

@@ -15,6 +15,12 @@
                             string="Test Connection"
                             type="object"
                             class="btn-primary"/>
+                    <button name="action_connect_screen"
+                            string="Scan QR"
+                            type="object"
+                            class="btn-primary"
+                            invisible="status == 'connected' or not id"
+                            groups="base.group_system"/>
                     <button name="action_fetch_config"
                             string="Load Settings"
                             type="object"
@@ -70,8 +76,7 @@
                         <field name="authorized_number" readonly="1" nolabel="1"
                                class="oe_inline"/>, the only number the panel
                         allows for this database, so it was logged out again.
-                        Scan the QR in the panel with the right phone, then press
-                        <b>Test Connection</b>.
+                        Press <b>Scan QR</b> and scan with the right phone.
                     </div>
                     <div invisible="status in ('connected', 'wrong_number')"
                          class="alert alert-warning mt-3" role="alert">
@@ -80,8 +85,8 @@
                         database, or the number
                         <field name="authorized_number" readonly="1" nolabel="1"
                                class="oe_inline"/>
-                        has not been paired. Scan its QR in the panel with that
-                        phone, then press <b>Test Connection</b>.
+                        has not been paired. Press <b>Scan QR</b> and scan with
+                        that phone.
                     </div>
 
                     <div invisible="not error_message"
@@ -148,35 +153,61 @@
         <field name="name">whatsapp.session.list</field>
         <field name="model">whatsapp.session</field>
         <field name="arch" type="xml">
-            <list>
-                <field name="name"/>
-                <field name="phone_number"/>
-                <field name="instance_name"/>
-                <field name="tenant_label" optional="show"/>
+            <list string="WhatsApp Numbers" create="false" delete="false" decoration-muted="not active">
+                <field name="active" column_invisible="True"/>
+                <field name="removed" column_invisible="True"/>
+                <header>
+                    <button name="action_connect_new" type="object" display="always"
+                            string="+ Connect a number" class="btn-primary"
+                            groups="base.group_system"/>
+                </header>
+                <field name="name" string="Name"/>
+                <field name="authorized_number" string="Number" widget="wa_phone" readonly="1"/>
+                <field name="phone_number" optional="hide"/>
+                <field name="instance_name" optional="hide"/>
+                <field name="tenant_label" optional="hide"/>
                 <field name="company_id"
                        groups="base.group_multi_company"
                        optional="hide"/>
-                <field name="status" widget="badge"/>
-                <field name="message_count" string="Messages"/>
+                <field name="status" widget="badge"
+                       decoration-success="status == 'connected'"
+                       decoration-danger="status in ('wrong_number', 'error', 'disconnected')"
+                       decoration-warning="status in ('connecting', 'waiting_qr')"/>
+                <field name="message_count" string="Messages" optional="show"/>
+                <button name="action_connect_screen" type="object" string="Scan again"
+                        class="btn-secondary" invisible="status == 'connected' or not active"
+                        groups="base.group_system"/>
+                <button name="action_turn_off" type="object" string="Turn off"
+                        class="btn-secondary" invisible="not active" groups="base.group_system"/>
+                <button name="action_turn_on" type="object" string="Turn on"
+                        class="btn-primary" invisible="active or removed" groups="base.group_system"/>
+                <button name="action_remove_number" type="object" string="Remove"
+                        class="btn-link text-danger" invisible="removed" groups="base.group_system"/>
             </list>
         </field>
     </record>
 
     <!-- ============ SESSION ACTION ============ -->
     <record id="action_whatsapp_session" model="ir.actions.act_window">
-        <field name="name">WhatsApp Sessions</field>
+        <field name="name">WhatsApp Numbers</field>
         <field name="res_model">whatsapp.session</field>
+        <field name="domain">[('removed', '=', False)]</field>
+        <field name="context">{'active_test': False}</field>
         <field name="view_mode">list,form</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
-                Point 369ai at your WhatsApp gateway
+                Connect your first WhatsApp number
             </p>
             <p>
-                Create a session, paste the gateway URL and API key, and name
-                the instance to send through. The number itself is paired once
-                on the gateway - not here, and not per database.
+                Press <b>+ Connect a number</b>: choose the country, type the
+                number, scan the QR.
             </p>
         </field>
+    </record>
+
+    <record id="action_whatsapp_connect" model="ir.actions.client">
+        <field name="name">Connect a number</field>
+        <field name="tag">whatsapp_gateway.connect</field>
     </record>
 
 </odoo>

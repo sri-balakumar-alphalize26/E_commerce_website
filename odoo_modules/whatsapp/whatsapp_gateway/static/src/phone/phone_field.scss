@@ -1,0 +1,10 @@
+.o_wa_phone {
+    width: 100%;
+    .o_wa_phone_row { display: flex; align-items: center; gap: 8px; input { flex: 1; min-width: 0; } }
+    .o_wa_phone_country { flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border: 1px solid $border-color; border-radius: 6px; background: transparent; color: inherit; font-weight: 600; white-space: nowrap; i { font-size: .65em; } }
+    .o_wa_phone_count { flex: none; color: $text-muted; font-size: .8rem; }
+    .o_wa_phone_menu { position: fixed; z-index: 1100; width: 300px; max-width: calc(100vw - 16px); padding: 8px; border: 1px solid $border-color; border-radius: 10px; background: $o-white; box-shadow: 0 10px 30px rgba(0, 0, 0, .18); }
+    .o_wa_phone_options { max-height: 240px; overflow: auto; margin-top: 6px;
+        button { width: 100%; display: flex; justify-content: space-between; gap: 12px; padding: 8px 10px; border: 0; border-radius: 8px; background: transparent; color: inherit; text-align: left; }
+        button:hover, button:focus { background: $o-gray-200; } }
+}

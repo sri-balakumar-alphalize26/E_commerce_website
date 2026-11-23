@@ -15,14 +15,14 @@
 
                     <separator string="📱 Owner Notification Numbers"/>
                     <p class="text-muted">
-                        Add phone numbers (with country code, no + sign) to receive
+                        Add phone numbers (choose the country) to receive
                         business notifications via WhatsApp.
                     </p>
                     <field name="owner_number_ids">
                         <list editable="bottom">
                             <field name="sequence" widget="handle"/>
                             <field name="name" placeholder="e.g. Owner / Manager"/>
-                            <field name="phone" placeholder="e.g. 919944080209"/>
+                            <field name="phone" widget="wa_phone"/>
                             <field name="active"/>
                         </list>
                     </field>
@@ -68,7 +68,7 @@ action = {
             <list editable="bottom">
                 <field name="sequence" widget="handle"/>
                 <field name="name"/>
-                <field name="phone"/>
+                <field name="phone" widget="wa_phone"/>
                 <field name="active"/>
             </list>
         </field>
