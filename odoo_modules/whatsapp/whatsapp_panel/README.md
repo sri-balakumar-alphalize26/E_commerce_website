@@ -71,6 +71,6 @@ the caller sends.
 ## Files
 
 `server.js` (routes), `db.js` (schema + migrations, run at every start),
-`views.js` (layout), `mail.js` (SMTP), `reset_login.js`, `init-db.js`. Logs in
+`views.js` (layout), `ui.js` (the look and the animations of every page), `mail.js` (SMTP), `reset_login.js`, `init-db.js`. Logs in
 `logs\panel.log`. Runs as the Windows service `whatsapp-panel` (nssm). The
 files from before the role rewrite are kept beside the new ones as `*.bak-roles`.

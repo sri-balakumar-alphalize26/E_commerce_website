@@ -30,7 +30,7 @@ const session = require('express-session');
 const bcrypt = require('bcryptjs');
 
 const { pool, init, origin } = require('./db');
-const { layout, esc } = require('./views');
+const { layout, esc, LOGO } = require('./views');
 const mailer = require('./mail');
 
 const PORT = Number(process.env.PANEL_PORT || 8086);
@@ -234,7 +234,7 @@ async function identify(req) {
   const claimedDb = String(req.headers['x-odoo-db'] || '').trim();
   const claimedUrl = origin(req.headers['x-odoo-url'] || '');
 
-  if (!supplied) return { error: 'no token supplied' };
+  if (!supplied) return { error: 'no key was sent: paste the key of this number from the WhatsApp panel in Setup Key and save' };
 
   const { rows } = await pool.query(
     `SELECT d.id, d.db_name, d.tenant_label, d.contact_number, d.active AS db_active,
@@ -250,7 +250,7 @@ async function identify(req) {
       WHERE d.token = $1`,
     [supplied]
   );
-  if (!rows.length) return { error: 'token not registered' };
+  if (!rows.length) return { error: 'this key is not registered in the WhatsApp panel (reset, or not complete): copy it again there, paste it in Setup Key and save' };
   const row = rows[0];
 
   if (!row.company_id) {
@@ -258,17 +258,18 @@ async function identify(req) {
   }
   if (!row.company_active) return { error: `${row.company_name} is switched off`, row };
   if (!row.server_active) return { error: `server ${row.base_url} is switched off`, row };
-  if (!row.db_active) return { error: `database ${row.db_name} is switched off`, row };
   // Both headers are REQUIRED now. A bare token used to pass; that let a key
   // copied out of one Odoo be used from anywhere.
   if (!claimedDb) return { error: 'X-Odoo-Db header missing', row };
   if (claimedDb !== row.db_name) {
-    return { error: `token belongs to database ${row.db_name}, not ${claimedDb}`, row };
+    return { error: `wrong key: it is the key of database ${row.db_name}, but this is ${claimedDb}. Open ${claimedDb} in the WhatsApp panel and copy the key there`, row };
   }
   if (!claimedUrl) return { error: 'X-Odoo-Url header missing', row };
   if (claimedUrl !== origin(row.base_url)) {
-    return { error: `token is registered to ${row.base_url}, not ${claimedUrl}`, row };
+    return { error: `wrong address: this key is for ${row.base_url}, but this Odoo is ${claimedUrl}`, row };
   }
+  // after the two above: with the wrong key, "switched off" would name the other database
+  if (!row.db_active) return { error: `database ${row.db_name} is switched off in the WhatsApp panel. Press Activate on its page there`, row };
   if (row.off_by) return { error: 'this WhatsApp number is turned off', row, off: row.off_by };
   return { row };
 }
@@ -589,6 +590,32 @@ document.querySelectorAll('.phone').forEach(function (box) {
 });
 </script>`;
 
+// Copies the key of one number. The old way first: it is done at once, before
+// the Odoo tab takes the focus, and it also works on a plain http address.
+const KEY_SCRIPT = `<script>
+function wapCopyKey(b, say) {
+  var row = b.closest('.num-row'), text = row.querySelector('.key-line code').textContent.trim();
+  var box = document.createElement('textarea'), ok = false;
+  box.value = text; box.style.position = 'fixed'; box.style.opacity = '0';
+  document.body.appendChild(box); box.select();
+  try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+  box.remove();
+  var line = row.querySelector('.key-line');
+  if (ok) { line.classList.add('copied'); setTimeout(function () { line.classList.remove('copied'); }, 1800); }
+  if (say) {
+    var tell = function (done) { b.textContent = done ? 'Copied' : 'Copy it by hand'; b.classList.toggle('done', done); setTimeout(function () { b.textContent = 'Copy'; b.classList.remove('done'); }, 1800); };
+    if (ok || !navigator.clipboard) { tell(ok); }
+    else { navigator.clipboard.writeText(text).then(function () { tell(true); }, function () { tell(false); }); }
+  } else if (!ok && navigator.clipboard) { navigator.clipboard.writeText(text).catch(function () {}); }
+  return ok;
+}
+function wapConnect(b) {
+  if (wapCopyKey(b, false) && window.wapToast) { window.wapToast('Key copied. Paste it in Setup Key in Odoo.'); }
+  var steps = b.closest('.num-row').querySelector('details.odoo-steps');
+  if (steps) { steps.open = true; }
+}
+</script>`;
+
 const TABS_SCRIPT = `<script>
 (function () {
   var links = document.querySelectorAll('.tabs a'), parts = document.querySelectorAll('section.tab'), key = 'wapTab' + location.pathname;
@@ -659,6 +686,20 @@ async function loadNumber(id) {
 }
 
 /** Every row of one Odoo database: one per number. The first is the oldest. */
+/**
+ * The last thing this database's Odoo was refused, unless it got through since.
+ * Also when it used the key of another database of the same vendor.
+ */
+async function lastProblem(d, ids) {
+  const { rows } = await pool.query(
+    `SELECT l.status, l.detail, l.created_at FROM wap_log l
+       LEFT JOIN wap_database k ON k.id = l.database_id
+      WHERE l.created_at > now() - interval '30 minutes' AND l.remote_ip <> '' AND l.claimed_db = $1
+        AND (l.database_id = ANY($2::int[]) OR ((k.company_id = $3 OR l.database_id IS NULL) AND l.claimed_url = $4))
+      ORDER BY l.id DESC LIMIT 1`, [d.db_name, ids, d.company_id, origin(d.base_url)]);
+  return rows.length && rows[0].status === 'refused' ? rows[0] : null;
+}
+
 async function siblings(row) {
   if (!row.server_id) {
     const own = await pool.query('SELECT server_id FROM wap_database WHERE id = $1', [row.id]);
@@ -1365,19 +1406,43 @@ function scopeNumber(param = 'id') {
 
 app.get('/login', (req, res) => {
   res.send(layout('Sign in', `
-    <form method="post" action="/login" class="card narrow">
-      <h1>WhatsApp Panel</h1>
-      <p class="muted">One sign-in for everybody. What you see depends on the
-      login: the administrator sees everything, a vendor its own databases and
-      numbers, a client its one database.</p>
-      ${req.query.bad ? '<p class="bad">Wrong vendor, username or password.</p>' : ''}
-      <label>Vendor name<input name="vendor" autofocus placeholder="your software company">
-        <span class="muted">Vendors and clients type the vendor's name. Leave empty
-        only if you are the platform administrator.</span></label>
-      <label>Username<input name="username" autocomplete="username"></label>
-      <label>Password<input name="password" type="password" autocomplete="current-password"></label>
-      <button class="primary">Sign in</button>
-    </form>`, false));
+    <div class="auth-wrap">
+      <div class="auth-side">
+        <div class="auth-logo"><i></i><i></i>${LOGO}</div>
+        <h1>WhatsApp Panel</h1>
+        <p>One sign-in for everybody. What you see depends on the login: the
+        administrator sees everything, a vendor its own databases and numbers,
+        a client its one database.</p>
+        <div class="bubbles" aria-hidden="true">
+          <span>Scan the number once</span>
+          <span>Connected to Odoo &#10003;&#10003;</span>
+          <span><span class="dots"><i></i><i></i><i></i></span></span>
+        </div>
+      </div>
+      <form method="post" action="/login" class="card auth-card ${req.query.bad ? 'shake' : ''}">
+        <h2>Sign in</h2>
+        ${req.query.bad ? '<p class="wrong" role="alert">Wrong vendor, username or password.</p>' : ''}
+        <div class="field">
+          <label for="si-vendor">Vendor name</label>
+          <div class="in"><input id="si-vendor" name="vendor" autofocus placeholder="your software company">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21V5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v16M15 10h4a1 1 0 0 1 1 1v10M3 21h18M8 8h3M8 12h3M8 16h3"/></svg></div>
+          <span class="hint">Vendors and clients type the vendor's name. Leave empty only if you are the platform administrator.</span>
+        </div>
+        <div class="field">
+          <label for="si-user">Username</label>
+          <div class="in"><input id="si-user" name="username" autocomplete="username">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg></div>
+        </div>
+        <div class="field">
+          <label for="si-pass">Password</label>
+          <div class="in"><input id="si-pass" name="password" type="password" autocomplete="current-password">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+            <button type="button" class="peek" aria-pressed="false" aria-controls="si-pass" hidden>Show</button></div>
+          <span class="hint caps" role="status" hidden>Caps Lock is on.</span>
+        </div>
+        <button class="primary">Sign in</button>
+      </form>
+    </div>`, false));
 });
 
 app.post('/login', async (req, res) => {
@@ -2029,6 +2094,43 @@ app.get('/database/:id', requireLogin, scopeDatabase('id'), async (req, res) => 
   const connected = rowsOfDb.filter(x => x.on && x.n && x.n.pair_state === 'open').length;
   const withNumber = rowsOfDb.filter(x => x.number_id);
 
+  // Every number is its own session in Odoo: a new one is opened for it, so that
+  // its key is never pasted over another number's.
+  // with the database's name: the browser may be signed in to another one
+  const odooAction = (name, tail = '') => `${d.base_url}/odoo/action-${name}${tail}?db=${encodeURIComponent(d.db_name)}`;
+  const sessionsUrl = odooAction('whatsapp_gateway.action_whatsapp_session');
+  const newSessionUrl = odooAction('whatsapp_gateway.action_whatsapp_session', '/new');
+  const ownMax = Math.max(0, ...all.map(y => y.own_numbers_max));
+  const odooSteps = x => {
+    const used = !!x.odoo_webhook_url;
+    const another = rowsOfDb.some(y => y.id !== x.id && y.odoo_webhook_url);
+    const out = (url, text) => `<a href="${esc(url)}" target="_blank" rel="noopener"${url === sessionsUrl ? ' onclick="wapConnect(this)"' : ''}>${text}</a>`;
+    return `
+        <details class="odoo-steps">
+          <summary>${used ? 'Load its groups, or paste a new key' : 'Steps: paste the key, load settings, load groups'}</summary>
+          <ol class="muted">
+            <li>The button copies the key and opens the database <code>${esc(d.db_name)}</code> (sign in when asked). The key works only there.</li>
+            ${used ? `<li>Open ${out(sessionsUrl, 'the numbers in Odoo')} and choose the session with <b>Instance</b>
+              <code>${esc(x.n.instance_name || '')}</code>. Do not press New: this number has its session already. After <b>Reset key</b>: paste it in <b>Setup Key</b> and save.</li>` : `
+            <li><b>Connect with Odoo</b> copies the key and opens a new session. Give it a name, paste the key in <b>Setup Key</b>${another
+              ? ', untick <b>Email</b> and <b>Send all 369ai email through the gateway</b> (the first number has the e-mail)' : ''} and save.
+              Do not paste it into another number's session.</li>`}
+            <li>Press <b>Load Settings</b>. Odoo shows this number; when it is not connected, scan its QR here.</li>
+            <li>Press <b>Sync Groups</b> (with Sales Automation). To choose them one by one: ${out(odooAction('sales_automation.action_sa_customer_group'), 'Customer Groups')} or
+              ${out(odooAction('sales_automation.action_sa_vendor_group'), 'Vendor Groups')} &rarr; <b>New</b> &rarr; choose this session &rarr; <b>Load Groups</b>.</li>
+            ${used ? '' : `<li>If Odoo's list has <b>+ Connect a number</b>, that screen does all of this: ${out(sessionsUrl, 'open the list')}, press it and paste the key there when it asks.</li>`}
+          </ol>
+        </details>`;
+  };
+
+  const problem = canEdit && anyActive ? await lastProblem(d, rowsOfDb.map(x => x.id)) : null;
+  const problemCard = problem ? `
+    <div class="card warn" role="alert">
+      <b class="warn-msg">Odoo was refused at ${esc(new Date(problem.created_at).toLocaleTimeString())}</b>
+      <p style="margin:6px 0 0">${esc(problem.detail)}</p>
+      <p class="muted" style="margin:6px 0 0">This goes away by itself when Odoo gets through.</p>
+    </div>` : '';
+
   const numberRow = (x, i) => {
     const n = x.n;
     const only = rowsOfDb.length < 2;
@@ -2055,8 +2157,19 @@ app.get('/database/:id', requireLogin, scopeDatabase('id'), async (req, res) => 
         <div class="key-line">
           <span class="muted">Key</span>
           <code>${esc(setupKey(x.token))}</code>
-          <button type="button" onclick="var b=this;navigator.clipboard.writeText(b.previousElementSibling.textContent.trim()).then(function(){b.textContent='Copied';setTimeout(function(){b.textContent='Copy'},1500)})">Copy</button>
-        </div>` : ''}
+          <button type="button" onclick="wapCopyKey(this, true)">Copy</button>
+          <form method="post" action="/database/${x.id}/rotate" style="margin:0"
+                onsubmit="return confirm('The present key of this number stops working at once. The new one has to be pasted in its Odoo session. Reset the key?')">
+            <button class="bad-btn">Reset key</button></form>
+          ${!n ? '' : !x.active
+            ? (isAdmin && !anyActive ? `<form method="post" action="/database/${d.id}/toggle" style="margin:0"><button class="primary">Activate first</button></form>`
+                       : '<span class="warn-msg">Stopped: ask the administrator</span>')
+            : x.off_by ? '<span class="warn-msg">Turn it on first</span>'
+            : x.odoo_webhook_url
+            ? `<a class="btn" href="${esc(sessionsUrl)}" target="_blank" rel="noopener" onclick="wapConnect(this)">Open in Odoo</a>`
+            : `<a class="btn primary" href="${esc(newSessionUrl)}" target="_blank" rel="noopener" onclick="wapConnect(this)">Connect with Odoo</a>`}
+        </div>
+        ${n ? odooSteps(x) : ''}` : ''}
         <p class="muted" style="margin:6px 0 0">${x.odoo_webhook_url ? '&#10003; Used by Odoo' : '&#9675; Not used by Odoo yet'}
           &middot; at most ${x.daily_cap || 'unlimited'} messages a day, ${x.per_minute || 'unlimited'} a minute
           ${x.shared.length ? `&middot; <span class="warn-msg">also used by ${esc(x.shared.join(', '))}: both may answer</span>` : ''}</p>
@@ -2082,9 +2195,6 @@ app.get('/database/:id', requireLogin, scopeDatabase('id'), async (req, res) => 
           </form>` : ''}
           <div class="row" style="margin-top:10px;flex-wrap:wrap">
             ${isAdmin && n ? `<a class="btn" href="/number/${n.id}">Number and phone</a>` : ''}
-            <form method="post" action="/database/${x.id}/rotate" style="margin:0"
-                  onsubmit="return confirm('The present key of this number stops working at once. The new one has to be pasted in its Odoo session. Issue a new key?')">
-              <button>Issue a new key</button></form>
             ${isAdmin && !only ? `<form method="post" action="/database/${x.id}/delete" style="margin:0"
                   onsubmit="return confirm('Remove ${n ? esc(fmtNumber(n.authorized_number)) : 'this number'} from this database? Its key stops at once. The other numbers stay. The number is free to use again.')">
               <input type="hidden" name="sure" value="1"><button class="bad-btn">Remove from this database</button></form>` : ''}
@@ -2094,15 +2204,19 @@ app.get('/database/:id', requireLogin, scopeDatabase('id'), async (req, res) => 
   };
 
   const numbersCard = `
+    ${problemCard}
     <div class="card" id="numbers">
       <div class="row between">
         <h2 style="margin:0">WhatsApp numbers</h2>
         <span class="muted">${connected} of ${withNumber.length} connected</span>
       </div>
       <p class="muted">One number for one employee, each with its own key and its own session in Odoo.
-        Odoo adds and connects numbers itself under <b>Connect a number</b>; a key is pasted only for the first one.
-        ${canEdit ? `<a href="${esc(d.base_url)}/odoo/action-whatsapp_gateway.action_whatsapp_session" target="_blank" rel="noopener">Open the numbers in Odoo</a>` : ''}</p>
+        ${ownMax > 0
+          ? 'Odoo adds and connects numbers itself under <b>Connect a number</b>; a key is pasted only for the first one.'
+          : (canEdit ? 'Press <b>Connect with Odoo</b> beside a number to paste its key there.' : '')}
+        ${canEdit ? `<a href="${esc(sessionsUrl)}" target="_blank" rel="noopener">Open the numbers in Odoo</a>` : ''}</p>
       ${rowsOfDb.map(numberRow).join('')}
+      ${canEdit ? KEY_SCRIPT : ''}
       ${isAdmin ? `
       <details class="num-add" ${q.add || !withNumber.length ? 'open' : ''}>
         <summary class="btn primary">+ Add another number</summary>
@@ -2122,7 +2236,7 @@ app.get('/database/:id', requireLogin, scopeDatabase('id'), async (req, res) => 
         </form>
       </details>
       <form method="post" action="/database/${d.id}/own-numbers" class="own-max">
-        <label>Odoo may have, at most<input name="max" type="number" min="0" max="50" value="${Math.max(0, ...all.map(x => x.own_numbers_max))}"></label>
+        <label>Odoo may have, at most<input name="max" type="number" min="0" max="50" value="${ownMax}"></label>
         <span class="muted">numbers, and adds them itself under "Connect a number". 0 = only you add numbers here.</span>
         <button>Save</button>
       </form>` : ''}
@@ -2671,7 +2785,7 @@ app.get('/number/:id/qr', requireLogin, scopeNumber('id'), async (req, res) => {
     <h1>${esc(n.label)} <span class="muted">— WhatsApp connection</span></h1>
     <p class="muted">Used by ${dbs.length ? dbs.map(d => '<code>' + esc(d.db_name) + '</code>').join(' ') : 'no database yet'}.</p>
     ${n.pair_state === 'open' ? `
-      <div class="card narrow">
+      <div class="card narrow" id="qr-open">
         <p>${statePill('open')}</p>
         <table class="plain">
           <tr><th>Number</th><td class="big">${esc(fmtNumber(n.paired_number))}</td></tr>
@@ -2689,6 +2803,7 @@ app.get('/number/:id/qr', requireLogin, scopeNumber('id'), async (req, res) => {
           <button class="bad-btn">Disconnect</button>
         </form>
       </div>` : `
+      <div id="qr-live">
       ${n.pair_state === 'wrong_number' ? `
       <div class="card narrow danger">
         <h2 class="bad">Wrong phone</h2>
@@ -2703,13 +2818,15 @@ app.get('/number/:id/qr', requireLogin, scopeNumber('id'), async (req, res) => {
         : qr ? `
           <p>Scan this with the phone holding <b class="big">${esc(allowed) || 'the number for this database'}</b>:</p>
           <p class="muted">WhatsApp &rarr; <b>Linked devices</b> &rarr; <b>Link a device</b></p>
-          <img class="qr" src="${esc(qr)}" alt="WhatsApp QR code">
-          <p class="muted">The code expires in under a minute. This page refreshes
+          <div class="qr-box"><img class="qr" src="${esc(qr)}" alt="WhatsApp QR code"></div>
+          <div class="qr-time" aria-hidden="true"><i></i></div>
+          <p class="muted">The code expires in under a minute. It renews
           itself — leave it open and point the camera again. Any other phone is
           refused.</p>
         ` : `<p class="bad">No QR yet.</p><p class="muted">The gateway may still be starting. Wait and reload.</p>`}
         <form method="post" action="/number/${n.id}/restart" style="margin-top:14px"><button>Reload the code</button></form>
         <a class="btn" href="${backHref}">Back</a>
+      </div>
       </div>
       ${isClient ? '' : `
       <div class="card narrow danger">
@@ -2721,7 +2838,7 @@ app.get('/number/:id/qr', requireLogin, scopeNumber('id'), async (req, res) => {
           <button class="bad-btn">Reset and scan again</button>
         </form>
       </div>`}
-      <meta http-equiv="refresh" content="12">`}`);
+      <noscript><meta http-equiv="refresh" content="12"></noscript>`}`);
 });
 
 app.post('/number/:id/restart', requireLogin, scopeNumber('id'), async (req, res) => {
