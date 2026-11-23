@@ -47,6 +47,24 @@
                                    placeholder="e.g. Company WhatsApp"/>
                         </h1>
                     </div>
+                    <div invisible="not id or not active or not setup_next" class="alert alert-info" role="status">
+                        <field name="setup_next" invisible="1"/>
+                        <field name="setup_text" readonly="1" nolabel="1"/>
+                        <div name="setup_buttons" class="mt-2">
+                            <button name="action_fetch_config" type="object" string="Load Settings"
+                                    class="btn-primary" invisible="setup_next != 'settings'"/>
+                            <button name="action_connect_screen" type="object" string="Scan QR"
+                                    class="btn-primary" invisible="setup_next != 'phone'"
+                                    groups="base.group_system"/>
+                        </div>
+                    </div>
+                    <div invisible="not waiting_count" class="alert alert-warning" role="status">
+                        <field name="waiting_count" invisible="1"/>
+                        <field name="waiting_text" readonly="1" nolabel="1" class="d-inline"/>
+                        <button name="action_drop_waiting" type="object" string="Do not send them"
+                                class="btn-secondary ms-2" groups="base.group_system"
+                                confirm="These messages will never be sent. They stay in the list as failed. Go on?"/>
+                    </div>
                     <group>
                         <group string="Connection">
                             <field name="is_activated" widget="boolean_toggle" readonly="1"/>
