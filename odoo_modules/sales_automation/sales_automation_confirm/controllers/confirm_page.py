@@ -12,6 +12,7 @@ import html
 import logging
 
 from odoo import fields, http
+from odoo.addons.sales_automation.controllers.close_timer import CLOSE_TIMER
 from odoo.addons.sales_automation.controllers.link_expired import expired_page
 from odoo.addons.web.controllers.home import Home
 from odoo.addons.web.controllers.utils import ensure_db
@@ -247,25 +248,93 @@ def _page(title, body, status=200, ask='', body_class=''):
                                           ('Cache-Control', 'no-store')])
 
 
-def _back_button(link):
-    """After the answer: back to the WhatsApp group the customer came from -
-    "Back to <group name>", in this tab, by its invite link. Without that link
-    only the words: never a private chat with the shop's number (owner,
-    23 Nov 2026)."""
-    group = link.sudo().request_id.group_id
-    url = ''
-    try:
-        if group and hasattr(group, '_sa_back_url'):
-            url = group._sa_back_url() or ''
-    except Exception as err:  # noqa: BLE001 - the page must still render
-        _logger.info("Confirm page: back link for %s unavailable: %s", link.id, err)
-    name = html.escape((group.name or '').strip()[:40])
-    if url.startswith('https://chat.whatsapp.com/'):
-        return ('<a class="btn ok back" href="%s" rel="noopener" '
-                'style="display:block;text-decoration:none;margin-top:12px;padding-top:15px">'
-                '&#8617;&#65039; Back to %s</a>' % (html.escape(url, quote=True), name or 'WhatsApp group'))
-    return ('<p style="text-align:center;margin:14px 0 0;color:#2e7d32">&#9989; Done. Go back to %s in WhatsApp.</p>'
-            % ('the <b>%s</b> group' % name if name else 'the group'))
+def _group_name(link):
+    return html.escape((link.sudo().request_id.group_id.name or '').strip()[:40])
+
+
+def _just_done():
+    """Right after the answer, not an old link opened again."""
+    return request.params.get('done') == '1'
+
+
+def _card(title, when, inner, ok=True, fresh=False):
+    """One card for everybody's answer: a tick, what was done, the rest."""
+    stamp = ''
+    if when:
+        stamp = '<small data-utc="%sZ">%s UTC</small>' % (when.strftime('%Y-%m-%dT%H:%M:%S'), when.strftime('%d %b %Y %H:%M'))
+    return _RESULT_CSS + (
+        '<section class="card rc %s"><div class="rt%s" role="status"><i><svg width="30" height="30" viewBox="0 0 24 24" fill="none" '
+        'stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="%s"/></svg></i>'
+        '<h1>%s</h1>%s</div>' % ('acc' if ok else 'rej', ' fresh' if fresh else '', 'M5 12l5 5L20 7' if ok else 'M6 6l12 12M18 6L6 18',
+                                 title, stamp)) + '<div class="rb">' + inner + (
+        '</div></section><script>document.querySelectorAll("[data-utc]").forEach(function(e){var d=new Date(e.dataset.utc);'
+        'if(!isNaN(d))e.textContent=d.toLocaleString([],{day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"})})</script>')
+
+
+def _product_row(link, name):
+    return '<div class="rpn"><b>%s</b><small>Ref #%s</small></div>' % (html.escape(str(name)), html.escape(link.request_id.ref_code or ''))
+
+
+def _result_card(link, accepted, outcome, name, when):
+    """The customer's page after the answer (owner, 24 Nov 2026): what was done,
+    what happens next, and where - only words, no button to the group."""
+    group = _group_name(link)
+    where = ('the <b>%s</b> group in WhatsApp' % group) if group else 'WhatsApp'
+    if (link.channel or 'whatsapp') != 'whatsapp':
+        where = 'your chat'
+    steps = (['We are getting your price now.', 'You get it in %s.' % where, 'Then you say if you want to order.'] if accepted
+             else ['Your answer is saved.', 'We carry on in %s.' % where])
+    inner = _product_row(link, name)
+    if outcome == 'again':
+        inner += '<p class="ra">Your answer was already recorded and cannot be changed.</p>'
+    inner += '<div class="rnb"><h2>What happens next</h2><ol class="rn">%s</ol></div>' % ''.join('<li><span>%s</span></li>' % s for s in steps)
+    inner += '<p class="rg">Done. Go back to %s.</p>' % where
+    if outcome == 'accept' and accepted and _just_done():
+        inner += CLOSE_TIMER
+    return _card('You accepted this product' if accepted else 'You rejected this product', when, inner, ok=accepted,
+                 fresh=outcome in ('accept', 'reject'))
+
+
+def _vendor_card(link, state, name, when):
+    """A vendor who typed the amount, or said no (owner, 24 Nov 2026)."""
+    timer = CLOSE_TIMER if _just_done() else ''
+    if state == 'rejected':
+        return _card('Thank you for your answer', when, _product_row(link, name) +
+                     '<p class="rw">You rejected this product.</p>' + timer, ok=False, fresh=_just_done())
+    amount, cur = link._vendor_money()
+    return _card('Thank you for your confirmation', when, (
+        '<div class="ram"><small>Your price</small><b>%s</b></div>' % html.escape(('%s %.2f' % (cur, amount)).strip())) +
+        _product_row(link, name) + '<p class="rw">Our salesman will contact you if they need this product.</p>' + timer, fresh=_just_done())
+
+
+_RESULT_CSS = """<style>
+body{background:linear-gradient(180deg,#eaf3ee 0,#f5f7f9 320px) no-repeat,#f5f7f9}
+.res{max-width:480px}
+.rc{padding:0;overflow:hidden;border:0;border-radius:24px;box-shadow:0 24px 60px -28px rgba(16,40,28,.45),0 2px 8px rgba(16,40,28,.06)}
+.rt{display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;padding:34px 24px 28px;color:#fff;background:linear-gradient(150deg,#1f9a52,#12693a)}
+.rc.rej .rt{background:linear-gradient(150deg,#c2554c,#8f2c24)}
+.rt i{width:72px;height:72px;border-radius:50%;display:grid;place-items:center;color:#17703a;background:#fff;box-shadow:0 0 0 9px rgba(255,255,255,.2);margin:4px 0 12px}
+.rc.rej .rt i{color:#a3322a}
+.rt.fresh i{animation:sa-pop .5s cubic-bezier(.2,.8,.2,1) backwards}
+.rt h1{margin:0;font-size:23px;font-weight:800;letter-spacing:-.015em;line-height:1.25;text-wrap:balance}
+.rt small{color:rgba(255,255,255,.88);font-size:13.5px}
+.rb{padding:22px;display:flex;flex-direction:column;gap:18px}
+.rpn{display:grid;grid-template-columns:44px minmax(0,1fr);gap:2px 13px;align-items:center;border:1px solid var(--line);border-radius:16px;padding:14px 15px}
+.rpn::before{content:"";grid-row:span 2;width:44px;height:44px;border-radius:13px;background:var(--ok-bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2317703a' stroke-width='1.8' stroke-linejoin='round'%3E%3Cpath d='M12 3l8 4.5v9L12 21l-8-4.5v-9z'/%3E%3Cpath d='M4 7.5l8 4.5 8-4.5M12 12v9'/%3E%3C/svg%3E") center/24px no-repeat}
+.rpn b{font-size:16px;line-height:1.3;overflow-wrap:anywhere}.rpn small,.ram small{color:var(--muted);font-size:13px}
+.ram{text-align:center;background:var(--ok-bg);border-radius:16px;padding:16px}
+.ram b{display:block;font-size:34px;font-weight:800;color:#17703a;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.rc h2{margin:0 0 12px;font-size:15px;font-weight:800;color:var(--ink)}
+.rn{list-style:none;margin:0;padding:0;counter-reset:n}
+.rn li{counter-increment:n;position:relative;display:grid;grid-template-columns:28px minmax(0,1fr);gap:12px;font-size:15.5px;line-height:1.45;padding-bottom:15px;align-items:start}
+.rn li:last-child{padding-bottom:0}.rn li>span{padding-top:3px}
+.rn li::before{content:counter(n);position:relative;z-index:1;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:800;background:#17703a;color:#fff}
+.rn li:not(:first-child)::before{background:var(--ok-bg);color:#17703a}
+.rn li:not(:last-child)::after{content:"";position:absolute;left:13px;top:28px;bottom:0;width:2px;background:#d9e7de}
+.rg{margin:0;text-align:center;color:#17703a;font-size:15px;font-weight:600;background:#f0f8f3;border-radius:14px;padding:12px 14px;text-wrap:balance}
+.rg b{font-weight:800}.ra,.rw{margin:0;text-align:center;color:#3d4c58;font-size:16px;line-height:1.5;text-wrap:balance}
+@media(min-width:860px){.res{padding-top:24px}}
+</style>"""
 
 
 def _trust_html(badges):
@@ -526,33 +595,17 @@ class SaConfirmPage(http.Controller):
         accepted = state != 'rejected'
         when = link.decided_on or (link._vendor_links().filtered('decided').sorted('decided_on')[:1].decided_on
                                    if vendor else False)
-        stamp = (when.strftime('%d %b %Y %H:%M') + ' UTC') if when else ''
         product = link._product()
         name = (req._sa_confirm_name() if getattr(req, 'sa_variant_id', False) else '') or product.name \
             or req._sa_confirm_name() or ''
-        fresh = ' fresh' if outcome in ('accept', 'reject') else ''
-        tick = ('<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" '
-                'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="%s"/></svg>')
-        box = '<div class="done %s%s" role="status"><i>%s</i><span><b>%s</b><small>%s</small></span></div>'
-        out = box % ('acc' if accepted else 'rej', fresh,
-                     tick % ('M5 12l5 5L20 7' if accepted else 'M6 6l12 12M18 6L6 18'),
-                     'You accepted this product' if accepted else 'You rejected this product', html.escape(stamp))
-        out += '<section class="card"><h1 class="nm">%s</h1><div class="foot" style="text-align:left">Ref #%s</div></section>' % (
-            html.escape(str(name)), html.escape(req.ref_code or ''))
-        if vendor and state == 'priced':
-            amount, cur = link._vendor_money()
-            out += box % ('acc', '', tick % 'M5 12l5 5L20 7',
-                          html.escape(('Your price %s %s was received' % (cur, '%.2f' % amount)).replace('  ', ' ')),
-                          'Our salesman will contact you soon. Thank you!')
-        elif vendor and state == 'accepted':
+        if vendor and state == 'accepted':
+            out = _card('You accepted this product', when, _product_row(link, name))
             out += self._price_form(link, name, error) if link._vendor_price_open() else (
                 '<section class="card">This price check is already closed. Thank you.</section>')
-        elif not vendor:
-            if outcome == 'again':
-                out += '<div class="foot">Your answer was already recorded and cannot be changed.</div>'
-            out += '<div class="foot">Your answer is saved. We will carry on in WhatsApp.</div>'
-            if (link.channel or 'whatsapp') == 'whatsapp':
-                out += _back_button(link)
+        elif vendor:
+            out = _vendor_card(link, state, name, when)
+        else:
+            out = _result_card(link, accepted, outcome, name, when)
             if outcome == 'reject' and when and (fields.Datetime.now() - when).total_seconds() < 600:
                 out += self._similar_html(link)
         return _page('Ref #%s' % html.escape(req.ref_code or ''), '<div class="res">%s</div>' % out)

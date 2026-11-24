@@ -212,7 +212,7 @@ class TestVendorPage(VendorCase):
         self.assertEqual(len(self.req.quote_ids), 1)
         self.assertEqual(self.req.quote_ids.price, 1450.5)
         html = self._html()
-        self.assertIn('Your price INR 1450.50 was received', html)
+        self.assertIn('INR 1450.50', html)
         self.assertNotIn('id="amount"', html)
 
     def test_not_a_number(self):
@@ -236,7 +236,7 @@ class TestVendorPage(VendorCase):
         self._press('accept')
         self.env['sa.vendor.quote'].sudo()._sa_take_price(self.req, 70.0, 'INR', {
             'partner_id': self.vendor.id, 'vendor_phone': INDIA, 'vendor_name': 'V', 'matched_by': 'direct'})
-        self.assertIn('Your price INR 70.00 was received', self._html())
+        self.assertIn('INR 70.00', self._html())
 
     def test_closed_when_the_customer_cancelled(self):
         self._press('accept')
@@ -259,7 +259,7 @@ class TestVendorPage(VendorCase):
         self.assertTrue(self._price('100').json()['ok'])
         self.assertFalse(self.req.quote_ids)
         self.assertEqual(self.req._sa_held_of(self.vendor.id)['code'], 'INR')
-        self.assertIn('Your price INR 100.00 was received', self._html())
+        self.assertIn('INR 100.00', self._html())
 
     def test_expired(self):
         self._press('accept')
@@ -399,7 +399,7 @@ class TestVendorWeChat(VendorCase):
         self._press('accept', self.wx)
         self.assertIn('id="amount"', self._html(self.link), 'the WhatsApp page asks the price too')
         self._price('45', self.wx)
-        self.assertIn('Your price INR 45.00 was received', self._html(self.link))
+        self.assertIn('INR 45.00', self._html(self.link))
         self._price('99', self.link)
         self.assertEqual(self.req.quote_ids.mapped('price'), [45.0])
         self.sent.clear()

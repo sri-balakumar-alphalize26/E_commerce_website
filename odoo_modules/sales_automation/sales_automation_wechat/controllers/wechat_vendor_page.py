@@ -21,6 +21,8 @@ from odoo.addons.web.controllers.home import Home
 from odoo.addons.web.controllers.utils import ensure_db
 from odoo.http import request
 
+from odoo.addons.sales_automation.controllers.close_timer import CLOSE_TIMER
+
 _logger = logging.getLogger(__name__)
 
 _PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8">
@@ -92,6 +94,18 @@ def _expired_page():
     return _page('Expired', '<div class="ok">This link has expired.<br><span class="zh">此链接已过期。</span></div>', 410)
 
 
+def _answered(token, quote, req):
+    """Opened again: what was answered last, for a week."""
+    if quote:
+        amount = '%s %.2f' % (html.escape(quote.sa_typed_currency or req.currency_id.name or ''), quote.sa_typed_amount or quote.price)
+        msg = ('Thank you for your confirmation: %s.<br>Our salesman will contact you if they need this product.'
+               '<br><span class="zh">谢谢您的确认：%s。如有需要，我们的销售人员会与您联系。</span>' % (amount, amount))
+    else:
+        msg = 'Thank you for your answer: no stock.<br><span class="zh">谢谢，已回复：没有。</span>'
+    return ('<div class="ok">%s</div><a class="btn opt" style="text-align:center;text-decoration:none" href="/sa/wx/%s?change=1">'
+            'Change my answer <span class="zh">修改回复</span></a>' % (msg, token))
+
+
 class WeChatVendorPageEntry(Home):
     """Doorway: bind the database from `?db=`, then send the vendor to the
     page. A cold public route on a multi-database server cannot find its
@@ -125,6 +139,8 @@ class WeChatVendorPage(http.Controller):
         quote = request.env['sa.vendor.quote'].sudo().search(
             [('request_id', '=', req.id), ('partner_id', '=', row.partner_id.id)], order='id desc', limit=1)
         already = ''
+        if not kw.get('change') and (quote or row.partner_id in req.sa_vendor_no_ids):
+            return _page('Thank you', _answered(token, quote, req))
         if quote:
             already = ('<div class="sub">Already answered: %s %.2f. You can send a new answer below.'
                        '<br><span class="zh">已回复：%s %.2f。可在下方重新回复。</span></div>'
@@ -157,12 +173,14 @@ class WeChatVendorPage(http.Controller):
             return _page('Error', '<div class="ok">Sorry, that did not work: %s<br><span class="zh">抱歉，提交失败。</span></div>'
                          % html.escape(str(err)), 500)
         if result.get('result') == 'no_stock':
-            msg = 'No problem, thank you.<br><span class="zh">没关系，谢谢。</span>'
+            msg = 'Thank you for your answer.<br><span class="zh">没关系，谢谢。</span>'
         elif result.get('result') == 'quoted':
-            msg = ('Received: %s %.2f, %s. Thank you!<br><span class="zh">已收到：%s %.2f，%s。谢谢！</span>'
+            msg = ('Thank you for your confirmation: %s %.2f, %s.<br>Our salesman will contact you if they need this product.'
+                   '<br><span class="zh">谢谢您的确认：%s %.2f，%s。如有需要，我们的销售人员会与您联系。</span>'
                    % (html.escape(result.get('cur') or ''), result['price'], html.escape(result.get('days_en') or ''),
                       html.escape(result.get('cur') or ''), result['price'], html.escape(result.get('days_zh') or '')))
         else:
             msg = 'Please choose In stock or No stock.<br><span class="zh">请选择有货或没有。</span>'
-        back = '<a class="btn opt" style="text-align:center;text-decoration:none" href="/sa/wx/%s">Change my answer <span class="zh">修改回复</span></a>' % token
-        return _page('Thank you', '<div class="ok">%s</div>%s' % (msg, back))
+        back = '<a class="btn opt" style="text-align:center;text-decoration:none" href="/sa/wx/%s?change=1">Change my answer <span class="zh">修改回复</span></a>' % token
+        timer = CLOSE_TIMER if result.get('result') in ('no_stock', 'quoted') else ''
+        return _page('Thank you', '<div class="ok">%s</div>%s%s' % (msg, back, timer))

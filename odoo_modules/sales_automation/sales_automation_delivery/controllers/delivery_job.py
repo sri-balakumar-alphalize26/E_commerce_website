@@ -229,6 +229,8 @@ class SaDeliveryJob(http.Controller):
                                        day(picking.sa_delivered_on))
         elif tone == 'alert':
             eta_tail = 'we will contact you'
+        elif promised and picking.sa_promise_day_only:
+            eta_tail = 'on %s' % day(picking.sa_promised_on)
         elif promised:
             eta_tail = 'by %s, %s' % (clock(picking.sa_promised_on),
                                        day(picking.sa_promised_on))
@@ -338,7 +340,7 @@ class SaDeliveryJob(http.Controller):
         promised = picking.sa_promised_on
         promise = ''
         if promised and state not in ('delivered', 'cancelled', 'failed', 'returned', 'returning'):
-            promise = ('Promised between %s and %s' % (clock(promised - timedelta(hours=2)), clock(promised))
+            promise = 'Delivery on %s' % day(promised) if picking.sa_promise_day_only else ('Promised between %s and %s' % (clock(promised - timedelta(hours=2)), clock(promised))
                        if picking.sa_delivery_kind == 'express' else 'Promised by %s' % clock(promised))
         return {
             'state': state, 'label': label, 'tone': tone, 'progress': progress,

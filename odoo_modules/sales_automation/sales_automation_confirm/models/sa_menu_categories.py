@@ -60,6 +60,7 @@ class SaGroupRequestMenuCategories(models.Model):
         'Last menu search', readonly=True, copy=False,
         help="What the customer last typed after NEW ORDER - kept so MORE "
              "can page through the results.")
+    sa_menu_handed_at = fields.Datetime(readonly=True, copy=False, help="When a menu search was handed to the ordinary enquiry.")
     sa_menu_ask_at = fields.Datetime(
         'Menu search open since', readonly=True, copy=False,
         help="Set while the customer is on a NEW ORDER screen: what they type "
@@ -493,11 +494,31 @@ class SaGroupRequestMenuCategories(models.Model):
         # the ordinary enquiry, which asks the vendors. Between 22 and 23 Nov
         # 2026 these were told "couldn't find" (5,849 of 8,067 products).
         if self._sa_listed_unshown(term):
-            self.sudo().write({'sa_menu_ask_at': False})
+            self.sudo().write({'sa_menu_ask_at': False, 'sa_menu_handed_at': fields.Datetime.now()})
             _logger.info("Sales Automation: menu search %r is not on the menu - typed enquiry", term)
             return None
         self.sudo().write({'sa_menu_ask_at': fields.Datetime.now()})
         return self._sa_say_not_found(term)
+
+    def _drop(self, reason):
+        """Handed over by the menu and then "no product" ("mh" is inside "MHz"):
+        the customer is on our menu, so silence is wrong (24 Nov 2026). The
+        menu search is open again for the next words."""
+        res = super()._drop(reason)
+        if reason != 'not_product' or not self.group_id:
+            return res
+        since = fields.Datetime.now() - timedelta(minutes=2)
+        mine = self._sa_id_tail(self.requester_phone)
+        for menu in self.sudo().search([('group_id', '=', self.group_id.id), ('sa_menu_handed_at', '>=', since), ('id', '!=', self.id)],
+                                       order='sa_menu_handed_at desc, id desc', limit=10):
+            same = mine == self._sa_id_tail(menu.requester_phone) if mine else (
+                self.requester_lid and self.requester_lid == menu.requester_lid)
+            if same:
+                menu.write({'sa_menu_handed_at': False, 'sa_menu_ask_at': fields.Datetime.now()})
+                if self._settings().chatter_action != 'reply':      # else it was answered already
+                    self._sa_say_not_found(self.raw_text)
+                break
+        return res
 
     def _sa_listed_unshown(self, term):
         """A sellable product of this company has every typed word in its name,

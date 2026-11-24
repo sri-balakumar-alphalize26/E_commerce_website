@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Sales Automation - WeChat Vendors',
-    'version': '19.0.1.7.6',
+    'version': '19.0.1.7.7',
     'category': 'Sales',
     'summary': 'Price checks to vendors on WeChat through a bridge PC that polls 369ai over the public URL',
     'description': """

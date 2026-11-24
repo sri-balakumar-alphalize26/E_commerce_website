@@ -34,9 +34,7 @@
                             exact product" and the price is asked; REJECT means "don't have it".
                             <br/><br/>
                             <b>Pictures.</b> The product's own pictures are used, the same ones the
-                            shop shows, up to 13. Pictures are never searched for on the internet. When
-                            there is no picture, an AI reference picture is drawn with the Gemini key
-                            from AI Settings, if switched on above.
+                            shop shows, up to 13. Pictures are never searched for on the internet. 
                             <br/><br/>
                             <b>Click log.</b> Every open and every press is recorded with the account
                             the link was sent to, the time, the IP address and the browser:

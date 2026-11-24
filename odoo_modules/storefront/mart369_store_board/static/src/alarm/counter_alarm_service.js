@@ -24,6 +24,7 @@ import { registry } from "@web/core/registry";
 import { user } from "@web/core/user";
 import { _t } from "@web/core/l10n/translation";
 import { Alarm } from "@sales_automation_store/store_screen";
+import { shared, sharedChanged } from "@sales_automation_store/notice_shared";
 
 const POLL_MS = 10000;
 /* The package's rule (enquiry_alarm_service.js): after this many failed asks
@@ -83,6 +84,20 @@ export const counterAlarmService = {
          *  the package's enquiry alarm does the same. Closed the moment
          *  nothing is waiting; not shown while the Counter itself is open. */
         function tellThem() {
+            // The Store's notification cards are on (24 Nov 2026): one card
+            // there, with the bell; the note below is for when they are off.
+            const onCard = shared.on && !counterOpen() && !storeScreenOpen() ? state.ringing : 0;
+            if (shared.counter !== onCard) {
+                shared.counter = onCard;
+                sharedChanged();
+            }
+            if (shared.on) {
+                if (closeNotification) {
+                    closeNotification();
+                    closeNotification = null;
+                }
+                return;
+            }
             if (!state.ringing) {
                 if (closeNotification) {
                     closeNotification();

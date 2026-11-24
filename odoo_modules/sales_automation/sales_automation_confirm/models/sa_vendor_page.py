@@ -88,8 +88,12 @@ class SaConfirmLinkVendor(models.Model):
         if req.state == 'sourcing' or (req.state == 'dropped' and req.drop_reason == 'no_vendor_reply'):
             return True
         # late: kept and shown, for a day (owner, 23 Nov 2026)
-        return bool(req.sa_evaluated_on and req.sa_evaluated_on > fields.Datetime.now() - timedelta(days=1)
-                    and req.state in ('quoted', 'negotiating', 'awaiting_order_confirm', 'order_created', 'handed_off'))
+        if req.sa_evaluated_on and req.sa_evaluated_on > fields.Datetime.now() - timedelta(days=1) \
+                and req.state in ('quoted', 'negotiating', 'awaiting_order_confirm', 'order_created', 'handed_off'):
+            return True
+        # asked again after the sale order, at the counter (24 Nov 2026)
+        asked = getattr(req, '_sa_supply_price_open', None)
+        return bool(asked and asked(self.partner_id))
 
     def _vendor_currency(self):
         self.ensure_one()

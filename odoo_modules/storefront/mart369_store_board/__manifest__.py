@@ -1,6 +1,6 @@
 {
     'name': '369 Mart: New Orders Board',
-    'version': '19.0.1.1.1',
+    'version': '19.0.1.1.2',
     'category': 'Website',
     'summary': "369 Mart › Sales › Orders opens on the shop counter: Counter ⇄ All orders",
     'description': """

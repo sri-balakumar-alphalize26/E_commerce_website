@@ -199,6 +199,24 @@ class TestDetailsTypedWords(TransactionCase):
         self._send('headphone')
         self.assertIn('Found for *headphone*', self._bodies())
 
+    def _handed(self, phone=PHONE, reason='not_product'):
+        self.waiting.write({'sa_menu_ask_at': False, 'sa_menu_handed_at': fields.Datetime.now()})
+        del self.said[:]
+        self.env['sa.group.request'].create({
+            'group_id': self.group.id, 'requester_phone': phone, 'raw_text': 'mh', 'state': 'new'})._drop(reason)
+        self.waiting.invalidate_recordset()
+
+    def test_handed_over_and_no_product_is_answered(self):
+        self._handed()
+        self.assertEqual(self._bodies().count("couldn't find anything for *mh*"), 1)
+        self.assertTrue(self.waiting.sa_menu_ask_at, 'the next word is a search again')
+
+    def test_others_chat_stays_unanswered(self):
+        self._handed(phone='919811199999')
+        self.assertFalse(self.said)
+        self._handed(reason='stale')
+        self.assertFalse(self.said)
+
     def test_not_published_goes_to_the_ordinary_enquiry(self):
         if 'is_published' not in self.hidden._fields:
             self.skipTest('every product is on the menu without the shop')

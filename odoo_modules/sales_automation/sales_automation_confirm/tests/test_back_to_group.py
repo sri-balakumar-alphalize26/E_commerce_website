@@ -85,10 +85,23 @@ class TestBackToGroup(HttpCase):
         self.assertNotIn('wa.me', html)
         self.assertIn('Go back to the <b>Back Test Group</b> group', html)
 
-    def test_with_an_invite_link_this_tab_opens_the_group(self):
+    def test_the_page_closes_after_accept_only(self):
+        self._post()
+        self.assertIn('window.close()', self._html('?done=1'))
+        self.assertIn('Stay on this page', self._html('?done=1'))
+        for query in ('', '?done=again'):
+            self.assertNotIn('window.close()', self._html(query), 'an old link stays open')
+
+    def test_the_page_stays_after_reject(self):
+        self._post('reject')
+        self.assertNotIn('window.close()', self._html('?done=1'))
+
+    def test_with_an_invite_link_only_the_words(self):
         self.group.invite_url = 'https://chat.whatsapp.com/AbCdEf'
         self._post()
-        button = self._html('?done=1').split('class="btn ok back"', 1)[1].split('</a>', 1)[0]
-        self.assertIn('href="https://chat.whatsapp.com/AbCdEf"', button)
-        self.assertNotIn('_blank', button)
-        self.assertIn('Back Test Group', button)
+        html = self._html('?done=1')
+        self.assertNotIn('chat.whatsapp.com', html)
+        self.assertNotIn('btn ok back', html)
+        self.assertIn('What happens next', html)
+        self.assertIn('We are getting your price now', html)
+        self.assertIn('Go back to the <b>Back Test Group</b> group', html)

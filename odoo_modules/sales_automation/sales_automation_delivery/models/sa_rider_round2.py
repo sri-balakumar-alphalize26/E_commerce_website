@@ -111,7 +111,7 @@ class StockPickingRound2(models.Model):
             "Thank you for shopping with us! \U0001F64F",
             order=self.sale_id.name or self.sa_ref_code or self.name,
             time=when.strftime('%H:%M'),
-            rider=self.sa_delivery_partner_id.name or _("our rider"))
+            rider=self._sa_carrier_name())
         # "⭐ Rate your products" (once per order, when the shop asks for
         # reviews). This message replaced the base one and had left it out,
         # so the review link never went (21 Nov 2026).
@@ -146,6 +146,11 @@ class StockPickingRound2(models.Model):
         total = max(0, self.env['sa.delivery.settings'].sudo().get_settings().packed_wait_payment_seconds or 0)
         gone = (fields.Datetime.now() - self.sa_packed_unpaid_on).total_seconds()
         return max(0, int(total - gone))
+
+    def _sa_carrier_name(self):
+        """Who delivered, for the customer's message."""
+        self.ensure_one()
+        return self.sa_delivery_partner_id.name or _("our rider")
 
     def _compute_sa_stage_text(self):
         super()._compute_sa_stage_text()

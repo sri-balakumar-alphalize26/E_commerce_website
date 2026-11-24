@@ -344,7 +344,7 @@ class StockPickingTrack(models.Model):
         if show and rider_block and dlat and dlng:
             left_km = Ping._sa_metres(rider_block['latitude'], rider_block['longitude'], dlat, dlng) * 1.3 / 1000.0
             eta['minutes'] = max(1, int(round(left_km / job._sa_recent_speed_kmh() * 60)))
-        elif not ended and job.sa_promised_on:
+        elif not ended and job.sa_promised_on and not job.sa_promise_day_only:
             eta['window_to'] = job.sa_promised_on.replace(microsecond=0).isoformat() + 'Z'
             if kind == 'express':
                 eta['window_from'] = (job.sa_promised_on - timedelta(hours=2)).replace(microsecond=0).isoformat() + 'Z'

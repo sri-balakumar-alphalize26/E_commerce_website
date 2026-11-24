@@ -96,6 +96,8 @@ class StockPicking(models.Model):
              "confirmation, and editable afterwards - a promise that changes "
              "should be visible, not silently recomputed.")
 
+    sa_promise_day_only = fields.Boolean(
+        copy=False, readonly=True, help="Only the day was promised: no time is shown to the customer.")
     sa_cancelled_on = fields.Datetime('Cancelled On', copy=False,
                                       readonly=True)
     sa_returned_on = fields.Datetime('Returned On', copy=False, readonly=True)
