@@ -316,6 +316,15 @@ export class EnquiryScreen extends Component {
                 row.seconds_left -= 1;
             }
         }
+        for (const row of this.state.stalled) {
+            if (row.choice && row.seconds_left > 0) {
+                row.seconds_left -= 1;
+                if (row.seconds_left === 0) {
+                    // it goes now: read again as soon as it is done
+                    setTimeout(() => this.refresh(), 4000);
+                }
+            }
+        }
         for (const row of this.state.tracking) {
             if (row.seconds_left > 0) {
                 row.seconds_left -= 1;

@@ -121,7 +121,9 @@ class SaNotice(models.Model):
                     else 'vendor' if kind == 'stalled' and request.sa_vendor_choice_pending else kind,
                     'ref': request.ref_code or str(request.id), 'qty': request.qty or 1.0,
                     'product': request.product_id.name or request.ai_search_term or request.raw_text or '',
-                    'customer': request.requester_name or '', 'at': request.create_date.isoformat() + 'Z'})
+                    'customer': request.requester_name or '', 'at': request.create_date.isoformat() + 'Z',
+                    'seconds': request._sa_price_seconds_left(), 'price': request.sa_price_vendor or 0.0,
+                    'currency': request.currency_id.name or ''})
         return rows
 
     @api.model

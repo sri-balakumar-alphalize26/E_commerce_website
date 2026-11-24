@@ -22,6 +22,7 @@
                                 <div class="sa_side_text">
                                     <div class="sa_side_top"><b t-esc="words(w)"/><small t-esc="when(w.at)"/></div>
                                     <div class="sa_side_body">Ref <t t-esc="w.ref"/> &#183; <t t-esc="w.product"/> &#215; <t t-esc="w.qty"/><t t-if="w.customer"> &#183; <t t-esc="w.customer"/></t></div>
+                                    <div t-if="w.until" class="sa_side_count" t-esc="left(w)"/>
                                     <div class="sa_side_do"><button type="button" class="btn btn-sm btn-primary" t-on-click="() => this.notice.openEnquiry(w.id)">Open</button></div>
                                 </div>
                             </article>
@@ -48,6 +49,7 @@
                     <article t-foreach="cards" t-as="c" t-key="c.key" class="sa_pop_card" t-att-class="c.key">
                         <span class="sa_pop_ico"><span class="sa_shake"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" aria-hidden="true"><path d="M12 2a2 2 0 0 0-2 2v.4A6 6 0 0 0 6 10v5l-2 3h16l-2-3v-5a6 6 0 0 0-4-5.6V4a2 2 0 0 0-2-2z"/><path d="M9.5 19.5a2.5 2.5 0 0 0 5 0z"/></svg></span></span>
                         <div><b t-esc="c.title"/><div t-esc="c.text"/>
+                            <div t-if="c.key === 'enquiries' and next" class="sa_side_count" t-esc="next"/>
                             <button t-if="c.list" type="button" class="btn btn-link btn-sm p-0" t-on-click="() => this.notice.unfold()">See the list</button></div>
                         <button type="button" class="sa_pop_x" t-on-click="() => this.notice.tuck(c.key)" aria-label="Move to the side" title="Move to the side">&#10005;</button>
                         <button type="button" class="sa_pop_go" t-on-click="() => this.notice.openSection(c)"><t t-esc="c.go"/> &#8594;</button>

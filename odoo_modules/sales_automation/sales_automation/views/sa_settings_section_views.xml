@@ -343,6 +343,13 @@
                         <label for="price_approval_tolerance_percent" string="Ignore small differences" invisible="not price_approval_enabled"/>
                         <div invisible="not price_approval_enabled"><field name="price_approval_tolerance_percent" class="oe_inline"/> %
                             <div class="text-muted small">0 asks you always. 5 does not ask while the two are within 5%.</div></div>
+                        <label for="price_auto_minutes" string="Goes by itself after" invisible="not price_approval_enabled or vendor_choice_mode != 'auto'"/>
+                        <div invisible="not price_approval_enabled or vendor_choice_mode != 'auto'"><field name="price_auto_minutes" class="oe_inline"/> minutes
+                            <div class="text-muted small">Then our price goes to the customer. 0: it waits for you.</div></div>
+                        <label for="price_auto_max_below" string="Too low" invisible="not price_approval_enabled or vendor_choice_mode != 'auto' or not price_auto_minutes"/>
+                        <div invisible="not price_approval_enabled or vendor_choice_mode != 'auto' or not price_auto_minutes"><field name="price_auto_max_below" class="oe_inline"/> %
+                            <div class="text-muted small">Our price is below the page price by more than this: it waits for you.</div></div>
+                        <field name="vendor_choice_mode" invisible="1"/>
                     </group>
                 </sheet>
             </form>

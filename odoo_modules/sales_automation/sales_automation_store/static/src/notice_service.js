@@ -78,6 +78,9 @@ export const noticeService = {
                 }
             }
             before = counts;
+            for (const w of data.waiting || []) {
+                w.until = w.seconds >= 0 ? Date.now() + w.seconds * 1000 : 0;
+            }
             Object.assign(state, data);
             shared.on = !!data.allowed;
             shared.known = true;

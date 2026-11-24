@@ -63,7 +63,7 @@ export class NoticePanel extends Component {
         this.notice = useService("sa_notice");
         this.data = useState(this.notice.state);
         this.shared = useState(shared);
-        this.state = useState({ shut: {}, top: TOP });
+        this.state = useState({ shut: {}, top: TOP, now: Date.now() });
         this.pop = useRef("pop");
         const place = () => {
             if (this.pop.el) {
@@ -74,12 +74,19 @@ export class NoticePanel extends Component {
             }
         };
         let timer;
+        let tick;
         onMounted(() => {
             timer = setInterval(place, 800);
+            tick = setInterval(() => {
+                if (this.data.waiting.some((w) => w.until)) {
+                    this.state.now = Date.now();
+                }
+            }, 1000);
             window.addEventListener("resize", place);
         });
         onWillUnmount(() => {
             clearInterval(timer);
+            clearInterval(tick);
             window.removeEventListener("resize", place);
         });
     }
@@ -118,6 +125,23 @@ export class NoticePanel extends Component {
 
     get aside() {
         return this.sections.filter((s) => this.data.tucked[s.key]).length + (this.accept && this.data.tucked.accept ? 1 : 0);
+    }
+
+    /** "sends 120.00 AED by itself in 0:59" */
+    left(w) {
+        if (!w.until) {
+            return "";
+        }
+        const s = Math.max(0, Math.ceil((w.until - this.state.now) / 1000));
+        const price = `${w.price.toFixed(2)} ${w.currency}`;
+        return s ? _t("sends %(price)s by itself in %(time)s", { price, time: `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}` })
+            : _t("sending %s ...", price);
+    }
+
+    /** The next one to go, for the card while the panel is folded. */
+    get next() {
+        const list = this.data.waiting.filter((w) => w.until).sort((a, b) => a.until - b.until);
+        return list.length ? this.left(list[0]) : "";
     }
 
     toggle(key) {

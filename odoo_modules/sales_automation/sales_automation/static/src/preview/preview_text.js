@@ -27,6 +27,10 @@ function lastOf(d, t) {
 const differs = (d, t) => d.price_approval_enabled && t.page > 0
     && Math.abs(t.page - sellOf(d, t)) > (t.page * n(d.price_approval_tolerance_percent)) / 100 + 0.005;
 
+// the countdown of "Two prices": not when ours is far below the page
+const goes = (d, t) => d.vendor_choice_mode === "auto" && n(d.price_auto_minutes) > 0
+    && t.page - sellOf(d, t) <= (t.page * n(d.price_auto_max_below)) / 100 + 0.005;
+
 // ------------------------------------------------- one line for each option
 export const LINES = {
     active: onOff("The AI understands the messages.", "Only the exact words of your products are understood."),
@@ -53,6 +57,8 @@ export const LINES = {
     qty_bargain_all: onOff("The ranges are for every product.", "The ranges are for ticked products."),
     price_approval_enabled: onOff("You decide first. The customer waits.", "The customer gets our price at once."),
     price_approval_tolerance_percent: (v) => (n(v) ? `Up to ${pct(v)} difference is ignored.` : "Every difference asks you."),
+    price_auto_minutes: (v) => (n(v) ? `After ${n(v)} minute(s) our price goes by itself.` : "It waits for you."),
+    price_auto_max_below: (v) => `Page price 100: below ${num(100 - n(v))} it waits for you.`,
     supply_mode: (v) => (v === "auto" ? "The cheapest vendor gets the order by itself." : "You press the order button."),
     supply_auto_start: (v) => (v === "signed" ? "After the customer signed, also when not paid." : "After the customer paid. Cash on delivery does not count."),
     supply_auto_wait: (v) => (n(v) ? `We wait ${n(v)} more minutes for a cheaper price.` : "We order at once."),
@@ -120,7 +126,7 @@ export const GROUPS = {
         ["3. Waiting for the customer", ["customer_reply_minutes"]], ["4. Orders not paid yet", ["pay_remind_minutes", "pay_remind_max"]]],
     margin: [["Margin", ["margin_percent", "margin_rules_enabled", "margin_rules_by"]],
         ["Bargaining", ["bargain_enabled", "bargain_step_percent", "bargain_max_steps", "min_margin_percent", "qty_bargain_all"]],
-        ["Price differs from the product page", ["price_approval_enabled", "price_approval_tolerance_percent"]],
+        ["Price differs from the product page", ["price_approval_enabled", "price_approval_tolerance_percent", "price_auto_minutes", "price_auto_max_below"]],
         ["Ordering from the vendor", ["supply_mode", "supply_auto_margin"]]],
     payments: [["When the payment link is sent", ["pay_link_in_stock", "pay_link_no_stock"]]],
     address: [["Delivery Address", ["pincode_country_id", "pincode_prefixes", "stale_after_minutes", "max_order_quantity", "address_link_enabled", "address_link_minutes"]]],
@@ -143,6 +149,8 @@ const WHEN = {
     bargain_step_percent: (d) => d.bargain_enabled, bargain_max_steps: (d) => d.bargain_enabled,
     min_margin_percent: (d) => d.bargain_enabled, qty_bargain_all: (d) => d.bargain_enabled,
     price_approval_tolerance_percent: (d) => d.price_approval_enabled,
+    price_auto_minutes: (d) => d.price_approval_enabled && d.vendor_choice_mode === "auto",
+    price_auto_max_below: (d) => d.price_approval_enabled && d.vendor_choice_mode === "auto" && n(d.price_auto_minutes) > 0,
     address_link_minutes: (d) => d.address_link_enabled,
     chatter_reply_text: (d) => d.chatter_action === "reply", media_reply_text: (d) => d.media_action === "reply",
     finder_max_options: (d) => d.finder_enabled,
@@ -187,7 +195,7 @@ function marginPicture(d, t) {
     html += warn.map((w) => `<div class="alert alert-warning py-2 px-3 mb-2"><span>${esc(w)}</span></div>`).join("");
     return html + chat("Group chat", [["c", `${ITEM}?`], S("Not in stock: the vendors are asked"), ["v", money(t.cost, d), "Vendor B"],
         S(`Margin ${pct(m)}${rule ? ` (${rule.name})` : ""}: + ${money(sell - t.cost, d)}`),
-        wait ? S(`You choose first: the product page says ${money(t.page, d)}`)
+        wait ? S(`You choose first: the product page says ${money(t.page, d)}${goes(d, t) ? `. After ${n(d.price_auto_minutes)} minute(s) ours goes by itself` : ""}`)
             : d.price_approval_enabled && t.page > 0 ? S(`Fits the product page: ${money(t.page, d)}`) : null, ["b", `${ITEM}: ${money(sell, d)}`],
         d.bargain_enabled ? ["c", "Better price?"] : S("The price is final"),
         d.bargain_enabled && n(d.bargain_max_steps) ? S(`Up to ${n(d.bargain_max_steps)} times ${pct(d.bargain_step_percent)} less, never below ${money(t.cost * (1 + n(d.min_margin_percent) / 100), d)}`) : null,

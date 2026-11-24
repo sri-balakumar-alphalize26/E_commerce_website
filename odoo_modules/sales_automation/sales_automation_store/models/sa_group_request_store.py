@@ -186,7 +186,10 @@ class SaGroupRequest(models.Model):
                 'hint_vendor': seller.partner_id.name if seller else '',
                 'vendors': vendors,
                 # Vendor price differs from the product page: approve one.
+                'seconds_left': request._sa_price_seconds_left(),
                 'choice': ({
+                    'below': int(request._sa_price_below()),
+                    'auto': request._settings().vendor_choice_mode == 'auto' and request._settings().price_auto_minutes > 0,
                     'page': request.sa_price_page,
                     'vendor': request.sa_price_vendor,
                     'cost': request.vendor_price,

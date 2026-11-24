@@ -440,7 +440,11 @@
                     <div class="sa_choice_title" t-if="row.pick_vendor">&#9878; Choose the vendor</div>
                     <VendorCards t-if="state.view !== 'list' and row.cards and row.cards.length" cards="row.cards" requestId="row.id" busy="state.busy === row.id" onChoose="(card) => this.onChooseVendor(row, card)" t-key="row.id"/>
                     <div class="sa_choice" t-if="row.choice">
-                        <div class="sa_choice_title">&#9878; Two prices - approve one</div>
+                        <div class="sa_choice_title">&#9878; Two prices - approve one
+                            <span t-if="row.seconds_left > 0" class="sa_count">sends <t t-esc="row.choice.vendor.toFixed(2)"/> by itself in <b><t t-esc="countdown(row)"/></b></span>
+                            <span t-elif="row.seconds_left === 0" class="sa_count">sending <t t-esc="row.choice.vendor.toFixed(2)"/> ...</span>
+                            <span t-elif="row.choice.auto and row.choice.below > 0" class="sa_count sa_wait">waits for you: <t t-esc="row.choice.below"/>% below the page price</span>
+                        </div>
                         <div>&#127991; Product page: <b><t t-esc="row.choice.page.toFixed(2)"/> <t t-esc="row.currency"/></b></div>
                         <div>&#128666; Vendor <t t-esc="row.choice.vendor_name"/>:
                             <t t-esc="row.choice.cost.toFixed(2)"/> + <t t-esc="row.margin"/>% =
@@ -454,17 +458,17 @@
 
                     <div class="sa_actions" t-if="row.choice">
                         <button class="btn btn-primary sa_big"
-                                t-att-disabled="state.busy === row.id"
+                                t-att-disabled="state.busy === row.id or row.seconds_left === 0"
                                 t-on-click="() => this.onApprovePrice(row, 'page')">
                             Use page price <t t-esc="row.choice.page.toFixed(2)"/>
                         </button>
                         <button class="btn btn-outline-primary sa_big"
-                                t-att-disabled="state.busy === row.id"
+                                t-att-disabled="state.busy === row.id or row.seconds_left === 0"
                                 t-on-click="() => this.onApprovePrice(row, 'vendor')">
                             Use vendor price <t t-esc="row.choice.vendor.toFixed(2)"/>
                         </button>
                         <button class="btn btn-secondary"
-                                t-att-disabled="state.busy === row.id"
+                                t-att-disabled="state.busy === row.id or row.seconds_left === 0"
                                 t-on-click="() => this.onApprovePrice(row, 'typed')">
                             Type another
                         </button>

@@ -268,3 +268,5 @@
 
 .sa_choice { margin: 6px 0; padding: 6px 8px; border-left: 3px solid #b45309; background: #fffbeb; }
 .sa_choice_title { font-weight: 600; color: #b45309; margin-bottom: 2px; }
+.sa_choice_title .sa_count { display: inline-block; margin-left: 8px; padding: 2px 12px; border-radius: 99px; background: #b45f00; color: #fff; font-weight: 600; font-variant-numeric: tabular-nums; }
+.sa_choice_title .sa_wait { background: #5f6873; }

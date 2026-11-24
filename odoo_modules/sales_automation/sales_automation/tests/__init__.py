@@ -31,3 +31,4 @@ from . import test_vendor_choice
 from . import test_state_apart
 from . import test_number_page
 from . import test_margin
+from . import test_price_countdown

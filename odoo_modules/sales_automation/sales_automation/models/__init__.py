@@ -51,4 +51,5 @@ from . import sa_group_employee
 from . import sa_settings_easy
 from . import sa_margin
 from . import sa_preview
+from . import sa_price_countdown
 from . import sa_poll_rule

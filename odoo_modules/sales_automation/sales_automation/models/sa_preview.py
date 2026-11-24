@@ -68,6 +68,8 @@ WORDS = {
     'qty_bargain_all': "Quantity ranges for every product?",
     'price_approval_enabled': "Other price on the product page: ask you first?",
     'price_approval_tolerance_percent': "Which difference is too small to ask?",
+    'price_auto_minutes': "How long before it goes by itself?",
+    'price_auto_max_below': "How far below the page price is too low?",
     'pay_link_in_stock': "In stock: when is the payment link sent?",
     'pay_link_no_stock': "Not in stock: when is the payment link sent?",
     'pincode_country_id': "Which country for addresses?",
@@ -202,7 +204,9 @@ class SaAiSettingsPreview(models.Model):
             (manual, _("One price wins"), _("YOU choose on Store > Enquiries.") if manual else _("The lowest: vendor B, 100."), [vendor]),
             (False, _("We add your margin"), _("%(p)s%%: 100 becomes %(s).2f %(m)s.", p=margin, s=sell, m=money) + own, [price]),
             (s.price_approval_enabled, _("Is the product page price different?"),
-             _("YOU choose first. The customer waits.") if s.price_approval_enabled else _("The customer is told at once."), [price]),
+             _("YOU choose first. After %s minute(s) our price goes by itself.", s.price_auto_minutes)
+             if s.price_approval_enabled and not manual and s.price_auto_minutes
+             else _("YOU choose first. The customer waits.") if s.price_approval_enabled else _("The customer is told at once."), [price]),
             (False, _("The customer gets the price"),
              _("Answer within %s minutes.", s.customer_reply_minutes) if s.customer_reply_minutes else _("Answer within 24 hours."), [vendor]),
             (False, _("The customer asks for a better price"),
