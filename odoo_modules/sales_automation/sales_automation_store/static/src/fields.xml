@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="sales_automation_store.SaSelect">
+        <div class="sa_f" t-att-class="{ small: props.small }" t-ref="root" t-on-keydown="onKey">
+            <button type="button" class="sa_f_btn" t-ref="button" t-on-click="toggle" aria-haspopup="listbox" t-att-aria-expanded="float.open ? 'true' : 'false'"
+                    t-att-aria-label="props.label + ': ' + words"><span t-att-class="{ none: !current }" t-esc="words"/><i aria-hidden="true">&#9662;</i></button>
+            <div t-if="float.open" class="sa_f_box" t-ref="box" t-att-style="float.style">
+                <input t-if="searches" class="sa_f_search" type="search" t-ref="search" t-att-value="state.word" t-on-input="onWord" placeholder="Search" aria-label="Search"/>
+                <div role="listbox" t-att-aria-label="props.label">
+                    <button t-foreach="options" t-as="o" t-key="o.value" type="button" role="option" class="sa_f_opt" tabindex="-1"
+                            t-att-class="{ on: isOn(o), at: o_index === state.at, no: o.disabled }" t-att-aria-selected="isOn(o) ? 'true' : 'false'" t-on-click="() => this.pick(o)">
+                        <span><t t-esc="o.label"/><small t-if="o.sub" t-esc="o.sub"/></span><i t-if="isOn(o)" aria-hidden="true">&#10003;</i></button>
+                    <div t-if="!options.length" class="sa_f_none">Nothing found.</div>
+                </div>
+            </div>
+        </div>
+    </t>
+
+    <t t-name="sales_automation_store.SaDate">
+        <div class="sa_f" t-ref="root" t-on-keydown="onKey">
+            <button type="button" class="sa_f_btn" t-ref="button" t-on-click="toggle" aria-haspopup="dialog" t-att-aria-expanded="float.open ? 'true' : 'false'"
+                    t-att-aria-label="props.label + ': ' + words"><span t-esc="words"/><i class="fa fa-calendar" role="img" aria-hidden="true"/></button>
+            <div t-if="float.open" class="sa_f_box sa_cal" t-ref="box" t-att-style="float.style" role="dialog" t-att-aria-label="props.label">
+                <div class="sa_cal_head">
+                    <button type="button" t-on-click="() => this.month(-1)" t-att-disabled="!canBack" aria-label="Previous month">&#8249;</button>
+                    <b t-esc="title"/>
+                    <button type="button" t-on-click="() => this.month(1)" aria-label="Next month">&#8250;</button>
+                </div>
+                <div class="sa_cal_grid">
+                    <small t-foreach="weekdays" t-as="w" t-key="w_index" t-esc="w"/>
+                    <t t-foreach="days" t-as="d" t-key="d.key">
+                        <span t-if="d.empty"/>
+                        <button t-else="" type="button" t-att-class="{ on: d.on, today: d.today, at: d.at }" t-att-disabled="d.past" t-att-tabindex="d.at ? '0' : '-1'"
+                                t-att-aria-label="d.iso" t-att-aria-pressed="d.on ? 'true' : 'false'" t-on-click="() => this.pick(d)" t-esc="d.n"/>
+                    </t>
+                </div>
+                <button type="button" class="sa_cal_today" t-on-click="pickToday">Today</button>
+            </div>
+        </div>
+    </t>
+
+    <t t-name="sales_automation_store.ArrivedDialog">
+        <Dialog title="'Goods arrived, order #' + props.row.ref" size="'sm'">
+            <p>Purchase <b t-esc="props.row.po.name"/>: <t t-esc="props.row.po.open"/> still to come. How many came?</p>
+            <div class="sa_arrived">
+                <button type="button" class="btn btn-secondary" t-on-click="() => this.step(-1)" aria-label="One less">&#8722;</button>
+                <input class="form-control" type="text" inputmode="decimal" aria-label="How many came" t-model="state.qty"/>
+                <button type="button" class="btn btn-secondary" t-on-click="() => this.step(1)" aria-label="One more">+</button>
+            </div>
+            <div t-if="problem" class="text-danger mt-2" role="alert" t-esc="problem"/>
+            <small t-else="" class="text-muted d-block mt-2">They go into stock and are kept for this customer. A draft bill is made for your accountant.</small>
+            <t t-set-slot="footer">
+                <button class="btn btn-success" t-att-disabled="!!problem" t-on-click="save">Receive</button>
+                <button class="btn btn-secondary" t-on-click="() => props.close()">Cancel</button>
+            </t>
+        </Dialog>
+    </t>
+
+</templates>

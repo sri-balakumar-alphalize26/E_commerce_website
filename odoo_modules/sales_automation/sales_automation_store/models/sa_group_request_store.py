@@ -132,7 +132,8 @@ class SaGroupRequest(models.Model):
             'pick': len(picks),
             'pick_seconds_left': max(0, seconds_left),
             'stalled': self.sudo().search_count(
-                [('state', '=', 'sourcing'), '|', ('sa_price_stalled', '=', True), ('sa_price_choice_pending', '=', True)]),
+                [('state', '=', 'sourcing'), '|', '|', ('sa_price_stalled', '=', True), ('sa_price_choice_pending', '=', True),
+                 ('sa_vendor_choice_pending', '=', True)]),
             'ring': max(3, settings.enquiry_ring_seconds or 30),
             'repeat': max(3, settings.enquiry_repeat_seconds or 10),
             'stalled_ring': max(3, settings.stalled_ring_seconds or 30),
@@ -151,9 +152,9 @@ class SaGroupRequest(models.Model):
         finished on a phone away from the counter.
         """
         stalled = self.sudo().search(
-            [('state', '=', 'sourcing'), '|', ('sa_price_stalled', '=', True), ('sa_price_choice_pending', '=', True)],
+            [('state', '=', 'sourcing'), '|', '|', ('sa_price_stalled', '=', True), ('sa_price_choice_pending', '=', True),
+                 ('sa_vendor_choice_pending', '=', True)],
             order='sa_price_asked_on asc, id asc', limit=limit)
-        settings = self.env['sa.ai.settings'].sudo().get_settings()
         rows = []
         for request in stalled:
             asked = request.sourcing_vendor_ids
@@ -193,10 +194,10 @@ class SaGroupRequest(models.Model):
                                     or request.sa_price_choice_quote_id.partner_id.name
                                     or request.best_quote_id.vendor_name or ''),
                 } if request.sa_price_choice_pending else None),
-                'no_vendors': not asked and not request.sa_price_choice_pending,
+                'no_vendors': not asked and not request.sa_price_choice_pending and not request.sa_vendor_choice_pending,
                 'categ': request.product_id.categ_id.display_name or '',
                 'waiting': waited,
-                'margin': settings.margin_percent or 0.0,
+                'margin': request._sa_margin(),
                 'currency': (request.currency_id.name
                              or self.env.company.currency_id.name or ''),
                 'link': request._sa_price_entry_url() or '',

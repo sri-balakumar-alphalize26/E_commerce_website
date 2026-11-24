@@ -13,8 +13,8 @@ BELL = 30
 WAITING = 20
 JOIN_MINUTES = 10           # prices of one enquiry are one note
 
-LEVEL = {'order': 'blue', 'price': 'green', 'cheaper': 'red', 'paid': 'green', 'whatsapp': 'red'}
-MANAGERS_ONLY = ('cheaper', 'whatsapp')
+LEVEL = {'order': 'blue', 'price': 'green', 'cheaper': 'red', 'paid': 'green', 'whatsapp': 'red', 'supply': 'red'}
+MANAGERS_ONLY = ('cheaper', 'whatsapp', 'supply')
 
 
 class SaNotice(models.Model):
@@ -23,7 +23,8 @@ class SaNotice(models.Model):
     _order = 'told_on desc, id desc'
 
     kind = fields.Selection([('order', 'New order'), ('price', 'Vendor price'), ('cheaper', 'Cheaper vendor'),
-                             ('paid', 'Payment'), ('whatsapp', 'WhatsApp problem')], required=True)
+                             ('paid', 'Payment'), ('whatsapp', 'WhatsApp problem'),
+                             ('supply', 'Order from a vendor')], required=True)
     title = fields.Char(required=True)
     body = fields.Char()
     key = fields.Char(index=True, help="One note per key; a price note is renewed instead.")
@@ -112,11 +113,12 @@ class SaNotice(models.Model):
         Request = self.env['sa.group.request']
         rows = []
         for kind, domain in (('pick', [('state', '=', 'awaiting_vendor_pick')]),
-                             ('stalled', [('state', '=', 'sourcing'), '|', ('sa_price_stalled', '=', True),
-                                          ('sa_price_choice_pending', '=', True)])):
+                             ('stalled', [('state', '=', 'sourcing'), '|', '|', ('sa_price_stalled', '=', True),
+                                          ('sa_price_choice_pending', '=', True), ('sa_vendor_choice_pending', '=', True)])):
             for request in Request.search(domain, order='id desc', limit=WAITING).sudo():
                 rows.append({
-                    'id': request.id, 'kind': 'choice' if kind == 'stalled' and request.sa_price_choice_pending else kind,
+                    'id': request.id, 'kind': 'choice' if kind == 'stalled' and request.sa_price_choice_pending
+                    else 'vendor' if kind == 'stalled' and request.sa_vendor_choice_pending else kind,
                     'ref': request.ref_code or str(request.id), 'qty': request.qty or 1.0,
                     'product': request.product_id.name or request.ai_search_term or request.raw_text or '',
                     'customer': request.requester_name or '', 'at': request.create_date.isoformat() + 'Z'})

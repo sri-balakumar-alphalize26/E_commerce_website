@@ -28,6 +28,21 @@
 @media (max-width: 480px) { .sa_side { top: 52px; width: calc(100vw - 24px); } }
 @media print { .sa_side, .sa_side_tab { display: none; } }
 
+// the cards, and the tab they move to
+.sa_pop { position: fixed; top: 60px; right: 16px; z-index: 1030; width: 390px; max-width: calc(100vw - 32px); display: flex; flex-direction: column; gap: 10px; pointer-events: none; transition: top .2s; > * { pointer-events: auto; } }
+.sa_pop_card { background: $o-white; color: $body-color; border: 1px solid $border-color; border-radius: 18px; padding: 15px; box-shadow: 0 12px 30px rgba(0, 0, 0, .2); display: grid; grid-template-columns: 46px minmax(0, 1fr) auto; gap: 11px; align-items: start; animation: sa_side_in .25s ease-out;
+    b { font-size: 16px; } .sa_pop_ico { width: 46px; height: 46px; border-radius: 12px; display: grid; place-items: center; background: #e1eef6; color: #0f5e8c; }
+    &.accept .sa_pop_ico { background: #dff2e7; color: #1c7245; } &.enquiries .sa_pop_ico { background: #fdeed6; color: #935500; } &.whatsapp .sa_pop_ico { background: #fbe3e0; color: #b1271b; } }
+.sa_pop_x { border: 0; background: transparent; color: inherit; width: 40px; height: 40px; margin: -8px -8px 0 0; border-radius: 10px; font-size: 17px; &:hover, &:focus-visible { background: $o-gray-200; } }
+.sa_pop_go { grid-column: 1 / -1; border: 0; border-radius: 11px; min-height: 44px; background: #1c7245; color: #fff; font-weight: 700; &:hover, &:focus-visible { background: #155a36; } }
+.sa_pop_tab { align-self: flex-end; margin-right: -16px; border: 0; border-radius: 13px 0 0 13px; background: #1c7245; color: #fff; min-height: 46px; padding: 6px 12px; display: flex; gap: 9px; align-items: center; font-weight: 800; font-size: 17px; box-shadow: 0 8px 22px rgba(0, 0, 0, .22); animation: sa_side_in .25s ease-out;
+    .sa_pop_n { min-width: 24px; border-radius: 99px; background: #fff; color: #1c7245; padding: 1px 7px; font-size: 14px; } }
+.sa_shake { display: inline-flex; transform-origin: 50% 8%; animation: sa_ring 2.4s ease-in-out infinite; }
+@keyframes sa_ring { 0%, 45%, 100% { transform: rotate(0); } 5%, 25% { transform: rotate(18deg); } 10%, 30% { transform: rotate(-16deg); } 15% { transform: rotate(12deg); } 20% { transform: rotate(-10deg); } 35% { transform: rotate(6deg); } }
+@media (prefers-reduced-motion: reduce) { .sa_pop_card, .sa_pop_tab, .sa_shake { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .sa_pop { transition: none; } }
+@media print { .sa_pop { display: none; } }
+
 // the preview on the settings page
 .sa_notice_preview { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; margin-top: 14px; max-width: 720px;
     .sa_pv { border: 1px solid $border-color; border-radius: 12px; padding: 12px; background: $o-white; &.on { border-color: #1c7245; box-shadow: 0 0 0 1px #1c7245; } }

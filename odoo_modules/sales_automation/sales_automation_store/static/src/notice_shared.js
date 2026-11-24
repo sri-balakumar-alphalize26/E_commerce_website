@@ -4,7 +4,7 @@
 // user who may not see the panel): the alarm shows its own note, as always.
 import { reactive } from "@odoo/owl";
 
-export const shared = reactive({ known: false, on: false, pick: 0, stalled: 0 });
+export const shared = reactive({ known: false, on: false, pick: 0, stalled: 0, counter: 0 });
 
 const listeners = [];
 export function onShared(callback) {

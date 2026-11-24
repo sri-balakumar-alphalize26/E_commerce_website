@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Sales Automation: Store Screen',
-    'version': '19.0.9.3.0',
+    'version': '19.0.9.10.0',
     'summary': 'New paid orders alert the shop, who pack them and call a rider',
     'description': """
 Puts the shop between the payment and the rider.
@@ -26,16 +26,30 @@ a person with their hands full actually needs.
         'views/sale_order_store_views.xml',
         'views/store_menus.xml',
         'views/sa_notice_settings_views.xml',
+        'views/sa_supply_settings_views.xml',
+        'views/staff_delivery_templates.xml',
     ],
     'assets': {
         'web.assets_backend': [
             'sales_automation_store/static/src/board.js',
             'sales_automation_store/static/src/board.xml',
             'sales_automation_store/static/src/board.scss',
+            'sales_automation_store/static/src/fields.js',
+            'sales_automation_store/static/src/fields.xml',
+            'sales_automation_store/static/src/fields.scss',
+            'sales_automation_store/static/src/chat_log.js',
+            'sales_automation_store/static/src/chat_log.xml',
+            'sales_automation_store/static/src/chat_log.scss',
+            'sales_automation_store/static/src/vendor_cards.js',
+            'sales_automation_store/static/src/vendor_cards.xml',
+            'sales_automation_store/static/src/vendor_cards.scss',
             'sales_automation_store/static/src/store_screen.js',
             'sales_automation_store/static/src/browser_tz_service.js',
             'sales_automation_store/static/src/store_screen.xml',
             'sales_automation_store/static/src/store_screen.scss',
+            'sales_automation_store/static/src/hand_over.js',
+            'sales_automation_store/static/src/hand_over.xml',
+            'sales_automation_store/static/src/hand_over.scss',
             'sales_automation_store/static/src/notice_shared.js',
             'sales_automation_store/static/src/enquiry_alarm_shared.js',
             'sales_automation_store/static/src/enquiry_screen.js',

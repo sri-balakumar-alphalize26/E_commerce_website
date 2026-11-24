@@ -1,0 +1,22 @@
+// Hand over, and the buttons of an order (24 Nov 2026).
+.sa_ho_ways { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;
+    button { text-align: start; border: 1px solid $border-color; border-radius: 12px; background: $o-white; color: inherit; padding: 16px; cursor: pointer;
+        b { display: block; font-size: 16px; margin-bottom: 4px; } small { color: $text-muted; } &:hover, &:focus-visible { border-color: $o-brand-primary; } } }
+.sa_ho_tabs { display: flex; gap: 8px; margin-bottom: 12px;
+    button { flex: 1; min-height: 42px; border: 1px solid $border-color; border-radius: 10px; background: $o-white; color: inherit; &.on { border-color: $o-brand-primary; color: $o-brand-primary; font-weight: 700; } } }
+.sa_ho_list { max-height: 260px; overflow: auto; margin-top: 8px; border: 1px solid $border-color; border-radius: 10px;
+    label { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 6px 12px; margin: 0; cursor: pointer; border-bottom: 1px solid $border-color;
+        &:last-child { border-bottom: 0; } &.on { background: $o-gray-100; } small { margin-inline-start: auto; color: $text-muted; white-space: nowrap; } } }
+.sa_ho_kind { font-size: 12px; border-radius: 999px; padding: 1px 8px; background: $o-gray-200; }
+.sa_ho_number { display: grid; gap: 10px; }
+
+// One main button, the others outlined, all of one height; what is only to
+// read stands above them, what is rarely pressed below.
+.sa_store, .sa_card {
+    .sa_buy_box { border: 1px solid $border-color; border-radius: 10px; background: $o-gray-100; padding: 8px 12px; margin-bottom: 10px; font-size: 13px; display: grid; gap: 2px;
+        &:empty { display: none; } }
+    .sa_actions.sa_steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); align-items: stretch; gap: 10px;
+        > .sa_big { min-height: 50px; padding: 8px 14px; line-height: 1.25; border-radius: 10px; }
+        > .sa_wait_text { grid-column: 1 / -1; } }
+    .sa_more { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 18px; margin-top: 8px; .btn-link { padding: 6px 0; } .sa_cancel { margin-inline-start: auto; } }
+}

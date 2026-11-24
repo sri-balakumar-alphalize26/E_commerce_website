@@ -1,0 +1,51 @@
+.sa_store {
+    .sa_sect_head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin: 12px 2px 0; padding-bottom: 5px; border-bottom: 2px solid $border-color;
+        h2 { font-size: 16px; font-weight: 800; margin: 0; flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; } span { color: $text-muted; font-size: 13px; font-weight: 600; } }
+    .sa_by { display: inline-flex; gap: 2px; }
+    .sa_by button, .sa_vc_group button { border: 1px solid $border-color; background: $o-white; color: $text-muted; border-radius: 8px; min-height: 34px; padding: 3px 11px; font-weight: 600;
+        &[aria-pressed="true"] { border-color: #0f5e8c; background: #e1eef6; color: #0f5e8c; } &:focus-visible { outline: 3px solid #0f5e8c; } }
+    .sa_vl { grid-column: 1 / -1; margin-top: 8px; }
+    .sa_vl_line { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; gap: 8px; padding: 5px 0; border-top: 1px solid $border-color; align-items: baseline;
+        small { color: $text-muted; font-weight: 400; } .sa_vl_name small { display: block; } .sa_vl_price { white-space: nowrap; font-variant-numeric: tabular-nums; }
+        &.low { color: #1c7245; font-weight: 700; } }
+    .sa_vc .sa_state { border-radius: 99px; padding: 1px 9px; font-size: 12.5px; font-weight: 600; background: #e7ecf0; color: #5b6875; &.good { background: #dff2e7; color: #1c7245; } &.warn { background: #fdeed6; color: #935500; } }
+    .sa_vc { margin: 10px 0; }
+    .sa_vc_bar { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-bottom: 8px; } .sa_vc_group { display: inline-flex; flex-wrap: wrap; gap: 3px; }
+    .sa_vc_cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
+    .sa_vc_card { border: 1px solid $border-color; border-radius: 11px; padding: 11px 12px; background: $o-white; display: flex; flex-direction: column; gap: 3px; min-width: 0;
+        .btn { margin-top: 6px; } &.none { border-style: dashed; background: $o-gray-100; } &.chosen { border-color: #1c7245; box-shadow: 0 0 0 1px #1c7245; }
+        &.low .sa_vc_price { color: #1c7245; } }
+    .sa_vc_top { display: flex; flex-wrap: wrap; gap: 5px 8px; align-items: center; b { overflow-wrap: anywhere; } }
+    .sa_vc_price { font-size: 19px; font-weight: 800; font-variant-numeric: tabular-nums; }
+    .sa_vc_time { color: $text-muted; font-size: 13px; font-variant-numeric: tabular-nums; } .sa_vc_text { font-size: 13px; overflow-wrap: anywhere; } .sa_vc_why { color: #1c7245; font-weight: 600; font-size: 13.5px; }
+}
+.sa_store .sa_store_grid.sa_wide { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); .sa_card { max-width: 640px; } }
+@media (max-width: 480px) { .sa_store .sa_store_grid.sa_wide { grid-template-columns: minmax(0, 1fr); } }
+
+// the popup "Order from a vendor" (24 Nov 2026)
+.sa_sup { display: flex; flex-direction: column; gap: 14px;
+    h3 { font-size: 14px; font-weight: 800; color: $text-muted; margin: 0 0 8px; } small { color: $text-muted; display: block; }
+    .sa_sup_head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; background: $o-gray-100; border-radius: 12px; padding: 12px 14px; b { font-size: 16px; } }
+    .sa_sup_sell { text-align: end; }
+    .sa_sup_cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); gap: 10px; }
+    .sa_sup_card { border: 1px solid $border-color; border-radius: 13px; padding: 12px; cursor: pointer; background: $o-white; min-width: 0; transition: border-color .12s, box-shadow .12s;
+        &:hover { border-color: #0f5e8c; } &:focus-visible { outline: 3px solid #0f5e8c; } &.none { border-style: dashed; background: $o-gray-100; }
+        &.best { border-color: #1c7245; background: #f1faf5; .sa_sup_price { color: #1c7245; } } &.on { border-color: #0f5e8c; box-shadow: 0 0 0 2px #0f5e8c; } &.on.best { border-color: #1c7245; box-shadow: 0 0 0 2px #1c7245; } }
+    .sa_sup_tags { display: flex; flex-wrap: wrap; gap: 4px; min-height: 22px; margin-bottom: 5px; }
+    .sa_sup_name { display: block; overflow-wrap: anywhere; } .sa_sup_price { font-size: 21px; font-weight: 800; font-variant-numeric: tabular-nums; } .sa_sup_why { color: #1c7245; font-weight: 600; margin-top: 3px; }
+    .sa_sup_tag { border-radius: 99px; padding: 1px 9px; font-size: 12px; font-weight: 600; background: #e7ecf0; color: #5b6875; &.good { background: #1c7245; color: #fff; } &.warn { background: #fdeed6; color: #935500; } }
+    .sa_sup_form { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; label { font-weight: 600; } } .sa_sup_cost { font-size: 20px; font-weight: 700; }
+    .sa_sup_left { border-radius: 10px; padding: 9px 13px; font-weight: 700; background: #dff2e7; color: #1c7245; &.bad { background: #fbe3e0; color: #b1271b; } }
+    .sa_sup_note { color: $text-muted; }
+    .sa_sup_send { display: flex; gap: 10px; align-items: flex-start; border: 1px solid $border-color; border-radius: 12px; padding: 11px 13px; cursor: pointer; input { margin-top: 4px; } }
+    .sa_sup_ask { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; align-items: flex-start; }
+    .sa_sup_vendor { display: flex; gap: 10px; align-items: center; &.no { opacity: .55; } }
+}
+.sa_sup_line { font-size: 14px; color: $text-muted; margin: 4px 0; &.stop { color: #b1271b; font-weight: 600; } }
+.sa_store .sa_vc_card .sa_vc_chat { margin-top: auto; border: 1px solid #12693a; color: #12693a; background: $o-white; font-weight: 600; min-height: 36px; &:hover, &:focus-visible { background: #e9f5ee; } }
+
+.sa_store .sa_payment { display: inline-flex; flex-wrap: wrap; gap: 2px 7px; align-items: baseline; border-radius: 12px; padding: 7px 13px; font-size: 15px; background: #e7ecf0; color: #46535f;
+    &.good { background: #dff2e7; color: #1c7245; } &.warn { background: #fdeed6; color: #935500; } &.bad { background: #fbe3e0; color: #b1271b; } small { opacity: .9; } }
+.sa_self_code { font-size: 30px; letter-spacing: 10px; text-align: center; font-weight: 700; }
+.sa_self_cash { display: flex; gap: 10px; align-items: flex-start; border: 1px solid $border-color; border-radius: 12px; padding: 11px 13px; margin-top: 12px; cursor: pointer; input { margin-top: 4px; } small { display: block; color: $text-muted; } }
+.sa_self_more { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; margin-top: 14px; }

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+<t t-name="sales_automation_store.HandOverDialog">
+  <Dialog title="title" size="'md'">
+    <p class="sa_cd_lead"><b t-esc="props.row.customer"/><t t-if="props.row.address"> &#183; <t t-esc="props.row.address"/></t></p>
+    <div t-if="unpaid" class="alert alert-warning" role="status">
+      <b>Not paid: <t t-esc="props.row.self_due.toFixed(2)"/> <t t-esc="props.row.currency"/>.</b>
+      <t t-if="props.row.payment and props.row.payment.key === 'checking'"> A payment is being checked. Check it before taking cash.</t>
+      <t t-else=""> Take the cash when it is handed over.</t>
+    </div>
+
+    <div t-if="!state.step" class="sa_ho_ways">
+      <button type="button" t-on-click="() => this.go('collect')"><b>&#127980; Store pickup</b><small>Send the code and hand it over here</small></button>
+      <button type="button" t-on-click="() => this.go('link')"><b>&#128757; Home delivery</b><small>Send a link to the person who delivers</small></button>
+    </div>
+
+    <p t-if="state.step === 'collect'">Is <b t-esc="props.row.customer"/> here? The code goes to their WhatsApp now.</p>
+
+    <t t-if="state.step === 'link'">
+      <div class="sa_ho_tabs" role="group" aria-label="Who delivers">
+        <button type="button" t-att-class="{ on: state.how === 'list' }" t-on-click="() => { state.how = 'list'; }">Choose a person</button>
+        <button type="button" t-att-class="{ on: state.how === 'number' }" t-on-click="() => { state.how = 'number'; }">Type a number</button>
+      </div>
+      <t t-if="state.how === 'list'">
+        <input type="search" class="form-control" placeholder="Search name or number" aria-label="Search name or number" t-model="state.word"/>
+        <div class="sa_ho_list" role="radiogroup" aria-label="Riders and staff">
+          <label t-foreach="shown" t-as="c" t-key="c.key" t-att-class="{ on: state.carrier === c.key }">
+            <input type="radio" name="sa_ho" t-att-value="c.key" t-model="state.carrier"/>
+            <b t-esc="c.name"/><span class="sa_ho_kind" t-esc="c.kind === 'rider' ? 'Rider' : 'Staff'"/><small t-esc="c.pretty"/></label>
+          <div t-if="!shown.length" class="text-muted p-2">Nobody found. Type the number instead.</div>
+        </div>
+      </t>
+      <div t-else="" class="sa_ho_number">
+        <SaSelect value="state.country" options="state.countries" label="'Country'" placeholder="'Country'" onChange="(v) => { state.country = v; }"/>
+        <input type="tel" inputmode="numeric" class="form-control" placeholder="Number, without the country code" aria-label="Number" t-model="state.number"/>
+        <input type="text" maxlength="60" class="form-control" placeholder="Name (optional)" aria-label="Name" t-model="state.name"/>
+        <small class="text-muted">Check the number: whoever has the link sees the customer's name, phone and address.</small>
+      </div>
+    </t>
+
+    <div t-if="state.told" class="alert alert-danger mt-3 mb-0" role="alert" t-esc="state.told"/>
+
+    <t t-set-slot="footer">
+      <button t-if="state.step === 'collect'" class="btn btn-success btn-lg" t-att-disabled="state.busy" t-on-click="collect">Yes, send the code</button>
+      <button t-if="state.step === 'link'" class="btn btn-success btn-lg" t-att-disabled="!ready" t-on-click="send">Send the link</button>
+      <button t-if="state.step and !props.change" class="btn btn-secondary" t-att-disabled="state.busy" t-on-click="() => this.go('')">Back</button>
+      <button t-else="" class="btn btn-secondary" t-on-click="() => props.close()">Close</button>
+    </t>
+  </Dialog>
+</t>
+
+</templates>

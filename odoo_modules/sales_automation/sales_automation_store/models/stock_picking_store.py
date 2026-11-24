@@ -14,7 +14,7 @@ _logger = logging.getLogger(__name__)
 # A date picked at the counter means "by the end of that day's trading", not
 # midnight: a promise that only expires at 23:59 is never late in time for
 # anybody to do anything about it.
-_SA_PROMISE_HOUR = 18
+_SA_PROMISE_HOUR = 21         # only the day is told; late is after this hour
 
 
 class StockPicking(models.Model):
@@ -516,7 +516,7 @@ class StockPicking(models.Model):
                 'supply_cost': job.sa_supply_cost or 0.0,
                 'supply_asked': len(job.sa_supply_vendor_ids),
                 'promised': (fields.Datetime.context_timestamp(
-                    job, job.sa_promised_on).strftime('%a %d %b')
+                    job.with_context(tz=job._sa_promise_zone().zone), job.sa_promised_on).strftime('%a %d %b')
                     if job.sa_promised_on else ''),
                 'kind': job.sa_delivery_kind or '',
                 # Rings only for the ones this morning's reminder named, so
@@ -566,23 +566,24 @@ class StockPicking(models.Model):
     # ------------------------------------------------------------------
     # Nothing on any shelf
     # ------------------------------------------------------------------
-    @api.model
+    def _sa_promise_zone(self):
+        company = self[:1].company_id or self.env.company
+        return pytz.timezone(self.env['sa.delivery.partner']._sa_company_tz(company) or 'UTC')
+
     def _sa_promise_at(self, day):
         """A date picked at the counter, as a UTC datetime.
 
-        Stored at `_SA_PROMISE_HOUR` in the reader's own timezone. Naive UTC
-        is what Odoo stores, and doing the conversion here is what keeps a
-        20:00 local promise from being filed under tomorrow.
+        Stored at `_SA_PROMISE_HOUR` in the COMPANY's time zone: the user's
+        own (India) showed a customer in Oman 4:30 PM (D8LR, 24 Nov 2026).
         """
         if not day:
             return False
         if isinstance(day, str):
             day = fields.Date.from_string(day)
-        zone = pytz.timezone(self.env.user.tz or 'UTC')
+        zone = self._sa_promise_zone()
         local = zone.localize(datetime.combine(day, time(_SA_PROMISE_HOUR, 0)))
         return local.astimezone(pytz.UTC).replace(tzinfo=None)
 
-    @api.model
     def _sa_kind_for_date(self, promised):
         """`quick` when the promise falls today, `express` when it is later.
 
@@ -592,9 +593,9 @@ class StockPicking(models.Model):
         """
         if not promised:
             return 'quick'
-        local = fields.Datetime.context_timestamp(self, promised)
-        today = fields.Datetime.context_timestamp(
-            self, fields.Datetime.now())
+        here = self.with_context(tz=self._sa_promise_zone().zone)
+        local = fields.Datetime.context_timestamp(here, promised)
+        today = fields.Datetime.context_timestamp(here, fields.Datetime.now())
         return 'quick' if local.date() <= today.date() else 'express'
 
     def _sa_supply_vendors(self):
@@ -735,7 +736,7 @@ class StockPicking(models.Model):
                 # point - and the moves stay waiting until the goods land.
                 job._sa_store_move_to_company(company)
 
-        promised = self._sa_promise_at(promised_date)
+        promised = job._sa_promise_at(promised_date)
         vals = {
             'sa_supply_waiting': True,
             'sa_supply_cost': amount,
@@ -743,7 +744,8 @@ class StockPicking(models.Model):
         }
         if promised:
             vals['sa_promised_on'] = promised
-            vals['sa_delivery_kind'] = self._sa_kind_for_date(promised)
+            vals['sa_promise_day_only'] = True
+            vals['sa_delivery_kind'] = job._sa_kind_for_date(promised)
         job.write(vals)
         if job.sa_delivery_state == 'awaiting_shop':
             job.sa_shop_accept()
@@ -816,7 +818,11 @@ class StockPicking(models.Model):
             lines = []
             for job in jobs:
                 due = ''
-                if job.sa_promised_on:
+                if job.sa_supply_day:           # the vendor's own day
+                    local = job.sa_supply_day
+                    late = local < now_local.date()
+                    due = _(" - due %(day)s%(late)s", day=local.strftime('%a %d %b'), late=_(" \u26A0 OVERDUE") if late else '')
+                elif job.sa_promised_on:
                     local = fields.Datetime.context_timestamp(
                         self, job.sa_promised_on)
                     late = job.sa_promised_on < fields.Datetime.now()

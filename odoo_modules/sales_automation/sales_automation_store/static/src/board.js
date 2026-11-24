@@ -47,13 +47,41 @@ export function byDay(rows, first) {
     return out;
 }
 
+/** [{day, rows, product}] one section per product, the newest first; problems on top. */
+export function byProduct(rows, first, nameOf) {
+    const out = [];
+    const at = new Map();
+    for (const group of byDay(rows, first)) {
+        for (const row of group.rows) {
+            const name = first(row) ? _t("Problems") : nameOf(row) || _t("No product");
+            if (!at.has(name)) {
+                at.set(name, { day: name, rows: [], product: !first(row) });
+                out.push(at.get(name));
+            }
+            at.get(name).rows.push(row);
+        }
+    }
+    return out;
+}
+
+export function orderProduct(row) {
+    const names = [...new Set((row.lines || []).map((l) => l.name))];
+    return names.length > 1 ? _t("Several products") : names[0] || "";
+}
+
+/** How many of the vendors asked gave a price, over the rows of a section. */
+export function pricesIn(rows) {
+    const cards = rows.flatMap((r) => r.cards || []);
+    return cards.length ? _t("%(a)s of %(b)s gave a price", { a: cards.filter((c) => c.state === "price").length, b: cards.length }) : "";
+}
+
 export function matches(row, word) {
     const w = (word || "").trim().toLowerCase().replace(/^#/, "");
     if (!w) {
         return true;
     }
     const text = [row.ref, row.order_name, row.product, row.customer, row.phone, row.group, row.address]
-        .concat((row.lines || []).map((l) => l.name));
+        .concat((row.lines || []).map((l) => l.name), (row.cards || []).map((c) => c.vendor));
     return text.join(" ").toLowerCase().includes(w);
 }
 
@@ -111,12 +139,13 @@ export function orderPills(row) {
     } else if (row.in_stock === false) {
         out.push(["warn", _t("No stock")]);
     }
-    if (row.paid) {
-        out.push(["good", _t("Paid")]);
-    } else if (row.pay_link) {
-        out.push(["warn", _t("Link sent, not paid")]);
+    if (row.payment) {
+        out.push([row.payment.colour, row.payment.words]);
     } else {
-        out.push(["", _t("Not paid")]);
+        out.push(row.paid ? ["good", _t("Paid")] : ["warn", _t("Payment pending")]);
+    }
+    if (row.self_delivery) {
+        out.push(["", row.self_way === "collect" ? _t("Store pickup") : row.self_link ? row.self_who : _t("Our staff")]);
     }
     if (row.rider) {
         out.push(["", row.rider]);
@@ -126,6 +155,12 @@ export function orderPills(row) {
 
 /** The one button of the row: the next step, or nothing to press. */
 export function orderMain(row) {
+    if (row.self_link && !row.self_reached) {
+        return null;            // the person with the link does the steps
+    }
+    if (row.self_delivery && orderStep(row) === "road") {
+        return { key: "self_code", name: _t("Type the code"), cls: "btn-success" };
+    }
     switch (orderStep(row)) {
         case "new":
             return { key: "accept", name: _t("Accept"), cls: "btn-primary" };
@@ -171,6 +206,8 @@ export function enquiryPill(row) {
             return ["new", _t("Choose the vendors")];
         case "choice":
             return ["new", _t("Two prices, approve one")];
+        case "vendor":
+            return ["new", _t("Choose the vendor")];
         case "price":
             return ["new", _t("Needs a price")];
         case "vendors":

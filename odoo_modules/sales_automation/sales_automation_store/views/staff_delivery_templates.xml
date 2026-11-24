@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="staff_delivery_page" name="Home Delivery">
+        <t t-call="sales_automation_delivery.delivery_job_layout">
+            <t t-set="head_title">Delivery</t>
+            <div class="card" t-if="not job">
+                <h1>This link has ended</h1>
+                <p class="muted">The order is delivered, or it was given to somebody else. If you just finished it: thank you. Any question: call the shop.</p>
+            </div>
+            <div class="card" t-else="">
+                <t t-set="base" t-value="'/wa/staff/%s/' % job.id"/>
+                <div class="code">Delivery #<t t-esc="job.sa_ref_code"/></div>
+                <h1 t-esc="partner.name or 'Customer'"/>
+                <div class="steps">
+                    <div t-attf-class="step #{job.sa_self_accepted_on and 'on' or ''}">Accepted</div>
+                    <div t-attf-class="step #{state in ('picked', 'dispatched', 'out_for_delivery') and 'on' or ''}">Parcel</div>
+                    <div t-attf-class="step #{state in ('dispatched', 'out_for_delivery') and 'on' or ''}">Started</div>
+                    <div t-attf-class="step #{job.sa_arrived_customer_on and 'on' or ''}">Reached</div>
+                </div>
+                <div class="row" t-if="job.sa_shop_id"><span class="lbl">Collect from</span><span class="val" t-esc="job.sa_shop_id.name"/></div>
+                <div class="row" t-if="where"><span class="lbl">Deliver to</span>
+                    <span class="val"><t t-esc="where"/><t t-if="locked"> (full address after you have the parcel)</t></span></div>
+                <div class="row" t-if="partner.phone and not locked"><span class="lbl">Phone</span>
+                    <span class="val"><a t-attf-href="tel:#{partner.phone}" t-esc="partner.phone"/></span></div>
+                <div class="row" t-foreach="job.move_ids" t-as="move"><span class="lbl" t-esc="'%g' % move.product_uom_qty"/>
+                    <span class="val" t-esc="move.product_id.name"/></div>
+                <div t-if="due &gt; 0.005" class="cod">Collect <b t-esc="'%.2f' % due"/> <t t-esc="currency"/> on delivery.</div>
+                <div t-else="" class="cod paid">Already paid, nothing to collect.</div>
+                <a t-if="map_url" t-att-href="map_url" class="btn map" target="_blank" rel="noreferrer">Open in Maps</a>
+                <div t-if="error" role="alert" style="background:#fee2e2;color:#991b1b;padding:10px 12px;border-radius:8px;margin:10px 0" t-esc="error"/>
+                <div t-if="told" role="status" style="background:#dcfce7;color:#166534;padding:10px 12px;border-radius:8px;margin:10px 0" t-esc="told"/>
+
+                <form t-if="state == 'accepted' and not job.sa_self_accepted_on" method="post" t-attf-action="#{base}accept">
+                    <input type="hidden" name="token" t-att-value="token"/>
+                    <button class="btn go" type="submit">Accept</button>
+                </form>
+                <form t-elif="state == 'accepted'" method="post" t-attf-action="#{base}parcel">
+                    <input type="hidden" name="token" t-att-value="token"/>
+                    <button class="btn go" type="submit">I have the parcel</button>
+                </form>
+                <form t-elif="state == 'picked'" method="post" t-attf-action="#{base}start">
+                    <input type="hidden" name="token" t-att-value="token"/>
+                    <p class="muted">The customer is told that you are on the way.</p>
+                    <button class="btn go" type="submit">Start</button>
+                </form>
+                <form t-elif="not job.sa_arrived_customer_on" method="post" t-attf-action="#{base}reached">
+                    <input type="hidden" name="token" t-att-value="token"/>
+                    <p class="muted">At the door: this sends the customer a 6-digit code.</p>
+                    <button class="btn go" type="submit">Reached, send the code</button>
+                </form>
+                <t t-else="">
+                    <form method="post" t-attf-action="#{base}done">
+                        <input type="hidden" name="token" t-att-value="token"/>
+                        <p class="muted">Give the parcel first, then type the code the customer gives you.</p>
+                        <input name="code" inputmode="numeric" pattern="[0-9]*" maxlength="6" required="required" placeholder="6 digits"
+                               aria-label="The customer's code" autocomplete="off"
+                               style="font-size:26px;letter-spacing:8px;text-align:center;width:100%;padding:8px;margin-bottom:8px;box-sizing:border-box"/>
+                        <label t-if="due &gt; 0.005" style="display:block;margin:6px 0 12px"><input type="checkbox" name="cash" value="1"/>
+                            I received <b t-esc="'%.2f' % due"/> <t t-esc="currency"/> in cash</label>
+                        <button class="btn go" type="submit">Delivered</button>
+                    </form>
+                    <form method="post" t-attf-action="#{base}again">
+                        <input type="hidden" name="token" t-att-value="token"/>
+                        <button class="btn map" type="submit">Send the code again</button>
+                    </form>
+                </t>
+                <details style="margin-top:18px">
+                    <summary>Cannot deliver</summary>
+                    <form method="post" t-attf-action="#{base}fail" style="margin-top:8px">
+                        <input type="hidden" name="token" t-att-value="token"/>
+                        <input name="why" maxlength="120" required="required" placeholder="Why? For example: nobody at home" aria-label="Why"
+                               style="width:100%;padding:10px;margin-bottom:8px;box-sizing:border-box"/>
+                        <button class="btn map" type="submit">Tell the shop, end this link</button>
+                    </form>
+                </details>
+            </div>
+        </t>
+    </template>
+</odoo>

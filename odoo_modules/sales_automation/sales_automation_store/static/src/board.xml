@@ -10,7 +10,7 @@
                 <b>What the colours mean</b>
                 <div><span class="sa_state new">Blue</span> New, needs you</div>
                 <div><span class="sa_state warn">Orange</span> Waiting for goods or payment</div>
-                <div><span class="sa_state good">Green</span> Paid, in stock, done</div>
+                <div><span class="sa_state good">Green</span> Paid, in stock, done, lowest price</div>
                 <div><span class="sa_state">Grey</span> Going on, nothing to do</div>
                 <div><span class="sa_state bad">Red</span> Problem: failed, SOS, rider report</div>
             </div>
@@ -26,13 +26,18 @@
                 <t t-esc="t.name"/> <span class="sa_n" t-esc="t.count"/>
             </button>
         </nav>
+        <div class="sa_by" role="group" aria-label="Show by">
+            <button type="button" t-att-aria-pressed="state.by === 'product' ? 'true' : 'false'" t-on-click="() => this.setBy('product')">By product</button>
+            <button type="button" t-att-aria-pressed="state.by === 'day' ? 'true' : 'false'" t-on-click="() => this.setBy('day')">By day</button>
+        </div>
         <div class="sa_split" t-att-class="{ sa_open: state.detailOpen }">
             <div class="sa_list">
                 <t t-foreach="orderDays" t-as="g" t-key="g.day">
-                    <div class="sa_day" t-esc="g.day"/>
+                    <div t-if="g.product" class="sa_sect_head"><h2 t-esc="g.day"/><span><t t-if="g.rows.length > 1"><t t-esc="g.rows.length"/> orders &#183; </t><t t-esc="pricesIn(g.rows)"/></span></div>
+                    <div t-else="" class="sa_day" t-esc="g.day"/>
                     <div t-foreach="g.rows" t-as="row" t-key="row.id" class="sa_row" t-att-class="{ sel: row.id === state.sel }" tabindex="0" role="button"
                          t-on-click="() => this.select(row)" t-on-keydown="(ev) => this.onRowKey(ev, row)">
-                        <div class="sa_row_time"><b t-esc="timeOf(row.at)"/><small t-if="row.waiting"><t t-esc="row.waiting"/> min</small></div>
+                        <div class="sa_row_time"><b t-esc="timeOf(row.at)"/><small t-if="g.product" t-esc="dayOf(row.at)"/><small t-if="row.waiting"><t t-esc="row.waiting"/> min</small></div>
                         <div class="sa_row_body">
                             <div class="sa_row_what">#<t t-esc="row.ref"/> &#183; <t t-foreach="row.lines" t-as="l" t-key="l_index"><t t-esc="l.name"/> &#215; <t t-esc="l.qty"/><t t-if="!l_last">, </t></t></div>
                             <div class="sa_row_who"><t t-esc="row.customer"/><t t-if="row.address"> &#183; <t t-esc="row.address"/></t></div>
@@ -41,9 +46,10 @@
                         <div class="sa_row_right">
                             <b class="sa_row_money"><t t-esc="money(row)"/></b>
                             <t t-set="m" t-value="mainOf(row)"/>
-                            <button t-if="m" type="button" class="btn" t-att-class="m.cls" t-att-disabled="state.busy === row.id"
+                            <button t-if="m" type="button" class="btn" t-att-class="m.cls" t-att-disabled="state.busy === row.id or (m.key === 'supply_arrived' and !!row.arrive_stop)" t-att-title="m.key === 'supply_arrived' and row.arrive_stop or ''"
                                     t-on-click.stop="() => this.runMain(row, m.key)" t-esc="m.name"/>
                         </div>
+                        <t t-call="sales_automation_store.VendorLines"/>
                     </div>
                 </t>
                 <div t-if="!state.loading and !orderDays.length" class="sa_none">
@@ -55,17 +61,18 @@
                 <t t-if="row">
                     <button type="button" class="btn btn-secondary sa_back" t-on-click="() => this.closeDetail()">&#8249; Orders</button>
                     <ol class="sa_path"><li t-foreach="path(row)" t-as="p" t-key="p_index" t-att-class="p.cls"><t t-if="p.cls === 'past'">&#10003; </t><t t-esc="p.name"/></li></ol>
-                    <button t-if="row.can_send_pay_link" type="button" class="btn btn-outline-primary mb-2" t-att-disabled="state.busy === row.id"
-                            t-on-click="() => this.act(row, 'send_pay_link')">
-                        <t t-if="row.pay_link">Send payment link again</t><t t-else="">Send payment link</t>
-                    </button>
                     <t t-if="row.state === 'delivered'">
+                        <button t-if="row.can_send_pay_link" type="button" class="btn btn-outline-primary mb-2" t-att-disabled="state.busy === row.id" t-on-click="() => this.act(row, 'send_pay_link')">
+                            <t t-if="row.pay_link">Send payment link again</t><t t-else="">Send payment link</t>
+                        </button>
                         <div class="sa_card"><div class="sa_card_top"><span class="sa_ref">#<t t-esc="row.ref"/></span> <span class="sa_stage">Delivered <t t-esc="timeOf(row.done_at)"/></span></div>
                             <div class="sa_who"><div class="sa_cust" t-esc="row.customer"/><div class="sa_addr" t-esc="row.address"/></div>
                             <ul class="sa_lines"><li t-foreach="row.lines" t-as="l" t-key="l_index"><span class="sa_qty" t-esc="l.qty"/><span t-esc="l.name"/></li></ul>
                             <div class="sa_docs"><a t-if="row.order_id" class="sa_doc" t-attf-href="/odoo/sale.order/#{row.order_id}" target="_blank">Order <t t-esc="row.order_name"/></a></div></div>
                     </t>
                     <t t-else="" t-call="sales_automation_store.OrderCard"/>
+                    <VendorCards t-if="row.cards and row.cards.length" cards="row.cards" requestId="row.request_id or 0" why="row.selected_why or ''" t-key="row.id"/>
+                    <ChatLog t-if="row.request_id" requestId="row.request_id"/>
                 </t>
                 <div t-else="" class="sa_none">Choose an order on the left.</div>
             </section>
@@ -82,13 +89,18 @@
                 <t t-esc="t.name"/> <span class="sa_n" t-esc="t.count"/>
             </button>
         </nav>
+        <div class="sa_by" role="group" aria-label="Show by">
+            <button type="button" t-att-aria-pressed="state.by === 'product' ? 'true' : 'false'" t-on-click="() => this.setBy('product')">By product</button>
+            <button type="button" t-att-aria-pressed="state.by === 'day' ? 'true' : 'false'" t-on-click="() => this.setBy('day')">By day</button>
+        </div>
         <div class="sa_split" t-att-class="{ sa_open: state.detailOpen }">
             <div class="sa_list">
                 <t t-foreach="enquiryDays" t-as="g" t-key="g.day">
-                    <div class="sa_day" t-esc="g.day"/>
+                    <div t-if="g.product" class="sa_sect_head"><h2 t-esc="g.day"/><span><t t-if="g.rows.length > 1"><t t-esc="g.rows.length"/> customers &#183; </t><t t-esc="pricesIn(g.rows)"/></span></div>
+                    <div t-else="" class="sa_day" t-esc="g.day"/>
                     <div t-foreach="g.rows" t-as="row" t-key="row.key" class="sa_row" t-att-class="{ sel: row.id === state.sel }" tabindex="0" role="button"
                          t-on-click="() => this.select(row)" t-on-keydown="(ev) => this.onRowKey(ev, row)">
-                        <div class="sa_row_time"><b t-esc="timeOf(row.at)"/><small t-if="row.waiting"><t t-esc="row.waiting"/> min</small></div>
+                        <div class="sa_row_time"><b t-esc="timeOf(row.at)"/><small t-if="g.product" t-esc="dayOf(row.at)"/><small t-if="row.waiting"><t t-esc="row.waiting"/> min</small></div>
                         <div class="sa_row_body">
                             <div class="sa_row_what">#<t t-esc="row.ref"/> &#183; <t t-esc="row.product"/><t t-if="row.qty"> &#215; <t t-esc="row.qty"/></t></div>
                             <div class="sa_row_who"><t t-esc="row.customer"/><t t-if="row.group"> &#183; <t t-esc="row.group"/></t></div>
@@ -98,15 +110,9 @@
                         </div>
                         <div class="sa_row_right">
                             <b class="sa_row_money" t-if="row.sell"><t t-esc="row.sell.toFixed(2)"/> <t t-esc="row.currency"/></b>
-                            <t t-if="row.prices and row.prices.length">
-                                <small t-foreach="row.prices.slice(0, 4)" t-as="p" t-key="p.id" class="d-block"
-                                       t-att-class="p.lowest and row.prices.length > 1 ? 'text-success fw-bold' : 'text-muted'">
-                                    <t t-if="p.lowest and row.prices.length > 1">&#9733; </t><t t-esc="p.vendor"/> &#183; <t t-esc="p.price.toFixed(2)"/>
-                                </small>
-                                <small t-if="row.prices.length > 4" class="text-muted">+<t t-esc="row.prices.length - 4"/> more</small>
-                            </t>
-                            <small t-elif="row.best_price" class="text-muted">best <t t-esc="row.best_price.toFixed(2)"/><t t-if="row.best_vendor"> &#183; <t t-esc="row.best_vendor"/></t></small>
+                            
                         </div>
+                        <t t-call="sales_automation_store.VendorLines"/>
                     </div>
                 </t>
                 <div t-if="!state.loading and !enquiryDays.length" class="sa_none">
@@ -119,7 +125,7 @@
                 <t t-if="row">
                     <button type="button" class="btn btn-secondary sa_back" t-on-click="() => this.closeDetail()">&#8249; Enquiries</button>
                     <t t-if="row.kind === 'pick'" t-call="sales_automation_store.EnquiryPickCard"/>
-                    <t t-elif="row.kind === 'choice' or row.kind === 'price'" t-call="sales_automation_store.EnquiryPriceCard"/>
+                    <t t-elif="row.kind === 'choice' or row.kind === 'price' or row.kind === 'vendor'" t-call="sales_automation_store.EnquiryPriceCard"/>
                     <t t-else="">
                         <div class="sa_dtitle"><b>#<t t-esc="row.ref"/> &#183; <t t-esc="row.product"/></b> <span class="sa_state" t-att-class="pill(row)[0]" t-esc="pill(row)[1]"/></div>
                         <div class="sa_row_who"><t t-esc="row.customer"/><t t-if="row.group"> &#183; <t t-esc="row.group"/></t></div>
@@ -135,32 +141,8 @@
                             <t t-esc="d.better.vendor"/> came late with <b><t t-esc="d.better.price.toFixed(2)"/></b>, cheaper by <b><t t-esc="d.better.less.toFixed(2)"/></b>
                             <button type="button" class="btn btn-primary btn-sm ms-2" t-att-disabled="state.busy === row.id" t-on-click="() => this.useLate(row, d.better)">Use this price</button>
                         </div>
-                        <table class="table sa_vendors" t-if="d.vendors.length">
-                            <thead><tr><th>#</th><th>Vendor</th><th class="text-end">Price</th><th>Reply</th></tr></thead>
-                            <tbody>
-                                <tr t-foreach="d.vendors" t-as="v" t-key="v_index" t-att-class="{ best: v.is_best, late: v.late }">
-                                    <td><t t-if="v.is_best">&#9733;</t><t t-elif="v.rank" t-esc="v.rank"/></td>
-                                    <td><b t-esc="v.name"/><div class="small text-muted" t-if="v.text" t-esc="v.text"/></td>
-                                    <td class="text-end"><t t-if="v.replied"><t t-esc="v.price.toFixed(2)"/> <t t-esc="d.currency"/>
-                                        <div t-if="v.lowest" class="small text-success fw-bold">lowest</div></t></td>
-                                    <td>
-                                        <span t-if="v.late" class="sa_state warn">late</span>
-                                        <span t-elif="v.replied" class="sa_state good">in time</span>
-                                        <span t-elif="v.said_no" class="sa_state">said no</span>
-                                        <span t-elif="v.said_yes" class="sa_state warn">has it, no price</span>
-                                        <span t-else="" class="sa_state">silent</span>
-                                        <small class="text-muted ms-1" t-if="v.replied" t-esc="timeOf(v.at)"/>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        <div class="sa_talk" t-if="d.messages.length or d.vendor_messages.length">
-                            <b>What was written</b>
-                            <div t-foreach="talk(d)" t-as="m" t-key="m_index" class="sa_line" t-att-class="m.who">
-                                <small><t t-esc="timeOf(m.at)"/> <t t-esc="m.who === 'customer' ? d.customer : m.who === 'vendor' ? (m.name or m.phone) : 'Us'"/></small>
-                                <div t-esc="m.text"/>
-                            </div>
-                        </div>
+                        <VendorCards t-if="d.cards.length" cards="d.cards" requestId="d.id" why="d.selected_why or ''" busy="state.busy === row.id" onChoose="(card) => this.onChooseVendor(row, card)" t-key="d.id"/>
+                        <ChatLog requestId="d.id"/>
                     </t>
                     <div t-else="" class="sa_none">One moment&#8230;</div>
                 </t>

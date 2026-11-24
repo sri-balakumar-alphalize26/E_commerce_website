@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="sales_automation_store.VendorCards">
+        <div class="sa_vc">
+            <div class="sa_vc_bar" t-if="props.cards.length > 1">
+                <span class="sa_vc_group" role="group" aria-label="Sort">
+                    <button type="button" t-att-aria-pressed="state.by === 'rate' ? 'true' : 'false'" t-on-click="() => this.sort('rate')">Rate<t t-esc="arrow('rate')"/></button>
+                    <button type="button" t-att-aria-pressed="state.by === 'time' ? 'true' : 'false'" t-on-click="() => this.sort('time')">Time<t t-esc="arrow('time')"/></button>
+                </span>
+                <span class="sa_vc_group" role="group" aria-label="Show">
+                    <button type="button" t-att-aria-pressed="state.show === 'all' ? 'true' : 'false'" t-on-click="() => this.show('all')">All <t t-esc="counts.all"/></button>
+                    <button type="button" t-att-aria-pressed="state.show === 'replied' ? 'true' : 'false'" t-on-click="() => this.show('replied')">With price <t t-esc="counts.replied"/></button>
+                    <button type="button" t-att-aria-pressed="state.show === 'waiting' ? 'true' : 'false'" t-on-click="() => this.show('waiting')">No price <t t-esc="counts.waiting"/></button>
+                </span>
+            </div>
+            <div class="sa_vc_cards" aria-live="polite">
+                <article t-foreach="cards" t-as="c" t-key="c.key" class="sa_vc_card" t-att-class="{ none: c.state !== 'price', low: c.lowest, chosen: c.selected }">
+                    <div class="sa_vc_top"><b t-esc="c.vendor"/>
+                        <span t-if="c.selected" class="sa_state good">Chosen</span>
+                        <span t-if="c.lowest" class="sa_state good">&#9733; Lowest</span>
+                        <span t-if="c.late" class="sa_state warn">Late</span>
+                        <span t-if="c.state !== 'price'" class="sa_state" t-att-class="{ warn: c.state === 'yes' or c.state === 'held' }" t-esc="words(c)"/>
+                    </div>
+                    <div class="sa_vc_price" t-esc="money(c)"/>
+                    <div class="sa_vc_time" t-esc="time(c)"/>
+                    <div class="sa_vc_time"><t t-if="c.bought">bought <t t-esc="c.bought"/> <t t-if="c.bought === 1">time</t><t t-else="">times</t></t><t t-else="">not bought yet</t></div>
+                    <div t-if="c.text" class="sa_vc_text" t-esc="c.text"/>
+                    <div t-if="c.selected and props.why" class="sa_vc_why" t-esc="props.why"/>
+                    <button t-if="c.can_choose and props.onChoose" type="button" class="btn btn-primary" t-att-disabled="props.busy"
+                            t-on-click.stop="() => this.props.onChoose(c)">Choose</button>
+                    <button t-if="props.requestId and c.phone" type="button" class="btn sa_vc_chat" t-on-click.stop="() => this.chat(c)"><i class="fa fa-whatsapp" role="img" aria-hidden="true"/> Chat</button>
+                </article>
+            </div>
+        </div>
+    </t>
+
+    <!-- in a row of the list: one line each -->
+    <t t-name="sales_automation_store.VendorLines">
+        <div class="sa_vl" t-if="row.cards and row.cards.length">
+            <div t-foreach="row.cards" t-as="c" t-key="c.key" class="sa_vl_line" t-att-class="{ low: c.lowest }">
+                <span><t t-if="c.lowest">&#9733;</t></span>
+                <span class="sa_vl_name"><t t-esc="c.vendor"/><t t-if="c.lowest"> &#183; lowest</t><t t-if="c.selected"> &#183; chosen</t><t t-if="c.late"> &#183; late</t>
+                    <small t-if="c.state === 'price'"><t t-esc="replyTime(c)"/><t t-if="c.bought"> &#183; bought <t t-esc="c.bought"/> <t t-if="c.bought === 1">time</t><t t-else="">times</t></t></small></span>
+                <span class="sa_vl_price"><t t-if="c.state === 'price'"><t t-esc="c.price.toFixed(2)"/> <t t-esc="c.currency"/></t><t t-else=""><small><t t-esc="cardWords(c)"/></small> &#8212;</t></span>
+            </div>
+        </div>
+    </t>
+
+</templates>

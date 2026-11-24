@@ -23,7 +23,10 @@ import { Alarm } from "./store_screen";
 import {
     ENQUIRY_TONE, STALLED_TONE, presence,
 } from "./enquiry_alarm_shared";
-import { ColourKey, ENQUIRY_TABS, byDay, dayKey, enquiryPill, matches, remember, remembered, timeOf } from "./board";
+import { ColourKey, ENQUIRY_TABS, byDay, byProduct, dayName, enquiryPill, matches, pricesIn, remember, remembered, timeOf } from "./board";
+import { VendorCards, cardState, replyTime } from "./vendor_cards";
+import { ChatLog } from "./chat_log";
+import { SaSelect } from "./fields";
 const TICK_MS = 1000;
 
 /** m:ss, or h:mm:ss once it has been going a while. */
@@ -133,7 +136,7 @@ export class TrackDialog extends Component {
  */
 export class PriceDialog extends Component {
     static template = "sales_automation_store.PriceDialog";
-    static components = { Dialog };
+    static components = { Dialog, SaSelect };
     static props = { close: Function, row: Object, onApply: Function,
                      sellMode: { type: Boolean, optional: true } };
 
@@ -163,6 +166,14 @@ export class PriceDialog extends Component {
         return this.cost * (1 + (this.props.row.margin || 0) / 100);
     }
 
+    get vendorOptions() {
+        return [{ value: "", label: "Not saying" }].concat(this.props.row.vendors.map((v) => ({ value: `${v.id}`, label: v.name })));
+    }
+
+    onVendor(value) {
+        this.state.vendor = value;
+    }
+
     get vendorName() {
         const picked = this.props.row.vendors.find(
             (v) => `${v.id}` === `${this.state.vendor}`);
@@ -189,7 +200,7 @@ export class PriceDialog extends Component {
 
 export class EnquiryScreen extends Component {
     static template = "sales_automation_store.EnquiryScreen";
-    static components = { ColourKey };
+    static components = { ChatLog, ColourKey, SaSelect, VendorCards };
     // client action: 369ai 19 passes action / actionId / updateActionState / className
     static props = { "*": true };
 
@@ -222,7 +233,7 @@ export class EnquiryScreen extends Component {
             stalledRepeat: 120,
             stalledMaxMinutes: 10,
             // the list (23 Nov 2026)
-            view: remembered("sa_enquiries_view", "list"),
+            view: remembered("sa_enquiries_view_2", "list"), by: remembered("sa_board_by", "product"),
             tab: "needs", sel: 0, search: "", days: 30, detail: null, detailOpen: false,
             old: [], counts: {}, more: false,
         });
@@ -487,7 +498,7 @@ export class EnquiryScreen extends Component {
         const kind = (rows, k) => rows.map((r) => Object.assign(r, { kind: typeof k === "function" ? k(r) : k, key: r.id }));
         switch (this.state.tab) {
             case "needs":
-                return kind(this.state.rows, "pick").concat(kind(this.state.stalled, (r) => (r.choice ? "choice" : "price")));
+                return kind(this.state.rows, "pick").concat(kind(this.state.stalled, (r) => (r.choice ? "choice" : r.pick_vendor ? "vendor" : "price")));
             case "vendors":
                 return kind(this.state.tracking.filter((r) => r.state === "sourcing"), "vendors");
             case "sent":
@@ -506,7 +517,47 @@ export class EnquiryScreen extends Component {
         const since = new Date();
         since.setHours(0, 0, 0, 0);
         since.setDate(since.getDate() - (this.state.days - 1));
-        return byDay(this.boardRows.filter((r) => matches(r, this.state.search) && (!r.at || new Date(r.at) >= since)), () => false);
+        const rows = this.boardRows.filter((r) => matches(r, this.state.search) && (!r.at || new Date(r.at) >= since));
+        return this.state.by === "day" ? byDay(rows, () => false) : byProduct(rows, () => false, (r) => r.product);
+    }
+    /** The Cards view: the same sections, one per product. */
+    sections(rows) {
+        return byProduct(rows, () => false, (r) => r.product);
+    }
+    setBy(by) {
+        this.state.by = by;
+        remember("sa_board_by", by);
+    }
+    pricesIn(rows) {
+        return pricesIn(rows);
+    }
+    dayOf(iso) {
+        return dayName(iso).split(",")[0];
+    }
+    replyTime(card) {
+        return replyTime(card.replied_at);
+    }
+    cardWords(card) {
+        return cardState(card);
+    }
+    onChooseVendor(row, card) {
+        const cur = row.currency || card.currency || "";
+        this.dialog.add(ConfirmationDialog, {
+            title: `Choose ${card.vendor} for #${row.ref}`,
+            body: `${card.vendor} asks ${card.price.toFixed(2)} ${card.currency || cur}. With your margin the customer pays ${card.sell.toFixed(2)} ${cur}. Choose this vendor?`,
+            confirmLabel: "Choose " + card.vendor,
+            cancelLabel: "Back",
+            confirm: async () => {
+                this.state.busy = row.id;
+                try {
+                    await this.orm.call("sa.group.request", "sa_vendor_choose", [row.id, card.quote_id]);
+                } finally {
+                    this.state.busy = 0;
+                    await this.refresh();
+                }
+            },
+            cancel: () => {},
+        });
     }
     get selected() {
         return this.boardRows.find((r) => r.id === this.state.sel) || null;
@@ -542,8 +593,11 @@ export class EnquiryScreen extends Component {
     loadMore() {
         return this.loadOld(true);
     }
-    async onWhen(ev) {
-        this.state.days = parseInt(ev.target.value, 10) || 30;
+    get whenOptions() {
+        return [{ value: 30, label: "30 days" }, { value: 1, label: "Today" }, { value: 7, label: "7 days" }];
+    }
+    async onWhen(value) {
+        this.state.days = parseInt(value, 10) || 30;
         await this.loadOld();
         this._keepSelection();
     }
@@ -578,7 +632,7 @@ export class EnquiryScreen extends Component {
     }
     toggleView() {
         this.state.view = this.state.view === "list" ? "cards" : "list";
-        remember("sa_enquiries_view", this.state.view);
+        remember("sa_enquiries_view_2", this.state.view);
     }
     pill(row) {
         return enquiryPill(row);

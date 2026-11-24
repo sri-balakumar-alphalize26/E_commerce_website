@@ -20,5 +20,17 @@
             <field name="priority">40</field>
         </record>
 
+        <!-- Does nothing while "Who orders from the vendor" is Manual. -->
+        <record id="cron_sa_supply_auto" model="ir.cron">
+            <field name="name">Store: Order From the Vendor by Itself</field>
+            <field name="model_id" ref="stock.model_stock_picking"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_sa_supply_auto()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">minutes</field>
+            <field name="active">True</field>
+            <field name="priority">45</field>
+        </record>
+
     </data>
 </odoo>

@@ -8,6 +8,10 @@ from . import stock_picking_oos_gate
 from . import res_users_tz
 from . import sa_boards
 from . import sa_enquiry_prices
+from . import sa_vendor_cards
+from . import sa_supply_choice
+from . import sa_self_delivery
+from . import sa_self_link
 from . import sa_notice_settings
 from . import sa_notice
 from . import sa_notice_hooks

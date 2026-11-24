@@ -43,10 +43,24 @@
                 </div>
             </aside>
 
-            <button t-else="" type="button" class="sa_side_tab" t-att-class="{ hot: count }" t-on-click="() => this.notice.unfold()"
-                    t-att-aria-label="'Open notifications, ' + count + ' new'" title="Notifications">
-                <span aria-hidden="true">&lt;</span><span t-if="count" class="sa_side_n" t-esc="count"/>
-            </button>
+            <t t-else="">
+                <div class="sa_pop" role="status" t-ref="pop" t-if="cards.length or aside" t-attf-style="top: {{state.top}}px">
+                    <article t-foreach="cards" t-as="c" t-key="c.key" class="sa_pop_card" t-att-class="c.key">
+                        <span class="sa_pop_ico"><span class="sa_shake"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" aria-hidden="true"><path d="M12 2a2 2 0 0 0-2 2v.4A6 6 0 0 0 6 10v5l-2 3h16l-2-3v-5a6 6 0 0 0-4-5.6V4a2 2 0 0 0-2-2z"/><path d="M9.5 19.5a2.5 2.5 0 0 0 5 0z"/></svg></span></span>
+                        <div><b t-esc="c.title"/><div t-esc="c.text"/>
+                            <button t-if="c.list" type="button" class="btn btn-link btn-sm p-0" t-on-click="() => this.notice.unfold()">See the list</button></div>
+                        <button type="button" class="sa_pop_x" t-on-click="() => this.notice.tuck(c.key)" aria-label="Move to the side" title="Move to the side">&#10005;</button>
+                        <button type="button" class="sa_pop_go" t-on-click="() => this.notice.openSection(c)"><t t-esc="c.go"/> &#8594;</button>
+                    </article>
+                    <button t-if="aside" type="button" class="sa_pop_tab" t-on-click="() => this.notice.untuck()"
+                            t-att-aria-label="'Show notifications, ' + aside" title="Notifications">
+                        <span aria-hidden="true">&#8249;</span><span class="sa_shake"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" aria-hidden="true"><path d="M12 2a2 2 0 0 0-2 2v.4A6 6 0 0 0 6 10v5l-2 3h16l-2-3v-5a6 6 0 0 0-4-5.6V4a2 2 0 0 0-2-2z"/><path d="M9.5 19.5a2.5 2.5 0 0 0 5 0z"/></svg></span><span class="sa_pop_n" t-esc="aside"/>
+                    </button>
+                </div>
+                <button t-else="" type="button" class="sa_side_tab" t-on-click="() => this.notice.unfold()" aria-label="Open notifications" title="Notifications">
+                    <span aria-hidden="true">&lt;</span>
+                </button>
+            </t>
         </t>
     </t>
 </templates>

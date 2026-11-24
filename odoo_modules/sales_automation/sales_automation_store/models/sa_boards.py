@@ -135,7 +135,7 @@ class SaGroupRequestBoard(models.Model):
         better = request.sa_better_quote_id
         detail.update(
             best_cost=best.price if best else 0.0,
-            margin=request.sa_margin_used if request.sa_evaluated_on else (self.env['sa.ai.settings'].sudo().get_settings().margin_percent or 0.0),
+            margin=request._sa_margin(),
             evaluated_on=iso(request.sa_evaluated_on),
             better={'quote_id': better.id, 'vendor': better.partner_id.name or better.vendor_name or '', 'price': better.price,
                     'less': best.price - better.price} if better else False)

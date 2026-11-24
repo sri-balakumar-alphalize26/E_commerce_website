@@ -17,8 +17,12 @@ import { Component, onMounted, onWillStart, onWillUnmount, useState } from "@odo
 // One definition of every alarm tone, shared with the enquiry desk, so
 // four alarms on two screens cannot drift into sounding alike.
 import { SUPPLY_TONE } from "./enquiry_alarm_shared";
+import { VendorCards, cardState, replyTime } from "./vendor_cards";
+import { ChatLog } from "./chat_log";
+import { SaDate, SaSelect, isoDay } from "./fields";
+import { HandOverDialog } from "./hand_over";
 import {
-    ColourKey, ORDER_TABS, byDay, dayKey, matches, orderMain, orderPath, orderPills, orderProblem, orderStep, remember, remembered, timeOf,
+    ColourKey, ORDER_TABS, byDay, byProduct, dayKey, dayName, matches, orderProduct, pricesIn, orderMain, orderPath, orderPills, orderProblem, orderStep, remember, remembered, timeOf,
 } from "./board";
 
 /**
@@ -130,12 +134,20 @@ export class Alarm {
  *  the delivery code the customer gives after receiving the parcel. */
 class OtpDialog extends Component {
     static template = "sales_automation_store.OtpDialog";
-    static components = { Dialog };
+    static components = { Dialog, SaSelect };
     static props = { close: Function, title: String, hint: String, onConfirm: Function,
                      riders: { type: Array, optional: true }, riderId: { type: Number, optional: true } };
 
     setup() {
         this.state = useState({ code: "", error: "", rider: this.props.riderId ? `${this.props.riderId}` : "" });
+    }
+
+    get riderOptions() {
+        return (this.props.riders || []).map((r) => ({ value: `${r.id}`, label: r.name }));
+    }
+
+    onRider(value) {
+        this.state.rider = value;
     }
 
     async confirm() {
@@ -329,11 +341,15 @@ class CompanyDialog extends Component {
  */
 class SupplyDialog extends Component {
     static template = "sales_automation_store.SupplyDialog";
-    static components = { Dialog };
+    static components = { Dialog, SaDate, SaSelect };
     static props = {
         row: Object,
         vendors: Array,
         noCateg: Boolean,
+        prices: Object,
+        asked: Array,
+        now: Object,
+        load: Function,
         onAsk: Function,
         onSave: Function,
         close: Function,
@@ -341,13 +357,67 @@ class SupplyDialog extends Component {
 
     setup() {
         this.state = useState({
-            picked: {},
-            partner: "",
-            cost: "",
-            day: this.today(),
-            asked: false,
-            error: "",
+            picked: {}, partner: "", cost: "", day: this.props.now.date, cday: "", now: this.props.now, own: false, cown: false, asked: false, error: "", send: true,
+            prices: this.props.prices, vendors: this.props.vendors, askedNow: this.props.asked, touched: false, asking: false,
         });
+        this.useRecommended();
+        this.useDays();
+        let timer;
+        onMounted(() => {
+            // a vendor's late price shows while this is open
+            timer = setInterval(() => this.reload(), 10000);
+        });
+        onWillUnmount(() => clearInterval(timer));
+    }
+
+    async reload() {
+        try {
+            const data = await this.props.load();
+            this.state.prices = data.prices;
+            this.state.vendors = data.vendors;
+            this.state.askedNow = data.asked || [];
+            this.state.now = data.now;
+            if (!this.state.own) {          // not changed by hand: it goes on with the clock
+                this.state.day = data.now.date;
+            }
+            this.useDays();
+            if (!this.state.touched) {
+                this.useRecommended();
+            }
+        } catch {
+            /* read again in a moment */
+        }
+    }
+
+    /** The customer's day follows the vendor's until it was typed. */
+    useDays() {
+        if (!this.state.cown) {
+            const [y, m, d] = this.state.day.split("-").map((x) => parseInt(x, 10));
+            this.state.cday = isoDay(new Date(y, m - 1, d + (this.state.now.customer_days || 0)));
+        } else if (this.state.cday < this.state.day) {
+            this.state.cday = this.state.day;
+        }
+    }
+
+    onCustomerDay(value) {
+        this.state.cown = true;
+        this.state.cday = value;
+    }
+
+    get daysWords() {
+        const n = this.state.now.customer_days || 0;
+        if (this.state.cown) {
+            return "Your own day for this order";
+        }
+        return n ? `${n} day${n > 1 ? "s" : ""} after the vendor (Configuration)` : "The same day (Configuration)";
+    }
+
+    useRecommended() {
+        const pick = this.state.prices.recommended;
+        if (pick && pick.vendor_id) {
+            this.state.partner = `${pick.vendor_id}`;
+            this.state.cost = pick.total.toFixed(2);
+        }
     }
 
     today() {
@@ -376,40 +446,231 @@ class SupplyDialog extends Component {
 
     /** Same rule as the server: today is Quick, later is Express. */
     get kindLabel() {
-        return this.state.day && this.state.day > this.today()
+        return this.state.cday && this.state.cday > this.state.now.date
             ? "Express"
             : "Same day";
     }
 
+    /** A vendor's price taken with one tap. */
+    take(card) {
+        if (!card.vendor_id) {
+            return;
+        }
+        this.state.touched = true;
+        this.state.partner = `${card.vendor_id}`;
+        if (card.state === "price") {
+            this.state.cost = (card.total === undefined ? card.price : card.total).toFixed(2);
+        }
+    }
+
+    onCardKey(ev, card) {
+        if (ev.key === "Enter" || ev.key === " ") {
+            ev.preventDefault();
+            this.take(card);
+        }
+    }
+
+    touch() {
+        this.state.touched = true;
+    }
+
+    get vendorOptions() {
+        return [{ value: "", label: "Not saying" }].concat(this.state.vendors.map((v) => ({ value: `${v.id}`, label: v.name, sub: v.phone || "no number" })));
+    }
+
+    onVendor(value) {
+        this.touch();
+        this.state.partner = value;
+    }
+
+    onDay(value) {
+        this.state.own = true;
+        this.state.day = value;
+        this.useDays();
+    }
+
+    isTaken(card) {
+        return card.vendor_id && `${card.vendor_id}` === `${this.state.partner}`;
+    }
+
+    isRecommended(card) {
+        const pick = this.state.prices.recommended;
+        return !!pick && pick.quote_id === card.quote_id;
+    }
+
+    time(card) {
+        return replyTime(card.replied_at);
+    }
+
+    words(card) {
+        return cardState(card);
+    }
+
+    /** Only who was not asked yet: for the enquiry or here. */
+    get askable() {
+        const done = new Set(this.state.prices.cards.map((c) => c.vendor_id).concat(this.state.askedNow.map((v) => v.id)));
+        return this.state.vendors.filter((v) => !done.has(v.id));
+    }
+
+    get askedNames() {
+        return this.state.askedNow.map((v) => v.name).join(", ");
+    }
+
+    toggleAsk() {
+        this.state.asking = !this.state.asking;
+    }
+
+    get amount() {
+        const raw = `${this.state.cost || ""}`.trim().replace(/,/g, "");
+        const value = parseFloat(raw);
+        return raw !== "" && isFinite(value) ? value : null;
+    }
+
+    get vendor() {
+        return this.state.vendors.find((v) => `${v.id}` === `${this.state.partner}`) || null;
+    }
+
+    /** {text, bad}: what is left for us. */
+    get left() {
+        const p = this.state.prices;
+        if (this.amount === null || !p.sell || !this.amount) {
+            return null;
+        }
+        const win = p.sell - this.amount;
+        return { bad: win < 0, text: win < 0 ? `We would lose ${(-win).toFixed(2)} ${p.currency}`
+            : `We keep ${win.toFixed(2)} ${p.currency} (${((win / this.amount) * 100).toFixed(0)}%)` };
+    }
+
+    get sendProblem() {
+        if (!this.vendor) {
+            return "Choose a vendor to send the order.";
+        }
+        return this.vendor.ok ? "" : `${this.vendor.name} has no WhatsApp number, so nothing is sent.`;
+    }
+
     ask() {
         if (!this.chosen.length) {
-            this.state.error = "Tick at least one supplier first.";
+            this.state.error = "Tick at least one vendor first.";
             return;
         }
         this.state.error = "";
-        this.state.asked = true;
         this.props.onAsk(this.chosen);
+        this.props.close();             // left as it is: accepted later
     }
 
     save() {
-        const cost = parseFloat((this.state.cost || "").replace(/,/g, ""));
-        if (!(cost >= 0) || this.state.cost === "") {
+        if (this.amount === null || this.amount < 0) {
             this.state.error = "Type the amount as a number, like 900.";
             return;
         }
         this.props.onSave({
-            partner_id: this.state.partner
-                ? parseInt(this.state.partner, 10) : false,
-            cost,
+            partner_id: this.state.partner ? parseInt(this.state.partner, 10) : false,
+            cost: this.amount,
             promised_date: this.state.day,
+            customer_date: this.state.cday,
+            send: this.state.send && !this.sendProblem,
         });
+        this.props.close();
+    }
+}
+
+/** Our staff types the customer's code. */
+class SelfCodeDialog extends Component {
+    static template = "sales_automation_store.SelfCodeDialog";
+    static components = { Dialog };
+    static props = { row: Object, act: Function, close: Function };
+
+    setup() {
+        this.state = useState({ code: "", cash: false, told: "", bad: false, busy: false });
+    }
+
+    get due() {
+        return this.props.row.self_due > 0.005;
+    }
+
+    get money() {
+        return `${this.props.row.self_due.toFixed(2)} ${this.props.row.payment ? this.props.row.payment.amount.split(" ").pop() : this.props.row.currency}`;
+    }
+
+    get ready() {
+        return (this.state.code || "").replace(/\D/g, "").length === 6 && (!this.due || this.state.cash) && !this.state.busy;
+    }
+
+    async run(action, extra) {
+        this.state.busy = true;
+        this.state.told = "";
+        try {
+            const data = await this.props.act(action, extra);
+            return data;
+        } catch (err) {
+            this.state.bad = true;
+            this.state.told = (err && err.data && err.data.message) || (err && err.message) || "It did not work. Try again.";
+            return null;
+        } finally {
+            this.state.busy = false;
+        }
+    }
+
+    async confirm() {
+        const data = await this.run("self_code", { code: this.state.code.replace(/\D/g, ""), cash: this.state.cash });
+        if (data && data.self_told) {
+            this.state.bad = true;
+            this.state.told = data.self_told;
+        } else if (data) {
+            this.props.close();
+        }
+    }
+
+    async again() {
+        const data = await this.run("self_resend");
+        if (data) {
+            this.state.bad = false;
+            this.state.told = data.self_told;
+        }
+    }
+
+    async back() {
+        if (await this.run("self_back")) {
+            this.props.close();
+        }
+    }
+}
+
+/** How many of the purchase came. */
+class ArrivedDialog extends Component {
+    static template = "sales_automation_store.ArrivedDialog";
+    static components = { Dialog };
+    static props = { row: Object, onSave: Function, close: Function };
+
+    setup() {
+        this.state = useState({ qty: `${this.props.row.po.open}` });
+    }
+
+    get qty() {
+        const value = parseFloat(`${this.state.qty}`.replace(/,/g, "."));
+        return isFinite(value) ? value : 0;
+    }
+
+    get problem() {
+        if (this.qty <= 0) {
+            return "Type how many came, like 1.";
+        }
+        return this.qty > this.props.row.po.open ? `Only ${this.props.row.po.open} are still to come.` : "";
+    }
+
+    step(by) {
+        this.state.qty = `${Math.min(this.props.row.po.open, Math.max(1, this.qty + by))}`;
+    }
+
+    save() {
+        this.props.onSave(this.qty);
         this.props.close();
     }
 }
 
 export class StoreScreen extends Component {
     static template = "sales_automation_store.StoreScreen";
-    static components = { ColourKey };
+    static components = { ChatLog, ColourKey, SaSelect, VendorCards };
     // client action: 369ai 19 passes action / actionId / updateActionState / className
     static props = { "*": true };
 
@@ -441,7 +702,8 @@ export class StoreScreen extends Component {
             waitingSupply: 0,
             supplyRinging: 0,
             // the list (23 Nov 2026)
-            view: remembered("sa_orders_view", "list"),
+            view: remembered("sa_orders_view_2", "list"),
+            by: remembered("sa_board_by", "product"),
             tab: "new", sel: 0, search: "", when: "all", done: [], detailOpen: false,
         });
 
@@ -625,9 +887,42 @@ export class StoreScreen extends Component {
         }
     }
 
-    async onShopChange(ev) {
+    get whenOptions() {
+        return [{ value: "all", label: "All days" }, { value: "today", label: "Today" }, { value: "yesterday", label: "Yesterday" }];
+    }
+
+    onWhen(value) {
+        this.state.when = value;
+    }
+
+    get shopOptions() {
+        return [{ value: 0, label: "All shops" }].concat(this.state.shops.map((s) => ({ value: s.id, label: s.name })));
+    }
+
+    /** A purchase: ask how many came. Lots or no purchase: as the server says. */
+    async onArrived(row) {
+        if (row.po && row.po.receipt_url) {
+            this.notification.add("This product has serial or lot numbers: type them on the receipt, then press Goods arrived again.", { type: "warning" });
+            window.open(row.po.receipt_url, "_blank");
+            return;
+        }
+        if (row.po && row.po.open > 1 && row.po.single) {
+            this.dialog.add(ArrivedDialog, { row, onSave: (qty) => this.act(row, "supply_arrived", { qty }) });
+            return;
+        }
+        this.dialog.add(ConfirmationDialog, {
+            title: "Goods arrived - #" + row.ref + "?",
+            body: "Confirm only when the goods are in the shop: the order goes on.",
+            confirmLabel: "Yes, they arrived",
+            cancelLabel: "Back",
+            confirm: () => this.act(row, "supply_arrived"),
+            cancel: () => {},
+        });
+    }
+
+    async onShopChange(value) {
         this.bus.deleteChannel(this._channel());
-        this.state.shopId = parseInt(ev.target.value, 10) || 0;
+        this.state.shopId = parseInt(value, 10) || 0;
         this._listen();
         await this.refresh();
     }
@@ -658,6 +953,10 @@ export class StoreScreen extends Component {
             row,
             vendors: data.vendors || [],
             noCateg: !!data.no_categ,
+            prices: data.prices,
+            asked: data.asked || [],
+            now: data.now,
+            load: () => this.orm.silent.call("stock.picking", "sa_store_supply_options", [row.id]),
             onAsk: (ids) => this.act(row, "supply_ask", { vendor_ids: ids }),
             onSave: (vals) => this.act(row, "supply_set", vals),
         });
@@ -765,6 +1064,54 @@ export class StoreScreen extends Component {
         });
     }
 
+    /** No rider: store pickup (the code) or home delivery (a link to one person). */
+    onSelf(row, change = false) {
+        this.dialog.add(HandOverDialog, {
+            row, change,
+            act: (action, extra) => this.act(row, action, extra),
+            onCode: () => {
+                const now = this.allOrders.find((r) => r.id === row.id);
+                if (now && now.self_delivery) {
+                    this.onSelfCode(now);
+                }
+            },
+        });
+    }
+
+    async onLinkAgain(row) {
+        const data = await this.act(row, "self_link_again");
+        if (data && data.self_told) {
+            this.notification.add(data.self_told, { type: "success" });
+        }
+    }
+
+    /** The counter for a person whose phone does not work. */
+    onLinkReached(row) {
+        this.dialog.add(ConfirmationDialog, {
+            title: "Send the code for #" + row.ref + "?",
+            body: "Only when " + row.self_who + " is with the customer. The customer gets the code on WhatsApp now.",
+            confirmLabel: "Send the code",
+            cancelLabel: "Back",
+            confirm: () => this.act(row, "self_step"),
+            cancel: () => {},
+        });
+    }
+
+    onLinkBack(row) {
+        this.dialog.add(ConfirmationDialog, {
+            title: "Not delivered - #" + row.ref + "?",
+            body: "The order goes back to packed. The link and the code stop working.",
+            confirmLabel: "Back to packed",
+            cancelLabel: "Keep it",
+            confirm: () => this.act(row, "self_back"),
+            cancel: () => {},
+        });
+    }
+
+    onSelfCode(row) {
+        this.dialog.add(SelfCodeDialog, { row, act: (action, extra) => this.act(row, action, extra) });
+    }
+
     onFail(row) {
         this.dialog.add(ConfirmationDialog, {
             title: "Delivery failed - #" + row.ref + "?",
@@ -825,7 +1172,26 @@ export class StoreScreen extends Component {
         }
         const rows = this.allOrders.filter((r) => (this.state.search.trim() ? matches(r, this.state.search) : orderStep(r) === this.state.tab)
             && (!wanted || dayKey(r.at) === wanted));
-        return byDay(rows, orderProblem);
+        return this.state.by === "day" ? byDay(rows, orderProblem) : byProduct(rows, orderProblem, orderProduct);
+    }
+    sections(rows) {
+        return byProduct(rows, orderProblem, orderProduct);
+    }
+    setBy(by) {
+        this.state.by = by;
+        remember("sa_board_by", by);
+    }
+    pricesIn(rows) {
+        return pricesIn(rows);
+    }
+    dayOf(iso) {
+        return dayName(iso).split(",")[0];
+    }
+    replyTime(card) {
+        return replyTime(card.replied_at);
+    }
+    cardWords(card) {
+        return cardState(card);
     }
     get selected() {
         return this.allOrders.find((r) => r.id === this.state.sel) || null;
@@ -869,7 +1235,7 @@ export class StoreScreen extends Component {
     }
     toggleView() {
         this.state.view = this.state.view === "list" ? "cards" : "list";
-        remember("sa_orders_view", this.state.view);
+        remember("sa_orders_view_2", this.state.view);
     }
     pills(row) {
         return orderPills(row);
@@ -890,7 +1256,7 @@ export class StoreScreen extends Component {
         this.state.sel = row.id;
         return {
             accept: () => this.onAccept(row),
-            supply_arrived: () => this.act(row, "supply_arrived"),
+            supply_arrived: () => this.onArrived(row),
             ready: () => this.act(row, "ready"),
             pay_link: () => this.act(row, "send_pay_link"),
             call: () => this.onCallRider(row),
@@ -898,10 +1264,22 @@ export class StoreScreen extends Component {
             near: () => this.act(row, "near"),
             reached: () => this.act(row, "reached"),
             delivered: () => this.onOtp(row, "delivery"),
+            self_code: () => this.onSelfCode(row),
         }[key]();
     }
 
+    payTime(iso) {
+        const d = new Date(iso);
+        return isNaN(d) ? "" : d.toLocaleString([], { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
+    }
+
     stageLabel(row) {
+        if (row.self_link) {
+            return row.state === "accepted" ? "Home delivery" : "Out with " + row.self_who;
+        }
+        if (row.self_delivery && row.state === "out_for_delivery") {
+            return row.self_way === "collect" ? "Store pickup" : "Out with our staff";
+        }
         return {
             awaiting_shop: "New order",
             preparing: "Packing",

@@ -1,0 +1,12 @@
+.sa_chat { margin-top: 14px; border: 1px solid $border-color; border-radius: 13px; overflow: hidden; background: $o-white;
+    .sa_chat_head { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; padding: 10px 13px; background: $o-gray-100; border-bottom: 1px solid $border-color; }
+    .sa_chat_tabs { display: inline-flex; flex-wrap: wrap; gap: 4px;
+        button { border: 1px solid $border-color; background: $o-white; color: $text-muted; border-radius: 99px; padding: 3px 12px; min-height: 32px; font-weight: 600; &[aria-pressed="true"] { background: #12693a; border-color: #12693a; color: #fff; } &:focus-visible { outline: 3px solid #12693a; } } }
+    .sa_chat_box { max-height: 460px; overflow: auto; padding: 12px; display: flex; flex-direction: column; gap: 6px; background: #efe9e1; &:focus-visible { outline: 2px solid #12693a; outline-offset: -2px; } }
+    .sa_chat_day { text-align: center; margin: 6px 0; span { background: #fff; color: #54656f; border-radius: 8px; padding: 3px 11px; font-size: 12.5px; box-shadow: 0 1px 1px rgba(0, 0, 0, .08); } }
+    .sa_chat_msg { align-self: flex-start; max-width: min-content; min-width: 130px; width: fit-content; max-width: 82%; background: #fff; color: #111b21; border-radius: 0 10px 10px 10px; padding: 6px 10px 5px; box-shadow: 0 1px 1px rgba(0, 0, 0, .1);
+        &.out { align-self: flex-end; background: #d9fdd3; border-radius: 10px 0 10px 10px; } &.bad { background: #fbe3e0; } small { display: block; color: #12693a; font-weight: 700; } }
+    .sa_chat_text { white-space: pre-wrap; overflow-wrap: anywhere; }
+    .sa_chat_time { display: block; text-align: end; font-size: 11.5px; color: #667781; font-variant-numeric: tabular-nums; i { font-style: normal; &.read { color: #0b7fc0; } } }
+    .sa_chat_none { text-align: center; color: #54656f; padding: 24px 8px; } }
+.sa_chat_dialog .sa_chat { margin-top: 0; .sa_chat_box { max-height: 62vh; min-height: 220px; } }

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="sales_automation_store.ChatLog">
+        <section class="sa_chat" aria-label="Chat">
+            <div class="sa_chat_head" t-if="!props.plain"><b>Chat</b>
+                <span class="sa_chat_tabs" t-if="tabs.length" role="group" aria-label="Whose chat">
+                    <button t-foreach="tabs" t-as="t" t-key="t.key" type="button" t-att-aria-pressed="t.key === state.tab ? 'true' : 'false'" t-on-click="() => this.open(t.key)" t-esc="t.name"/>
+                </span></div>
+            <div class="sa_chat_box" t-ref="box" tabindex="0">
+                <t t-foreach="lines" t-as="m" t-key="m.key">
+                    <div t-if="m.day" class="sa_chat_day"><span t-esc="m.day"/></div>
+                    <div t-else="" class="sa_chat_msg" t-att-class="{ out: m.sent, bad: m.status === 'failed' or m.status === 'blocked' }">
+                        <small t-if="who(m)" t-esc="who(m)"/>
+                        <div class="sa_chat_text" t-esc="m.text"/>
+                        <span class="sa_chat_time"><t t-esc="m.time"/> <i t-if="m.sent" t-att-class="{ read: m.status === 'read' }" t-att-title="m.status" t-esc="tick(m)"/></span>
+                    </div>
+                </t>
+                <div t-if="!lines.length" class="sa_chat_none"><t t-if="state.failed">The chat could not be read.</t><t t-elif="state.detail">Nothing was written yet.</t><t t-else="">One moment...</t></div>
+            </div>
+        </section>
+    </t>
+
+    <t t-name="sales_automation_store.ChatDialog">
+        <Dialog title="props.name" size="'md'" bodyClass="'sa_chat_dialog'">
+            <p class="text-muted mb-2">Only what was written for this order.</p>
+            <ChatLog requestId="props.requestId" vendorPhone="props.vendorPhone" plain="true"/>
+            <t t-set-slot="footer"><button class="btn btn-secondary" t-on-click="() => props.close()">Close</button></t>
+        </Dialog>
+    </t>
+</templates>

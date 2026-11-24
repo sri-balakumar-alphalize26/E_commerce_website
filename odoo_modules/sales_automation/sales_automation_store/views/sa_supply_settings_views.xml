@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_sa_settings_vendor_form_supply" model="ir.ui.view">
+        <field name="name">sa.settings.vendor.form.supply</field>
+        <field name="model">sa.ai.settings</field>
+        <field name="inherit_id" ref="sales_automation.view_sa_settings_vendor_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='vendor_money']/ancestor::group[2]" position="after">
+                <group string="Ordering from the vendor, after the sale order">
+                    <label for="supply_mode" string="Who orders from the vendor"/>
+                    <div><field name="supply_mode" widget="radio"/>
+                        <div class="text-muted small"><b>Manual:</b> you accept the order on Store &gt; Orders and choose the vendor; the lowest is recommended.<br/>
+                            <b>Automatic:</b> when no branch has stock, the lowest price is ordered on WhatsApp by itself. Orders from before are never ordered by themselves.</div></div>
+                    <label for="supply_customer_days" string="Deliver to the customer"/>
+                    <div><field name="supply_customer_days" class="oe_inline"/> days after the vendor brings it
+                        <div class="text-muted small">0 is the same day. You can change it for one order.</div></div>
+                    <label for="supply_auto_start" string="Start when the customer" invisible="supply_mode != 'auto'"/>
+                    <div invisible="supply_mode != 'auto'"><field name="supply_auto_start" widget="radio"/>
+                        <div class="text-muted small">Has paid: goods nobody paid for are never ordered. Cash does not count as paid.</div></div>
+                    <label for="supply_auto_wait" string="Wait for late prices" invisible="supply_mode != 'auto'"/>
+                    <div invisible="supply_mode != 'auto'"><field name="supply_auto_wait" class="oe_inline"/> minutes
+                        <div class="text-muted small">A vendor who answers late can still be the lowest.</div></div>
+                    <label for="supply_auto_margin" string="Lowest margin to order automatically" invisible="supply_mode != 'auto'"/>
+                    <div invisible="supply_mode != 'auto'"><field name="supply_auto_margin" class="oe_inline"/> %
+                        <div class="text-muted small">Less is left: it stops and asks you.</div></div>
+                    <label for="supply_auto_limit" string="Order by itself up to" invisible="supply_mode != 'auto'"/>
+                    <div invisible="supply_mode != 'auto'"><field name="supply_auto_limit" class="oe_inline"/>
+                        <div class="text-muted small">In your own currency, for one order. 0 is no limit.</div></div>
+                    <label for="supply_auto_days" string="Goods here after" invisible="supply_mode != 'auto'"/>
+                    <div invisible="supply_mode != 'auto'"><field name="supply_auto_days" class="oe_inline"/> days
+                        <div class="text-muted small">When the vendor gave no delivery time. 0 is today.</div></div>
+                </group>
+            </xpath>
+        </field>
+    </record>
+</odoo>

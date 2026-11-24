@@ -5,7 +5,7 @@
         <field name="model">sa.ai.settings</field>
         <field name="priority">51</field>
         <field name="arch" type="xml">
-            <form string="Side Notifications">
+            <form string="Side Notifications" create="0" delete="0">
                 <sheet>
                     <group>
                         <field name="notice_on" widget="boolean_toggle" string="Side panel"/>
@@ -36,7 +36,7 @@
         <field name="model_id" ref="sales_automation.model_sa_ai_settings"/>
         <field name="state">code</field>
         <field name="code">
-action = {'type': 'ir.actions.act_window', 'name': 'Side Notifications', 'res_model': 'sa.ai.settings',
+action = {'type': 'ir.actions.act_window', 'name': 'Side Notifications', 'context': {'sa_page': 'Side Notifications'}, 'res_model': 'sa.ai.settings',
           'res_id': model.get_settings().id, 'view_mode': 'form', 'target': 'current',
           'views': [[env.ref('sales_automation_store.view_sa_settings_notify_form').id, 'form']]}
         </field>

@@ -20,9 +20,7 @@
 
                 <t t-if="state.view === 'list'">
                     <input class="sa_search" type="search" placeholder="Search #ref, product, customer" aria-label="Search" t-model="state.search" t-on-change="() => this.loadOld()"/>
-                    <select class="sa_search" style="max-width:150px" aria-label="Date" t-on-change="onWhen">
-                        <option value="30" t-att-selected="state.days === 30">30 days</option><option value="1" t-att-selected="state.days === 1">Today</option><option value="7" t-att-selected="state.days === 7">7 days</option>
-                    </select>
+                    <SaSelect value="state.days" options="whenOptions" label="'Date'" small="true" onChange="(v) => this.onWhen(v)"/>
                 </t>
                 <button class="btn btn-secondary btn-sm" t-on-click="toggleView"><t t-if="state.view === 'list'">Cards</t><t t-else="">List</t></button>
                 <span class="sa_spacer"/>
@@ -58,27 +56,34 @@
                 </p>
             </div>
 
-            <div class="sa_store_grid" t-if="state.rows.length">
-                <t t-foreach="state.rows" t-as="row" t-key="row.id" t-call="sales_automation_store.EnquiryPickCard"/>
+            <t t-foreach="sections(state.rows)" t-as="g" t-key="g.day">
+            <div class="sa_sect_head"><h2 t-esc="g.day"/><span><t t-if="g.rows.length > 1"><t t-esc="g.rows.length"/> customers &#183; </t><t t-esc="pricesIn(g.rows)"/></span></div>
+            <div class="sa_store_grid">
+                <t t-foreach="g.rows" t-as="row" t-key="row.id" t-call="sales_automation_store.EnquiryPickCard"/>
             </div>
+            </t>
 
             <!-- ======== nobody answered: a person has to price it ======== -->
             <h4 class="sa_sect sa_sect_stall" t-if="state.stalled.length">
                 Needs a price
             </h4>
 
-            <div class="sa_store_grid" t-if="state.stalled.length">
-                <t t-foreach="state.stalled" t-as="row" t-key="row.id" t-call="sales_automation_store.EnquiryPriceCard"/>
+            <t t-foreach="sections(state.stalled)" t-as="g" t-key="g.day">
+            <div class="sa_sect_head"><h2 t-esc="g.day"/><span><t t-if="g.rows.length > 1"><t t-esc="g.rows.length"/> customers &#183; </t><t t-esc="pricesIn(g.rows)"/></span></div>
+            <div class="sa_store_grid sa_wide">
+                <t t-foreach="g.rows" t-as="row" t-key="row.id" t-call="sales_automation_store.EnquiryPriceCard"/>
             </div>
+            </t>
 
             <!-- ============ waiting for the vendors ============ -->
             <h4 class="sa_sect" t-if="state.tracking.length">
                 Asked - waiting for suppliers
             </h4>
 
-            <div class="sa_store_grid" t-if="state.tracking.length">
-                <div class="sa_card sa_card_track" t-foreach="state.tracking"
-                     t-as="row" t-key="row.id"
+            <t t-foreach="sections(state.tracking)" t-as="g" t-key="g.day">
+            <div class="sa_sect_head"><h2 t-esc="g.day"/><span><t t-if="g.rows.length > 1"><t t-esc="g.rows.length"/> customers &#183; </t><t t-esc="pricesIn(g.rows)"/></span></div>
+            <div class="sa_store_grid">
+                <div class="sa_card sa_card_track" t-foreach="g.rows" t-as="row" t-key="row.id"
                      t-on-click="() => this.onTrack(row)">
                     <div class="sa_card_top">
                         <span class="sa_ref">#<t t-esc="row.ref"/></span>
@@ -111,9 +116,11 @@
                         <t t-esc="row.waiting_on.join(', ')"/>
                     </div>
 
+                    <t t-call="sales_automation_store.VendorLines"/>
                     <div class="sa_openhint">Click to see every reply</div>
                 </div>
             </div>
+            </t>
             </t>
         </div>
     </t>
@@ -151,13 +158,7 @@
                 </div>
 
                 <label class="sa_lbl" t-if="!props.sellMode">Which supplier? (optional)</label>
-                <select class="form-select sa_vendor" t-model="state.vendor" t-if="!props.sellMode">
-                    <option value="">Not saying</option>
-                    <option t-foreach="props.row.vendors" t-as="v"
-                            t-key="v.id" t-att-value="v.id">
-                        <t t-esc="v.name"/>
-                    </option>
-                </select>
+                <SaSelect t-if="!props.sellMode" value="state.vendor" options="vendorOptions" label="'Which supplier?'" onChange="(v) => this.onVendor(v)"/>
 
                 <label class="sa_lbl" t-if="!props.sellMode">Days to deliver (optional)</label>
                 <input type="number" min="0" class="form-control sa_days"
@@ -436,19 +437,8 @@
                         (<t t-esc="row.hint_vendor"/>) - check before using
                     </div>
 
-                    <table class="table table-sm mb-2" t-if="row.prices and row.prices.length">
-                        <thead><tr><th>Vendor</th><th class="text-end">Vendor price</th><th class="text-end">+ <t t-esc="row.margin"/>%</th></tr></thead>
-                        <tbody>
-                            <tr t-foreach="row.prices" t-as="p" t-key="p.id" t-att-class="{ 'fw-bold': p.lowest and row.prices.length > 1 }">
-                                <td><t t-if="p.lowest and row.prices.length > 1">&#9733; </t><t t-esc="p.vendor"/>
-                                    <span t-if="p.lowest and row.prices.length > 1" class="small text-success ms-1">lowest</span>
-                                    <span t-if="p.late" class="small text-muted ms-1">late</span></td>
-                                <td class="text-end"><t t-esc="p.price.toFixed(2)"/> <t t-esc="row.currency"/></td>
-                                <td class="text-end"><t t-esc="p.sell.toFixed(2)"/> <t t-esc="row.currency"/></td>
-                            </tr>
-                        </tbody>
-                    </table>
-
+                    <div class="sa_choice_title" t-if="row.pick_vendor">&#9878; Choose the vendor</div>
+                    <VendorCards t-if="state.view !== 'list' and row.cards and row.cards.length" cards="row.cards" requestId="row.id" busy="state.busy === row.id" onChoose="(card) => this.onChooseVendor(row, card)" t-key="row.id"/>
                     <div class="sa_choice" t-if="row.choice">
                         <div class="sa_choice_title">&#9878; Two prices - approve one</div>
                         <div>&#127991; Product page: <b><t t-esc="row.choice.page.toFixed(2)"/> <t t-esc="row.currency"/></b></div>
@@ -457,7 +447,8 @@
                             <b><t t-esc="row.choice.vendor.toFixed(2)"/> <t t-esc="row.currency"/></b></div>
                     </div>
 
-                    <div class="sa_auto">
+                    <div class="sa_auto" t-if="row.pick_vendor">The customer waits for the price.</div>
+                    <div class="sa_auto" t-else="">
                         The customer has been told we are still checking.
                     </div>
 
@@ -483,7 +474,7 @@
                             History
                         </button>
                     </div>
-                    <div class="sa_actions" t-if="!row.choice">
+                    <div class="sa_actions" t-if="!row.choice and !row.pick_vendor">
                         <button class="btn btn-primary sa_big"
                                 t-att-disabled="state.busy === row.id"
                                 t-on-click="() => this.onSetPrice(row)">

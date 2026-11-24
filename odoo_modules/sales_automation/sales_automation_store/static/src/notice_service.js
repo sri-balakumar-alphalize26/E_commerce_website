@@ -42,16 +42,42 @@ class Tone {
     }
 }
 
-export const noticeService = {
-    dependencies: ["orm", "bus_service", "notification", "action"],
+export const SECTIONS = [
+    ["enquiries", _t("Enquiries"), ["price", "cheaper"]],
+    ["orders", _t("Orders"), ["order", "paid", "supply"]],
+    ["whatsapp", _t("WhatsApp"), ["whatsapp"]],
+];
+const CARD_KINDS = new Set(SECTIONS.flatMap((s) => s[2]));
+const SCREENS = { accept: "sales_automation_store.action_sa_store_screen", enquiries: "sales_automation_store.action_sa_enquiry_screen", orders: "sales_automation_store.action_sa_store_screen" };
+const MENUS = { accept: "sales_automation_store.menu_sa_store_screen", enquiries: "sales_automation_store.menu_sa_store_enquiries", orders: "sales_automation_store.menu_sa_store_screen" };
 
-    start(env, { orm, bus_service, notification, action }) {
-        const state = reactive({ allowed: false, unread: 0, rows: [], waiting: [], panel: false });
+function sectionCounts(data) {
+    const counts = {};
+    for (const [key, , kinds] of SECTIONS) {
+        counts[key] = (data.rows || []).filter((r) => !r.seen && kinds.includes(r.kind)).length
+            + (key === "enquiries" ? (data.waiting || []).length : 0);
+    }
+    return counts;
+}
+
+export const noticeService = {
+    dependencies: ["orm", "bus_service", "notification", "action", "menu"],
+
+    start(env, { orm, bus_service, notification, action, menu }) {
+        const state = reactive({ allowed: false, unread: 0, rows: [], waiting: [], panel: false, tucked: {} });
         const shown = new Map(); // key -> close
         const tone = new Tone();
-        let folded = false; // by its X, until the next load of the page
+        let before = {};
 
         function take(data) {
+            // a section with something more comes out again
+            const counts = sectionCounts(data);
+            for (const key of Object.keys(counts)) {
+                if (counts[key] > (before[key] || 0)) {
+                    state.tucked[key] = false;
+                }
+            }
+            before = counts;
             Object.assign(state, data);
             shared.on = !!data.allowed;
             shared.known = true;
@@ -69,21 +95,38 @@ export const noticeService = {
             }
         }
 
-        function unfoldForNews() {
-            if (state.allowed && !folded && (state.unread || state.waiting.length)) {
-                state.panel = true;
-            }
-        }
-
         function fold() {
-            folded = true;
             state.panel = false;
+            for (const [key] of SECTIONS) {
+                state.tucked[key] = true;
+            }
+            state.tucked.accept = true;
         }
 
         function unfold() {
-            folded = false;
             state.panel = true;
             load();
+        }
+
+        function tuck(key) {
+            state.tucked[key] = true;
+        }
+
+        function untuck() {
+            state.tucked = {};
+            load();
+        }
+
+        async function openSection(section) {
+            tuck(section.key);
+            const target = menu.getAll().find((m) => m.xmlid && m.xmlid === MENUS[section.key]);
+            if (target) {
+                await menu.selectMenu(target);      // the Store app and its menu, not only the screen
+            } else if (SCREENS[section.key]) {
+                await action.doAction(SCREENS[section.key], { clearBreadcrumbs: true });
+            } else {
+                unfold();
+            }
         }
 
         async function open(id) {
@@ -109,8 +152,8 @@ export const noticeService = {
             if (SOUND.includes(note.kind)) {
                 tone.play();
             }
-            if (state.panel) {
-                return; // it is in the panel, which is open
+            if (state.panel || CARD_KINDS.has(note.kind)) {
+                return; // it is in the panel or on a card
             }
             const before = shown.get(note.key);
             if (before) {
@@ -145,8 +188,12 @@ export const noticeService = {
             load();
         });
         let counted = "";
+        let waitingOrders = 0;
         onShared(() => {
-            unfoldForNews();
+            if (shared.counter > waitingOrders) {
+                state.tucked.accept = false;        // one more: the card comes out again
+            }
+            waitingOrders = shared.counter;
             const now = `${shared.pick}-${shared.stalled}`;
             if (now !== counted) {          // another enquiry waits, or one less
                 counted = now;
@@ -157,7 +204,7 @@ export const noticeService = {
         });
         load();
 
-        return { state, open, openEnquiry, seen, load, fold, unfold };
+        return { state, open, openEnquiry, openSection, seen, load, fold, unfold, tuck, untuck };
     },
 };
 
