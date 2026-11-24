@@ -9,7 +9,9 @@ first, then redirects), `/wa/confirm/<token>` the page, `/wa/confirm/<token>/ima
 the picture, `/wa/confirm/<token>/accept|reject` the decision (POST only).
 """
 import html
+import json
 import logging
+import re
 
 from odoo import fields, http
 from odoo.addons.sales_automation.controllers.close_timer import CLOSE_TIMER
@@ -21,6 +23,24 @@ from odoo.tools import html_sanitize
 from odoo.tools.image import image_process
 
 _logger = logging.getLogger(__name__)
+
+_OWN_PATH = re.compile(r'^/wa/confirm/([A-Za-z0-9_-]{16,64})(?:/price)?$')
+
+
+def _public_address():
+    """The address bar shows the link that opens anywhere (owner, 24 Nov 2026):
+    `/wa/confirm/<token>` copied to a browser with no session is a 404 on a
+    server of several databases."""
+    match = _OWN_PATH.match(request.httprequest.path)
+    if not match:
+        return ''
+    path = request.env['sa.confirm.link']._public_path(match.group(1))
+    done = request.httprequest.args.get('done')
+    if done in ('1', 'again'):
+        path += '&done=' + done
+    # inside a script: no "</script>" can come of it
+    return '<script>try{history.replaceState(null,"",%s)}catch(e){}</script>' % (
+        json.dumps(path).replace('<', '\\u003c'))
 
 _PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5"><meta name="robots" content="noindex">
@@ -240,6 +260,7 @@ window.addEventListener('pageshow',function(e){if(e.persisted)location.reload()}
 def _page(title, body, status=200, ask='', body_class=''):
     # the logo uploaded in the 369 Mart console, else the old setting, else ours
     logo = request.env['sa.brand'].logo_url()
+    body += _public_address() if status == 200 else ''
     return request.make_response(_PAGE % {'title': title, 'body': body, 'logo': html.escape(logo),
                                           'ask': ask, 'body_class': body_class,
                                           'image_host': (request.env['sa.picture'].preconnect_html()
@@ -417,6 +438,8 @@ class SaConfirmEntry(Home):
         target = '/wa/confirm/%s' % token
         if str(kw.get('img') or '') == '1':
             target += '/image'
+        elif kw.get('done') in ('1', 'again'):
+            target += '?done=%s' % kw['done']
         return request.redirect(target, code=303)
 
 

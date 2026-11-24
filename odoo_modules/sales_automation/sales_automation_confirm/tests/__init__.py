@@ -6,3 +6,4 @@ from . import test_back_to_group
 from . import test_vendor_page
 from . import test_only_ours
 from . import test_confirm_remind
+from . import test_public_address

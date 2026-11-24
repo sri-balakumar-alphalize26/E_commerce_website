@@ -124,10 +124,16 @@ class SaConfirmLink(models.Model):
         params = self.env['ir.config_parameter'].sudo()
         return (params.get_param('sa_delivery.public_base_url') or params.get_param('web.base.url') or '').rstrip('/')
 
+    @api.model
+    def _public_path(self, token):
+        """The address that opens for anybody: it names the database, which
+        `/wa/confirm/<token>` alone does not."""
+        return '/scoped_app/c?db=%s&t=%s' % (quote(self.env.cr.dbname, safe=''), quote(token, safe=''))
+
     def _url(self):
         """The link the person taps: through the database doorway, short."""
         self.ensure_one()
-        return '%s/scoped_app/c?db=%s&t=%s' % (self._public_base(), quote(self.env.cr.dbname), self.sudo().token)
+        return self._public_base() + self._public_path(self.sudo().token)
 
     def _image_url(self):
         """The picture alone (used by the WeChat bridge to send it as a file)."""

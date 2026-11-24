@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Sales Automation - Product Confirmation Page',
-    'version': '19.0.2.21.1',
+    'version': '19.0.2.21.2',
     'category': 'Sales',
     'summary': 'Picture + details page with ACCEPT / REJECT for customers and vendors (WhatsApp and WeChat), with a click log',
     'description': """
