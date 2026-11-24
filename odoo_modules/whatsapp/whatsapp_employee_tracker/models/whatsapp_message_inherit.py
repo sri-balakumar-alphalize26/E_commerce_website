@@ -45,7 +45,7 @@ class WhatsAppMessageInherit(models.Model):
             if owner:
                 rec.sudo().employee_session_id = owner.id
         try:
-            self._instant_sync_to_tracker(records)
+            self.sudo()._instant_sync_to_tracker(records.sudo())
         except Exception as e:
             _logger.warning(
                 "WA Tracker: Real-time sync failed (cron will catch up): %s", e
@@ -57,7 +57,7 @@ class WhatsAppMessageInherit(models.Model):
         res = super().write(vals)
         if 'status' in vals or 'message' in vals:
             try:
-                self._instant_update_tracker(vals)
+                self.sudo()._instant_update_tracker(vals)
             except Exception as e:
                 _logger.warning(
                     "WA Tracker: Real-time update failed: %s", e

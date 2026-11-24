@@ -340,6 +340,7 @@ class Conversation(models.Model):
     )
 
     last_message_preview = fields.Char(
+        groups='whatsapp_employee_tracker.group_wa_tracker_manager',
         compute='_compute_last_message_preview', string='Last Message',
     )
 

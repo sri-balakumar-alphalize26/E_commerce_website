@@ -17,4 +17,100 @@
     <record id="base.group_system" model="res.groups">
         <field name="implied_ids" eval="[(4, ref('group_wa_tracker_manager'))]"/>
     </record>
+
+    <!-- 24 Nov 2026: what was written is the managers', and the employee's own -->
+    <record id="rule_wa_communication_log_own" model="ir.rule">
+        <field name="name">WhatsApp communication_log: own number</field>
+        <field name="model_id" ref="model_wa_communication_log"/>
+        <field name="domain_force">[('employee_session_id.employee_id.user_id', '=', user.id)]</field>
+        <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+    </record>
+    <record id="rule_wa_communication_log_department" model="ir.rule">
+        <field name="name">WhatsApp communication_log: own department</field>
+        <field name="model_id" ref="model_wa_communication_log"/>
+        <field name="domain_force">[('employee_session_id.employee_id.department_id.manager_id.user_id', '=', user.id)]</field>
+        <field name="groups" eval="[(4, ref('group_wa_tracker_dept_head'))]"/>
+    </record>
+    <record id="rule_wa_communication_log_manager" model="ir.rule">
+        <field name="name">WhatsApp communication_log: managers all</field>
+        <field name="model_id" ref="model_wa_communication_log"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('group_wa_tracker_manager'))]"/>
+    </record>
+
+    <record id="rule_wa_keyword_alert_log_own" model="ir.rule">
+        <field name="name">WhatsApp keyword_alert_log: own number</field>
+        <field name="model_id" ref="model_wa_keyword_alert_log"/>
+        <field name="domain_force">[('employee_session_id.employee_id.user_id', '=', user.id)]</field>
+        <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+    </record>
+    <record id="rule_wa_keyword_alert_log_department" model="ir.rule">
+        <field name="name">WhatsApp keyword_alert_log: own department</field>
+        <field name="model_id" ref="model_wa_keyword_alert_log"/>
+        <field name="domain_force">[('employee_session_id.employee_id.department_id.manager_id.user_id', '=', user.id)]</field>
+        <field name="groups" eval="[(4, ref('group_wa_tracker_dept_head'))]"/>
+    </record>
+    <record id="rule_wa_keyword_alert_log_manager" model="ir.rule">
+        <field name="name">WhatsApp keyword_alert_log: managers all</field>
+        <field name="model_id" ref="model_wa_keyword_alert_log"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('group_wa_tracker_manager'))]"/>
+    </record>
+
+    <record id="rule_wa_quality_score_own" model="ir.rule">
+        <field name="name">WhatsApp quality_score: own number</field>
+        <field name="model_id" ref="model_wa_quality_score"/>
+        <field name="domain_force">[('employee_session_id.employee_id.user_id', '=', user.id)]</field>
+        <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+    </record>
+    <record id="rule_wa_quality_score_department" model="ir.rule">
+        <field name="name">WhatsApp quality_score: own department</field>
+        <field name="model_id" ref="model_wa_quality_score"/>
+        <field name="domain_force">[('employee_session_id.employee_id.department_id.manager_id.user_id', '=', user.id)]</field>
+        <field name="groups" eval="[(4, ref('group_wa_tracker_dept_head'))]"/>
+    </record>
+    <record id="rule_wa_quality_score_manager" model="ir.rule">
+        <field name="name">WhatsApp quality_score: managers all</field>
+        <field name="model_id" ref="model_wa_quality_score"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('group_wa_tracker_manager'))]"/>
+    </record>
+
+    <record id="rule_wa_auto_reply_own" model="ir.rule">
+        <field name="name">WhatsApp auto_reply: own number</field>
+        <field name="model_id" ref="model_wa_auto_reply"/>
+        <field name="domain_force">[('employee_session_id.employee_id.user_id', '=', user.id)]</field>
+        <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+    </record>
+    <record id="rule_wa_auto_reply_department" model="ir.rule">
+        <field name="name">WhatsApp auto_reply: own department</field>
+        <field name="model_id" ref="model_wa_auto_reply"/>
+        <field name="domain_force">[('employee_session_id.employee_id.department_id.manager_id.user_id', '=', user.id)]</field>
+        <field name="groups" eval="[(4, ref('group_wa_tracker_dept_head'))]"/>
+    </record>
+    <record id="rule_wa_auto_reply_manager" model="ir.rule">
+        <field name="name">WhatsApp auto_reply: managers all</field>
+        <field name="model_id" ref="model_wa_auto_reply"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('group_wa_tracker_manager'))]"/>
+    </record>
+
+    <record id="rule_wa_message_tone_own" model="ir.rule">
+        <field name="name">WhatsApp message_tone: own number</field>
+        <field name="model_id" ref="model_wa_message_tone"/>
+        <field name="domain_force">[('employee_session_id.employee_id.user_id', '=', user.id)]</field>
+        <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+    </record>
+    <record id="rule_wa_message_tone_department" model="ir.rule">
+        <field name="name">WhatsApp message_tone: own department</field>
+        <field name="model_id" ref="model_wa_message_tone"/>
+        <field name="domain_force">[('employee_session_id.employee_id.department_id.manager_id.user_id', '=', user.id)]</field>
+        <field name="groups" eval="[(4, ref('group_wa_tracker_dept_head'))]"/>
+    </record>
+    <record id="rule_wa_message_tone_manager" model="ir.rule">
+        <field name="name">WhatsApp message_tone: managers all</field>
+        <field name="model_id" ref="model_wa_message_tone"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('group_wa_tracker_manager'))]"/>
+    </record>
 </odoo>
