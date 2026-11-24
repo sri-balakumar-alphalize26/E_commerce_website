@@ -229,8 +229,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS wap_database_number_once_idx
   ON wap_database (server_id, db_name, number_id) WHERE number_id IS NOT NULL;
 
 -- How many numbers this database's own Odoo may have by adding them itself.
--- 0 = only the administrator adds numbers here (the default).
+-- 0 = only the administrator adds numbers here. A database added from now on
+-- starts with 10; those that are there keep what they have.
 ALTER TABLE wap_database ADD COLUMN IF NOT EXISTS own_numbers_max INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE wap_database ALTER COLUMN own_numbers_max SET DEFAULT 10;
 
 -- One number turned off: '' = on, 'admin' (here) or 'odoo' (there).
 ALTER TABLE wap_database ADD COLUMN IF NOT EXISTS off_by TEXT NOT NULL DEFAULT '';

@@ -68,6 +68,9 @@ const ALLOWED = [
   { method: 'POST', re: /^\/chat\/whatsappNumbers\/[^/]+$/, kind: 'read' },
   { method: 'POST', re: /^\/chat\/findContacts\/[^/]+$/, kind: 'read' },
   { method: 'POST', re: /^\/chat\/getBase64FromMediaMessage\/[^/]+$/, kind: 'read' },
+  // The chats of the database's own number, for an administrator of it.
+  { method: 'POST', re: /^\/chat\/findChats\/[^/]+$/, kind: 'read', quiet: true },
+  { method: 'POST', re: /^\/chat\/findMessages\/[^/]+$/, kind: 'read', quiet: true },
   { method: 'GET', re: /^\/group\/fetchAllGroups\/[^/]+$/, kind: 'read' },
   // Delete-for-everyone, used by the conduct filter to pull an abusive
   // member's message out of a group. WhatsApp only honours it from a group
@@ -389,7 +392,16 @@ app.all(/^\/(message|instance|chat|group|webhook)\b.*/, async (req, res) => {
     return res.status(403).json({ error: 'Refused', detail: gate });
   }
 
-  const body = req.body && typeof req.body === 'object' ? { ...req.body } : {};
+  let body = req.body && typeof req.body === 'object' ? { ...req.body } : {};
+  // Nothing but the chat and the page: another instance cannot be asked for.
+  if (rule.quiet) {
+    const jid = String((((body.where || {}).key || {}).remoteJid) || '');
+    if (/findMessages/.test(req.path) && !/^[0-9A-Za-z._:-]+@(s\.whatsapp\.net|g\.us|lid)$/.test(jid)) {
+      return res.status(400).json({ error: 'Which chat?' });
+    }
+    body = /findMessages/.test(req.path)
+      ? { where: { key: { remoteJid: jid } }, page: Math.max(1, parseInt(body.page, 10) || 1), offset: 50 } : {};
+  }
   // Usually what the caller asked for, but a text send that gains a button has
   // to be posted to the endpoint that accepts buttons instead.
   let apiPath = req.path;
@@ -512,7 +524,7 @@ app.all(/^\/(message|instance|chat|group|webhook)\b.*/, async (req, res) => {
         }
       } catch (err) { /* not JSON - pass through */ }
     }
-    await log({ databaseId: row.id, url: claimedUrl, db: row.db_name, ip, phone,
+    if (!rule.quiet || !upstream.ok) await log({ databaseId: row.id, url: claimedUrl, db: row.db_name, ip, phone,
                 endpoint: apiPath === req.path ? req.path : `${req.path} -> ${apiPath}`,
                 status: upstream.ok ? (rule.kind === 'read' ? 'read' : 'sent') : 'failed',
                 detail: upstream.ok ? '' : text.slice(0, 400) });
@@ -1041,10 +1053,49 @@ const FREE_NUMBERS = `SELECT n.* FROM wap_number n WHERE n.active AND n.company_
         AND NOT EXISTS (SELECT 1 FROM wap_database x WHERE x.number_id = n.id)
       ORDER BY (n.pair_state = 'open') DESC, n.label`;
 
+/**
+ * Where a number is, for the database that asks: here (in this database), off
+ * (here, turned off), free (of this vendor, in no database), elsewhere, new.
+ * Never whose it is.
+ */
+async function whereIs(row, number, all) {
+  const same = all.filter(x => x.number_id && x.authorized_number === number);
+  if (same.length) {
+    const x = same.find(y => !y.off_by) || same[0];
+    return { where: x.off_by ? 'off' : 'here', row: x };
+  }
+  const { rows } = await pool.query(
+    `SELECT n.*, EXISTS (SELECT 1 FROM wap_database x WHERE x.number_id = n.id) AS taken
+       FROM wap_number n WHERE n.authorized_number = $1 ORDER BY n.active DESC, n.id DESC`, [number]);
+  if (!rows.length) return { where: 'new' };
+  if (rows.some(n => n.taken)) return { where: 'elsewhere' };
+  const free = rows.find(n => n.active && n.company_id === row.company_id);
+  return free ? { where: 'free', row: free } : { where: 'elsewhere' };
+}
+
+// How often a database asks where a number is: 30 times a minute.
+const asked = new Map();
+function mayAsk(id) {
+  const now = Date.now();
+  const list = (asked.get(id) || []).filter(t => now - t < 60000);
+  if (list.length >= 30) return false;
+  list.push(now);
+  asked.set(id, list);
+  return true;
+}
+
 app.get('/v1/numbers', async (req, res) => {
   const who = await identify(req);
   if (who.error) return res.status(403).json({ error: 'Refused', detail: who.error });
   const all = await siblings(who.row);
+  if (req.query.check !== undefined) {
+    const number = digits(req.query.check);
+    if (number.length < 8 || number.length > 15) return res.status(400).json({ error: 'Refused', detail: 'The phone number needs 8 to 15 digits, with the country code.' });
+    if (!mayAsk(who.row.id)) return res.status(429).json({ error: 'Refused', detail: 'too many checks, try again in a minute' });
+    const it = await whereIs(who.row, number, all);
+    const mine = it.where === 'here' || it.where === 'off';
+    return res.json({ check: it.where, in_use: mine ? !!it.row.odoo_webhook_url : false });
+  }
   const max = Math.max(0, ...all.map(x => x.own_numbers_max));
   // of this vendor and in no database, as on the panel page; only for who may add
   const free = max ? (await pool.query(FREE_NUMBERS, [who.row.company_id])).rows : [];
@@ -1084,22 +1135,20 @@ async function addOwnNumber(row, body, ip) {
   const max = Math.max(0, ...all.map(x => x.own_numbers_max));
   if (!max) return refuse('adding numbers from Odoo is not allowed for this database; the panel administrator allows it', 403);
   if (number.length < 8 || number.length > 15) return refuse('The phone number needs 8 to 15 digits, with the country code.', 400);
-  const same = all.find(x => x.authorized_number === number);
-  if (same) {
+  const it = await whereIs(row, number, all);
+  if (it.where === 'off') return refuse(`+${number} is in this database and turned off.`);
+  if (it.where === 'here') {
+    const same = it.row;
     if (same.odoo_webhook_url || same.id === row.id) return refuse(`+${number} is already connected to this database.`);
     const fresh = token();
     await pool.query('UPDATE wap_database SET token = $1 WHERE id = $2', [fresh, same.id]);
     return { body: { key: setupKey(fresh), authorized_number: number, state: same.pair_state } };
   }
   if (all.filter(x => x.number_id).length >= max) return refuse(`This database may have ${max} number(s); the panel administrator can allow more.`);
-  const known = await pool.query('SELECT * FROM wap_number WHERE authorized_number = $1', [number]);
   let numberId;
-  if (known.rows.length) {
-    const n = known.rows[0];
-    if (n.company_id !== row.company_id || !n.active || (await numberDatabases(n.id)).length) {
-      return refuse(`+${number} is already used elsewhere.`);
-    }
-    numberId = n.id;
+  if (it.where === 'elsewhere') return refuse(`+${number} is already used elsewhere.`);
+  if (it.where === 'free') {
+    numberId = it.row.id;
   } else {
     const made = await createNumber(row.company_id, label || (row.db_name + ' +' + number), number);
     if (made.error) return refuse(made.error);
