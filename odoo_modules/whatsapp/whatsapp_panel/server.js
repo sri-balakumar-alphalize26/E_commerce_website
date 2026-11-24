@@ -406,6 +406,9 @@ app.all(/^\/(message|instance|chat|group|webhook)\b.*/, async (req, res) => {
   // to be posted to the endpoint that accepts buttons instead.
   let apiPath = req.path;
   let phone = '';
+  // A person typed it: no "please do not reply" under it. Limits and STOP stay.
+  const plain = rule.kind === 'text' && body.plain === true;
+  delete body.plain;
   if (rule.kind !== 'read') {
     const verdict = await screen(row, body, rule.kind);
     phone = verdict.phone || '';
@@ -459,7 +462,7 @@ app.all(/^\/(message|instance|chat|group|webhook)\b.*/, async (req, res) => {
       const isButtons = rule.kind === 'buttons';
       // The footer is optional per database (Settings > tick). Off = the
       // message goes exactly as Odoo wrote it.
-      const sig = !row.sign_messages ? ''
+      const sig = !row.sign_messages || plain ? ''
         : isGroup ? (label ? GROUP_SIG(label) : '')
         : isButtons ? NOTICE : signatureWithLink(row);
       // A list / poll carries its own footer; signing its description produces
@@ -1180,6 +1183,7 @@ app.post('/v1/self', async (req, res) => {
     return res.status(status).json({ error: 'Refused', detail });
   };
   if (!mine) return refuse(who.error || 'refused');
+  if (['restart', 'unlink', 'reset', 'rename', 'footer'].includes(what)) return ownNumberDo(req, res, row, what, refuse);
   if (what === 'off') {
     await pool.query(`UPDATE wap_database SET off_by = 'odoo' WHERE id = $1`, [row.id]);
   } else if (what === 'on') {
@@ -1189,10 +1193,80 @@ app.post('/v1/self', async (req, res) => {
     if ((await siblings(row)).length < 2) return refuse('This is the only number of the database; it cannot be removed.', 409);
     await dropRow(row);
   } else {
-    return refuse('do: off, on or remove', 400);
+    return refuse('do: off, on, remove, restart, unlink, reset, rename or footer', 400);
   }
   await log({ databaseId: what === 'remove' ? null : row.id, db: row.db_name, ip: clientIp(req), endpoint: '/v1/self', status: 'number ' + what, detail: 'from Odoo' });
   res.json({ ok: true });
+});
+
+/** Restart, unlink, start over, name and footer, for the key's own number only. */
+async function ownNumberDo(req, res, row, what, refuse) {
+  const b = req.body || {};
+  const done = async (detail = 'from Odoo') => {
+    await log({ databaseId: row.id, db: row.db_name, ip: clientIp(req), endpoint: '/v1/self', status: 'number ' + what, detail });
+    res.json({ ok: true });
+  };
+  if (what === 'footer') {
+    const phone = digits(b.phone);
+    if (phone && (phone.length < 8 || phone.length > 15)) return refuse('the support number needs 8 to 15 digits, with the country code', 400);
+    await pool.query('UPDATE wap_database SET tenant_label=$1, contact_number=$2, sign_messages=$3 WHERE id = ANY($4::int[])',
+      [String(b.name || '').trim().slice(0, 60), phone ? '+' + phone : '', b.on === true, (await siblings(row)).map(x => x.id)]);
+    return done();
+  }
+  const n = row.number_id ? await loadNumber(row.number_id) : null;
+  if (!n || !n.active) return refuse('no WhatsApp number assigned, or it is switched off');
+  const shared = (await numberDatabases(n.id)).filter(d => d.id !== row.id && d.active).length;
+  if (what === 'rename') {
+    const label = String(b.label || '').trim().slice(0, 60);
+    if (!label) return refuse('type a name', 400);
+    await pool.query('UPDATE wap_number SET label=$1 WHERE id=$2', [label, n.id]);
+    return done();
+  }
+  if (!n.authorized_number) return refuse('this number is connected in the panel');
+  if (b.sure !== true) return refuse(shared ? 'another database uses this number too: say sure' : 'say sure', 409);
+  const ask = async (path, method, body) => {
+    try { const r = await evo(path, method, body); return r.ok ? '' : 'the gateway refused it'; } catch (err) { return 'the gateway is not reachable'; }
+  };
+  if (what === 'restart') {
+    const bad = await ask('/instance/restart/' + n.instance_name, 'POST');
+    return bad ? refuse(bad, 502) : done();
+  }
+  if (what === 'unlink') {
+    const bad = await ask('/instance/logout/' + n.instance_name, 'DELETE');
+    if (bad === 'the gateway is not reachable') return refuse(bad, 502);
+  } else {
+    await ask('/instance/logout/' + n.instance_name, 'DELETE');           // may not be linked
+    const gone = await ask('/instance/delete/' + n.instance_name, 'DELETE'); // may not exist
+    if (gone === 'the gateway is not reachable') return refuse(gone, 502);
+    const bad = await ask('/instance/create', 'POST', { instanceName: n.instance_name, qrcode: true, integration: 'WHATSAPP-BAILEYS' });
+    if (bad) return refuse(bad, 502);
+  }
+  await pool.query("UPDATE wap_number SET pair_state='close', paired_number='', profile_name='', webhook_applied=(CASE WHEN $2 THEN FALSE ELSE webhook_applied END) WHERE id=$1",
+    [n.id, what === 'reset']);
+  if (what === 'reset') await applyHook({ ...n, webhook_applied: false });
+  return done();
+}
+
+/** What there is about the key's own number; ?activity=1 its last 50 lines. */
+app.get('/v1/self', async (req, res) => {
+  const who = await identify(req);
+  if (who.error) return res.status(403).json({ error: 'Refused', detail: who.error });
+  const row = who.row;
+  const all = await siblings(row);
+  const out = {
+    label: row.number_label || '', state: row.pair_state || '',
+    shared_with: row.number_id ? (await numberDatabases(row.number_id)).filter(d => d.id !== row.id && d.active).length : 0,
+    footer: { on: !!row.sign_messages, name: row.tenant_label || '', phone: row.contact_number || '' },
+    used: all.filter(x => x.number_id).length, may_add: Math.max(0, ...all.map(x => x.own_numbers_max)),
+  };
+  if (req.query.activity) {
+    const { rows } = await pool.query(
+      `SELECT created_at AS at, channel, phone, status, detail FROM wap_log
+        WHERE database_id = $1 AND status <> 'read' ORDER BY id DESC LIMIT 50`, [row.id]);
+    out.activity = rows;
+  }
+  res.set('Cache-Control', 'no-store');
+  res.json(out);
 });
 
 /** Take one number out of a database; what belongs to the whole database stays with it. */
@@ -1224,6 +1298,7 @@ async function dropRow(row) {
 }
 
 const qrAsked = new Map();
+const qrWaiting = new Map();
 
 /**
  * GET /v1/qr - the QR of THIS key's number, for the Odoo administrator's
@@ -1242,11 +1317,23 @@ app.get('/v1/qr', async (req, res) => {
   if (['open', 'missing', 'unreachable'].includes(out.state)) return res.json(out);
   const last = qrAsked.get(n.id);
   if (last && Date.now() - last.at < 4000) return res.json({ ...out, qr: last.qr });
-  try {
-    const c = await evo(`/instance/connect/${n.instance_name}`);
-    if (c.data && c.data.base64) out.qr = c.data.base64;
-  } catch (err) { /* asked again in a few seconds */ }
-  qrAsked.set(n.id, { at: Date.now(), qr: out.qr });
+  // the gateway may need a moment before it has one; everybody who asks waits for the same
+  if (!qrWaiting.has(n.id)) {
+    qrWaiting.set(n.id, (async () => {
+      const until = Date.now() + 7000;
+      try {
+        while (Date.now() < until) {
+          const c = await evo(`/instance/connect/${n.instance_name}`);
+          if (c.data && c.data.base64) return c.data.base64;
+          if (c.data && c.data.instance && c.data.instance.state === 'open') return '';
+          await new Promise(r => setTimeout(r, 700));
+        }
+      } catch (err) { /* asked again in a moment */ } finally { qrWaiting.delete(n.id); }
+      return '';
+    })());
+  }
+  out.qr = await qrWaiting.get(n.id) || '';
+  if (out.qr) qrAsked.set(n.id, { at: Date.now(), qr: out.qr });
   await log({ databaseId: row.id, db: row.db_name, ip: clientIp(req), endpoint: '/v1/qr', status: 'read' });
   res.set('Cache-Control', 'no-store');
   res.json(out);
