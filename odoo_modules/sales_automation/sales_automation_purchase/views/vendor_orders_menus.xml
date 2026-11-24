@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="action_sa_vendor_orders" model="ir.actions.client">
+        <field name="name">Vendor Orders</field>
+        <field name="tag">sales_automation_purchase.vendor_orders</field>
+    </record>
+
+    <menuitem id="menu_sa_vendor_orders"
+              name="Vendor Orders"
+              parent="sales_automation_store.menu_sa_store_root"
+              action="action_sa_vendor_orders"
+              groups="sales_automation.group_sa_user"
+              sequence="6"/>
+</odoo>

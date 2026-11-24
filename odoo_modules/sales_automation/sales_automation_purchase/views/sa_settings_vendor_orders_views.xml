@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_sa_settings_vendor_orders_form" model="ir.ui.view">
+        <field name="name">sa.settings.vendor.orders.form</field>
+        <field name="model">sa.ai.settings</field>
+        <field name="priority">50</field>
+        <field name="arch" type="xml">
+            <form string="Vendor Orders">
+                <sheet>
+                    <group string="A cheaper vendor">
+                        <field name="late_min_saving_amount"/>
+                        <div class="text-muted" colspan="2">A cheaper vendor is pointed out on Store &gt; Vendor Orders only when the
+                            whole line becomes at least this much cheaper, in the company's currency. 0 points out every cheaper price.</div>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_sa_settings_vendor_orders" model="ir.actions.server">
+        <field name="name">Vendor Orders</field>
+        <field name="model_id" ref="sales_automation.model_sa_ai_settings"/>
+        <field name="state">code</field>
+        <field name="code">
+action = {'type': 'ir.actions.act_window', 'name': 'Vendor Orders', 'res_model': 'sa.ai.settings',
+          'res_id': model.get_settings().id, 'view_mode': 'form', 'target': 'current',
+          'views': [[env.ref('sales_automation_purchase.view_sa_settings_vendor_orders_form').id, 'form']]}
+        </field>
+    </record>
+
+    <menuitem id="menu_sa_settings_vendor_orders" name="Vendor Orders"
+              parent="sales_automation.menu_sa_config" action="action_sa_settings_vendor_orders" sequence="34"/>
+</odoo>

@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="sales_automation_purchase.VendorOrders">
+        <div class="sa_store sa_board sa_buy">
+            <div class="sa_store_bar">
+                <span class="sa_chip">Asked <b t-esc="state.totals.asked || 0"/></span>
+                <span class="sa_chip">Replied <b t-esc="state.totals.replied || 0"/></span>
+                <span class="sa_chip">No reply <b t-esc="state.totals.no_reply || 0"/></span>
+                <span class="sa_chip">Said no <b t-esc="state.totals.said_no || 0"/></span>
+                <input class="sa_search" type="search" placeholder="Search #ref, product, customer" aria-label="Search" t-model="state.search"/>
+                <button type="button" class="btn btn-secondary btn-sm" t-on-click="() => this.load()">Refresh</button>
+            </div>
+
+            <div t-foreach="state.warnings" t-as="w" t-key="w_index" class="alert alert-danger sa_buy_red" role="alert" t-esc="w"/>
+            <div t-if="state.totals.better" class="alert alert-danger sa_buy_red" role="alert">
+                <t t-esc="state.totals.better"/> item(s) have a cheaper vendor than the one the customer's price came from.
+            </div>
+            <div t-if="state.failed" class="alert alert-warning sa_buy_red" role="alert">Could not refresh. This may be old; it is tried again in a minute.</div>
+            <div t-if="state.more" class="alert alert-warning sa_buy_red">Only the newest items are shown.</div>
+            <div class="sa_buy_note">To look at only: ordering from vendors comes in a later version.</div>
+
+            <nav class="sa_tabs" role="tablist">
+                <button t-foreach="tabs" t-as="t" t-key="t.key" type="button" class="sa_tab" role="tab"
+                        t-att-class="{ on: !state.search and t.key === state.tab, hot: t.key === 'review' and t.count, bad: t.bad }"
+                        t-att-aria-selected="t.key === state.tab ? 'true' : 'false'" t-on-click="() => this.openTab(t.key)">
+                    <t t-esc="t.name"/> <span class="sa_n" t-esc="t.count"/>
+                </button>
+            </nav>
+
+            <div class="sa_split" t-att-class="{ sa_open: state.detailOpen }">
+                <div class="sa_list">
+                    <t t-foreach="days" t-as="g" t-key="g.day">
+                        <div class="sa_day" t-esc="g.day"/>
+                        <div t-foreach="g.rows" t-as="row" t-key="row.id" class="sa_row" t-att-class="{ sel: row.id === state.sel }" tabindex="0" role="button"
+                             t-on-click="() => this.select(row)" t-on-keydown="(ev) => this.onRowKey(ev, row)">
+                            <div class="sa_row_time"><b t-esc="timeOf(row.at)"/></div>
+                            <div class="sa_row_body">
+                                <div class="sa_row_what">#<t t-esc="row.ref"/> &#183; <t t-esc="row.product"/> &#215; <t t-esc="row.qty"/></div>
+                                <div class="sa_row_who"><t t-esc="row.customer"/><t t-if="row.group"> &#183; <t t-esc="row.group"/></t> &#183; <t t-esc="row.order_name"/></div>
+                                <div class="sa_states"><span t-foreach="pills(row)" t-as="p" t-key="p_index" class="sa_state" t-att-class="p[0]" t-esc="p[1]"/></div>
+                            </div>
+                            <div class="sa_row_right">
+                                <span class="sa_row_money">Paid <b t-esc="money(row.paid, row.sell_currency)"/></span>
+                                <t t-if="row.best">
+                                    <span class="sa_row_money"><t t-esc="row.best.vendor"/> <b t-esc="money(row.best.cost, row.currency)"/></span>
+                                    <span class="sa_row_money">Profit <b t-esc="money(row.best.margin, row.currency)"/></span>
+                                </t>
+                            </div>
+                        </div>
+                    </t>
+                    <div t-if="!state.loading and !days.length" class="sa_none">
+                        <t t-if="state.search">No item matches.</t><t t-else="">Nothing here now. Paid items that are not in stock appear on their own.</t>
+                    </div>
+                </div>
+
+                <section class="sa_detail">
+                    <t t-set="row" t-value="selected"/>
+                    <t t-if="row">
+                        <button type="button" class="btn btn-secondary sa_back" t-on-click="() => this.closeDetail()">&#8249; Items</button>
+                        <div class="sa_dtitle"><b>#<t t-esc="row.ref"/></b> <span><t t-esc="row.product"/> &#215; <t t-esc="row.qty"/> <t t-esc="row.unit"/></span></div>
+                        <div class="sa_sum">
+                            Customer paid <b t-esc="money(row.paid, row.sell_currency)"/>, without tax. This does not change.
+                            <a t-attf-href="/odoo/sale.order/#{row.order_id}" target="_blank">Order <t t-esc="row.order_name"/></a>
+                        </div>
+                        <div t-if="row.better" class="alert alert-danger" role="alert">
+                            <b t-esc="row.better.vendor"/> is <b t-esc="money(row.better.saving, row.currency)"/> cheaper than <t t-esc="row.better.than"/>.
+                        </div>
+                        <div t-if="row.loss" class="alert alert-danger" role="alert">Even the lowest price is more than the customer paid.</div>
+                        <table t-if="row.prices.length" class="table table-sm sa_vendors">
+                            <thead><tr><th>#</th><th>Vendor</th><th>They said</th><th class="text-end">Each</th><th class="text-end">Profit</th><th class="text-end">Days</th><th>Came</th></tr></thead>
+                            <tbody>
+                                <tr t-foreach="row.prices" t-as="p" t-key="p.id" t-att-class="{ best: p.place === 1 }">
+                                    <td t-esc="p.place"/>
+                                    <td><t t-esc="p.vendor"/> <span t-if="p.quoted" class="sa_state">Quoted from</span> <span t-if="p.late" class="sa_state warn">Late</span></td>
+                                    <td t-esc="p.typed"/>
+                                    <td class="text-end" t-esc="money(p.cost, row.currency)"/>
+                                    <td class="text-end" t-esc="money(p.margin, row.currency)"/>
+                                    <td class="text-end" t-esc="p.days"/>
+                                    <td><t t-esc="dayName(p.at)"/> <t t-esc="timeOf(p.at)"/></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div t-else="" class="sa_none">No vendor has given a price.</div>
+                        <div t-if="row.held.length">Price without a current exchange rate: <t t-esc="row.held.join(', ')"/></div>
+                        <div t-if="row.yes.length">Has it, no price yet: <t t-esc="row.yes.join(', ')"/></div>
+                        <div t-if="row.no.length">Said no: <t t-esc="row.no.join(', ')"/></div>
+                        <div t-if="row.silent.length">No reply: <t t-esc="row.silent.join(', ')"/></div>
+                    </t>
+                    <div t-else="" class="sa_none">Choose an item on the left.</div>
+                </section>
+            </div>
+        </div>
+    </t>
+</templates>

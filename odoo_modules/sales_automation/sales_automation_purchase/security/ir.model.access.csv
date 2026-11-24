@@ -1,0 +1,3 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_sa_buy_line_user,sa.buy.line.user,model_sa_buy_line,sales_automation.group_sa_user,1,0,0,0
+access_sa_buy_line_manager,sa.buy.line.manager,model_sa_buy_line,sales_automation.group_sa_manager,1,0,0,0

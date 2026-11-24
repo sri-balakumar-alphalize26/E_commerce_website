@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="0">
+        <!-- Only makes lines for orders already paid; sends and orders nothing. -->
+        <record id="cron_sa_buy_sweep" model="ir.cron">
+            <field name="name">Vendor Orders: paid orders not looked at yet</field>
+            <field name="model_id" ref="model_sa_buy_line"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_buy_sweep()</field>
+            <field name="interval_number">10</field>
+            <field name="interval_type">minutes</field>
+            <field name="active">True</field>
+        </record>
+    </data>
+</odoo>
