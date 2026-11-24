@@ -16,6 +16,7 @@
                     </li>
                 </ol>
 
+                <div t-if="state.ready and state.data.may_add and state.step === 'number'" class="text-muted small mb-2"><t t-esc="state.data.used"/> of <t t-esc="state.data.may_add"/> numbers used</div>
                 <div t-if="!state.ready" class="o_wa_wait"><i class="fa fa-spinner fa-spin"/> One moment…</div>
 
                 <div t-if="state.error" class="alert alert-danger" role="alert" t-esc="state.error"/>
@@ -149,7 +150,7 @@
                             <input type="checkbox" t-att-checked="g.chosen and !g.taken" t-att-disabled="!!g.taken or g.enabled" t-on-change="() => this.toggleGroup(g)"/>
                             <span class="o_wa_gname" t-esc="g.name"/>
                             <span class="text-muted small">
-                                <t t-if="g.taken">already on: <t t-esc="g.taken"/></t>
+                                <span t-if="g.taken" class="text-danger fw-bold" t-esc="g.used_by or g.taken"/>
                                 <t t-elif="g.enabled">already on</t>
                                 <t t-else=""><t t-esc="g.members"/> members</t>
                             </span>

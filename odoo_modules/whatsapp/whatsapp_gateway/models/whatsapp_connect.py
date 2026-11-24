@@ -277,8 +277,28 @@ class WhatsAppConnect(models.AbstractModel):
             'can_add': bool(has_session and may > len(numbers)),
             'scanned': self._scanned(self._from_panel(numbers, free if may > len(numbers) else []) if has_session and may else []),
             'why': why if has_session else '',
-            'session': self.state(session_id) if session_id else False,
+            'session': self.state(session_id) if session_id and not self._is_off(session_id) else False,
+            'off': self._off_row(session_id) if session_id and self._is_off(session_id) else False,
         }
+
+    @api.model
+    def _is_off(self, session_id):
+        session = self.env['whatsapp.session'].sudo().browse(int(session_id or 0)).exists()
+        return bool(session and not session.active and not session.removed)
+
+    @api.model
+    def _off_row(self, session_id):
+        """A number that is off: picked already, with the question about it."""
+        session = self.env['whatsapp.session'].sudo().browse(int(session_id))
+        number = ''.join(c for c in (session.authorized_number or '') if c.isdigit())
+        return {'id': 'o%s' % session.id, 'off_session_id': session.id, 'session_id': False, 'number': number,
+                'pretty': self._pretty(number) or session.name, 'label': session.name, 'connected': False,
+                'owner': self._owner(session)[1], 'ask_on': self._ask_on(session, number)}
+
+    @api.model
+    def _ask_on(self, session, number):
+        return {'number': self._pretty(number) or session.name, 'name': session.name, 'owner': self._owner(session)[1],
+                'waiting': len(session._waiting_messages())}
 
     @api.model
     def check_number(self, country_id, number):
@@ -338,6 +358,22 @@ class WhatsAppConnect(models.AbstractModel):
         vals = dict(vals or {})
         if vals.get('session_id'):
             return self._give(vals)
+        if vals.get('off_session_id'):
+            session = self.env['whatsapp.session'].sudo().browse(int(vals['off_session_id'])).exists()
+            if not session or session.removed:
+                raise UserError(_("That number is no longer there. Open the screen again."))
+            if session.active:
+                return self._first_state(session, vals)
+            number = ''.join(c for c in (session.authorized_number or '') if c.isdigit())
+            if not number:
+                raise UserError(_("%s has no number yet. Use Connect a number.", session.name))
+            other = session._same_number_on()
+            if other:
+                raise UserError(_("%(number)s is already connected: %(session)s.", number=self._pretty(number), session=other.name))
+            if not vals.get('turn_on'):
+                return {'ask_on': self._ask_on(session, number)}
+            vals['company'] = session.company_id or self.env.company
+            return self._turn_on_here(session, number, vals)
         free = ''.join(c for c in str(vals.get('free_number') or '') if c.isdigit())
         if free:
             if free not in {n['authorized_number'] for n in self._free_numbers()}:
@@ -354,8 +390,7 @@ class WhatsAppConnect(models.AbstractModel):
             return state                    # left halfway: go on with it
         off = self._off_session(number)
         if off and not vals.get('turn_on'):
-            return {'ask_on': {'number': self._pretty(number), 'name': off.name, 'owner': self._owner(off)[1],
-                               'waiting': len(off._waiting_messages())}}
+            return {'ask_on': self._ask_on(off, number)}
         company = self.env['res.company'].browse(int(vals.get('company_id') or 0)).exists() or self.env.company
         if company not in self.env.companies and company != self.env.company:
             raise AccessError(_("You cannot use that company."))
@@ -370,7 +405,7 @@ class WhatsAppConnect(models.AbstractModel):
         if not vals.get('key'):
             self._save()
         self._load(session)
-        return self.state(session.id)
+        return self._first_state(session, vals)
 
     # ------------------------------------------------------------ one that is off
     @api.model
@@ -399,14 +434,14 @@ class WhatsAppConnect(models.AbstractModel):
             if not self._owner(session)[0]:
                 self._before(vals, number)
                 self._after(vals, session, number)
-            return self.state(session.id)
+            return self._first_state(session, vals)
         if says.get('check') == 'elsewhere':
             raise UserError(_("%s is already used by another database.", self._pretty(number)))
         owner = self._owner(session)[0]
         if owner:
             vals['employee_id'] = owner
         self._new_key(session, number, vals['company'], vals)
-        return self.state(session.id)
+        return self._first_state(session, vals)
 
     @api.model
     def _new_key(self, session, number, company, vals=None):
@@ -493,6 +528,17 @@ class WhatsAppConnect(models.AbstractModel):
                               got=self._pretty(got), wanted=self._pretty(wanted)))
 
     @api.model
+    def _first_state(self, session, vals):
+        """The scan step opens at once; the QR is asked for right after."""
+        if not (vals or {}).get('quick'):
+            return self.state(session.id)
+        out = {'id': session.id, 'name': session.name, 'number': self._pretty(session.authorized_number),
+               'company': session.company_id.name or '', 'connected': False, 'status': session.status, 'qr': '', 'error': '',
+               'wrong': False, 'first': True}
+        out.update(self._state_extra(session))
+        return out
+
+    @api.model
     def state(self, session_id):
         """Step 2: connected, or the QR to scan."""
         self._check_admin()
@@ -516,6 +562,14 @@ class WhatsAppConnect(models.AbstractModel):
                 qr = str(body.get('qr') or '')
                 out['qr'] = qr if qr.startswith('data:image/') else ''
                 out['wrong'] = body.get('state') == 'wrong_number'
+                if not session.active:
+                    out['error'] = _("This number is turned off. Turn it on first.")
+                elif not out['qr']:
+                    out['error'] = {
+                        'open': _("The panel says this number is connected already. If it does not go on, press Load Settings on its page."),
+                        'missing': _("The gateway does not know this number. Use Full reset on its page."),
+                        'unreachable': _("The WhatsApp gateway cannot be reached now."),
+                    }.get(body.get('state'), '')
             except UserError as err:
                 out['error'] = self._last_line(err)
         return out

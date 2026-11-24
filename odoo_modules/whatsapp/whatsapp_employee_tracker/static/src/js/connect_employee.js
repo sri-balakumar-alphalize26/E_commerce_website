@@ -18,7 +18,9 @@ patch(ConnectNumber.prototype, {
         const v = this.state.values;
         const named = Number(v.employee_id) > 0 || (String(v.employee_id) === "new" && (v.employee_name || "").trim());
         const look = this.state.look;
-        return super.ready1 && (!!named || !!(look && look.where === "off" && look.owner));
+        const picked = this.state.picked;
+        return super.ready1 && (!!named || !!(picked && picked.off_session_id && picked.owner)
+            || !!(!picked && look && look.where === "off" && look.owner));
     },
     get forWhom() {
         const v = this.state.values;

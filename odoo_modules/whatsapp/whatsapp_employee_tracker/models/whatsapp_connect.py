@@ -28,7 +28,7 @@ class WhatsAppConnectEmployee(models.AbstractModel):
 
     @api.model
     def _owner(self, session):
-        link = self.env['wa.employee.session'].sudo().search([('session_id', '=', session.id)], limit=1)
+        link = self.env['wa.employee.session'].sudo().search([('session_id', '=', session.id), ('active', '=', True)], limit=1)
         return (link.employee_id.id, link.employee_id.name) if link else super()._owner(session)
 
     @api.model
@@ -70,5 +70,5 @@ class WhatsAppConnectEmployee(models.AbstractModel):
 
     @api.model
     def _state_extra(self, session):
-        link = self.env['wa.employee.session'].sudo().search([('session_id', '=', session.id)], limit=1)
+        link = self.env['wa.employee.session'].sudo().search([('session_id', '=', session.id), ('active', '=', True)], limit=1)
         return dict(super()._state_extra(session), employee=link.employee_id.name or '')

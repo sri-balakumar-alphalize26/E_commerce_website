@@ -59,6 +59,10 @@ export class ConnectNumber extends Component {
             this.state.company = data.company;
             const given = params.give_session_id || context.give_session_id;
             this.state.picked = (data.scanned || []).find((r) => given && r.session_id === given) || null;
+            if (data.off) {
+                this.state.picked = data.off;
+                this.state.turnOn = data.off.ask_on;
+            }
             this.onLoaded(data);
             if (data.session) {
                 this.useSession(data.session);
@@ -204,10 +208,11 @@ export class ConnectNumber extends Component {
         }
         try {
             const p = this.state.picked;
-            const which = p ? (p.session_id ? { session_id: p.session_id } : { free_number: p.number })
+            const which = p ? (p.off_session_id ? { off_session_id: p.off_session_id }
+                : p.session_id ? { session_id: p.session_id } : { free_number: p.number })
                             : { country_id: this.state.country.id, number: this.state.number };
             const session = await this.call("add", [{
-                ...which, company_id: Number(this.state.company), turn_on: !!this.state.turnOn,
+                ...which, company_id: Number(this.state.company), turn_on: !!this.state.turnOn, quick: true,
                 label: this.state.label, key: this.needsKey ? this.state.key.trim() : "", ...this.extraValues(),
             }]);
             if (session.ask_on) {
@@ -233,7 +238,7 @@ export class ConnectNumber extends Component {
         }
         this.state.step = "scan";
         this.stopTimer();
-        this.timer = setTimeout(() => this.poll(), session.qr ? 5000 : 3000);
+        this.timer = setTimeout(() => this.poll(), session.qr ? 5000 : session.first ? 50 : session.error ? 3000 : 1000);
     }
     async poll() {
         if (this.state.step !== "scan" || !this.state.session) {
