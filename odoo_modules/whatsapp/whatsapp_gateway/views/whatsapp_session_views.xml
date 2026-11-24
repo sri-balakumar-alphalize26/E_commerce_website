@@ -180,14 +180,15 @@
                             groups="base.group_system"/>
                 </header>
                 <field name="name" string="Name"/>
-                <field name="authorized_number" string="Number" widget="wa_phone" readonly="1"/>
+                <field name="shown_number" string="Number"/>
+                <field name="authorized_number" column_invisible="True"/>
                 <field name="phone_number" optional="hide"/>
                 <field name="instance_name" optional="hide"/>
                 <field name="tenant_label" optional="hide"/>
                 <field name="company_id"
                        groups="base.group_multi_company"
                        optional="hide"/>
-                <field name="status" widget="badge"
+                <field name="status" widget="badge" invisible="not active"
                        decoration-success="status == 'connected'"
                        decoration-danger="status in ('wrong_number', 'error', 'disconnected')"
                        decoration-warning="status in ('connecting', 'waiting_qr')"/>

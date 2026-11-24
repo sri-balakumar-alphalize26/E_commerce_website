@@ -10,7 +10,7 @@ from datetime import timedelta
 import requests
 
 from odoo import _, api, fields, models
-from odoo.exceptions import AccessError, UserError
+from odoo.exceptions import AccessError, UserError, ValidationError
 
 _logger = logging.getLogger(__name__)
 
@@ -19,6 +19,33 @@ class WhatsAppSessionOff(models.Model):
     _inherit = 'whatsapp.session'
 
     removed = fields.Boolean('Removed', readonly=True, copy=False)
+    shown_number = fields.Char('Number', compute='_compute_shown_number')
+
+    # ------------------------------------------------------------ one number, once
+    def _same_number_on(self):
+        """Another entry that is on with this one's number."""
+        self.ensure_one()
+        number = ''.join(c for c in (self.authorized_number or '') if c.isdigit())
+        return self.sudo().search([('active', '=', True), ('id', '!=', self.id), ('authorized_number', '=', number)],
+                                  limit=1) if number else self.browse()
+
+    @api.constrains('authorized_number', 'active')
+    def _check_number_once(self):
+        for rec in self:
+            other = rec._same_number_on() if rec.active else rec.browse()
+            if other:
+                raise ValidationError(_("%(number)s is already connected as \"%(name)s\". One number can be connected only once.",
+                                        number=self.env['whatsapp.connect']._pretty(rec.authorized_number), name=other.name))
+
+    @api.depends('authorized_number', 'phone_number', 'active')
+    def _compute_shown_number(self):
+        """One that is off shows its own phone, not the number another one has now."""
+        for rec in self:
+            number = rec.authorized_number or ''
+            if not rec.active and number and rec._same_number_on():
+                own = ''.join(c for c in (rec.sudo().phone_number or '') if c.isdigit())
+                number = own if own and own != number else ''
+            rec.shown_number = (self.env['whatsapp.connect']._pretty(number) or number) if number else False
 
     def _check_number_admin(self):
         if not self.env.user.has_group('base.group_system'):
@@ -89,11 +116,29 @@ class WhatsAppSessionOff(models.Model):
         session._panel_self('off')
         _logger.info("WhatsApp: number %s turned off by %s", session.name, self.env.user.login)
 
+    def _key_of_another(self):
+        """One that is on has the very same key: this one needs its own."""
+        self.ensure_one()
+        key = self.sudo().gateway_api_key or ''
+        token = lambda text: self._decode_setup_key(text)[1] or text  # noqa: E731
+        return bool(key) and any(token(s.gateway_api_key or '') == token(key) for s in self.sudo().search(
+            [('active', '=', True), ('id', '!=', self.id), ('gateway_api_key', '!=', False)]))
+
     def _turn_on(self):
         self.ensure_one()
         session = self.sudo()
+        if not session.removed and not session._same_number_on() and session._key_of_another():
+            session._waiting_messages().write({'status': 'failed'})
+            Connect = self.env['whatsapp.connect']
+            number = ''.join(c for c in (session.authorized_number or '') if c.isdigit())
+            Connect._new_key(session, number, session.company_id or self.env.company)
+            return []
         if session.removed:
             raise UserError(_("It was removed. Use Connect a number to add it again."))
+        other = session._same_number_on()
+        if other:
+            raise UserError(_("%(number)s is already connected as \"%(name)s\". One number can be connected only once.",
+                              number=self.env['whatsapp.connect']._pretty(session.authorized_number), name=other.name))
         session.write({'active': True})
         # what waited longer than a day says nothing true any more
         session._waiting_messages(before=fields.Datetime.now() - timedelta(days=1)).write({'status': 'failed'})
