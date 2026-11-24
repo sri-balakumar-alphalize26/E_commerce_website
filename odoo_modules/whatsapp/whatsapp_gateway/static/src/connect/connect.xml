@@ -23,7 +23,7 @@
                 <!-- 1 -->
                 <form t-if="state.ready and state.step === 'number'" t-on-submit.prevent="next1" autocomplete="off">
                     <div t-if="scanned.length" class="o_wa_scanned">
-                        <label class="o_wa_label">Already scanned</label>
+                        <label class="o_wa_label">Already in the panel</label>
                         <div t-foreach="scanned" t-as="r" t-key="r.id" class="o_wa_srow">
                             <div><b t-esc="r.pretty"/> <span class="text-muted" t-esc="r.label"/>
                                 <div class="small" t-att-class="r.connected ? 'text-success' : 'text-muted'"><t t-if="r.connected">connected, no scan needed</t><t t-else="">not linked now, scan once</t></div></div>
@@ -69,6 +69,9 @@
                         <span t-if="state.checkError" class="text-danger" t-esc="state.checkError"/>
                         <span t-elif="state.check" class="text-success">&#10003; <t t-esc="state.check"/></span>
                         <span t-elif="state.country" class="text-muted"><t t-esc="wanted"/>, digits only</span>
+                        <div t-if="state.look and state.look.text" t-att-class="state.look.ok ? (state.look.where ? 'text-success' : 'text-muted') : 'text-danger'">
+                            <t t-if="state.look.ok and state.look.where">&#10003; </t><t t-esc="state.look.text"/></div>
+                        <div t-elif="state.check" class="text-muted"><i class="fa fa-spinner fa-spin"/> Looking in the panel…</div>
                     </div>
                     </t>
 
@@ -84,22 +87,36 @@
 
                     <t t-if="needsKey">
                         <div class="alert alert-warning mt-3 mb-2" role="status">
-                            <t t-if="!state.data.has_session">The first number of this database needs its key from the WhatsApp panel, once.</t>
+                            <t t-if="state.look and state.look.key" t-esc="state.look.text"/>
+                            <t t-elif="!state.data.has_session">The first number of this database needs its key from the WhatsApp panel, once.</t>
                             <t t-elif="state.data.may_add">This database has all <t t-esc="state.data.may_add"/> numbers it may have. The panel administrator can allow more.</t>
-                            <t t-else="">Adding numbers from here is off. The panel administrator switches it on: the database's page, "Odoo may have, at most". <t t-esc="state.data.why"/></t>
+                            <t t-elif="state.data.why">The WhatsApp panel cannot be asked now: <t t-esc="state.data.why"/></t>
+                            <t t-else="">Adding numbers from here is off. The panel administrator switches it on: the database's page, "Odoo may have, at most".</t>
+                            <button t-if="state.data.has_session and !state.showKey" type="button" class="btn btn-link p-0 ms-1" t-on-click="() => state.showKey = true">I have a key</button>
                         </div>
-                        <label class="o_wa_label" for="wa_key">Key of this number, from the panel</label>
-                        <input id="wa_key" type="password" class="form-control" autocomplete="new-password" placeholder="wa1_…" t-model="state.key"/>
+                        <label t-if="state.showKey or !state.data.has_session" class="o_wa_label" for="wa_key">Key of this number, from the panel</label>
+                        <input t-if="state.showKey or !state.data.has_session" id="wa_key" type="password" class="form-control" autocomplete="new-password" placeholder="wa1_…" t-model="state.key"/>
                     </t>
 
+                    <div t-if="state.turnOn" class="alert alert-info mt-3 mb-2" role="status">
+                        <div><b t-esc="state.turnOn.number"/> is turned off here (<t t-esc="state.turnOn.name"/>). Turn it on again<t t-if="state.turnOn.owner or forWhom"> for <b t-esc="state.turnOn.owner or forWhom"/></t>?</div>
+                        <div t-if="state.turnOn.waiting" class="small"><t t-esc="state.turnOn.waiting"/> old messages wait on it: they will <b>not</b> be sent.</div>
+                        <button type="button" class="btn btn-link p-0" t-att-disabled="state.busy" t-on-click="changeNumber">Change</button>
+                    </div>
+                    <div t-if="state.confirm" class="alert alert-info mt-3 mb-2" role="status">
+                        <div><b t-esc="state.check"/> is new. Save it<t t-if="forWhom"> for <b t-esc="forWhom"/></t> in the database <b t-esc="state.data.database"/>?</div>
+                        <div class="small">The key is made in the WhatsApp panel and fetched by itself.</div>
+                        <button type="button" class="btn btn-link p-0" t-att-disabled="state.busy" t-on-click="changeNumber">Change</button>
+                    </div>
                     <button type="submit" class="btn btn-primary o_wa_go" t-att-disabled="!ready1">
                         <i t-if="state.busy" class="fa fa-spinner fa-spin me-2"/>
-                        <t t-if="state.busy">Preparing the number…</t><t t-elif="state.picked and state.picked.connected">Next: groups</t><t t-else="">Next: scan</t>
+                        <t t-if="state.busy and state.confirm">Adding it to the panel and fetching its key…</t><t t-elif="state.busy">Preparing the number…</t><t t-elif="state.confirm">Save and scan</t><t t-elif="state.turnOn">Turn on and scan</t><t t-elif="state.picked and state.picked.connected">Next: groups</t><t t-else="">Next: scan</t>
                     </button>
                 </form>
 
                 <!-- 2 -->
                 <div t-if="state.step === 'scan'" class="o_wa_scan">
+                    <p t-if="state.saved" class="text-success small">&#10003; In the panel under <t t-esc="state.data.database"/> &#160; &#10003; Key fetched &#160; &#10003; Saved</p>
                     <p>Scan with the phone that has</p>
                     <p class="o_wa_big" t-esc="state.session.number"/>
                     <div t-if="state.session.wrong" class="alert alert-danger" role="alert">

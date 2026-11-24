@@ -212,9 +212,20 @@ class WhatsAppConnect(models.AbstractModel):
         return 0, [], why, []
 
     @api.model
+    def _from_panel(self, numbers, free):
+        """What the panel has ready: added there for this database and not in
+        Odoo yet, and what no database uses."""
+        here = set(self.env['whatsapp.session'].sudo().with_context(active_test=False).search(
+            [('removed', '=', False)]).mapped('authorized_number'))
+        ready = [n for n in numbers if n.get('in_use') is False and n.get('authorized_number')
+                 and n['authorized_number'] not in here]
+        return ready + [n for n in free if n['authorized_number'] not in {r['authorized_number'] for r in ready}]
+
+    @api.model
     def _free_numbers(self):
-        """Numbers of the vendor, linked in the panel, used by no database."""
-        return self._panel_numbers()[3]
+        """Numbers of the vendor, linked in the panel, that Odoo does not have."""
+        _may, numbers, _why, free = self._panel_numbers()
+        return self._from_panel(numbers, free)
 
     @api.model
     def _without_owner(self):
@@ -246,7 +257,7 @@ class WhatsAppConnect(models.AbstractModel):
                 continue
             if body.get('key'):
                 return body['key']
-        raise UserError(why)
+        raise UserError(_("Not added in the panel: %s", why) if self._sessions() else why)
 
     # ------------------------------------------------------------ the screen
     @api.model
@@ -261,10 +272,10 @@ class WhatsAppConnect(models.AbstractModel):
             'country': country.id if country.phone_code else False,
             'companies': [{'id': c.id, 'name': c.name} for c in self.env.companies],
             'company': self.env.company.id,
-            'has_session': has_session,
+            'has_session': has_session, 'database': self.env.cr.dbname,
             'may_add': may, 'used': len(numbers),
             'can_add': bool(has_session and may > len(numbers)),
-            'scanned': self._scanned(free if has_session and may > len(numbers) else []),
+            'scanned': self._scanned(self._from_panel(numbers, free if may > len(numbers) else []) if has_session and may else []),
             'why': why if has_session else '',
             'session': self.state(session_id) if session_id else False,
         }
@@ -278,6 +289,47 @@ class WhatsAppConnect(models.AbstractModel):
         except UserError as err:
             return {'ok': False, 'error': str(err.args[0])}
         return {'ok': True, 'pretty': self._pretty(whole)}
+
+    @api.model
+    def look(self, country_id, number):
+        """Is it here, or in the panel, already? {'where', 'text', 'ok', 'key'}:
+        ok - it can be connected; key - only with its key from the panel."""
+        self._check_admin()
+        try:
+            whole = self._number(self.env['res.country'].sudo().browse(int(country_id or 0)).exists(), number)
+        except UserError as err:
+            return {'where': 'bad', 'ok': False, 'text': str(err.args[0])}
+        session = self._session_of(whole)
+        if session:
+            if session.status == 'connected':
+                return {'where': 'here', 'ok': False, 'text': _("Already connected: %s", session.name)}
+            return {'where': 'here', 'ok': True, 'text': _("Already in this database, go on to scan")}
+        off = self._off_session(whole)
+        if off:
+            return {'where': 'off', 'ok': True, 'owner': self._owner(off)[1],
+                    'text': _("Turned off here, you can turn it on: %s", off.name)}
+        body = {}
+        for asked in self._sessions():
+            try:
+                body = asked._gateway_call('GET', '/v1/numbers?check=%s' % whole, timeout=(3, 8)) or {}
+            except UserError as err:
+                _logger.info("Connect a number: the panel was not asked: %s", self._last_line(err))
+                continue
+            break
+        where = body.get('check')
+        if where == 'here' and body.get('in_use'):
+            return {'where': 'here', 'ok': True, 'key': True,
+                    'text': _("The panel has it in use for this database already; its key is needed.")}
+        answer = {
+            'new': (True, _("New number, it will be added to this database")),
+            'free': (True, _("Already in the panel and free, it will be used")),
+            'here': (True, _("Already in the panel for this database, it will be used")),
+            'off': (False, _("It is turned off for this database in the panel.")),
+            'elsewhere': (False, _("Already used by another database")),
+        }.get(where)
+        if not answer:
+            return {'where': '', 'ok': True, 'text': _("Could not check in the panel now; checked again on Next") if self._sessions() else ''}
+        return {'where': where, 'ok': answer[0], 'text': answer[1]}
 
     @api.model
     def add(self, vals):
@@ -300,15 +352,16 @@ class WhatsAppConnect(models.AbstractModel):
                 raise UserError(_("%(number)s is already connected: %(session)s.",
                                   number=self._pretty(number), session=session.name))
             return state                    # left halfway: go on with it
-        off = self.env['whatsapp.session'].sudo().search(
-            [('active', '=', False), ('removed', '=', False), ('authorized_number', '=', number)], limit=1)
-        if off:
-            raise UserError(_("%(number)s is turned off: %(session)s. Press Turn on in WhatsApp Numbers.",
-                              number=self._pretty(number), session=off.name))
+        off = self._off_session(number)
+        if off and not vals.get('turn_on'):
+            return {'ask_on': {'number': self._pretty(number), 'name': off.name, 'owner': self._owner(off)[1],
+                               'waiting': len(off._waiting_messages())}}
         company = self.env['res.company'].browse(int(vals.get('company_id') or 0)).exists() or self.env.company
         if company not in self.env.companies and company != self.env.company:
             raise AccessError(_("You cannot use that company."))
         vals['company'] = company
+        if off:
+            return self._turn_on_here(off, number, vals)
         self._before(vals, number)
         label = (vals.get('label') or '').strip()[:60] or self._label(vals, number)
         key = (vals.get('key') or '').strip() or self._ask_panel(number, label)
@@ -318,6 +371,55 @@ class WhatsAppConnect(models.AbstractModel):
             self._save()
         self._load(session)
         return self.state(session.id)
+
+    # ------------------------------------------------------------ one that is off
+    @api.model
+    def _owner(self, session):
+        """Hook: (id, name) of who has this number."""
+        return False, ''
+
+    @api.model
+    def _panel_says(self, number):
+        for session in self._sessions():
+            try:
+                return session._gateway_call('GET', '/v1/numbers?check=%s' % number, timeout=(3, 8)) or {}
+            except UserError as err:
+                _logger.info("Connect a number: the panel was not asked: %s", self._last_line(err))
+        return {}
+
+    @api.model
+    def _turn_on_here(self, session, number, vals):
+        """On again. What waited is never sent. An entry without a key of its
+        own gets a new one; its groups stay off then."""
+        session._drop_waiting()
+        says = self._panel_says(number)
+        own_key = says.get('check') in (None, 'off') or (says.get('check') == 'here' and says.get('in_use'))
+        if own_key and not session._key_of_another():
+            session._turn_on()
+            if not self._owner(session)[0]:
+                self._before(vals, number)
+                self._after(vals, session, number)
+            return self.state(session.id)
+        if says.get('check') == 'elsewhere':
+            raise UserError(_("%s is already used by another database.", self._pretty(number)))
+        owner = self._owner(session)[0]
+        if owner:
+            vals['employee_id'] = owner
+        self._new_key(session, number, vals['company'], vals)
+        return self.state(session.id)
+
+    @api.model
+    def _new_key(self, session, number, company, vals=None):
+        session._number_off(removed=True)
+        if vals is not None:
+            self._before(vals, number)
+        key = self._ask_panel(number, session.name)
+        session.write({'gateway_api_key': key, 'instance_name': PENDING + number, 'authorized_number': number,
+                       'company_id': company.id, 'active': True, 'removed': False, 'status': 'disconnected'})
+        if vals is not None:
+            self._after(vals, session, number)
+        self._save()
+        self._load(session)
 
     @api.model
     def _give(self, vals):
@@ -336,6 +438,11 @@ class WhatsAppConnect(models.AbstractModel):
     def _session_of(self, number):
         return self.env['whatsapp.session'].sudo().search(
             [('active', '=', True), ('authorized_number', '=', number)], limit=1)
+
+    @api.model
+    def _off_session(self, number):
+        return self.env['whatsapp.session'].sudo().search(
+            [('active', '=', False), ('removed', '=', False), ('authorized_number', '=', number)], limit=1)
 
     @api.model
     def _label(self, vals, number):

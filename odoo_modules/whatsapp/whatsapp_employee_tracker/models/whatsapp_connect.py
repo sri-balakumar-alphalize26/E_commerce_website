@@ -27,6 +27,11 @@ class WhatsAppConnectEmployee(models.AbstractModel):
         return self.env['wa.employee.session'].sudo().search([]).session_id
 
     @api.model
+    def _owner(self, session):
+        link = self.env['wa.employee.session'].sudo().search([('session_id', '=', session.id)], limit=1)
+        return (link.employee_id.id, link.employee_id.name) if link else super()._owner(session)
+
+    @api.model
     def _before(self, vals, number):
         super()._before(vals, number)
         Employee = self.env['hr.employee'].sudo()

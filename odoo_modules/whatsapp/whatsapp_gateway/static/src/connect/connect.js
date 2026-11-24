@@ -16,14 +16,17 @@ export class ConnectNumber extends Component {
         this.action = useService("action");
         this.state = useState({
             ready: false, step: "number", busy: false, error: "", data: {},
-            countrySearch: "", countryOpen: false, country: null, number: "", check: "", checkError: "",
+            countrySearch: "", countryOpen: false, country: null, number: "", check: "", checkError: "", look: null, confirm: false, turnOn: null, showKey: false, saved: false,
             company: 0, label: "", key: "", values: {}, picked: null,
             session: null, groups: [], groupSearch: "", groupsError: "", done: [],
         });
         this.timer = null;
         this.asked = 0;
         onWillStart(() => this.load());
-        onWillUnmount(() => this.stopTimer());
+        onWillUnmount(() => {
+            this.stopTimer();
+            clearTimeout(this.lookTimer);
+        });
     }
 
     get steps() {
@@ -109,35 +112,72 @@ export class ConnectNumber extends Component {
     async checkNumber() {
         this.state.check = "";
         this.state.checkError = "";
+        this.state.look = null;
+        this.state.confirm = false;
+        this.state.turnOn = null;
+        clearTimeout(this.lookTimer);
+        const asked = ++this.asked;
         if (!this.complete) {
             return;
         }
-        const asked = ++this.asked;
         try {
             const answer = await this.call("check_number", [this.state.country.id, this.state.number]);
             if (asked === this.asked) {
                 this.state.check = answer.ok ? answer.pretty : "";
                 this.state.checkError = answer.ok ? "" : answer.error;
+                if (answer.ok) {
+                    this.lookTimer = setTimeout(() => this.lookNow(), 400);
+                }
             }
         } catch (err) {
             this.state.checkError = this.message(err);
         }
+    }
+    /** Is the number here, or in the panel, already? An older answer is dropped. */
+    async lookNow() {
+        clearTimeout(this.lookTimer);
+        const asked = this.asked;
+        let look;
+        try {
+            look = await this.call("look", [this.state.country.id, this.state.number]);
+        } catch (err) {
+            look = { where: "", ok: true, text: _t("Could not check in the panel now; checked again on Next") };
+        }
+        if (asked === this.asked) {
+            this.state.look = look;
+        }
+        return asked === this.asked;
+    }
+    /** Whom it is for, in the question. */
+    get forWhom() {
+        return (this.state.label || "").trim();
+    }
+    changeNumber() {
+        this.state.confirm = false;
+        this.state.turnOn = null;
+        this.state.picked = null;
     }
     get scanned() {
         return this.state.picked ? [] : this.state.data.scanned || [];
     }
     pick(row) {
         this.state.picked = row;
+        this.state.turnOn = null;
         this.state.error = "";
     }
     get needsKey() {
-        return !this.state.data.can_add && !this.state.picked;
+        const look = this.state.look;
+        if (this.state.picked || (look && (look.where === "off" || (look.where === "here" && !look.key)))) {
+            return false;
+        }
+        return !this.state.data.can_add || !!(look && look.key);
     }
     get ready1() {
         if (this.state.picked) {
             return !this.state.busy;
         }
-        return this.complete && !!this.state.check && (!this.needsKey || this.state.key.trim()) && !this.state.busy;
+        return this.complete && !!this.state.check && !(this.state.look && !this.state.look.ok)
+            && (!this.needsKey || !!this.state.key.trim()) && !this.state.busy;
     }
     extraValues() {
         return this.state.values;
@@ -148,14 +188,34 @@ export class ConnectNumber extends Component {
         }
         this.state.busy = true;
         this.state.error = "";
+        if (!this.state.picked && !this.state.look && !(await this.lookNow())) {
+            this.state.busy = false;
+            return;
+        }
+        if (!this.state.picked && (!this.state.look.ok || (this.needsKey && !this.state.key.trim()))) {
+            this.state.busy = false;
+            return;
+        }
+        // a new number is asked about first
+        if (!this.state.picked && this.state.look.where === "new" && !this.state.confirm) {
+            this.state.confirm = true;
+            this.state.busy = false;
+            return;
+        }
         try {
             const p = this.state.picked;
             const which = p ? (p.session_id ? { session_id: p.session_id } : { free_number: p.number })
                             : { country_id: this.state.country.id, number: this.state.number };
             const session = await this.call("add", [{
-                ...which, company_id: Number(this.state.company),
+                ...which, company_id: Number(this.state.company), turn_on: !!this.state.turnOn,
                 label: this.state.label, key: this.needsKey ? this.state.key.trim() : "", ...this.extraValues(),
             }]);
+            if (session.ask_on) {
+                this.state.turnOn = session.ask_on;     // it is off: one question
+                this.state.busy = false;
+                return;
+            }
+            this.state.saved = !this.state.picked && !this.needsKey && !this.state.turnOn;
             this.useSession(session);
         } catch (err) {
             this.state.error = this.message(err);

@@ -17,7 +17,16 @@ patch(ConnectNumber.prototype, {
     get ready1() {
         const v = this.state.values;
         const named = Number(v.employee_id) > 0 || (String(v.employee_id) === "new" && (v.employee_name || "").trim());
-        return super.ready1 && !!named;
+        const look = this.state.look;
+        return super.ready1 && (!!named || !!(look && look.where === "off" && look.owner));
+    },
+    get forWhom() {
+        const v = this.state.values;
+        if (String(v.employee_id) === "new") {
+            return (v.employee_name || "").trim();
+        }
+        const one = (this.state.data.employees || []).find((e) => e.id === Number(v.employee_id));
+        return one ? one.name : super.forWhom;
     },
     extraValues() {
         const v = this.state.values;
