@@ -43,8 +43,12 @@ from . import wa_connect_groups
 from . import wa_chat_history
 from . import sa_only_listed
 from . import sa_send_once
+from . import sa_vendor_choice
+from . import sa_portal_next
 from . import sa_vendor_window
 from . import sa_pay_link_rule
 from . import sa_group_employee
 from . import sa_settings_easy
+from . import sa_margin
+from . import sa_preview
 from . import sa_poll_rule

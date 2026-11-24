@@ -109,7 +109,10 @@ class SaGroupRequestOos(models.Model):
                  order=order.name, lines=self._sa_order_lines_text(order),
                  cur=order.currency_id.symbol or '', total=order.amount_total,
                  pay=self._sa_pay_link_any_state(order))
-        self._say(body)
+        if self.with_context(sa_private_window=60)._say(body) is False:
+            _logger.warning("Sales Automation: pay link of %s was not sent", order.name)
+            job.sudo().write({'sa_last_error': _("The payment link was not sent. Press Send payment link.")})
+            return False
         self.write({'sa_pay_link_sent_on': fields.Datetime.now(), 'sa_stock_confirmed': True,
                     'sa_pay_remind_count': 0, 'sa_pay_reminded_on': False})
         return True

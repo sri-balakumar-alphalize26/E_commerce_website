@@ -108,9 +108,7 @@ class SalesGroup(models.Model):
     # ---- Pricing ----
     markup_percent = fields.Float(
         'Margin (%)', default=20.0,
-        help="Added to what the product costs us - the cheapest vendor reply, "
-             "or the vendor price list when nobody replies: "
-             "quoted = cost x (1 + margin / 100).",
+        help="NOT USED: the margin is set on Configuration > Price & Margin.",
     )
     dm_use_buttons = fields.Boolean(
         'Use Buttons in the Private Chat',
@@ -213,7 +211,7 @@ class SalesGroup(models.Model):
         session = self.session_id
         if not session:
             return EmployeeSession
-        found = EmployeeSession.search([('session_id', '=', session.id)], limit=1)
+        found = EmployeeSession.search([('session_id', '=', session.id), ('active', '=', True)], limit=1)
         if not found:
             # an old one only for the number the session is now (23 Nov 2026)
             number = session.authorized_number or session.phone_number
@@ -246,7 +244,7 @@ class SalesGroup(models.Model):
         if not session_id:
             return self.env['wa.employee.session']
         return self.env['wa.employee.session'].search(
-            [('session_id', '=', session_id)], limit=1)
+            [('session_id', '=', session_id), ('active', '=', True)], limit=1)
 
     @api.model_create_multi
     def create(self, vals_list):

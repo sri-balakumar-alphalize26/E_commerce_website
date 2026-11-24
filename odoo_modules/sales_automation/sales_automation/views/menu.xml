@@ -40,6 +40,7 @@
               name="Customer Groups"
               parent="menu_sa_config"
               action="action_sa_customer_group"
+              active="0"
               sequence="1"/>
 
     <menuitem id="menu_sa_sales_group"

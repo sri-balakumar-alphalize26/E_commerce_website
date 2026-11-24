@@ -92,6 +92,7 @@ class SaleOrderPortalStatus(models.Model):
             'delivered': delivered,
             'dstate': dstate or '',
             'promised_on': job.sa_promised_on if job and 'sa_promised_on' in job._fields else False,
+            'promised_day_only': bool(getattr(job, 'sa_promise_day_only', False)) if job else False,
             'rider': (job.sa_delivery_partner_id.name or '')
             if job and 'sa_delivery_partner_id' in job._fields else '',
         }
@@ -150,7 +151,8 @@ class SaleOrderPortalStatus(models.Model):
             day = o.qe_slot_day.strftime('%d %b') if 'qe_slot_day' in o._fields and o.qe_slot_day else ''
             return ', '.join(p for p in (day, o.qe_slot_id.name) if p)
         if step == 'done' and status.get('promised_on'):
-            return _("By %s", when(status['promised_on']))
+            return _("By %s", self.env['sa.group.request']._sa_ss_when(
+                status['promised_on'], o.company_id, bool(status.get('promised_day_only'))))
         for field in ('qe_due_at', 'mart369_due_at'):
             if field in o._fields and o[field]:
                 return _("By %s", when(o[field]))

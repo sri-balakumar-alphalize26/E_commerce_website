@@ -19,6 +19,7 @@
             <xpath expr="//header" position="inside">
                 <button name="action_sa_sync_groups" type="object"
                         string="Sync Groups" class="btn-secondary"
+                        invisible="status != 'connected'"
                         groups="sales_automation.group_sa_manager"
                         help="Fetch every group this number has joined, then tick the ones that should answer product enquiries."/>
             </xpath>
@@ -27,23 +28,32 @@
                         class="btn-primary" invisible="setup_next != 'groups'"
                         groups="sales_automation.group_sa_manager"/>
             </xpath>
-            <!-- the groups of this number, those that are on first -->
-            <xpath expr="//notebook/page[1]" position="before">
-                <page string="Groups" name="sa_groups" groups="sales_automation.group_sa_user">
-                    <div class="text-muted mb-2" invisible="sa_group_ids">
-                        No group is known for this number yet. Press <b>Sync Groups</b> above.
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button name="action_sa_groups_on" type="object" class="oe_stat_button" icon="fa-users"
+                        invisible="status != 'connected'" groups="sales_automation.group_sa_user">
+                    <field name="sa_group_count" widget="statinfo" string="Groups on"/>
+                </button>
+            </xpath>
+            <!-- only the groups that are on; the others are in Sync Groups -->
+            <xpath expr="//div[@name='general_more']" position="inside">
+                <div name="sa_groups" invisible="status != 'connected'" groups="sales_automation.group_sa_user">
+                    <separator string="Groups on"/>
+                    <div class="text-muted mb-2" invisible="sa_group_on_ids">
+                        No group is on yet. Press <b>Sync Groups</b> above and turn on the groups this number answers.
                     </div>
-                    <field name="sa_group_ids" readonly="1" nolabel="1">
-                        <list decoration-muted="not enabled" create="0" delete="0" default_order="enabled desc, name">
+                    <field name="sa_group_on_ids" readonly="1" nolabel="1">
+                        <list create="0" delete="0" default_order="name">
                             <field name="name"/>
                             <field name="group_type"/>
-                            <field name="enabled" string="On" widget="boolean"/>
                             <field name="employee_session_id" string="Employee"/>
                             <field name="company_id" groups="base.group_multi_company"/>
                             <field name="member_count" string="Members"/>
+                            <button name="action_sa_switch_off" type="object" icon="fa-toggle-on" string="On"
+                                    title="Turn this group off" groups="sales_automation.group_sa_manager"
+                                    confirm="Turn this group off? It gets no answer any more until it is turned on again."/>
                         </list>
                     </field>
-                </page>
+                </div>
             </xpath>
         </field>
     </record>

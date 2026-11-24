@@ -60,6 +60,7 @@ ALLOWED_TARGETS = (
     re.compile(r'^/wa/track/\d{1,12}$'),
     re.compile(r'^/wa/track/\d{1,12}/pos$'),
     re.compile(r'^/wa/delivery/\d{1,12}$'),
+    re.compile(r'^/wa/staff/\d{1,12}$'),        # home delivery by one person
     re.compile(r'^/wa/delivery/\d{1,12}/[a-z_]{1,32}$'),
     # The shop typing a price in when no vendor answered.
     re.compile(r'^/wa/quote/\d{1,12}$'),

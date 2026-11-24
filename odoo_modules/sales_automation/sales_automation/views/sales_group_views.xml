@@ -6,9 +6,11 @@
         <field name="model">sa.sales.group</field>
         <field name="arch" type="xml">
             <list string="WhatsApp Groups" editable="bottom" create="false" open_form_view="True"
-                  decoration-info="group_type == 'vendor'">
+                  decoration-danger="used_by_text and not enabled"
+                  decoration-info="group_type == 'vendor' and not (used_by_text and not enabled)">
                 <field name="enabled" widget="boolean_toggle" string="On"/>
                 <field name="name" readonly="1"/>
+                <field name="used_by_text" readonly="1" optional="show"/>
                 <field name="group_type"/>
                 <field name="company_id" optional="show"
                        groups="base.group_multi_company"/>
@@ -17,11 +19,9 @@
                 <field name="invite_url" string="Invite Link" optional="show"
                        placeholder="https://chat.whatsapp.com/..."/>
                 <field name="member_count" readonly="1" optional="hide"/>
-                <field name="markup_percent" string="Margin %" optional="show"/>
                 <field name="auto_confirm_order" optional="hide"/>
                 <field name="ai_enabled" optional="hide"/>
                 <field name="require_confirmation" optional="hide"/>
-                <field name="handoff_dm" optional="hide"/>
                 <field name="request_count" string="Enquiries" optional="show"/>
                 <field name="order_count" string="Orders" optional="hide"/>
                 <field name="group_jid" optional="hide" readonly="1"/>
@@ -39,6 +39,10 @@
                             string="Sync Groups" class="btn-secondary"/>
                 </header>
                 <sheet>
+                    <div class="alert alert-danger" role="alert" invisible="not used_by_text or enabled">
+                        <field name="used_by_text" readonly="1" nolabel="1" class="d-inline"/>
+                        <button name="action_sa_open_owner" type="object" string="Open it there" class="btn-link p-0 ms-2"/>
+                    </div>
                     <div class="oe_button_box" name="button_box">
                         <button name="action_view_requests" type="object"
                                 class="oe_stat_button" icon="fa-comments-o">
@@ -100,8 +104,6 @@
                                    options="{'no_create': True}"
                                    colspan="2"
                                    placeholder="Which categories can this group quote?"/>
-                            <field name="is_fallback_vendor_group"/>
-                            <field name="sourcing_window_minutes"/>
                         </group>
 
                         <group string="Behaviour"
@@ -110,13 +112,10 @@
                             <field name="min_confidence"/>
                             <field name="max_products"/>
                             <field name="require_confirmation"/>
-                            <field name="handoff_dm"/>
                             <field name="use_virtual_stock"/>
                         </group>
-                        <group string="Pricing"
+                        <group string="Advanced"
                                invisible="group_type != 'customer'">
-                            <field name="markup_percent"/>
-                            <field name="group_use_buttons"/>
                             <field name="dm_use_buttons"/>
                             <field name="auto_confirm_order"/>
                         </group>
@@ -128,10 +127,9 @@
                         enquiry here, and the bot never replies.
                     </div>
                     <div class="alert alert-warning" role="status"
-                         invisible="group_type != 'customer' or handoff_dm">
+                         invisible="group_type != 'customer'">
                         Prices are posted <b>in this group</b>, so every member
-                        sees them. Turn on <b>Continue in Private Chat</b> to
-                        keep them between you and the person who asked.
+                        sees them.
                     </div>
                     <notebook>
                         <page string="Notes" name="notes">

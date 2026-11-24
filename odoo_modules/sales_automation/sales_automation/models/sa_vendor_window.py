@@ -18,6 +18,7 @@ _logger = logging.getLogger(__name__)
 
 # arrivals are stored by the second, the deadline too
 SLACK = timedelta(seconds=1)
+CLOSE_TRIES = 5
 OPEN_FOR_BETTER = ('quoted', 'negotiating')
 
 
@@ -31,9 +32,9 @@ class SaVendorQuoteWindow(models.Model):
 
     @api.depends('price', 'request_id.sa_margin_used')
     def _compute_sa_sell_price(self):
-        margin = self.env['sa.ai.settings'].sudo().get_settings().margin_percent or 0.0
+        normal = self.env['sa.ai.settings'].sudo().get_settings()._sa_margin_for()
         for rec in self:
-            used = rec.request_id.sa_margin_used if rec.request_id.sa_evaluated_on else margin
+            used = rec.request_id._sa_margin() if rec.request_id else normal
             rec.sa_sell_price = (rec.price or 0.0) * (1.0 + used / 100.0)
 
     @api.model_create_multi
@@ -86,7 +87,7 @@ class SaGroupRequestWindow(models.Model):
     def _start_sourcing(self, vendors):
         res = super()._start_sourcing(vendors)
         if self.state == 'sourcing' and self.sourcing_deadline:
-            self.write({'sa_evaluated_on': False, 'sa_window_extended': False})
+            self.write({'sa_evaluated_on': False, 'sa_window_extended': False, 'sa_vendor_choice_pending': False, 'sa_close_tries': 0})
             self._sa_wake_at(self.sourcing_deadline)
         return res
 
@@ -117,6 +118,22 @@ class SaGroupRequestWindow(models.Model):
                 if not test:
                     self.env.cr.rollback()
                 self.env.invalidate_all()
+            except psycopg2.errors.InFailedSqlTransaction as err:
+                # An earlier refusal of the database was hidden by the code in
+                # between: not this enquiry's fault (Ref 1GG, 24 Nov 2026). A bug
+                # that always does this must not message the customer for ever.
+                if not test:
+                    self.env.cr.rollback()
+                self.env.invalidate_all()
+                tries = request.sa_close_tries + 1
+                if tries < CLOSE_TRIES:
+                    _logger.warning("Sales Automation: closing enquiry %s met a broken transaction, try %s of %s", request_id, tries, CLOSE_TRIES)
+                    request.sa_close_tries = tries
+                else:
+                    _logger.error("Sales Automation: closing enquiry %s failed %s times", request_id, tries)
+                    request.write({'sa_close_tries': tries, 'state': 'dropped', 'drop_reason': 'error', 'error': str(err)[:2000]})
+                if not test:
+                    self.env.cr.commit()
             except Exception as err:  # noqa: BLE001 - one bad enquiry must not stall every other one
                 _logger.exception("Sales Automation: closing enquiry %s failed", request_id)
                 self.env.invalidate_all()
@@ -164,8 +181,9 @@ class SaGroupRequestWindow(models.Model):
                 _logger.info("Sales Automation: enquiry %s - %s said yes, no price yet: waiting once more", self.id, waiting.mapped('name'))
                 return True
             return super()._close_sourcing()
-        order = pool.sorted(lambda q: (round(q.price, 4), q._sa_arrived(), q.delay_days or 0, q.id))
-        margin = self._settings().margin_percent or 0.0
+        bought = self._sa_bought_map()
+        order = self._sa_rank_quotes(pool, bought)
+        margin = self._sa_margin_live()
         self.write({'sa_evaluated_on': fields.Datetime.now(), 'sa_margin_used': margin})
         (self.quote_ids - order).write({'sa_rank': 0, 'sa_in_window': False})
         for place, quote in enumerate(order, 1):
@@ -173,6 +191,9 @@ class SaGroupRequestWindow(models.Model):
         best = order[:1]
         _logger.info("Sales Automation: enquiry %s - %s price(s), lowest %.2f from %s", self.id, len(order), best.price,
                      best.partner_id.name or best.vendor_name or best.vendor_phone)
+        if self._settings().vendor_choice_mode == 'manual':
+            return self._sa_wait_for_choice()
+        self._sa_selected('auto', self._sa_rank_reason(order, bought))
         return self._apply_winning_quote(best)
 
     # ------------------------------------------------------------ late, but cheaper
@@ -185,6 +206,7 @@ class SaGroupRequestWindow(models.Model):
         if not self.best_quote_id or quote.price >= self.best_quote_id.price:
             raise UserError(_("That price is not lower."))
         self._say(_("\U0001F44D Good news - we got you a better price.\n\n_Ref %s_") % (self.ref_code or self.id))
+        self._sa_selected('manual', 'manual')
         self.with_context(sa_price_approved=True)._apply_winning_quote(quote)
         _logger.info("Sales Automation: enquiry %s - late price %.2f used by %s", self.id, quote.price, self.env.user.name)
         return True

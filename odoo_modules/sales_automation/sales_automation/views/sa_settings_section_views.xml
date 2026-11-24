@@ -11,7 +11,7 @@
         <field name="model">sa.ai.settings</field>
         <field name="priority">40</field>
         <field name="arch" type="xml">
-            <form string="The Shop Counter">
+            <form string="The Shop Counter" create="0" delete="0">
                 <sheet>
                     <group>
                         <group>
@@ -59,7 +59,7 @@
         <field name="model">sa.ai.settings</field>
         <field name="priority">41</field>
         <field name="arch" type="xml">
-            <form string="Vendors &amp; Customer Replies">
+            <form string="Vendors &amp; Customer Replies" create="0" delete="0">
                 <sheet>
                     <div class="alert alert-info" role="status">
                         <b>What happens with the settings below</b>
@@ -67,9 +67,15 @@
                     </div>
                     <group>
                         <group string="1. Asking the vendors">
-                            <label for="sourcing_window_minutes" string="Wait for vendor prices"/>
+                            <label for="sourcing_window_minutes" string="Wait for vendor prices" invisible="vendor_choice_mode == 'manual'"/>
+                            <label for="sourcing_window_minutes" string="Remind me after" invisible="vendor_choice_mode != 'manual'"/>
                             <div><field name="sourcing_window_minutes" class="oe_inline"/> minutes
-                                <div class="text-muted small">Then the lowest price is taken. All have answered: no more waiting. Usually 5 to 15.</div></div>
+                                <div class="text-muted small" invisible="vendor_choice_mode == 'manual'">Then the vendor is chosen. All have answered: no more waiting. Usually 5 to 15.</div>
+                                <div class="text-muted small" invisible="vendor_choice_mode != 'manual'">Manual does not wait: you can choose as soon as a price is there. After this time, or when all have answered, it goes to Needs you with the alarm.</div></div>
+                            <label for="vendor_choice_mode" string="Who chooses the vendor"/>
+                            <div><field name="vendor_choice_mode" widget="radio"/>
+                                <div class="text-muted small"><b>Automatic:</b> the lowest price. The same price: who answered first, then whom you bought this product from more. The customer is told at once.<br/>
+                                    <b>Manual:</b> you choose on Store &gt; Enquiries, then the customer is told.</div></div>
                             <label for="vendor_money" string="Vendors type the price in"/>
                             <div><field name="vendor_money" widget="radio"/>
                                 <div class="text-muted small">Another currency than yours needs a rate in Odoo, at most a week old.</div></div>
@@ -82,17 +88,10 @@
                                 <div class="text-muted small">On each product category, under WhatsApp Sourcing.</div></div>
                         </group>
                         <group string="2. The price for the customer">
-                            <label for="margin_percent" string="Your margin"/>
-                            <div><field name="margin_percent" class="oe_inline"/> %
-                                <div class="text-muted small">Added to the lowest vendor price. 20 makes 100 into 120.</div></div>
-                            <label for="price_approval_enabled" string="Ask me first when the prices differ"/>
-                            <div><field name="price_approval_enabled" widget="boolean_toggle"/>
-                                <div class="text-muted small">On: when the product page has another price, you choose on Store &gt; Enquiries.
-                                    Off: the customer gets the vendor price plus your margin at once.</div></div>
-                            <label for="price_approval_tolerance_percent" string="Ignore small differences"
-                                   invisible="not price_approval_enabled"/>
-                            <div invisible="not price_approval_enabled"><field name="price_approval_tolerance_percent" class="oe_inline"/> %
-                                <div class="text-muted small">0 asks you always. 5 does not ask while the two are within 5%.</div></div>
+                            <label for="margin_percent" string="Normal margin"/>
+                            <div><field name="margin_percent" readonly="1" class="oe_inline"/> %
+                                <button name="action_sa_open_margin" type="object" string="Change on Price &amp; Margin" class="btn-link p-0 ms-2"/>
+                                <div class="text-muted small">Added to the chosen vendor's price.</div></div>
                         </group>
                     </group>
                     <group>
@@ -109,13 +108,11 @@
                             <div><field name="pay_remind_max" class="oe_inline"/> at most</div>
                         </group>
                     </group>
-                    <group string="Rarely needed">
+                    <group string="Advanced">
                         <div class="text-muted small mb-2" colspan="2">Only products of your own catalogue are offered to customers, so an enquiry normally
-                            needs neither of these.</div>
+                            does not need this.</div>
                         <field name="unlisted_vendor_ids" string="Extra vendors (not by category)" widget="many2many_tags"
                                options="{'no_create': True}" placeholder="Leave empty"/>
-                        <field name="new_product_category_id" string="Category of a product made from an enquiry"
-                               options="{'no_create': True}"/>
                     </group>
                 </sheet>
             </form>
@@ -128,7 +125,7 @@
         <field name="model">sa.ai.settings</field>
         <field name="priority">42</field>
         <field name="arch" type="xml">
-            <form string="Delivery Address">
+            <form string="Delivery Address" create="0" delete="0">
                 <sheet>
                     <group>
                         <group>
@@ -175,7 +172,7 @@
         <field name="model">sa.ai.settings</field>
         <field name="priority">43</field>
         <field name="arch" type="xml">
-            <form string="Messages That Are Not Enquiries">
+            <form string="Messages That Are Not Enquiries" create="0" delete="0">
                 <sheet>
                     <group>
                         <group>
@@ -215,7 +212,7 @@
         <field name="model">sa.ai.settings</field>
         <field name="priority">44</field>
         <field name="arch" type="xml">
-            <form string="Bargaining">
+            <form string="Bargaining" create="0" delete="0">
                 <sheet>
                     <group>
                         <group>
@@ -277,13 +274,100 @@
         </field>
     </record>
 
+    <!-- ============ Price & Margin (24 Nov 2026): every margin on one page ============ -->
+    <record id="view_sa_settings_margin_form" model="ir.ui.view">
+        <field name="name">sa.settings.margin.form</field>
+        <field name="model">sa.ai.settings</field>
+        <field name="priority">44</field>
+        <field name="arch" type="xml">
+            <form string="Price &amp; Margin" create="0" delete="0">
+                <sheet>
+                    <group string="Margin">
+                        <label for="margin_percent" string="Normal margin"/>
+                        <div><field name="margin_percent" class="oe_inline"/> %
+                            <div class="text-muted small">Added to the chosen vendor's price.</div></div>
+                        <label for="margin_rules_enabled" string="Different margins"/>
+                        <div><field name="margin_rules_enabled" widget="boolean_toggle" options="{'autosave': False}"/>
+                            <div class="text-muted small" invisible="margin_rules_enabled">Off: the normal margin for everything.</div>
+                            <div class="text-muted small" invisible="not margin_rules_enabled">On: what you set below is used.</div></div>
+                        <label for="margin_rules_by" string="Different by" invisible="not margin_rules_enabled"/>
+                        <div invisible="not margin_rules_enabled"><field name="margin_rules_by" widget="radio"/>
+                            <div class="text-muted small" invisible="margin_rules_by != 'category'">A category not in the table: the category above it, then the normal margin.</div>
+                            <div class="text-muted small" invisible="margin_rules_by != 'group'">A group not in the table: the normal margin.</div></div>
+                        <field name="margin_category_ids" nolabel="1" colspan="2"
+                               invisible="not margin_rules_enabled or margin_rules_by != 'category'">
+                            <list editable="bottom">
+                                <field name="categ_id" required="1" options="{'no_create': True}"/>
+                                <field name="percent"/>
+                                <field name="sell_example"/>
+                            </list>
+                        </field>
+                        <field name="margin_group_ids" nolabel="1" colspan="2"
+                               invisible="not margin_rules_enabled or margin_rules_by != 'group'">
+                            <list editable="bottom">
+                                <field name="group_id" required="1" options="{'no_create': True}" domain="[('group_type', '=', 'customer')]"/>
+                                <field name="percent"/>
+                                <field name="sell_example"/>
+                            </list>
+                        </field>
+                    </group>
+                    <group string="Bargaining">
+                        <label for="bargain_enabled" string="Allow bargaining"/>
+                        <div><field name="bargain_enabled" widget="boolean_toggle" options="{'autosave': False}"/>
+                            <div class="text-muted small" invisible="not bargain_enabled">On: the price can come down to the lowest margin.</div>
+                            <div class="text-muted small" invisible="bargain_enabled">Off: the first price is final.</div></div>
+                        <label for="bargain_step_percent" string="Price drop for each step" invisible="not bargain_enabled"/>
+                        <div invisible="not bargain_enabled"><field name="bargain_step_percent" class="oe_inline"/> %
+                            <div class="text-muted small">Taken off the first price.</div></div>
+                        <label for="bargain_max_steps" string="How many steps" invisible="not bargain_enabled"/>
+                        <div invisible="not bargain_enabled"><field name="bargain_max_steps" class="oe_inline"/></div>
+                        <label for="min_margin_percent" string="Lowest margin when bargaining" invisible="not bargain_enabled"/>
+                        <div invisible="not bargain_enabled"><field name="min_margin_percent" class="oe_inline"/> %
+                            <div class="text-muted small">The price never goes below this.</div></div>
+                        <field name="qty_bargain_all" string="Quantity ranges for every product" invisible="not bargain_enabled"/>
+                        <field name="qty_bargain_ids" nolabel="1" colspan="2" invisible="not bargain_enabled">
+                            <list editable="bottom">
+                                <field name="qty_min"/>
+                                <field name="qty_max"/>
+                                <field name="percent"/>
+                            </list>
+                        </field>
+                        <div class="text-muted small" colspan="2" invisible="not bargain_enabled">Off: the ranges are for products
+                            ticked <b>Quantity bargaining on WhatsApp</b>. A product's own table always wins. To 0: no upper limit.</div>
+                    </group>
+                    <group string="Price differs from the product page">
+                        <label for="price_approval_enabled" string="Ask me first"/>
+                        <div><field name="price_approval_enabled" widget="boolean_toggle" options="{'autosave': False}"/>
+                            <div class="text-muted small" invisible="not price_approval_enabled">On: the customer waits until you choose on Store &gt; Enquiries.</div>
+                            <div class="text-muted small" invisible="price_approval_enabled">Off: vendor price plus margin is sent at once.</div></div>
+                        <label for="price_approval_tolerance_percent" string="Ignore small differences" invisible="not price_approval_enabled"/>
+                        <div invisible="not price_approval_enabled"><field name="price_approval_tolerance_percent" class="oe_inline"/> %
+                            <div class="text-muted small">0 asks you always. 5 does not ask while the two are within 5%.</div></div>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    <record id="action_sa_settings_margin" model="ir.actions.server">
+        <field name="name">Price &amp; Margin</field>
+        <field name="model_id" ref="model_sa_ai_settings"/>
+        <field name="state">code</field>
+        <field name="code">
+action = {'type': 'ir.actions.act_window', 'name': 'Price &amp; Margin', 'context': {'sa_page': 'Price &amp; Margin'}, 'res_model': 'sa.ai.settings',
+          'res_id': model.get_settings().id, 'view_mode': 'form', 'target': 'current',
+          'views': [[env.ref('sales_automation.view_sa_settings_margin_form').id, 'form']]}
+        </field>
+    </record>
+    <menuitem id="menu_sa_settings_margin" name="Price &amp; Margin"
+              parent="menu_sa_config" action="action_sa_settings_margin" sequence="32"/>
+
     <!-- ============ Guided Finder ============ -->
     <record id="view_sa_settings_finder_form" model="ir.ui.view">
         <field name="name">sa.settings.finder.form</field>
         <field name="model">sa.ai.settings</field>
         <field name="priority">45</field>
         <field name="arch" type="xml">
-            <form string="Guided Finder">
+            <form string="Guided Finder" create="0" delete="0">
                 <sheet>
                     <group>
                         <group>
@@ -310,7 +394,7 @@
         <field name="model">sa.ai.settings</field>
         <field name="priority">47</field>
         <field name="arch" type="xml">
-            <form string="Customer Links">
+            <form string="Customer Links" create="0" delete="0">
                 <sheet>
                     <div class="text-muted mb-3">
                         Where each link goes. <b>Private chat</b>: the customer's own
@@ -353,7 +437,7 @@
         <field name="model_id" ref="model_sa_ai_settings"/>
         <field name="state">code</field>
         <field name="code">
-action = {'type': 'ir.actions.act_window', 'name': 'Customer Links', 'res_model': 'sa.ai.settings',
+action = {'type': 'ir.actions.act_window', 'name': 'Customer Links', 'context': {'sa_page': 'Customer Links'}, 'res_model': 'sa.ai.settings',
           'res_id': model.get_settings().id, 'view_mode': 'form', 'target': 'current',
           'views': [[env.ref('sales_automation.view_sa_settings_links_form').id, 'form']]}
         </field>
@@ -363,7 +447,7 @@ action = {'type': 'ir.actions.act_window', 'name': 'Customer Links', 'res_model'
         <field name="model">sa.ai.settings</field>
         <field name="priority">48</field>
         <field name="arch" type="xml">
-            <form string="Payments">
+            <form string="Payments" create="0" delete="0">
                 <sheet>
                     <group string="When the payment link is sent">
                         <field name="pay_link_in_stock" widget="radio" options="{'horizontal': true}"/>
@@ -382,7 +466,7 @@ action = {'type': 'ir.actions.act_window', 'name': 'Customer Links', 'res_model'
         <field name="model_id" ref="model_sa_ai_settings"/>
         <field name="state">code</field>
         <field name="code">
-action = {'type': 'ir.actions.act_window', 'name': 'Payments', 'res_model': 'sa.ai.settings',
+action = {'type': 'ir.actions.act_window', 'name': 'Payments', 'context': {'sa_page': 'Payments'}, 'res_model': 'sa.ai.settings',
           'res_id': model.get_settings().id, 'view_mode': 'form', 'target': 'current',
           'views': [[env.ref('sales_automation.view_sa_settings_payments_form').id, 'form']]}
         </field>
@@ -399,7 +483,7 @@ action = {'type': 'ir.actions.act_window', 'name': 'Payments', 'res_model': 'sa.
         <field name="model_id" ref="model_sa_ai_settings"/>
         <field name="state">code</field>
         <field name="code">
-action = {'type': 'ir.actions.act_window', 'name': 'The Shop Counter', 'res_model': 'sa.ai.settings',
+action = {'type': 'ir.actions.act_window', 'name': 'The Shop Counter', 'context': {'sa_page': 'The Shop Counter'}, 'res_model': 'sa.ai.settings',
           'res_id': model.get_settings().id, 'view_mode': 'form', 'target': 'current',
           'views': [[env.ref('sales_automation.view_sa_settings_counter_form').id, 'form']]}
         </field>
@@ -409,7 +493,7 @@ action = {'type': 'ir.actions.act_window', 'name': 'The Shop Counter', 'res_mode
         <field name="model_id" ref="model_sa_ai_settings"/>
         <field name="state">code</field>
         <field name="code">
-action = {'type': 'ir.actions.act_window', 'name': 'Vendors &amp; Customer Replies', 'res_model': 'sa.ai.settings',
+action = {'type': 'ir.actions.act_window', 'name': 'Vendors &amp; Customer Replies', 'context': {'sa_page': 'Vendors &amp; Customer Replies'}, 'res_model': 'sa.ai.settings',
           'res_id': model.get_settings().id, 'view_mode': 'form', 'target': 'current',
           'views': [[env.ref('sales_automation.view_sa_settings_vendor_form').id, 'form']]}
         </field>
@@ -419,7 +503,7 @@ action = {'type': 'ir.actions.act_window', 'name': 'Vendors &amp; Customer Repli
         <field name="model_id" ref="model_sa_ai_settings"/>
         <field name="state">code</field>
         <field name="code">
-action = {'type': 'ir.actions.act_window', 'name': 'Delivery Address', 'res_model': 'sa.ai.settings',
+action = {'type': 'ir.actions.act_window', 'name': 'Delivery Address', 'context': {'sa_page': 'Delivery Address'}, 'res_model': 'sa.ai.settings',
           'res_id': model.get_settings().id, 'view_mode': 'form', 'target': 'current',
           'views': [[env.ref('sales_automation.view_sa_settings_address_form').id, 'form']]}
         </field>
@@ -429,7 +513,7 @@ action = {'type': 'ir.actions.act_window', 'name': 'Delivery Address', 'res_mode
         <field name="model_id" ref="model_sa_ai_settings"/>
         <field name="state">code</field>
         <field name="code">
-action = {'type': 'ir.actions.act_window', 'name': 'Messages That Are Not Enquiries', 'res_model': 'sa.ai.settings',
+action = {'type': 'ir.actions.act_window', 'name': 'Messages That Are Not Enquiries', 'context': {'sa_page': 'Messages That Are Not Enquiries'}, 'res_model': 'sa.ai.settings',
           'res_id': model.get_settings().id, 'view_mode': 'form', 'target': 'current',
           'views': [[env.ref('sales_automation.view_sa_settings_chatter_form').id, 'form']]}
         </field>
@@ -439,7 +523,7 @@ action = {'type': 'ir.actions.act_window', 'name': 'Messages That Are Not Enquir
         <field name="model_id" ref="model_sa_ai_settings"/>
         <field name="state">code</field>
         <field name="code">
-action = {'type': 'ir.actions.act_window', 'name': 'Bargaining', 'res_model': 'sa.ai.settings',
+action = {'type': 'ir.actions.act_window', 'name': 'Bargaining', 'context': {'sa_page': 'Bargaining'}, 'res_model': 'sa.ai.settings',
           'res_id': model.get_settings().id, 'view_mode': 'form', 'target': 'current',
           'views': [[env.ref('sales_automation.view_sa_settings_bargain_form').id, 'form']]}
         </field>
@@ -449,7 +533,7 @@ action = {'type': 'ir.actions.act_window', 'name': 'Bargaining', 'res_model': 's
         <field name="model_id" ref="model_sa_ai_settings"/>
         <field name="state">code</field>
         <field name="code">
-action = {'type': 'ir.actions.act_window', 'name': 'Guided Finder', 'res_model': 'sa.ai.settings',
+action = {'type': 'ir.actions.act_window', 'name': 'Guided Finder', 'context': {'sa_page': 'Guided Finder'}, 'res_model': 'sa.ai.settings',
           'res_id': model.get_settings().id, 'view_mode': 'form', 'target': 'current',
           'views': [[env.ref('sales_automation.view_sa_settings_finder_form').id, 'form']]}
         </field>
@@ -465,7 +549,7 @@ action = {'type': 'ir.actions.act_window', 'name': 'Guided Finder', 'res_model':
     <menuitem id="menu_sa_settings_chatter" name="Messages That Are Not Enquiries"
               parent="menu_sa_config" action="action_sa_settings_chatter" sequence="34"/>
     <menuitem id="menu_sa_settings_bargain" name="Bargaining"
-              parent="menu_sa_config" action="action_sa_settings_bargain" sequence="35"/>
+              parent="menu_sa_config" action="action_sa_settings_bargain" sequence="35" active="0"/>
     <menuitem id="menu_sa_settings_finder" name="Guided Finder"
               parent="menu_sa_config" action="action_sa_settings_finder" sequence="36"/>
 
@@ -475,7 +559,7 @@ action = {'type': 'ir.actions.act_window', 'name': 'Guided Finder', 'res_model':
         <field name="model">sa.ai.settings</field>
         <field name="priority">47</field>
         <field name="arch" type="xml">
-            <form string="Human Takeover">
+            <form string="Human Takeover" create="0" delete="0">
                 <sheet>
                     <group>
                         <group>
@@ -516,7 +600,7 @@ action = {'type': 'ir.actions.act_window', 'name': 'Guided Finder', 'res_model':
         <field name="model_id" ref="model_sa_ai_settings"/>
         <field name="state">code</field>
         <field name="code">
-action = {'type': 'ir.actions.act_window', 'name': 'Human Takeover', 'res_model': 'sa.ai.settings',
+action = {'type': 'ir.actions.act_window', 'name': 'Human Takeover', 'context': {'sa_page': 'Human Takeover'}, 'res_model': 'sa.ai.settings',
           'res_id': model.get_settings().id, 'view_mode': 'form', 'target': 'current',
           'views': [[env.ref('sales_automation.view_sa_settings_takeover_form').id, 'form']]}
         </field>

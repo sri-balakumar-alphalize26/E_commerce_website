@@ -146,7 +146,11 @@ class WhatsAppWebhookGroups(WhatsAppWebhook):
         wa_id = str(key.get('id') or '')
         if wa_id and not key.get('fromMe'):
             guard = request.env['sa.outbox.guard'].sudo()
-            if not guard.claim('in|%s' % wa_id, 600):
+            # Once per NUMBER: with two of ours in one group the number that
+            # does not answer it could come first, and the one that does was
+            # told "again" and kept silent (Test 2, 24 Nov 2026).
+            session_id = session.id
+            if not guard.claim('in|%s|%s' % (session_id, wa_id), 600):
                 _logger.info("WhatsApp: message %s delivered again - ignored",
                              wa_id)
                 return
@@ -160,7 +164,7 @@ class WhatsAppWebhookGroups(WhatsAppWebhook):
             # a failed attempt be retried.
             request.env.cr.postrollback.add(
                 lambda: request.env['sa.outbox.guard'].sudo().release(
-                    'in|%s' % wa_id))
+                    'in|%s|%s' % (session_id, wa_id)))
 
         if not remote_jid.endswith('@g.us'):
             # A poll vote carries no text. In a private chat that made a tap

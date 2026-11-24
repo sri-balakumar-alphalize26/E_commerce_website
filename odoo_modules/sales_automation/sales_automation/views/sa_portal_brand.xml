@@ -232,6 +232,12 @@
                                 <p class="sa-muted">We will message you on WhatsApp when there is something to do.</p>
                             </t>
                             <div id="sa_action_slot"/>
+                            <t t-if="sa_pg.get('close')" t-out="sa_pg['close']"/>
+                            <!-- 24 Nov 2026: what is really sent after this step (sa_portal_next.py) -->
+                            <div t-if="sa_pg.get('next')" class="sa-next">
+                                <b><t t-if="sa_pg['step'] == 'sign'">After you sign</t><t t-else="">What happens next</t></b>
+                                <ul><li t-foreach="sa_pg['next']" t-as="line" t-out="line"/></ul>
+                            </div>
                         </section>
                         <p t-if="message == 'cant_reject'" class="sa-note">This order can no longer be rejected. Message us on WhatsApp if something is wrong.</p>
                         <t t-if="sa_pg['step'] == 'sign'">

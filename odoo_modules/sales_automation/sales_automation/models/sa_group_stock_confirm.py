@@ -237,7 +237,8 @@ class SaGroupRequestStockConfirm(models.Model):
             local = fields.Datetime.context_timestamp(self, job.sa_promised_on)
             when = _("\n\U0001F69A *Delivery:* %(kind)s%(date)s.",
                      kind=(kind + ', ') if kind else '',
-                     date=local.strftime('%a %d %b, by %I:%M %p').lstrip('0'))
+                     date=self._sa_ss_when(job.sa_promised_on, order.company_id, day_only=True)
+                     if getattr(job, 'sa_promise_day_only', False) else local.strftime('%a %d %b, by %I:%M %p').lstrip('0'))
         if job or self._sa_flow_end() == 'delivery':
             body = _("✅ Payment received for order *#%(ref)s* - thank you!\n"
                      "Invoice %(inv)s is above.%(when)s\n\nWe will message here when "

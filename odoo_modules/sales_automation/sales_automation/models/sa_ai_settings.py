@@ -171,9 +171,8 @@ class SaAiSettings(models.Model):
              "to use 369ai's default category.",
     )
     margin_percent = fields.Float(
-        'Margin (%)', default=20.0,
-        help="Added to what the goods cost - the cheapest vendor reply, or the "
-             "vendor price list when nobody answers: "
+        'Normal Margin (%)', default=20.0,
+        help="Added to the chosen vendor's price: "
              "quoted = cost x (1 + margin / 100).",
     )
     vendor_money = fields.Selection([
@@ -205,7 +204,7 @@ class SaAiSettings(models.Model):
              "says it is final.",
     )
     min_margin_percent = fields.Float(
-        'Lowest Margin (%)', default=5.0,
+        'Lowest Margin When Bargaining (%)', default=5.0,
         help="How far the margin may be given away. The price never goes "
              "below cost x (1 + this / 100), whatever the customer offers "
              "and however many steps are left.",

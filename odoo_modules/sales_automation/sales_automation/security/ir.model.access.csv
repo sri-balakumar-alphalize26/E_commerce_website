@@ -20,3 +20,5 @@ access_sa_address_link_user,sa.address.link.user,model_sa_address_link,group_sa_
 access_sa_address_link_manager,sa.address.link.manager,model_sa_address_link,group_sa_manager,1,1,1,1
 access_sa_after_task_manager,sa.after.task.manager,model_sa_after_task,group_sa_manager,1,0,0,0
 access_sa_poll_manager,sa.poll.manager,model_sa_poll,group_sa_manager,1,0,0,0
+access_sa_margin_rule_user,sa.margin.rule.user,model_sa_margin_rule,group_sa_user,1,0,0,0
+access_sa_margin_rule_manager,sa.margin.rule.manager,model_sa_margin_rule,group_sa_manager,1,1,1,1

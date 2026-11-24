@@ -2,9 +2,12 @@
 """/wa/review/<order> - "Rate your products" for an order bought through
 WhatsApp, opened from the private Delivered message (13 Nov 2026). The order's
 own portal token is the whole credential. See models/sa_review.py."""
+from markupsafe import Markup
+
 from odoo import http
 from odoo.http import request
 
+from .close_timer import CLOSE_TIMER
 from .link_expired import expired_page, visit_expired
 
 
@@ -21,11 +24,14 @@ class SaReviewPage(http.Controller):
             return request.not_found()
         if visit_expired(order):
             return expired_page()
+        items = order._sa_review_items()
         return request.render('sales_automation.sa_review_page', {
+            # the last product was just rated
+            'close': Markup(CLOSE_TIMER) if saved and items and all(i['stars'] for i in items) else '',
             'order': order,
             'token': access_token,
             'open': order._sa_review_open(),
-            'items': order._sa_review_items(),
+            'items': items,
             'saved': str(saved or ''),
         })
 

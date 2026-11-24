@@ -15,7 +15,7 @@ class SaAiSettingsPayLink(models.Model):
     _inherit = 'sa.ai.settings'
 
     pay_link_in_stock = fields.Selection(WHEN, 'With Stock', default='sign', required=True)
-    pay_link_no_stock = fields.Selection(WHEN, 'Without Stock', default='accept', required=True)
+    pay_link_no_stock = fields.Selection(WHEN, 'Without Stock', default='sign', required=True)
     pay_link_words = fields.Text(compute='_compute_pay_link_words')
 
     @api.depends('pay_link_in_stock', 'pay_link_no_stock')
@@ -38,7 +38,7 @@ class SaGroupRequestPayLink(models.Model):
         self.ensure_one()
         settings = self._settings()
         in_stock = self._sa_lines_in_stock(order)
-        when = (settings.pay_link_in_stock if in_stock else settings.pay_link_no_stock) or ('sign' if in_stock else 'accept')
+        when = (settings.pay_link_in_stock if in_stock else settings.pay_link_no_stock) or 'sign'
         if when == 'accept' and self._sa_flow_end() != 'delivery':
             return 'sign'           # no counter step in this flow
         return when
@@ -76,9 +76,12 @@ class SaGroupRequestPayLink(models.Model):
             raise UserError(_("The order has no WhatsApp group."))
         if not self.env['sa.outbox.guard'].sudo().claim('paylinkhand|%s' % self.id, 600):
             raise UserError(_("The payment link went out a moment ago. Wait ten minutes."))
-        self._say(_("\U0001F4B3 Payment for your order *#%(ref)s*\n\n%(order)s\n%(lines)s\n*Total: %(cur)s %(total).2f*\n\n%(pay)s",
-                    ref=self.ref_code or order.name, order=order.name, lines=self._sa_order_lines_text(order),
-                    cur=order.currency_id.symbol or '', total=order.amount_total, pay=self._sa_pay_link_any_state(order)))
+        sent = self._say(_("\U0001F4B3 Payment for your order *#%(ref)s*\n\n%(order)s\n%(lines)s\n*Total: %(cur)s %(total).2f*\n\n%(pay)s",
+                           ref=self.ref_code or order.name, order=order.name, lines=self._sa_order_lines_text(order),
+                           cur=order.currency_id.symbol or '', total=order.amount_total, pay=self._sa_pay_link_any_state(order)))
+        if sent is False:
+            self.env['sa.outbox.guard'].sudo().release('paylinkhand|%s' % self.id)
+            raise UserError(_("The payment link could not be sent. Is WhatsApp connected?"))
         self.write({'sa_pay_link_sent_on': fields.Datetime.now(), 'sa_stock_confirmed': True,
                     'sa_pay_remind_count': 0, 'sa_pay_reminded_on': False})
         _logger.info("Sales Automation: payment link of %s sent by hand by %s", order.name, self.env.user.name)

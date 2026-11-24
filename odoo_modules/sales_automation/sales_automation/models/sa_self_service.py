@@ -342,7 +342,7 @@ class SaGroupRequestSelfService(models.Model):
             return self._sa_menu_show('main')
         return target._sa_resume_continue(step)
 
-    def _sa_ss_when(self, dt, company):
+    def _sa_ss_when(self, dt, company, day_only=False):
         if not dt:
             return ''
         tz = 'UTC'
@@ -353,6 +353,8 @@ class SaGroupRequestSelfService(models.Model):
                 pass
         local = fields.Datetime.context_timestamp(self.with_context(tz=tz), dt)
         today = fields.Datetime.context_timestamp(self.with_context(tz=tz), fields.Datetime.now()).date()
+        if day_only:
+            return _("today") if local.date() == today else local.strftime('%a %d %b')
         day = '' if local.date() == today else local.strftime('%d %b ')
         return day + local.strftime('%I:%M %p').lstrip('0')
 
@@ -373,7 +375,7 @@ class SaGroupRequestSelfService(models.Model):
                  '\U0001F69A %s' % row['status']]
         promised = getattr(job, 'sa_promised_on', False) if job else False
         if promised and row['in_flight']:
-            lines[-1] += _(", arriving by %s") % self._sa_ss_when(promised, o.company_id)
+            lines[-1] += _(", arriving by %s") % self._sa_ss_when(promised, o.company_id, getattr(job, 'sa_promise_day_only', False))
         return '\n'.join(x for x in lines if x)
 
     def _sa_track_text(self, key):
@@ -394,7 +396,7 @@ class SaGroupRequestSelfService(models.Model):
                 out.append(_("Call the rider: %s") % rider.phone)
         promised = getattr(job, 'sa_promised_on', False)
         if promised and row['in_flight']:
-            out.append(_("Arriving by %s") % self._sa_ss_when(promised, o.company_id))
+            out.append(_("Arriving by %s") % self._sa_ss_when(promised, o.company_id, getattr(job, 'sa_promise_day_only', False)))
         url = getattr(job, 'sa_track_url', '') if row['in_flight'] else ''
         if url:
             out.append(_("Follow it live: %s") % url)

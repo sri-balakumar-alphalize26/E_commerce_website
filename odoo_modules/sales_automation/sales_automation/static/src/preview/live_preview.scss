@@ -1,0 +1,109 @@
+// Two sides on the settings pages: the options and what happens with them.
+.o_form_view .o_form_sheet:has(.sa_two_sides) {
+    max-width: 1500px;
+}
+.sa_two_sides {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px;
+    align-items: start;
+
+    .sa_side_left {
+        min-width: 0;
+
+        // one column: half a page is too narrow for two
+        .o_group:not(.o_inner_group) > * {
+            width: 100%;
+        }
+        .o_horizontal_separator,
+        .o_form_label {
+            cursor: pointer;
+        }
+    }
+    .sa_side_right {
+        min-width: 0;
+        position: sticky;
+        top: 8px;
+    }
+    .sa_side_right .o_widget {
+        display: block;
+        width: 100%;
+    }
+}
+.sa_pv {
+    border: 1px solid $border-color;
+    border-radius: 4px;
+    max-height: calc(100vh - 170px);
+    display: flex;
+    flex-direction: column;
+    background: $o-gray-100;
+
+    .sa_pv_bar {
+        padding: 10px 16px;
+        border-bottom: 1px solid $border-color;
+        b { font-size: 15px; }
+        span { color: $text-muted; }
+    }
+    .sa_pv_body {
+        padding: 12px 16px 20px;
+        overflow: auto;
+    }
+    .sa_pv_try label { display: block; margin-bottom: 6px; }
+    h3 { font-size: 15px; margin: 16px 0 8px; }
+    h4 { font-size: 13px; color: $text-muted; margin: 12px 0 6px; font-weight: 600; }
+    dl {
+        background: $o-view-background-color;
+        border-radius: 4px;
+        padding: 0 12px;
+        margin-bottom: 10px;
+
+        div { display: grid; grid-template-columns: minmax(0, 42%) minmax(0, 1fr); gap: 12px; padding: 7px 0; border-top: 1px solid $border-color; }
+        div:first-child { border-top: 0; }
+        dt { font-weight: 600; }
+        dd { margin: 0; overflow-wrap: anywhere; }
+    }
+    mark { background: #ffe58a; color: #212529; padding: 0 2px; font-weight: 700; }
+    .sa_pv_short { font-size: 18px; font-weight: 700; line-height: 1.35; margin-bottom: 12px; }
+    .sa_pv_phone { max-width: 460px; margin: 0 auto 14px; border-radius: 16px; overflow: hidden; background: #efeae2; color: #1b2327; box-shadow: 0 2px 10px rgba(0, 0, 0, .18); }
+    .sa_pv_head {
+        display: flex; align-items: center; gap: 10px; background: #0b5d52; color: #fff; padding: 10px 14px;
+        i { width: 34px; height: 34px; border-radius: 50%; background: #cfe9e4; flex: none; }
+        b { display: block; font-size: 15px; line-height: 1.2; }
+        small { opacity: .85; }
+    }
+    .sa_pv_chat { display: flex; flex-direction: column; gap: 8px; padding: 14px 12px 18px; }
+    .sa_pv_bub {
+        align-self: flex-start; max-width: 82%; background: #fff; border-radius: 0 10px 10px 10px; padding: 7px 12px 8px; font-size: 15px;
+        overflow-wrap: anywhere; white-space: pre-line; box-shadow: 0 1px 1px rgba(0, 0, 0, .13);
+        b { display: block; font-size: 12px; color: #1f6fb2; }
+    }
+    .sa_pv_v b { color: #a35b00; }
+    .sa_pv_b, .sa_pv_k { align-self: flex-end; background: #d9fdd3; border-radius: 10px 0 10px 10px; b { color: #1c7a45; } }
+    .sa_pv_note {
+        align-self: center; max-width: 92%; background: #fff8dc; color: #54490f; border-radius: 8px; padding: 4px 12px; font-size: 13px; text-align: center; overflow-wrap: anywhere;
+    }
+    .sa_pv_you { background: #ffd9a8; color: #5c3200; font-weight: 700; }
+    .sa_pv_result {
+        max-width: 460px; margin: 0 auto 14px; background: $o-view-background-color; border: 2px solid #1c7a45; border-radius: 12px; padding: 10px 14px;
+        > b { display: block; margin-bottom: 6px; }
+    }
+    .sa_pv_big {
+        display: grid; grid-template-columns: repeat(auto-fit, minmax(105px, 1fr)); gap: 8px; text-align: center;
+        span { display: block; color: $text-muted; font-size: 12px; }
+        strong { font-size: 18px; }
+        .sa_pv_earn strong { color: #1c7a45; }
+    }
+    .sa_pv_all {
+        border-top: 1px solid $border-color; padding-top: 8px;
+        > summary { cursor: pointer; font-weight: 700; padding: 6px 0; }
+    }
+    .sa_pv_tag { display: inline-block; border-radius: 99px; padding: 1px 10px; margin-right: 8px; background: $o-gray-200; overflow-wrap: anywhere; }
+    .sa_pv_on { background: #1c7a45; color: #fff; }
+    .sa_pv_off { background: #8a929b; color: #fff; }
+    dd > span { display: block; margin-top: 3px; }
+}
+@media (max-width: 991px) {
+    .sa_two_sides { grid-template-columns: minmax(0, 1fr); }
+    .sa_two_sides .sa_side_right { position: static; }
+    .sa_pv { max-height: none; }
+}

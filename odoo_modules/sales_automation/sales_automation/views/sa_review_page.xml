@@ -49,6 +49,7 @@
                                 </div>
                             </form>
                         </t>
+                        <t t-if="close" t-out="close"/>
                     </div>
                 </div>
             </div>

@@ -1,6 +1,6 @@
 {
     'name': 'Sales Automation (WhatsApp Groups)',
-    'version': '19.0.173.40.0',
+    'version': '19.0.173.50.0',
     'category': 'Sales',
     'summary': 'Turn WhatsApp group enquiries into sale orders',
     'description': """
@@ -60,6 +60,12 @@
         'data/ir_cron.xml',
     ],
     'assets': {
+        'web.assets_backend': [
+            'sales_automation/static/src/preview/preview_text.js',
+            'sales_automation/static/src/preview/live_preview.js',
+            'sales_automation/static/src/preview/live_preview.xml',
+            'sales_automation/static/src/preview/live_preview.scss',
+        ],
         # the customer's order page (views/sa_portal_brand.xml); every rule
         # sits under .sa-page, so the rest of the website is untouched
         'web.assets_frontend': [

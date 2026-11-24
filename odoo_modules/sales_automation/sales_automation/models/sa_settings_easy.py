@@ -11,11 +11,17 @@ DAY = 24 * 60
 class SaAiSettingsEasy(models.Model):
     _inherit = 'sa.ai.settings'
 
+    @api.depends_context('sa_page')
+    def _compute_display_name(self):
+        """The page's own name, not the AI provider's (24 Nov 2026)."""
+        for rec in self:
+            rec.display_name = self.env.context.get('sa_page') or _("Settings")
+
     easy_example = fields.Text(compute='_compute_easy_example')
     easy_vendors = fields.Text(compute='_compute_easy_vendors')
 
-    @api.depends('margin_percent', 'sourcing_window_minutes', 'price_approval_enabled', 'price_approval_tolerance_percent',
-                 'customer_reply_minutes', 'pay_remind_minutes', 'pay_remind_max')
+    @api.depends('vendor_choice_mode', 'margin_percent', 'sourcing_window_minutes', 'price_approval_enabled', 'price_approval_tolerance_percent',
+                 'margin_rules_enabled', 'margin_rules_by', 'customer_reply_minutes', 'pay_remind_minutes', 'pay_remind_max')
     def _compute_easy_example(self):
         money = self.env.company.currency_id.name or ''
         for rec in self:
@@ -23,9 +29,14 @@ class SaAiSettingsEasy(models.Model):
             lines = [
                 _("1. A customer asks for a product that is not in stock. Every vendor of its category is asked."),
                 _("2. We wait up to %s minutes. When every vendor has answered we go on at once.", rec.sourcing_window_minutes or 10),
-                _("3. Vendor A says 110 %(m)s, vendor B says 100 %(m)s. The lowest is taken: 100 %(m)s.", m=money),
+                _("3. Vendor A says 110 %(m)s, vendor B says 100 %(m)s. You choose on Store > Enquiries, for example 100 %(m)s.", m=money)
+                if rec.vendor_choice_mode == 'manual' else
+                _("3. Vendor A says 110 %(m)s, vendor B says 100 %(m)s. The lowest is taken: 100 %(m)s. The same price: who answered first.", m=money),
                 _("4. Your margin of %(p)s%% is added: %(sell).2f %(m)s.", p='%g' % (rec.margin_percent or 0.0), sell=sell, m=money),
             ]
+            if rec.margin_rules_enabled:
+                lines[-1] += ' ' + (_("A group with an own margin gets its own.") if rec.margin_rules_by == 'group'
+                                    else _("A category with an own margin gets its own."))
             if rec.price_approval_enabled:
                 tolerance = rec.price_approval_tolerance_percent or 0.0
                 lines.append(_("5. The product page has another price? You choose on Store > Enquiries before the customer is told.")
@@ -63,7 +74,7 @@ class SaAiSettingsEasy(models.Model):
             out.append(_("Your margin: type 0 to 500 percent."))
         if {'margin_percent', 'min_margin_percent'} & names and self.bargain_enabled \
                 and self.min_margin_percent > self.margin_percent:
-            out.append(_("Your margin (%(a)s%%) is below the Lowest Margin of the Bargaining page (%(b)s%%).",
+            out.append(_("Your margin (%(a)s%%) is below the Lowest Margin When Bargaining (%(b)s%%).",
                          a='%g' % self.margin_percent, b='%g' % self.min_margin_percent))
         if 'price_approval_tolerance_percent' in names and not 0 <= self.price_approval_tolerance_percent <= 100:
             out.append(_("Ignore small differences: type 0 to 100 percent."))

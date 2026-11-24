@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="sales_automation.SaLivePreview">
+        <div class="sa_pv" t-ref="root">
+            <div class="sa_pv_bar"><b>Live preview</b> <span>This is what happens now</span></div>
+            <div class="sa_pv_body" t-ref="body">
+                <div t-if="page === 'margin'" class="sa_pv_try">
+                    <label>The vendor asks
+                        <input type="number" min="0" class="o_input" t-att-value="state.cost" t-on-input="(ev) => this.onNumber('cost', ev)"/></label>
+                    <label>Price on the product page (0: none)
+                        <input type="number" min="0" class="o_input" t-att-value="state.page" t-on-input="(ev) => this.onNumber('page', ev)"/></label>
+                    <label t-if="rules.length">Try it for
+                        <select class="o_input" t-on-change="onPick">
+                            <option t-foreach="rules" t-as="r" t-key="r_index" t-att-value="r_index" t-att-selected="r_index === state.pick"><t t-esc="r.name"/></option>
+                            <option t-att-value="rules.length" t-att-selected="state.pick >= rules.length">Everything else</option>
+                        </select></label>
+                </div>
+                <div t-out="html" t-on-click="onFold"/>
+            </div>
+        </div>
+    </t>
+</templates>

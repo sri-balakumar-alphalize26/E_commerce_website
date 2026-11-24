@@ -4263,8 +4263,7 @@ class SaGroupRequest(models.Model):
         priced = self._sa_priced(product)
         page = self._catalog_price(priced, self._is_existing_contact(
             self.conversation_id))
-        margin = settings.margin_percent or 0.0
-        vendor_sell = (quote.price or 0.0) * (1.0 + margin / 100.0)
+        vendor_sell = settings._sa_sell(quote.price, self._sa_margin())
         if page <= 0:
             return None
         tolerance = (getattr(settings, 'price_approval_tolerance_percent', 0.0) or 0.0)
@@ -4364,8 +4363,7 @@ class SaGroupRequest(models.Model):
         """Cost + margin - or the selling price the counter approved -
         posted where the group was configured to see it."""
         self.ensure_one()
-        margin = self.env['sa.ai.settings'].sudo().get_settings().margin_percent or 0.0
-        price = float(sell) if sell else cost * (1.0 + margin / 100.0)
+        price = float(sell) if sell else self._settings()._sa_sell(cost, self._sa_margin())
         self.quoted_price = price
 
         # A vendor who said nothing about timing leaves `delay` at 0, and so

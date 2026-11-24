@@ -17,6 +17,7 @@ import logging
 from odoo import _, http
 from odoo.http import request
 
+from .close_timer import CLOSE_TIMER
 from .link_expired import expired_page
 
 _logger = logging.getLogger(__name__)
@@ -57,6 +58,16 @@ background:#fff;user-select:none}
 .spot{border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;display:flex;align-items:center;gap:12px}
 .spot .ic{width:40px;height:40px;border-radius:50%;background:var(--bg);display:grid;place-items:center;flex:none;color:var(--muted)}
 .spot .ic.on{background:var(--blue-soft);color:var(--blue)}
+.spot .ic:not(.on),.locno i{background:#b45309;color:#fff}.spot .ic:not(.on) svg{display:none}
+.spot .ic:not(.on)::before{content:"!";font-size:21px;font-weight:800}
+.locno{display:flex;gap:12px;align-items:center;text-align:left;background:#fff7ed;border:1px solid #fed7aa;border-radius:14px;padding:12px 14px;margin:0 0 14px}
+.locno i{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-weight:800;font-size:18px;flex:none}
+.locno b{display:block;font-size:15px}.locno small{color:#7c5a3a;font-size:13px}
+.card.done{padding:0;overflow:hidden;border:0;border-radius:24px;max-width:480px;margin-left:auto;margin-right:auto;box-shadow:0 24px 60px -28px rgba(16,40,28,.45),0 2px 8px rgba(16,40,28,.06)}
+.card.done .top{color:#fff;background:linear-gradient(150deg,#1f9a52,#12693a);padding:34px 24px 28px}
+.card.done .top i{width:72px;height:72px;border-radius:50%;background:#fff;color:#17703a;display:grid;place-items:center;margin:4px auto 14px;box-shadow:0 0 0 9px rgba(255,255,255,.2)}
+.card.done .top h1{margin:0;font-size:23px}.card.done .in{padding:22px}.card.done .in p{margin:0 0 14px;line-height:1.5}
+.card.done .in .addr{margin:0 0 14px}.card.done .go{background:#f0f8f3;color:#17703a;font-weight:600;border-radius:14px;padding:12px 14px;font-size:15px}
 .spot .ic svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2}
 .spot .t{flex:1}.spot .t b{display:block;font-size:15px}.spot .t span{color:var(--muted);font-size:13px}
 .btn{appearance:none;border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:12px;padding:11px 16px;
@@ -144,21 +155,18 @@ def _back_label(link):
 
 
 def _back_html(link):
-    """The button back: to the order (opened from its sign page) or to the
-    group by its invite link. No link: only the words - never a private chat
-    with the shop's number (owner, 23 Nov 2026)."""
+    """Back to the order is a button (opened from its sign page: there is still
+    something to do). To the group only the words (owner, 24 Nov 2026)."""
     url = _back_url(link)
     if link.back == 'page':
         return '<a class="btn primary wide" href="%s" data-sa-back="1">%s</a>' % (_e(url), _e(_back_label(link)))
-    if url.startswith('https://chat.whatsapp.com/'):
-        return '<a class="btn primary wide" href="%s">%s</a>' % (_e(url), _e(_back_label(link)))
     name = (link.request_id.sudo().group_id.name or '').strip()[:40]
-    return '<p class="muted">%s</p>' % (
+    return '<p class="go">%s</p>' % (
         _e(_("Go back to the %s group in WhatsApp.", name)) if name else _e(_("Go back to the group in WhatsApp.")))
 
 
 def _gone(link):
-    body = ('<div class="card done"><div class="big">&#8987;</div><h1>%s</h1><p class="muted">%s</p>%s</div>') % (
+    body = ('<div class="card done"><div class="in"><div class="big">&#8987;</div><h1>%s</h1><p class="muted">%s</p>%s</div></div>') % (
         _e(_("This link can't be used any more")),
         _e(_("It was already used, it expired, or the address was given in the group.")),
         _back_html(link))
@@ -166,20 +174,34 @@ def _gone(link):
                  script=_BACK_JS if link.back == 'page' else '')
 
 
-def _saved(link):
+def _next_html(link):
+    """What comes after the address, when it is the signature (24 Nov 2026)."""
+    order = link.order_id.sudo()
+    if link.mode == 'edit' or link.back == 'page' or not order or order.signed_on or not order._has_to_be_signed():
+        return ''
+    return '<p>%s</p>' % _e(_("Next: check your order and sign it. The link is sent to you in WhatsApp."))
+
+
+def _saved(link, just=False):
     addr = link.address_id.sudo()
     text = addr._sa_addr_title() if addr else ''
     has_pin = bool(addr and (addr.partner_latitude or addr.partner_longitude))
     # owner, 21 Nov 2026: a button back to the group instead of a line of text
-    body = ('<div class="card done"><div class="big green">&#10004;</div><h1>%(t)s</h1>'
-            '<div class="addr">%(addr)s\n&#128506; %(loc)s</div>'
-            '%(back)s'
-            '<p class="muted" style="margin-top:14px">%(once)s</p></div>') % {
+    body = ('<div class="card done"><div class="top"><i><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+            'stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></i><h1>%(t)s</h1></div>'
+            '<div class="in"><div class="addr">%(addr)s</div>%(loc)s'
+            '%(next)s%(back)s'
+            '<p class="muted" style="margin-top:14px">%(once)s</p></div></div>') % {
+        'next': _next_html(link),
         't': _e(_("Address updated") if link.mode == 'edit' else _("Address saved")), 'addr': _e(text),
-        'loc': _e(_("Location on map: set") if has_pin else _("Location on map: not set")),
+        'loc': ('<p class="muted">&#128506; %s</p>' % _e(_("Location on map: set"))) if has_pin else (
+            '<div class="locno"><i aria-hidden="true">!</i><span><b>%s</b><small>%s</small></span></div>' % (
+                _e(_("Location not added")), _e(_("The rider has only the address to find your door.")))),
         'back': _back_html(link),
         'once': _e(_("This link can't be used again.")),
     }
+    if just and link.back != 'page':
+        body += '<div style="margin-top:18px">%s</div>' % CLOSE_TIMER
     return _page(_("Address updated") if link.mode == 'edit' else _("Address saved"), body,
                  ref='#%s' % link.request_id.sudo()._sa_book_ref())
 
@@ -217,7 +239,7 @@ class SaAddressLinkPage(http.Controller):
                 request.env.cr.rollback()
                 errors = {'form': _("Could not save that address. Try again.")}
             if not errors:
-                return request.redirect(_back_url(link)) if link.back == 'page' else _saved(link)
+                return request.redirect(_back_url(link)) if link.back == 'page' else _saved(link, just=True)
         else:
             link._note_open()
         return self._form(link, post if errors else {}, errors)
@@ -358,9 +380,9 @@ class SaAddressLinkPage(http.Controller):
             'bad_state': bad('state'), 'err_state': err('state'),
             'landmark': text('landmark', _("Landmark (optional)"), span=True),
             'spot_on': ' on' if has_pin else '', 'pin_svg': PIN_SVG,
-            't_spot': _e(_("Location on map is set") if has_pin else _("Location on map")),
+            't_spot': _e(_("Location on map is set") if has_pin else _("Location not added")),
             't_spot_sub': _e(_("Riders use this pin to find you.") if has_pin else
-                             _("Optional, but it shows if Quick delivery reaches you and helps the rider find you.")),
+                             _("Add it so the rider finds your door.")),
             't_pick': _e(_("Change") if has_pin else _("Pick on map")),
             't_door': _e(_("Put the pin on your door.")),
             't_drag': _e(_("Drag the map; the pin stays in the middle.")),

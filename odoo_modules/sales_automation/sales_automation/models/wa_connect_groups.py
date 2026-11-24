@@ -27,10 +27,11 @@ class WhatsAppConnectGroups(models.AbstractModel):
             session.action_sa_sync_groups()
         except UserError as err:            # what was read before is still listed
             error = self._last_line(err)
-        taken = {g.group_jid: g.session_id.name for g in Group.search(
+        taken = {g.group_jid: g for g in Group.search(
             [('enabled', '=', True), ('session_id', '!=', session.id), ('session_id.active', '=', True)])}
-        rows = [{'id': g.id, 'name': g.name or g.group_jid, 'members': g.member_count,
-                 'enabled': g.enabled, 'taken': taken.get(g.group_jid, '') if not g.enabled else ''}
+        rows = [{'id': g.id, 'name': g.name or g.group_jid, 'members': g.member_count, 'enabled': g.enabled,
+                 'taken': taken[g.group_jid].session_id.name if g.group_jid in taken and not g.enabled else '',
+                 'used_by': g._sa_owner_text(taken[g.group_jid]) if g.group_jid in taken and not g.enabled else ''}
                 for g in Group.search([('session_id', '=', session.id), ('group_type', '=', 'customer')], order='name')]
         return {'available': True, 'groups': rows, 'error': error if not rows or error else ''}
 
@@ -41,7 +42,7 @@ class WhatsAppConnectGroups(models.AbstractModel):
         Group = self.env['sa.sales.group'].sudo()
         chosen = Group.search([('id', 'in', [int(i) for i in group_ids or []]), ('session_id', '=', session.id),
                                ('group_type', '=', 'customer')])
-        employee = self.env['wa.employee.session'].sudo().search([('session_id', '=', session.id)], limit=1)
+        employee = self.env['wa.employee.session'].sudo().search([('session_id', '=', session.id), ('active', '=', True)], limit=1)
         # only those not on yet get the company: one set by hand stays
         for group in chosen.filtered(lambda g: not g.enabled):
             values = {'enabled': True, 'company_id': session.company_id.id}
@@ -73,6 +74,23 @@ class WhatsAppSessionGroupList(models.Model):
     _inherit = 'whatsapp.session'
 
     sa_group_ids = fields.One2many('sa.sales.group', 'session_id', string='WhatsApp Groups')
+    sa_group_on_ids = fields.One2many('sa.sales.group', 'session_id', string='Groups that are on',
+                                      domain=[('enabled', '=', True)])
+
+    def action_sa_groups_on(self):
+        self.ensure_one()
+        action = self.env['ir.actions.act_window']._for_xml_id('sales_automation.action_sa_sales_group')
+        return dict(action, name=_("Groups on - %s", self.name), context={},
+                    domain=[('session_id', '=', self.id), ('enabled', '=', True)])
+
+
+class SalesGroupSwitch(models.Model):
+    _inherit = 'sa.sales.group'
+
+    def action_sa_switch_off(self):
+        """The switch beside a group on the number's page (managers)."""
+        self.write({'enabled': False})
+        return {'type': 'ir.actions.client', 'tag': 'soft_reload'}
 
 
 class SalesGroupOnce(models.Model):
@@ -80,6 +98,45 @@ class SalesGroupOnce(models.Model):
 
     sa_paused = fields.Boolean('On again with its number', readonly=True, copy=False,
                                help="Its WhatsApp number was turned off while this group was on.")
+    used_by_text = fields.Char('Used by', compute='_compute_used_by', compute_sudo=True)
+    used_by_id = fields.Many2one('sa.sales.group', compute='_compute_used_by', compute_sudo=True)
+
+    # ------------------------------------------------------------ whose group it is
+    def _sa_other_owner(self):
+        """The same WhatsApp group, on for another number that is on."""
+        self.ensure_one()
+        if not self.group_jid:
+            return self.browse()
+        return self.sudo().search([
+            ('id', '!=', self._origin.id or self.id), ('group_jid', '=', self.group_jid), ('enabled', '=', True),
+            ('session_id', '!=', self.session_id.id), ('session_id.active', '=', True)], limit=1)
+
+    def _sa_owner_text(self, other):
+        """What to tell about it. The number of another company is not named."""
+        session = other.session_id.sudo()
+        company = session.company_id
+        if company and company not in self.env.companies:
+            who = _("another number")
+        else:
+            pretty = self.env['whatsapp.connect'].sudo()._pretty(session.authorized_number) if session.authorized_number else ''
+            who = session.name if not pretty or pretty == session.name else '%s (%s)' % (session.name, pretty)
+        if session.status != 'connected':
+            who = _("%s, offline", who)
+        return _("Already connected with %s. Turn it off there, then turn it on here to reply to customers.", who)
+
+    @api.depends('group_jid', 'enabled', 'session_id', 'session_id.active')
+    @api.depends_context('allowed_company_ids')
+    def _compute_used_by(self):
+        for rec in self:
+            other = rec._sa_other_owner()
+            rec.used_by_text = rec._sa_owner_text(other) if other else False
+            rec.used_by_id = other
+
+    def action_sa_open_owner(self):
+        self.ensure_one()
+        other = self._sa_other_owner()
+        return {'type': 'ir.actions.act_window', 'res_model': 'sa.sales.group', 'res_id': other.id, 'view_mode': 'form',
+                'name': other.name} if other else False
 
     @api.constrains('enabled', 'group_jid', 'session_id', 'active')
     def _check_one_number_per_group(self):
@@ -87,12 +144,12 @@ class SalesGroupOnce(models.Model):
         for rec in self:
             if not (rec.enabled and rec.active):
                 continue
-            other = self.sudo().search([
-                ('id', '!=', rec.id), ('group_jid', '=', rec.group_jid), ('enabled', '=', True),
-                ('session_id', '!=', rec.session_id.id), ('session_id.active', '=', True)], limit=1)
+            # two people at the same moment: the second one waits and is tried again
+            self.env.flush_all()
+            self.env.cr.execute('SELECT id FROM sa_sales_group WHERE group_jid = %s ORDER BY id FOR UPDATE', [rec.group_jid or ''])
+            other = rec._sa_other_owner()
             if other:
-                raise ValidationError(_("'%(group)s' is already on in session '%(session)s'. Switch it off there first.",
-                                        group=rec.name, session=other.session_id.name))
+                raise ValidationError('%s: %s' % (rec.name, rec._sa_owner_text(other)))
 
 
 class WhatsAppSessionGroups(models.Model):
@@ -201,7 +258,7 @@ class WhatsAppSessionGroups(models.Model):
 
     def _sa_offline_activities(self):
         self.ensure_one()
-        link = self.env['wa.employee.session'].sudo().search([('session_id', '=', self.id)], limit=1)
+        link = self.env['wa.employee.session'].sudo().search([('session_id', '=', self.id), ('active', '=', True)], limit=1)
         if not link:
             return self.env['mail.activity'].sudo()
         return self.env['mail.activity'].sudo().search([
@@ -212,7 +269,7 @@ class WhatsAppSessionGroups(models.Model):
         """A to-do for its employee and the managers, and a notice on their
         screens. Never by WhatsApp or e-mail: either may be what is down."""
         self.ensure_one()
-        link = self.env['wa.employee.session'].sudo().search([('session_id', '=', self.id)], limit=1)
+        link = self.env['wa.employee.session'].sudo().search([('session_id', '=', self.id), ('active', '=', True)], limit=1)
         managers = self.env.ref('sales_automation.group_sa_manager', raise_if_not_found=False)
         users = link.employee_id.user_id
         if managers:

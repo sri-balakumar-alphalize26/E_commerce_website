@@ -202,10 +202,14 @@ class SaGroupRequestPrivateLinks(models.Model):
         phone = self._sa_private_target()
         if not phone:
             return False
-        if not self.env['sa.outbox.guard'].sudo().claim('priv|%s|%s' % (phone, body), 300):
-            return True     # the same message went privately moments ago
+        # an order accepted again asks again: a shorter window (D8LR, 24 Nov 2026)
+        window = self.env.context.get('sa_private_window')
+        if not self.env['sa.outbox.guard'].sudo().claim('priv|%s|%s' % (phone, body), window or 300):
+            _logger.info("Sales Automation: enquiry %s - the same private message went moments ago, not sent again", self.id)
+            return True
         try:
-            sent = self.group_id.session_id.send_message(phone, body + self._sa_private_footer())
+            text = body + self._sa_private_footer()
+            sent = self._sa_send_once_more(phone, text, '') if window else self.group_id.session_id.send_message(phone, text)
         except Exception as err:  # noqa: BLE001 - the group gets it instead
             _logger.info("Sales Automation: enquiry %s - private message refused: %s", self.id, err)
             sent = False

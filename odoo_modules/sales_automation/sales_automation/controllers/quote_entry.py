@@ -48,8 +48,7 @@ class SaQuoteEntry(http.Controller):
             'name': (product.name or enquiry.ai_search_term
                      or enquiry.raw_text or ''),
             'vendors': vendors,
-            'margin': request.env['sa.ai.settings'].sudo(
-                ).get_settings().margin_percent or 0.0,
+            'margin': enquiry._sa_margin(),
             'currency': enquiry.currency_id.name or '',
             'error': '',
         }
@@ -109,8 +108,7 @@ class SaQuoteEntry(http.Controller):
                 'sales_automation.sa_quote_entry_page',
                 self._values(enquiry, token,
                              error=_("Type the price as a number, like 500.")))
-        margin = request.env['sa.ai.settings'].sudo(
-            ).get_settings().margin_percent or 0.0
+        margin = enquiry._sa_margin()
         vendor = request.env['res.partner'].sudo().browse(
             int(kw['vendor_id'])) if (kw.get('vendor_id') or '').isdigit() \
             else request.env['res.partner']
