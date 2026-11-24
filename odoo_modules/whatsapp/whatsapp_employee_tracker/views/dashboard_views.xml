@@ -8,11 +8,13 @@
         <field name="name">wa.employee.session.kanban</field>
         <field name="model">wa.employee.session</field>
         <field name="arch" type="xml">
-            <kanban class="o_kanban_mobile" sample="1" action="action_open_chats" type="object">
+            <kanban class="o_kanban_mobile" js_class="wa_dashboard_kanban" sample="1" action="action_open_chats" type="object">
                 <field name="employee_id"/>
                 <field name="department_id"/>
                 <field name="phone_number"/>
                 <field name="session_status"/>
+                <field name="active"/>
+                <field name="until"/>
                 <field name="monitoring_enabled"/>
                 <field name="total_messages"/>
                 <field name="total_sent"/>
@@ -36,7 +38,8 @@
                                         <div class="text-muted small"><field name="department_id"/></div>
                                     </div>
                                 </div>
-                                <span t-if="record.session_status.raw_value == 'connected'" class="badge rounded-pill bg-success">Online</span>
+                                <span t-if="!record.active.raw_value" class="badge rounded-pill bg-secondary">Old number</span>
+                                <span t-elif="record.session_status.raw_value == 'connected'" class="badge rounded-pill bg-success">Online</span>
                                 <span t-elif="record.session_status.raw_value == 'disconnected'" class="badge rounded-pill bg-danger">Offline</span>
                                 <span t-else="" class="badge rounded-pill bg-warning">Waiting</span>
                             </div>
@@ -45,6 +48,7 @@
                             <div class="text-muted small mb-2">
                                 <i class="fa fa-whatsapp text-success me-1"/>
                                 <field name="phone_number"/>
+                                <span t-if="!record.active.raw_value and record.until.raw_value" class="ms-1">until <field name="until" widget="date"/></span>
                             </div>
 
                             <!-- Stats Row 1: Messages -->
