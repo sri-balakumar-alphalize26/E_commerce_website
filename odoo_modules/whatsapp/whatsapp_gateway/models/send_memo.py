@@ -18,6 +18,7 @@ class SendMemo:
     def __init__(self):
         self.sent, self.used = {}, {}
         self.made, self.at = {}, {}
+        self.rows = {}        # message rows written outside the transaction
         self.attempt = 0
 
     def again(self):

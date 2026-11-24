@@ -19,6 +19,20 @@
                     <b>Groups, customers, orders, invoices and messages stay.</b>
                     Connect the same number again later and its history is there.</p>
                 </div>
+                <field name="shared" invisible="1"/>
+                <div invisible="do != 'restart'"><p>It connects again. No new scan while the phone is still linked.</p></div>
+                <div invisible="do != 'unlink'" class="alert alert-danger" role="alert">
+                    <b>This logs the phone out.</b> The QR has to be scanned again. Until then nothing is sent or answered.
+                </div>
+                <div invisible="do != 'reset'" class="alert alert-danger" role="alert">
+                    <b>This throws the connection away and makes it new.</b> The QR has to be scanned again. Until then nothing
+                    is sent or answered. <b>The phone's older chats and groups in Chat View can be lost.</b>
+                </div>
+                <p invisible="do != 'reset'">Only when Restart and Unlink do not help. <b>Chats, orders and messages in Odoo stay.</b></p>
+                <group invisible="do not in ('unlink', 'reset')"><field name="last_digits" placeholder="0000"/></group>
+                <div class="alert alert-danger" role="alert" invisible="not shared or do not in ('restart', 'unlink', 'reset')">
+                    <field name="shared" readonly="1" nolabel="1" class="oe_inline"/> other database(s) use this number too: it is the same for them.
+                </div>
                 <div class="alert alert-warning" role="status" invisible="not open_text">
                     Open now: <b><field name="open_text" readonly="1" nolabel="1" class="oe_inline"/></b>
                 </div>
@@ -26,9 +40,51 @@
                     <button name="action_do" type="object" string="Turn off" class="btn-primary" invisible="do != 'off'"/>
                     <button name="action_do" type="object" string="Turn on" class="btn-primary" invisible="do != 'on'"/>
                     <button name="action_do" type="object" string="Remove" class="btn-danger" invisible="do != 'remove'"/>
+                    <button name="action_do" type="object" string="Restart" class="btn-primary" invisible="do != 'restart'"/>
+                    <button name="action_do" type="object" string="Unlink phone" class="btn-danger" invisible="do != 'unlink'"/>
+                    <button name="action_do" type="object" string="Full reset" class="btn-danger" invisible="do != 'reset'"/>
                     <button string="Cancel" class="btn-secondary" special="cancel"/>
                 </footer>
             </form>
+        </field>
+    </record>
+
+    <record id="view_whatsapp_number_panel_form" model="ir.ui.view">
+        <field name="name">whatsapp.number.panel.form</field>
+        <field name="model">whatsapp.number.panel</field>
+        <field name="arch" type="xml">
+            <form string="WhatsApp panel">
+                <field name="what" invisible="1"/>
+                <div class="text-muted mb-2"><field name="used_text" readonly="1" nolabel="1"/></div>
+                <div invisible="what != 'footer'">
+                    <p>Under each message: "Please do not reply", the company name and the support number. Off: messages go exactly as Odoo wrote them.</p>
+                    <group>
+                        <field name="footer_on" widget="boolean_toggle"/>
+                        <field name="footer_name"/>
+                        <field name="footer_phone" placeholder="+971 50 123 4567"/>
+                    </group>
+                </div>
+                <field name="activity" readonly="1" nolabel="1" invisible="what != 'activity'"/>
+                <footer>
+                    <button name="action_save" type="object" string="Save" class="btn-primary" invisible="what != 'footer'"/>
+                    <button string="Close" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_whatsapp_session_form_panel" model="ir.ui.view">
+        <field name="name">whatsapp.session.form.panel</field>
+        <field name="model">whatsapp.session</field>
+        <field name="inherit_id" ref="whatsapp_gateway.view_whatsapp_session_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header/field[@name='status']" position="before">
+                <button name="action_restart_number" type="object" string="Restart" groups="base.group_system" invisible="not id or not active"/>
+                <button name="action_unlink_phone" type="object" string="Unlink phone" groups="base.group_system" invisible="not id or not active"/>
+                <button name="action_reset_number" type="object" string="Full reset" groups="base.group_system" invisible="not id or not active"/>
+                <button name="action_message_footer" type="object" string="Message footer" groups="base.group_system" invisible="not id or not active"/>
+                <button name="action_panel_activity" type="object" string="Activity" groups="base.group_system" invisible="not id or not active"/>
+            </xpath>
         </field>
     </record>
 </odoo>

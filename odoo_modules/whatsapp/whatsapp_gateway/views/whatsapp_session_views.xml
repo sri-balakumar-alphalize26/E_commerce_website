@@ -14,7 +14,8 @@
                     <button name="action_test_connection"
                             string="Test Connection"
                             type="object"
-                            class="btn-primary"/>
+                            class="btn-primary"
+                            invisible="status not in ('connected', 'error')"/>
                     <button name="action_connect_screen"
                             string="Scan QR"
                             type="object"
@@ -25,6 +26,7 @@
                             string="Load Settings"
                             type="object"
                             class="btn-secondary"
+                            invisible="status != 'connected'"
                             help="Ask the panel which number and name this database should use."/>
                     <field name="status" widget="statusbar"
                            statusbar_visible="disconnected,connecting,connected,wrong_number"/>
@@ -47,16 +49,33 @@
                                    placeholder="e.g. Company WhatsApp"/>
                         </h1>
                     </div>
-                    <div invisible="not id or not active or not setup_next" class="alert alert-info" role="status">
+                    <div name="number_facts"/>
+                    <!-- one line for "not linked": the steps are shown for what else is missing -->
+                    <div invisible="not id or not active or not setup_next or setup_next == 'phone'" class="alert alert-info" role="status">
                         <field name="setup_next" invisible="1"/>
                         <field name="setup_text" readonly="1" nolabel="1"/>
                         <div name="setup_buttons" class="mt-2">
                             <button name="action_fetch_config" type="object" string="Load Settings"
                                     class="btn-primary" invisible="setup_next != 'settings'"/>
-                            <button name="action_connect_screen" type="object" string="Scan QR"
-                                    class="btn-primary" invisible="setup_next != 'phone'"
-                                    groups="base.group_system"/>
                         </div>
+                    </div>
+                    <div invisible="status != 'wrong_number'" class="alert alert-danger" role="alert">
+                        <b>Wrong phone.</b> It was logged out again. Scan with
+                        <field name="shown_number" readonly="1" nolabel="1" class="oe_inline"/>.
+                    </div>
+                    <div invisible="not id or not active or status in ('connected', 'wrong_number', 'error') or setup_next in ('key', 'settings')"
+                         class="alert alert-warning" role="alert">
+                        <b>Not linked.</b> Scan with
+                        <field name="shown_number" readonly="1" nolabel="1" class="oe_inline"/>.
+                        <div invisible="not error_message"><field name="error_message" readonly="1" nolabel="1"/></div>
+                    </div>
+                    <div invisible="status != 'error' and (not error_message or status in ('disconnected', 'connecting', 'waiting_qr'))"
+                         class="alert alert-danger" role="alert">
+                        <span invisible="error_message">The WhatsApp panel cannot be reached.</span>
+                        <field name="error_message" readonly="1" nolabel="1"/>
+                    </div>
+                    <div invisible="not number_mismatch" class="alert alert-warning" role="alert" groups="base.group_system">
+                        <field name="number_mismatch" readonly="1" nolabel="1"/>
                     </div>
                     <div invisible="not waiting_count" class="alert alert-warning" role="status">
                         <field name="waiting_count" invisible="1"/>
@@ -65,55 +84,54 @@
                                 class="btn-secondary ms-2" groups="base.group_system"
                                 confirm="These messages will never be sent. They stay in the list as failed. Go on?"/>
                     </div>
-                    <group>
-                        <group string="Connection">
-                            <field name="is_activated" widget="boolean_toggle" readonly="1"/>
-                            <field name="gateway_api_key" password="True"
-                                   string="Setup Key" groups="base.group_system"
-                                   placeholder="wa1_... paste from the panel and save"/>
-                            <field name="gateway_url" readonly="1" groups="base.group_system"/>
-                            <field name="instance_name" readonly="1" groups="base.group_system"/>
-                            <field name="phone_number" readonly="1" groups="base.group_system"/>
-                            <field name="authorized_number" readonly="1"/>
-                            <field name="authorized_email" readonly="1"/>
-                        </group>
-                        <group string="Channels">
-                            <field name="use_whatsapp"/>
-                            <field name="use_email"/>
-                            <field name="route_odoo_mail" groups="base.group_system"/>
-                            <field name="tenant_label" readonly="1"/>
-                            <field name="company_id" groups="base.group_multi_company"/>
-                            <field name="active" invisible="1"/>
-                        </group>
-                    </group>
-
-                    <div invisible="status != 'wrong_number'"
-                         class="alert alert-danger mt-3" role="alert">
-                        <b>Wrong phone.</b>
-                        The QR was scanned with a phone other than
-                        <field name="authorized_number" readonly="1" nolabel="1"
-                               class="oe_inline"/>, the only number the panel
-                        allows for this database, so it was logged out again.
-                        Press <b>Scan QR</b> and scan with the right phone.
-                    </div>
-                    <div invisible="status in ('connected', 'wrong_number')"
-                         class="alert alert-warning mt-3" role="alert">
-                        <b>Not sending.</b>
-                        The gateway is unreachable, no number is assigned to this
-                        database, or the number
-                        <field name="authorized_number" readonly="1" nolabel="1"
-                               class="oe_inline"/>
-                        has not been paired. Press <b>Scan QR</b> and scan with
-                        that phone.
-                    </div>
-
-                    <div invisible="not error_message"
-                         class="alert alert-danger mt-3" role="alert">
-                        <field name="error_message" readonly="1" nolabel="1"/>
-                    </div>
 
                     <notebook>
-                        <page string="Protecting the Number" name="policy" groups="base.group_system">
+                        <page string="General" name="general">
+                            <group>
+                                <group string="Number">
+                                    <!-- a new one starts with its key; afterwards it is in Technical -->
+                                    <field name="gateway_api_key" password="True"
+                                           string="Setup Key" groups="base.group_system"
+                                           invisible="id and setup_next != 'key'"
+                                           placeholder="wa1_... paste from the panel and save"/>
+                                    <field name="shown_number" string="Number" readonly="1" invisible="not id"/>
+                                    <field name="company_id" groups="base.group_multi_company"/>
+                                    <field name="active" invisible="1"/>
+                                </group>
+                                <group string="Channels">
+                                    <field name="use_whatsapp"/>
+                                    <field name="use_email"/>
+                                    <field name="route_odoo_mail" groups="base.group_system"/>
+                                </group>
+                            </group>
+                            <div name="general_more"/>
+                            <separator string="Messages"/>
+                            <field name="message_ids" readonly="1">
+                                <list>
+                                    <field name="create_date" string="Time"/>
+                                    <field name="direction"/>
+                                    <field name="phone"/>
+                                    <field name="partner_id"/>
+                                    <field name="message"/>
+                                    <field name="status" widget="badge"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Technical" name="technical" groups="base.group_system">
+                            <group>
+                                <group string="Connection">
+                                    <field name="is_activated" widget="boolean_toggle" readonly="1"/>
+                                    <field name="gateway_api_key" password="True"
+                                           string="Setup Key" invisible="not id or setup_next == 'key'"
+                                           placeholder="wa1_... paste from the panel and save"/>
+                                    <field name="gateway_url" readonly="1"/>
+                                    <field name="instance_name" readonly="1"/>
+                                    <field name="phone_number" readonly="1"/>
+                                    <field name="authorized_number" readonly="1"/>
+                                    <field name="authorized_email" readonly="1"/>
+                                    <field name="tenant_label" readonly="1"/>
+                                </group>
+                            </group>
                             <div class="alert alert-info" role="status">
                                 Shown for reference only. The gateway enforces the
                                 real limits - the daily cap, the sending rate, the
@@ -128,9 +146,7 @@
                                     <field name="dedupe_minutes" readonly="1"/>
                                 </group>
                             </group>
-                        </page>
-                        <page string="Incoming" name="incoming" groups="base.group_system">
-                            <group>
+                            <group string="Incoming">
                                 <field name="webhook_url" readonly="1"
                                        widget="CopyClipboardChar"/>
                                 <field name="webhook_secret"
@@ -147,18 +163,6 @@
                                 database. A number shared by several databases
                                 delivers to all of them.
                             </div>
-                        </page>
-                        <page string="Messages" name="messages">
-                            <field name="message_ids" readonly="1">
-                                <list>
-                                    <field name="create_date" string="Time"/>
-                                    <field name="direction"/>
-                                    <field name="phone"/>
-                                    <field name="partner_id"/>
-                                    <field name="message"/>
-                                    <field name="status" widget="badge"/>
-                                </list>
-                            </field>
                         </page>
                     </notebook>
                 </sheet>

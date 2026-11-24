@@ -29,6 +29,7 @@ import base64
 import logging
 import uuid
 
+import psycopg2
 import requests
 
 from odoo import _, api, fields, models
@@ -93,6 +94,38 @@ class WhatsAppQueued(UserError):
     shortly" apart from "this can never be sent", which is the difference
     between waiting and sending something else instead.
     """
+
+
+# What this process was told last: {(database, session): (write_date, values)}.
+_STATE_MEMO = {}
+
+# A state that did not change is written again only this often.
+STATE_WRITE = 300
+
+
+def _state_direct(env):
+    """Tests have one connection: the state is written directly."""
+    return config['test_enable'] and not env.context.get('wa_own_cursor')
+
+
+def _write_state(registry, session_id, vals):
+    """In a transaction of its own; somebody else on the row: not now."""
+    try:
+        with registry.cursor() as cr:
+            cr.execute('SELECT status, error_message, state_checked FROM whatsapp_session WHERE id = %s', [session_id])
+            row = cr.fetchone()
+            if not row:
+                return
+            same = row[0] == vals['status'] and (row[1] or False) == (vals['error_message'] or False)
+            if same and row[2] and 0 <= (vals['state_checked'] - row[2]).total_seconds() < STATE_WRITE:
+                return
+            cr.execute('SELECT 1 FROM whatsapp_session WHERE id = %s FOR NO KEY UPDATE SKIP LOCKED', [session_id])
+            if cr.fetchone():
+                names = sorted(vals)
+                cr.execute('UPDATE whatsapp_session SET %s WHERE id = %%s' % ', '.join('"%s" = %%s' % n for n in names),
+                           [vals[n] or None for n in names] + [session_id])
+    except Exception as err:  # noqa: BLE001 - the state is asked again in a moment
+        _logger.info("WhatsApp: state of %s not saved now: %s", session_id, err)
 
 
 class WhatsAppSession(models.Model):
@@ -533,6 +566,8 @@ class WhatsAppSession(models.Model):
                 age = (now - session.state_checked).total_seconds()
                 if age < STATE_TTL:
                     continue
+            if not force and session._state_known(now):
+                continue
             vals = {'state_checked': now}
             try:
                 body = session._gateway_call(
@@ -551,30 +586,54 @@ class WhatsAppSession(models.Model):
             session._save_state(vals)
         return True
 
-    def _save_state(self, vals):
-        """Into the database in a moment of its own. Written with the message's
-        own transaction, the status job and every other message collided on
-        this one row, and the message was sent again (23 Nov 2026)."""
+    def _state_key(self):
+        return self.env.cr.dbname, self.id
+
+    def _state_known(self, now):
+        """This process asked less than STATE_TTL ago: its answer, unless
+        somebody wrote the number since."""
         self.ensure_one()
+        if _state_direct(self.env):
+            return False
+        written, vals = _STATE_MEMO.get(self._state_key(), (None, None))
+        if not vals or written != self.sudo().write_date or not 0 <= (now - vals['state_checked']).total_seconds() < STATE_TTL:
+            return False
+        self._state_into_cache(vals)
+        return True
+
+    def _state_into_cache(self, vals):
         session = self.sudo()
-        if config['test_enable'] and not self.env.context.get('wa_own_cursor'):
-            session.write(vals)
-            return
-        try:
-            with self.env.registry.cursor() as cr:
-                cr.execute('SELECT 1 FROM whatsapp_session WHERE id = %s', [session.id])
-                if not cr.fetchone():
-                    session.write(vals)            # made in this very transaction
-                    return
-                cr.execute('SELECT 1 FROM whatsapp_session WHERE id = %s FOR UPDATE SKIP LOCKED', [session.id])
-                if cr.fetchone():
-                    names = sorted(vals)
-                    cr.execute('UPDATE whatsapp_session SET %s WHERE id = %%s' % ', '.join('"%s" = %%s' % n for n in names),
-                               [vals[n] or None for n in names] + [session.id])
-        except Exception as err:  # noqa: BLE001 - the state is asked again in a moment
-            _logger.info("WhatsApp: state of %s not saved now: %s", session.id, err)
         for name, value in vals.items():
             session._fields[name]._update_cache(session, session._fields[name].convert_to_cache(value, session))
+
+    def _save_state(self, vals):
+        """Into the database after this transaction, in a moment of its own.
+        Written with the message's own transaction, the status job and every
+        other message collided on this one row and the message was sent again
+        (23 Nov 2026). Written beside it while it still ran, the message of this
+        very transaction collided with it: enquiry 1GG was dropped (24 Nov)."""
+        self.ensure_one()
+        session = self.sudo()
+        if _state_direct(self.env):
+            session.write(vals)
+            return
+        _STATE_MEMO[self._state_key()] = (session.write_date, dict(vals))
+        cr = self.env.cr
+        waiting = cr.cache.setdefault('whatsapp_gateway.state', {})
+        if not waiting:
+            registry = self.env.registry
+
+            # the values stay with the function: postcommit.data is emptied by
+            # a rollback before postrollback runs
+            def after():
+                todo = dict(waiting)
+                waiting.clear()
+                for session_id, state in todo.items():
+                    _write_state(registry, session_id, state)
+            cr.postcommit.add(after)
+            cr.postrollback.add(after)
+        waiting[session.id] = dict(vals)
+        self._state_into_cache(vals)
 
     # ----------------------------------------------------------
     # The screens show the gateway's answer, not an old saved one
@@ -834,7 +893,29 @@ class WhatsAppSession(models.Model):
         # `retry` carries what a document needs to be sent again as a document.
         if retry:
             vals.update(retry)
-        return self.env['whatsapp.message'].sudo().create(vals)
+        Message = self.env['whatsapp.message'].sudo()
+        if status != 'sent':
+            return Message.create(vals)
+        # It has left. What the database refuses now must neither lose its row
+        # nor leave the caller in a broken transaction (Ref 1GG, 24 Nov 2026).
+        memo = send_memo.current(self.env)
+        if memo and wa_message_id and memo.rows.get(wa_message_id):
+            return Message.browse(memo.rows[wa_message_id])
+        self.env.flush_all()
+        try:
+            with self.env.cr.savepoint(flush=False):
+                message = Message.create(vals)
+                self.env.flush_all()
+                return message
+        except psycopg2.OperationalError as err:
+            _logger.info("WhatsApp: message to %s is written on its own (%s)", phone, str(err).split('\n')[0])
+            self.env.invalidate_all(flush=False)
+        with self.env.registry.cursor() as cr:
+            cr.execute("SET LOCAL lock_timeout = '3s'")
+            message_id = Message.with_env(api.Environment(cr, self.env.uid, dict(self.env.context))).sudo().create(vals).id
+        if memo and wa_message_id:
+            memo.rows[wa_message_id] = message_id
+        return Message.browse(message_id)
 
     def _retry_soon(self):
         """Ask the retry cron to run now instead of on its 5-minute tick.

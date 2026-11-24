@@ -2,7 +2,9 @@ from . import send_memo
 from . import whatsapp_session
 from . import whatsapp_connect
 from . import whatsapp_number_off
+from . import whatsapp_number_panel
 from . import whatsapp_session_easy
+from . import whatsapp_session_page
 from . import ir_mail_server
 from . import whatsapp_optout
 from . import whatsapp_message
