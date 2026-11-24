@@ -1,7 +1,8 @@
 /** @odoo-module **/
 
-import { Component, useState, useRef, onWillStart, onMounted } from "@odoo/owl";
+import { Component, useState, useRef, onWillStart, onMounted, onWillUnmount } from "@odoo/owl";
 import { registry } from "@web/core/registry";
+import { useService } from "@web/core/utils/hooks";
 
 class WaChatView extends Component {
     static template = "whatsapp_employee_tracker.ChatView";
@@ -9,6 +10,15 @@ class WaChatView extends Component {
 
     setup() {
         this.messagesRef = useRef("messagesContainer");
+        this.bus = useService("bus_service");
+        this._opened = {};
+        this._onNew = () => {
+            clearTimeout(this._soon);
+            this._soon = setTimeout(() => this._refreshQuietly(), 300);
+        };
+        this._onSeen = () => {
+            if (!document.hidden) this._refreshQuietly();
+        };
 
         this.state = useState({
             conversations: [],
@@ -19,6 +29,12 @@ class WaChatView extends Component {
             employees: [],
             employeeId: null,       // null: everybody
             numberId: null,         // an employee session; null: all numbers
+            phone: false,           // the list is the phone's own
+            phoneDown: false,
+            showOld: false,         // chats older than 48 hours too
+            limit: 40,
+            more: false,            // older messages of the opened chat
+            loadingOlder: false,
         });
 
         // Priority: context > localStorage
@@ -27,14 +43,24 @@ class WaChatView extends Component {
         this._openAll = !!context.wa_all_numbers;
         this._saved = { employee: this._read("wa_tracker_employee"), number: this._read("wa_tracker_number"),
                         conv: this._read("wa_tracker_conv_id") };
-        this._pendingConvId = parseInt(this._saved.conv) || null;
+        this._pendingConvId = this._saved.conv.includes("@") ? this._saved.conv : parseInt(this._saved.conv) || null;
 
         onWillStart(async () => {
             await this.loadEmployeeSessions();
             await this.loadConversations();
         });
 
+        onWillUnmount(() => {
+            clearInterval(this._timer);
+            clearTimeout(this._soon);
+            this.bus.unsubscribe("wa_tracker_new", this._onNew);
+            document.removeEventListener("visibilitychange", this._onSeen);
+        });
         onMounted(() => {
+            this.bus.subscribe("wa_tracker_new", this._onNew);
+            this.bus.start();
+            document.addEventListener("visibilitychange", this._onSeen);
+            this._timer = setInterval(() => this._refreshQuietly(), 8000);
             if (this._pendingConvId) {
                 const id = this._pendingConvId;
                 if (this.state.conversations.find(c => c.id === id)) {
@@ -42,6 +68,56 @@ class WaChatView extends Component {
                 }
             }
         });
+    }
+
+    /** New messages without pressing anything; the place scrolled to stays. */
+    async _refreshQuietly() {
+        if (document.hidden) return;
+        if (this._busy) {
+            this._again = true;
+            return;
+        }
+        this._busy = true;
+        const { numberId, employeeId, selectedConvId } = this.state;
+        const same = () => numberId === this.state.numberId && employeeId === this.state.employeeId;
+        try {
+            const wasPhone = this.state.phone;
+            if (!(await this._loadPhone())) {
+                const rows = await this._jsonRpc("/wa_tracker/conversations", { employee_session_id: numberId, employee_id: employeeId });
+                if (Array.isArray(rows) && rows.length && same()) this.state.conversations = rows;
+            }
+            if (wasPhone !== this.state.phone) {
+                // the ids of the two lists are not the same
+                this.state.selectedConvId = null;
+                this.state.messages = [];
+                return;
+            }
+            if (selectedConvId) {
+                const answer = wasPhone ? await this._phonePage()
+                    : await this._jsonRpc("/wa_tracker/messages", { conversation_id: selectedConvId });
+                const messages = wasPhone ? answer && answer.messages : answer;
+                const box = this.messagesRef.el;
+                const atEnd = box && box.scrollHeight - box.scrollTop - box.clientHeight < 80;
+                if (Array.isArray(messages) && messages.length && same() && selectedConvId === this.state.selectedConvId) {
+                    if (wasPhone) this._merge(messages);
+                    else this.state.messages = messages;
+                    if (atEnd) {
+                        setTimeout(() => {
+                            const el = this.messagesRef.el;
+                            if (el) el.scrollTop = el.scrollHeight;
+                        }, 100);
+                    }
+                }
+            }
+        } catch {
+            // the next round tries again
+        } finally {
+            this._busy = false;
+            if (this._again) {
+                this._again = false;
+                this._onNew();
+            }
+        }
     }
 
     _read(key) {
@@ -108,8 +184,38 @@ class WaChatView extends Component {
         }
     }
 
+    _unread(chat) {
+        if (chat.id === this.state.selectedConvId) this._opened[chat.id] = chat.date;
+        return (this._opened[chat.id] || "") >= chat.date ? 0 : chat.unread;
+    }
+
+    /** The chats as the phone has them; false: the saved ones are shown. */
+    async _loadPhone() {
+        const numberId = this.state.numberId;
+        if (!numberId) {
+            this.state.phone = this.state.phoneDown = false;
+            return false;
+        }
+        const result = await this._jsonRpc("/wa_tracker/phone_chats", { employee_session_id: numberId });
+        if (numberId !== this.state.numberId) return true;
+        this.state.phoneDown = !!(result && result.down);
+        if (!result || !result.chats) {
+            this.state.phone = false;
+            return false;
+        }
+        const number = this.selectedEmployee.numbers.find((n) => n.id === numberId) || {};
+        this.state.phone = true;
+        this.state.conversations = result.chats.map((c) => ({
+            id: c.id, contact_name: c.name, phone: c.phone, total_messages: this._unread(c), last_message_date: c.date, group: c.group,
+            last_message_preview: (c.from_me ? "\u2197 " : "") + c.preview, employee_name: this.selectedEmployee.name || "",
+            own_number: number.number || "", own_current: true,
+        }));
+        return true;
+    }
+
     async loadConversations() {
         try {
+            if (await this._loadPhone()) return;
             const result = await this._jsonRpc("/wa_tracker/conversations", {
                 employee_session_id: this.state.numberId,
                 employee_id: this.state.employeeId,
@@ -127,6 +233,41 @@ class WaChatView extends Component {
         await this._changed();
     }
 
+    showOlderChats() {
+        this.state.showOld = true;
+    }
+    onListScroll(ev) {
+        const box = ev.currentTarget;
+        if (box.scrollHeight - box.scrollTop - box.clientHeight < 200) this.state.limit += 40;
+    }
+    async onMessagesScroll(ev) {
+        const box = ev.currentTarget;
+        const id = this.state.selectedConvId;
+        if (box.scrollTop > 60 || !this.state.phone || !this.state.more || this.state.loadingOlder) return;
+        this.state.loadingOlder = true;
+        try {
+            const page = this._page + 1;
+            const result = await this._jsonRpc("/wa_tracker/phone_messages", { employee_session_id: this.state.numberId, chat_id: id, page });
+            if (id === this.state.selectedConvId && result && result.messages) {
+                this._page = page;
+                const before = box.scrollHeight;
+                this._merge(result.messages);
+                this.state.more = result.more;
+                setTimeout(() => (box.scrollTop += box.scrollHeight - before), 50);
+            }
+        } finally {
+            this.state.loadingOlder = false;
+        }
+    }
+    _merge(messages) {
+        const all = new Map(this.state.messages.map((m) => [m.id, m]));
+        messages.forEach((m) => all.set(m.id, m));
+        this.state.messages = [...all.values()].sort((a, b) => a.message_date.localeCompare(b.message_date));
+    }
+    async _phonePage() {
+        return this._jsonRpc("/wa_tracker/phone_messages", { employee_session_id: this.state.numberId, chat_id: this.state.selectedConvId, page: 1 });
+    }
+
     async onNumberChange(ev) {
         this.state.numberId = parseInt(ev.target.value) || null;
         await this._changed();
@@ -135,6 +276,8 @@ class WaChatView extends Component {
     async _changed() {
         this.state.selectedConvId = null;
         this.state.messages = [];
+        this.state.more = this.state.showOld = false;
+        this.state.limit = 40;
         this._saveState();
         await this.loadConversations();
     }
@@ -155,20 +298,71 @@ class WaChatView extends Component {
         const from = day(n.first), to = day(n.last);
         return n.number + (from ? " (" + (from === to ? from : from + " - " + to) + ")" : "");
     }
+    /** Odoo's times are UTC; the viewer reads their own. */
+    _date(text) {
+        if (!text || text === "False" || text === "false") return null;
+        const d = new Date(text.slice(0, 19).replace(" ", "T") + "Z");
+        return isNaN(d.getTime()) ? null : d;
+    }
+    isNewDay(index) {
+        const day = (m) => {
+            const d = m && this._date(m.message_date);
+            return d ? d.toDateString() : "";
+        };
+        const now = day(this.state.messages[index]);
+        return !!now && now !== day(this.state.messages[index - 1]);
+    }
+    dayLabel(text) {
+        const d = this._date(text);
+        if (!d) return "";
+        const other = new Date();
+        if (d.toDateString() === other.toDateString()) return "Today";
+        other.setDate(other.getDate() - 1);
+        if (d.toDateString() === other.toDateString()) return "Yesterday";
+        return d.toLocaleDateString([], { day: "numeric", month: "short", year: "numeric" });
+    }
+    formatClock(text) {
+        const d = this._date(text);
+        return d ? d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
+    }
+    tick(status) {
+        const grey = "#667781";
+        return {
+            sent: { icons: ["fa-check"], color: grey },
+            delivered: { icons: ["fa-check", "fa-check"], color: grey },
+            read: { icons: ["fa-check", "fa-check"], color: "#53bdeb" },
+            failed: { icons: ["fa-exclamation-circle"], color: "#dc3545" },
+        }[status] || { icons: ["fa-clock-o"], color: grey };
+    }
     formatDay(text) {
-        const d = text ? new Date(text.replace(" ", "T")) : null;
-        return d && !isNaN(d.getTime()) ? d.toLocaleDateString([], { day: "numeric", month: "short" }) : "";
+        const d = this._date(text);
+        return d ? d.toLocaleDateString([], { day: "numeric", month: "short" }) : "";
     }
 
     async selectConversation(convId) {
         this.state.selectedConvId = convId;
         this.state.loading = true;
+        const opened = this.state.phone && this.state.conversations.find((c) => c.id === convId);
+        if (opened) {
+            this._opened[convId] = opened.last_message_date;
+            opened.total_messages = 0;
+        }
         this._saveState();
 
         try {
-            const result = await this._jsonRpc("/wa_tracker/messages", {
-                conversation_id: convId,
-            });
+            let result;
+            if (this.state.phone) {
+                this.state.messages = [];
+                this._page = 1;
+                const answer = await this._phonePage();
+                if (convId !== this.state.selectedConvId) return;
+                result = (answer && answer.messages) || [];
+                this.state.more = !!(answer && answer.more);
+            } else {
+                this.state.more = false;
+                result = await this._jsonRpc("/wa_tracker/messages", { conversation_id: convId });
+                if (convId !== this.state.selectedConvId) return;
+            }
             this.state.messages = result || [];
             setTimeout(() => {
                 const container = this.messagesRef.el;
@@ -190,12 +384,22 @@ class WaChatView extends Component {
 
     get filteredConversations() {
         const q = (this.state.searchQuery || "").toLowerCase();
+        if (!q && this.state.phone) {
+            const since = Date.now() - 48 * 3600 * 1000;
+            const recent = (c) => { const d = this._date(c.last_message_date); return d && d.getTime() >= since; };
+            return this.state.conversations.filter((c) => this.state.showOld || recent(c) || c.id === this.state.selectedConvId)
+                .slice(0, this.state.limit);
+        }
         if (!q) return this.state.conversations;
         return this.state.conversations.filter(
             (c) =>
                 (c.contact_name || "").toLowerCase().includes(q) ||
                 (c.phone || "").includes(q)
         );
+    }
+
+    get hasOlderChats() {
+        return this.state.phone && !this.state.showOld && !this.state.searchQuery;
     }
 
     get selectedConvName() {
@@ -219,10 +423,9 @@ class WaChatView extends Component {
     }
 
     formatTime(dateStr) {
-        if (!dateStr || dateStr === "False" || dateStr === "false") return "";
+        const d = this._date(dateStr);
+        if (!d) return "";
         try {
-            const d = new Date(dateStr.replace(" ", "T"));
-            if (isNaN(d.getTime())) return "";
             const now = new Date();
             const isToday = d.toDateString() === now.toDateString();
             if (isToday) {

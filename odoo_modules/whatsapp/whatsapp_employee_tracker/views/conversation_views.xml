@@ -169,21 +169,9 @@
                     <!-- Chat Messages -->
                     <notebook>
                         <page string="Chat Messages" name="messages">
-                            <field name="log_ids" readonly="1">
-                                <list decoration-info="direction == 'outgoing'"
-                                       decoration-success="direction == 'incoming'"
-                                       decoration-danger="is_flagged == True"
-                                       default_order="message_date asc">
-                                    <field name="message_date" widget="datetime"/>
-                                    <field name="direction"
-                                           widget="badge"
-                                           decoration-info="direction == 'outgoing'"
-                                           decoration-success="direction == 'incoming'"/>
-                                    <field name="message_text"/>
-                                    <field name="status" widget="badge"/>
-                                    <field name="is_flagged" widget="boolean"/>
-                                </list>
-                            </field>
+                            <!-- as in WhatsApp: received left, sent right -->
+                            <field name="log_ids" readonly="1" mode="kanban"
+                                   context="{'kanban_view_ref': 'whatsapp_employee_tracker.view_wa_chat_kanban'}"/>
                         </page>
                     </notebook>
                 </sheet>

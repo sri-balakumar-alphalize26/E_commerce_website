@@ -71,7 +71,11 @@
                                         <field name="message_date" widget="relative"/>
                                     </small>
                                     <small t-if="record.direction.raw_value == 'outgoing'" class="text-muted" style="font-size: 10px;">
-                                        <i t-attf-class="fa #{record.status.raw_value == 'sent' ? 'fa-check' : (record.status.raw_value == 'delivered' ? 'fa-check-double' : 'fa-clock-o')}"/>
+                                        <i t-if="record.status.raw_value == 'failed'" class="fa fa-exclamation-circle text-danger"/>
+                                        <i t-elif="record.status.raw_value == 'sent'" class="fa fa-check"/>
+                                        <span t-elif="record.status.raw_value == 'delivered'"><i class="fa fa-check"/><i class="fa fa-check"/></span>
+                                        <span t-elif="record.status.raw_value == 'read'" class="text-info"><i class="fa fa-check"/><i class="fa fa-check"/></span>
+                                        <i t-else="" class="fa fa-clock-o"/>
                                     </small>
                                 </div>
                             </div>
