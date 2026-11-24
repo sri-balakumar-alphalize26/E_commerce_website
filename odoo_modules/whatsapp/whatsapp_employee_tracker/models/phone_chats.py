@@ -2,7 +2,9 @@
 
 Read from the gateway when somebody looks; nothing is copied into the database.
 Only administrators: it is everything on that phone, groups as well."""
+import base64
 import logging
+import re
 import time
 from datetime import datetime
 
@@ -21,6 +23,11 @@ KEEP_LIST, KEEP_NAMES = 20, 600
 PRIVATE, GROUP, HIDDEN = '@s.whatsapp.net', '@g.us', '@lid'
 RANK = {'PENDING': (0, 'pending'), 'SERVER_ACK': (1, 'sent'), 'DELIVERY_ACK': (2, 'delivered'), 'READ': (3, 'read'),
         'PLAYED': (4, 'read'), 'ERROR': (5, 'failed')}
+KINDS = {'imageMessage': 'image', 'stickerMessage': 'image', 'videoMessage': 'video', 'audioMessage': 'audio', 'documentMessage': 'file'}
+# what a browser may show by itself; anything else is only downloaded
+INLINE = ('image/jpeg', 'image/png', 'image/webp', 'image/gif', 'audio/ogg', 'audio/mpeg', 'audio/mp4', 'audio/aac', 'audio/wav',
+          'video/mp4', 'video/3gpp', 'application/pdf')
+MAX_MEDIA = 25 * 1024 * 1024
 _MEMO = {}
 
 
@@ -170,7 +177,7 @@ class EmployeeSessionPhone(models.Model):
         names = self._phone_names(session) if chat['group'] else {}
         Name = self.env['wa.phone.name'].sudo()
         taught = Name._taught(session.id) if chat['group'] else {}
-        found, more = {}, False
+        found, more, later = {}, False, []
         for jid in chat['jids']:
             answer = session._gateway_call('POST', '/chat/findMessages/%s' % session.instance_name, {
                 'where': {'key': {'remoteJid': jid}}, 'page': page, 'offset': PAGE}, timeout=(3, 20))
@@ -181,6 +188,9 @@ class EmployeeSessionPhone(models.Model):
                 key = message.get('key') or {}
                 if key.get('remoteJid') != jid or not key.get('id'):
                     continue
+                change = self._phone_change(message)
+                if change:
+                    later.append((int(message.get('messageTimestamp') or 0), change))
                 text = self._phone_text(message)
                 if not text:
                     continue            # a vote, a reaction, an edit
@@ -197,5 +207,100 @@ class EmployeeSessionPhone(models.Model):
                     who = message.get('pushName') or names.get(part) or taught.get(part, ('', ''))[0] \
                         or ('+' + digits(part.split('@')[0]) if part.endswith(PRIVATE) else '')
                 found[key['id']] = {'id': key['id'], 'message_text': text, 'direction': 'outgoing' if mine else 'incoming',
-                                    'message_date': self._phone_when(message), 'status': status, 'is_flagged': False, 'sender': who}
+                                    'message_date': self._phone_when(message), 'status': status, 'is_flagged': False, 'sender': who, 'media': self._phone_media(message)}
+        for _at, (kind, target, value) in sorted(later, key=lambda x: x[0]):
+            message = found.get(target)
+            if not message:
+                continue
+            if kind == 'reaction':
+                message['reactions'] = [value] if value else []
+            elif kind == 'deleted':
+                message.update(deleted=True, media=False, message_text='')
+            elif not message.get('deleted'):
+                message.update(edited=True, message_text=value or message['message_text'])
         return {'messages': sorted(found.values(), key=lambda m: m['message_date']), 'more': more}
+
+    def phone_reply(self, chat_id, text):
+        """An administrator writes in a private chat; the bot is quiet there first."""
+        session = self._phone_check()
+        text = str(text or '').strip()
+        if not text:
+            raise UserError(self.env._("Type the message first."))
+        if len(text) > 4000:
+            raise UserError(self.env._("The message is too long."))
+        chat = next((c for c in self._phone_chats() if c['id'] == chat_id), None)
+        if not chat:
+            raise AccessError(self.env._("That chat is not on this number."))
+        if chat['group']:
+            raise UserError(self.env._("Groups are answered on the phone."))
+        number = digits(chat['phone'])
+        if not number:
+            raise UserError(self.env._("WhatsApp hides this person's number; answer on the phone."))
+        if not session.use_whatsapp:
+            raise UserError(self.env._("WhatsApp is switched off for this number."))
+        reason = session._policy_block(number, text)
+        if reason:
+            raise UserError(reason)
+        paused = self._phone_pause(session, chat, text)
+        session._send_payload('sendText', {'number': number, 'text': text, 'delay': session.send_delay_ms, 'plain': True},
+                              number, text, queue_on_failure=False)
+        _logger.info("WA Tracker: %s answered a chat of %s", self.env.user.login, session.name)
+        return {'paused': paused}
+
+    def _phone_pause(self, session, chat, text):
+        """True: the bot is quiet in this chat for the takeover time of the settings."""
+        if 'sa.human.hold' not in self.env:
+            return True
+        settings = self.env['sa.ai.settings'].sudo().get_settings()
+        if not settings.takeover_enabled:
+            return False
+        for jid in chat['jids']:
+            self.env['sa.human.hold'].sudo().hold(session, jid, self.env.user.name, text, settings)
+        return True
+
+    @api.model
+    def _phone_change(self, message):
+        """A reaction, an edit or a deletion of another message: (what, its id, value)."""
+        body = message.get('message') or {}
+        if not isinstance(body, dict):
+            return None
+        reaction = body.get('reactionMessage')
+        if isinstance(reaction, dict):
+            target = (reaction.get('key') or {}).get('id')
+            return ('reaction', target, str(reaction.get('text') or '')[:8]) if target else None
+        protocol = body.get('protocolMessage') or ((body.get('editedMessage') or {}).get('message') or {}).get('protocolMessage')
+        if isinstance(protocol, dict):
+            target = (protocol.get('key') or {}).get('id')
+            if target and protocol.get('type') in (0, 'REVOKE'):
+                return 'deleted', target, ''
+            if target and protocol.get('type') in (14, 'MESSAGE_EDIT'):
+                return 'edited', target, _text_of(protocol.get('editedMessage') or {})[0]
+        return None
+
+    @api.model
+    def _phone_media(self, message):
+        """What can be opened in a message: {'kind', 'name'} or False."""
+        body = message.get('message') or {}
+        for kind, what in KINDS.items():
+            media = body.get(kind) if isinstance(body, dict) else None
+            if isinstance(media, dict):
+                return {'kind': what, 'name': str(media.get('fileName') or '')[:120]}
+        return False
+
+    def phone_media(self, message_id):
+        """(bytes, type, name, may the browser show it) of a message of this number."""
+        session = self._phone_check()
+        if not re.fullmatch(r'[0-9A-Za-z_-]{6,64}', str(message_id or '')):
+            raise UserError(self.env._("That message is not known."))
+        answer = session._gateway_call('POST', '/chat/getBase64FromMediaMessage/%s' % session.instance_name, {
+            'message': {'key': {'id': message_id}}, 'convertToMp4': False}, timeout=(3, 60)) or {}
+        text = answer.get('base64') or ''
+        if not text or len(text) > MAX_MEDIA * 4 / 3 + 4:
+            raise UserError(self.env._("It cannot be opened: not there any more, or larger than 25 MB."))
+        try:
+            data = base64.b64decode(text)
+        except ValueError as err:
+            raise UserError(self.env._("It cannot be opened.")) from err
+        kind = str(answer.get('mimetype') or '').split(';')[0].strip().lower()
+        name = re.sub(r'[^\w.() -]', '_', str(answer.get('fileName') or 'file'))[:120]
+        return data, kind, name, kind in INLINE

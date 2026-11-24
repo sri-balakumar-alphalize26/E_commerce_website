@@ -3,6 +3,7 @@
 import { Component, useState, useRef, onWillStart, onMounted, onWillUnmount } from "@odoo/owl";
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
+import { waText } from "./wa_text";
 
 class WaChatView extends Component {
     static template = "whatsapp_employee_tracker.ChatView";
@@ -15,6 +16,12 @@ class WaChatView extends Component {
         this._onNew = () => {
             clearTimeout(this._soon);
             this._soon = setTimeout(() => this._refreshQuietly(), 300);
+        };
+        this._onEsc = (ev) => {
+            if (ev.key === "Escape" && this.state.viewer) {
+                ev.stopPropagation();
+                this.closeViewer();
+            }
         };
         this._onSeen = () => {
             if (!document.hidden) this._refreshQuietly();
@@ -35,6 +42,11 @@ class WaChatView extends Component {
             limit: 40,
             more: false,            // older messages of the opened chat
             loadingOlder: false,
+            media: {},              // opened pictures and voice notes
+            viewer: null,           // the picture or video in the popup
+            reply: "",
+            sending: false,
+            replyError: "",
         });
 
         // Priority: context > localStorage
@@ -53,6 +65,7 @@ class WaChatView extends Component {
         onWillUnmount(() => {
             clearInterval(this._timer);
             clearTimeout(this._soon);
+            window.removeEventListener("keydown", this._onEsc, true);
             this.bus.unsubscribe("wa_tracker_new", this._onNew);
             document.removeEventListener("visibilitychange", this._onSeen);
         });
@@ -60,6 +73,7 @@ class WaChatView extends Component {
             this.bus.subscribe("wa_tracker_new", this._onNew);
             this.bus.start();
             document.addEventListener("visibilitychange", this._onSeen);
+            window.addEventListener("keydown", this._onEsc, true);
             this._timer = setInterval(() => this._refreshQuietly(), 8000);
             if (this._pendingConvId) {
                 const id = this._pendingConvId;
@@ -233,6 +247,65 @@ class WaChatView extends Component {
         await this._changed();
     }
 
+    get canReply() {
+        const chat = this.state.conversations.find((c) => c.id === this.state.selectedConvId);
+        return this.state.phone && !!chat && !chat.group && !!chat.phone;
+    }
+    onReplyKey(ev) {
+        if (ev.key === "Enter" && !ev.shiftKey && !ev.isComposing) {
+            ev.preventDefault();
+            this.sendReply();
+        }
+    }
+    async sendReply() {
+        const text = this.state.reply.trim();
+        if (!text || this.state.sending) return;
+        const chat = this.state.selectedConvId;
+        this.state.sending = true;
+        this.state.replyError = "";
+        try {
+            const answer = await this._jsonRpc("/wa_tracker/phone_reply", {
+                employee_session_id: this.state.numberId, chat_id: chat, text });
+            if (!answer || answer.error || answer.paused === undefined) {
+                if (chat === this.state.selectedConvId) this.state.replyError = (answer && answer.error) || "Not sent.";
+            } else if (chat === this.state.selectedConvId) {
+                this.state.reply = "";
+                if (!answer.paused) this.state.replyError = "Sent. The assistant is not paused: Shopkeeper takes over is off in the settings.";
+                this._onNew();
+            }
+        } catch {
+            this.state.replyError = "It is not known whether it was sent. Look in the chat before sending again.";
+        } finally {
+            this.state.sending = false;
+        }
+    }
+
+    mediaUrl(msg) {
+        return `/wa_tracker/phone_media/${this.state.numberId}/${encodeURIComponent(msg.id)}`;
+    }
+    openMedia(msg) {
+        if (msg.media.kind === "image" || msg.media.kind === "video") {
+            this.state.viewer = msg;
+            return;
+        }
+        this.state.media[msg.id] = "open";
+    }
+    closeViewer() {
+        this.state.viewer = null;
+    }
+    viewerFailed() {
+        if (this.state.viewer) this.state.media[this.state.viewer.id] = "failed";
+        this.state.viewer = null;
+    }
+    /** The text in pieces; the picture itself is below, so "Image:" is not said again. */
+    pieces(msg) {
+        let text = msg.message_text || "";
+        if (msg.media) text = text.replace(/^(\u{1F4F7} Image|\u{1F3AC} Video|\u{1F3A4} Voice note|\u{1F4C4} Document|Sticker)(: |$)/u, "");
+        return waText(text);
+    }
+    mediaFailed(msg) {
+        this.state.media[msg.id] = "failed";
+    }
     showOlderChats() {
         this.state.showOld = true;
     }
@@ -340,6 +413,9 @@ class WaChatView extends Component {
     }
 
     async selectConversation(convId) {
+        if (convId !== this.state.selectedConvId) {
+            this.state.reply = this.state.replyError = "";
+        }
         this.state.selectedConvId = convId;
         this.state.loading = true;
         const opened = this.state.phone && this.state.conversations.find((c) => c.id === convId);

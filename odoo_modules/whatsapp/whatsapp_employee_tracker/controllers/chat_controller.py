@@ -14,13 +14,23 @@ class WaChatController(http.Controller):
         if not request.env.user._is_internal():
             raise AccessError("Only for employees.")
 
+    def _mine(self):
+        """Whose chats: all, the department's, or one's own."""
+        user = request.env.user
+        if user.has_group('whatsapp_employee_tracker.group_wa_tracker_manager'):
+            return []
+        own = [('employee_id.user_id', '=', user.id)]
+        if user.has_group('whatsapp_employee_tracker.group_wa_tracker_dept_head'):
+            return ['|', ('employee_id.department_id.manager_id.user_id', '=', user.id)] + own
+        return own
+
     @http.route('/wa_tracker/employee_sessions', type='jsonrpc', auth='user')
     def get_employee_sessions(self):
         """Every employee with the numbers they have and had."""
         self._staff()
         Log = request.env['wa.communication.log'].sudo()
         pretty = request.env['whatsapp.connect'].sudo()._pretty
-        sessions = request.env['wa.employee.session'].sudo().with_context(active_test=False).search([])
+        sessions = request.env['wa.employee.session'].sudo().with_context(active_test=False).search(self._mine())
         stats = {s.id: (count, first, last) for s, count, first, last in Log._read_group(
             [('employee_session_id', 'in', sessions.ids)], ['employee_session_id'],
             ['__count', 'message_date:min', 'message_date:max'])}
@@ -41,7 +51,7 @@ class WaChatController(http.Controller):
     def get_conversations(self, employee_session_id=None, employee_id=None):
         """Get conversations list for the chat panel."""
         self._staff()
-        domain = [('total_messages', '>', 0)]
+        domain = [('total_messages', '>', 0)] + self._mine()
         if employee_session_id:
             domain.append(('employee_session_id', '=', int(employee_session_id)))
         elif employee_id:
@@ -129,12 +139,43 @@ class WaChatController(http.Controller):
             _logger.info("WA Tracker: phone messages: %s", err)
             return {'down': True}
 
+    @http.route('/wa_tracker/phone_reply', type='jsonrpc', auth='user')
+    def phone_reply(self, employee_session_id, chat_id, text):
+        link = self._phone(employee_session_id)
+        if not link:
+            raise AccessError("Only an administrator, on the present number.")
+        try:
+            return link.phone_reply(str(chat_id), text)
+        except AccessError:
+            raise
+        except UserError as err:
+            return {'error': str(err.args[0] if err.args else err).strip()[:400]}
+
+    @http.route('/wa_tracker/phone_media/<int:employee_session_id>/<string:message_id>', type='http', auth='user', methods=['GET'])
+    def get_phone_media(self, employee_session_id, message_id, **kw):
+        """A picture, a voice note or a file, when it is tapped. Nothing is kept."""
+        link = self._phone(employee_session_id)
+        if not link:
+            raise request.not_found()
+        try:
+            data, kind, name, inline = link.phone_media(message_id)
+        except UserError as err:
+            _logger.info("WA Tracker: media: %s", err)
+            raise request.not_found() from err
+        return request.make_response(data, [
+            ('Content-Type', kind if inline else 'application/octet-stream'), ('Content-Length', str(len(data))),
+            ('Content-Disposition', http.content_disposition(name, 'inline' if inline else 'attachment')),
+            ('X-Content-Type-Options', 'nosniff'), ('Content-Security-Policy', "default-src 'none'; sandbox"),
+            ('Cache-Control', 'private, max-age=600')])
+
     @http.route('/wa_tracker/messages', type='jsonrpc', auth='user')
     def get_messages(self, conversation_id):
         """Get messages for a conversation."""
         self._staff()
+        chat = request.env['wa.conversation'].sudo().with_context(active_test=False).search(
+            [('id', '=', int(conversation_id))] + self._mine())
         logs = request.env['wa.communication.log'].sudo().search([
-            ('conversation_id', '=', int(conversation_id)),
+            ('conversation_id', 'in', chat.ids),
         ], order='message_date asc')
 
         result = []
