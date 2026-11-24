@@ -12,3 +12,4 @@ access_wa_tone_report_all,wa.tone.report.all,model_wa_tone_report,,1,1,1,1
 access_wa_response_time_stat_all,wa.response.time.stat.all,model_wa_response_time_stat,,1,0,0,0
 access_wa_response_time_summary_all,wa.response.time.summary.all,model_wa_response_time_summary,,1,0,0,0
 access_wa_employee_handover_system,wa.employee.handover.system,model_wa_employee_handover,base.group_system,1,1,1,1
+access_wa_phone_name_admin,wa.phone.name.admin,model_wa_phone_name,base.group_system,1,0,0,0

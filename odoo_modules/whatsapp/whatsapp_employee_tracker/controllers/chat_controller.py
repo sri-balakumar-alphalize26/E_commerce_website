@@ -1,7 +1,7 @@
 import logging
 
 from odoo import http
-from odoo.exceptions import AccessError
+from odoo.exceptions import AccessError, UserError
 from odoo.http import request
 
 _logger = logging.getLogger(__name__)
@@ -46,6 +46,9 @@ class WaChatController(http.Controller):
             domain.append(('employee_session_id', '=', int(employee_session_id)))
         elif employee_id:
             domain.append(('employee_id', '=', int(employee_id)))
+        else:
+            # everybody: the numbers of now; an old one is chosen by its employee
+            domain.append(('employee_session_id.active', '=', True))
 
         convs = request.env['wa.conversation'].sudo().with_context(active_test=False).search(
             domain, order='last_message_date desc'
@@ -93,6 +96,38 @@ class WaChatController(http.Controller):
                 'own_current': own.active,
             })
         return result
+
+    # ---- as the phone has it (24 Nov 2026): administrators, the present number
+    def _phone(self, employee_session_id):
+        self._staff()
+        link = request.env['wa.employee.session'].browse(int(employee_session_id or 0)).exists()
+        if not link or not request.env.user.has_group('base.group_system'):
+            return None
+        return link if link.active and link.sudo().session_id.active else None
+
+    @http.route('/wa_tracker/phone_chats', type='jsonrpc', auth='user')
+    def get_phone_chats(self, employee_session_id=None):
+        link = self._phone(employee_session_id)
+        if not link:
+            return {'phone': False}
+        try:
+            return {'phone': True, 'chats': link.phone_chats()}
+        except UserError as err:
+            _logger.info("WA Tracker: phone chats: %s", err)
+            return {'phone': True, 'down': True}
+
+    @http.route('/wa_tracker/phone_messages', type='jsonrpc', auth='user')
+    def get_phone_messages(self, employee_session_id, chat_id, page=1):
+        link = self._phone(employee_session_id)
+        if not link:
+            return {'messages': [], 'more': False}
+        try:
+            return link.phone_messages(str(chat_id), page)
+        except AccessError:
+            raise
+        except UserError as err:
+            _logger.info("WA Tracker: phone messages: %s", err)
+            return {'down': True}
 
     @http.route('/wa_tracker/messages', type='jsonrpc', auth='user')
     def get_messages(self, conversation_id):

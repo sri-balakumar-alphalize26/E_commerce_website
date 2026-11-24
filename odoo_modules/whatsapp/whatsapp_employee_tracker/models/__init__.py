@@ -21,3 +21,6 @@ from . import account_move_inherit
 from . import res_partner_phone
 from . import employee_number
 from . import employee_session_easy
+from . import phone_typed
+from . import phone_name
+from . import phone_chats
