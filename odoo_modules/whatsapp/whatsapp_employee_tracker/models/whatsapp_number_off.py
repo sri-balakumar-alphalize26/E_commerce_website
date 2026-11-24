@@ -8,7 +8,8 @@ class WhatsAppSessionOffEmployee(models.Model):
     def _number_off(self, removed=False):
         super()._number_off(removed=removed)
         if removed:
-            self.env['wa.employee.session'].sudo().search([('session_id', 'in', self.ids)]).write({'active': False})
+            self.env['wa.employee.session'].sudo().search([
+                ('session_id', 'in', self.ids), ('active', '=', True)]).write({'active': False})
 
     def _has_history(self):
         return super()._has_history() or bool(self.env['wa.employee.session'].sudo().with_context(

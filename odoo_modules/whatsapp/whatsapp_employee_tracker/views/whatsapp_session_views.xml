@@ -23,6 +23,32 @@
                 <button name="action_give_number" type="object" string="Choose the employee"
                         class="btn-primary" invisible="setup_next != 'employee'" groups="base.group_system"/>
             </xpath>
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button name="action_wa_chats" type="object" class="oe_stat_button" icon="fa-whatsapp"
+                        invisible="status != 'connected' or not wa_employee_id"
+                        groups="whatsapp_employee_tracker.group_wa_tracker_manager">
+                    <field name="wa_chats" widget="statinfo" string="Chats"/>
+                </button>
+            </xpath>
+            <xpath expr="//div[@name='number_facts']" position="inside">
+                <div class="mb-3" invisible="not id">
+                    <div>
+                        Employee:
+                        <field name="wa_employee_id" nolabel="1" class="oe_inline fw-bold" options="{'no_open': True}"
+                               invisible="not wa_employee_id"/>
+                        <span class="text-muted" invisible="wa_employee_id">nobody yet</span>
+                        <button name="action_give_number" type="object" string="Choose the employee"
+                                class="btn-secondary btn-sm ms-2" groups="base.group_system"
+                                invisible="wa_employee_id or not active or setup_next == 'employee'"/>
+                    </div>
+                    <div class="text-muted" invisible="status != 'connected' or not wa_employee_id">
+                        Today: <field name="wa_today_sent" nolabel="1" class="oe_inline"/> sent,
+                        <field name="wa_today_received" nolabel="1" class="oe_inline"/> received
+                        <span invisible="not wa_last_activity" class="ms-3">Last:
+                            <field name="wa_last_activity" nolabel="1" class="oe_inline"/></span>
+                    </div>
+                </div>
+            </xpath>
         </field>
     </record>
 </odoo>

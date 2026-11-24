@@ -216,7 +216,7 @@ class WhatsAppSessionNumber(models.Model):
 
     def _number_changed(self, old, new):
         super()._number_changed(old, new)
-        link = self.env['wa.employee.session'].sudo().search([('session_id', '=', self.id)], limit=1)
+        link = self.env['wa.employee.session'].sudo().search([('session_id', '=', self.id), ('active', '=', True)], limit=1)
         if link:
             link._go_on_with(number=new)
 

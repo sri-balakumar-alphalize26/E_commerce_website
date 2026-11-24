@@ -1,6 +1,6 @@
 {
     'name': 'Employee Tracker & Sales Agent',
-    'version': '19.0.1.4.5',
+    'version': '19.0.1.4.7',
     'category': 'Human Resources',
     'summary': 'Track & monitor employee WhatsApp communications on company numbers',
     'description': """
@@ -42,6 +42,7 @@
     'assets': {
         'web.assets_backend': [
             'whatsapp_employee_tracker/static/src/css/wa_chat_style.css',
+            'whatsapp_employee_tracker/static/src/js/wa_text.js',
             'whatsapp_employee_tracker/static/src/js/chat_view.js',
             'whatsapp_employee_tracker/static/src/xml/chat_view.xml',
             'whatsapp_employee_tracker/static/src/js/dashboard.js',

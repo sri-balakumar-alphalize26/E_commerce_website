@@ -11,7 +11,9 @@
             <kanban class="o_kanban_mobile" js_class="wa_dashboard_kanban" sample="1" action="action_open_chats" type="object">
                 <field name="employee_id"/>
                 <field name="department_id"/>
-                <field name="phone_number"/>
+                <field name="number_pretty"/>
+                <field name="has_replies"/>
+                <field name="has_score"/>
                 <field name="session_status"/>
                 <field name="active"/>
                 <field name="until"/>
@@ -47,7 +49,7 @@
                             <!-- Phone -->
                             <div class="text-muted small mb-2">
                                 <i class="fa fa-whatsapp text-success me-1"/>
-                                <field name="phone_number"/>
+                                <field name="number_pretty"/>
                                 <span t-if="!record.active.raw_value and record.until.raw_value" class="ms-1">until <field name="until" widget="date"/></span>
                             </div>
 
@@ -89,11 +91,11 @@
                             <div class="d-flex justify-content-between px-1 mt-1">
                                 <div class="small">
                                     <i class="fa fa-clock-o text-warning me-1"/>
-                                    <span class="fw-bold"><field name="avg_response_minutes"/></span> min avg
+                                    <span class="fw-bold" t-esc="record.has_replies.raw_value ? record.avg_response_minutes.raw_value.toFixed(1) : '-'"/> min avg
                                 </div>
                                 <div class="small">
                                     <i class="fa fa-star text-warning me-1"/>
-                                    <span class="fw-bold"><field name="quality_score"/></span>/100
+                                    <span class="fw-bold" t-esc="record.has_score.raw_value ? record.quality_score.raw_value.toFixed(1) : '-'"/>/100
                                 </div>
                                 <div class="small">
                                     <i class="fa fa-exclamation-triangle me-1" t-attf-class="#{record.alert_count.raw_value > 0 ? 'text-danger' : 'text-muted'}"/>
@@ -102,9 +104,9 @@
                             </div>
 
                             <!-- Last Activity -->
-                            <div class="text-muted small mt-2 text-end">
+                            <div class="text-muted small mt-2 text-end text-nowrap">
                                 <i class="fa fa-clock-o me-1"/>
-                                Last: <field name="last_activity" widget="relative"/>
+                                Last: <span t-esc="record.last_activity.raw_value ? record.last_activity.value : '-'"/>
                             </div>
                         </div>
                     </t>

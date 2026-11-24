@@ -86,13 +86,22 @@ class QualityScore(models.Model):
         ])
 
         for emp_session in emp_sessions:
-            # Check if already computed today
+            # Already there and nothing new since: leave it
             existing = self.search([
                 ('employee_session_id', '=', emp_session.id),
                 ('score_date', '=', today),
-            ])
+            ], limit=1)
             if existing:
-                continue
+                day = fields.Datetime.to_datetime(today)
+                Log = self.env['wa.communication.log']
+                domain = [
+                    ('employee_session_id', '=', emp_session.id),
+                    ('message_date', '>=', day),
+                    ('message_date', '<=', day.replace(hour=23, minute=59, second=59)),
+                ]
+                if (existing.period_messages == Log.search_count(domain)
+                        and existing.period_alerts == Log.search_count(domain + [('is_flagged', '=', True)])):
+                    continue
 
             self._compute_score_for(emp_session, today)
 
@@ -198,7 +207,7 @@ class QualityScore(models.Model):
         word_counts = [l.word_count for l in sent if l.word_count]
         avg_wc = sum(word_counts) / len(word_counts) if word_counts else 0
 
-        self.create({
+        vals = {
             'employee_session_id': emp_session.id,
             'score_date': date,
             'score': round(overall, 1),
@@ -214,4 +223,12 @@ class QualityScore(models.Model):
             'avg_response_minutes': round(avg_rt, 1),
             'avg_word_count': round(avg_wc, 1),
             'peak_hour': peak_hour,
-        })
+        }
+        existing = self.search([
+            ('employee_session_id', '=', emp_session.id),
+            ('score_date', '=', date),
+        ], limit=1)
+        if existing:
+            existing.write(vals)
+        else:
+            self.create(vals)

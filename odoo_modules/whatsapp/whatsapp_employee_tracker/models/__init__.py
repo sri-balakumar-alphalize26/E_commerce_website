@@ -24,3 +24,4 @@ from . import employee_session_easy
 from . import phone_typed
 from . import phone_name
 from . import phone_chats
+from . import dashboard_stats

@@ -92,7 +92,7 @@ class WhatsAppSessionEmployee(models.Model):
 
     def _setup_steps(self):
         steps = super()._setup_steps()
-        link = self.env['wa.employee.session'].sudo().search([('session_id', '=', self.id)], limit=1) \
+        link = self.env['wa.employee.session'].sudo().search([('session_id', '=', self.id), ('active', '=', True)], limit=1) \
             if isinstance(self.id, int) else False
         steps.append(('employee', bool(link), link.employee_id.name if link else _("Employee"),
                       _("Choose the employee who answers on this number.")))
