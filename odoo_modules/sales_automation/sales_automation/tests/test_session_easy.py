@@ -280,7 +280,10 @@ class TestGroupEmployee(EasyCase):
             self.group.enabled = True
 
     def test_the_same_number_elsewhere(self):
-        self.spare.authorized_number = '971500000001'
+        # from before one number could be connected only once
+        self.env.flush_all()
+        self.env.cr.execute("UPDATE whatsapp_session SET authorized_number = '971500000001' WHERE id = %s", [self.spare.id])
+        self.spare.invalidate_recordset()
         with self.assertRaisesRegex(ValidationError, 'already has Zz Ravi'), self.env.cr.savepoint():
             self.group.enabled = True
 

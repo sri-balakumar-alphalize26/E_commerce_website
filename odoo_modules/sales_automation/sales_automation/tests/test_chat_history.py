@@ -4,7 +4,7 @@ and nothing of an old one is lost (23 Nov 2026)."""
 from unittest.mock import patch
 
 from odoo import fields
-from odoo.exceptions import UserError
+from odoo.exceptions import AccessError, UserError
 from odoo.tests import HttpCase, new_test_user, tagged
 from odoo.tools import mute_logger
 
@@ -262,6 +262,132 @@ class TestChatHistory(HistoryCase):
         self.assertEqual((alert.employee_session_id, alert.employee_id), (old, self.anu))
         self.assertEqual(request.conversation_id.employee_session_id, old)
 
+    def test_typed_on_the_phone(self):
+        def payload(wa_id, text, jid=CUSTOMER + '@s.whatsapp.net', me=True, **message):
+            return {'event': 'messages.upsert', 'data': {'messageTimestamp': 1795487231, 'message': message or {'conversation': text},
+                    'key': {'id': wa_id, 'fromMe': me, 'remoteJid': jid}}}
+        self.assertFalse(self.Log._typed_values(payload('G', 'x', jid='7@g.us'), 'x'), 'a group')
+        self.assertFalse(self.Log._typed_values(payload('I', 'x', me=False), 'x'), 'received')
+        self.assertFalse(self.Log._typed_values(payload('R', '', reactionMessage={'text': 'y'}), ''))
+        self.assertIn('look', self.Log._typed_values(payload('P', '', imageMessage={'caption': 'look'}), '')[2])
+        values = self.Log._typed_values(payload('T1', 'hiloo'), 'hiloo')
+        messages = self.env['whatsapp.message'].search_count([])
+        log = self.Log._typed_store(self.second.id, '971501234567', values)
+        self.assertEqual((log.direction, log.message_text, log.employee_session_id, log.conversation_id.phone),
+                         ('outgoing', 'hiloo', self.link, CUSTOMER))
+        self.assertEqual(self.env['whatsapp.message'].search_count([]), messages, 'no cap, no bot')
+        self.assertEqual(self.link.total_sent, 1)
+        self.assertFalse(self.Log._typed_store(self.second.id, '971501234567', values), 'once')
+        row = {'session_id': self.second.id, 'phone': CUSTOMER, 'direction': 'outgoing', 'status': 'sent'}
+        self.env['whatsapp.message'].create(dict(row, message='by Odoo', wa_message_id='T2'))
+        now = fields.Datetime.now()
+        self.assertFalse(self.Log._typed_store(self.second.id, '971501234567', ('T2', CUSTOMER, 'by Odoo', now)))
+        late = self.Log._typed_store(self.second.id, '971501234567', ('T3', CUSTOMER, 'slow', now))
+        self.env['whatsapp.message'].create(dict(row, message='slow', wa_message_id='T3'))
+        self.Log._cron_sync_messages()
+        self.assertFalse(late.exists(), 'Odoo sent it after all: not twice')
+        self.ES._split_by_number()
+        self.assertIn('hiloo', self._texts(self.link))
+
+    def test_a_number_without_an_employee(self):
+        free = self.env['whatsapp.session'].create({'name': 'Zz free', 'gateway_api_key': 'zz-free', 'authorized_number': '971507777777'})
+        ids = [n['id'] for n in self.ES.numbers_without_employee()]
+        self.assertIn(free.id, ids)
+        self.assertNotIn(self.second.id, ids, 'it has a card')
+
+    def test_one_number_once(self):
+        with self.assertRaisesRegex(Exception, 'only once'), self.env.cr.savepoint():
+            self.env['whatsapp.session'].create({'name': 'Zz twin', 'gateway_api_key': 'zz-twin', 'authorized_number': '971501234567'})
+        off = self.env['whatsapp.session'].create({'name': 'Zz old', 'gateway_api_key': 'zz-old', 'active': False,
+                                                   'phone_number': '971509999999', 'authorized_number': '971501234567'})
+        self.assertEqual(off.shown_number, '+971 50 999 9999', 'its own phone')
+        self.assertEqual(self.second.shown_number, '+971 50 123 4567')
+        with self.assertRaisesRegex(UserError, 'only once'):
+            off._turn_on()
+
+    def test_the_phones_own_chats(self):
+        from odoo.addons.whatsapp_employee_tracker.models import phone_chats
+        phone_chats._MEMO.clear()
+        self.addCleanup(phone_chats._MEMO.clear)
+        jid, lid = CUSTOMER + '@s.whatsapp.net', '55@lid'
+
+        def msg(wid, jid, text, at, me=False, **key):
+            return {'key': dict({'id': wid, 'remoteJid': jid, 'fromMe': me}, **key), 'message': {'conversation': text}, 'messageTimestamp': at,
+                    'pushName': 'Push', 'MessageUpdate': [{'status': 'READ'}, {'status': 'DELIVERY_ACK'}] if me else []}
+        asked = []
+
+        def gateway(rec, method, path, payload=None, **kw):
+            asked.append((path.split('/')[2], payload))
+            if 'findChats' in path:
+                return [{'remoteJid': jid, 'lastMessage': msg('a', jid, 'old', 100), 'unreadCount': 1},
+                        {'remoteJid': lid, 'lastMessage': msg('b', lid, 'hi', 300, True, remoteJidAlt=jid), 'unreadCount': 0},
+                        {'remoteJid': '9@g.us', 'lastMessage': msg('c', '9@g.us', 'grp', 200)},
+                        {'remoteJid': '1@newsletter', 'lastMessage': msg('d', '1@newsletter', 'n', 400)}]
+            if 'findContacts' in path:
+                return [{'remoteJid': '9@g.us', 'pushName': 'My group'}]
+            at = payload['where']['key']['remoteJid']
+            rows = {jid: [msg('a', jid, 'old', 100)], lid: [msg('b', lid, 'hi', 300, True)], '9@g.us': [msg('c', '9@g.us', 'grp', 200)]}[at]
+            return {'messages': {'pages': 2 if at == jid else 1, 'records': rows}}
+        with patch.object(self.env.registry['whatsapp.session'], '_gateway_call', gateway):
+            chats = self.link.phone_chats()
+            self.assertEqual([(c['id'], c['name'], c['preview']) for c in chats], [(jid, 'Push', 'hi'), ('9@g.us', 'My group', 'grp')])
+            one = self.link.phone_messages(jid)
+            self.assertEqual([(m['message_text'], m['direction'], m['status']) for m in one['messages']],
+                             [('old', 'incoming', 'received'), ('hi', 'outgoing', 'read')])
+            self.assertTrue(one['more'])
+            self.assertEqual(self.link.phone_messages('9@g.us')['messages'][0]['sender'], 'Push')
+            self.assertEqual([a for a, _p in asked].count('findChats'), 1, 'kept for a moment')
+            with self.assertRaises(AccessError):
+                self.link.phone_messages('77777@s.whatsapp.net')
+            user = new_test_user(self.env, 'zz-not-admin', groups='base.group_user')
+            with self.assertRaises(AccessError):
+                self.link.with_user(user).phone_chats()
+
+    def test_names_and_live_notice(self):
+        from odoo.addons.whatsapp_employee_tracker.models import phone_chats
+        phone_chats._MEMO.clear()
+        self.addCleanup(phone_chats._MEMO.clear)
+        jid, lid = CUSTOMER + '@s.whatsapp.net', '77@lid'
+        Name = self.env['wa.phone.name']
+
+        def msg(wid, jid, text, at, me=False, push='', **key):
+            return {'key': dict({'id': wid, 'remoteJid': jid, 'fromMe': me}, **key), 'message': {'conversation': text},
+                    'messageTimestamp': at, 'pushName': push}
+        rows = [{'remoteJid': jid, 'lastMessage': msg('a', jid, 'ours', 300, True, 'Our Shop')},
+                {'remoteJid': lid, 'lastMessage': msg('b', lid, 'ours too', 200, True, 'Our Shop')}]
+        calls = []
+
+        def gateway(rec, method, path, payload=None, **kw):
+            calls.append(path)
+            if 'findChats' in path:
+                return rows
+            if 'findContacts' in path:
+                return [{'remoteJid': jid, 'pushName': CUSTOMER}]
+            return {'messages': {'pages': 1, 'records': [msg('c', payload['where']['key']['remoteJid'], 'hi', 100, push='Ravi')]}}
+        told = []
+        with patch.object(self.env.registry['whatsapp.session'], '_gateway_call', gateway), \
+                patch.object(self.env.registry['res.groups'], '_bus_send', lambda rec, kind, data, **kw: told.append((rec, kind, data))):
+            names = {c['id']: c['name'] for c in self.link.phone_chats()}
+            self.assertEqual(names, {jid: '+' + CUSTOMER, lid: 'Hidden number'}, 'a number is no name, ours is not theirs')
+            Name._look(self.second, jid)
+            self.assertEqual(self.link.phone_chats()[0]['name'], 'Ravi', 'what they call themselves')
+            Name._teach(self.second.id, {jid: ('', '')})
+            self.assertEqual(Name._taught(self.second.id)[jid][0], 'Ravi', 'learnt once, it stays')
+            asked = calls.count('/chat/findChats/%s' % self.second.instance_name)
+            self.second._phone_new(msg('d', lid, 'secret', 400, push='Meena', remoteJidAlt='9715@s.whatsapp.net'))
+            self.assertEqual(told, [(self.env.ref('base.group_system'), 'wa_tracker_new', {'session': self.second.id, 'chat': lid})])
+            first = self.link.phone_chats()[0]
+            self.assertEqual((first['id'], first['name'], first['preview'], first['unread']), ('9715@s.whatsapp.net', 'Meena', 'secret', 1))
+            self.assertEqual(calls.count('/chat/findChats/%s' % self.second.instance_name), asked, 'not asked again')
+            del told[:]
+            row = {'session_id': self.second.id, 'phone': CUSTOMER, 'direction': 'outgoing', 'message': 'x'}
+            waiting = self.env['whatsapp.message'].create(dict(row, status='pending'))
+            self.assertFalse(told)
+            waiting.status = 'sent'
+            self.assertEqual([t[2]['chat'] for t in told], [jid])
+            self._in('y')
+        self.env.registry.clear_cache()
+
     def test_unknown_stays_where_it_is(self):
         m = self._in('x')
         m.write({'own_number': False, 'employee_session_id': False})
@@ -308,6 +434,10 @@ class TestChatPages(HttpCase):
         self.assertEqual([m['message_text'] for m in self._call('/wa_tracker/messages', conversation_id=one[0]['id'])], ['one'])
         both = self._call('/wa_tracker/conversations', employee_id=employee.id)
         self.assertEqual({c['employee_session_id'] for c in both}, {link.id, new.id})
+        everybody = {c['employee_session_id'] for c in self._call('/wa_tracker/conversations')}
+        self.assertIn(new.id, everybody)
+        self.assertNotIn(link.id, everybody, 'an old number is not among the present ones')
+        self.assertEqual(link.action_open_chats()['context']['active_employee_session_id'], link.id)
         self.authenticate('zz-page-portal', 'zz-page-portal')
         for path, params in (('/wa_tracker/employee_sessions', {}), ('/wa_tracker/conversations', {}),
                              ('/wa_tracker/messages', {'conversation_id': one[0]['id']})):

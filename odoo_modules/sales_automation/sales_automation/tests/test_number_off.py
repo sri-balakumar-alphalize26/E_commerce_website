@@ -170,8 +170,9 @@ class TestNumberOff(ConnectCase):
 
     def test_an_off_number_is_turned_on_not_added(self):
         self._do('off')
-        with self.assertRaisesRegex(UserError, 'Turn on'):
-            self._add(employee_id=0, employee_name='Zz X')
+        ask = self._add(employee_id=0, employee_name='Zz X')['ask_on']
+        self.assertEqual(ask['owner'], 'Zz Anu')
+        self.assertFalse(self.second.active, 'asked first')
 
     def test_the_freed_employee_takes_another_number(self):
         self._do('remove')

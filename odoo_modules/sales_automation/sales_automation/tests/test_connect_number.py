@@ -39,8 +39,10 @@ class ConnectCase(TransactionCase):
             number = box.panel.get(rec.sudo().gateway_api_key)
             if not number:
                 raise UserError('The gateway refused the request (HTTP 403).\ntoken not registered')
+            if path.startswith('/v1/numbers?check='):
+                return {'check': box.where.get(path.split('=')[1], 'new'), 'in_use': box.in_use}
             if path == '/v1/numbers' and method == 'GET':
-                return {'may_add': box.may_add, 'numbers': [{'authorized_number': n} for n in box.panel.values()],
+                return {'may_add': box.may_add, 'numbers': [{'authorized_number': n} for n in box.panel.values()] + box.unused,
                         'free': [f for f in box.free if f['authorized_number'] not in box.panel.values()]}
             if path == '/v1/numbers':
                 if not box.may_add:
@@ -64,7 +66,8 @@ class ConnectCase(TransactionCase):
                 jid = path.split('groupJid=')[1]
                 return {'inviteUrl': box.invite.get(jid, '')}
             return {}
-        self.lost, self.free = set(), []
+        self.unused = []
+        self.lost, self.free, self.where, self.in_use = set(), [], {}, False
         p = patch.object(env.registry['whatsapp.session'], '_gateway_call', gateway)
         p.start()
         self.addCleanup(p.stop)
@@ -110,6 +113,98 @@ class TestConnectNumber(ConnectCase):
             self.Connect._number(self.env['res.country'], '501234567')
         self.assertEqual(self.Connect.check_number(self.ae.id, '501234567'), {'ok': True, 'pretty': '+971 50 123 4567'})
         self.assertFalse(self.Connect.check_number(self.ae.id, '5')['ok'])
+
+    # ------------------------------------------------------------ is it there
+    def test_look(self):
+        look = lambda n='501234567': self.Connect.look(self.ae.id, n)  # noqa: E731
+        self.assertEqual((look()['where'], look()['ok']), ('new', True))
+        for where, ok in (('free', True), ('here', True), ('off', False), ('elsewhere', False)):
+            self.where['971501234567'] = where
+            self.assertEqual((look()['where'], look()['ok'], bool(look().get('key'))), (where, ok, False))
+        self.where['971501234567'], self.in_use = 'here', True
+        self.assertTrue(look()['key'], 'in use, but this Odoo lost it')
+        self.assertEqual((look('500000001')['where'], look('500000001')['ok']), ('here', False), 'connected')
+        self.assertIn('Area 1', look('500000001')['text'])
+        self.assertFalse(look('5')['ok'])
+        self.down = True
+        self.assertEqual((look()['where'], look()['ok']), ('', True), 'the panel is asked again on Next')
+        self.down = False
+        self.first.with_context(wa_switch=True).write({'active': False})
+        self.assertEqual((look('500000001')['where'], look('500000001')['ok']), ('off', True))
+        self.assertFalse([c for c in self.calls if c[0] == 'POST'], 'looking adds nothing')
+        self.assertEqual(self.Connect.start()['database'], self.env.cr.dbname)
+        user = new_test_user(self.env, 'zz-look', groups='base.group_user')
+        with self.assertRaises(AccessError):
+            self.Connect.with_user(user).look(self.ae.id, '501234567')
+
+    def _off_with_waiting(self, key):
+        """An entry that is off, with messages that wait, some of them new."""
+        old = self.env['whatsapp.session'].sudo().create({
+            'name': 'Zz old', 'gateway_api_key': key, 'active': False, 'authorized_number': '971501234567', 'phone_number': '971501234567'})
+        waiting = self.env['whatsapp.message'].sudo().create([{
+            'session_id': old.id, 'phone': '971509990001', 'message': 'm%s' % n, 'direction': 'outgoing', 'status': 'pending'} for n in (1, 2)])
+        return old, waiting
+
+    def test_turn_on_here_with_a_new_key(self):
+        """Its key is another number's: a new one, the same entry, nothing sent, groups off."""
+        old, waiting = self._off_with_waiting(setup_key('tokA'))
+        group = self.env['sa.sales.group'].sudo().create({'name': 'Zz old g', 'group_jid': '31@g.us', 'session_id': old.id, 'sa_paused': True})
+        ask = self._add()
+        self.assertEqual((ask['ask_on']['name'], ask['ask_on']['waiting']), ('Zz old', 2))
+        self.assertFalse(old.active, 'asked first')
+        self.assertEqual(set(waiting.mapped('status')), {'pending'})
+        self._add(turn_on=True)
+        self.assertTrue(old.active)
+        self.assertEqual(set(waiting.mapped('status')), {'failed'}, 'never sent')
+        self.assertFalse(old._key_of_another())
+        self.assertFalse(group.enabled)
+        self.assertEqual(self._session(), old, 'the same entry, with its history')
+        link = self.env['wa.employee.session'].search([('session_id', '=', old.id)])
+        self.assertEqual(link.employee_id, self.anu)
+        self.assertEqual(self.first.status, 'connected')
+
+    def test_turn_on_here_refused(self):
+        old, waiting = self._off_with_waiting(setup_key('tokA'))
+        self.where['971501234567'] = 'elsewhere'
+        with self.assertRaisesRegex(UserError, 'another database'), self.env.cr.savepoint():
+            self._add(turn_on=True)
+        self.assertEqual((old.active, set(waiting.mapped('status'))), (False, {'pending'}), 'nothing is changed')
+        self.where.clear()
+        self.may_add = 0
+        with self.assertRaisesRegex(UserError, 'not allowed'), self.env.cr.savepoint():
+            self._add(turn_on=True)
+        self.assertEqual((old.active, set(waiting.mapped('status'))), (False, {'pending'}))
+
+    def test_turn_on_here_with_its_own_key(self):
+        self._add()
+        session = self._session()
+        waiting = self.env['whatsapp.message'].sudo().create({
+            'session_id': session.id, 'phone': '971509990001', 'message': 'm', 'direction': 'outgoing', 'status': 'pending'})
+        key = session.gateway_api_key
+        session._turn_off()
+        self.where['971501234567'] = 'off'
+        self.assertEqual(self.Connect.look(self.ae.id, '501234567')['owner'], 'Zz Anu')
+        self.assertEqual(self._add(employee_id=0)['ask_on']['owner'], 'Zz Anu')
+        self._add(employee_id=0, turn_on=True)
+        self.assertEqual((session.active, session.gateway_api_key, waiting.status), (True, key, 'failed'))
+        self.assertEqual(self.env['wa.employee.session'].search([('session_id', '=', session.id)]).employee_id, self.anu)
+
+    def test_turn_on_in_the_list_with_anothers_key(self):
+        old, waiting = self._off_with_waiting(setup_key('tokA'))
+        old._turn_on()
+        self.assertTrue(old.active)
+        self.assertFalse(old._key_of_another())
+        self.assertEqual(set(waiting.mapped('status')), {'failed'})
+
+    def test_added_in_the_panel(self):
+        """Added in the panel under this database: Odoo lists it and takes it, no key typed."""
+        self.unused = [{'authorized_number': '971501234567', 'label': 'Deira', 'state': 'open', 'in_use': False}]
+        self.may_add = 2            # the limit does not count against one that is there already
+        rows = self.Connect.start()['scanned']
+        self.assertEqual([(r['number'], r['session_id'], r['connected']) for r in rows], [('971501234567', False, True)])
+        self.Connect.add({'free_number': '971501234567', 'employee_id': self.anu.id, 'company_id': self.env.company.id})
+        self.assertTrue(self._session().gateway_api_key.startswith('tok-971501234567'), 'its own key, fetched')
+        self.assertFalse(self.Connect.start()['scanned'], 'it is here now')
 
     # ------------------------------------------------------------ adding
     def test_start(self):
