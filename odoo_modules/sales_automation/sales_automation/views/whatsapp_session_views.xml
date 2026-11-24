@@ -27,6 +27,24 @@
                         class="btn-primary" invisible="setup_next != 'groups'"
                         groups="sales_automation.group_sa_manager"/>
             </xpath>
+            <!-- the groups of this number, those that are on first -->
+            <xpath expr="//notebook/page[1]" position="before">
+                <page string="Groups" name="sa_groups" groups="sales_automation.group_sa_user">
+                    <div class="text-muted mb-2" invisible="sa_group_ids">
+                        No group is known for this number yet. Press <b>Sync Groups</b> above.
+                    </div>
+                    <field name="sa_group_ids" readonly="1" nolabel="1">
+                        <list decoration-muted="not enabled" create="0" delete="0" default_order="enabled desc, name">
+                            <field name="name"/>
+                            <field name="group_type"/>
+                            <field name="enabled" string="On" widget="boolean"/>
+                            <field name="employee_session_id" string="Employee"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="member_count" string="Members"/>
+                        </list>
+                    </field>
+                </page>
+            </xpath>
         </field>
     </record>
 

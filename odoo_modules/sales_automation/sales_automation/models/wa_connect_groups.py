@@ -69,6 +69,12 @@ class WhatsAppConnectGroups(models.AbstractModel):
         return out
 
 
+class WhatsAppSessionGroupList(models.Model):
+    _inherit = 'whatsapp.session'
+
+    sa_group_ids = fields.One2many('sa.sales.group', 'session_id', string='WhatsApp Groups')
+
+
 class SalesGroupOnce(models.Model):
     _inherit = 'sa.sales.group'
 
