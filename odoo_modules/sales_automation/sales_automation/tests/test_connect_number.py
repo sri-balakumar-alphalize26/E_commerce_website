@@ -163,6 +163,33 @@ class TestConnectNumber(ConnectCase):
         self.assertEqual(link.employee_id, self.anu)
         self.assertEqual(self.first.status, 'connected')
 
+    def test_scan_on_a_number_that_is_off(self):
+        """Scan on the page of an off number: the question, not a QR that never comes."""
+        old, waiting = self._off_with_waiting(setup_key('tokA'))
+        data = self.Connect.start(old.id)
+        self.assertFalse(data['session'])
+        self.assertEqual((data['off']['off_session_id'], data['off']['ask_on']['waiting']), (old.id, 2))
+        self.assertIn('ask_on', self.Connect.add({'off_session_id': old.id}))
+        self.assertFalse(old.active)
+        first = self.Connect.add({'off_session_id': old.id, 'turn_on': True, 'employee_id': self.anu.id, 'quick': True})
+        self.assertTrue(first['first'])
+        self.assertTrue(old.active)
+        self.assertEqual(set(waiting.mapped('status')), {'failed'})
+        self.assertFalse(self.Connect.start(old.id)['off'])
+        self.assertTrue(self.Connect.state(old.id)['qr'])
+        self.assertEqual(self.Connect.add({'off_session_id': old.id, 'quick': True})['id'], old.id, 'tapped twice')
+
+    def test_no_qr_says_why(self):
+        self._add()
+        session = self._session()
+        self.assertTrue(self.Connect.state(session.id)['qr'])
+        before = self.env.registry['whatsapp.session']._gateway_call
+        for state in ('open', 'missing', 'unreachable'):
+            def gateway(rec, method, path, payload=None, **kw):
+                return {'state': state, 'qr': ''} if path == '/v1/qr' else before(rec, method, path, payload, **kw)
+            with patch.object(self.env.registry['whatsapp.session'], '_gateway_call', gateway):
+                self.assertTrue(self.Connect.state(session.id)['error'], state)
+
     def test_turn_on_here_refused(self):
         old, waiting = self._off_with_waiting(setup_key('tokA'))
         self.where['971501234567'] = 'elsewhere'
@@ -195,6 +222,93 @@ class TestConnectNumber(ConnectCase):
         self.assertTrue(old.active)
         self.assertFalse(old._key_of_another())
         self.assertEqual(set(waiting.mapped('status')), {'failed'})
+
+    def test_the_panel_from_odoo(self):
+        """Restart, unlink, reset, footer, activity, name."""
+        did, about = [], {'shared_with': 1, 'used': 1, 'may_add': 5, 'footer': {'on': True, 'name': 'Co', 'phone': '+97150'},
+                          'activity': [{'at': '2026-11-24T04:00:00.000Z', 'phone': '97150', 'status': 'refused', 'detail': '<b>why</b>'}]}
+        before = self.env.registry['whatsapp.session']._gateway_call
+
+        def gateway(rec, method, path, payload=None, **kw):
+            if path.startswith('/v1/self'):
+                if method == 'POST':
+                    did.append((rec.id, payload))
+                    return {'ok': True}
+                return about
+            return before(rec, method, path, payload, **kw)
+        with patch.object(self.env.registry['whatsapp.session'], '_gateway_call', gateway):
+            for action, do in (('action_restart_number', 'restart'), ('action_unlink_phone', 'unlink'), ('action_reset_number', 'reset')):
+                ask = getattr(self.first, action)()
+                wizard = self.env['whatsapp.number.off'].browse(ask['res_id'])
+                self.assertEqual((wizard.do, wizard.shared), (do, 1))
+                self.assertFalse([d for d in did if d[1]['do'] == do], 'asked first')
+                if do != 'restart':
+                    for wrong in (False, '9999'):
+                        wizard.last_digits = wrong
+                        with self.assertRaisesRegex(UserError, '4 digits'):
+                            wizard.action_do()
+                    self.assertFalse([d for d in did if d[1]['do'] == do], 'nothing on wrong digits')
+                    wizard.last_digits = '0001'
+                wizard.action_do()
+                self.assertEqual(did[-1], (self.first.id, {'sure': True, 'do': do}))
+            footer = self.env['whatsapp.number.panel'].browse(self.first.action_message_footer()['res_id'])
+            self.assertEqual((footer.footer_on, footer.footer_name, footer.used_text), (True, 'Co', '1 of 5 numbers'))
+            footer.write({'footer_on': False, 'footer_phone': '12'})
+            with self.assertRaises(UserError):
+                footer.action_save()
+            footer.footer_phone = '+971 50 123 4567'
+            footer.action_save()
+            self.assertEqual(did[-1][1], {'do': 'footer', 'on': False, 'name': 'Co', 'phone': '971501234567'})
+            activity = self.env['whatsapp.number.panel'].browse(self.first.action_panel_activity()['res_id']).activity
+            self.assertIn('refused', activity)
+            self.assertNotIn('<b>why', activity)
+            self.first.web_save({'name': 'Area 9'}, {'name': {}})
+            self.assertEqual(did[-1][1], {'do': 'rename', 'label': 'Area 9'})
+            user = new_test_user(self.env, 'zz-panel', groups='whatsapp_gateway.group_whatsapp_manager')
+            for action in ('action_restart_number', 'action_message_footer', 'action_panel_activity'):
+                with self.assertRaises(AccessError):
+                    getattr(self.first.with_user(user), action)()
+
+    def test_a_group_another_number_uses(self):
+        self._add()
+        second = self._session()
+        self.env['whatsapp.session'].browse(second.id).status = 'connected'
+        Group = self.env['sa.sales.group']
+        one = Group.create({'name': 'Zz Test Group', 'group_jid': '71@g.us', 'session_id': self.first.id, 'enabled': True})
+        two = Group.create({'name': 'Zz Test Group', 'group_jid': '71@g.us', 'session_id': second.id})
+        alone = Group.create({'name': 'Zz Test Group', 'group_jid': '72@g.us', 'session_id': second.id, 'enabled': True})
+        self.assertIn('Area 1', two.used_by_text)
+        self.assertIn('Turn it off there', two.used_by_text)
+        self.assertNotIn('offline', two.used_by_text)
+        self.assertEqual(two.action_sa_open_owner()['res_id'], one.id)
+        self.assertFalse(one.used_by_text)
+        self.assertFalse(alone.used_by_text, 'the same name is another group')
+        with self.assertRaisesRegex(ValidationError, 'Already connected with Area 1'), self.env.cr.savepoint():
+            two.enabled = True
+        two.invalidate_recordset()
+        self.assertFalse(two.enabled)
+        self.groups_of['971501234567'] = [('71@g.us', 'Zz Test Group')]
+        row = [g for g in self.Connect.groups(second.id)['groups'] if g['id'] == two.id][0]
+        self.assertIn('Turn it off there', row['used_by'])
+        self.first.status = 'disconnected'
+        two.invalidate_recordset()
+        self.assertIn('offline', two.used_by_text, 'only offline: still its group')
+        # off there, on here
+        one.enabled = False
+        two.invalidate_recordset()
+        self.assertFalse(two.used_by_text)
+        two.enabled = True
+        one.invalidate_recordset()
+        self.assertTrue(one.used_by_text)
+        with self.assertRaises(ValidationError), self.env.cr.savepoint():
+            one.enabled = True
+        # a number that is off owns nothing
+        second.write({'active': False})
+        one.invalidate_recordset()
+        self.assertFalse(one.used_by_text)
+        for view in ('view_sa_sales_group_list', 'view_sa_sales_group_form'):
+            record = self.env.ref('sales_automation.%s' % view)
+            Group.get_views([(record.id, record.type)])
 
     def test_added_in_the_panel(self):
         """Added in the panel under this database: Odoo lists it and takes it, no key typed."""

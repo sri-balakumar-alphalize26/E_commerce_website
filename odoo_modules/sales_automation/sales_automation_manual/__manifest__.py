@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Sales Automation - User Manual',
-    'version': '19.0.1.2.0',
+    'version': '19.0.1.3.0',
     'category': 'Sales',
     'summary': 'The full user manual of the WhatsApp sales automation, reachable from every module menu',
     'description': """

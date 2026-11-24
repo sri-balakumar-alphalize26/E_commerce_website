@@ -343,6 +343,132 @@ class TestChatHistory(HistoryCase):
             with self.assertRaises(AccessError):
                 self.link.with_user(user).phone_chats()
 
+    def test_media_reactions_edits(self):
+        import base64
+        from odoo.addons.whatsapp_employee_tracker.models import phone_chats
+        phone_chats._MEMO.clear()
+        self.addCleanup(phone_chats._MEMO.clear)
+        jid = CUSTOMER + '@s.whatsapp.net'
+
+        def msg(wid, at, body):
+            return {'key': {'id': wid, 'remoteJid': jid, 'fromMe': False}, 'message': body, 'messageTimestamp': at}
+        rows = [msg('IMG001', 1, {'imageMessage': {'caption': 'look'}}), msg('TXT001', 2, {'conversation': 'old text'}),
+                msg('TXT002', 3, {'conversation': 'gone'}), msg('DOC001', 4, {'documentMessage': {'fileName': 'a.pdf'}}),
+                msg('R1', 5, {'reactionMessage': {'key': {'id': 'IMG001'}, 'text': '\u2764'}}),
+                msg('E1', 6, {'protocolMessage': {'type': 14, 'key': {'id': 'TXT001'}, 'editedMessage': {'conversation': 'new text'}}}),
+                msg('D1', 7, {'protocolMessage': {'type': 0, 'key': {'id': 'TXT002'}}})]
+        answer = {'base64': base64.b64encode(b'PIC').decode(), 'mimetype': 'image/jpeg; x=1', 'fileName': '../a b.jpg'}
+
+        def gateway(rec, method, path, payload=None, **kw):
+            if 'findChats' in path:
+                return [{'remoteJid': jid, 'lastMessage': rows[2]}]
+            if 'getBase64' in path:
+                return dict(answer)
+            return {'messages': {'pages': 1, 'records': rows}} if 'findMessages' in path else []
+        with patch.object(self.env.registry['whatsapp.session'], '_gateway_call', gateway):
+            got = {m['id']: m for m in self.link.phone_messages(jid)['messages']}
+            self.assertEqual(sorted(got), ['DOC001', 'IMG001', 'TXT001', 'TXT002'])
+            self.assertEqual((got['IMG001']['media']['kind'], got['IMG001']['reactions']), ('image', ['\u2764']))
+            self.assertEqual((got['TXT001']['message_text'], got['TXT001']['edited']), ('new text', True))
+            self.assertEqual((got['TXT002']['message_text'], got['TXT002']['deleted']), ('', True))
+            self.assertEqual(got['DOC001']['media'], {'kind': 'file', 'name': 'a.pdf'})
+            data, kind, name, inline = self.link.phone_media('IMG001')
+            self.assertEqual((data, kind, inline), (b'PIC', 'image/jpeg', True))
+            self.assertNotIn('/', name)
+            answer['mimetype'] = 'text/html'
+            self.assertFalse(self.link.phone_media('IMG001')[3], 'never shown by the browser')
+            for bad in ('', '../x', 'a b', 'x' * 99):
+                with self.assertRaises(UserError):
+                    self.link.phone_media(bad)
+            answer['base64'] = ''
+            with self.assertRaises(UserError):
+                self.link.phone_media('IMG001')
+            user = new_test_user(self.env, 'zz-media', groups='base.group_user')
+            with self.assertRaises(AccessError):
+                self.link.with_user(user).phone_media('IMG001')
+
+    def test_reply(self):
+        from odoo.addons.whatsapp_employee_tracker.models import phone_chats
+        phone_chats._MEMO.clear()
+        self.addCleanup(phone_chats._MEMO.clear)
+        jid, sent = CUSTOMER + '@s.whatsapp.net', []
+
+        def gateway(rec, method, path, payload=None, **kw):
+            if 'findChats' in path:
+                last = lambda j: {'key': {'id': 'X', 'remoteJid': j}, 'message': {'conversation': 'x'}, 'messageTimestamp': 1}  # noqa: E731
+                return [{'remoteJid': j, 'lastMessage': last(j)} for j in (jid, '9@g.us', '8@lid')]
+            if '/message/sendText' in path:
+                self.assertTrue(self.env['sa.human.hold'].search([('chat_key', '=', CUSTOMER)]), 'quiet before it is sent')
+                sent.append((rec.id, payload))
+                return {'key': {'id': 'SENT%s' % len(sent)}}
+            return {'instance': {'state': 'open'}} if 'connectionState' in path else []
+        settings = self.env['sa.ai.settings'].sudo().get_settings()
+        settings.takeover_enabled = True
+        with patch.object(self.env.registry['whatsapp.session'], '_gateway_call', gateway):
+            self.assertEqual(self.link.phone_reply(jid, ' hello '), {'paused': True})
+            self.assertEqual((sent[0][0], sent[0][1]['number'], sent[0][1]['text'], sent[0][1]['plain']),
+                             (self.second.id, CUSTOMER, 'hello', True))
+            self.assertIn('hello', self._texts(self.link))
+            for chat, text in (('9@g.us', 'x'), ('8@lid', 'x'), (jid, '  '), (jid, 'y' * 4001)):
+                with self.assertRaises(UserError):
+                    self.link.phone_reply(chat, text)
+            with self.assertRaises(AccessError):
+                self.link.phone_reply('70000000@s.whatsapp.net', 'x')
+            self.env['whatsapp.optout'].sudo().record(CUSTOMER, source='inbound')
+            with self.assertRaisesRegex(UserError, 'opted out'):
+                self.link.phone_reply(jid, 'again')
+            user = new_test_user(self.env, 'zz-reply', groups='base.group_user')
+            with self.assertRaises(AccessError):
+                self.link.with_user(user).phone_reply(jid, 'x')
+            self.assertEqual(len(sent), 1)
+
+    def test_who_sees_what(self):
+        self._in('secret')
+        log = self.Log.search([('employee_session_id', '=', self.link.id)])
+        own = new_test_user(self.env, 'zz-own', groups='base.group_user')
+        self.anu.user_id = own
+        other = new_test_user(self.env, 'zz-other', groups='base.group_user')
+        boss = new_test_user(self.env, 'zz-boss', groups='base.group_user,whatsapp_employee_tracker.group_wa_tracker_manager')
+        head = new_test_user(self.env, 'zz-head', groups='base.group_user,whatsapp_employee_tracker.group_wa_tracker_dept_head')
+        chief = self.env['hr.employee'].create({'name': 'Zz chief', 'user_id': head.id})
+        self.anu.department_id = self.env['hr.department'].create({'name': 'Zz dep', 'manager_id': chief.id})
+        portal = new_test_user(self.env, 'zz-customer', groups='base.group_portal')
+        for user, sees in ((own, True), (boss, True), (head, True), (other, False)):
+            self.assertEqual(bool(self.Log.with_user(user).search([('id', '=', log.id)])), sees, user.login)
+        for user in (own, other, head):
+            with self.assertRaises(AccessError):
+                log.with_user(user).write({'message_text': 'x'})
+        public = self.env.ref('base.public_user')
+        for model in ('wa.employee.session', 'wa.communication.log', 'wa.conversation', 'wa.keyword.alert.log', 'wa.keyword.alert.rule',
+                      'wa.quality.score', 'wa.auto.reply', 'wa.message.tone', 'wa.voice.config', 'wa.tone.report',
+                      'wa.response.time.stat', 'wa.response.time.summary', 'wa.phone.name'):
+            for user in (portal, public):
+                for what in ('read', 'write', 'create', 'unlink'):
+                    self.assertFalse(self.env[model].with_user(user).has_access(what), (model, user.login, what))
+            self.assertFalse(self.env[model].with_user(other).has_access('write'), model)
+        # somebody without rights sends: it is in the log all the same
+        seller = new_test_user(self.env, 'zz-seller', groups='base.group_user,whatsapp_gateway.group_whatsapp_user')
+        self.env['whatsapp.message'].with_user(seller).create({
+            'session_id': self.second.id, 'phone': CUSTOMER, 'message': 'by staff', 'direction': 'outgoing', 'status': 'sent'})
+        self.assertIn('by staff', self._texts(self.link))
+
+    def test_the_present_entry_with_archived_ones_listed(self):
+        """The list of numbers is opened with the archived ones too."""
+        self._in('one')
+        self._panel_number(self.second, '971504444444')
+        new = self.ES.search([('session_id', '=', self.second.id)])
+        until = self.link.until
+        self._in('two')
+        session = self.second.with_context(active_test=False)
+        session.invalidate_recordset()
+        self.assertEqual(session.wa_employee_id, self.anu)
+        if 'wa_last_activity' in session._fields:
+            self.assertEqual(session._wa_link(), new)
+            self.assertEqual(session.wa_today_received, new.today_received)
+        self.assertEqual(self.env['whatsapp.connect'].with_context(active_test=False)._owner(session), (self.anu.id, self.anu.name))
+        session._number_off(removed=True)
+        self.assertEqual((self.link.until, new.active), (until, False), 'the old one keeps its date')
+
     def test_names_and_live_notice(self):
         from odoo.addons.whatsapp_employee_tracker.models import phone_chats
         phone_chats._MEMO.clear()
@@ -423,7 +549,7 @@ class TestChatPages(HttpCase):
         session.authorized_number = '971504444444'
         new = ES.search([('session_id', '=', session.id)])
         Message.create(dict(row, message='two'))
-        new_test_user(self.env, 'zz-page-user', groups='base.group_user', password='zz-page-user')
+        new_test_user(self.env, 'zz-page-user', groups='base.group_user,whatsapp_employee_tracker.group_wa_tracker_manager', password='zz-page-user')
         new_test_user(self.env, 'zz-page-portal', groups='base.group_portal', password='zz-page-portal')
         self.authenticate('zz-page-user', 'zz-page-user')
         person = [p for p in self._call('/wa_tracker/employee_sessions') if p['id'] == employee.id][0]

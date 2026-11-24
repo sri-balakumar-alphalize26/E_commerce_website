@@ -167,10 +167,11 @@ class TestOrderPageFlow(HttpCase):
             'expires_on': self.env.cr.now().replace(tzinfo=None).replace(year=2099)})
         html = self.url_open('/wa/address/%s' % link.token).text
         self.assertNotIn('data-sa-back', html)
+        self.assertIn('Location not added', html)
         link.active = False
         html = self.url_open('/wa/address/%s' % link.token).text
         self.assertNotIn('wa.me', html)
         self.assertIn('Zz Page Flow group in WhatsApp', html)
         self.group.invite_url = 'https://chat.whatsapp.com/AbCdEf'
         html = self.url_open('/wa/address/%s' % link.token).text
-        self.assertIn('https://chat.whatsapp.com/AbCdEf', html)
+        self.assertNotIn('chat.whatsapp.com', html, 'only the words (24 Nov 2026)')

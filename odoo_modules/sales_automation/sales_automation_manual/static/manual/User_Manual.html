@@ -126,7 +126,7 @@ Public web pages for phones (payment, signing, tracking, product confirmation): 
  <tr><td>AI Settings</td><td>Gemini API key and model. Margin percentage, sourcing window (minutes the vendors get to answer), stale-after minutes, shop-picks-vendors switch.</td></tr>
  <tr><td>The Shop Counter</td><td>Whether the shop confirms every order first (counter screen), alarm sounds, timeouts.</td></tr>
  <tr><td>Vendors &amp; Customer Replies</td><td>Texts and behaviour of the vendor price checks and customer replies.</td></tr>
- <tr><td>Bargaining</td><td>Flat step-down percentage and maximum steps; per-product quantity ranges are on the product form ("WhatsApp Bargaining").</td></tr>
+ <tr><td>Price &amp; Margin</td><td>Normal margin; Different margins (off by default) gives a product category or a customer group its own margin; price approval; bargaining. Flat step-down percentage and maximum steps; per-product quantity ranges are on the product form ("WhatsApp Bargaining").</td></tr>
  <tr><td>Guided Finder</td><td>On/off and the models used to suggest types, brands, models and reference pictures for vague requests.</td></tr>
  <tr><td>Delivery Address</td><td>How the address is asked and confirmed.</td></tr>
  <tr><td>Messages That Are Not Enquiries</td><td>Chatter handling, greetings, cancel words.</td></tr>
@@ -344,8 +344,9 @@ https://…</div>
  <tr><td>AI Settings ▸ provider, api_key, model</td><td>Gemini (default model gemini-3.5-flash); image models for the finder</td></tr>
  <tr><td>AI Settings ▸ sourcing_window_minutes</td><td>How long vendors get before the cheapest quote is taken</td></tr>
  <tr><td>AI Settings ▸ stale_after_minutes</td><td>After this an unanswered confirmation is no longer matched to a reply</td></tr>
- <tr><td>AI Settings ▸ margin_percent</td><td>Added on the vendor cost to make the customer price</td></tr>
- <tr><td>Bargaining ▸ bargain_step_percent, bargain_max_steps, min_margin_percent</td><td>Flat bargaining</td></tr>
+ <tr><td>Price &amp; Margin ▸ margin_percent</td><td>Normal margin: added on the vendor cost to make the customer price</td></tr>
+ <tr><td>Price &amp; Margin ▸ margin_rules_enabled, margin_rules_by</td><td>Off: the normal margin for everything. On: an own margin by product category (else the category above, else normal) or by customer group (else normal)</td></tr>
+ <tr><td>Price &amp; Margin ▸ bargain_step_percent, bargain_max_steps, min_margin_percent</td><td>Flat bargaining</td></tr>
  <tr><td>Product form ▸ WhatsApp Bargaining ranges</td><td>Per-product quantity ranges with their discount</td></tr>
  <tr><td>Product Confirmation ▸ confirm_enabled / confirm_vendor_enabled</td><td>Page confirmation for customers / vendors</td></tr>
  <tr><td>Product Confirmation ▸ confirm_fetch_images, confirm_browser_search, python path, browsers path</td><td>Picture search</td></tr>

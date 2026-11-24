@@ -187,7 +187,7 @@ Bridge status: Sales Automation ▸ Configuration ▸ Connections. Key: Configur
 
 | Step | Customer sees | Rules |
 |---|---|---|
-| 9.1 | BETTER PRICE → the price steps down by `bargain_step_percent`, at most `bargain_max_steps` times, never below `min_margin_percent`. State `negotiating`. | Configuration ▸ Bargaining |
+| 9.1 | BETTER PRICE → the price steps down by `bargain_step_percent`, at most `bargain_max_steps` times, never below `min_margin_percent`. State `negotiating`. | Configuration ▸ Price & Margin |
 | 9.2 | Products with **quantity ranges** (product form ▸ WhatsApp Bargaining, e.g. 5-9 pcs 2 %, 10-20 pcs 5 %) ask the quantity first; BETTER PRICE appears only inside a range; the range discount is applied once. | product form |
 | 9.3 | ACCEPT → **"How many?"** (poll 1 · 2 · 3 · 5 · 10 · TYPE) or the typed number. State `awaiting_qty`. | - |
 | 9.4 | **"📋 Order summary / Seagate BarraCuda 2TB … / 2 x 30.00 / Total: 60.00"** poll CONFIRM · CHANGE. CHANGE → CHANGE QUANTITY · BETTER PRICE · KEEP · CANCEL. | state `awaiting_order_confirm` |

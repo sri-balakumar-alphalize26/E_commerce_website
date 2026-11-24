@@ -27,3 +27,7 @@ from . import test_portal_location
 from . import test_session_easy
 from . import test_settings_easy
 from . import test_poll_rule
+from . import test_vendor_choice
+from . import test_state_apart
+from . import test_number_page
+from . import test_margin

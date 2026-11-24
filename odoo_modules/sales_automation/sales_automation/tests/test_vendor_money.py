@@ -84,8 +84,10 @@ class TestVendorMoney(TransactionCase):
         self.assertFalse(req._sa_held())
 
     def test_one_missing_rate_is_enough_to_hold(self):
+        # the enquiry's money has no rate: not the company's own, which needs none
+        other = self.aed if self.own == self.omr else self.omr
         self._rate(self.inr, 80.0)
-        self.assertFalse(self._answer(self._request(self.omr), '200'))
+        self.assertFalse(self._answer(self._request(other), '200'))
 
     def test_a_week_old_is_used_older_is_not(self):
         self._rate(self.inr, 80.0, days=7)

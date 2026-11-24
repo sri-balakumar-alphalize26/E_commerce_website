@@ -108,6 +108,7 @@ class TestAfterOrder(HttpCase):
         self.assertEqual(self._task(req, 'signed').mode, 'pay')
 
     def test_one_short_is_arranged(self):
+        self.env['sa.ai.settings'].sudo().get_settings().pay_link_no_stock = 'accept'      # pay when the goods are here
         self._stock(8)
         other, _r = self._order(6)
         self._sign(other)
@@ -117,6 +118,13 @@ class TestAfterOrder(HttpCase):
         self.assertFalse(req.sa_pay_link_sent_on)
         self._task(req, 'signed')._run()
         self.assertTrue([b for k, b in self.log if k == 'say' and 'arranging the goods' in b])
+
+    def test_without_stock_pays_at_the_signature(self):
+        self.env['sa.ai.settings'].sudo().get_settings().pay_link_no_stock = 'sign'
+        order, req = self._order(99)
+        self._sign(order)
+        self.assertFalse(req._sa_lines_in_stock(order))
+        self.assertTrue(req.sa_pay_link_sent_on, 'not after the goods')
 
     # ------------------------------------------------------------ sign
     def test_signing_sends_and_prints_nothing_while_they_wait(self):
@@ -277,6 +285,7 @@ class TestAfterOrder(HttpCase):
 
     # ------------------------------------------------------------ waiting page
     def test_the_waiting_page_is_told_when_to_go_on(self):
+        self.env['sa.ai.settings'].sudo().get_settings().pay_link_no_stock = 'accept'      # pay when the goods are here
         order, req = self._order(99)
         self._sign(order)
         url = '/my/orders/%s/step?access_token=' % order.id
