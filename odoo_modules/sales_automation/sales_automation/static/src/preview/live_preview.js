@@ -3,15 +3,32 @@
 // The right side of a Sales Automation settings page: what happens with the
 // options now, also before saving. A click on an option or on a heading only
 // highlights its words (24 Nov 2026).
+import { Dialog } from "@web/core/dialog/dialog";
 import { registry } from "@web/core/registry";
+import { useService } from "@web/core/utils/hooks";
 import { Component, markup, onMounted, onWillUnmount, useEffect, useRef, useState } from "@odoo/owl";
 import { GROUPS, fullHtml, highlight, rulesOf } from "./preview_text";
+
+/** How an enquiry goes with the saved settings: orange needs you. */
+export class SaFlowDialog extends Component {
+    static template = "sales_automation.SaFlowDialog";
+    static components = { Dialog };
+    static props = { steps: Array, open: Function, close: Function };
+
+    go(xmlid) {
+        this.props.close();
+        this.props.open(xmlid);
+    }
+}
 
 export class SaLivePreview extends Component {
     static template = "sales_automation.SaLivePreview";
     static props = { "*": true };
 
     setup() {
+        this.orm = useService("orm");
+        this.dialog = useService("dialog");
+        this.action = useService("action");
         this.root = useRef("root");
         this.body = useRef("body");
         this.state = useState({ names: [], taps: 0, cost: 100, page: 0, pick: 0 });
@@ -96,7 +113,11 @@ export class SaLivePreview extends Component {
 
     get html() {
         const d = this.data;
-        const args = [this.page, d, this.state, this.props.record.fields];
+        const fields = {};
+        for (const [name, field] of Object.entries(this.props.record.fields)) {
+            fields[name] = this.props.words[name] ? { ...field, string: this.props.words[name] } : field;
+        }
+        const args = [this.page, d, this.state, fields];
         return markup(this.state.names.length ? highlight(...args, this.state.names) : fullHtml(...args));
     }
 
@@ -133,6 +154,11 @@ export class SaLivePreview extends Component {
         }
     }
 
+    async onFlow() {
+        const steps = await this.orm.call("sa.ai.settings", "sa_flow_steps", []);
+        this.dialog.add(SaFlowDialog, { steps, open: (xmlid) => this.action.doAction(xmlid) });
+    }
+
     onFold(ev) {
         if (ev.target.closest("summary")) {
             ev.preventDefault();
@@ -153,5 +179,5 @@ export class SaLivePreview extends Component {
 
 registry.category("view_widgets").add("sa_live_preview", {
     component: SaLivePreview,
-    extractProps: ({ attrs }) => ({ page: attrs.page }),
+    extractProps: ({ attrs }) => ({ page: attrs.page, words: JSON.parse(attrs.words || "{}") }),
 });

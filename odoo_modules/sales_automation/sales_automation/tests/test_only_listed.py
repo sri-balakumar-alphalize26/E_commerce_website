@@ -108,6 +108,9 @@ class TestOnlyListed(ListedCase):
         self.assertFalse(any("don't have" in s for s in self.said))
 
     def test_a_model_number_is_never_corrected(self):
+        # with the 369 Mart bridge only products of the website are spelling words
+        if 'is_published' in self.product._fields:
+            self.product.is_published = True
         req = self._req('x')
         self.assertFalse(req._sa_spell_listed('zzboard q77661'))
         self.assertEqual(req._sa_spell_listed('zzbord toshiba'), 'zzboard toshiba')

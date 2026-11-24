@@ -85,10 +85,10 @@ class SaAiSettingsMargin(models.Model):
         if touched & names and self.margin_rules_enabled and self.bargain_enabled:
             rules = self.margin_group_ids if self.margin_rules_by == 'group' else self.margin_category_ids
             for rule in rules.filtered(lambda r: r.percent < self.min_margin_percent):
-                out.append(_("%(name)s (%(a)s%%) is below the Lowest Margin When Bargaining (%(b)s%%).", name=rule._label(),
+                out.append(_("%(name)s: you add %(a)s%%, but %(b)s%% must always be left when the customer bargains.", name=rule._label(),
                              a='%g' % rule.percent, b='%g' % self.min_margin_percent))
         if 'min_margin_percent' in names and not 0 <= self.min_margin_percent <= 500:
-            out.append(_("Lowest margin when bargaining: type 0 to 500 percent."))
+            out.append(_("How much must always be left? Type 0 to 500 percent."))
         return out
 
     def action_sa_open_margin(self):

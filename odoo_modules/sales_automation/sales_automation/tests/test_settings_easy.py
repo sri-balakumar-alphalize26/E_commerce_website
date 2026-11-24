@@ -29,10 +29,10 @@ class TestSettingsEasy(TransactionCase):
 
     def test_what_cannot_work_is_refused(self):
         for vals, words in (
-                ({'sourcing_window_minutes': 0}, 'Wait for vendor prices'), ({'sourcing_window_minutes': 2000}, '1440'),
-                ({'margin_percent': -1.0}, 'Your margin'), ({'margin_percent': 2.0}, 'Lowest Margin'),
+                ({'sourcing_window_minutes': 0}, 'wait for prices'), ({'sourcing_window_minutes': 2000}, '1440'),
+                ({'margin_percent': -1.0}, 'add normally'), ({'margin_percent': 2.0}, 'always be left'),
                 ({'price_approval_tolerance_percent': 150.0}, '0 to 100'), ({'customer_reply_minutes': 2}, '5 to 1440'),
-                ({'customer_reply_minutes': -5}, '5 to 1440'), ({'pay_remind_minutes': 1}, 'Remind after'),
+                ({'customer_reply_minutes': -5}, '5 to 1440'), ({'pay_remind_minutes': 1}, 'remind after'),
                 ({'pay_remind_max': 50}, '0 to 10'), ({'price_escalation_phone': '12345'}, 'whole phone number')):
             with self.assertRaisesRegex(ValidationError, words, msg=str(vals)), self.env.cr.savepoint():
                 self._save(**vals)

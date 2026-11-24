@@ -2,7 +2,8 @@
 <templates xml:space="preserve">
     <t t-name="sales_automation.SaLivePreview">
         <div class="sa_pv" t-ref="root">
-            <div class="sa_pv_bar"><b>Live preview</b> <span>This is what happens now</span></div>
+            <div class="sa_pv_bar"><b>Live preview</b> <span>This is what happens now</span>
+                <button type="button" class="btn btn-secondary btn-sm float-end" t-on-click="onFlow">Show the flow</button></div>
             <div class="sa_pv_body" t-ref="body">
                 <div t-if="page === 'margin'" class="sa_pv_try">
                     <label>The vendor asks
@@ -18,5 +19,21 @@
                 <div t-out="html" t-on-click="onFold"/>
             </div>
         </div>
+    </t>
+    <t t-name="sales_automation.SaFlowDialog">
+        <Dialog title.translate="How an enquiry goes" footer="false" size="'lg'">
+            <p><span class="sa_flow_key sa_flow_you">Orange</span> needs you <span class="sa_flow_key sa_flow_auto ms-3">Green</span> goes by itself. With the saved settings.</p>
+            <ol class="sa_flow">
+                <li t-foreach="props.steps" t-as="step" t-key="step_index" t-att-class="{ sa_flow_needs: step.you }">
+                    <div>
+                        <b t-esc="step.title"/>
+                        <span t-esc="step.text"/>
+                        <small t-if="step.links.length">Set on:
+                            <button t-foreach="step.links" t-as="l" t-key="l.action" type="button" class="btn btn-link btn-sm p-0 me-2" t-on-click="() => this.go(l.action)"><t t-esc="l.name"/></button>
+                        </small>
+                    </div>
+                </li>
+            </ol>
+        </Dialog>
     </t>
 </templates>

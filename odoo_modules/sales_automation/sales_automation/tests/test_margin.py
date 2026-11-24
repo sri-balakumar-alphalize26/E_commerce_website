@@ -81,11 +81,27 @@ class TestMargin(ListedCase):
         with self.assertRaisesRegex(ValidationError, 'Zz categ'), self.env.cr.savepoint():
             self.settings.web_save({'margin_rules_enabled': True, 'min_margin_percent': 5.0}, {'id': {}})
 
+    def test_the_flow(self):
+        def step(title):
+            return [x for x in self.env['sa.ai.settings'].sa_flow_steps() if x['title'] == title][0]
+        self.assertFalse(step('One price wins')['you'])
+        self.assertIn('120.00', step('We add your margin')['text'])
+        self.settings.write({'vendor_choice_mode': 'manual', 'margin_rules_enabled': True})
+        self.assertTrue(step('One price wins')['you'])
+        self.assertIn('own margin', step('We add your margin')['text'])
+        nobody = self.env['res.users'].create({'name': 'Zz none', 'login': 'zz-none-flow', 'group_ids': [(6, 0, [self.env.ref('base.group_user').id])]})
+        self.assertEqual(self.env['sa.ai.settings'].with_user(nobody).sa_flow_steps(), [])
+
+    def test_advanced_is_folded(self):
+        view = self.env.ref('sales_automation.view_sa_settings_vendor_form')
+        self.assertIn('sa_fold', self.env['sa.ai.settings'].get_views([(view.id, 'form')])['views']['form']['arch'])
+
     def test_the_pages_open_with_their_preview(self):
         for name in ('margin', 'vendor', 'counter', 'payments', 'address', 'links', 'chatter', 'finder', 'takeover'):
             view = self.env.ref('sales_automation.view_sa_settings_%s_form' % name)
             arch = self.env['sa.ai.settings'].get_views([(view.id, 'form')])['views']['form']['arch']
             self.assertIn('sa_live_preview', arch, name)
+            self.assertIn('?', arch, name)
         group = self.env.ref('sales_automation.view_sa_sales_group_form')
         self.assertIn('sa_live_preview', self.env['sa.sales.group'].get_views([(group.id, 'form')])['views']['form']['arch'])
         self.assertFalse(self.env.ref('sales_automation.menu_sa_settings_bargain').active)

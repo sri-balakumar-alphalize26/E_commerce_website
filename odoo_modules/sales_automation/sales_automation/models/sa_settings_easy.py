@@ -69,21 +69,21 @@ class SaAiSettingsEasy(models.Model):
         self.ensure_one()
         out = []
         if 'sourcing_window_minutes' in names and not 1 <= self.sourcing_window_minutes <= DAY:
-            out.append(_("Wait for vendor prices: type 1 to 1440 minutes (a day)."))
+            out.append(_("How long do we wait for prices? Type 1 to 1440 minutes (a day)."))
         if 'margin_percent' in names and not 0 <= self.margin_percent <= 500:
-            out.append(_("Your margin: type 0 to 500 percent."))
+            out.append(_("How much do you add normally? Type 0 to 500 percent."))
         if {'margin_percent', 'min_margin_percent'} & names and self.bargain_enabled \
                 and self.min_margin_percent > self.margin_percent:
-            out.append(_("Your margin (%(a)s%%) is below the Lowest Margin When Bargaining (%(b)s%%).",
+            out.append(_("You add %(a)s%%, but %(b)s%% must always be left when the customer bargains.",
                          a='%g' % self.margin_percent, b='%g' % self.min_margin_percent))
         if 'price_approval_tolerance_percent' in names and not 0 <= self.price_approval_tolerance_percent <= 100:
-            out.append(_("Ignore small differences: type 0 to 100 percent."))
+            out.append(_("Which difference is too small to ask? Type 0 to 100 percent."))
         if 'customer_reply_minutes' in names and not (self.customer_reply_minutes == 0 or 5 <= self.customer_reply_minutes <= DAY):
-            out.append(_("Customer must answer within: type 0 (a whole day) or 5 to 1440 minutes."))
+            out.append(_("How long can the customer answer? Type 0 (a whole day) or 5 to 1440 minutes."))
         if 'pay_remind_minutes' in names and not (self.pay_remind_minutes == 0 or 5 <= self.pay_remind_minutes <= 7 * DAY):
-            out.append(_("Remind after: type 0 (never) or 5 to 10080 minutes (a week)."))
+            out.append(_("Not paid: remind after how long? Type 0 (never) or 5 to 10080 minutes (a week)."))
         if 'pay_remind_max' in names and not 0 <= self.pay_remind_max <= 10:
-            out.append(_("How many reminders: type 0 to 10."))
+            out.append(_("How many reminders? Type 0 to 10."))
         phone = (self.price_escalation_phone or '').strip()
         if 'price_escalation_phone' in names and phone:
             digits = ''.join(c for c in phone if c.isdigit())

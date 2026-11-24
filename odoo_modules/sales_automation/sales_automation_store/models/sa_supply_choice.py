@@ -44,13 +44,13 @@ class SaAiSettingsSupply(models.Model):
     def _easy_problems(self, names):
         out = super()._easy_problems(names)
         if 'supply_auto_wait' in names and not 0 <= self.supply_auto_wait <= DAY:
-            out.append(_("Wait for late prices: type 0 to 1440 minutes (a day)."))
+            out.append(_("Wait for a cheaper late price? Type 0 to 1440 minutes (a day)."))
         if 'supply_auto_margin' in names and not 0 <= self.supply_auto_margin <= 500:
-            out.append(_("Lowest margin to order automatically: type 0 to 500 percent."))
+            out.append(_("How much must be left to order by itself? Type 0 to 500 percent."))
         if 'supply_auto_limit' in names and self.supply_auto_limit < 0:
-            out.append(_("Order by itself up to: type 0 (no limit) or more."))
+            out.append(_("Biggest order without asking you? Type 0 (no limit) or more."))
         if 'supply_auto_days' in names and not 0 <= self.supply_auto_days <= 60:
-            out.append(_("Goods here after: type 0 to 60 days."))
+            out.append(_("When are the goods here? Type 0 to 60 days."))
         if 'supply_customer_days' in names and not 0 <= self.supply_customer_days <= 60:
             out.append(_("Deliver to the customer after: type 0 to 60 days."))
         return out
