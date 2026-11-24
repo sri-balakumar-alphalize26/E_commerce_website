@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
-"""The page is finished: it counts ten seconds and closes its tab (owner, 24 Nov
-2026). A browser closes only a tab that was opened for this page; where it
-refuses, the words say what to do. A touch, a key or the wheel stops it, so
-nobody loses a page they are reading."""
+"""The page is finished: it counts ten full seconds, 10 to 1, and closes its tab
+(owner, 24 Nov 2026). A touch or a scroll does not stop it, only the button does.
+It counts while the page is looked at. A browser closes only a tab that was
+opened for this page; where it refuses, the words say what to do. Opened again
+afterwards, the same page stays open as a normal page."""
 
 SECONDS = 10
 
@@ -14,12 +15,14 @@ CLOSE_TIMER = """<div id="bye" style="display:flex;flex-direction:column;align-i
 <text id="byen" x="42" y="52" text-anchor="middle" font-size="28" font-weight="800" fill="#1a7f3c">10</text></svg>
 <div id="byet" style="font-size:14px;color:#52616d">This page closes by itself</div>
 <button type="button" id="byestay" style="border:1px solid #cfd8df;background:#fff;color:#13212b;border-radius:999px;padding:9px 18px;font:inherit;font-size:14px;font-weight:600;cursor:pointer">Stay on this page</button></div>
-<script>(function(){var ALL=10000,end=Date.now()+ALL,g=function(i){return document.getElementById(i)},iv=setInterval(tick,100);
-function stop(){clearInterval(iv);var b=g('bye');if(b)b.style.display='none';
-['pointerdown','keydown','wheel','touchmove'].forEach(function(e){document.removeEventListener(e,stop)})}
-['pointerdown','keydown','wheel','touchmove'].forEach(function(e){document.addEventListener(e,stop,{passive:true})});
-function tick(){var left=Math.max(0,end-Date.now());g('byen').textContent=Math.ceil(left/1000);
-g('byearc').setAttribute('stroke-dashoffset',String(226.2*(1-left/ALL)));
-if(left>0)return;clearInterval(iv);window.close();
+<script>(function(){var left=10,iv,g=function(i){return document.getElementById(i)},h=document.querySelector('h1,h2'),
+key='sa_bye|'+location.pathname+'|'+((h&&h.textContent)||document.title||'').trim().slice(0,80);
+function seen(v){try{if(v)localStorage.setItem(key,v);return localStorage.getItem(key)}catch(e){return null}}
+function hide(){clearInterval(iv);g('bye').style.display='none'}
+if(seen()){hide();return}
+g('byestay').addEventListener('click',function(){seen('1');hide()});
+function show(){g('byen').textContent=left;g('byearc').setAttribute('stroke-dashoffset',String(226.2*(1-left/10)))}
+function step(){if(document.hidden)return;left-=1;if(left>0){show();return}
+clearInterval(iv);seen('1');window.close();
 setTimeout(function(){g('byering').style.display='none';g('byestay').style.display='none';g('byet').textContent='You can close this page now.'},400)}
-tick()})();</script>"""
+show();iv=setInterval(step,1000)})();</script>"""
