@@ -170,6 +170,21 @@
                             </p>
                         </div>
 
+                        <!-- Products: which ones the web shop lists. -->
+                        <div t-if="state.tab === 'products' and state.draft.visibility" class="st-rows">
+                            <div t-foreach="VISIBILITY" t-as="v" t-key="v.key" class="st-row">
+                                <span class="st-ic"><Icon n="v.icon" size="18"/></span>
+                                <span class="st-txt"><b t-esc="v.label"/><small t-esc="v.help"/></span>
+                                <Switch on="!!state.draft.visibility[v.key]" label="v.label"
+                                        disabled="state.busy"
+                                        onChange="(on) => this.setField('visibility', v.key, on)"/>
+                            </div>
+                            <p class="st-hint">
+                                <Icon n="'info'" size="14"/>
+                                <span>A product must pass every switch that is on. If even one is missing, it is not shown on the website. WhatsApp is not affected.</span>
+                            </p>
+                        </div>
+
                         <!-- Alerts: the shared settings record. -->
                         <div t-if="state.tab === 'alerts'" class="st-rows">
                             <div t-foreach="ALERTS" t-as="a" t-key="a.key" class="st-row">

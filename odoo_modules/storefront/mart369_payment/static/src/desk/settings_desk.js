@@ -38,6 +38,13 @@ const ALERTS = [
     { key: "lowStock", label: _t("Low stock"), help: _t("Bell when products reach the level where the app says “Only N left”") },
 ];
 
+// Which products the web shop lists (mart369/models/product_listing.py).
+const VISIBILITY = [
+    { key: "requirePrice", icon: "money", label: _t("Show only products with a price"), help: _t("Products with no price, or a price of 0, are hidden") },
+    { key: "requireImage", icon: "camera", label: _t("Show only products with a picture"), help: _t("Products with no picture are hidden") },
+    { key: "requireStock", icon: "box", label: _t("Show only products in stock"), help: _t("Products with no stock left, or whose stock is not counted, are hidden") },
+];
+
 const PAY_ICON = { cod: "money", wallet: "wallet", gateway: "lock" };
 const PAY_STATE = {
     enabled: [_t("On"), "green"],
@@ -151,6 +158,7 @@ export class SettingsDesk extends Component {
 
         this.STORE_FIELDS = STORE_FIELDS;
         this.ALERTS = ALERTS;
+        this.VISIBILITY = VISIBILITY;
         this.PAY_ICON = PAY_ICON;
 
         this.state = useState({
@@ -190,7 +198,7 @@ export class SettingsDesk extends Component {
     // ---------------------------------------------------------------- state
 
     get group() {
-        return this.state.tab === "payments" ? "pay" : this.state.tab;
+        return { payments: "pay", products: "visibility" }[this.state.tab] || this.state.tab;
     }
 
     get tabItems() {
@@ -209,6 +217,9 @@ export class SettingsDesk extends Component {
         // Added by mart369_account: photo/video limits and blocked words.
         if (this.state.saved?.reviews) {
             tabs.push(["reviews", _t("Reviews"), null]);
+        }
+        if (this.state.saved?.visibility) {
+            tabs.push(["products", _t("Products"), null]);
         }
         tabs.push(["alerts", _t("Alerts"), null]);
         return tabs;

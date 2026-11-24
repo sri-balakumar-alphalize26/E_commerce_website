@@ -10,6 +10,8 @@ phone number is this or that, and the two would drift:
   delivery slots are what decide when an order can be placed.
 * **alerts** are the only fields that had no home anywhere, so they live on
   this model - and only the two the console actually acts on.
+* **visibility** decides which products the web shop lists - see
+  product_listing.py, the one rule that reads it.
 * **pay** is added by `mart369_payment`, which owns the payment providers.
 
 A module adds a group by overriding `_mart369_admin_settings_groups` and
@@ -39,6 +41,12 @@ ALERT_FIELDS = {
     'lowStock': 'alert_low_stock',
 }
 
+VISIBILITY_FIELDS = {
+    'requirePrice': 'require_price',
+    'requireImage': 'require_image',
+    'requireStock': 'require_stock',
+}
+
 
 class Mart369Config(models.Model):
     _inherit = 'mart369.config'
@@ -57,6 +65,17 @@ class Mart369Config(models.Model):
         help="The console's bell says how many products are at or below the "
              "level where the app starts saying \"Only N left\".")
 
+    require_price = fields.Boolean(
+        string='Show only products with a price',
+        help="On: the web shop does not list a product with no price, or a price of 0.")
+    require_image = fields.Boolean(
+        string='Show only products with a picture',
+        help="On: the web shop does not list a product with no picture.")
+    require_stock = fields.Boolean(
+        string='Show only products in stock',
+        help="On: the web shop does not list a product with no stock left, or "
+             "whose stock is not counted.")
+
     # -------------------------------------------------------------- reading
 
     @api.model
@@ -73,6 +92,8 @@ class Mart369Config(models.Model):
         return {
             'store': store,
             'alerts': {key: bool(config[field]) for key, field in ALERT_FIELDS.items()},
+            'visibility': {key: bool(config[field])
+                           for key, field in VISIBILITY_FIELDS.items()},
         }
 
     # ------------------------------------------------------------ the logo
@@ -133,6 +154,12 @@ class Mart369Config(models.Model):
         if group == 'alerts':
             vals = {field: bool(values[key])
                     for key, field in ALERT_FIELDS.items() if key in values}
+            if vals:
+                self._get().write(vals)
+            return True
+        if group == 'visibility':
+            vals = {field: bool(values[key])
+                    for key, field in VISIBILITY_FIELDS.items() if key in values}
             if vals:
                 self._get().write(vals)
             return True

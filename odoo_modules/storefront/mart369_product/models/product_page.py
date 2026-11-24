@@ -361,9 +361,19 @@ class Mart369ProductPage(models.AbstractModel):
     # ------------------------------------------------- the surrounding rows
 
     @api.model
+    def _visible_domain(self):
+        """The Settings > Products switches, for the web product page only:
+        WhatsApp pages use these rows too and are not to change."""
+        if not self.env.context.get('mart369_web_visible'):
+            return []
+        return self.env['product.template']._mart369_visibility_domain()
+
+    @api.model
     def _published(self, templates, exclude=None):
         exclude = exclude or self.env['product.template'].browse()
-        return templates.filtered(lambda t: t.is_published and t not in exclude)
+        found = templates.filtered(lambda t: t.is_published and t not in exclude)
+        domain = self._visible_domain() if found else []
+        return found.filtered_domain(domain) if domain else found
 
     @api.model
     def _bundle(self, product, keys):
@@ -404,7 +414,7 @@ class Mart369ProductPage(models.AbstractModel):
             ('is_published', '=', True),
             ('id', '!=', product.id),
             ('public_categ_ids', 'in', categories.ids),
-        ], limit=40)
+        ] + self._visible_domain(), limit=40)
         if exclude:
             found = found.filtered(lambda t: t not in exclude)
         in_stock = found.filtered(

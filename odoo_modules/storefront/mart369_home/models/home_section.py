@@ -400,7 +400,7 @@ class Mart369HomeSection(models.Model):
             raise UserError(self.env._('A row holds at most %s products.', self.PICK_MAX))
         Template = self.env['product.template'].sudo()
         listed = Template.search(
-            Template._mart369_listed_domain() + [('id', 'in', ids)]) if ids else Template
+            Template._mart369_listed_base_domain() + [('id', 'in', ids)]) if ids else Template
         if len(listed) != len(ids):
             raise UserError(self.env._(
                 'Some of those products are not on the shop any more. Refresh the list and pick again.'))

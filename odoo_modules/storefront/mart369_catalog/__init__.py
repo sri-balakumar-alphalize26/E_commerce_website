@@ -37,6 +37,9 @@ def hide_sample_categories(env):
         category = env.ref('mart369_home.%s' % xmlid, raise_if_not_found=False)
         if not category or not category.mart_in_app:
             continue
-        if Template.search_count(category._mart369_product_domain(), limit=1):
+        # The base rule: a Settings > Products switch must not empty a category
+        # here, since this hides it for good.
+        if Template.search_count(Template._mart369_listed_base_domain() + [
+                ('public_categ_ids', 'child_of', category.id)], limit=1):
             continue
         category.mart_in_app = False

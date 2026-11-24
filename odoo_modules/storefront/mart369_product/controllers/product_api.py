@@ -37,7 +37,10 @@ class Mart369ProductApi(http.Controller):
 
     def _page(self, product, variant=None):
         env = request.env
-        payload = env['mart369.product.page'].sudo().payload(product, variant)
+        # The rows around the product follow Settings > Products on the web
+        # only; the WhatsApp pages ask the same model without this.
+        page = env['mart369.product.page'].sudo().with_context(mart369_web_visible=True)
+        payload = page.payload(product, variant)
         config = env['mart369.config'].sudo()._get()
         return request.make_json_response(payload, headers=[
             ('Cache-Control',
