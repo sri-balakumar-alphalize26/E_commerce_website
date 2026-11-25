@@ -829,6 +829,42 @@ async function checkPairing(n, map) {
 }
 
 /** Refresh one number against the gateway; returns the updated row. */
+/**
+ * The QR of a number, '' when there is none (linked, or not yet).
+ *
+ * Evolution starts a NEW link on every connect it gets while the state is
+ * 'close' - also while it is reconnecting by itself. Two links of one number
+ * push each other out for ever (25 Nov 2026: 183 in eight minutes). So: the
+ * state first; connect only reads the QR while 'connecting'; a link is started
+ * only when it is still closed after a moment, once in half a minute.
+ */
+const STILL_CLOSED = 3000, START_AGAIN = 30000;
+const linkStarted = new Map();
+const pause = ms => new Promise(r => setTimeout(r, ms));
+async function askQr(n, wait, ask = evo, gap = STILL_CLOSED) {
+  const until = Date.now() + wait;
+  let closedSince = 0;
+  do {
+    const s = await ask(`/instance/connectionState/${n.instance_name}`);
+    const state = ((s.data || {}).instance || {}).state || '';
+    if (state === 'open') return '';
+    if (state !== 'close') closedSince = 0;
+    if (state === 'connecting') {
+      const c = await ask(`/instance/connect/${n.instance_name}`);
+      if (c.data && c.data.base64) return c.data.base64;
+    } else if (state === 'close') {
+      closedSince = closedSince || Date.now();
+      if (Date.now() - closedSince >= gap && Date.now() - (linkStarted.get(n.id) || 0) >= START_AGAIN) {
+        linkStarted.set(n.id, Date.now());
+        const c = await ask(`/instance/connect/${n.instance_name}`);
+        if (c.data && c.data.base64) return c.data.base64;
+      }
+    }
+    await pause(Math.min(700, gap));
+  } while (Date.now() < until);
+  return '';
+}
+
 async function refreshNumber(n) {
   try {
     const map = await fetchInstanceMap();
@@ -1087,9 +1123,12 @@ function mayAsk(id) {
   return true;
 }
 
+// A number turned off from Odoo still asks and adds; one the administrator turned off does not.
+const maySeeNumbers = who => !who.error || who.off === 'odoo';
+
 app.get('/v1/numbers', async (req, res) => {
   const who = await identify(req);
-  if (who.error) return res.status(403).json({ error: 'Refused', detail: who.error });
+  if (!maySeeNumbers(who)) return res.status(403).json({ error: 'Refused', detail: who.error });
   const all = await siblings(who.row);
   if (req.query.check !== undefined) {
     const number = digits(req.query.check);
@@ -1112,7 +1151,7 @@ app.get('/v1/numbers', async (req, res) => {
 
 app.post('/v1/numbers', async (req, res) => {
   const who = await identify(req);
-  if (who.error) {
+  if (!maySeeNumbers(who)) {
     await log({ databaseId: who.row ? who.row.id : null, ip: clientIp(req), endpoint: '/v1/numbers', status: 'refused', detail: who.error });
     return res.status(403).json({ error: 'Refused', detail: who.error });
   }
@@ -1320,14 +1359,8 @@ app.get('/v1/qr', async (req, res) => {
   // the gateway may need a moment before it has one; everybody who asks waits for the same
   if (!qrWaiting.has(n.id)) {
     qrWaiting.set(n.id, (async () => {
-      const until = Date.now() + 7000;
       try {
-        while (Date.now() < until) {
-          const c = await evo(`/instance/connect/${n.instance_name}`);
-          if (c.data && c.data.base64) return c.data.base64;
-          if (c.data && c.data.instance && c.data.instance.state === 'open') return '';
-          await new Promise(r => setTimeout(r, 700));
-        }
+        return await askQr(n, 10000);
       } catch (err) { /* asked again in a moment */ } finally { qrWaiting.delete(n.id); }
       return '';
     })());
@@ -2912,8 +2945,7 @@ app.get('/number/:id/qr', requireLogin, scopeNumber('id'), async (req, res) => {
   let qr = '';
   if (n.pair_state !== 'open' && n.pair_state !== 'missing') {
     try {
-      const c = await evo(`/instance/connect/${n.instance_name}`);
-      if (c.data && c.data.base64) qr = c.data.base64;
+      qr = await askQr(n, 8000);
     } catch (err) { /* leave qr empty */ }
   }
   const allowed = fmtNumber(n.authorized_number);
