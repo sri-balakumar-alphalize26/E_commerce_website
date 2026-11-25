@@ -1,6 +1,6 @@
 {
     'name': 'WhatsApp & Email Connector',
-    'version': '19.0.3.1.14',
+    'version': '19.0.3.1.15',
     'category': 'Tools',
     'summary': 'Send and receive WhatsApp through an Evolution API gateway',
     'description': """

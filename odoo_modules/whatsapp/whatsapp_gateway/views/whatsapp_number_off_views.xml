@@ -28,7 +28,7 @@
                     <b>This throws the connection away and makes it new.</b> The QR has to be scanned again. Until then nothing
                     is sent or answered. <b>The phone's older chats and groups in Chat View can be lost.</b>
                 </div>
-                <p invisible="do != 'reset'">Only when Restart and Unlink do not help. <b>Chats, orders and messages in Odoo stay.</b></p>
+                <p invisible="do != 'reset'">Only when Restart and Unlink do not help. <b>Chats, orders and messages in our software stay.</b></p>
                 <group invisible="do not in ('unlink', 'reset')"><field name="last_digits" placeholder="0000"/></group>
                 <div class="alert alert-danger" role="alert" invisible="not shared or do not in ('restart', 'unlink', 'reset')">
                     <field name="shared" readonly="1" nolabel="1" class="oe_inline"/> other database(s) use this number too: it is the same for them.
@@ -57,7 +57,7 @@
                 <field name="what" invisible="1"/>
                 <div class="text-muted mb-2"><field name="used_text" readonly="1" nolabel="1"/></div>
                 <div invisible="what != 'footer'">
-                    <p>Under each message: "Please do not reply", the company name and the support number. Off: messages go exactly as Odoo wrote them.</p>
+                    <p>Under each message: "Please do not reply", the company name and the support number. Off: messages go exactly as they were written.</p>
                     <group>
                         <field name="footer_on" widget="boolean_toggle"/>
                         <field name="footer_name"/>

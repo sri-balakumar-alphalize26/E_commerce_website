@@ -92,7 +92,7 @@
                             <t t-elif="!state.data.has_session">The first number of this database needs its key from the WhatsApp panel, once.</t>
                             <t t-elif="state.data.may_add">This database has all <t t-esc="state.data.may_add"/> numbers it may have. The panel administrator can allow more.</t>
                             <t t-elif="state.data.why">The WhatsApp panel cannot be asked now: <t t-esc="state.data.why"/></t>
-                            <t t-else="">Adding numbers from here is off. The panel administrator switches it on: the database's page, "Odoo may have, at most".</t>
+                            <t t-else="">Adding numbers from here is off. The panel administrator switches it on: the database's page, under Numbers.</t>
                             <button t-if="state.data.has_session and !state.showKey" type="button" class="btn btn-link p-0 ms-1" t-on-click="() => state.showKey = true">I have a key</button>
                         </div>
                         <label t-if="state.showKey or !state.data.has_session" class="o_wa_label" for="wa_key">Key of this number, from the panel</label>

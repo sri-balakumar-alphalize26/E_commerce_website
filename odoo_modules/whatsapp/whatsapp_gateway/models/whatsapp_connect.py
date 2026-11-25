@@ -667,7 +667,7 @@ class WhatsAppConnect(models.AbstractModel):
         may, used = int(body.get('may_add') or 0), len(body.get('numbers') or [])
         lines.insert(0, (True, _("The panel answers.")))
         if not may:
-            lines.append((False, _("Adding numbers from Odoo is off for this database. The panel administrator allows it.")))
+            lines.append((False, _("Adding numbers from our software is off for this database. The panel administrator allows it.")))
         else:
             lines.append((may > used, _("%(used)s of %(may)s numbers used, %(left)s left.",
                                         used=used, may=may, left=max(0, may - used))))
