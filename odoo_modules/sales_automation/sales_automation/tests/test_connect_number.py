@@ -40,10 +40,15 @@ class ConnectCase(TransactionCase):
             if not number:
                 raise UserError('The gateway refused the request (HTTP 403).\ntoken not registered')
             if path.startswith('/v1/numbers?check='):
+                if path.split('=')[1] in box.says:
+                    return box.says[path.split('=')[1]]
                 return {'check': box.where.get(path.split('=')[1], 'new'), 'in_use': box.in_use}
             if path == '/v1/numbers' and method == 'GET':
                 return {'may_add': box.may_add, 'numbers': [{'authorized_number': n} for n in box.panel.values()] + box.unused,
                         'free': [f for f in box.free if f['authorized_number'] not in box.panel.values()]}
+            if path == '/v1/numbers/move':
+                box.moves.append(payload)
+                return box.move_answer
             if path == '/v1/numbers':
                 if not box.may_add:
                     raise UserError('The gateway refused the request (HTTP 403).\nadding numbers from Odoo is not allowed')
@@ -67,6 +72,7 @@ class ConnectCase(TransactionCase):
                 return {'inviteUrl': box.invite.get(jid, '')}
             return {}
         self.unused = []
+        self.says, self.moves, self.move_answer = {}, [], {'ok': True, 'detail': ''}
         self.lost, self.free, self.where, self.in_use = set(), [], {}, False
         p = patch.object(env.registry['whatsapp.session'], '_gateway_call', gateway)
         p.start()
@@ -437,6 +443,36 @@ class TestConnectNumber(ConnectCase):
         self.assertFalse(look['ok'])
         self.assertIn('Used by another database', look['text'])
         self.assertEqual(len(self._tries()), 1, 'once, however often it is asked')
+
+    def test_move_it_here(self):
+        look = lambda: self.Connect.look(self.ae.id, '501234567')  # noqa: E731
+        self.says['971501234567'] = {'check': 'elsewhere', 'why': 'used', 'can_move': True, 'move_no': ''}
+        self.assertEqual((look()['ok'], look()['move']), (False, True))
+        self.assertTrue(self.Connect.move_code(self.ae.id, '501234567')['ok'])
+        self.assertTrue(self.Connect.move_check(self.ae.id, '501234567', ' 12 34-56')['ok'])
+        self.assertEqual(self.moves, [{'do': 'code', 'number': '971501234567'},
+                                      {'do': 'check', 'code': '123456', 'number': '971501234567'}])
+        self.says['971501234567'] = {'check': 'free', 'in_use': False, 'moves': True}
+        self.assertEqual((look()['ok'], look().get('move')), (True, None))
+        self.assertIn('moves here', look()['text'])
+        self._add()
+        self.assertEqual(len(self._session()), 1)
+
+    def test_move_refused(self):
+        self.move_answer = {'ok': False, 'detail': 'wrong code'}
+        self.assertEqual(self.Connect.move_check(self.ae.id, '501234567', '1'), {'ok': False, 'error': 'wrong code'})
+        self.assertEqual(len(self.moves), 1, 'asked once, a wrong code counts')
+        for says, text in (({'why': 'vendor', 'can_move': True}, 'not for this database'), ({'why': 'off'}, 'switched off'),
+                           ({'why': 'used', 'move_no': 'several databases use it'}, 'several databases'), ({}, 'Remove it there first')):
+            self.says['971501234567'] = dict(says, check='elsewhere')
+            look = self.Connect.look(self.ae.id, '501234567')
+            self.assertIn(text, look['text'])
+            self.assertEqual(look['move'], bool(says.get('can_move')))
+        self.panel = {}
+        self.assertFalse(self.Connect.move_code(self.ae.id, '501234567')['ok'])
+        user = new_test_user(self.env, login='zz_move', groups='base.group_user')
+        with self.assertRaises(AccessError):
+            self.Connect.with_user(user).move_code(self.ae.id, '501234567')
 
     def test_why_the_panel_was_not_asked(self):
         self.panel = {}

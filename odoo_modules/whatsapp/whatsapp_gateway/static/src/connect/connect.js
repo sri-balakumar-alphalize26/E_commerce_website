@@ -16,7 +16,7 @@ export class ConnectNumber extends Component {
         this.action = useService("action");
         this.state = useState({
             ready: false, step: "number", busy: false, error: "", data: {},
-            countrySearch: "", countryOpen: false, country: null, number: "", check: "", checkError: "", look: null, confirm: false, turnOn: null, showKey: false, saved: false,
+            countrySearch: "", countryOpen: false, country: null, number: "", check: "", checkError: "", look: null, move: "", moveCode: "", moveError: "", moveBusy: false, confirm: false, turnOn: null, showKey: false, saved: false,
             company: 0, label: "", key: "", values: {}, picked: null,
             session: null, groups: [], groupSearch: "", groupsError: "", done: [],
         });
@@ -118,6 +118,7 @@ export class ConnectNumber extends Component {
         this.state.check = "";
         this.state.checkError = "";
         this.state.look = null;
+        this.state.move = this.state.moveCode = this.state.moveError = "";
         this.state.confirm = false;
         this.state.turnOn = null;
         clearTimeout(this.lookTimer);
@@ -153,6 +154,57 @@ export class ConnectNumber extends Component {
         }
         return asked === this.asked;
     }
+    // ------------------------------------------------- used by another database
+    /** A code to the number's own WhatsApp. */
+    async moveAsk() {
+        await this.moveCall("move_code", [], () => {
+            this.state.move = "code";
+            this.state.moveCode = "";
+        });
+    }
+    /** Right: the look says it moves here on Next. */
+    async moveCheck() {
+        if (this.state.moveCode.length === 6) {
+            await this.moveCall("move_check", [this.state.moveCode], async () => {
+                this.state.move = "";
+                await this.lookNow();
+            });
+        }
+    }
+    async moveCall(method, args, done) {
+        if (this.state.moveBusy || !this.complete) {
+            return;
+        }
+        const asked = this.asked;
+        this.state.moveBusy = true;
+        this.state.moveError = "";
+        try {
+            const answer = await this.call(method, [this.state.country.id, this.state.number, ...args]);
+            if (asked === this.asked) {
+                if (answer.ok) {
+                    await done();
+                } else {
+                    this.state.moveError = answer.error;
+                }
+            }
+        } catch (err) {
+            if (asked === this.asked) {
+                this.state.moveError = this.message(err);
+            }
+        }
+        this.state.moveBusy = false;
+    }
+    onMoveCode(ev) {
+        this.state.moveCode = ev.target.value.replace(/[^0-9]/g, "").slice(0, 6);
+        ev.target.value = this.state.moveCode;
+    }
+    onMoveKey(ev) {
+        if (ev.key === "Enter") {
+            ev.preventDefault();            // not the form's Next
+            this.moveCheck();
+        }
+    }
+
     /** Whom it is for, in the question. */
     get forWhom() {
         return (this.state.label || "").trim();
@@ -226,6 +278,9 @@ export class ConnectNumber extends Component {
             this.useSession(session);
         } catch (err) {
             this.state.error = this.message(err);
+            if (!this.state.picked && this.complete) {
+                await this.lookNow();           // taken in the meantime: it can be moved
+            }
         }
         this.state.busy = false;
     }

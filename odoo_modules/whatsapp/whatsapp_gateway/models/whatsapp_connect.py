@@ -368,12 +368,63 @@ class WhatsAppConnect(models.AbstractModel):
                 return {'where': '', 'ok': True, 'text': _("Could not check in the panel: %s", why)}
             return {'where': '', 'ok': True, 'text': _("Could not check in the panel now; checked again on Next") if self._askers() else ''}
         if where == 'elsewhere':
-            self._keep_try('number', whole, answer[1])
+            text = self._elsewhere(body)
+            self._keep_try('number', whole, text)
+            return {'where': where, 'ok': False, 'text': text, 'move': bool(body.get('can_move'))}
+        if where == 'free' and body.get('moves'):
+            return {'where': where, 'ok': True, 'text': _("The code is right. The number moves here when you go on.")}
         return {'where': where, 'ok': answer[0], 'text': answer[1]}
 
     @api.model
-    def _elsewhere(self):
+    def _elsewhere(self, says=None):
+        """The panel says why since 25 Nov 2026; an older one does not."""
+        says = says or {}
+        why, no = says.get('why'), self._move_no(says.get('move_no'))
+        if why == 'vendor':
+            text = _("It is in the panel already, but not for this database.")
+        elif why == 'off':
+            text = _("It is switched off in the panel.")
+        elif why == 'used' and says.get('can_move'):
+            text = _("Used by another database.")
+        elif why == 'used':
+            text = _("Used by another database. The panel administrator can move it.")
+        else:
+            text = ''
+        if text:
+            return text + (' ' + _("It cannot be moved from here: %s.", no) if no else '')
         return _("Used by another database. Remove it there first, or assign it to this database in the panel.")
+
+    @api.model
+    def _move_no(self, text):
+        if text == 'adding numbers from Odoo is not allowed for this database':
+            return _("adding numbers from our software is off for this database")
+        return text or ''
+
+    @api.model
+    def _ask_move(self, country_id, number, values):
+        """{'ok', 'error'}. Only the first that the panel knows is asked: a
+        wrong code counts."""
+        self._check_admin()
+        whole = self._number(self.env['res.country'].sudo().browse(int(country_id or 0)).exists(), number)
+        why = ''
+        for session in self._askers():
+            try:
+                body = session._gateway_call('POST', '/v1/numbers/move', dict(values, number=whole), timeout=(5, 45)) or {}
+            except UserError as err:
+                why = why or self._last_line(err)
+                continue
+            return {'ok': bool(body.get('ok')), 'error': '' if body.get('ok') else self._move_no(body.get('detail')) or _("The panel refused it.")}
+        return {'ok': False, 'error': why or _("The panel cannot be asked now.")}
+
+    @api.model
+    def move_code(self, country_id, number):
+        """A code to the number's own WhatsApp: who has the phone may move it."""
+        return self._ask_move(country_id, number, {'do': 'code'})
+
+    @api.model
+    def move_check(self, country_id, number, code):
+        """Right: the next step takes the number from the other database."""
+        return self._ask_move(country_id, number, {'do': 'check', 'code': ''.join(c for c in str(code or '') if c.isdigit())[:6]})
 
     @api.model
     def _keep_try(self, step, number, error, apart=False):
@@ -507,7 +558,7 @@ class WhatsAppConnect(models.AbstractModel):
                 self._after(vals, session, number)
             return self._first_state(session, vals)
         if says.get('check') == 'elsewhere':
-            raise UserError("%s: %s" % (self._pretty(number), self._elsewhere()))
+            raise UserError("%s: %s" % (self._pretty(number), self._elsewhere(says)))
         owner = self._owner(session)[0]
         if owner:
             vals['employee_id'] = owner

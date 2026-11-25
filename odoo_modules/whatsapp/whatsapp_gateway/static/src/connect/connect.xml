@@ -72,7 +72,21 @@
                         <span t-elif="state.country" class="text-muted"><t t-esc="wanted"/>, digits only</span>
                         <div t-if="state.look and state.look.text" t-att-class="state.look.ok ? (state.look.where ? 'text-success' : 'text-muted') : 'text-danger'">
                             <t t-if="state.look.ok and state.look.where">&#10003; </t><t t-esc="state.look.text"/></div>
-                        <div t-elif="state.check" class="text-muted"><i class="fa fa-spinner fa-spin"/> Looking in the panel…</div>
+                        <div t-if="state.look and state.look.move" class="o_wa_move">
+                            <button t-if="!state.move" type="button" class="btn btn-outline-danger btn-sm" t-att-disabled="state.moveBusy" t-on-click="moveAsk">
+                                <i t-if="state.moveBusy" class="fa fa-spinner fa-spin me-1"/>Move it here</button>
+                            <t t-else="">
+                                <div>A code was sent to this number's own WhatsApp. Open <b>Message yourself</b> on that phone. The number stops in the other database.</div>
+                                <div class="d-flex gap-2 mt-2">
+                                    <input type="text" inputmode="numeric" autocomplete="one-time-code" class="form-control" placeholder="6 digits" aria-label="Code"
+                                           t-att-value="state.moveCode" t-on-input="onMoveCode" t-on-keydown="onMoveKey"/>
+                                    <button type="button" class="btn btn-primary" t-att-disabled="state.moveBusy or state.moveCode.length !== 6" t-on-click="moveCheck">Move</button>
+                                    <button type="button" class="btn btn-link" t-att-disabled="state.moveBusy" t-on-click="moveAsk">New code</button>
+                                </div>
+                            </t>
+                            <div t-if="state.moveError" class="text-danger" role="alert" t-esc="state.moveError"/>
+                        </div>
+                        <div t-if="state.check and !(state.look and state.look.text)" class="text-muted"><i class="fa fa-spinner fa-spin"/> Looking in the panel…</div>
                     </div>
                     </t>
 
