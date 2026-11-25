@@ -133,6 +133,14 @@
               groups="base.group_system"
               sequence="0"/>
 
+    <!-- 25 Nov 2026: why a number could not be connected -->
+    <menuitem id="menu_wa_connect_try"
+              name="Failed Connections"
+              parent="menu_wa_tracker_config"
+              action="whatsapp_gateway.action_whatsapp_connect_try"
+              groups="base.group_system"
+              sequence="0"/>
+
     <menuitem id="menu_wa_employee_sessions"
               name="Employee Sessions"
               parent="menu_wa_tracker_config"

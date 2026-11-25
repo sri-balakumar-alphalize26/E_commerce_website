@@ -97,6 +97,7 @@
                         </div>
                         <label t-if="state.showKey or !state.data.has_session" class="o_wa_label" for="wa_key">Key of this number, from the panel</label>
                         <input t-if="state.showKey or !state.data.has_session" id="wa_key" type="password" class="form-control" autocomplete="new-password" placeholder="wa1_…" t-model="state.key"/>
+                        <div t-if="state.showKey or !state.data.has_session" class="text-muted small">Copy it from the page of <b t-esc="state.data.database"/> in the panel. A key from another database does not work.</div>
                     </t>
 
                     <div t-if="state.turnOn" class="alert alert-info mt-3 mb-2" role="status">
@@ -111,7 +112,7 @@
                     </div>
                     <button type="submit" class="btn btn-primary o_wa_go" t-att-disabled="!ready1">
                         <i t-if="state.busy" class="fa fa-spinner fa-spin me-2"/>
-                        <t t-if="state.busy and state.confirm">Adding it to the panel and fetching its key…</t><t t-elif="state.busy">Preparing the number…</t><t t-elif="state.confirm">Save and scan</t><t t-elif="state.turnOn">Turn on and scan</t><t t-elif="state.picked and state.picked.connected">Next: groups</t><t t-else="">Next: scan</t>
+                        <t t-if="state.busy and state.confirm">Adding it to the panel and fetching its key…</t><t t-elif="state.busy">Preparing the number…</t><t t-elif="state.confirm">Save and scan</t><t t-elif="state.turnOn">Turn on and scan</t><t t-elif="state.picked and state.picked.connected"><t t-if="state.data.has_groups">Next: groups</t><t t-else="">Next</t></t><t t-else="">Next: scan</t>
                     </button>
                 </form>
 

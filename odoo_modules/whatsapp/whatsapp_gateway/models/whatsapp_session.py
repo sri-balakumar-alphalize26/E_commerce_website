@@ -549,6 +549,19 @@ class WhatsAppSession(models.Model):
         return {'type': 'ir.actions.client', 'tag': 'whatsapp_gateway.connect', 'name': _("Connect a number"),
                 'params': {'session_id': self.id}}
 
+    def action_check_again(self):
+        """Ask the panel now; a status says it, not a scan."""
+        self.ensure_one()
+        self._refresh_state(force=True)
+        return {'type': 'ir.actions.client', 'tag': 'soft_reload'}
+
+    def action_check_connection(self):
+        lines = self.env['whatsapp.connect'].check_connection()
+        return {'type': 'ir.actions.client', 'tag': 'display_notification', 'params': {
+            'title': _("Check connection"), 'sticky': True,
+            'type': 'success' if all(ok for ok, _text in lines) else 'warning',
+            'message': '\n'.join(text for _ok, text in lines)}}
+
     def action_connect_new(self):
         return {'type': 'ir.actions.client', 'tag': 'whatsapp_gateway.connect', 'name': _("Connect a number")}
 
@@ -578,6 +591,10 @@ class WhatsAppSession(models.Model):
                 # The panel says why a number cannot be used (wrong phone
                 # scanned, nothing assigned, instance missing) in `detail`.
                 vals['error_message'] = (body or {}).get('detail') or False
+                # a link that drops for a moment is not one to scan again:
+                # only what is closed at the next look too is disconnected
+                if state == 'close' and session.status == 'connected' and not vals['error_message']:
+                    vals['status'] = 'connecting'
             except UserError as err:
                 # Unreachable or unknown instance. Say so on the record rather
                 # than leaving a stale 'connected' behind for callers to trip on.

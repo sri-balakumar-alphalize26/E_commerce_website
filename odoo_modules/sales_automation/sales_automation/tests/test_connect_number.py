@@ -411,6 +411,8 @@ class TestConnectNumber(ConnectCase):
     def test_first_number_with_its_key(self):
         self.env['wa.employee.session'].search([]).write({'active': False})
         self.env['whatsapp.session'].search([]).write({'active': False})
+        self.assertTrue(self.Connect.start()['has_session'], 'one that is off can still ask the panel')
+        self.env['whatsapp.session'].with_context(active_test=False).search([]).write({'removed': True})
         self.assertFalse(self.Connect.start()['has_session'])
         with self.assertRaises(UserError):
             self._add()
@@ -425,10 +427,81 @@ class TestConnectNumber(ConnectCase):
             self._add(key=setup_key('tokW'))
         self.assertFalse(self._session())
 
+    def _tries(self, number='971501234567'):
+        return self.env['whatsapp.connect.try'].search([('number', '=', number)])
+
+    def test_used_by_another_database(self):
+        self.where['971501234567'] = 'elsewhere'
+        for _again in range(2):
+            look = self.Connect.look(self.ae.id, '501234567')
+        self.assertFalse(look['ok'])
+        self.assertIn('Used by another database', look['text'])
+        self.assertEqual(len(self._tries()), 1, 'once, however often it is asked')
+
+    def test_why_the_panel_was_not_asked(self):
+        self.panel = {}
+        look = self.Connect.look(self.ae.id, '501234567')
+        self.assertEqual((look['where'], look['ok']), ('', True))
+        self.assertIn('token not registered', look['text'])
+        self.assertIn('token not registered', self._tries().error)
+
+    def test_the_key_of_another_database(self):
+        Session = self.env.registry['whatsapp.session']
+        before = Session._gateway_call
+
+        def refused(rec, method, path, *args, **kw):
+            if path == '/v1/config' and rec.sudo().gateway_api_key == 'tokX':
+                raise UserError('The gateway refused the request (HTTP 403).\nwrong key: it is the key of database '
+                                'zz_old, but this is zz_new. Open zz_new in the WhatsApp panel and copy the key there')
+            return before(rec, method, path, *args, **kw)
+        with patch.object(Session, '_gateway_call', refused):
+            with self.assertRaisesRegex(UserError, 'This key is for database zz_old'), self.env.cr.savepoint():
+                self._add(key=setup_key('tokX'))
+        self.assertFalse(self._session())
+
+    def test_a_failed_add_is_kept_without_its_key(self):
+        try:
+            self._add(key='wa1_secret')
+        except UserError:
+            pass
+        self.assertTrue(self._tries())
+        self.assertNotIn('wa1_secret', self._tries()[0].error)
+        self.env['whatsapp.connect.try']._keep('scan', '1', 'bad wa1_abc here')
+        self.assertEqual(self._tries('1').error, 'bad *** here')
+
+    def test_one_that_is_off_can_ask(self):
+        self.first.with_context(wa_switch=True).write({'active': False})
+        self.assertTrue(self.Connect.start()['can_add'])
+        self._add()
+        self.assertTrue(self._session())
+
+    def test_a_short_drop_is_not_a_scan(self):
+        self.state['971500000001'] = 'close'
+        self.first.action_check_again()
+        self.assertEqual(self.first.status, 'connecting', 'a moment')
+        self.first.action_check_again()
+        self.assertEqual(self.first.status, 'disconnected', 'still closed')
+        self.state['971500000001'] = 'open'
+        self.assertEqual(self.first.action_check_again()['tag'], 'soft_reload')
+        self.assertEqual(self.first.status, 'connected')
+
+    def test_check_connection(self):
+        # archived demo entries cannot be asked: only this one is looked at
+        others = self.env['whatsapp.session'].with_context(active_test=False).search([('id', '!=', self.first.id)])
+        others.write({'removed': True})
+        lines = self.Connect.check_connection()
+        self.assertTrue(all(ok for ok, _text in lines), lines)
+        self.may_add = 0
+        self.assertFalse(all(ok for ok, _text in self.Connect.check_connection()))
+        self.down = True
+        self.assertFalse(self.Connect.check_connection()[0][0])
+        self.assertEqual(self.first.action_check_connection()['params']['type'], 'warning')
+
     def test_only_an_administrator(self):
         user = new_test_user(self.env, 'zz-wa-user', groups='base.group_user')
         for method, args in (('start', []), ('add', [{}]), ('state', [self.first.id]), ('groups', [self.first.id]),
-                             ('finish', [self.first.id, []]), ('check_number', [self.ae.id, '1'])):
+                             ('finish', [self.first.id, []]), ('check_number', [self.ae.id, '1']),
+                             ('check_connection', [])):
             with self.assertRaises(AccessError, msg=method):
                 getattr(self.Connect.with_user(user), method)(*args)
 

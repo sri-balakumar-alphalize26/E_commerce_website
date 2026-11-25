@@ -30,11 +30,12 @@ export class ConnectNumber extends Component {
     }
 
     get steps() {
-        return [
+        const steps = [
             { key: "number", n: 1, name: _t("Number") },
             { key: "scan", n: 2, name: _t("Scan") },
-            { key: "groups", n: 3, name: _t("Groups") },
         ];
+        // groups only with Sales Automation
+        return this.state.data.has_groups ? [...steps, { key: "groups", n: 3, name: _t("Groups") }] : steps;
     }
     stepState(key) {
         const order = ["number", "scan", "groups", "done"];
@@ -171,7 +172,8 @@ export class ConnectNumber extends Component {
     }
     get needsKey() {
         const look = this.state.look;
-        if (this.state.picked || (look && (look.where === "off" || (look.where === "here" && !look.key)))) {
+        // refused already: no key would help
+        if (this.state.picked || (look && (!look.ok || look.where === "off" || (look.where === "here" && !look.key)))) {
             return false;
         }
         return !this.state.data.can_add || !!(look && look.key);

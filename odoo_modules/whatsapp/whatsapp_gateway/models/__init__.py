@@ -1,6 +1,7 @@
 from . import send_memo
 from . import whatsapp_session
 from . import whatsapp_connect
+from . import whatsapp_connect_try
 from . import whatsapp_number_off
 from . import whatsapp_number_panel
 from . import whatsapp_session_easy

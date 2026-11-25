@@ -192,6 +192,14 @@ class WhatsAppConnect(models.AbstractModel):
         sessions = self.env['whatsapp.session'].sudo().search([('active', '=', True), ('gateway_api_key', '!=', False)])
         return sessions.sorted(lambda s: (s.status != 'connected', s.id))
 
+    @api.model
+    def _askers(self):
+        """Who may ask the panel: the numbers that are on, then those turned off
+        in Odoo. The panel lets such a key ask and add, never send."""
+        off = self.env['whatsapp.session'].sudo().search([
+            ('active', '=', False), ('removed', '=', False), ('gateway_api_key', '!=', False)])
+        return self._sessions() + off.filtered(lambda s: not s.gateway_api_key.startswith('removed-'))
+
     @staticmethod
     def _last_line(err):
         text = str(err.args[0] if getattr(err, 'args', None) else err)
@@ -201,11 +209,11 @@ class WhatsAppConnect(models.AbstractModel):
     def _panel_numbers(self):
         """(numbers it may have, numbers it has, why not, free ones)."""
         why = ''
-        for session in self._sessions():
+        for session in self._askers():
             try:
                 body = session._gateway_call('GET', '/v1/numbers', timeout=(5, 15)) or {}
             except UserError as err:
-                why = self._last_line(err)
+                why = why or self._last_line(err)
                 continue
             return (int(body.get('may_add') or 0), body.get('numbers') or [], '',
                     [n for n in body.get('free') or [] if n.get('authorized_number')])
@@ -247,17 +255,19 @@ class WhatsAppConnect(models.AbstractModel):
     @api.model
     def _ask_panel(self, number, label):
         """The setup key of a new number of this database."""
-        why = _("This database has no WhatsApp session yet. Paste its first key from the panel.")
-        for session in self._sessions():
+        if not self._askers():
+            raise UserError(_("This database has no WhatsApp session yet. Paste its first key from the panel."))
+        why = ''
+        for session in self._askers():
             try:
                 body = session._gateway_call('POST', '/v1/numbers', {'number': number, 'label': label},
                                              timeout=(5, 60)) or {}
             except UserError as err:
-                why = self._last_line(err)
+                why = why or self._last_line(err)
                 continue
             if body.get('key'):
                 return body['key']
-        raise UserError(_("Not added in the panel: %s", why) if self._sessions() else why)
+        raise UserError(_("Not added in the panel: %s", why))
 
     # ------------------------------------------------------------ the screen
     @api.model
@@ -265,7 +275,9 @@ class WhatsAppConnect(models.AbstractModel):
         self._check_admin()
         # a list that cannot be read must not close the screen
         may, numbers, why, free = self._panel_numbers()
-        has_session = bool(self._sessions())
+        has_session = bool(self._askers())
+        if has_session and why:
+            self._keep_try('open', '', why)
         country = self.env.company.country_id
         return {
             'countries': self._countries(),
@@ -273,6 +285,7 @@ class WhatsAppConnect(models.AbstractModel):
             'companies': [{'id': c.id, 'name': c.name} for c in self.env.companies],
             'company': self.env.company.id,
             'has_session': has_session, 'database': self.env.cr.dbname,
+            'has_groups': 'sa.sales.group' in self.env,
             'may_add': may, 'used': len(numbers),
             'can_add': bool(has_session and may > len(numbers)),
             'scanned': self._scanned(self._from_panel(numbers, free if may > len(numbers) else []) if has_session and may else []),
@@ -328,13 +341,15 @@ class WhatsAppConnect(models.AbstractModel):
         if off:
             return {'where': 'off', 'ok': True, 'owner': self._owner(off)[1],
                     'text': _("Turned off here, you can turn it on: %s", off.name)}
-        body = {}
-        for asked in self._sessions():
+        body, why = {}, ''
+        for asked in self._askers():
             try:
                 body = asked._gateway_call('GET', '/v1/numbers?check=%s' % whole, timeout=(3, 8)) or {}
             except UserError as err:
+                why = why or self._last_line(err)
                 _logger.info("Connect a number: the panel was not asked: %s", self._last_line(err))
                 continue
+            why = ''
             break
         where = body.get('check')
         if where == 'here' and body.get('in_use'):
@@ -345,17 +360,65 @@ class WhatsAppConnect(models.AbstractModel):
             'free': (True, _("Already in the panel and free, it will be used")),
             'here': (True, _("Already in the panel for this database, it will be used")),
             'off': (False, _("It is turned off for this database in the panel.")),
-            'elsewhere': (False, _("Already used by another database")),
+            'elsewhere': (False, self._elsewhere()),
         }.get(where)
         if not answer:
-            return {'where': '', 'ok': True, 'text': _("Could not check in the panel now; checked again on Next") if self._sessions() else ''}
+            if why:
+                self._keep_try('number', whole, why)
+                return {'where': '', 'ok': True, 'text': _("Could not check in the panel: %s", why)}
+            return {'where': '', 'ok': True, 'text': _("Could not check in the panel now; checked again on Next") if self._askers() else ''}
+        if where == 'elsewhere':
+            self._keep_try('number', whole, answer[1])
         return {'where': where, 'ok': answer[0], 'text': answer[1]}
+
+    @api.model
+    def _elsewhere(self):
+        return _("Used by another database. Remove it there first, or assign it to this database in the panel.")
+
+    @api.model
+    def _keep_try(self, step, number, error, apart=False):
+        """A failed try, for the list. Apart: what follows is undone, this is not."""
+        Try = self.env['whatsapp.connect.try'].sudo()
+        try:
+            if apart and not config['test_enable']:
+                with self.env.registry.cursor() as cr:
+                    Try.with_env(Try.env(cr=cr))._keep(step, number, error)
+            else:
+                with self.env.cr.savepoint():
+                    Try._keep(step, number, error)
+        except Exception as err:  # noqa: BLE001 - the list never stops the screen
+            _logger.warning("Connect a number: a failed try was not kept: %s", err)
+
+    @api.model
+    def _typed(self, vals):
+        """The number of a try, as far as it can be told."""
+        digits = ''.join(c for c in str(vals.get('free_number') or '') if c.isdigit())
+        if digits:
+            return digits
+        session = self.env['whatsapp.session'].sudo().browse(
+            int(vals.get('off_session_id') or vals.get('session_id') or 0)).exists()
+        if session:
+            return session.authorized_number or ''
+        try:
+            return self._number(self.env['res.country'].sudo().browse(int(vals.get('country_id') or 0)).exists(),
+                                vals.get('number'))
+        except UserError:
+            return ''
 
     @api.model
     def add(self, vals):
         """Step 1: the number, its key and its session."""
         self._check_admin()
         vals = dict(vals or {})
+        number = self._typed(vals)
+        try:
+            return self._add_number(vals)
+        except UserError as err:
+            self._keep_try('number', number, str(err.args[0] if err.args else err), apart=True)
+            raise
+
+    @api.model
+    def _add_number(self, vals):
         if vals.get('session_id'):
             return self._give(vals)
         if vals.get('off_session_id'):
@@ -404,7 +467,15 @@ class WhatsAppConnect(models.AbstractModel):
         self._after(vals, session, number)
         if not vals.get('key'):
             self._save()
-        self._load(session)
+        try:
+            self._load(session)
+        except UserError as err:
+            other = re.search(r'it is the key of database (.+?), but this is', self._last_line(err))
+            if not vals.get('key') or not other:
+                raise
+            raise UserError(_(
+                "This key is for database %(other)s. Open %(here)s in the panel, assign the number there and copy the key from that page.",
+                other=other.group(1), here=self.env.cr.dbname)) from err
         return self._first_state(session, vals)
 
     # ------------------------------------------------------------ one that is off
@@ -415,7 +486,7 @@ class WhatsAppConnect(models.AbstractModel):
 
     @api.model
     def _panel_says(self, number):
-        for session in self._sessions():
+        for session in self._askers():
             try:
                 return session._gateway_call('GET', '/v1/numbers?check=%s' % number, timeout=(3, 8)) or {}
             except UserError as err:
@@ -436,7 +507,7 @@ class WhatsAppConnect(models.AbstractModel):
                 self._after(vals, session, number)
             return self._first_state(session, vals)
         if says.get('check') == 'elsewhere':
-            raise UserError(_("%s is already used by another database.", self._pretty(number)))
+            raise UserError("%s: %s" % (self._pretty(number), self._elsewhere()))
         owner = self._owner(session)[0]
         if owner:
             vals['employee_id'] = owner
@@ -572,7 +643,35 @@ class WhatsAppConnect(models.AbstractModel):
                     }.get(body.get('state'), '')
             except UserError as err:
                 out['error'] = self._last_line(err)
+        if out['wrong'] or out['error']:
+            self._keep_try('scan', session.authorized_number, out['error'] or _("Scanned with another phone"))
         return out
+
+    @api.model
+    def check_connection(self):
+        """[(ok, text)]: can the panel be asked, may numbers be added, how many are left."""
+        self._check_admin()
+        askers = self._askers()
+        if not askers:
+            return [(False, _("This database has no WhatsApp number yet. Its first key comes from the panel."))]
+        lines, body = [], None
+        for session in askers:
+            try:
+                answer = session._gateway_call('GET', '/v1/numbers', timeout=(5, 15)) or {}
+            except UserError as err:
+                lines.append((False, "%s: %s" % (session.name, self._last_line(err))))
+                continue
+            body = answer if body is None else body
+        if body is None:
+            return [(False, _("The panel could not be asked."))] + lines
+        may, used = int(body.get('may_add') or 0), len(body.get('numbers') or [])
+        lines.insert(0, (True, _("The panel answers.")))
+        if not may:
+            lines.append((False, _("Adding numbers from Odoo is off for this database. The panel administrator allows it.")))
+        else:
+            lines.append((may > used, _("%(used)s of %(may)s numbers used, %(left)s left.",
+                                        used=used, may=may, left=max(0, may - used))))
+        return lines
 
     @api.model
     def _state_extra(self, session):
