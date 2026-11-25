@@ -36,7 +36,9 @@
         label { display: flex; align-items: center; gap: 12px; padding: 12px 14px; margin: 0; border-bottom: 1px solid $border-color; cursor: pointer; }
         label:last-child { border-bottom: 0; }
         label.on { background: rgba($success, .08); }
-        label.taken { opacity: .55; cursor: not-allowed; }
+        label.taken { flex-wrap: wrap; row-gap: 4px; opacity: .55; cursor: not-allowed;
+            .o_wa_gname { flex-basis: calc(100% - 32px); }
+            > .small { flex: 0 0 100%; padding-left: 32px; } }
         input { width: 20px; height: 20px; flex: none; } }
     .o_wa_gname { flex: 1; min-width: 0; overflow-wrap: anywhere; font-weight: 600; }
     .o_wa_done { ul { list-style: none; padding: 0; } li { padding: 8px 0; font-size: 1.05rem; } li.ok span { color: $success; font-weight: 800; } li.not span { color: $warning; font-weight: 800; } }

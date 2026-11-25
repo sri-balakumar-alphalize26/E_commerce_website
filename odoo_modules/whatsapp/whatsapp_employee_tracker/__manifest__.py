@@ -13,8 +13,8 @@
     'website': 'https://www.alphalize.com',
     'depends': ['whatsapp_gateway', 'hr', 'sale_management', 'sale_stock', 'stock', 'account', 'payment'],
     'data': [
-        'security/ir.model.access.csv',
         'security/tracker_security.xml',
+        'security/ir.model.access.csv',
         'data/alert_keywords_data.xml',
         'data/ir_cron.xml',
         'views/employee_session_views.xml',
