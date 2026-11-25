@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_wa_owner_number_list" model="ir.ui.view">
+        <field name="name">whatsapp.owner.number.alert.list</field>
+        <field name="model">whatsapp.owner.number</field>
+        <field name="priority">50</field>
+        <field name="arch" type="xml">
+            <list string="Owner Numbers" editable="bottom">
+                <field name="name" string="Name" placeholder="e.g. Owner"/>
+                <field name="phone" widget="wa_phone"/>
+                <field name="active" string="Send" widget="boolean_toggle"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="ir_cron_wa_watch_numbers" model="ir.cron">
+        <field name="name">WA Tracker: Tell when a number is disconnected</field>
+        <field name="model_id" ref="whatsapp_gateway.model_whatsapp_session"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_watch_numbers()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">minutes</field>
+        <field name="active">True</field>
+    </record>
+
+    <record id="view_wa_owner_config_form" model="ir.ui.view">
+        <field name="name">whatsapp.config.owner.form</field>
+        <field name="model">whatsapp.config</field>
+        <field name="priority">50</field>
+        <field name="arch" type="xml">
+            <form create="false" delete="false">
+                <sheet>
+                    <p class="text-muted">These numbers get a WhatsApp message when a number is disconnected, and when it is
+                        connected again. Another connected number sends it. Without a number here nothing is sent.</p>
+                    <group>
+                        <label for="alert_minutes"/>
+                        <div><field name="alert_minutes" class="oe_inline"/> <span class="text-muted">0 = at once, within about a minute</span></div>
+                        <field name="alert_down"/>
+                        <field name="alert_up"/>
+                        <field name="alert_steps"/>
+                    </group>
+                    <field name="owner_number_ids" context="{'active_test': False, 'default_company_id': company_id}">
+                        <list editable="bottom">
+                            <field name="name" string="Name" placeholder="e.g. Owner"/>
+                            <field name="phone" widget="wa_phone"/>
+                            <field name="active" string="Send" widget="boolean_toggle"/>
+                        </list>
+                    </field>
+                    <field name="company_id" invisible="1"/>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_wa_owner_page" model="ir.actions.server">
+        <field name="name">Owner Numbers</field>
+        <field name="model_id" ref="whatsapp_gateway.model_whatsapp_config"/>
+        <field name="state">code</field>
+        <field name="code">action = model.action_wa_owner_numbers()</field>
+    </record>
+</odoo>

@@ -9,6 +9,13 @@
               web_icon="whatsapp_employee_tracker,static/description/icon.png"
               sequence="85"/>
 
+    <!-- 25 Nov 2026: what a manager does not need every day. Moved, not removed. -->
+    <menuitem id="menu_wa_advanced"
+              name="Advanced"
+              parent="menu_wa_tracker_root"
+              groups="base.group_system"
+              sequence="50"/>
+
     <!-- ============================================================ -->
     <!-- Dashboard (main landing page) -->
     <!-- ============================================================ -->
@@ -29,7 +36,7 @@
     <menuitem id="menu_wa_tracker_monitoring"
               name="Monitoring"
               parent="menu_wa_tracker_root"
-              sequence="2"/>
+              sequence="0"/>
 
     <menuitem id="menu_wa_chat_view"
               name="Chat View"
@@ -39,21 +46,21 @@
 
     <menuitem id="menu_wa_conversations"
               name="Conversations"
-              parent="menu_wa_tracker_monitoring"
+              parent="menu_wa_advanced"
               action="action_wa_conversation"
-              sequence="2"/>
+              sequence="10"/>
 
     <menuitem id="menu_wa_communication_log"
               name="Communication Log"
-              parent="menu_wa_tracker_monitoring"
+              parent="menu_wa_advanced"
               action="action_wa_communication_log"
-              sequence="3"/>
+              sequence="20"/>
 
     <menuitem id="menu_wa_voice_messages"
               name="Voice Messages"
-              parent="menu_wa_tracker_monitoring"
+              parent="menu_wa_advanced"
               action="action_wa_voice_messages"
-              sequence="4"/>
+              sequence="40"/>
 
     <menuitem id="menu_wa_alerts"
               name="Keyword Alerts"
@@ -63,27 +70,27 @@
 
     <menuitem id="menu_wa_auto_reply_log"
               name="Auto Reply Log"
-              parent="menu_wa_tracker_monitoring"
+              parent="menu_wa_advanced"
               action="action_wa_auto_reply_log"
-              sequence="6"/>
+              sequence="50"/>
 
     <menuitem id="menu_wa_tone_chart"
               name="Tone Chart"
-              parent="menu_wa_tracker_monitoring"
+              parent="menu_wa_advanced"
               action="action_wa_tone_chart"
-              sequence="6"/>
+              sequence="70"/>
 
     <menuitem id="menu_wa_tone_report"
               name="Tone Report"
-              parent="menu_wa_tracker_monitoring"
+              parent="menu_wa_advanced"
               action="action_wa_tone_report"
-              sequence="7"/>
+              sequence="80"/>
 
     <menuitem id="menu_wa_message_tone"
               name="Tone Analysis"
-              parent="menu_wa_tracker_monitoring"
+              parent="menu_wa_advanced"
               action="action_wa_message_tone_all"
-              sequence="8"/>
+              sequence="60"/>
 
     <menuitem id="menu_wa_message_tone_harsh"
               name="Harsh Messages"
@@ -99,9 +106,9 @@
 
     <menuitem id="menu_wa_response_time_detail"
               name="Response Time Detail"
-              parent="menu_wa_tracker_monitoring"
+              parent="menu_wa_advanced"
               action="action_wa_response_time_detail"
-              sequence="11"/>
+              sequence="30"/>
 
     <!-- ============================================================ -->
     <!-- Reporting (interactive drill-down reports) -->
@@ -112,10 +119,10 @@
               sequence="9"/>
 
     <menuitem id="menu_wa_tone_report_wizard"
-              name="Tone Report"
-              parent="menu_wa_tracker_reporting"
+              name="Tone Report by Period"
+              parent="menu_wa_advanced"
               action="action_wa_tone_report_wizard"
-              sequence="1"/>
+              sequence="90"/>
 
     <!-- ============================================================ -->
     <!-- Configuration (setup + analytics) -->
@@ -133,13 +140,21 @@
               groups="base.group_system"
               sequence="0"/>
 
+    <!-- 25 Nov 2026: who is told when a number is disconnected -->
+    <menuitem id="menu_wa_owner_number"
+              name="Owner Numbers"
+              parent="menu_wa_tracker_config"
+              action="action_wa_owner_page"
+              groups="base.group_system"
+              sequence="2"/>
+
     <!-- 25 Nov 2026: why a number could not be connected -->
     <menuitem id="menu_wa_connect_try"
               name="Failed Connections"
-              parent="menu_wa_tracker_config"
+              parent="menu_wa_advanced"
               action="whatsapp_gateway.action_whatsapp_connect_try"
               groups="base.group_system"
-              sequence="0"/>
+              sequence="150"/>
 
     <menuitem id="menu_wa_employee_sessions"
               name="Employee Sessions"
@@ -149,44 +164,44 @@
 
     <menuitem id="menu_wa_alert_rules"
               name="Alert Rules"
-              parent="menu_wa_tracker_config"
+              parent="menu_wa_advanced"
               action="action_wa_keyword_alert_rules"
-              sequence="2"/>
+              sequence="140"/>
 
     <menuitem id="menu_wa_quality_scores"
               name="Quality Scores"
-              parent="menu_wa_tracker_config"
+              parent="menu_wa_advanced"
               action="action_wa_quality_score"
-              sequence="3"/>
+              sequence="100"/>
 
     <menuitem id="menu_wa_dashboard_volume"
               name="Message Volume"
-              parent="menu_wa_tracker_config"
+              parent="menu_wa_advanced"
               action="action_wa_dashboard_volume"
-              sequence="4"/>
+              sequence="120"/>
 
     <menuitem id="menu_wa_dashboard_hours"
               name="Activity Hours"
-              parent="menu_wa_tracker_config"
+              parent="menu_wa_advanced"
               action="action_wa_dashboard_activity_hours"
-              sequence="5"/>
+              sequence="130"/>
 
     <menuitem id="menu_wa_dashboard_quality"
               name="Quality Trends"
-              parent="menu_wa_tracker_config"
+              parent="menu_wa_advanced"
               action="action_wa_dashboard_quality"
-              sequence="6"/>
+              sequence="110"/>
 
     <menuitem id="menu_wa_voice_test"
               name="Voice Test"
-              parent="menu_wa_tracker_config"
-              sequence="98"
+              parent="menu_wa_advanced"
+              sequence="170"
               action="action_wa_voice_test_url"/>
 
     <menuitem id="menu_wa_voice_config"
               name="AI / Voice Settings"
-              parent="menu_wa_tracker_config"
-              sequence="99"
+              parent="menu_wa_advanced"
+              sequence="160"
               action="action_wa_voice_config"/>
 
 </odoo>
