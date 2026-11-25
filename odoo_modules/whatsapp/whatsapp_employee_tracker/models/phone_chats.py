@@ -114,7 +114,9 @@ class EmployeeSessionPhone(models.Model):
         row['unreadCount'] = 0 if mine else int(row.get('unreadCount') or 0) + 1
 
     def _phone_rows(self, session):
-        rows = _kept(self._phone_key('chats'), KEEP_LIST, lambda: session._gateway_call(
+        # a reply only needs the chat: a list some minutes old will do
+        keep = self.env.context.get('wa_chats_kept') or KEEP_LIST
+        rows = _kept(self._phone_key('chats'), keep, lambda: session._gateway_call(
             'POST', '/chat/findChats/%s' % session.instance_name, {}, timeout=(3, 20)))
         return [r for r in rows if isinstance(r, dict) and str(r.get('remoteJid') or '').endswith((PRIVATE, GROUP, HIDDEN))
                 and r.get('lastMessage')] if isinstance(rows, list) else []
@@ -228,7 +230,9 @@ class EmployeeSessionPhone(models.Model):
             raise UserError(self.env._("Type the message first."))
         if len(text) > 4000:
             raise UserError(self.env._("The message is too long."))
-        chat = next((c for c in self._phone_chats() if c['id'] == chat_id), None)
+        old = self.with_context(wa_chats_kept=KEEP_NAMES)
+        chat = next((c for c in old._phone_chats() if c['id'] == chat_id), None) \
+            or next((c for c in self._phone_chats() if c['id'] == chat_id), None)
         if not chat:
             raise AccessError(self.env._("That chat is not on this number."))
         if chat['group']:
@@ -238,14 +242,18 @@ class EmployeeSessionPhone(models.Model):
             raise UserError(self.env._("WhatsApp hides this person's number; answer on the phone."))
         if not session.use_whatsapp:
             raise UserError(self.env._("WhatsApp is switched off for this number."))
-        reason = session._policy_block(number, text)
+        reason = session.with_context(wa_typed=True)._policy_block(number, text)
         if reason:
             raise UserError(reason)
         paused = self._phone_pause(session, chat, text)
-        session._send_payload('sendText', {'number': number, 'text': text, 'delay': session.send_delay_ms, 'plain': True},
+        # a person typed it: no pretended typing before it goes
+        session._send_payload('sendText', {'number': number, 'text': text, 'delay': 0, 'plain': True},
                               number, text, queue_on_failure=False)
         _logger.info("WA Tracker: %s answered a chat of %s", self.env.user.login, session.name)
-        return {'paused': paused}
+        row = self.env['whatsapp.message'].sudo().search([
+            ('session_id', '=', session.id), ('direction', '=', 'outgoing'), ('phone', '=', number), ('message', '=', text),
+            ('status', '=', 'sent')], order='id desc', limit=1)
+        return {'paused': paused, 'id': row.wa_message_id or False}
 
     def _phone_pause(self, session, chat, text):
         """True: the bot is quiet in this chat for the takeover time of the settings."""

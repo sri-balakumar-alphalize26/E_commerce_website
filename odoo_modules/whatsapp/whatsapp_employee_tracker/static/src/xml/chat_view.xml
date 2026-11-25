@@ -203,8 +203,8 @@
                     <div class="d-flex align-items-end gap-2">
                         <textarea class="form-control" rows="1" maxlength="4000" placeholder="Type a message" aria-label="Message"
                                   style="resize:none; border-radius:8px; border:none;" t-model="state.reply" t-on-keydown="onReplyKey"/>
-                        <button type="button" class="btn btn-primary" t-att-disabled="state.sending or !state.reply.trim()" t-on-click="sendReply" title="Send">
-                            <i t-att-class="state.sending ? 'fa fa-spinner fa-spin' : 'fa fa-paper-plane'"/>
+                        <button type="button" class="btn btn-primary" t-att-disabled="!state.reply.trim()" t-on-mousedown.prevent="" t-on-click="sendReply" title="Send">
+                            <i class="fa fa-paper-plane"/>
                         </button>
                     </div>
                 </div>

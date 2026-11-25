@@ -405,7 +405,8 @@ class TestChatHistory(HistoryCase):
         settings = self.env['sa.ai.settings'].sudo().get_settings()
         settings.takeover_enabled = True
         with patch.object(self.env.registry['whatsapp.session'], '_gateway_call', gateway):
-            self.assertEqual(self.link.phone_reply(jid, ' hello '), {'paused': True})
+            self.assertEqual(self.link.phone_reply(jid, ' hello '), {'paused': True, 'id': 'SENT1'})
+            self.assertEqual(sent[0][1]['delay'], 0, 'a person typed it: it goes at once')
             self.assertEqual((sent[0][0], sent[0][1]['number'], sent[0][1]['text'], sent[0][1]['plain']),
                              (self.second.id, CUSTOMER, 'hello', True))
             self.assertIn('hello', self._texts(self.link))
@@ -414,13 +415,22 @@ class TestChatHistory(HistoryCase):
                     self.link.phone_reply(chat, text)
             with self.assertRaises(AccessError):
                 self.link.phone_reply('70000000@s.whatsapp.net', 'x')
+            with self.assertRaisesRegex(UserError, 'sent just now'):
+                self.link.phone_reply(jid, 'hello')
+            self.assertTrue(self.second._policy_block(CUSTOMER, 'hello'), 'automatic: five minutes')
+            first = self.env['whatsapp.message'].search([('wa_message_id', '=', 'SENT1')])
+            first.flush_recordset()
+            self.env.cr.execute("UPDATE whatsapp_message SET create_date = create_date - interval '11 seconds' WHERE id = %s", [first.id])
+            first.invalidate_recordset()
+            self.assertIn('Identical', self.second._policy_block(CUSTOMER, 'hello'))
+            self.assertEqual(self.link.phone_reply(jid, 'hello')['id'], 'SENT2')
             self.env['whatsapp.optout'].sudo().record(CUSTOMER, source='inbound')
             with self.assertRaisesRegex(UserError, 'opted out'):
                 self.link.phone_reply(jid, 'again')
             user = new_test_user(self.env, 'zz-reply', groups='base.group_user')
             with self.assertRaises(AccessError):
                 self.link.with_user(user).phone_reply(jid, 'x')
-            self.assertEqual(len(sent), 1)
+            self.assertEqual(len(sent), 2)
 
     def test_who_sees_what(self):
         self._in('secret')

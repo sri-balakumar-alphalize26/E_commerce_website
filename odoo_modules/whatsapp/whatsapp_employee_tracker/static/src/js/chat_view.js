@@ -45,7 +45,6 @@ class WaChatView extends Component {
             media: {},              // opened pictures and voice notes
             viewer: null,           // the picture or video in the popup
             reply: "",
-            sending: false,
             replyError: "",
         });
 
@@ -257,26 +256,53 @@ class WaChatView extends Component {
             this.sendReply();
         }
     }
-    async sendReply() {
+    /** In the chat at once, with a clock; one after the other, in the order typed. */
+    sendReply() {
         const text = this.state.reply.trim();
-        if (!text || this.state.sending) return;
-        const chat = this.state.selectedConvId;
-        this.state.sending = true;
-        this.state.replyError = "";
+        if (!text) return;
+        const one = {
+            id: "sending-" + (this._sent = (this._sent || 0) + 1), message_text: text, direction: "outgoing", status: "pending",
+            message_date: new Date().toISOString().slice(0, 19).replace("T", " "), is_flagged: false, sender: "", media: false,
+        };
+        const chat = this.state.selectedConvId, number = this.state.numberId;
+        this.state.reply = this.state.replyError = "";
+        this.state.messages.push(one);
+        setTimeout(() => {
+            const el = this.messagesRef.el;
+            if (el) el.scrollTop = el.scrollHeight;
+        }, 0);
+        this._sendLine = (this._sendLine || Promise.resolve()).then(() => this._sendOne(one, chat, number));
+    }
+    /** What became of it: its real id, or gone and the text back in the box. */
+    _sendDone(one, chat, id) {
+        if (chat !== this.state.selectedConvId) return;
+        const rows = this.state.messages;
+        if (!id || rows.some((m) => m.id === id)) {
+            this.state.messages = rows.filter((m) => m.id !== one.id);
+        } else {
+            this.state.messages = rows.map((m) => (m.id === one.id ? { ...m, id, status: "sent" } : m));
+        }
+    }
+    _sendFailed(one, chat, error, again) {
+        this._sendDone(one, chat, false);
+        if (chat !== this.state.selectedConvId) return;
+        this.state.replyError = error;
+        if (again && !this.state.reply.trim()) this.state.reply = one.message_text;
+    }
+    async _sendOne(one, chat, number) {
+        const text = one.message_text;
         try {
             const answer = await this._jsonRpc("/wa_tracker/phone_reply", {
-                employee_session_id: this.state.numberId, chat_id: chat, text });
+                employee_session_id: number, chat_id: chat, text });
             if (!answer || answer.error || answer.paused === undefined) {
-                if (chat === this.state.selectedConvId) this.state.replyError = (answer && answer.error) || "Not sent.";
+                this._sendFailed(one, chat, (answer && answer.error) || "Not sent.", true);
             } else if (chat === this.state.selectedConvId) {
-                this.state.reply = "";
+                this._sendDone(one, chat, answer.id);
                 if (!answer.paused) this.state.replyError = "Sent. The assistant is not paused: Shopkeeper takes over is off in the settings.";
                 this._onNew();
             }
         } catch {
-            this.state.replyError = "It is not known whether it was sent. Look in the chat before sending again.";
-        } finally {
-            this.state.sending = false;
+            this._sendFailed(one, chat, "It is not known whether it was sent. Look in the chat before sending again.", false);
         }
     }
 

@@ -103,6 +103,10 @@ _STATE_MEMO = {}
 STATE_WRITE = 300
 
 
+# The same text typed by a person (context wa_typed): a double press, not more.
+TYPED_REPEAT = 10
+
+
 def _state_direct(env):
     """Tests have one connection: the state is written directly."""
     return config['test_enable'] and not env.context.get('wa_own_cursor')
@@ -881,8 +885,9 @@ class WhatsAppSession(models.Model):
                 )
 
         if self.dedupe_minutes > 0 and message:
+            typed = self.env.context.get('wa_typed')
             cutoff = fields.Datetime.subtract(
-                fields.Datetime.now(), minutes=self.dedupe_minutes)
+                fields.Datetime.now(), **({'seconds': TYPED_REPEAT} if typed else {'minutes': self.dedupe_minutes}))
             duplicate = Message.search_count([
                 ('session_id', '=', self.id),
                 ('direction', '=', 'outgoing'),
@@ -891,6 +896,8 @@ class WhatsAppSession(models.Model):
                 ('status', 'in', ('sent', 'delivered', 'read')),
                 ('create_date', '>=', cutoff),
             ])
+            if duplicate and typed:
+                return _("The same message was sent just now. Wait %s seconds to send it again.", TYPED_REPEAT)
             if duplicate:
                 return _(
                     "Identical message already sent to %(phone)s in the last "
