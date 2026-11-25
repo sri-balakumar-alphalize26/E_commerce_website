@@ -909,6 +909,8 @@ app.post('/hook/:instance', async (req, res) => {
 
   const arrived = nextArrival();
   const payload = JSON.stringify(req.body || {});
+  // the code of a move is for the phone only, not for a chat history
+  if (payload.includes(MOVE_MARK) && [...moveCodes.values()].some(m => m.code && payload.includes(m.code))) return;
   const targets = (await numberDatabases(n.id)).filter(d => d.active && d.odoo_webhook_url);
   await Promise.allSettled(targets.map(async d => {
     // Behind those already waiting, so messages keep their order.
@@ -1112,6 +1114,138 @@ async function whereIs(row, number, all) {
   return free ? { where: 'free', row: free } : { where: 'elsewhere' };
 }
 
+// ---- a number moves to another database. Who asks proves that the phone is
+// theirs: a code goes to the number's own WhatsApp. In memory: after a restart
+// a new code is asked for.
+const MOVE_CODE_FOR = 10 * 60000, MOVE_TRIES = 5, MOVE_WAIT = 15 * 60000;
+const moveCodes = new Map();      // who -> {code, until, tries, blocked}
+const moveGrants = new Map();     // who -> until
+const moveSent = new Map();       // number -> when its codes were sent
+const MOVE_MARK = 'Move code:';
+const moveWho = (row, number) => `${row.server_id}|${row.db_name}|${number}`;
+const mayMove = (row, number) => (moveGrants.get(moveWho(row, number)) || 0) > Date.now();
+
+/** {n, dbs, why, no}: the number, who has it, and why it cannot be moved from Odoo. */
+async function moveState(row, number, all) {
+  const { rows } = await pool.query('SELECT * FROM wap_number WHERE authorized_number = $1 ORDER BY active DESC, id DESC', [number]);
+  const n = rows[0];
+  if (!n) return { no: 'it is not in the panel' };
+  const dbs = (await pool.query('SELECT * FROM wap_database WHERE number_id = $1 ORDER BY id', [n.id])).rows;
+  const why = dbs.length ? 'used' : !n.active ? 'off' : 'vendor';
+  const max = Math.max(0, ...all.map(x => x.own_numbers_max));
+  const no = !max ? 'adding numbers from Odoo is not allowed for this database'
+    : all.filter(x => x.number_id).length >= max ? `this database may have ${max} number(s)`
+    : !n.active || dbs.some(d => !d.active || d.off_by === 'admin') ? 'it is switched off in the panel'
+    : dbs.length > 1 ? 'several databases use it'
+    : n.pair_state !== 'open' ? 'it is not connected, so no code can be sent to it' : '';
+  return { n, dbs, why, no };
+}
+
+/** Takes the number out of these rows; the databases, keys, logins and e-mail stay. */
+async function releaseRows(client, rows) {
+  const ids = rows.map(x => x.id);
+  if (!ids.length) return;
+  await client.query("UPDATE wap_database SET number_id = NULL, off_by = '' WHERE id = ANY($1::int[])", [ids]);
+  await client.query('DELETE FROM wap_retry WHERE database_id = ANY($1::int[])', [ids]);
+}
+
+/** Number n out of everything else and into the database of `row`, all or nothing. */
+async function moveNumber(n, row, olds) {
+  const fresh = token();
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await releaseRows(client, olds);
+    await client.query('UPDATE wap_number SET company_id = $1 WHERE id = $2', [row.company_id, n.id]);
+    const empty = await client.query(
+      'SELECT id, token FROM wap_database WHERE server_id = $1 AND db_name = $2 AND number_id IS NULL AND odoo_webhook_url = \'\' ORDER BY id LIMIT 1', [row.server_id, row.db_name]);
+    let key = fresh;
+    if (empty.rows.length) {
+      key = empty.rows[0].token;
+      await client.query('UPDATE wap_database SET number_id = $2 WHERE id = $1', [empty.rows[0].id, n.id]);
+    } else {
+      await client.query(
+        `INSERT INTO wap_database (server_id, company_id, number_id, db_name, tenant_label, contact_number,
+                                   token, daily_cap, per_minute, sign_messages, active, own_numbers_max)
+         SELECT server_id, company_id, $2, db_name, tenant_label, contact_number,
+                $3, daily_cap, per_minute, sign_messages, active, own_numbers_max
+           FROM wap_database WHERE id = $1`, [row.id, n.id, fresh]);
+    }
+    await client.query('COMMIT');
+    return key;
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+/** POST /v1/numbers/move {number, do: 'code' | 'check', code} - always an answer, {ok, detail}. */
+app.post('/v1/numbers/move', async (req, res) => {
+  const who = await identify(req);
+  const ip = clientIp(req);
+  if (!maySeeNumbers(who)) return res.status(403).json({ error: 'Refused', detail: who.error });
+  const row = who.row;
+  const number = digits((req.body || {}).number);
+  const answer = async (ok, detail, note) => {
+    await log({ databaseId: row.id, db: row.db_name, ip, phone: number, endpoint: '/v1/numbers/move', status: ok ? note : 'refused', detail: ok ? 'from Odoo' : detail });
+    return res.json({ ok, detail });
+  };
+  try {
+    const key = moveWho(row, number);
+    const now = Date.now();
+    const all = await siblings(row);
+    if ((await whereIs(row, number, all)).where !== 'elsewhere') return await answer(false, 'this number need not be moved');
+    const it = await moveState(row, number, all);
+    if (it.no) return await answer(false, it.no);
+    const had = moveCodes.get(key) || {};
+    if (had.blocked > now) return await answer(false, `too many wrong codes, wait ${Math.ceil((had.blocked - now) / 60000)} minute(s)`);
+    if ((req.body || {}).do === 'check') {
+      if (!had.code || had.until < now) return await answer(false, 'the code is too old, ask for a new one');
+      if (digits((req.body || {}).code) !== had.code) {
+        had.tries += 1;
+        if (had.tries >= MOVE_TRIES) moveCodes.set(key, { blocked: now + MOVE_WAIT });
+        return await answer(false, had.tries >= MOVE_TRIES ? 'too many wrong codes, wait 15 minutes' : 'wrong code');
+      }
+      moveCodes.delete(key);
+      moveGrants.set(key, now + MOVE_CODE_FOR);
+      return await answer(true, '', 'move allowed');
+    }
+    const sent = (moveSent.get(number) || []).filter(t => now - t < 3600000);
+    if (sent.length && now - sent[sent.length - 1] < 60000) return await answer(false, 'a code was sent just now, wait a minute');
+    if (sent.length >= 5) return await answer(false, 'too many codes for this number, try again in an hour');
+    const n = await refreshNumber(it.n);
+    if (n.gateway_error) return await answer(false, 'the gateway is not reachable');
+    if (n.pair_state !== 'open') return await answer(false, 'it is not connected, so no code can be sent to it');
+    // asked again: somebody else may have been quicker while the gateway answered
+    const again = (moveSent.get(number) || []).filter(t => now - t < 3600000);
+    if (again.length !== sent.length) return await answer(false, 'a code was sent just now, wait a minute');
+    moveSent.set(number, [...sent, now]);
+    const code = String(crypto.randomInt(100000, 1000000));
+    moveCodes.set(key, { code, until: now + MOVE_CODE_FOR, tries: 0 });
+    const text = `${MOVE_MARK} *${code}*\nSomebody wants to use this WhatsApp number in the database ${row.db_name}. It stops in the database that uses it now.\nNot you? Do not give this code to anybody.`;
+    let went;
+    try { went = await evo('/message/sendText/' + n.instance_name, 'POST', { number, text }); } catch (err) { went = { ok: false }; }
+    if (!went.ok) {
+      moveCodes.delete(key);
+      return await answer(false, 'the code could not be sent');
+    }
+    return await answer(true, '', 'move code sent');
+  } catch (err) {
+    console.error('[panel] move:', err.message);
+    return res.status(500).json({ error: 'Failed', detail: 'the number could not be moved' });
+  }
+});
+
+// What is over is forgotten.
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of moveCodes) if ((v.blocked || v.until) < now) moveCodes.delete(k);
+  for (const [k, v] of moveGrants) if (v < now) moveGrants.delete(k);
+  for (const [k, v] of moveSent) if (v.every(t => now - t > 3600000)) moveSent.delete(k);
+}, 60000).unref();
+
 // How often a database asks where a number is: 30 times a minute.
 const asked = new Map();
 function mayAsk(id) {
@@ -1136,6 +1270,11 @@ app.get('/v1/numbers', async (req, res) => {
     if (!mayAsk(who.row.id)) return res.status(429).json({ error: 'Refused', detail: 'too many checks, try again in a minute' });
     const it = await whereIs(who.row, number, all);
     const mine = it.where === 'here' || it.where === 'off';
+    if (it.where === 'elsewhere') {
+      const m = await moveState(who.row, number, all);
+      if (!m.no && mayMove(who.row, number)) return res.json({ check: 'free', in_use: false, moves: true });
+      return res.json({ check: 'elsewhere', in_use: false, why: m.why || '', can_move: !m.no, move_no: m.no || '' });
+    }
     return res.json({ check: it.where, in_use: mine ? !!it.row.odoo_webhook_url : false });
   }
   const max = Math.max(0, ...all.map(x => x.own_numbers_max));
@@ -1188,7 +1327,17 @@ async function addOwnNumber(row, body, ip) {
   }
   if (all.filter(x => x.number_id).length >= max) return refuse(`This database may have ${max} number(s); the panel administrator can allow more.`);
   let numberId;
-  if (it.where === 'elsewhere') return refuse(`+${number} is already used elsewhere.`);
+  if (it.where === 'elsewhere') {
+    if (!mayMove(row, number)) return refuse(`+${number} is already used elsewhere.`);
+    const m = await moveState(row, number, all);
+    if (m.no) return refuse(`+${number} cannot be moved: ${m.no}.`);
+    const key = await moveNumber(m.n, row, m.dbs);
+    moveGrants.delete(moveWho(row, number));
+    for (const d of m.dbs) await log({ databaseId: d.id, db: d.db_name, phone: number, endpoint: 'move', status: 'number moved away', detail: 'with the code sent to its phone' });
+    await log({ databaseId: row.id, db: row.db_name, ip, phone: number, endpoint: '/v1/numbers', status: 'number moved here', detail: 'from Odoo, with the code sent to its phone' });
+    const n = await loadNumber(m.n.id);
+    return { body: { key: setupKey(key), authorized_number: n.authorized_number, state: n.pair_state } };
+  }
   if (it.where === 'free') {
     numberId = it.row.id;
   } else {
@@ -1486,6 +1635,25 @@ app.use(session({
   cookie: { httpOnly: true, sameSite: 'lax', maxAge: 8 * 60 * 60 * 1000 },
 }));
 
+/** One line in Activity for what a person did here. */
+function audit(req, status, { databaseId, db, url, phone, detail } = {}) {
+  // without the address: lastProblem() takes a line that has one for a call from Odoo
+  return log({ databaseId, db, url, phone, endpoint: 'admin', status,
+               detail: [`by ${req.session.username} (${req.session.role})`, detail].filter(Boolean).join(': ') });
+}
+/** The same, on every database that uses the number. */
+async function auditNumber(req, n, status, dbs) {
+  const on = dbs || await numberDatabases(n.id);
+  for (const d of on.length ? on : [{}]) {
+    await audit(req, status, { databaseId: d.id, db: d.db_name, phone: n.authorized_number || '', detail: n.label });
+  }
+}
+
+/** Text inside onsubmit="return confirm('...')". */
+function ask(text) {
+  return esc(String(text).replace(/['\\\r\n]/g, ''));
+}
+
 /** What the header shows and which pages it links. */
 function nav(req) {
   const s = req.session || {};
@@ -1507,10 +1675,64 @@ function forbidden(req, res, why) {
     <a class="btn" href="/">Back</a></div>`, 403);
 }
 
-function requireLogin(req, res, next) {
-  if (req.session && req.session.adminId) return next();
-  return res.redirect('/login');
+/** Changes with the password, so that a reset ends the sessions of the old one. */
+function stamp(hash) {
+  return crypto.createHash('sha256').update(String(hash)).digest('hex').slice(0, 24);
 }
+
+/** Signed in, with the password of today, and the vendor is not turned off. */
+async function requireLogin(req, res, next) {
+  const s = req.session;
+  if (!s || !s.adminId) return res.redirect('/login');
+  let me;
+  try {
+    const { rows } = await pool.query(
+      `SELECT a.password_hash, a.database_id, COALESCE(d.company_id, a.company_id) AS company_id,
+              c.active AS company_active, d.db_name
+         FROM wap_admin a
+         LEFT JOIN wap_database d ON d.id = a.database_id
+         LEFT JOIN wap_company c ON c.id = COALESCE(d.company_id, a.company_id)
+        WHERE a.id = $1`, [s.adminId]);
+    me = rows[0];
+  } catch (err) {
+    console.error('[panel] login not checked:', err.message);
+    return page(req, res, 'Try again', '<div class="card narrow"><h1>The panel cannot reach its database</h1><p>Try again in a moment.</p></div>', 503);
+  }
+  const why = !me || stamp(me.password_hash) !== s.stamp ? 'again' : me.company_active === false ? 'off' : '';
+  if (why) return s.destroy(() => res.redirect('/login?' + why + '=1'));
+  if (s.role !== 'admin') {           // a login moves along with its database
+    s.companyId = me.company_id;
+    s.databaseId = me.database_id;
+    s.dbName = me.db_name || '';
+  }
+  return next();
+}
+
+// Wrong passwords, in memory: key -> {n, last, until}. The wide key counts
+// without the address, which a caller can make up.
+const wrongTries = new Map();
+const tryKeys = (ip, vendor, user) => {
+  const who = `${vendor}|${user}`.toLowerCase().slice(0, 160);
+  return [['a|' + String(ip).slice(0, 60) + '|' + who, 5, 15], ['w|' + who, 30, 1]];
+};
+function waitMinutes(keys) {
+  const left = Math.max(0, ...keys.map(([k]) => ((wrongTries.get(k) || {}).until || 0) - Date.now()));
+  return Math.ceil(left / 60000);
+}
+function wrongTry(keys) {
+  const now = Date.now();
+  for (const [k, limit, most] of keys) {
+    let t = wrongTries.get(k);
+    if (!t || now - t.last > 30 * 60000) t = { n: 0, until: 0 };
+    t.n += 1;
+    t.last = now;
+    if (t.n >= limit) t.until = now + 60000 * Math.min(most, 2 ** Math.min(10, t.n - limit));
+    wrongTries.delete(k);               // the newest last
+    wrongTries.set(k, t);
+    if (wrongTries.size > 5000) wrongTries.delete(wrongTries.keys().next().value);
+  }
+}
+const rightTry = keys => keys.forEach(([k]) => wrongTries.delete(k));
 
 function requireRole(...roles) {
   return (req, res, next) => {
@@ -1588,9 +1810,12 @@ app.get('/login', (req, res) => {
           <span><span class="dots"><i></i><i></i><i></i></span></span>
         </div>
       </div>
-      <form method="post" action="/login" class="card auth-card ${req.query.bad ? 'shake' : ''}">
+      <form method="post" action="/login" class="card auth-card ${req.query.bad || req.query.wait ? 'shake' : ''}">
         <h2>Sign in</h2>
         ${req.query.bad ? '<p class="wrong" role="alert">Wrong vendor, username or password.</p>' : ''}
+        ${req.query.wait ? `<p class="wrong" role="alert">Too many wrong tries. Wait ${Math.max(1, Math.min(15, Number(req.query.wait) || 1))} minute(s), then try again.</p>` : ''}
+        ${req.query.off ? '<p class="wrong" role="alert">This vendor is turned off. Ask the administrator.</p>' : ''}
+        ${req.query.again ? '<p class="wrong" role="alert">Your login was changed. Sign in again.</p>' : ''}
         <div class="field">
           <label for="si-vendor">Vendor name</label>
           <div class="in"><input id="si-vendor" name="vendor" autofocus placeholder="your software company">
@@ -1605,8 +1830,7 @@ app.get('/login', (req, res) => {
         <div class="field">
           <label for="si-pass">Password</label>
           <div class="in"><input id="si-pass" name="password" type="password" autocomplete="current-password">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
-            <button type="button" class="peek" aria-pressed="false" aria-controls="si-pass" hidden>Show</button></div>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></div>
           <span class="hint caps" role="status" hidden>Caps Lock is on.</span>
         </div>
         <button class="primary">Sign in</button>
@@ -1619,11 +1843,20 @@ app.post('/login', async (req, res) => {
   const username = String((req.body || {}).username || '').trim();
   const password = String((req.body || {}).password || '');
 
+  const keys = tryKeys(clientIp(req), vendor, username);
+  // asked and counted with nothing in between, so many at once do not slip by
+  const wrong = () => {
+    const wait = waitMinutes(keys);
+    if (wait) return res.redirect('/login?wait=' + wait);
+    wrongTry(keys);
+    return res.redirect('/login?bad=1');
+  };
+
   let companyId = null;
   if (vendor) {
     // Matched case-insensitively: a vendor name is typed by a person.
     const c = await pool.query('SELECT id, name FROM wap_company WHERE lower(name) = lower($1)', [vendor]);
-    if (!c.rows.length) return res.redirect('/login?bad=1');
+    if (!c.rows.length) return wrong();
     companyId = c.rows[0].id;
   }
 
@@ -1632,7 +1865,7 @@ app.post('/login', async (req, res) => {
   //   vendor - vendor given, row with that company and no database
   //   client - vendor given, row bound to a database of that vendor
   const { rows } = await pool.query(
-    `SELECT a.*, d.db_name, d.company_id AS db_company_id, c.name AS vendor_name
+    `SELECT a.*, d.db_name, d.company_id AS db_company_id, c.name AS vendor_name, c.active AS vendor_active
        FROM wap_admin a
        LEFT JOIN wap_database d ON d.id = a.database_id
        LEFT JOIN wap_company c ON c.id = COALESCE(d.company_id, a.company_id)
@@ -1643,9 +1876,16 @@ app.post('/login', async (req, res) => {
       ORDER BY a.database_id NULLS FIRST`,
     [username, companyId]);
 
-  for (const row of rows) {
-    if (!bcrypt.compareSync(password, row.password_hash)) continue;
+  const wait = waitMinutes(keys);
+  if (wait) return res.redirect('/login?wait=' + wait);
+  const row = rows.find(x => bcrypt.compareSync(password, x.password_hash));
+  if (!row) return wrong();
+  rightTry(keys);
+  if (row.vendor_active === false) return res.redirect('/login?off=1');
+  req.session.regenerate(err => {
+    if (err) return res.redirect('/login');
     req.session.adminId = row.id;
+    req.session.stamp = stamp(row.password_hash);
     req.session.username = row.username;
     req.session.role = row.database_id ? 'client' : (row.company_id ? 'vendor' : 'admin');
     req.session.companyId = row.database_id ? row.db_company_id : (row.company_id || null);
@@ -1653,8 +1893,7 @@ app.post('/login', async (req, res) => {
     req.session.dbName = row.db_name || '';
     req.session.vendor = row.vendor_name || vendor || null;
     return res.redirect(req.session.role === 'client' ? '/me' : '/');
-  }
-  res.redirect('/login?bad=1');
+  });
 });
 
 app.post('/logout', (req, res) => req.session.destroy(() => res.redirect('/login')));
@@ -1676,6 +1915,7 @@ function statePill(state) {
 function fmtNumber(digits) {
   return digits ? '+' + digits : '';
 }
+const logPill = l => l.status === 'sent' || l.status === 'read' ? 'ok' : l.endpoint === 'admin' ? 'dim' : 'no';
 function logRows(rows) {
   return rows.length ? `<table>
       <tr><th>When</th><th></th><th>To</th><th>What</th><th>Result</th><th>Detail</th></tr>
@@ -1684,7 +1924,7 @@ function logRows(rows) {
         <td class="muted">${l.channel === 'email' ? '&#9993;' : '&#128172;'}</td>
         <td>${esc(l.phone)}</td>
         <td class="muted">${esc(l.endpoint)}</td>
-        <td><span class="pill ${l.status === 'sent' || l.status === 'read' ? 'ok' : 'no'}">${esc(l.status)}</span></td>
+        <td><span class="pill ${logPill(l)}">${esc(l.status)}</span></td>
         <td class="muted">${esc(l.detail)}</td></tr>`).join('')}
     </table>` : '<div class="card"><p class="muted">Nothing yet.</p></div>';
 }
@@ -1750,12 +1990,16 @@ document.querySelectorAll('.smtp-preset').forEach(function (sel) {
 
 // ---------------------------------------------------------------- dashboard
 
+const serverGone = (name, dbs) => `Remove server ${name}? ` + (dbs
+  ? `${dbs} database${dbs === 1 ? ' goes' : 's go'} with it, with the keys, client logins and e-mail accounts. Sending stops at once. This cannot be undone.`
+  : 'It has no databases.');
+
 app.get('/', requireLogin, async (req, res) => {
   const s = req.session;
   if (s.role === 'client') return res.redirect('/me');
   const isAdmin = s.role === 'admin';
 
-  const servers = isAdmin ? await pool.query('SELECT * FROM wap_server ORDER BY name') : { rows: [] };
+  const servers = isAdmin ? await pool.query('SELECT sv.*, (SELECT count(DISTINCT d.db_name)::int FROM wap_database d WHERE d.server_id = sv.id) AS dbs FROM wap_server sv ORDER BY sv.name') : { rows: [] };
   const dbs = await pool.query(
     `SELECT d.*, s.base_url, s.name AS server_name, c.name AS company_name,
             n.label AS number_label, n.authorized_number, n.pair_state,
@@ -1818,7 +2062,9 @@ app.get('/', requireLogin, async (req, res) => {
       <td class="num">${d.wa_today} / ${d.daily_cap || '&infin;'}<br><span class="muted">${d.email_id ? d.mail_today + ' / ' + (d.email_cap || '&infin;') : '&mdash;'}</span></td>
       <td><span class="pill ${d.active ? 'ok' : 'no'}">${d.active ? 'active' : 'STOPPED'}</span></td>
       <td class="right"><div class="row" style="justify-content:flex-end">
-        ${isAdmin ? `<form method="post" action="/database/${d.id}/toggle" style="margin:0">
+        ${isAdmin ? `<form method="post" action="/database/${d.id}/toggle" style="margin:0"
+            ${d.active ? `onsubmit="return confirm('Stop ${ask(d.db_name)}: all its numbers and its e-mail? The phones stay paired.')"` : ''}>
+          <input type="hidden" name="to" value="${d.active ? 'off' : 'on'}">
           <button class="${d.active ? 'bad-btn' : 'primary'}" title="${d.active ? 'Stop all numbers and e-mail of this database (the phones stay paired)' : 'Let this database send again'}">${d.active ? 'Deactivate' : 'Activate'}</button>
         </form>` : ''}
         <a class="btn" href="/database/${d.id}">Open</a></div></td>
@@ -1880,7 +2126,8 @@ app.get('/', requireLogin, async (req, res) => {
         <td class="right"><div class="row" style="justify-content:flex-end">
           <a class="btn" href="/server/${sv.id}">Open</a>
           <form method="post" action="/server/${sv.id}/delete" style="margin:0"
-                onsubmit="return confirm('Remove server ${esc(sv.name).replace(/'/g, '')}? Its databases go with it.')">
+                onsubmit="return confirm('${ask(serverGone(sv.name, sv.dbs))}')">
+            <input type="hidden" name="sure" value="1">
             <button class="bad-btn" title="Remove server">&#128465; Delete</button>
           </form></div></td></tr>`).join('')}
     </table>` : ''}`);
@@ -1938,7 +2185,7 @@ app.get('/me', requireLogin, async (req, res) => {
           <tr><th>Status</th><td>${d.email_id ? `<span class="pill ${d.email_active ? 'ok' : 'no'}">${d.email_active ? 'on' : 'off'}</span>` : ''}</td></tr>
         </table>
       </div>
-      <h2>Opted out (this database)</h2>
+      <h2 id="optouts">Opted out (this database)</h2>
       <div class="card narrow">
         <form method="post" action="/blocked/optout" class="row gap">
           ${phoneField('phone', 'Country', { required: true, like: (mine.map(x => x.n && x.n.authorized_number).find(Boolean)) || '' })}
@@ -2034,6 +2281,7 @@ app.get('/server/:id', requireLogin, requireAdmin, async (req, res) => {
   page(req, res, 'Server', `
     <form method="post" action="/server/${sv.id}" class="card narrow">
       <h1>${esc(sv.name)}</h1>
+      ${req.query.bad ? `<p class="bad">${esc(req.query.bad)}</p>` : ''}
       <label>Name<input name="name" value="${esc(sv.name)}"></label>
       <label>Server address<input name="base_url" value="${esc(sv.base_url)}"></label>
       <label class="check"><input type="checkbox" name="active" ${sv.active ? 'checked' : ''}> Allowed to send</label>
@@ -2052,20 +2300,44 @@ app.get('/server/:id', requireLogin, requireAdmin, async (req, res) => {
       : `<p class="bad">Could not read the list from ${esc(sv.base_url)}: ${esc(listed.error)}</p>
          <p class="muted">The server may be off, unreachable from here, or has <code>list_db = False</code>. The database name can still be typed on the Add database form.</p>`}
     </div>
-    <form method="post" action="/server/${sv.id}/delete" class="card narrow danger">
+    <form method="post" action="/server/${sv.id}/delete" class="card narrow danger"
+          onsubmit="return confirm('${ask(serverGone(sv.name, Object.keys(regMap).length))}')">
+      <input type="hidden" name="sure" value="1">
       <p class="muted">Removing a server also removes its databases, and they stop sending immediately.</p>
       <button class="bad-btn">Remove server</button>
     </form>`);
 });
 
 app.post('/server/:id', requireLogin, requireAdmin, async (req, res) => {
-  await pool.query('UPDATE wap_server SET name=$1, base_url=$2, active=$3 WHERE id=$4',
-    [String(req.body.name || '').trim(), origin(req.body.base_url), !!req.body.active, Number(req.params.id) || 0]);
+  const id = Number(req.params.id) || 0;
+  const name = String(req.body.name || '').trim();
+  const typed = String(req.body.base_url || '').trim();
+  const url = origin(typed);
+  const host = url.replace(/^https?:\/\//, '');
+  // a name without a dot only when http:// was typed with it (a server in the house)
+  const right = /^([a-z0-9.-]+|\[[0-9a-f:]+\])(:\d+)?$/.test(host)
+    && (/^https?:\/\//i.test(typed) || host.includes('.') || /^localhost(:|$)/.test(host));
+  const bad = msg => res.redirect(`/server/${id}?bad=` + encodeURIComponent(msg));
+  if (!name) return bad('Give the server a name. Nothing was saved.');
+  if (!right) return bad('That is not a valid address: type it like https://odoo.example.com. Nothing was saved.');
+  try {
+    await pool.query('UPDATE wap_server SET name=$1, base_url=$2, active=$3 WHERE id=$4', [name, url, !!req.body.active, id]);
+  } catch (err) {
+    return bad(/duplicate|unique/i.test(err.message) ? `${url} is already registered as another server. Nothing was saved.` : err.message.slice(0, 160));
+  }
   res.redirect('/');
 });
 
 app.post('/server/:id/delete', requireLogin, requireAdmin, async (req, res) => {
-  await pool.query('DELETE FROM wap_server WHERE id = $1', [Number(req.params.id) || 0]);
+  const id = Number(req.params.id) || 0;
+  if (!req.body.sure) return res.redirect('/server/' + id);
+  const dbs = await pool.query('SELECT DISTINCT db_name FROM wap_database WHERE server_id = $1 ORDER BY db_name', [id]);
+  const gone = await pool.query('DELETE FROM wap_server WHERE id = $1 RETURNING name, base_url', [id]);
+  if (gone.rows.length) {
+    const sv = gone.rows[0];
+    await audit(req, 'server removed', { url: sv.base_url,
+      detail: `${sv.name}, ${dbs.rows.length} database(s): ${dbs.rows.map(x => x.db_name).join(', ') || 'none'}` });
+  }
   res.redirect('/');
 });
 
@@ -2300,6 +2572,7 @@ app.get('/database/:id', requireLogin, scopeDatabase('id'), async (req, res) => 
       <p class="muted" style="margin:6px 0 0">This goes away by itself when Odoo gets through.</p>
     </div>` : '';
 
+  const lastNumber = x => !!x.number_id && !all.some(y => y.id !== x.id && y.number_id);
   const numberRow = (x, i) => {
     const n = x.n;
     const only = rowsOfDb.length < 2;
@@ -2319,6 +2592,11 @@ app.get('/database/:id', requireLogin, scopeDatabase('id'), async (req, res) => 
             ${isAdmin && n ? `<form method="post" action="/database/${x.id}/number/toggle" style="margin:0"
                 ${x.off_by ? '' : `onsubmit="return confirm('Turn off ${esc(fmtNumber(n.authorized_number))}? It sends nothing and its groups get no answer until it is turned on. The phone stays linked; the other numbers go on.')"`}>
               <button class="${x.off_by ? 'primary' : ''}">${x.off_by ? 'Turn on' : 'Turn off'}</button></form>` : ''}
+            ${isAdmin && (n || !only) ? `<form method="post" action="/database/${x.id}/number/remove" style="margin:0"
+                onsubmit="return confirm('${ask(lastNumber(x)
+                  ? `Remove ${fmtNumber(n.authorized_number) || n.label} from this database? It is the only number: nothing is sent on WhatsApp until another is added. The database, its key, login and e-mail stay. The number is free to use again.`
+                  : `Remove ${n ? fmtNumber(n.authorized_number) || n.label : 'this empty line'} from this database? Its key stops at once. The other numbers stay.${n ? ' The number is free to use again.' : ''}`)}')">
+              <input type="hidden" name="sure" value="1"><button class="bad-btn">Remove</button></form>` : ''}
           </div>
         </div>
         ${n && n.pair_state === 'wrong_number' ? `<p class="bad">Scanned with ${esc(fmtNumber(n.last_wrong_number))}; only ${esc(fmtNumber(n.authorized_number))} is allowed. Scan again.</p>` : ''}
@@ -2331,7 +2609,7 @@ app.get('/database/:id', requireLogin, scopeDatabase('id'), async (req, res) => 
                 onsubmit="return confirm('The present key of this number stops working at once. The new one has to be pasted in its Odoo session. Reset the key?')">
             <button class="bad-btn">Reset key</button></form>
           ${!n ? '' : !x.active
-            ? (isAdmin && !anyActive ? `<form method="post" action="/database/${d.id}/toggle" style="margin:0"><button class="primary">Activate first</button></form>`
+            ? (isAdmin && !anyActive ? `<form method="post" action="/database/${d.id}/toggle" style="margin:0"><input type="hidden" name="to" value="on"><button class="primary">Activate first</button></form>`
                        : '<span class="warn-msg">Stopped: ask the administrator</span>')
             : x.off_by ? '<span class="warn-msg">Turn it on first</span>'
             : x.odoo_webhook_url
@@ -2364,13 +2642,28 @@ app.get('/database/:id', requireLogin, scopeDatabase('id'), async (req, res) => 
           </form>` : ''}
           <div class="row" style="margin-top:10px;flex-wrap:wrap">
             ${isAdmin && n ? `<a class="btn" href="/number/${n.id}">Number and phone</a>` : ''}
-            ${isAdmin && !only ? `<form method="post" action="/database/${x.id}/delete" style="margin:0"
-                  onsubmit="return confirm('Remove ${n ? esc(fmtNumber(n.authorized_number)) : 'this number'} from this database? Its key stops at once. The other numbers stay. The number is free to use again.')">
-              <input type="hidden" name="sure" value="1"><button class="bad-btn">Remove from this database</button></form>` : ''}
           </div>
         </details>` : ''}
       </div>`;
   };
+
+  const moving = isAdmin && Number(q.move) ? await loadNumber(Number(q.move)) : null;
+  const movingFrom = moving ? (await pool.query(
+    'SELECT d.db_name, s.base_url FROM wap_database d JOIN wap_server s ON s.id = d.server_id WHERE d.number_id = $1 ORDER BY d.db_name', [moving.id])).rows : [];
+  const movingVendor = moving ? ((await pool.query('SELECT name FROM wap_company WHERE id = $1', [moving.company_id])).rows[0] || {}).name || '' : '';
+  const movingText = !moving ? '' : movingFrom.length
+    ? `is already used by ${movingFrom.map(x => `${x.db_name} (${x.base_url})`).join(', ')}`
+    : moving.company_id !== d.company_id ? `is in no database, but belongs to the vendor ${movingVendor}` : 'is in the panel already, in no database';
+  const movingCard = moving && !rowsOfDb.some(x => x.number_id === moving.id) ? `
+        <div class="card warn" role="alert">
+          <b class="warn-msg">${esc(fmtNumber(moving.authorized_number))} ${esc(movingText)}.</b>
+          ${moving.active ? `<p class="muted" style="margin:6px 0">${movingFrom.length ? 'Moved here, it stops there at once. That database, its key, login and e-mail stay. ' : ''}The phone stays linked.</p>
+          <form method="post" action="/database/${d.id}/number/move" style="margin:0"
+                onsubmit="return confirm('${ask(`Move ${fmtNumber(moving.authorized_number)} to ${d.db_name}?${movingFrom.length ? ` It stops in ${movingFrom.map(x => x.db_name).join(', ')} at once.` : ''}`)}')">
+            <input type="hidden" name="number_id" value="${moving.id}"><input type="hidden" name="sure" value="1">
+            <button class="primary">Move it here</button></form>`
+          : `<p class="muted" style="margin:6px 0 0">It is switched off. <a href="/number/${moving.id}">Open its page</a> and tick "Allowed to send" first.</p>`}
+        </div>` : '';
 
   const numbersCard = `
     ${problemCard}
@@ -2389,6 +2682,7 @@ app.get('/database/:id', requireLogin, scopeDatabase('id'), async (req, res) => 
       ${isAdmin ? `
       <details class="num-add" ${q.add || !withNumber.length ? 'open' : ''}>
         <summary class="btn primary">+ Add another number</summary>
+        ${movingCard}
         ${freeNumbers.length ? `
         <h3>Numbers you already added</h3>
         ${freeNumbers.map(x => `
@@ -2471,6 +2765,12 @@ app.get('/database/:id', requireLogin, scopeDatabase('id'), async (req, res) => 
       <label>Vendor<select name="company_id">
         ${companies.rows.map(c => `<option value="${c.id}" ${c.id === d.company_id ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}
       </select><span class="muted">Changing the vendor drops the number assignment (numbers belong to a vendor).</span></label>
+      <label class="check" id="sure-vendor"><input type="checkbox" name="sure_vendor"> Yes, change the vendor: ${withNumber.length ? `its ${withNumber.length} number(s) drop, and nothing is sent on WhatsApp until one is added again` : 'it has no numbers now'}</label>
+      <script>(function () {
+        var box = document.getElementById('sure-vendor'), sel = box.closest('form').elements.company_id, tick = box.querySelector('input');
+        function show() { var other = sel.value !== '${d.company_id || ''}'; box.style.display = other ? '' : 'none'; tick.required = other; if (!other) { tick.checked = false; } }
+        sel.addEventListener('change', show); show();
+      })();</script>
       <label>Database name<input name="db_name" value="${esc(d.db_name)}"></label>` : ''}
       <label>Sends as<input name="tenant_label" value="${esc(d.tenant_label)}"></label>
       <label class="check"><input type="checkbox" name="sign_messages" ${d.sign_messages ? 'checked' : ''}> Add the automatic no-reply footer (optional)</label>
@@ -2489,6 +2789,7 @@ app.get('/database/:id', requireLogin, scopeDatabase('id'), async (req, res) => 
     <div class="card narrow danger">
       <h2 style="margin-top:0">Whole database</h2>
       <form method="post" action="/database/${d.id}/toggle" ${anyActive ? `onsubmit="return confirm('Stop the whole database, all its numbers and its e-mail? To stop one number use Turn off beside it.')"` : ''}>
+        <input type="hidden" name="to" value="${anyActive ? 'off' : 'on'}">
         <p class="muted" style="margin-top:0">${anyActive ? 'Stops all its numbers and its e-mail. The phones stay paired. For one number use Turn off beside it.' : 'It is stopped: nothing goes out and nothing comes in.'}</p>
         <button class="${anyActive ? 'bad-btn' : 'primary'}">${anyActive ? 'Stop the whole database' : 'Activate - continue'}</button>
       </form>
@@ -2508,6 +2809,9 @@ app.post('/database/:id', requireLogin, requireVendorOrAdmin, scopeDatabase('id'
   const d = req.db;
   const b = req.body || {};
   const isAdmin = req.session.role === 'admin';
+  const newVendor = isAdmin && Number(b.company_id) !== d.company_id ? Number(b.company_id) || 0 : 0;
+  if (newVendor && !b.sure_vendor) return res.redirect(`/database/${d.id}?bad=` + encodeURIComponent('Nothing was saved. Changing the vendor drops all its numbers: tick "Yes, change the vendor" as well.'));
+  if (newVendor && !(await pool.query('SELECT 1 FROM wap_company WHERE id = $1', [newVendor])).rowCount) return res.redirect(`/database/${d.id}?bad=` + encodeURIComponent('That vendor no longer exists.'));
   // a number saved before the country was asked is only checked when it changes
   const same = String(b.contact_number || '').trim() === String(d.contact_number || '').trim();
   if (!same && phoneWrong(b, 'contact_number')) return res.redirect(`/database/${d.id}?bad=` + encodeURIComponent('Support number: ' + phoneWrong(b, 'contact_number')));
@@ -2530,6 +2834,7 @@ app.post('/database/:id', requireLogin, requireVendorOrAdmin, scopeDatabase('id'
       if (companyId !== d.company_id) {
         await pool.query('UPDATE wap_database SET number_id = NULL WHERE id = ANY($1::int[])', [ids]);
         await pool.query('UPDATE wap_admin SET company_id = $1 WHERE database_id = ANY($2::int[])', [companyId, ids]);
+        await audit(req, 'vendor changed', { databaseId: d.id, db: dbName, detail: 'its numbers dropped' });
       }
     } catch (err) {
       return res.redirect(`/database/${d.id}?bad=` + encodeURIComponent(/duplicate/i.test(err.message) ? 'That name is already registered on this server.' : err.message.slice(0, 160)));
@@ -2549,7 +2854,36 @@ app.post('/database/:id/number', requireLogin, requireAdmin, scopeDatabase('id')
     return res.redirect(`/database/${d.id}?bad=` + encodeURIComponent('This database has that number already, with its own key.'));
   }
   await pool.query('UPDATE wap_database SET number_id = $1 WHERE id = $2', [numberId, d.id]);
+  if (numberId !== d.number_id) {
+    await audit(req, !numberId ? 'number removed' : d.number_id ? 'number replaced' : 'number added',
+      { databaseId: d.id, db: d.db_name, phone: d.authorized_number || '' });
+  }
   res.redirect(`/database/${d.id}?ok=` + encodeURIComponent(numberId ? 'Number assigned.' : 'Number removed.'));
+});
+
+/** Take a number off. The last one leaves the database, its key, login and e-mail in place. */
+app.post('/database/:id/number/remove', requireLogin, requireAdmin, scopeDatabase('id'), async (req, res) => {
+  const d = req.db;
+  if (!req.body.sure) return res.redirect('/database/' + d.id);
+  const others = (await siblings(d)).filter(x => x.id !== d.id);
+  const last = d.number_id && !others.some(x => x.number_id);
+  let home = d.id;
+  try {
+    if (last) {
+      await pool.query("UPDATE wap_database SET number_id = NULL, off_by = '' WHERE id = $1", [d.id]);
+      await pool.query('DELETE FROM wap_retry WHERE database_id = $1', [d.id]);
+    } else if (others.length) {
+      home = await dropRow(d);
+    } else {
+      return res.redirect(`/database/${d.id}?bad=` + encodeURIComponent('It has no number.'));
+    }
+  } catch (err) {
+    return res.redirect(`/database/${d.id}?bad=` + encodeURIComponent(err.message.slice(0, 160)));
+  }
+  await audit(req, 'number removed', { databaseId: home, db: d.db_name, phone: d.authorized_number || '', detail: last ? 'the last one, the database stays' : 'with its key' });
+  res.redirect(`/database/${home}?ok=` + encodeURIComponent(last
+    ? 'The number was removed. The database, its key, login and e-mail stay.'
+    : 'That number and its key were removed from this database.') + '#numbers');
 });
 
 app.post('/database/:id/own-numbers', requireLogin, requireAdmin, scopeDatabase('id'), async (req, res) => {
@@ -2587,6 +2921,12 @@ app.post('/database/:id/number/add', requireLogin, requireAdmin, scopeDatabase('
   if (!numberId && !typed) return back('Type the new number, with the country code.');
   if (typed && phoneWrong(b, 'new_number')) return back(phoneWrong(b, 'new_number'));
   if (typed) {
+    const known = await pool.query('SELECT id FROM wap_number WHERE authorized_number = $1', [typed]);
+    if (known.rows.length) {
+      const here = (await siblings(d)).find(x => x.number_id === known.rows[0].id);
+      if (here) return back('This database has that number already, with its own key.');
+      return res.redirect(`/database/${d.id}?add=1&move=${known.rows[0].id}#numbers`);
+    }
     const made = await createNumber(d.company_id, label || (d.db_name + ' +' + typed), typed);
     if (made.error) return back(made.error);
     numberId = made.row.id;
@@ -2618,6 +2958,27 @@ app.post('/database/:id/number/add', requireLogin, requireAdmin, scopeDatabase('
   res.redirect(`/database/${d.id}?ok=` + encodeURIComponent('Number added. Its key is in the list below.') + '#numbers');
 });
 
+/** The administrator moves a number that another database has, or another vendor. */
+app.post('/database/:id/number/move', requireLogin, requireAdmin, scopeDatabase('id'), async (req, res) => {
+  const d = req.db;
+  const back = msg => res.redirect(`/database/${d.id}?bad=` + encodeURIComponent(msg));
+  if (!req.body.sure) return res.redirect('/database/' + d.id);
+  const n = await loadNumber(Number(req.body.number_id) || 0);
+  if (!n) return back('That number no longer exists.');
+  if (!n.active) return back('That number is switched off: tick "Allowed to send" on its own page first.');
+  if ((await siblings(d)).some(x => x.number_id === n.id)) return back('This database has that number already, with its own key.');
+  if (!d.company_id) return back('This database has no vendor.');
+  const olds = (await pool.query('SELECT * FROM wap_database WHERE number_id = $1 ORDER BY id', [n.id])).rows;
+  try {
+    await moveNumber(n, d, olds);
+  } catch (err) {
+    return back(err.message.slice(0, 160));
+  }
+  for (const x of olds) await audit(req, 'number moved away', { databaseId: x.id, db: x.db_name, phone: n.authorized_number, detail: 'to ' + d.db_name });
+  await audit(req, 'number moved here', { databaseId: d.id, db: d.db_name, phone: n.authorized_number, detail: olds.length ? 'from ' + olds.map(x => x.db_name).join(', ') : 'it was in no database' });
+  res.redirect(`/database/${d.id}?ok=` + encodeURIComponent('The number was moved here. Its key is in the list below.') + '#numbers');
+});
+
 app.post('/database/:id/number/new', requireLogin, requireAdmin, scopeDatabase('id'), async (req, res) => {
   const d = req.db;
   const number = digits(req.body.new_number);
@@ -2639,14 +3000,19 @@ app.post('/database/:id/toggle', requireLogin, requireAdmin, scopeDatabase('id')
   // the whole database: every number of it
   const everyone = await siblings(d);
   d.active = everyone.some(x => x.active);
+  const back = () => res.redirect(String(req.headers.referer || '').includes('/database/') ? `/database/${d.id}` : '/');
+  // an old page must not turn it the other way
+  const to = String((req.body || {}).to || '');
+  if ((to === 'on' && d.active) || (to === 'off' && !d.active)) return back();
   await pool.query('UPDATE wap_database SET active = $2 WHERE id = ANY($1::int[])', [everyone.map(x => x.id), !d.active]);
   await log({ databaseId: d.id, db: d.db_name, endpoint: 'admin', status: d.active ? 'deactivated' : 'activated',
               detail: `by ${req.session.username}` });
-  res.redirect(String(req.headers.referer || '').includes('/database/') ? `/database/${d.id}` : '/');
+  back();
 });
 
 app.post('/database/:id/rotate', requireLogin, requireVendorOrAdmin, scopeDatabase('id'), async (req, res) => {
   await pool.query('UPDATE wap_database SET token=$1 WHERE id=$2', [token(), req.db.id]);
+  await audit(req, 'key reset', { databaseId: req.db.id, db: req.db.db_name, phone: req.db.authorized_number || '' });
   res.redirect(`/database/${req.db.id}?ok=` + encodeURIComponent('New key issued. Paste it into Odoo.'));
 });
 
@@ -2662,6 +3028,7 @@ app.post('/database/:id/delete', requireLogin, requireAdmin, scopeDatabase('id')
     }
   }
   await pool.query('DELETE FROM wap_database WHERE id=$1', [req.db.id]);
+  await audit(req, 'database removed', { db: req.db.db_name, url: req.db.base_url, phone: req.db.authorized_number || '', detail: req.db.base_url });
   res.redirect('/');
 });
 
@@ -2698,11 +3065,13 @@ app.post('/database/:id/client', requireLogin, requireVendorOrAdmin, scopeDataba
     await pool.query('INSERT INTO wap_admin (username, password_hash, company_id, database_id) VALUES ($1,$2,$3,$4)',
       [username, bcrypt.hashSync(password, 10), d.company_id, d.id]);
   }
+  if (password) await audit(req, cur ? 'client password reset' : 'client login added', { databaseId: d.id, db: d.db_name });
   res.redirect(`/database/${d.id}?ok=` + encodeURIComponent(`Client login ${username} saved.`));
 });
 
 app.post('/database/:id/client/delete', requireLogin, requireAdmin, scopeDatabase('id'), async (req, res) => {
   await pool.query('DELETE FROM wap_admin WHERE database_id = $1', [req.db.id]);
+  await audit(req, 'client login removed', { databaseId: req.db.id, db: req.db.db_name });
   res.redirect(`/database/${req.db.id}?ok=` + encodeURIComponent('Client login removed.'));
 });
 
@@ -2919,9 +3288,15 @@ app.post('/number/:id/assign', requireLogin, requireAdmin, scopeNumber('id'), as
   if (steals.rows.length && !req.body.sure) {
     return res.redirect(`/number/${n.id}?bad=` + encodeURIComponent(`${steals.rows.map(x => x.db_name).join(', ')} would lose the number it has now. Tick "Replace" as well, or use "Add another number" on the database page.`));
   }
+  const before = await numberDatabases(n.id);
   // numberfirst: a number may serve databases of any vendor on any server.
   await pool.query('UPDATE wap_database SET number_id = NULL WHERE number_id = $1 AND NOT (id = ANY($2::int[]))', [n.id, picked]);
   await pool.query('UPDATE wap_database SET number_id = $1 WHERE id = ANY($2::int[])', [n.id, picked]);
+  const after = await numberDatabases(n.id);
+  const lost = before.filter(x => !after.some(y => y.id === x.id));
+  const got = after.filter(x => !before.some(y => y.id === x.id));
+  if (lost.length) await auditNumber(req, n, 'number removed', lost);
+  if (got.length) await auditNumber(req, n, 'number added', got);
   res.redirect(`/number/${n.id}?ok=` + encodeURIComponent('Assignment saved.'));
 });
 
@@ -2933,6 +3308,7 @@ app.post('/number/:id/delete', requireLogin, requireAdmin, scopeNumber('id'), as
   try { await evo(`/instance/logout/${n.instance_name}`, 'DELETE'); } catch (err) { /* fine */ }
   try { await evo(`/instance/delete/${n.instance_name}`, 'DELETE'); } catch (err) { /* fine */ }
   await pool.query('DELETE FROM wap_number WHERE id = $1', [n.id]);
+  await auditNumber(req, n, 'number deleted', []);
   res.redirect('/numbers');
 });
 
@@ -3018,6 +3394,7 @@ app.post('/number/:id/logout', requireLogin, scopeNumber('id'), async (req, res)
   if (!req.body.sure) return res.redirect(`/number/${req.number.id}/qr`);
   try { await evo(`/instance/logout/${req.number.instance_name}`, 'DELETE'); } catch (err) { /* shown on the page */ }
   await pool.query('UPDATE wap_number SET pair_state=\'close\', paired_number=\'\', profile_name=\'\' WHERE id=$1', [req.number.id]);
+  await auditNumber(req, req.number, 'number disconnected');
   res.redirect(`/number/${req.number.id}/qr`);
 });
 
@@ -3031,6 +3408,7 @@ app.post('/number/:id/reset', requireLogin, requireVendorOrAdmin, scopeNumber('i
   } catch (err) { /* the page will show it is missing */ }
   await pool.query('UPDATE wap_number SET pair_state=\'close\', paired_number=\'\', profile_name=\'\', webhook_applied=FALSE WHERE id=$1', [n.id]);
   await applyHook({ ...n, webhook_applied: false });
+  await auditNumber(req, n, 'number started over');
   res.redirect(`/number/${n.id}/qr`);
 });
 
@@ -3116,7 +3494,7 @@ app.get('/company/:id', requireLogin, requireAdmin, async (req, res) => {
     ${q.ok ? `<p class="ok-msg">${esc(q.ok)}</p>` : ''}${q.bad ? `<p class="bad">${esc(q.bad)}</p>` : ''}
     <form method="post" action="/company/${c.id}" class="card narrow">
       <label>Vendor name<input name="name" value="${esc(c.name)}"><span class="muted">Typed at sign-in.</span></label>
-      <label class="check"><input type="checkbox" name="active" ${c.active ? 'checked' : ''}> Allowed to send</label>
+      <label class="check"><input type="checkbox" name="active" ${c.active ? 'checked' : ''}> Allowed to send and to sign in (its clients too)</label>
       <button class="primary">Save</button> <a class="btn" href="/companies">Back</a>
     </form>
     <div class="card narrow">
@@ -3168,6 +3546,7 @@ app.post('/company/:id/password', requireLogin, requireAdmin, async (req, res) =
   if (password.length < 6) return res.redirect(`/company/${id}?bad=` + encodeURIComponent('At least 6 characters.'));
   const r = await pool.query('UPDATE wap_admin SET password_hash=$1 WHERE id=$2 AND company_id=$3 AND database_id IS NULL',
     [bcrypt.hashSync(password, 10), Number(req.body.admin_id) || 0, id]);
+  if (r.rowCount) await audit(req, 'vendor password reset', { detail: `vendor ${id}, login ${Number(req.body.admin_id) || 0}` });
   res.redirect(`/company/${id}?` + (r.rowCount ? 'ok=Password+reset.' : 'bad=No+such+login.'));
 });
 
@@ -3190,7 +3569,8 @@ app.post('/company/:id/delete', requireLogin, requireAdmin, async (req, res) => 
   await pool.query('DELETE FROM wap_email_optout WHERE company_id=$1', [id]);
   await pool.query('DELETE FROM wap_email WHERE company_id=$1 AND database_id IS NULL', [id]);
   await pool.query('DELETE FROM wap_admin WHERE company_id=$1', [id]);
-  await pool.query('DELETE FROM wap_company WHERE id=$1', [id]);
+  const gone = await pool.query('DELETE FROM wap_company WHERE id=$1 RETURNING name', [id]);
+  if (gone.rows.length) await audit(req, 'vendor removed', { detail: gone.rows[0].name });
   res.redirect('/companies');
 });
 
@@ -3201,18 +3581,22 @@ app.post(['/inbound', '/email/:companyId', '/email/:companyId/test', '/company/:
 
 // ---------------------------------------------------------------- blocking
 
+/** Every line (number) of the database a client's login is on. */
+const SAME_DATABASE = p => `SELECT y.id FROM wap_database me JOIN wap_database y
+  ON y.server_id = me.server_id AND y.db_name = me.db_name WHERE me.id = ${p}`;
+
 /** Which opt-out rows a login may see or touch. */
 function optoutScope(req) {
   const s = req.session;
   if (s.role === 'admin') return { sql: 'TRUE', params: [] };
   if (s.role === 'vendor') return { sql: 'o.company_id = $1', params: [s.companyId] };
-  return { sql: 'o.database_id = $1', params: [s.databaseId] };
+  return { sql: `o.database_id IN (${SAME_DATABASE('$1')})`, params: [s.databaseId] };
 }
 
 app.get('/blocked', requireLogin, async (req, res) => {
   const s = req.session;
   const isAdmin = s.role === 'admin';
-  if (s.role === 'client') return res.redirect('/me');
+  if (s.role === 'client') return res.redirect('/me#optouts');
   const scope = optoutScope(req);
   const optouts = await pool.query(`
     SELECT o.*, c.name AS company_name, d.db_name FROM wap_optout o
@@ -3268,7 +3652,9 @@ app.post('/blocked/word', requireLogin, requireAdmin, async (req, res) => {
   res.redirect('/blocked');
 });
 app.post('/blocked/word/:id/delete', requireLogin, requireAdmin, async (req, res) => {
-  await pool.query('DELETE FROM wap_block WHERE id=$1', [Number(req.params.id) || 0]); res.redirect('/blocked');
+  const gone = await pool.query('DELETE FROM wap_block WHERE id=$1 RETURNING pattern', [Number(req.params.id) || 0]);
+  if (gone.rows.length) await audit(req, 'blocked word removed', { detail: gone.rows[0].pattern });
+  res.redirect('/blocked');
 });
 
 app.post('/blocked/optout', requireLogin, async (req, res) => {
@@ -3302,8 +3688,9 @@ app.post('/blocked/optout', requireLogin, async (req, res) => {
 
 app.post('/blocked/optout/:id/delete', requireLogin, async (req, res) => {
   const scope = optoutScope(req);
-  await pool.query(`DELETE FROM wap_optout o WHERE o.id = $${scope.params.length + 1} AND ${scope.sql}`,
+  const gone = await pool.query(`DELETE FROM wap_optout o WHERE o.id = $${scope.params.length + 1} AND ${scope.sql} RETURNING o.phone, o.database_id`,
     [...scope.params, Number(req.params.id) || 0]);
+  if (gone.rows.length) await audit(req, 'opt-out removed', { databaseId: gone.rows[0].database_id, phone: gone.rows[0].phone });
   res.redirect(req.session.role === 'client' ? '/me' : '/blocked');
 });
 
@@ -3317,20 +3704,21 @@ app.get('/activity', requireLogin, async (req, res) => {
        LEFT JOIN wap_database d ON d.id = l.database_id
        LEFT JOIN wap_server s ON s.id = d.server_id
       WHERE ($1::int IS NULL OR d.company_id = $1)
-        AND ($2::int IS NULL OR d.id = $2)
+        AND ($2::int IS NULL OR d.id IN (${SAME_DATABASE('$2')}))
       ORDER BY l.created_at DESC LIMIT 200`,
     [s.role === 'admin' ? null : s.companyId, s.role === 'client' ? s.databaseId : null]);
   page(req, res, 'Activity', `
     <h1>Activity</h1>
     <table>
-      <tr><th>When</th><th></th><th>Where from</th><th>To</th><th>Result</th><th>Detail</th></tr>
+      <tr><th>When</th><th></th><th>Where from</th><th>To</th><th>What</th><th>Result</th><th>Detail</th></tr>
       ${rows.map(l => `<tr>
         <td class="muted">${new Date(l.created_at).toLocaleString()}</td>
         <td class="muted">${l.channel === 'email' ? '&#9993;' : '&#128172;'}</td>
         <td>${l.db_name ? esc(l.server_name) + ' / <code>' + esc(l.db_name) + '</code>'
-                        : '<span class="muted">' + esc(l.claimed_url || l.remote_ip) + '</span>'}</td>
+                        : l.claimed_db ? '<code>' + esc(l.claimed_db) + '</code> <span class="muted">' + esc(l.claimed_url || l.remote_ip) + '</span>' : '<span class="muted">' + esc(l.claimed_url || l.remote_ip) + '</span>'}</td>
         <td>${esc(l.phone)}</td>
-        <td><span class="pill ${l.status === 'sent' || l.status === 'read' ? 'ok' : 'no'}">${esc(l.status)}</span></td>
+        <td class="muted">${esc(l.endpoint)}</td>
+        <td><span class="pill ${logPill(l)}">${esc(l.status)}</span></td>
         <td class="muted">${esc(l.detail)}</td></tr>`).join('')}
     </table>`);
 });
@@ -3342,7 +3730,7 @@ app.get('/account', requireLogin, (req, res) => {
     <form method="post" action="/account" class="card narrow">
       <h1>Change password</h1>
       <p class="muted">Signed in as <code>${esc(req.session.username)}</code> (${esc(req.session.role)}).</p>
-      ${req.query.bad ? '<p class="bad">Current password is wrong.</p>' : ''}
+      ${req.query.bad ? `<p class="bad">${{ short: 'The new password needs at least 6 characters.', wait: 'Too many wrong tries. Wait some minutes, then try again.' }[req.query.bad] || 'Current password is wrong.'}</p>` : ''}
       ${req.query.ok ? '<p class="ok-msg">Password changed.</p>' : ''}
       <label>Current password<input type="password" name="current" required></label>
       <label>New password<input type="password" name="next" required minlength="6"></label>
@@ -3353,12 +3741,17 @@ app.get('/account', requireLogin, (req, res) => {
 app.post('/account', requireLogin, async (req, res) => {
   // By id, never by username: several logins are called "admin".
   const { rows } = await pool.query('SELECT * FROM wap_admin WHERE id=$1', [req.session.adminId]);
+  const keys = [['c|' + req.session.adminId, 5, 15]];
+  if (waitMinutes(keys)) return res.redirect('/account?bad=wait');
   if (!rows.length || !bcrypt.compareSync(String(req.body.current || ''), rows[0].password_hash)) {
+    wrongTry(keys);
     return res.redirect('/account?bad=1');
   }
-  if (String(req.body.next || '').length < 6) return res.redirect('/account?bad=1');
-  await pool.query('UPDATE wap_admin SET password_hash=$1 WHERE id=$2',
-    [bcrypt.hashSync(String(req.body.next), 10), rows[0].id]);
+  rightTry(keys);
+  if (String(req.body.next || '').length < 6) return res.redirect('/account?bad=short');
+  const hash = bcrypt.hashSync(String(req.body.next), 10);
+  await pool.query('UPDATE wap_admin SET password_hash=$1 WHERE id=$2', [hash, rows[0].id]);
+  req.session.stamp = stamp(hash);      // this one stays signed in, the others do not
   res.redirect('/account?ok=1');
 });
 

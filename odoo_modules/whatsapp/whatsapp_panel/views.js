@@ -17,7 +17,7 @@ const NAV = {
           ['/activity', 'Activity'], ['/blocked', 'Blocking'], ['/account', 'Account']],
   vendor: [['/', 'Databases'], ['/numbers', 'Numbers'], ['/activity', 'Activity'],
            ['/blocked', 'Opt-outs'], ['/account', 'Account']],
-  client: [['/me', 'My WhatsApp'], ['/activity', 'Activity'], ['/blocked', 'Opt-outs'],
+  client: [['/me', 'My WhatsApp'], ['/activity', 'Activity'], ['/me#optouts', 'Opt-outs'],
            ['/account', 'Account']],
 };
 

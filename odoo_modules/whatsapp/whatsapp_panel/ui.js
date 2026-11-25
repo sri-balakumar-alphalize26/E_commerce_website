@@ -182,9 +182,16 @@ body.auth main{width:100%;max-width:980px;margin:0 auto;padding:28px 18px}
 .auth-card .in svg{position:absolute;left:13px;top:50%;width:18px;height:18px;margin-top:-9px;color:var(--muted);pointer-events:none;transition:color .18s}
 .auth-card .in:focus-within svg{color:var(--accent)}
 .auth-card .in input{padding:12px 14px 12px 41px;font-size:15px}
-.auth-card .in input[name=password]{padding-right:72px}
-.auth-card .peek{position:absolute;right:6px;top:50%;transform:translateY(-50%);padding:5px 10px;font-size:12px;background:none;border-color:transparent;color:var(--muted)}
-.auth-card .peek:active{transform:translateY(-50%) scale(.95)}
+.auth-card .in input[name=password]{padding-right:48px}
+.pw{position:relative;display:block}
+.row.gap .pw{flex:1}
+.pw input{padding-right:46px}
+.eye{position:absolute;right:5px;top:50%;transform:translateY(-50%);width:36px;height:34px;padding:0;background:none;border-color:transparent;color:var(--muted)}
+.eye:active{transform:translateY(-50%) scale(.95)}
+.eye svg,.auth-card .in .eye svg{position:static;width:19px;height:19px;margin:0;color:inherit}
+.eye .slash{display:none}
+.eye[aria-pressed=true] .slash{display:inline}
+input[type=password]::-ms-reveal{display:none}
 .auth-card .hint{display:block;font-size:12px;color:var(--muted);margin-top:5px}
 .auth-card .caps{color:var(--warn)}
 .auth-card button.primary{width:100%;padding:12px;font-size:15px;margin-top:8px}
@@ -357,14 +364,29 @@ const SCRIPT = `<script>
     });
   }
 
-  // ---- sign in: show the password, caps lock
+  // ---- every password: an eye to show and hide it
+  doc.querySelectorAll('input[type=password]').forEach(function (f) {
+    var box = f.closest('.in'), b = el('button', 'eye');
+    if (!box) { box = el('span', 'pw'); f.parentNode.insertBefore(box, f); box.appendChild(f); }
+    b.type = 'button';
+    b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/><path class="slash" d="M4 4l16 16"/></svg>';
+    function set(shown) {
+      f.type = shown ? 'text' : 'password';
+      b.title = shown ? 'Hide password' : 'Show password';
+      b.setAttribute('aria-label', 'Show password');
+      b.setAttribute('aria-pressed', String(shown));
+    }
+    b.addEventListener('click', function (e) { e.preventDefault(); set(f.type === 'password'); f.focus(); });
+    if (f.form) { f.form.addEventListener('submit', function () { set(false); }); }
+    set(false);
+    box.appendChild(b);
+  });
+
+  // ---- sign in: caps lock
   var pw = doc.querySelector('.auth-card input[name=password]');
   if (pw) {
-    var peek = doc.querySelector('.peek'), caps = doc.querySelector('.caps');
-    peek.hidden = false;
-    peek.addEventListener('click', function () { var shown = pw.type === 'text'; pw.type = shown ? 'password' : 'text'; peek.textContent = shown ? 'Show' : 'Hide'; peek.setAttribute('aria-pressed', String(!shown)); pw.focus(); });
+    var caps = doc.querySelector('.caps');
     ['keydown', 'keyup'].forEach(function (n) { pw.addEventListener(n, function (e) { caps.hidden = !(e.getModifierState && e.getModifierState('CapsLock')); }); });
-    pw.form.addEventListener('submit', function () { pw.type = 'password'; });
   }
 
   // ---- QR page: the code renews itself without the whole page blinking
