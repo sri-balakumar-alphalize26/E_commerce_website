@@ -119,6 +119,21 @@ class WaPhoneName(models.Model):
         return True
 
 
+class PhoneNameOpen(models.Model):
+    _inherit = 'wa.phone.name'
+
+    @api.model
+    def _open_number(self, session_id, data):
+        """The same message with the open number of a hidden one, when it is
+        known from an earlier message (25 Nov 2026)."""
+        key = data.get('key') or {}
+        jid = str(key.get('remoteJid') or '')
+        if not jid.endswith(HIDDEN) or str(key.get('remoteJidAlt') or '').endswith(PRIVATE):
+            return data
+        alt = self._taught(session_id).get(jid, ('', ''))[1]
+        return dict(data, key=dict(key, remoteJidAlt=alt)) if alt else data
+
+
 class WhatsAppSessionLive(models.Model):
     _inherit = 'whatsapp.session'
 

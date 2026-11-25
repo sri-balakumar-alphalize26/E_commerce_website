@@ -15,9 +15,14 @@ class WaChatView extends Component {
         this._opened = {};
         this._onNew = () => {
             clearTimeout(this._soon);
+            this._homeAt = this._repliesAt = 0;
             this._soon = setTimeout(() => this._refreshQuietly(), 300);
         };
+        this._onAway = (ev) => {
+            if (this.state.drop && !(ev.target.closest && ev.target.closest(".wa-drop"))) this.state.drop = false;
+        };
         this._onEsc = (ev) => {
+            if (ev.key === "Escape" && this.state.drop) this.state.drop = false;
             if (ev.key === "Escape" && this.state.viewer) {
                 ev.stopPropagation();
                 this.closeViewer();
@@ -46,6 +51,13 @@ class WaChatView extends Component {
             viewer: null,           // the picture or video in the popup
             reply: "",
             replyError: "",
+            replies: [],            // how each employee replies
+            home: false,            // the chats of everybody; false: not for this user
+            picked: 0,              // only this number's chats
+            classic: false,         // the full history, as before
+            drop: false,            // the employees, opened
+            checking: 0,
+            now: Date.now(),
         });
 
         // Priority: context > localStorage
@@ -58,21 +70,28 @@ class WaChatView extends Component {
 
         onWillStart(async () => {
             await this.loadEmployeeSessions();
+            this._loadReplies();
+            this._loadHome();
+            if (!this._openSession) this.state.numberId = null;
             await this.loadConversations();
         });
 
         onWillUnmount(() => {
             clearInterval(this._timer);
             clearTimeout(this._soon);
+            clearInterval(this._clock);
             window.removeEventListener("keydown", this._onEsc, true);
+            window.removeEventListener("pointerdown", this._onAway, true);
             this.bus.unsubscribe("wa_tracker_new", this._onNew);
             document.removeEventListener("visibilitychange", this._onSeen);
         });
         onMounted(() => {
             this.bus.subscribe("wa_tracker_new", this._onNew);
+            this._clock = setInterval(() => (this.state.now = Date.now()), 5000);
             this.bus.start();
             document.addEventListener("visibilitychange", this._onSeen);
             window.addEventListener("keydown", this._onEsc, true);
+            window.addEventListener("pointerdown", this._onAway, true);
             this._timer = setInterval(() => this._refreshQuietly(), 8000);
             if (this._pendingConvId) {
                 const id = this._pendingConvId;
@@ -86,6 +105,8 @@ class WaChatView extends Component {
     /** New messages without pressing anything; the place scrolled to stays. */
     async _refreshQuietly() {
         if (document.hidden) return;
+        this._loadReplies();
+        this._loadHome();
         if (this._busy) {
             this._again = true;
             return;
@@ -133,6 +154,182 @@ class WaChatView extends Component {
         }
     }
 
+    /** At most every half minute; a failure leaves what is shown. */
+    async _loadReplies() {
+        this.state.now = Date.now();
+        if (this._repliesAt && this.state.now - this._repliesAt < 30000) return;
+        this._repliesAt = this.state.now;
+        try {
+            const answer = await this._jsonRpc("/wa_tracker/reply_status");
+            if (answer && answer.rows) this.state.replies = answer.rows;
+        } catch {
+            // the next round tries again
+        }
+    }
+    async checkNumber(row) {
+        this.state.checking = row.id;
+        try {
+            await this._jsonRpc("/wa_tracker/check_number", { employee_session_id: row.id });
+        } catch {
+            // what is shown stays
+        }
+        this.state.checking = 0;
+        this._repliesAt = 0;
+        await this._loadReplies();
+    }
+    /** Everybody's chats, private and groups; at most every ten seconds. */
+    async _loadHome() {
+        if (this._homeBusy || (this._homeAt && Date.now() - this._homeAt < 10000)) return;
+        this._homeBusy = true;
+        this._homeAt = Date.now();
+        try {
+            const answer = await this._jsonRpc("/wa_tracker/home");
+            if (answer && answer.chats !== undefined) this.state.home = answer.chats;
+        } catch {
+            // the next round tries again
+        }
+        this._homeBusy = false;
+    }
+    get showHome() {
+        return !!this.state.home && !this.state.classic;
+    }
+    get pickedRow() {
+        return this.state.replies.find((r) => r.id === this.state.picked);
+    }
+    cardName(chat) {
+        const row = this.state.replies.find((r) => r.id === chat.card);
+        return row ? row.name : "";
+    }
+    /** As WhatsApp Web lists them: one list, the newest on top. */
+    get homeRows() {
+        const q = (this.state.searchQuery || "").trim().toLowerCase();
+        return this.state.home.filter((c) => (!this.state.picked || c.card === this.state.picked)
+            && (!q || c.name.toLowerCase().includes(q) || (c.preview || "").toLowerCase().includes(q)))
+            .sort((a, b) => b.date.localeCompare(a.date));
+    }
+    /** The state of the last message as the chat knows it, else as the list does. */
+    listTick(chat) {
+        const open = this.state.numberId === chat.card && this.state.selectedConvId === chat.id ? this.state.messages : null;
+        const found = (open || this._kept(chat.card, chat.id) || []).find((m) => m.id === chat.last);
+        return found ? found.status : chat.tick;
+    }
+    /** Today the time, then Yesterday, the day of the week, the date. */
+    listTime(text) {
+        const d = this._date(text);
+        if (!d) return "";
+        const day = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+        const days = Math.round((day(new Date(this.state.now)) - day(d)) / 86400000);
+        if (days <= 0) return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+        if (days === 1) return "Yesterday";
+        return days < 7 ? d.toLocaleDateString([], { weekday: "long" }) : d.toLocaleDateString();
+    }
+    /** What the opened chat is: said there, not in the list. */
+    get openState() {
+        const c = this.openChat;
+        if (!c || c.state === "old") return "";
+        return c.state === "no" ? `Not replied, ${this._long(this._minutes(c.date) || 0)}` : "Replied";
+    }
+    /** Waiting chats of one employee, or of all. */
+    waitingOf(row) {
+        return this.state.home.filter((c) => c.state === "no" && (!row || c.card === row.id));
+    }
+    oldestOf(row) {
+        const dates = this.waitingOf(row).map((c) => c.date).sort();
+        return dates.length ? this._long(this._minutes(dates[0]) || 0) : "";
+    }
+    isLate(row) {
+        const dates = this.waitingOf(row).map((c) => c.date).sort();
+        return !!dates.length && (this._minutes(dates[0]) || 0) >= 30;
+    }
+    toggleDrop() {
+        this.state.drop = !this.state.drop;
+    }
+    choose(row) {
+        this.state.drop = false;
+        this.state.picked = row ? row.id : 0;
+        this.state.selectedConvId = null;
+        this.state.messages = [];
+        this._saveState();
+    }
+    get allToday() {
+        const n = this.state.replies.reduce((sum, r) => sum + r.replies, 0);
+        const minutes = this.state.replies.reduce((sum, r) => sum + r.replies * r.average, 0);
+        return n ? `${n} replies today, in ${this._long(Math.round(minutes / n))}` : "No replies yet today";
+    }
+    count(row, state) {
+        return this.state.home ? this.state.home.filter((c) => c.card === row.id && c.state === state).length
+            : state === "no" ? row.waiting : 0;
+    }
+    wrongCount(row) {
+        return (this.state.home || []).filter((c) => c.card === row.id && c.wrong).length;
+    }
+    /** The words of the alert rules, in a message of the employee. */
+    isWrong(msg) {
+        const chat = this.openChat;
+        return !!(chat && chat.wrong && msg.direction === "outgoing" && chat.wrong.texts.includes(msg.message_text));
+    }
+    /** Who has something open comes first. */
+    get board() {
+        const rank = (r) => this.wrongCount(r) * 1000 + this.count(r, "no");
+        return [...this.state.replies].sort((a, b) => rank(b) - rank(a) || a.name.localeCompare(b.name));
+    }
+    async _openNumber(row) {
+        this.state.employeeId = row.employee_id;
+        this.state.numberId = row.id;
+        await this._changed();
+    }
+    async openHomeChat(chat) {
+        const row = this.state.replies.find((r) => r.id === chat.card);
+        if (!row) return;
+        this.state.employeeId = row.employee_id;
+        this.state.numberId = row.id;
+        this.state.showOld = true;
+        this._homeNumber();                 // nothing to wait for
+        await this.selectConversation(chat.id);
+    }
+    get openChat() {
+        return this.state.home && this.state.home.find((c) => c.card === this.state.numberId && c.id === this.state.selectedConvId);
+    }
+    toggleClassic() {
+        this.state.classic = !this.state.classic;
+    }
+    letter(name) {
+        const found = (name || "").match(/[\p{L}\p{N}]/u);
+        return found ? found[0].toUpperCase() : "";
+    }
+    _minutes(text) {
+        const d = this._date(text);
+        return d ? Math.max(0, Math.floor((this.state.now - d.getTime()) / 60000)) : null;
+    }
+    _long(minutes) {
+        if (minutes < 60) return `${minutes} min`;
+        if (minutes < 1440) return `${Math.floor(minutes / 60)} h`;
+        return minutes < 2880 ? "1 day" : `${Math.floor(minutes / 1440)} days`;
+    }
+    /** When they last wrote something. */
+    activeText(row) {
+        if (!row.connected) return "Number not connected";
+        const mine = (this.state.home || []).filter((c) => c.card === row.id && c.mine).map((c) => c.date);
+        const last = [row.last || "", ...mine].sort().pop();
+        return last ? `Replied ${this.ago(last)}` : "No replies yet";
+    }
+    ago(text) {
+        const m = this._minutes(text);
+        if (m === null) return "";
+        if (m < 1) return "just now";
+        return m < 60 ? `${m} min ago` : this.formatTime(text);
+    }
+    /** The employee of the number shown. */
+    get chatOwner() {
+        return this.state.replies.find((row) => row.id === this.state.numberId);
+    }
+    initials(name) {
+        return (name || "?").trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
+    }
+    exactTime(text) {
+        const d = this._date(text);
+        return d ? d.toLocaleString() : "";
+    }
     _read(key) {
         try {
             return localStorage.getItem(key) || "";
@@ -202,12 +399,26 @@ class WaChatView extends Component {
         return (this._opened[chat.id] || "") >= chat.date ? 0 : chat.unread;
     }
 
+    /** This number's chats, out of the list of everybody. */
+    _homeNumber() {
+        const own = this.state.home.filter((c) => c.card === this.state.numberId);
+        this.state.phone = true;
+        this.state.phoneDown = false;
+        this.state.conversations = own.map((c) => ({
+            id: c.id, contact_name: c.name, phone: c.phone, total_messages: 0, last_message_date: c.date, group: c.group,
+            last_message_preview: c.preview, employee_name: this.cardName(c), own_number: "", own_current: true,
+        }));
+    }
     /** The chats as the phone has them; false: the saved ones are shown. */
     async _loadPhone() {
         const numberId = this.state.numberId;
         if (!numberId) {
             this.state.phone = this.state.phoneDown = false;
             return false;
+        }
+        if (this.showHome) {
+            this._homeNumber();
+            return true;
         }
         const result = await this._jsonRpc("/wa_tracker/phone_chats", { employee_session_id: numberId });
         if (numberId !== this.state.numberId) return true;
@@ -342,6 +553,7 @@ class WaChatView extends Component {
     async onMessagesScroll(ev) {
         const box = ev.currentTarget;
         const id = this.state.selectedConvId;
+        if (Date.now() < (this._settling || 0)) return;
         if (box.scrollTop > 60 || !this.state.phone || !this.state.more || this.state.loadingOlder) return;
         this.state.loadingOlder = true;
         try {
@@ -438,7 +650,29 @@ class WaChatView extends Component {
         return d ? d.toLocaleDateString([], { day: "numeric", month: "short" }) : "";
     }
 
+    _kept(number, convId) {
+        return this._seen && this._seen.get(number + "/" + convId);
+    }
+    /** The last thirty chats, in this page only. */
+    _keep(number, convId, messages) {
+        this._seen = this._seen || new Map();
+        const key = number + "/" + convId;
+        this._seen.delete(key);
+        this._seen.set(key, messages.filter((m) => !String(m.id).startsWith("sending-")));
+        if (this._seen.size > 30) this._seen.delete(this._seen.keys().next().value);
+    }
+    /** To the newest message, also after its pictures have come. */
+    _toEnd(convId) {
+        this._settling = Date.now() + 1200;         // going there is not scrolling up for older ones
+        for (const wait of [0, 100, 400, 900]) {
+            setTimeout(() => {
+                const el = this.messagesRef.el;
+                if (el && convId === this.state.selectedConvId && !this._left) el.scrollTop = el.scrollHeight;
+            }, wait);
+        }
+    }
     async selectConversation(convId) {
+        this._left = false;
         if (convId !== this.state.selectedConvId) {
             this.state.reply = this.state.replyError = "";
         }
@@ -454,11 +688,18 @@ class WaChatView extends Component {
         try {
             let result;
             if (this.state.phone) {
-                this.state.messages = [];
+                const number = this.state.numberId, kept = this._kept(number, convId);
+                this.state.messages = kept ? [...kept] : [];
+                this._toEnd(convId);
                 this._page = 1;
                 const answer = await this._phonePage();
-                if (convId !== this.state.selectedConvId) return;
-                result = (answer && answer.messages) || [];
+                if (convId !== this.state.selectedConvId || number !== this.state.numberId) return;
+                if (answer && answer.messages) {
+                    result = answer.messages;
+                    this._keep(number, convId, result);
+                } else {
+                    result = kept || [];
+                }
                 this.state.more = !!(answer && answer.more);
             } else {
                 this.state.more = false;
@@ -466,12 +707,7 @@ class WaChatView extends Component {
                 if (convId !== this.state.selectedConvId) return;
             }
             this.state.messages = result || [];
-            setTimeout(() => {
-                const container = this.messagesRef.el;
-                if (container) {
-                    container.scrollTop = container.scrollHeight;
-                }
-            }, 100);
+            this._toEnd(convId);
         } catch (e) {
             console.error("Failed to load messages:", e);
         }

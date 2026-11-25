@@ -22,6 +22,7 @@ from . import res_partner_phone
 from . import employee_number
 from . import employee_session_easy
 from . import phone_typed
+from . import manager_home
 from . import phone_name
 from . import phone_chats
 from . import dashboard_stats

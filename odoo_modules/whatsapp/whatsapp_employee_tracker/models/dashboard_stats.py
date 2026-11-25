@@ -1,7 +1,7 @@
 """The figures on the dashboard's cards, as they are now (24 Nov 2026)."""
 import logging
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import pytz
 
@@ -14,6 +14,14 @@ FIGURES = ('total_messages', 'total_sent', 'total_received', 'unique_contacts')
 # Asking the panel may take seconds per number when it is down; the rest is
 # asked the next time the screen refreshes.
 ASK_SECONDS = 4
+# A chat without a reply this long is not called waiting any more.
+WAIT_HOURS = 48
+# What the assistant wrote, as in wa.response.time.stat.
+NOT_THE_BOT = """NOT EXISTS (
+    SELECT 1 FROM wa_auto_reply ar
+     WHERE ar.conversation_id = l.conversation_id
+       AND TRIM(COALESCE(ar.reply_message, '')) = TRIM(COALESCE(l.message_text, ''))
+       AND ABS(EXTRACT(EPOCH FROM (ar.create_date - l.message_date))) < 60)"""
 
 
 class EmployeeSessionFigures(models.Model):
@@ -55,6 +63,85 @@ class EmployeeSessionFigures(models.Model):
              WHERE %(since)s::timestamp IS NULL OR at >= %(since)s::timestamp
              GROUP BY owner""", {'ids': ids, 'not_sent': NOT_SENT, 'since': since})
         return {row[0]: row[1:] for row in self.env.cr.fetchall()}
+
+    def _reply_status(self):
+        """{id: {'last', 'waiting', 'oldest', 'waits'}} (25 Nov 2026).
+
+        last: when the employee last wrote something - on the phone, or in Odoo
+        with their own login. Not a manager's reply and not the assistant's.
+        waiting: private chats whose customer wrote after the last reply of any
+        person; oldest: the first message still without one; waits: the same
+        for each chat, {last 9 digits: when}."""
+        result = {rec.id: {'last': False, 'waiting': 0, 'oldest': False, 'waits': {}} for rec in self}
+        ids = tuple(i for i in self.ids if isinstance(i, int))
+        if not ids:
+            return result
+        for model in ('whatsapp.message', 'wa.communication.log', 'wa.auto.reply', 'wa.employee.session', 'hr.employee'):
+            self.env[model].flush_model()
+        values = {'ids': ids, 'not_sent': NOT_SENT, 'since': fields.Datetime.now() - timedelta(hours=WAIT_HOURS)}
+        self.env.cr.execute("""
+            SELECT owner, max(at)
+              FROM (SELECT l.employee_session_id AS owner, l.message_date AS at
+                      FROM wa_communication_log l
+                     WHERE l.employee_session_id IN %(ids)s AND l.message_id IS NULL AND l.direction = 'outgoing'
+                       AND """ + NOT_THE_BOT + """
+                     UNION ALL
+                    SELECT m.employee_session_id, m.create_date
+                      FROM whatsapp_message m
+                      JOIN wa_employee_session s ON s.id = m.employee_session_id
+                      JOIN hr_employee e ON e.id = s.employee_id AND e.user_id = m.create_uid
+                     WHERE m.employee_session_id IN %(ids)s AND m.direction = 'outgoing'
+                       AND COALESCE(m.status, '') NOT IN %(not_sent)s) AS wrote
+             GROUP BY owner""", values)
+        for owner, last in self.env.cr.fetchall():
+            result[owner]['last'] = last
+        self.env.cr.execute("""
+            WITH said AS (
+                SELECT m.employee_session_id AS owner, right(regexp_replace(m.phone, '[^0-9]', '', 'g'), 9) AS who,
+                       m.direction, m.create_date AS at
+                  FROM whatsapp_message m
+                  LEFT JOIN res_users u ON u.id = m.create_uid
+                 WHERE m.employee_session_id IN %(ids)s AND m.create_date >= %(since)s
+                   AND COALESCE(m.phone, '') NOT LIKE '%%@g.us%%'
+                   AND (m.direction = 'incoming'
+                        OR (COALESCE(m.status, '') NOT IN %(not_sent)s AND u.id != 1 AND u.share IS NOT TRUE AND u.active))
+                 UNION ALL
+                SELECT l.employee_session_id, right(regexp_replace(l.phone, '[^0-9]', '', 'g'), 9), l.direction, l.message_date
+                  FROM wa_communication_log l
+                 WHERE l.employee_session_id IN %(ids)s AND l.message_id IS NULL AND l.message_date >= %(since)s
+                   AND l.is_group_message IS NOT TRUE AND COALESCE(l.phone, '') NOT LIKE '%%@g.us%%'
+                   AND (l.direction = 'incoming' OR """ + NOT_THE_BOT + """)),
+            replied AS (
+                SELECT owner, who, max(at) AS at FROM said WHERE direction = 'outgoing' GROUP BY owner, who)
+            SELECT said.owner, said.who, min(said.at)
+              FROM said
+              LEFT JOIN replied ON replied.owner = said.owner AND replied.who = said.who
+             WHERE said.direction = 'incoming' AND said.who != '' AND (replied.at IS NULL OR said.at > replied.at)
+             GROUP BY said.owner, said.who""", values)
+        for owner, who, at in self.env.cr.fetchall():
+            row = result[owner]
+            row['waits'][who] = at
+            row['waiting'] += 1
+            row['oldest'] = min(row['oldest'] or at, at)
+        return result
+
+    def _reply_today(self):
+        """{id: (replies, average minutes)} of today: the first reply of a person
+        to each customer message, as on the dashboard."""
+        ids = tuple(i for i in self.ids if isinstance(i, int))
+        if not ids:
+            return {}
+        self.env['wa.communication.log'].flush_model()
+        self.env['wa.auto.reply'].flush_model()
+        self.env.cr.execute("""
+            SELECT owner, count(*), avg(minutes)
+              FROM (SELECT employee_session_id AS owner, min(response_minutes) AS minutes, min(reply_date) AS at
+                      FROM wa_response_time_stat
+                     WHERE employee_session_id IN %s
+                     GROUP BY employee_session_id, conversation_id, customer_msg_date) AS first_reply
+             WHERE at >= %s
+             GROUP BY owner""", [ids, self._today_start()])
+        return {owner: (count, float(average or 0)) for owner, count, average in self.env.cr.fetchall()}
 
     def _totals(self):
         figures = self._figures()

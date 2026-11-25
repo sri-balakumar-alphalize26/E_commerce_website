@@ -145,7 +145,9 @@ class EmployeeSessionPhone(models.Model):
                 'id': main, 'jids': list(dict.fromkeys([main, jid])), 'phone': '+' + phone if phone else '',
                 'group': main.endswith(GROUP), 'name': '', 'push': '' if key.get('fromMe') else (last.get('pushName') or ''),
                 'from_me': bool(key.get('fromMe')), 'preview': self._phone_text(last)[:80], 'date': self._phone_when(last),
-                'unread': int(row.get('unreadCount') or 0), 'row_name': row.get('pushName') or ''}
+                'unread': int(row.get('unreadCount') or 0), 'row_name': row.get('pushName') or '',
+                'who': self._phone_who(last), 'last_id': str(key.get('id') or ''), 'pic': row.get('profilePicUrl') or '',
+                'tick': RANK[last['status']][1] if key.get('fromMe') and last.get('status') in RANK else ''}
         partners = {}
         tails = [c['phone'][-9:] for c in chats.values() if len(c['phone']) > 9]
         if tails:
@@ -164,6 +166,15 @@ class EmployeeSessionPhone(models.Model):
         Name._look_later(session, unnamed)
         return list(chats.values())
 
+    @api.model
+    def _phone_who(self, last):
+        """The digits of who wrote in a group, when WhatsApp shows them."""
+        key = last.get('key') or {}
+        for jid in (key.get('participantAlt'), key.get('participantPn'), key.get('participant'), last.get('participant')):
+            if str(jid or '').endswith(PRIVATE):
+                return digits(str(jid).split('@')[0].split(':')[0])
+        return ''
+
     def phone_chats(self):
         chats = self._phone_chats()
         keep = ('id', 'phone', 'group', 'name', 'from_me', 'preview', 'date', 'unread')
@@ -172,7 +183,9 @@ class EmployeeSessionPhone(models.Model):
     def phone_messages(self, chat_id, page=1):
         """One page of one chat of this number, the oldest of the page first."""
         session = self._phone_check()
-        chat = next((c for c in self._phone_chats() if c['id'] == chat_id), None)
+        old = self.with_context(wa_chats_kept=KEEP_NAMES)
+        chat = next((c for c in old._phone_chats() if c['id'] == chat_id), None) \
+            or next((c for c in self._phone_chats() if c['id'] == chat_id), None)
         if not chat:
             raise AccessError(self.env._("That chat is not on this number."))
         page = max(1, int(page or 1))

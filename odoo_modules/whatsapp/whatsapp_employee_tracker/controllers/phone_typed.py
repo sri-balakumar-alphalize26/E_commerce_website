@@ -23,6 +23,8 @@ class WhatsAppWebhookTyped(WhatsAppWebhook):
                 session = request.env['whatsapp.session'].sudo().search(
                     [('webhook_secret', '=', secret), ('active', '=', True)], limit=1)
                 Log = request.env['wa.communication.log'].sudo()
+                if session:
+                    data = request.env['wa.phone.name'].sudo()._open_number(session.id, data)
                 values = session and Log._typed_values({'data': data}, _text_of(data.get('message') or {})[0])
                 if values:
                     tail = data['_instance'].rpartition('-')[2]

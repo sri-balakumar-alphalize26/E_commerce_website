@@ -47,6 +47,53 @@ class WaChatController(http.Controller):
             person['numbers'].sort(key=lambda n: (n['current'], n['last']), reverse=True)
         return sorted(people.values(), key=lambda p: p['name'].lower())
 
+    @http.route('/wa_tracker/reply_status', type='jsonrpc', auth='user')
+    def get_reply_status(self):
+        """How each employee replies, on the number they have now."""
+        self._staff()
+        cards = request.env['wa.employee.session'].sudo().search(
+            self._mine() + [('active', '=', True), ('session_id.active', '=', True)])
+        found, today, replies = cards._reply_status(), cards._figures(cards._today_start()), cards._reply_today()
+        text = lambda at: str(at)[:19] if at else ''  # noqa: E731
+        rows = [{'id': c.id, 'employee_id': c.employee_id.id, 'name': c.employee_id.name or '',
+                 'connected': c.session_id.status == 'connected', 'last': text(found[c.id]['last']),
+                 'waiting': found[c.id]['waiting'], 'oldest': text(found[c.id]['oldest']),
+                 'waits': {who: text(at) for who, at in found[c.id]['waits'].items()},
+                 'sent': today.get(c.id, (0, 0, 0))[0], 'received': today.get(c.id, (0, 0, 0))[1],
+                 'replies': replies.get(c.id, (0, 0))[0], 'average': round(replies.get(c.id, (0, 0))[1], 1)} for c in cards]
+        # who keeps somebody waiting longest comes first
+        return {'rows': sorted(rows, key=lambda r: (not r['waiting'], r['oldest'], r['name'].lower()))}
+
+    @http.route('/wa_tracker/home', type='jsonrpc', auth='user')
+    def get_home(self):
+        """Every present number's chats. Administrators, as the
+        phone's chats are."""
+        self._staff()
+        if not request.env.user.has_group('base.group_system'):
+            return {'chats': False}
+        cards = request.env['wa.employee.session'].search(
+            self._mine() + [('active', '=', True), ('session_id.active', '=', True)])
+        own = {''.join(c for c in (s.session_id.authorized_number or '') if c.isdigit())[-9:] for s in cards.sudo()} - {''}
+        chats, down = [], []
+        for card in cards:
+            try:
+                chats += card._home_chats(own)
+            except UserError as err:
+                _logger.info("WA Tracker: chats of %s not read: %s", card.id, err)
+                down.append(card.id)
+        return {'chats': chats, 'down': down}
+
+    @http.route('/wa_tracker/check_number', type='jsonrpc', auth='user')
+    def check_number(self, employee_session_id):
+        """Ask the panel now whether this number is connected."""
+        self._staff()
+        card = request.env['wa.employee.session'].sudo().search(
+            self._mine() + [('id', '=', int(employee_session_id or 0)), ('active', '=', True)])
+        if not card:
+            raise AccessError("Not one of your numbers.")
+        card.session_id._refresh_state(force=True)
+        return {'connected': card.session_id.status == 'connected'}
+
     @http.route('/wa_tracker/conversations', type='jsonrpc', auth='user')
     def get_conversations(self, employee_session_id=None, employee_id=None):
         """Get conversations list for the chat panel."""

@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 from odoo import fields
 from odoo.exceptions import UserError
-from odoo.tests import TransactionCase, tagged
+from odoo.tests import TransactionCase, new_test_user, tagged
 
 
 @tagged('post_install', '-at_install')
@@ -119,6 +119,67 @@ class TestDashboardStats(TransactionCase):
         row = self._read(self.one, 'has_replies', 'avg_response_minutes')
         self.assertTrue(row['has_replies'])
         self.assertAlmostEqual(row['avg_response_minutes'], 4, places=1)
+
+    def _reply(self, card):
+        self.env.invalidate_all()
+        row = (self.one + self.two)._reply_status()[card.id]
+        self.assertEqual(len(row.pop('waits')), row['waiting'])
+        return row
+
+    def test_reply_status(self):
+        now = fields.Datetime.now().replace(microsecond=0)
+        ago = lambda **k: now - timedelta(**k)  # noqa: E731
+        self.assertEqual(self._reply(self.one), {'last': False, 'waiting': 0, 'oldest': False})
+        self._message(self.one, at=ago(minutes=45))
+        self._message(self.one, at=ago(minutes=10))
+        self._message(self.one, phone='919822222222', at=ago(minutes=5))
+        self._message(self.one, phone='919833333333', at=ago(hours=49))          # too old
+        self._message(self.one, phone='120363000000000001@g.us', at=ago(hours=1))   # a group
+        self.assertEqual(self._reply(self.one), {'last': False, 'waiting': 2, 'oldest': ago(minutes=45)})
+        self.assertEqual(self._reply(self.two)['waiting'], 0, 'each its own')
+        self.assertEqual(self.one._reply_status()[self.one.id]['waits'],
+                         {'811122233': ago(minutes=45), '822222222': ago(minutes=5)}, 'each customer')
+        # not a reply of a person
+        self._message(self.one, 'outgoing', at=ago(minutes=4))                  # the system
+        for status in ('failed', 'blocked', 'pending'):
+            self._message(self.one, 'outgoing', status, at=ago(minutes=4))
+        self.assertEqual(self._reply(self.one)['waiting'], 2)
+        # typed on the phone: that chat waits no more, and the employee was active
+        self._typed(self.one, '919811122233', ago(minutes=3))
+        self.assertEqual(self._reply(self.one), {'last': ago(minutes=3), 'waiting': 1, 'oldest': ago(minutes=5)})
+        # the customer writes again
+        self._message(self.one, at=ago(minutes=2))
+        self.assertEqual(self._reply(self.one)['waiting'], 2)
+
+    def test_reply_today(self):
+        self.assertEqual(self.one._reply_today(), {})
+        chat = self.env['wa.conversation']._get_or_create(self.one, '919811122233')
+        at = max(fields.Datetime.now() - timedelta(minutes=30), self.one._today_start())
+        self._typed(self.one, chat.phone, at, 'incoming', 'price?', chat)
+        self._typed(self.one, chat.phone, at + timedelta(minutes=6), text='10', conversation=chat)
+        self._typed(self.one, chat.phone, at + timedelta(minutes=9), text='more', conversation=chat)
+        count, average = self.one._reply_today()[self.one.id]
+        self.assertEqual((count, round(average)), (1, 6))
+        self.assertNotIn(self.two.id, (self.one + self.two)._reply_today())
+
+    def test_reply_status_bot_and_manager(self):
+        now = fields.Datetime.now().replace(microsecond=0)
+        chat = self.env['wa.conversation']._get_or_create(self.one, '919811122233')
+        self._message(self.one, at=now - timedelta(minutes=20))
+        bot = self._typed(self.one, '919811122233', now - timedelta(minutes=19), text='bot says', conversation=chat)
+        reply = self.env['wa.auto.reply'].create({
+            'employee_session_id': self.one.id, 'conversation_id': chat.id, 'reply_message': 'bot says'})
+        reply.flush_recordset()
+        self.env.cr.execute('UPDATE wa_auto_reply SET create_date = %s WHERE id = %s', [bot.message_date, reply.id])
+        self.assertEqual(self._reply(self.one)['waiting'], 1, 'the assistant does not end it')
+        self.assertFalse(self._reply(self.one)['last'])
+        manager = new_test_user(self.env, 'zz-reply-boss', groups='base.group_user')
+        sent = self._message(self.one, 'outgoing', at=now - timedelta(minutes=10))
+        self.env.cr.execute('UPDATE whatsapp_message SET create_uid = %s WHERE id = %s', [manager.id, sent.id])
+        status = self._reply(self.one)
+        self.assertEqual((status['waiting'], status['last']), (0, False), "answered, but not by the employee")
+        self.one.employee_id.user_id = manager
+        self.assertEqual(self._reply(self.one)['last'], now - timedelta(minutes=10), 'their own login')
 
     def test_nothing_yet_and_panel_down(self):
         self.down = True
