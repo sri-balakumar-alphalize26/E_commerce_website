@@ -153,9 +153,9 @@ class EmployeeWhatsAppSession(models.Model):
 
     @api.depends('auto_reply_company_id', 'session_id.company_id')
     def _compute_company_id(self):
-        """The branch chosen when the number was connected, else the number's own."""
+        """The Company set on the person's WhatsApp number, else the Order Company."""
         for rec in self:
-            rec.company_id = rec.auto_reply_company_id or rec.session_id.company_id
+            rec.company_id = rec.session_id.company_id or rec.auto_reply_company_id
 
     @api.depends('session_id')
     def _compute_session_number(self):

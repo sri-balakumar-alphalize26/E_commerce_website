@@ -130,6 +130,8 @@
                         <group string="Employee Details">
                             <field name="has_chats" invisible="1"/>
                             <field name="employee_id" readonly="has_chats"/>
+                            <field name="company_id" groups="base.group_multi_company"
+                                   help="The Company set on this person's WhatsApp number. Switching branch at the top right shows only that branch's people."/>
                             <field name="since"/>
                             <field name="until" invisible="not until"/>
                             <field name="department_id"/>
