@@ -23,6 +23,10 @@ class EmployeeWhatsAppSession(models.Model):
         required=True, ondelete='restrict', index=True,
         help='The WhatsApp session assigned to this employee.',
     )
+    # 26 Nov 2026: the branch, so switching branch shows only its people.
+    company_id = fields.Many2one(
+        'res.company', string='Branch', compute='_compute_company_id', store=True, index=True,
+    )
     department_id = fields.Many2one(
         related='employee_id.department_id', store=True,
         string='Department',
@@ -146,6 +150,12 @@ class EmployeeWhatsAppSession(models.Model):
 
     session_number = fields.Char(compute='_compute_session_number')
     free_session_ids = fields.Many2many('whatsapp.session', compute='_compute_free_sessions')
+
+    @api.depends('auto_reply_company_id', 'session_id.company_id')
+    def _compute_company_id(self):
+        """The branch chosen when the number was connected, else the number's own."""
+        for rec in self:
+            rec.company_id = rec.auto_reply_company_id or rec.session_id.company_id
 
     @api.depends('session_id')
     def _compute_session_number(self):

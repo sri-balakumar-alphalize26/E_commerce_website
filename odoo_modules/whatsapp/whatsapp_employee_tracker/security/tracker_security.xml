@@ -113,4 +113,57 @@
         <field name="domain_force">[(1, '=', 1)]</field>
         <field name="groups" eval="[(4, ref('group_wa_tracker_manager'))]"/>
     </record>
+
+    <!-- 26 Nov 2026: the top-right branch switch. Only the switched-on branches
+         are seen, by everyone, the managers too. -->
+    <record id="rule_wa_employee_session_branch" model="ir.rule">
+        <field name="name">WhatsApp employee_session: switched-on branches</field>
+        <field name="model_id" ref="model_wa_employee_session"/>
+        <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_wa_communication_log_branch" model="ir.rule">
+        <field name="name">WhatsApp communication_log: switched-on branches</field>
+        <field name="model_id" ref="model_wa_communication_log"/>
+        <field name="domain_force">['|', ('employee_session_id.company_id', '=', False), ('employee_session_id.company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_wa_conversation_branch" model="ir.rule">
+        <field name="name">WhatsApp conversation: switched-on branches</field>
+        <field name="model_id" ref="model_wa_conversation"/>
+        <field name="domain_force">['|', ('employee_session_id.company_id', '=', False), ('employee_session_id.company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_wa_keyword_alert_log_branch" model="ir.rule">
+        <field name="name">WhatsApp keyword_alert_log: switched-on branches</field>
+        <field name="model_id" ref="model_wa_keyword_alert_log"/>
+        <field name="domain_force">['|', ('employee_session_id.company_id', '=', False), ('employee_session_id.company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_wa_quality_score_branch" model="ir.rule">
+        <field name="name">WhatsApp quality_score: switched-on branches</field>
+        <field name="model_id" ref="model_wa_quality_score"/>
+        <field name="domain_force">['|', ('employee_session_id.company_id', '=', False), ('employee_session_id.company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_wa_auto_reply_branch" model="ir.rule">
+        <field name="name">WhatsApp auto_reply: switched-on branches</field>
+        <field name="model_id" ref="model_wa_auto_reply"/>
+        <field name="domain_force">['|', ('employee_session_id.company_id', '=', False), ('employee_session_id.company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_wa_message_tone_branch" model="ir.rule">
+        <field name="name">WhatsApp message_tone: switched-on branches</field>
+        <field name="model_id" ref="model_wa_message_tone"/>
+        <field name="domain_force">['|', ('employee_session_id.company_id', '=', False), ('employee_session_id.company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_wa_response_time_stat_branch" model="ir.rule">
+        <field name="name">WhatsApp response_time_stat: switched-on branches</field>
+        <field name="model_id" ref="model_wa_response_time_stat"/>
+        <field name="domain_force">['|', ('employee_session_id.company_id', '=', False), ('employee_session_id.company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_wa_response_time_summary_branch" model="ir.rule">
+        <field name="name">WhatsApp response_time_summary: switched-on branches</field>
+        <field name="model_id" ref="model_wa_response_time_summary"/>
+        <field name="domain_force">['|', ('employee_session_id.company_id', '=', False), ('employee_session_id.company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_wa_employee_handover_branch" model="ir.rule">
+        <field name="name">WhatsApp employee_handover: switched-on branches</field>
+        <field name="model_id" ref="model_wa_employee_handover"/>
+        <field name="domain_force">['|', ('session_id.company_id', '=', False), ('session_id.company_id', 'in', company_ids)]</field>
+    </record>
 </odoo>
