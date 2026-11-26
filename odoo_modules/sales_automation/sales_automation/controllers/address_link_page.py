@@ -504,7 +504,10 @@ function applyMeta(m){M=m;var dial=(m.phone&&m.phone.dial)||'+';document.querySe
   var s=$('f_state_id');s.innerHTML='<option value=""></option>';s.options[0].textContent=s.dataset.ph||'';
   (m.states||[]).forEach(function(x){var o=document.createElement('option');o.value=x.id;o.textContent=x.name;s.appendChild(o)});
   $('statebox').style.display=(m.states&&m.states.length)?'':'none';
-  ['phone','alt'].forEach(function(k){var el=$('f_'+k);if(el&&el.value)el.value=cleanMobile(el.value)});phoneHint();}
+  /* 26 Nov 2026: the box limits follow the new country (UAE 9 → India 10) */
+  ['phone','alt'].forEach(function(k){var el=$('f_'+k);if(!el)return;el.maxLength=(m.phone&&m.phone.length)||15;
+    if(el.value)el.value=cleanMobile(el.value)});
+  if($('f_pin'))$('f_pin').maxLength=m.pin_length||10;phoneHint();}
 $('f_state_id').dataset.ph=$('f_state_id').options[0].textContent;
 $('f_country').addEventListener('change',function(){var code=this.value;
   get('/meta?country='+encodeURIComponent(code)).then(function(m){if(!m||!m.ok)return;applyMeta(m);

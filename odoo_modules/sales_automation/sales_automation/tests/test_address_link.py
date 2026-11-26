@@ -562,3 +562,12 @@ class TestAddressLink(HttpCase):
         if rule.get('starts'):
             self.assertEqual(link._clean_mobile('5', rule), '', 'no Indian mobile starts with 5')
             self.assertIn('start with 6, 7, 8 or 9', link._mobile_error('5800022233', rule, {}))
+
+    def test_the_box_limits_follow_a_new_country(self):
+        """26 Nov 2026: opened for the UAE (9 digits), changed to India: the box takes 10."""
+        from odoo.addons.sales_automation.controllers import address_link_page as page
+        apply_meta = page._JS.split('function applyMeta', 1)[1].split('\n$(', 1)[0]
+        self.assertIn("el.maxLength=(m.phone&&m.phone.length)||15", apply_meta)
+        self.assertIn("$('f_pin').maxLength=m.pin_length||10", apply_meta)
+        link = self._open_book()
+        self.assertEqual(link._phone_rule(self.india).get('length'), 10)
