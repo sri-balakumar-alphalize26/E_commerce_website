@@ -12,4 +12,36 @@
               parent="menu_wa_tracker_config"
               action="action_wa_help_guide"
               sequence="100"/>
+
+    <!-- 26 Nov 2026: Help in the top menu opens a small window with the manual -->
+    <record id="view_wa_tracker_help_form" model="ir.ui.view">
+        <field name="name">wa.tracker.help.form</field>
+        <field name="model">wa.tracker.help</field>
+        <field name="arch" type="xml">
+            <form string="Help">
+                <div class="text-center py-3">
+                    <i class="fa fa-file-pdf-o fa-4x text-danger"/>
+                    <p class="mt-3">The user manual: how to connect a number, branches, alerts and daily work.</p>
+                    <button name="action_open_manual" type="object" class="btn-primary"
+                            icon="fa-external-link" string="manual.pdf"/>
+                </div>
+                <footer>
+                    <button string="Close" special="cancel" class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_wa_tracker_help" model="ir.actions.act_window">
+        <field name="name">Help</field>
+        <field name="res_model">wa.tracker.help</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <menuitem id="menu_wa_tracker_help"
+              name="Help"
+              parent="menu_wa_tracker_root"
+              action="action_wa_tracker_help"
+              sequence="99"/>
 </odoo>
