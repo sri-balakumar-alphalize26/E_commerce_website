@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="whatsapp_email_tracker.ConnectNumberExtra" t-inherit="whatsapp_gateway.ConnectNumberExtra" t-inherit-mode="extension">
+        <xpath expr="//label[@for='wa_employee']" position="attributes">
+            <attribute name="t-if">!companyMode</attribute>
+        </xpath>
+        <xpath expr="//select[@id='wa_employee']" position="attributes">
+            <attribute name="t-if">!companyMode</attribute>
+        </xpath>
+        <xpath expr="//input[@t-model='state.values.employee_name']" position="attributes">
+            <attribute name="t-if">!companyMode and state.values.employee_id === 'new'</attribute>
+        </xpath>
+    </t>
+</templates>

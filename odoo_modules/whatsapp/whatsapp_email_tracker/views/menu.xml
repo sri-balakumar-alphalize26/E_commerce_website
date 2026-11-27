@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Every company and branch with its numbers: tick the main WhatsApp and
+         the main e-mail. The same list as WhatsApp and Email > Sending per company. -->
+    <menuitem id="menu_wa_tracker_companies"
+              name="Companies (WhatsApp and Email)"
+              parent="whatsapp_employee_tracker.menu_wa_tracker_config"
+              action="whatsapp_email.action_whatsapp_config_companies"
+              groups="base.group_system"
+              sequence="1"/>
+</odoo>
