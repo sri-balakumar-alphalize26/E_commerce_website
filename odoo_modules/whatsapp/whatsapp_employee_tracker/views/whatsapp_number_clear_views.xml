@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- 27 Nov 2026: clear a number's chats in WA Tracker -->
+    <record id="view_whatsapp_number_off_form_clear" model="ir.ui.view">
+        <field name="name">whatsapp.number.off.form.clear</field>
+        <field name="model">whatsapp.number.off</field>
+        <field name="inherit_id" ref="whatsapp_gateway.view_whatsapp_number_off_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='shared']" position="before">
+                <div class="mt-2 mb-3 p-2 border rounded" invisible="do != 'remove' or not chats_text">
+                    <field name="clear_chats" nolabel="1" class="oe_inline"/>
+                    <label for="clear_chats" string="Also clear its chats in WA Tracker" class="fw-bold"/>
+                    <div class="text-muted small ms-4">
+                        <field name="chats_text" readonly="1" nolabel="1" class="oe_inline"/>.
+                        Cannot be undone. Orders, invoices and the WhatsApp send log stay.
+                    </div>
+                </div>
+                <div class="alert alert-danger d-flex align-items-start gap-2 border-0 border-start border-4 border-danger"
+                     role="alert" invisible="do != 'remove' or not clear_chats">
+                    <i class="fa fa-exclamation-triangle fa-lg mt-1" title="Warning"/>
+                    <div>
+                        <b>All chats of this number in WA Tracker will be deleted</b>
+                        (<field name="chats_text" readonly="1" nolabel="1" class="oe_inline"/>)
+                        when you press Remove.
+                        <hr class="my-2"/>
+                        <b>This cannot be undone.</b> Orders, invoices and the WhatsApp send log stay.
+                    </div>
+                </div>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_whatsapp_session_form_clear" model="ir.ui.view">
+        <field name="name">whatsapp.session.form.clear</field>
+        <field name="model">whatsapp.session</field>
+        <field name="inherit_id" ref="whatsapp_gateway.view_whatsapp_session_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <button name="action_clear_chats" type="object" string="Clear chats" icon="fa-eraser"
+                        class="btn-secondary" groups="base.group_system"
+                        confirm="Clear all chats of this number in WA Tracker? Its conversations, messages, alerts and scores there are deleted. Orders, invoices and the WhatsApp send log stay. This cannot be undone."/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

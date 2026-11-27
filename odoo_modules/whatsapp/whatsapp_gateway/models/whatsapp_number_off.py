@@ -15,8 +15,19 @@ from odoo.exceptions import AccessError, UserError, ValidationError
 _logger = logging.getLogger(__name__)
 
 
+SWITCHED_KEY = 'whatsapp_gateway.switched.%d'
+
+
 class WhatsAppSessionOff(models.Model):
     _inherit = 'whatsapp.session'
+
+    # where the number went, kept in a setting: no new column on a shared addons path
+    switched_to = fields.Char('Switched', compute='_compute_switched_to')
+
+    def _compute_switched_to(self):
+        ICP = self.env['ir.config_parameter'].sudo()
+        for rec in self:
+            rec.switched_to = (ICP.get_param(SWITCHED_KEY % rec.id) or '') if isinstance(rec.id, int) else ''
 
     removed = fields.Boolean('Removed', readonly=True, copy=False)
     shown_number = fields.Char('Number', compute='_compute_shown_number')
@@ -159,6 +170,33 @@ class WhatsAppSessionOff(models.Model):
         session._panel_self('remove')
         session.write({'gateway_api_key': 'removed-%s' % uuid.uuid4().hex})
         _logger.info("WhatsApp: number %s removed by %s", session.name, self.env.user.login)
+
+    def _switched_away(self, note=''):
+        """The panel moved this number to another database (27 Nov 2026): off
+        here, its groups off, but the entry stays in the list with where it
+        went and a Switch back button. The panel is not asked again."""
+        self.ensure_one()
+        session = self.sudo()
+        session._number_off(removed=True)
+        session._waiting_messages().write({'status': 'failed'})
+        session.write({'active': False, 'status': 'disconnected',
+                       'gateway_api_key': 'removed-%s' % uuid.uuid4().hex})
+        self.env['ir.config_parameter'].sudo().set_param(
+            SWITCHED_KEY % session.id, note or _("Switched to another database"))
+        _logger.info("WhatsApp: number %s: %s", session.name, note)
+
+    def _forget_switch(self):
+        """Back here again: the old entry gives way to the new one."""
+        ICP = self.env['ir.config_parameter'].sudo()
+        for rec in self.sudo():
+            ICP.search([('key', '=', SWITCHED_KEY % rec.id)]).unlink()
+        self.sudo().write({'removed': True})
+
+    def action_switch_back(self):
+        """The connect screen with this number typed: it offers Switch."""
+        self.ensure_one()
+        return {'type': 'ir.actions.client', 'tag': 'whatsapp_gateway.connect', 'name': _("Connect a number"),
+                'params': {'switch_number': self.sudo().authorized_number or ''}}
 
     def unlink(self):
         for session in self:

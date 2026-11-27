@@ -223,7 +223,10 @@
                        decoration-success="status == 'connected'"
                        decoration-danger="status in ('wrong_number', 'error', 'disconnected')"
                        decoration-warning="status in ('connecting', 'waiting_qr')"/>
+                <field name="switched_to" string="Switched" optional="show" decoration-info="switched_to"/>
                 <field name="message_count" string="Messages" optional="show"/>
+                <button name="action_switch_back" type="object" string="Switch back"
+                        class="btn-primary" invisible="active or removed or not switched_to" groups="base.group_system"/>
                 <button name="action_connect_screen" type="object" string="Scan again"
                         class="btn-secondary" invisible="status in ('connected', 'error') or not active"
                         groups="base.group_system"/>
@@ -232,7 +235,7 @@
                 <button name="action_turn_off" type="object" string="Turn off"
                         class="btn-secondary" invisible="not active" groups="base.group_system"/>
                 <button name="action_turn_on" type="object" string="Turn on"
-                        class="btn-primary" invisible="active or removed" groups="base.group_system"/>
+                        class="btn-primary" invisible="active or removed or switched_to" groups="base.group_system"/>
                 <button name="action_remove_number" type="object" string="Remove"
                         class="btn-link text-danger" invisible="removed" groups="base.group_system"/>
             </list>

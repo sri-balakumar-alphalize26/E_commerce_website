@@ -1,6 +1,6 @@
 {
     'name': 'Employee Tracker & Sales Agent',
-    'version': '19.0.1.5.14',
+    'version': '19.0.1.5.18',
     'category': 'Human Resources',
     'summary': 'Track & monitor employee WhatsApp communications on company numbers',
     'description': """
@@ -19,6 +19,7 @@
         'data/ir_cron.xml',
         'views/employee_session_views.xml',
         'views/whatsapp_session_views.xml',
+        'views/whatsapp_number_clear_views.xml',
         'views/communication_log_views.xml',
         'views/conversation_views.xml',
         'views/chat_views.xml',

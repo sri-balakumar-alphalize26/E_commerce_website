@@ -3,11 +3,24 @@
     <t t-name="whatsapp_employee_tracker.ConnectNumberExtra" t-inherit="whatsapp_gateway.ConnectNumberExtra" t-inherit-mode="extension">
         <xpath expr="//div[hasclass('o_wa_extra')]" position="inside">
             <label class="o_wa_label" for="wa_employee">Employee</label>
-            <select id="wa_employee" class="form-select" t-model="state.values.employee_id">
-                <option value="0">Choose the employee</option>
-                <option t-foreach="employeeOptions" t-as="e" t-key="e.id" t-att-value="e.id" t-att-disabled="!!e.taken" t-esc="e.text"/>
-                <option value="new">+ New employee…</option>
-            </select>
+            <div class="o_wa_emp">
+                <input id="wa_employee" type="text" class="form-control" autocomplete="off"
+                       placeholder="Search employee…" t-att-value="employeeText"
+                       t-on-focus="onEmployeeFocus" t-on-input="onEmployeeInput"
+                       t-on-keydown="onEmployeeKey" t-on-blur="onEmployeeBlur"/>
+                <div t-if="state.empOpen" class="o_wa_emp_list">
+                    <button type="button" t-foreach="shownEmployees" t-as="e" t-key="e.id" t-att-disabled="!!e.taken"
+                            t-att-class="{ active: e_index === state.empActive }"
+                            t-on-mousedown.prevent="() => this.pickEmployee(e)">
+                        <span t-esc="e.name"/><span t-if="e.taken" class="text-muted small" t-esc="'has ' + e.taken"/>
+                    </button>
+                    <div t-if="!shownEmployees.length" class="text-muted p-2 small">No employee found.</div>
+                    <button type="button" t-att-class="{ active: state.empActive === shownEmployees.length }"
+                            t-on-mousedown.prevent="newEmployee">
+                        <span>+ New employee<t t-if="state.empSearch.trim()">: <b t-esc="state.empSearch.trim()"/></t></span>
+                    </button>
+                </div>
+            </div>
             <input t-if="state.values.employee_id === 'new'" type="text" class="form-control mt-2" maxlength="80"
                    placeholder="Name of the employee" t-model="state.values.employee_name"/>
         </xpath>

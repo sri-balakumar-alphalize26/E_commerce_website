@@ -4,7 +4,7 @@
         <xpath expr="//label[@for='wa_employee']" position="attributes">
             <attribute name="t-if">!companyMode</attribute>
         </xpath>
-        <xpath expr="//select[@id='wa_employee']" position="attributes">
+        <xpath expr="//div[hasclass('o_wa_emp')]" position="attributes">
             <attribute name="t-if">!companyMode</attribute>
         </xpath>
         <xpath expr="//input[@t-model='state.values.employee_name']" position="attributes">

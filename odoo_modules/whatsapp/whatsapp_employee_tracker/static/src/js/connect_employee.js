@@ -8,6 +8,72 @@ patch(ConnectNumber.prototype, {
     onLoaded(data) {
         super.onLoaded(data);
         Object.assign(this.state.values, { employee_id: 0, employee_name: "" });
+        Object.assign(this.state, { empSearch: "", empOpen: false, empActive: 0 });
+    },
+    // ---- the employee, searched (27 Nov 2026)
+    get shownEmployees() {
+        const word = (this.state.empSearch || "").trim().toLowerCase();
+        return (this.state.data.employees || []).filter((e) => !word || (e.name || "").toLowerCase().includes(word)).slice(0, 50);
+    },
+    get employeeText() {
+        if (this.state.empOpen) {
+            return this.state.empSearch;
+        }
+        const v = this.state.values;
+        if (String(v.employee_id) === "new") {
+            return _t("+ New employee");
+        }
+        const one = (this.state.data.employees || []).find((e) => e.id === Number(v.employee_id));
+        return one ? one.name : "";
+    },
+    onEmployeeFocus(ev) {
+        this.state.empSearch = "";
+        this.state.empActive = 0;
+        this.state.empOpen = true;
+        ev.target.value = "";               // a new search, never after the chosen name
+    },
+    onEmployeeInput(ev) {
+        this.state.empSearch = ev.target.value;
+        this.state.empActive = 0;
+        this.state.empOpen = true;
+    },
+    onEmployeeKey(ev) {
+        const list = this.shownEmployees;
+        if (ev.key === "ArrowDown") {
+            ev.preventDefault();
+            this.state.empActive = Math.min(this.state.empActive + 1, list.length);
+        } else if (ev.key === "ArrowUp") {
+            ev.preventDefault();
+            this.state.empActive = Math.max(this.state.empActive - 1, 0);
+        } else if (ev.key === "Enter") {
+            ev.preventDefault();
+            const e = list[this.state.empActive];
+            if (e && !e.taken) {
+                this.pickEmployee(e);
+            } else if (this.state.empActive === list.length) {
+                this.newEmployee();
+            }
+            ev.target.blur();
+        } else if (ev.key === "Escape") {
+            this.state.empOpen = false;
+            ev.target.blur();
+        }
+    },
+    onEmployeeBlur() {
+        setTimeout(() => (this.state.empOpen = false), 150);
+    },
+    pickEmployee(e) {
+        if (e.taken) {
+            return;
+        }
+        this.state.values.employee_id = e.id;
+        this.state.values.employee_name = "";
+        this.state.empOpen = false;
+    },
+    newEmployee() {
+        this.state.values.employee_id = "new";
+        this.state.values.employee_name = (this.state.empSearch || "").trim();
+        this.state.empOpen = false;
     },
     get employeeOptions() {
         return (this.state.data.employees || []).map((e) => ({
