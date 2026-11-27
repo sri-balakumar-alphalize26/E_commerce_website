@@ -46,7 +46,7 @@
     <record id="action_whatsapp_email_help_centre" model="ir.actions.client">
         <field name="name">WhatsApp and Email Help</field>
         <field name="tag">whatsapp_gateway.help</field>
-        <field name="params" eval="{'url': '/whatsapp_email/static/help/help.html?v=15'}"/>
+        <field name="params" eval="{'url': '/whatsapp_email/static/help/help.html?v=16'}"/>
     </record>
 
     <menuitem id="menu_send_documents_guide"

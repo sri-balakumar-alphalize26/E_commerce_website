@@ -1,6 +1,6 @@
 {
     'name': 'WhatsApp and Email Integration',
-    'version': '19.0.5.15.0',
+    'version': '19.0.5.15.1',
     'category': 'Tools',
     'summary': 'Email + auto-send (Sales / Purchase / POS / Invoices) on top of the shared whatsapp_gateway session',
     'description': """
