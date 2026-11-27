@@ -13,3 +13,5 @@ access_whatsapp_optout_manager,whatsapp.optout.manager,model_whatsapp_optout,gro
 access_whatsapp_number_off_system,whatsapp.number.off.system,model_whatsapp_number_off,base.group_system,1,1,1,1
 access_whatsapp_number_panel_system,whatsapp.number.panel.system,model_whatsapp_number_panel,base.group_system,1,1,1,1
 access_whatsapp_connect_try_system,whatsapp.connect.try.system,model_whatsapp_connect_try,base.group_system,1,0,0,1
+access_whatsapp_session_email_wizard_system,whatsapp.session.email.wizard.system,model_whatsapp_session_email_wizard,base.group_system,1,1,1,1
+access_whatsapp_panel_link_wizard_system,whatsapp.panel.link.wizard.system,model_whatsapp_panel_link_wizard,base.group_system,1,1,1,1

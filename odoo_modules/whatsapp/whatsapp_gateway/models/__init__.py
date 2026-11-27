@@ -12,3 +12,4 @@ from . import whatsapp_message
 from . import whatsapp_mixin
 from . import whatsapp_config
 from . import res_partner
+from . import res_config_settings

@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en" data-theme="light" style="color-scheme:light"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WhatsApp Help</title>
+<style>
+:root { --bg:#f4f5f7; --card:#fff; --ink:#1f2430; --muted:#6b7280; --line:#e3e6ea; --brand:#714b67; --brand-ink:#fff; --accent:#017e84; --chip:#eef0f3; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#15171c; --card:#1e2128; --ink:#e8eaee; --muted:#9aa1ad; --line:#2f343d; --brand:#a27a98; --brand-ink:#15171c; --accent:#3fb5ba; --chip:#2a2e36; } }
+:root[data-theme="dark"] { --bg:#15171c; --card:#1e2128; --ink:#e8eaee; --muted:#9aa1ad; --line:#2f343d; --brand:#a27a98; --brand-ink:#15171c; --accent:#3fb5ba; --chip:#2a2e36; }
+* { box-sizing:border-box; } body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+.wrap { max-width:900px; margin:0 auto; padding:24px 16px 40px; } h1 { font-size:22px; margin:0 0 4px; } .sub { color:var(--muted); margin:0 0 20px; }
+h2 { font-size:15px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); margin:22px 0 10px; }
+.grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:12px; }
+.g { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; display:flex; flex-direction:column; }
+.g h3 { margin:0 0 4px; font-size:16px; } .g p { margin:0 0 12px; color:var(--muted); font-size:14px; flex:1; }
+.b { display:flex; gap:8px; } .b a { text-decoration:none; border-radius:8px; padding:7px 14px; font-weight:600; font-size:14px; }
+.s { background:var(--brand); color:var(--brand-ink); } .v { background:var(--chip); color:var(--ink); }
+.order { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px 16px; margin-bottom:6px; font-size:14px; }
+.order ol { margin:6px 0 0; padding-left:20px; }
+</style></head><body><div class="wrap">
+<h1>WhatsApp connector - help</h1>
+<p class="sub">Short guides with arrows and a video each.</p>
+<div class="order"><b>A new database, in this order:</b><ol>
+<li><b>Settings → WhatsApp</b>: type the panel address, paste the link token (it links at once).</li>
+<li><b>WhatsApp Numbers → + Connect a number</b> for each company / employee, scan the QR.</li>
+<li><b>Add email</b> on the number.</li>
+<li>With WhatsApp and Email: its own Help shows the companies and the sending.</li></ol></div>
+<section id="start-here-every-database"><h2>Start here (every database)</h2><div class="grid"><div class="g"><h3>Link a new database</h3><p>Settings → WhatsApp: the panel address + the vendor link token, once per database. And where the vendor copies them.</p><div class="b"><a class="s" href="/whatsapp_gateway/static/src/help/link_panel.html?from=help">Steps &rarr;</a><a class="v" href="/whatsapp_gateway/static/src/help/video.html?v=/whatsapp_gateway/static/src/help/link_panel.webm&amp;t=Link%20a%20new%20database&amp;back=/whatsapp_gateway/static/src/help/help.html">&#9654; Video</a></div></div><div class="g"><h3>Connect and look after numbers</h3><p>Scan a number for a company, scan again, check, turn off / on.</p><div class="b"><a class="s" href="/whatsapp_gateway/static/src/help/connect_number.html?from=help">Steps &rarr;</a><a class="v" href="/whatsapp_gateway/static/src/help/video.html?v=/whatsapp_gateway/static/src/help/connect_number.webm&amp;t=Connect%20and%20look%20after%20numbers&amp;back=/whatsapp_gateway/static/src/help/help.html">&#9654; Video</a></div></div><div class="g"><h3>Give a number its e-mail</h3><p>Gmail, Zoho, Microsoft 365, Yahoo or any mail server: get the app password, Add email.</p><div class="b"><a class="s" href="/whatsapp_gateway/static/src/help/email_password.html?from=help">Steps &rarr;</a><a class="v" href="/whatsapp_gateway/static/src/help/video.html?v=/whatsapp_gateway/static/src/help/email_password.webm&amp;t=Give%20a%20number%20its%20e-mail&amp;back=/whatsapp_gateway/static/src/help/help.html">&#9654; Video</a></div></div></div></section><section id="wa-tracker"><h2>WA Tracker</h2><div class="grid"><div class="g"><h3>Employees' numbers, chats and alerts</h3><p>Give numbers to employees, watch chats, keyword and tone alerts, offline alerts.</p><div class="b"><a class="s" href="/whatsapp_gateway/static/src/help/wa_tracker.html?from=help">Steps &rarr;</a><a class="v" href="/whatsapp_gateway/static/src/help/video.html?v=/whatsapp_gateway/static/src/help/wa_tracker.webm&amp;t=Employees%27%20numbers%2C%20chats%20and%20alerts&amp;back=/whatsapp_gateway/static/src/help/help.html">&#9654; Video</a></div></div></div></section>
+</div></body></html>

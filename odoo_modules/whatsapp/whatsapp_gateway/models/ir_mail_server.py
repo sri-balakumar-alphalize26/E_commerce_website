@@ -18,6 +18,7 @@ falling back would send precisely the messages the opt-out list exists to stop.
 
 import base64
 import logging
+from email.utils import parseaddr
 
 from odoo import _, api, models
 from odoo.addons.base.models.ir_mail_server import MailDeliveryException
@@ -30,14 +31,31 @@ class IrMailServer(models.Model):
     _inherit = 'ir.mail_server'
 
     @api.model
-    def _wa_gateway_session(self):
-        """The session that should carry Odoo's mail, or an empty recordset."""
+    def _wa_gateway_session(self, message=None):
+        """The session that should carry Odoo's mail, or an empty recordset.
+
+        Mail goes through the gateway only while some session has "Send all
+        email through the gateway" on. Which session carries one message:
+        1. the session whose address is the message's From (each company
+           sends from its own address),
+        2. the current company's chosen e-mail session,
+        3. the main mail session, as before.
+        """
         Session = self.env['whatsapp.session'].sudo()
-        return Session.search([
+        main = Session.search([
             ('active', '=', True),
             ('route_odoo_mail', '=', True),
             ('gateway_api_key', '!=', False),
-        ], limit=1)
+        ], order='id', limit=1)
+        if not main or message is None:
+            return main
+        sender = (parseaddr(str(message.get('From') or ''))[1] or '').strip().lower()
+        if sender:
+            for session in Session.search([('active', '=', True), ('gateway_api_key', '!=', False),
+                                           ('use_email', '=', True), ('authorized_email', '!=', False)]):
+                if (session.authorized_email or '').strip().lower() == sender:
+                    return session
+        return Session._mail_session_of_company(self.env.company.id) or main
 
     @staticmethod
     def _wa_parts(message):
@@ -81,7 +99,7 @@ class IrMailServer(models.Model):
         return super()._connect__(*args, **kwargs)
 
     def send_email(self, message, mail_server_id=None, smtp_server=None, **kwargs):
-        session = self._wa_gateway_session()
+        session = self._wa_gateway_session(message)
         if not session:
             return super().send_email(
                 message, mail_server_id=mail_server_id, smtp_server=smtp_server, **kwargs)

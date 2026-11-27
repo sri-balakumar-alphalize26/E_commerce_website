@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="whatsapp_gateway.HelpDialog">
+        <Dialog title="props.title" size="'xl'" footer="false" withBodyPadding="false" contentClass="'o_wa_help_dialog'">
+            <div class="o_wa_help_body">
+                <div t-if="!state.loaded" class="o_wa_help_loading">
+                    <i class="fa fa-circle-o-notch fa-spin fa-2x" role="img" aria-label="Loading"/>
+                    <span>Loading the guide...</span>
+                </div>
+                <iframe class="o_wa_help_frame" t-att-src="src" t-att-title="props.title"
+                        allow="fullscreen; autoplay" allowfullscreen="allowfullscreen" t-on-load="onLoad"/>
+            </div>
+        </Dialog>
+    </t>
+
+    <t t-name="whatsapp_gateway.HelpLink">
+        <a href="#" class="btn btn-link o_wa_help_link" t-on-click.prevent="onClick">
+            <i class="fa fa-question-circle me-1"/><t t-esc="props.label"/>
+        </a>
+    </t>
+</templates>

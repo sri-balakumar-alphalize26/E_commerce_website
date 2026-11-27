@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_whatsapp_panel_link_wizard_form" model="ir.ui.view">
+        <field name="name">whatsapp.panel.link.wizard.form</field>
+        <field name="model">whatsapp.panel.link.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Link to WhatsApp panel">
+                <field name="linked" invisible="1"/>
+                <div class="alert alert-success" role="status" invisible="not linked">
+                    <b>Linked.</b> <field name="linked_text" readonly="1" nolabel="1" class="oe_inline"/>
+                    <div class="small">Linking again is safe: nothing is made twice.</div>
+                </div>
+                <div class="alert alert-info" role="status" invisible="linked">
+                    Paste the <b>link token</b> of your vendor - from the WhatsApp panel, the vendor's page,
+                    <b>Odoo link token</b> → Copy. The same token for every database. It links this database once
+                    for every WhatsApp module here (WhatsApp and Email, WA Tracker, Sales Automation).
+                </div>
+                <group>
+                    <field name="panel_url" placeholder="https://whatsapp.369ai.biz"/>
+                    <field name="link_token" placeholder="the vendor's link token" password="True"/>
+                    <field name="this_odoo" readonly="1"/>
+                </group>
+                <footer>
+                    <button name="action_link" type="object" string="Link" class="btn-primary"/>
+                    <button name="action_show_steps" type="object" string="View steps"
+                            class="btn-secondary" icon="fa-list-ol"/>
+                    <button name="action_show_video" type="object" string="Watch video"
+                            class="btn-secondary" icon="fa-play-circle"/>
+                    <button name="action_unlink" type="object" string="Forget the link" class="btn-secondary"
+                            invisible="not linked"
+                            confirm="Numbers already connected keep working. New numbers can not be added until it is linked again. Go on?"/>
+                    <button string="Cancel" special="cancel" class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_whatsapp_panel_link" model="ir.actions.act_window">
+        <field name="name">Link to WhatsApp panel</field>
+        <field name="res_model">whatsapp.panel.link.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+</odoo>

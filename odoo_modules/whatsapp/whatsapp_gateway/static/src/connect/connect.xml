@@ -72,21 +72,7 @@
                         <span t-elif="state.country" class="text-muted"><t t-esc="wanted"/>, digits only</span>
                         <div t-if="state.look and state.look.text" t-att-class="state.look.ok ? (state.look.where ? 'text-success' : 'text-muted') : 'text-danger'">
                             <t t-if="state.look.ok and state.look.where">&#10003; </t><t t-esc="state.look.text"/></div>
-                        <div t-if="state.look and state.look.move" class="o_wa_move">
-                            <button t-if="!state.move" type="button" class="btn btn-outline-danger btn-sm" t-att-disabled="state.moveBusy" t-on-click="moveAsk">
-                                <i t-if="state.moveBusy" class="fa fa-spinner fa-spin me-1"/>Move it here</button>
-                            <t t-else="">
-                                <div>A code was sent to this number's own WhatsApp. Open <b>Message yourself</b> on that phone. The number stops in the other database.</div>
-                                <div class="d-flex gap-2 mt-2">
-                                    <input type="text" inputmode="numeric" autocomplete="one-time-code" class="form-control" placeholder="6 digits" aria-label="Code"
-                                           t-att-value="state.moveCode" t-on-input="onMoveCode" t-on-keydown="onMoveKey"/>
-                                    <button type="button" class="btn btn-primary" t-att-disabled="state.moveBusy or state.moveCode.length !== 6" t-on-click="moveCheck">Move</button>
-                                    <button type="button" class="btn btn-link" t-att-disabled="state.moveBusy" t-on-click="moveAsk">New code</button>
-                                </div>
-                            </t>
-                            <div t-if="state.moveError" class="text-danger" role="alert" t-esc="state.moveError"/>
-                        </div>
-                        <div t-if="state.check and !(state.look and state.look.text)" class="text-muted"><i class="fa fa-spinner fa-spin"/> Looking in the panel…</div>
+                        <div t-elif="state.check" class="text-muted"><i class="fa fa-spinner fa-spin"/> Looking in the panel…</div>
                     </div>
                     </t>
 
@@ -103,7 +89,11 @@
                     <t t-if="needsKey">
                         <div class="alert alert-warning mt-3 mb-2" role="status">
                             <t t-if="state.look and state.look.key" t-esc="state.look.text"/>
-                            <t t-elif="!state.data.has_session">The first number of this database needs its key from the WhatsApp panel, once.</t>
+                            <t t-elif="!state.data.has_session">
+                                This database is not linked to the WhatsApp panel yet.
+                                <button type="button" class="btn btn-primary btn-sm ms-1" t-on-click="openLink">Link to WhatsApp panel</button>
+                                <span class="d-block small mt-1">Settings &#8594; WhatsApp: the panel address and your vendor's link token. Or paste a number's key below.</span>
+                            </t>
                             <t t-elif="state.data.may_add">This database has all <t t-esc="state.data.may_add"/> numbers it may have. The panel administrator can allow more.</t>
                             <t t-elif="state.data.why">The WhatsApp panel cannot be asked now: <t t-esc="state.data.why"/></t>
                             <t t-else="">Adding numbers from here is off. The panel administrator switches it on: the database's page, under Numbers.</t>

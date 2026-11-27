@@ -33,6 +33,19 @@
                             class="btn-secondary"
                             invisible="status != 'connected'"
                             help="Ask the panel which number and name this database should use."/>
+                    <button name="action_add_email"
+                            string="Add email"
+                            type="object"
+                            class="btn-secondary"
+                            invisible="not id or not active or not gateway_api_key or authorized_email"
+                            groups="base.group_system"
+                            help="Give this number (its company) its own e-mail account. The password stays on the panel."/>
+                    <button name="action_add_email"
+                            string="Change email"
+                            type="object"
+                            class="btn-secondary"
+                            invisible="not id or not active or not gateway_api_key or not authorized_email"
+                            groups="base.group_system"/>
                     <field name="status" widget="statusbar"
                            statusbar_visible="disconnected,connecting,connected,wrong_number"/>
                 </header>
@@ -106,6 +119,8 @@
                                 <group string="Channels">
                                     <field name="use_whatsapp"/>
                                     <field name="use_email"/>
+                                    <field name="authorized_email" string="Email from" readonly="1"
+                                           invisible="not id" placeholder="no e-mail yet: press Add email"/>
                                     <field name="route_odoo_mail" groups="base.group_system"/>
                                 </group>
                             </group>
@@ -189,6 +204,10 @@
                             groups="base.group_system"/>
                     <button name="action_check_connection" type="object" display="always"
                             string="Check connection" groups="base.group_system"/>
+                    <button name="action_link_panel" type="object" display="always"
+                            string="Link to WhatsApp panel" icon="fa-link" groups="base.group_system"/>
+                    <button name="action_open_help" type="object" display="always"
+                            string="Help (steps + videos)" icon="fa-question-circle"/>
                 </header>
                 <field name="name" string="Name"/>
                 <field name="shown_number" string="Number"/>
@@ -198,7 +217,8 @@
                 <field name="tenant_label" optional="hide"/>
                 <field name="company_id"
                        groups="base.group_multi_company"
-                       optional="hide"/>
+                       optional="show"/>
+                <field name="authorized_email" string="Email" optional="show"/>
                 <field name="status" widget="badge" invisible="not active"
                        decoration-success="status == 'connected'"
                        decoration-danger="status in ('wrong_number', 'error', 'disconnected')"

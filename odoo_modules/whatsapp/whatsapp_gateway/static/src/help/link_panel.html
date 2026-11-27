@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="en" data-theme="light" style="color-scheme:light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Link a new database</title>
+<style>
+:root {
+  --bg: #f4f5f7; --card: #ffffff; --ink: #1f2430; --muted: #6b7280; --line: #e3e6ea;
+  --brand: #714b67; --brand-ink: #ffffff; --accent: #017e84; --screen: #fbfbfc; --chip: #eef0f3;
+  --ok: #1e8e3e; --ok-bg: #e6f4ea; --warn-bg: #fff4e5; --warn-ink: #8a4b00; --ring: rgba(1,126,132,.35);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #15171c; --card: #1e2128; --ink: #e8eaee; --muted: #9aa1ad; --line: #2f343d;
+    --brand: #a27a98; --brand-ink: #15171c; --accent: #3fb5ba; --screen: #23262e; --chip: #2a2e36;
+    --ok: #5bd17d; --ok-bg: #173523; --warn-bg: #3a2a12; --warn-ink: #ffcf8a; --ring: rgba(63,181,186,.35);
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #15171c; --card: #1e2128; --ink: #e8eaee; --muted: #9aa1ad; --line: #2f343d;
+  --brand: #a27a98; --brand-ink: #15171c; --accent: #3fb5ba; --screen: #23262e; --chip: #2a2e36;
+  --ok: #5bd17d; --ok-bg: #173523; --warn-bg: #3a2a12; --warn-ink: #ffcf8a; --ring: rgba(63,181,186,.35);
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+.wrap { max-width: min(1280px, 100%); margin: 0 auto; padding: 20px 16px 40px; }
+.vid { text-decoration: none; display: inline-block; }
+.full { margin-left: 6px; border: 1px solid var(--line); background: var(--card); color: var(--ink); border-radius: 999px; padding: 6px 14px; cursor: pointer; font: inherit; }
+/* full screen: the card fills the screen, the screenshot as large as it fits */
+.card:fullscreen { overflow: auto; border-radius: 0; display: flex; flex-direction: column; }
+.card:fullscreen .slide { flex: 1; display: flex; flex-direction: column; }
+.card:fullscreen .screen { flex: 1; }
+h1 { font-size: 20px; margin: 0 0 4px; }
+.sub { color: var(--muted); margin: 0 0 14px; }
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; align-items: center; }
+.tab { border: 1px solid var(--line); background: var(--card); color: var(--ink); border-radius: 999px; padding: 6px 14px; cursor: pointer; font: inherit; }
+.tab[aria-selected="true"] { background: var(--brand); color: var(--brand-ink); border-color: var(--brand); }
+.play { margin-left: auto; border: 1px solid var(--line); background: var(--card); color: var(--ink); border-radius: 999px; padding: 6px 14px; cursor: pointer; font: inherit; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 16px 0; }
+.count { color: var(--muted); font-size: 13px; white-space: nowrap; }
+.title { font-size: 18px; font-weight: 600; margin: 0; }
+.text { padding: 6px 16px 12px; margin: 0; }
+.text b { color: var(--accent); }
+.screen { margin: 0 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--screen); position: relative; overflow: hidden; min-height: 220px; }
+.bar { display: flex; align-items: center; gap: 6px; padding: 7px 10px; border-bottom: 1px solid var(--line); background: var(--chip); }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--line); }
+.url { flex: 1; margin-left: 6px; background: var(--card); border-radius: 6px; padding: 3px 10px; font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.body { padding: 14px; display: grid; gap: 8px; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); font-size: 14px; }
+.row .val { color: var(--muted); font-size: 13px; text-align: right; }
+.row.ghost { opacity: .55; }
+.row.okrow { background: var(--ok-bg); border-color: transparent; color: var(--ok); font-weight: 600; justify-content: flex-start; }
+.btn { display: inline-block; padding: 6px 14px; border-radius: 6px; background: var(--accent); color: #fff; font-size: 13px; font-weight: 600; }
+.input { flex: 1; max-width: 62%; border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; font-size: 13px; color: var(--muted); background: var(--screen); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.typing::after { content: '|'; animation: blink 1s steps(1) infinite; color: var(--accent); }
+@keyframes blink { 50% { opacity: 0; } }
+.secret { font-family: ui-monospace, Consolas, monospace; letter-spacing: 2px; font-size: 16px; }
+.warn { background: var(--warn-bg); color: var(--warn-ink); padding: 10px 14px; font-size: 14px; border-bottom: 1px solid var(--line); }
+.qr { width: 92px; height: 92px; margin: 4px auto; background:
+  conic-gradient(var(--ink) 0 25%, transparent 0 50%, var(--ink) 0 75%, transparent 0) 0 0/18px 18px; border: 6px solid var(--card); outline: 1px solid var(--line); }
+.target { position: relative; box-shadow: 0 0 0 3px var(--ring); animation: pulse 1.6s ease-in-out infinite; }
+/* a real screenshot: the highlight sits on the exact button */
+.shot { position: relative; line-height: 0; background: #fff; width: fit-content; max-width: 100%; margin: 0 auto; }
+.shot img { width: auto; max-width: 100%; height: auto; display: block; cursor: zoom-in; }
+.shot .hl { position: absolute; border: 3px solid #e8590c; border-radius: 7px; box-sizing: content-box;
+  margin: -6px 0 0 -6px; padding: 3px; animation: hl 1.6s ease-in-out infinite; pointer-events: none; }
+@keyframes hl { 0%,100% { box-shadow: 0 0 0 3px rgba(232,89,12,.25); } 50% { box-shadow: 0 0 0 10px rgba(232,89,12,.15); } }
+.shot .num { position: absolute; transform: translate(-50%, -115%); background: #e8590c; color: #fff; font: 700 13px/1 system-ui;
+  padding: 5px 8px; border-radius: 12px; white-space: nowrap; pointer-events: none; }
+.shot .num.below { transform: translate(-50%, 35%); }
+@keyframes pulse { 0%,100% { box-shadow: 0 0 0 2px var(--ring); } 50% { box-shadow: 0 0 0 7px var(--ring); } }
+.pointer { position: absolute; width: 26px; height: 26px; pointer-events: none; z-index: 3; transition: left .9s cubic-bezier(.3,.7,.3,1), top .9s cubic-bezier(.3,.7,.3,1); filter: drop-shadow(0 2px 2px rgba(0,0,0,.3)); }
+.pointer.click { animation: tap .5s ease-out 1s 2; }
+@keyframes tap { 50% { transform: scale(.8); } }
+.slide { animation: in .35s ease-out; }
+@keyframes in { from { opacity: 0; transform: translateX(18px); } to { opacity: 1; transform: none; } }
+.tip { margin: 12px 16px 0; padding: 8px 12px; border-left: 3px solid var(--accent); background: var(--chip); border-radius: 6px; font-size: 13px; }
+.tip.warn { border-color: var(--warn-ink); background: var(--warn-bg); color: var(--warn-ink); }
+.nav { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 16px 16px; }
+.arrow { border: 0; border-radius: 8px; padding: 9px 18px; font: inherit; font-weight: 600; cursor: pointer; }
+.arrow.prev { background: var(--chip); color: var(--ink); }
+.arrow.next { background: var(--brand); color: var(--brand-ink); }
+.arrow:disabled { opacity: .4; cursor: default; }
+.dots { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+.dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--line); display: block; }
+.dots i.on { background: var(--brand); width: 20px; border-radius: 4px; }
+.progress { height: 3px; background: var(--accent); width: 0; }
+.progress.run { animation: fill linear forwards; }
+@keyframes fill { to { width: 100%; } }
+.foot { color: var(--muted); font-size: 12px; margin-top: 12px; }
+/* inside the Odoo Help pop-up: compact, everything on one screen */
+.framed .wrap { padding: 10px 14px 6px; }
+.framed .foot { display: none; }
+.framed h1 { font-size: 18px; margin: 0; }
+.framed .sub { margin: 0 0 8px; }
+.framed .top { margin: 0 0 4px; }
+.framed .tabs { margin-bottom: 8px; }
+.framed .nav { padding: 10px 16px 12px; }
+.framed .text { padding: 4px 16px 8px; }
+.top { display: flex; align-items: center; gap: 12px; margin: 0 0 10px; font-size: 14px; }
+.top[hidden] { display: none; }
+.top a { background: var(--chip); color: var(--ink); text-decoration: none; font-weight: 600; border-radius: 8px; padding: 7px 14px; }
+.top a:hover { background: var(--line); }
+.top h1 { margin: 0; }
+.arrow.prev:disabled { visibility: hidden; }   /* first step: no "Previous" at all */
+/* screenshot zoom: over the guide, never a new tab */
+.lb { position: fixed; inset: 0; z-index: 50; background: rgba(10,12,16,.86); display: none; align-items: center; justify-content: center; padding: 24px; cursor: zoom-out; }
+.lb.on { display: flex; }
+.lb img { max-width: 100%; max-height: 100%; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,.5); background: #fff; }
+.lb button { position: absolute; top: 12px; right: 14px; border: 0; border-radius: 999px; width: 38px; height: 38px; font-size: 20px; line-height: 1; cursor: pointer; background: #fff; color: #1f2430; }
+@media (max-width: 520px) { .arrow { padding: 9px 12px; } .row { flex-wrap: wrap; } .input { max-width: 100%; } .play { margin-left: 0; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top" id="top" hidden><a href="/whatsapp_gateway/static/src/help/help.html">&larr; All guides</a></div>
+  <h1>Link a new database to WhatsApp and e-mail</h1>
+  <p class="sub">One time per database. Follow the arrows, press Play, or <a class="vidlink" href="/whatsapp_gateway/static/src/help/video.html?v=/whatsapp_gateway/static/src/help/link_panel.webm&amp;t=Link%20a%20new%20database&amp;back=/whatsapp_gateway/static/src/help/link_panel.html" style="color:var(--accent)">watch the video</a>.</p>
+  <div class="tabs" id="tabs"></div>
+  <div class="card" id="card"></div>
+  <p class="foot">Keyboard: &larr; / &rarr;. <a href="/whatsapp_gateway/static/src/help/help.html" style="color:var(--accent)">All guides of this module</a>.</p>
+</div>
+<div class="lb" id="lb" role="dialog" aria-label="Screenshot"><button type="button" aria-label="Close">&times;</button><img alt=""></div>
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="hand" viewBox="0 0 24 24"><path fill="#fff" stroke="#222" stroke-width="1.3" stroke-linejoin="round"
+    d="M9 2.8c.9 0 1.6.7 1.6 1.6v6.3l.6-.1c.9-.1 1.6.5 1.7 1.3l.1.4.4-.1c.9-.1 1.6.5 1.7 1.3l.1.5.3-.1c.9-.1 1.7.5 1.8 1.4l.4 3.4c.3 2.6-1.6 4.9-4.2 5.2l-1.6.1c-1.6.1-3.1-.6-4-1.9L4 16.7c-.5-.7-.3-1.6.4-2.1.7-.4 1.5-.3 2 .3l1 1.2V4.4c0-.9.7-1.6 1.6-1.6z"/></symbol>
+</svg>
+<script>
+const SHOTS = {"gateway/01_numbers_link": {"src": "/whatsapp_gateway/static/src/help/shots/gateway/01_numbers_link.png", "box": [39.91, 9.81, 8.03, 22.5]}, "gateway/04_connect_button": {"src": "/whatsapp_gateway/static/src/help/shots/gateway/04_connect_button.png", "box": [24.0, 9.81, 6.77, 22.5]}, "gateway/05_connect_form": {"src": "/whatsapp_gateway/static/src/help/shots/gateway/05_connect_form.png", "box": [28.27, 39.72, 43.46, 6.0]}, "gateway/06_connect_next": {"src": "/whatsapp_gateway/static/src/help/shots/gateway/06_connect_next.png", "box": [21.67, 70.83, 56.67, 5.56]}, "gateway/07_number_add_email": {"src": "/whatsapp_gateway/static/src/help/shots/gateway/07_number_add_email.png", "box": [42.13, 18.75, 9.04, 5.89]}, "gateway/08_email_form": {"src": "/whatsapp_gateway/static/src/help/shots/gateway/08_email_form.png", "box": [19.42, 34.24, 28.98, 5.26]}, "gateway/09_email_steps": {"src": "/whatsapp_gateway/static/src/help/shots/gateway/09_email_steps.png", "box": [75.02, 70.86, 20.4, 6.68]}, "gateway/10_email_save": {"src": "/whatsapp_gateway/static/src/help/shots/gateway/10_email_save.png", "box": [2.84, 87.56, 10.59, 6.68]}, "gateway/24_panel_address": {"src": "/whatsapp_gateway/static/src/help/shots/gateway/24_panel_address.png", "box": null}, "gateway/25_panel_token": {"src": "/whatsapp_gateway/static/src/help/shots/gateway/25_panel_token.png", "box": null}, "gateway/20_settings_app": {"src": "/whatsapp_gateway/static/src/help/shots/gateway/20_settings_app.png", "box": [25.0, 46.43, 18.94, 7.14]}, "gateway/21_settings_address": {"src": "/whatsapp_gateway/static/src/help/shots/gateway/21_settings_address.png", "box": [35.69, 43.83, 28.62, 12.33]}, "gateway/22_settings_token": {"src": "/whatsapp_gateway/static/src/help/shots/gateway/22_settings_token.png", "box": [35.69, 45.67, 28.62, 8.67]}, "gateway/23_settings_link": {"src": "/whatsapp_gateway/static/src/help/shots/gateway/23_settings_link.png", "box": [42.85, 44.5, 14.31, 11.0]}, "tracker/01_employee_sessions": {"src": "/whatsapp_gateway/static/src/help/shots/tracker/01_employee_sessions.png", "box": [4.57, 19.93, 94.43, 7.04]}, "tracker/02_chat_view": {"src": "/whatsapp_gateway/static/src/help/shots/tracker/02_chat_view.png", "box": [3.57, -9.21, 96.43, 118.42]}, "tracker/03_comm_log": {"src": "/whatsapp_gateway/static/src/help/shots/tracker/03_comm_log.png", "box": [4.57, 19.93, 96.1, 30.46]}, "tracker/04_dashboard": {"src": "/whatsapp_gateway/static/src/help/shots/tracker/04_dashboard.png", "box": [3.57, -9.21, 96.43, 118.42]}, "tracker/05_alert_rules": {"src": "/whatsapp_gateway/static/src/help/shots/tracker/05_alert_rules.png", "box": [3.57, -9.21, 96.43, 118.42]}, "tracker/06_owner_numbers": {"src": "/whatsapp_gateway/static/src/help/shots/tracker/06_owner_numbers.png", "box": [3.57, -9.21, 96.43, 118.42]}, "email/01_settings_from": {"src": "/whatsapp_email/static/src/help/shots/email/01_settings_from.png", "box": [32.27, 47.9, 35.46, 4.19]}, "email/02_settings_pdf": {"src": "/whatsapp_email/static/src/help/shots/email/02_settings_pdf.png", "box": [32.27, 48.02, 35.46, 3.95]}, "email/02b_sender_name": {"src": "/whatsapp_email/static/src/help/shots/email/02b_sender_name.png", "box": [62.08, 53.06, 35.46, 4.19]}, "email/03_make_main": {"src": "/whatsapp_email/static/src/help/shots/email/03_make_main.png", "box": [78.71, 86.34, 9.4, 4.11]}, "email/04_tab_sales": {"src": "/whatsapp_email/static/src/help/shots/email/04_tab_sales.png", "box": [62.08, 59.02, 1.62, 4.11]}, "email/05_tab_purchase": {"src": "/whatsapp_email/static/src/help/shots/email/05_tab_purchase.png", "box": [34.46, 91.79, 1.62, 4.11]}, "email/06_tab_pos": {"src": "/whatsapp_email/static/src/help/shots/email/06_tab_pos.png", "box": [34.46, 67.59, 1.62, 4.11]}, "email/07_per_company": {"src": "/whatsapp_email/static/src/help/shots/email/07_per_company.png", "box": [4.57, 31.56, 94.43, 11.15]}, "email/07b_companies_list": {"src": "/whatsapp_email/static/src/help/shots/email/07b_companies_list.png", "box": [4.57, 31.56, 94.43, 11.15]}, "email/14_change_company_button": {"src": "/whatsapp_email/static/src/help/shots/email/14_change_company_button.png", "box": [21.69, 48.02, 10.93, 3.95]}, "email/15_change_company_popup": {"src": "/whatsapp_email/static/src/help/shots/email/15_change_company_popup.png", "box": [4.78, 51.06, 90.74, 16.31]}, "email/16_change_company_confirm": {"src": "/whatsapp_email/static/src/help/shots/email/16_change_company_confirm.png", "box": [2.84, 84.08, 7.3, 8.55]}, "email/08_order_button": {"src": "/whatsapp_email/static/src/help/shots/email/08_order_button.png", "box": [41.94, 20.19, 14.81, 6.35]}, "email/09_send_form": {"src": "/whatsapp_email/static/src/help/shots/email/09_send_form.png", "box": [68.13, 65.93, 2.09, 4.96]}, "email/10_send_button": {"src": "/whatsapp_email/static/src/help/shots/email/10_send_button.png", "box": [2.84, 86.63, 6.77, 7.12]}, "email/11_easy_purchase": {"src": "/whatsapp_email/static/src/help/shots/email/11_easy_purchase.png", "box": [36.3, 18.75, 14.81, 5.89]}, "email/13_email_received": {"src": "/whatsapp_email/static/src/help/shots/email/13_email_received.png", "box": [5.56, 17.5, 88.89, 5.53]}, "email/12_whatsapp_received": {"src": "/whatsapp_email/static/src/help/shots/email/12_whatsapp_received.png", "box": [45.56, 59.36, 50.0, 29.22]}};
+const G = {
+  client: {
+    name: 'New database',
+    steps: [
+      { title: 'You receive two things', url: 'from your vendor',
+        text: 'Your vendor sends you the <b>WhatsApp panel address</b> and the <b>link token</b> - the same two for every database of that vendor.',
+        shot: 'gateway/25_panel_token', box: [5.46, 30, 89, 49], mark: 'Address + token' },
+      { title: 'Install the modules', url: 'Odoo → Apps',
+        text: 'In <b>Apps</b> install what you need: <b>WhatsApp and Email</b>, <b>WA Tracker</b>, <b>Sales Automation</b> - any mix. The connector comes with them.',
+        rows: [{ t: 'WhatsApp & Email Connector', v: 'comes with them', ghost: true }, { t: 'WhatsApp and Email', v: 'Install', target: true },
+               { t: 'WA Tracker', v: 'optional' }, { t: 'Sales Automation', v: 'optional' }],
+        tip: 'Each works alone. Installed together they share the same link and the same numbers.' },
+      { title: 'Open Settings → WhatsApp', url: 'Settings → WhatsApp',
+        text: 'Open <b>Settings</b> and choose <b>WhatsApp</b> on the left. (The <b>Link to WhatsApp panel</b> button on the numbers list opens the same page.)',
+        shot: 'gateway/20_settings_app', mark: '1. WhatsApp' },
+      { title: 'Type the panel address', url: 'Settings → WhatsApp',
+        text: 'Type the <b>WhatsApp panel address</b> exactly as sent - with several panels, this decides which one this database uses.',
+        shot: 'gateway/21_settings_address', mark: '2. Address' },
+      { title: 'Paste the link token', url: 'Settings → WhatsApp',
+        text: 'Paste the <b>link token</b>. It is checked by the panel and not kept in Odoo.',
+        shot: 'gateway/22_settings_token', mark: '3. Token' },
+      { title: 'Press Link', url: 'Settings → WhatsApp',
+        text: 'Press <b>Link</b> (it says <b>Link again</b> on a database linked before). Green "Linked to …" = done, for WhatsApp and Email, WA Tracker and Sales Automation alike. Linking again later is safe.',
+        shot: 'gateway/23_settings_link', mark: '4. Link' },
+      { title: 'Press + Connect a number', url: 'Configuration → WhatsApp Numbers',
+        text: 'Back on the numbers list press <b>+ Connect a number</b>.',
+        shot: 'gateway/04_connect_button', mark: '5. Click' },
+      { title: 'Choose, type the number', url: 'Connect a number',
+        text: 'Choose the <b>employee</b> (WA Tracker) or the <b>company</b>, the <b>country</b>, type the <b>WhatsApp number</b>.',
+        shot: 'gateway/05_connect_form', mark: '6. Fill in' },
+      { title: 'Next: scan', url: 'Connect a number',
+        text: 'Press <b>Next: scan</b>. A QR code appears.',
+        shot: 'gateway/06_connect_next', mark: '7. Next' },
+      { title: 'Scan the QR with that phone', url: 'Connect a number → Scan',
+        text: 'On that phone: <b>WhatsApp → Settings → Linked devices → Link a device</b>, scan the QR. It turns green by itself.',
+        rows: [{ kind: 'qr' }, { t: 'Waiting for the scan…', v: 'about 10 seconds', target: true }],
+        tip: 'Only that number\'s phone is accepted.' },
+      { title: 'Open the number → Add email', url: 'WhatsApp Numbers → the number',
+        text: 'Open the number and press <b>Add email</b> to give it an e-mail address.',
+        shot: 'gateway/07_number_add_email', mark: '8. Add email' },
+      { title: 'Provider, address, app password', url: 'E-mail of the number',
+        text: 'Choose the <b>provider</b>, type <b>Send from</b> (e.g. sales@369ai.biz) and the <b>app password</b>. No app password yet? <b>How to get it?</b> shows the steps.',
+        shot: 'gateway/08_email_form', mark: '9. Choose' },
+      { title: 'Test and save', url: 'E-mail of the number',
+        text: 'Press <b>Test and save</b>: the mail server is tested first, then the number e-mails from that address.',
+        shot: 'gateway/10_email_save', mark: '10. Save' },
+      { title: 'Done: the company sends from it', url: 'WhatsApp and Email → Configuration → Companies',
+        text: 'A company\'s first number becomes its main WhatsApp and e-mail by itself. Check it in <b>Companies</b> - and fill the <b>Sender name</b>.',
+        shot: 'email/07b_companies_list', mark: '11. Check' },
+    ],
+  },
+  vendor: {
+    name: 'Vendor: copy address + token',
+    steps: [
+      { title: 'Open the panel: Link an Odoo database', url: 'WhatsApp panel',
+        text: 'Vendor: sign in to the WhatsApp panel - <b>Link an Odoo database</b> is on your home page. Administrator: <b>Vendors</b> → the vendor.',
+        shot: 'gateway/24_panel_address', box: [5, 10, 90, 20], mark: 'Link an Odoo database' },
+      { title: 'Copy the panel address', url: 'WhatsApp panel → Link an Odoo database',
+        text: 'Press <b>Copy</b> next to <b>WhatsApp panel address</b>.',
+        shot: 'gateway/24_panel_address', box: [84, 44, 10.5, 9.6], mark: 'Copy address' },
+      { title: 'Copy the link token', url: 'WhatsApp panel → Link an Odoo database',
+        text: 'Press <b>Copy</b> next to <b>Link token</b>. Send both to the client - the same two for every database of this vendor.',
+        shot: 'gateway/25_panel_token', box: [84, 68, 10.5, 9.5], mark: 'Copy token' },
+      { title: 'Token shared by mistake?', url: 'WhatsApp panel → Vendors → the vendor',
+        text: '<b>New token</b> (administrator): the old one stops linking new databases; databases linked already keep working.',
+        shot: 'gateway/25_panel_token', box: [5.5, 81.5, 16.5, 10], mark: 'New token' },
+    ],
+  },
+};
+const order = ['client', 'vendor'];
+if (window.top !== window.self) document.documentElement.classList.add('framed');
+const VIDEO = '/whatsapp_gateway/static/src/help/link_panel.webm', VTITLE = 'Link a new database';
+const q = new URLSearchParams(location.search);
+let cur = order.includes(q.get('for')) ? q.get('for') : order[0], step = 0, playing = q.has('play'), timer = null;
+const tabs = document.getElementById('tabs'), card = document.getElementById('card');
+order.forEach(k => { const b = document.createElement('button'); b.className = 'tab'; b.textContent = G[k].name;
+  b.onclick = () => { cur = k; step = 0; draw(); }; tabs.appendChild(b); });
+const play = document.createElement('button'); play.className = 'play'; tabs.appendChild(play);
+// this guide's own video, in the same window; Back returns to this guide
+const videoUrl = '/whatsapp_gateway/static/src/help/video.html?v=' + encodeURIComponent(VIDEO) +
+  '&t=' + encodeURIComponent(VTITLE) + '&back=' + encodeURIComponent(location.pathname + location.search);
+const vid = document.createElement('a'); vid.className = 'full vid'; vid.href = videoUrl; vid.textContent = '🎬 Watch video';
+tabs.appendChild(vid);
+document.querySelectorAll('a.vidlink').forEach(a => { a.href = videoUrl; });
+if (q.get('from') === 'help') document.getElementById('top').hidden = false;
+// ?back=/same/site/page: "Back" returns there (e.g. a module's Help choices); the video link keeps it
+const bk = q.get('back');
+if (bk && bk.startsWith('/') && !bk.startsWith('//')) {
+  const top = document.getElementById('top'), a = top.querySelector('a');
+  top.hidden = false; a.href = bk; a.innerHTML = '&larr; Back';
+  top.appendChild(document.querySelector('h1'));   // one bar: Back + title, like the User Manual
+  const here = location.pathname + '?back=' + encodeURIComponent(bk);
+  document.querySelectorAll('a.vidlink, a.vid').forEach(l => {
+    const u = new URL(l.getAttribute('href'), location.href);
+    if (u.pathname.endsWith('/video.html')) { u.searchParams.set('back', here); l.href = u.pathname + u.search; }
+  });
+}
+play.onclick = () => { playing = !playing; draw(); };
+const full = document.createElement('button'); full.className = 'full'; full.textContent = '⛶ Full screen'; tabs.appendChild(full);
+full.onclick = () => {
+  if (document.fullscreenElement) { document.exitFullscreen(); return; }
+  if (card.requestFullscreen) card.requestFullscreen().then(() => setTimeout(draw, 150)).catch(() => {});
+};
+document.addEventListener('fullscreenchange', () => {
+  full.textContent = document.fullscreenElement ? '✕ Exit full screen' : '⛶ Full screen'; setTimeout(draw, 150);
+});
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function row(r) {
+  const cls = 'row' + (r.ghost ? ' ghost' : '') + (r.target ? ' target' : '');
+  if (r.kind === 'btn') return `<div class="row" style="justify-content:flex-end;border:0;background:none"><span class="btn${r.target ? ' target' : ''}">${esc(r.t)}</span></div>`;
+  if (r.kind === 'input') return `<div class="${cls}"><span>${esc(r.t)}</span><span class="input" data-v="${esc(r.v || '')}"></span></div>`;
+  if (r.kind === 'ok') return `<div class="row okrow">${esc(r.t)}</div>`;
+  if (r.kind === 'secret') return `<div class="${cls}" style="justify-content:center"><span class="secret">${esc(r.t)}</span></div>`;
+  if (r.kind === 'qr') return `<div class="qr" aria-label="QR code"></div>`;
+  return `<div class="${cls}"><span>${esc(r.t)}</span>${r.v ? `<span class="val">${esc(r.v)}</span>` : ''}</div>`;
+}
+function typeIn(box, i) {   // type the example values one box after another
+  const boxes = [...box.querySelectorAll('.input')];
+  const go = n => {
+    if (n >= boxes.length) return;
+    const el = boxes[n], full = el.dataset.v; let k = 0; el.classList.add('typing');
+    const t = setInterval(() => { el.textContent = full.slice(0, ++k);
+      if (k >= full.length) { clearInterval(t); el.classList.remove('typing'); go(n + 1); } }, 28);
+  };
+  go(0);
+}
+// a real screenshot step: {shot: 'gateway/04_connect_button', mark: 'Click here'} (SHOTS is filled by build.py)
+function shotHtml(s) {
+  const sh = s.shot && typeof SHOTS !== 'undefined' ? SHOTS[s.shot] : null;
+  if (!sh) return '';
+  // the marker always stays on the picture
+  let b = s.box || sh.box;
+  if (b) { const x = Math.max(0.5, b[0]), y = Math.max(0.5, b[1]);
+    b = [x, y, Math.min(b[2] - (x - b[0]), 99.5 - x), Math.min(b[3] - (y - b[1]), 99.5 - y)]; }
+  const hl = b ? `<div class="hl target" style="left:${b[0]}%;top:${b[1]}%;width:${b[2]}%;height:${b[3]}%"></div>
+     ${s.mark ? `<div class="num${b[1] < 12 ? ' below' : ''}" style="left:${b[0] + b[2] / 2}%;top:${b[1] < 12 ? b[1] + b[3] : b[1]}%">${esc(s.mark)}</div>` : ''}` : '';
+  return `<div class="shot"><img src="${sh.src}" alt="${esc(s.title)}" onclick="zoom(this)">${hl}</div>`;
+}
+const lb = document.getElementById('lb');
+function zoom(img) { lb.querySelector('img').src = img.src; lb.querySelector('img').alt = img.alt; lb.classList.add('on'); }
+lb.onclick = () => lb.classList.remove('on');
+function fit() {
+  const img = card.querySelector('.shot img');
+  if (!img || !img.naturalWidth) return;
+  const box = document.fullscreenElement || document.documentElement;
+  img.style.maxHeight = '';
+  const over = box.scrollHeight - box.clientHeight;
+  if (over > 0) img.style.maxHeight = Math.max(180, img.getBoundingClientRect().height - over - 2) + 'px';
+}
+addEventListener('resize', () => { fit(); });
+function draw() {
+  clearTimeout(timer);
+  const keepY = scrollY;
+  const g = G[cur], steps = g.steps, s = steps[step];
+  [...tabs.querySelectorAll('.tab')].forEach((b, i) => b.setAttribute('aria-selected', order[i] === cur));
+  play.textContent = playing ? '❚❚ Pause' : '▶ Play';
+  const ms = 5200;
+  card.innerHTML = `
+    ${playing ? `<div class="progress run" style="animation-duration:${ms}ms"></div>` : ''}
+    ${g.warn ? `<div class="warn">⚠ ${g.warn}</div>` : ''}
+    <div class="slide">
+      <div class="head"><h2 class="title">${step + 1}. ${s.title}</h2><span class="count">Step ${step + 1} of ${steps.length}</span></div>
+      <p class="text">${s.text}</p>
+      <div class="screen" id="screen">
+        <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">${esc(s.url)}</span></div>
+        ${shotHtml(s) || `<div class="body">${(s.rows || []).map(row).join('')}</div>`}
+        <svg class="pointer" id="ptr" style="left:85%;top:85%"><use href="#hand"/></svg>
+      </div>
+      ${s.tip ? `<div class="tip">${s.tip}</div>` : ''}
+    </div>
+    <div class="nav">
+      <button class="arrow prev" ${step === 0 ? 'disabled' : ''}>&larr; Previous</button>
+      <div class="dots">${steps.map((_, i) => `<i class="${i === step ? 'on' : ''}"></i>`).join('')}</div>
+      <button class="arrow next">${step === steps.length - 1 ? 'Start again ↺' : 'Next &rarr;'}</button>
+    </div>`;
+  card.querySelector('.prev').onclick = () => { if (step > 0) { step--; draw(); } };
+  card.querySelector('.next').onclick = () => { step = step === steps.length - 1 ? 0 : step + 1; draw(); };
+  const screen = document.getElementById('screen');
+  typeIn(screen);
+  const place = () => setTimeout(() => {
+    const ptr = document.getElementById('ptr'), t = screen.querySelector('.target');
+    if (!ptr) return;
+    if (!t) { ptr.style.display = 'none'; return; }
+    const a = screen.getBoundingClientRect(), b = t.getBoundingClientRect();
+    ptr.style.left = (b.left - a.left + Math.min(b.width * 0.6, Math.max(8, b.width - 14))) + 'px';
+    ptr.style.top = (b.top - a.top + b.height * 0.45) + 'px';
+    ptr.classList.add('click');
+  }, 700);
+  const img = screen.querySelector('.shot img');
+  const ready = () => { fit(); scrollTo(0, keepY); place(); };
+  if (img && !img.complete) img.addEventListener('load', ready, { once: true }); else requestAnimationFrame(ready);
+  if (playing) timer = setTimeout(() => {
+    if (step < steps.length - 1) { step++; draw(); }
+    else if (q.has('play') && !q.has('for') && order.indexOf(cur) < order.length - 1) { cur = order[order.indexOf(cur) + 1]; step = 0; draw(); }   // video: every part
+    else { playing = false; draw(); document.title = 'DONE'; }
+  }, ms);
+}
+document.addEventListener('keydown', e => {
+  if (lb.classList.contains('on')) { if (e.key === 'Escape') { lb.classList.remove('on'); e.stopPropagation(); } return; }
+  if (e.key === 'ArrowRight') card.querySelector('.next').click();
+  if (e.key === 'ArrowLeft') card.querySelector('.prev').click();
+});
+draw();
+</script>
+</body>
+</html>

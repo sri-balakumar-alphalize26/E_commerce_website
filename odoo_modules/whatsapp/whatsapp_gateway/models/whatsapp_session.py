@@ -137,6 +137,18 @@ class WhatsAppSession(models.Model):
     _description = 'WhatsApp Session'
     _rec_name = 'name'
 
+    @api.depends('name', 'authorized_email')
+    @api.depends_context('wa_show_email')
+    def _compute_display_name(self):
+        """Where an e-mail sender is chosen (context wa_show_email) a number is
+        shown as its address: "sales@369ai.biz (+91 70106 16092)" - not as the
+        phone number, which looked like the e-mail was a number."""
+        if not self.env.context.get('wa_show_email'):
+            return super()._compute_display_name()
+        for rec in self:
+            rec.display_name = ('%s (%s)' % (rec.authorized_email, rec.name)) if rec.authorized_email \
+                else _('%s (no e-mail yet)', rec.name)
+
     name = fields.Char(
         'Session Name', required=True, default='Default',
         help='A friendly name for this WhatsApp session',
@@ -684,13 +696,19 @@ class WhatsAppSession(models.Model):
     web_read._readonly = False
 
     @api.model
-    def get_connected_session(self, preferred_id=None):
+    def get_connected_session(self, preferred_id=None, company_id=None):
         """The session that can actually send right now.
+
+        company_id (optional): only that company's numbers. Without it nothing
+        changes - every caller written before it gets the same answer.
 
         Returns an empty recordset when nothing is linked; the caller decides
         what to do about that.
         """
-        sessions = self.sudo().search([('active', '=', True)])
+        domain = [('active', '=', True)]
+        if company_id:
+            domain.append(('company_id', '=', int(company_id)))
+        sessions = self.sudo().search(domain)
         sessions._refresh_state()
         connected = sessions.filtered(lambda s: s.status == 'connected')
         if preferred_id:
@@ -756,15 +774,22 @@ class WhatsAppSession(models.Model):
         local, domain = address.rsplit('@', 1)
         params = self.env['ir.config_parameter'].sudo()
         changed = []
-        for key, value in (('mail.default.from', local),
-                           ('mail.catchall.domain', domain)):
-            if params.get_param(key) != value:
-                params.set_param(key, value)
-                changed.append('%s=%s' % (key, value))
+        # The two parameters are for the whole database, while every number
+        # (company) may have its own address now. Only the main mail session
+        # (the oldest one carrying Odoo's mail) sets them; otherwise each sync
+        # would flip them to whichever session ran last.
+        main = self.sudo().search([('active', '=', True), ('route_odoo_mail', '=', True),
+                                   ('gateway_api_key', '!=', False)], order='id', limit=1)
+        if not main or main == self:
+            for key, value in (('mail.default.from', local),
+                               ('mail.catchall.domain', domain)):
+                if params.get_param(key) != value:
+                    params.set_param(key, value)
+                    changed.append('%s=%s' % (key, value))
         # Without this the author of every message is OdooBot, and Odoo shows
         # odoobot@example.com as the sender in the chatter even though the
         # gateway sends from the vendor's account.
-        company = self.env.company.sudo()
+        company = (self.company_id or self.env.company).sudo()
         if not (company.email or '').strip():
             company.email = address
             changed.append('company.email=%s' % address)
@@ -774,7 +799,7 @@ class WhatsAppSession(models.Model):
         # that does not exist, so it appears as the sender of everything until
         # it is replaced. Only touched while it is still that placeholder.
         bot = self.env.ref('base.partner_root', raise_if_not_found=False)
-        if bot and (bot.email or '').strip().lower().endswith('@example.com'):
+        if (not main or main == self) and bot and (bot.email or '').strip().lower().endswith('@example.com'):
             bot.sudo().email = address
             changed.append('odoobot=%s' % address)
         if changed:
@@ -782,17 +807,21 @@ class WhatsAppSession(models.Model):
         return True
 
     @api.model
-    def mail_from(self):
-        """The address this database should send email as, or ''.
+    def mail_from(self, company_id=None):
+        """The address this database (or, with company_id, that company)
+        should send email as, or ''.
 
         Asked of the gateway once and cached in the usual Odoo parameters, so
         every module can call it without a network round trip and a database
         that was only ever handed a setup key still knows the answer.
         """
         params = self.env['ir.config_parameter'].sudo()
-        session = self.sudo().search(
-            [('active', '=', True), ('use_email', '=', True), ('gateway_api_key', '!=', False)],
-            limit=1)
+        session = self.browse()
+        if company_id:
+            session = self._mail_session_of_company(company_id)
+        mailing = [('active', '=', True), ('use_email', '=', True), ('gateway_api_key', '!=', False)]
+        session = session or self.sudo().search(mailing + [('authorized_email', '!=', False)], order='id', limit=1) \
+            or self.sudo().search(mailing, order='id', limit=1)
         if session:
             # The panel decides the sender for this database. company.email is
             # whatever somebody typed in Odoo and is deliberately NOT a fallback.
@@ -808,6 +837,145 @@ class WhatsAppSession(models.Model):
         if local and domain:
             return '%s@%s' % (local, domain)
         return self.env.company.email or ''
+
+    @api.model
+    def _mail_session_of_company(self, company_id):
+        """The session that sends a company's e-mail, or an empty recordset.
+
+        The company's choice in WhatsApp and Email settings first (field added
+        by whatsapp_email), then a session of that company with e-mail on.
+        """
+        Session = self.sudo()
+        company_id = int(company_id or 0)
+        if not company_id:
+            return Session.browse()
+        Config = self.env['whatsapp.config'].sudo()
+        if 'email_session_id' in Config._fields:
+            chosen = Config.search([('company_id', '=', company_id)], limit=1).email_session_id
+            if chosen and chosen.active and chosen.gateway_api_key:
+                return chosen
+        return Session.search([('active', '=', True), ('use_email', '=', True), ('gateway_api_key', '!=', False),
+                               ('authorized_email', '!=', False), ('company_id', '=', company_id)], limit=1)
+
+    def action_add_email(self):
+        """Open the form that gives this number (its company) its own e-mail."""
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window', 'res_model': 'whatsapp.session.email.wizard',
+            'view_mode': 'form', 'target': 'new', 'name': _("E-mail of %s", self.name),
+            'context': {'default_session_id': self.id},
+        }
+
+    def _panel_save_email(self, values):
+        """Send an e-mail account to the panel for this key; the password
+        stays there. Then read back what the panel now says."""
+        self.ensure_one()
+        self._gateway_call('POST', '/v1/email', values, timeout=(5, 45))
+        self.sudo().write({'use_email': True})
+        config = self._fetch_panel_config()
+        self._sync_mail_from(config)
+        return config
+
+    @api.model
+    def _link_session(self):
+        """This database's link to the panel (Link to WhatsApp panel), as an
+        unsaved session that can only ask the panel - add numbers, e-mail.
+        Empty when the database was never linked that way."""
+        params = self.env['ir.config_parameter'].sudo()
+        key = params.get_param('whatsapp_gateway.link_key') or ''
+        url, token = self._decode_setup_key(key)
+        if not url or not token:
+            return self.browse()
+        # the address typed in Settings wins: with several panels it is the one
+        # this database really reaches (the key carries the panel's own idea)
+        url = params.get_param('whatsapp_gateway.link_url') or url
+        return self.sudo().new({'name': 'WhatsApp panel link', 'gateway_url': url, 'gateway_api_key': token,
+                                'instance_name': 'panel-link', 'use_whatsapp': False, 'use_email': False,
+                                'route_odoo_mail': False})
+
+    @api.model
+    def _panel_link(self, url, token_text):
+        """Link this database to the WhatsApp panel at `url` with the vendor's
+        link token (plain, or a wl1_ token that also carries an address).
+        Settings > WhatsApp and the link form both come here. Answers the
+        panel's reply; raises UserError with the panel's reason."""
+        if not self.env.user.has_group('base.group_system'):
+            raise UserError(_("Only an administrator can link this database."))
+        text = (token_text or '').strip()
+        if text.startswith('wa1_'):
+            raise UserError(_("That is the key of one number, not the link token. Paste it in Connect a number "
+                              "(\"I have a key\"), or copy the vendor's link token from the panel."))
+        token, carried = text, ''
+        if text.startswith('wl1_'):
+            raw = text[4:]
+            try:
+                plain = base64.urlsafe_b64decode(raw + '=' * (-len(raw) % 4)).decode('utf-8')
+                carried, _sep, token = plain.partition('|')
+            except (ValueError, UnicodeDecodeError):
+                token = ''
+        url = (url or carried or '').strip().rstrip('/')
+        if not url:
+            raise UserError(_("Type the WhatsApp panel address (the one your vendor gave you)."))
+        if '://' not in url:
+            url = 'https://' + url
+        if not token:
+            raise UserError(_("Paste the link token from the WhatsApp panel."))
+        params = self.env['ir.config_parameter'].sudo()
+        base = params.get_param('web.base.url', '')
+        try:
+            answer = requests.post(
+                url + '/v1/link', timeout=(5, 30), json={'token': token},
+                headers={'X-Odoo-Db': self.env.cr.dbname, 'X-Odoo-Url': base, 'Content-Type': 'application/json'})
+        except requests.exceptions.RequestException as err:
+            raise UserError(_("The WhatsApp panel at %(url)s cannot be reached from this server. Check the address.\n%(err)s",
+                              url=url, err=err)) from err
+        try:
+            body = answer.json()
+        except ValueError:
+            body = {}
+        if answer.status_code >= 400 or not body.get('key'):
+            raise UserError(_("Not linked: %s",
+                              body.get('detail') or body.get('error') or _("the panel at %(url)s answered %(code)s",
+                                                                           url=url, code=answer.status_code)))
+        params.set_param('whatsapp_gateway.link_key', body['key'])
+        params.set_param('whatsapp_gateway.link_vendor', body.get('vendor') or '')
+        params.set_param('whatsapp_gateway.link_url', url)
+        return body
+
+    @api.model
+    def _panel_link_info(self):
+        params = self.env['ir.config_parameter'].sudo()
+        if params.get_param('whatsapp_gateway.link_key'):
+            return {'linked': True, 'text': _("Linked to %(vendor)s at %(url)s",
+                                              vendor=params.get_param('whatsapp_gateway.link_vendor') or '?',
+                                              url=params.get_param('whatsapp_gateway.link_url') or '?')}
+        keyed = self.sudo().search_count([('active', '=', True), ('gateway_api_key', '!=', False)])
+        if keyed:
+            return {'linked': True, 'text': _("Linked through the keys of %s number(s), pasted from the panel.", keyed)}
+        return {'linked': False, 'text': _("Not linked yet.")}
+
+    @api.model
+    def _wa_help_action(self, url='/whatsapp_gateway/static/src/help/help.html', name=None):
+        """Open a guide (or a .webm video) in the Help pop-up, over the
+        current screen in the same browser tab (whatsapp_gateway.help)."""
+        return {'type': 'ir.actions.client', 'tag': 'whatsapp_gateway.help',
+                'name': name or _("Help - WhatsApp connector"), 'params': {'url': url}}
+
+    def action_open_help(self):
+        """Every WhatsApp micro manual (steps + video), one page."""
+        return self._wa_help_action('/whatsapp_gateway/static/src/help/connect_number.html',
+                                    _("Help - Connect a WhatsApp number"))
+
+    def action_link_panel(self):
+        """Settings > WhatsApp: the panel address and the link token, in one
+        place for every WhatsApp module of this database."""
+        return {'type': 'ir.actions.act_window', 'name': _("Settings"), 'res_model': 'res.config.settings',
+                'view_mode': 'form', 'target': 'inline', 'context': {'module': 'whatsapp_gateway'}}
+
+    def _panel_remove_email(self):
+        self.ensure_one()
+        self._gateway_call('DELETE', '/v1/email', timeout=(5, 20))
+        self.sudo().write({'use_email': False, 'authorized_email': False})
 
     def action_view_messages(self):
         self.ensure_one()
@@ -1220,6 +1388,10 @@ class WhatsAppSession(models.Model):
             payload['bcc'] = bcc
         if reply_to:
             payload['reply_to'] = reply_to
+        # the name shown next to the address (whatsapp_email: the company's "Sender name");
+        # the address itself stays the one on the panel
+        if self.env.context.get('wa_from_name'):
+            payload['from_name'] = str(self.env.context['wa_from_name'])[:80]
         if attachments:
             prepared = []
             for item in attachments:

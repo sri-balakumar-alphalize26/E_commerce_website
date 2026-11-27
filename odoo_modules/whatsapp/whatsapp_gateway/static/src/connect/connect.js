@@ -16,7 +16,7 @@ export class ConnectNumber extends Component {
         this.action = useService("action");
         this.state = useState({
             ready: false, step: "number", busy: false, error: "", data: {},
-            countrySearch: "", countryOpen: false, country: null, number: "", check: "", checkError: "", look: null, move: "", moveCode: "", moveError: "", moveBusy: false, confirm: false, turnOn: null, showKey: false, saved: false,
+            countrySearch: "", countryOpen: false, country: null, number: "", check: "", checkError: "", look: null, confirm: false, turnOn: null, showKey: false, saved: false,
             company: 0, label: "", key: "", values: {}, picked: null,
             session: null, groups: [], groupSearch: "", groupsError: "", done: [],
         });
@@ -58,6 +58,13 @@ export class ConnectNumber extends Component {
             this.state.data = data;
             this.state.country = data.countries.find((c) => c.id === data.country) || null;
             this.state.company = data.company;
+            // opened from a company's WhatsApp and Email settings: that company,
+            // and the number is the company's own (no employee asked for)
+            this.companyMode = !!(params.company_mode || context.company_mode);
+            const wanted = Number(params.company_id || context.company_id || 0);
+            if (wanted && (data.companies || []).some((c) => c.id === wanted)) {
+                this.state.company = wanted;
+            }
             const given = params.give_session_id || context.give_session_id;
             this.state.picked = (data.scanned || []).find((r) => given && r.session_id === given) || null;
             if (data.off) {
@@ -118,7 +125,6 @@ export class ConnectNumber extends Component {
         this.state.check = "";
         this.state.checkError = "";
         this.state.look = null;
-        this.state.move = this.state.moveCode = this.state.moveError = "";
         this.state.confirm = false;
         this.state.turnOn = null;
         clearTimeout(this.lookTimer);
@@ -154,57 +160,6 @@ export class ConnectNumber extends Component {
         }
         return asked === this.asked;
     }
-    // ------------------------------------------------- used by another database
-    /** A code to the number's own WhatsApp. */
-    async moveAsk() {
-        await this.moveCall("move_code", [], () => {
-            this.state.move = "code";
-            this.state.moveCode = "";
-        });
-    }
-    /** Right: the look says it moves here on Next. */
-    async moveCheck() {
-        if (this.state.moveCode.length === 6) {
-            await this.moveCall("move_check", [this.state.moveCode], async () => {
-                this.state.move = "";
-                await this.lookNow();
-            });
-        }
-    }
-    async moveCall(method, args, done) {
-        if (this.state.moveBusy || !this.complete) {
-            return;
-        }
-        const asked = this.asked;
-        this.state.moveBusy = true;
-        this.state.moveError = "";
-        try {
-            const answer = await this.call(method, [this.state.country.id, this.state.number, ...args]);
-            if (asked === this.asked) {
-                if (answer.ok) {
-                    await done();
-                } else {
-                    this.state.moveError = answer.error;
-                }
-            }
-        } catch (err) {
-            if (asked === this.asked) {
-                this.state.moveError = this.message(err);
-            }
-        }
-        this.state.moveBusy = false;
-    }
-    onMoveCode(ev) {
-        this.state.moveCode = ev.target.value.replace(/[^0-9]/g, "").slice(0, 6);
-        ev.target.value = this.state.moveCode;
-    }
-    onMoveKey(ev) {
-        if (ev.key === "Enter") {
-            ev.preventDefault();            // not the form's Next
-            this.moveCheck();
-        }
-    }
-
     /** Whom it is for, in the question. */
     get forWhom() {
         return (this.state.label || "").trim();
@@ -237,8 +192,16 @@ export class ConnectNumber extends Component {
         return this.complete && !!this.state.check && !(this.state.look && !this.state.look.ok)
             && (!this.needsKey || !!this.state.key.trim()) && !this.state.busy;
     }
+    async openLink() {
+        // the link form; back here it reads again, now with the link
+        // Settings > WhatsApp: the panel address and the link token
+        await this.action.doAction({
+            type: "ir.actions.act_window", res_model: "res.config.settings", name: _t("Settings"),
+            views: [[false, "form"]], target: "inline", context: { module: "whatsapp_gateway" },
+        });
+    }
     extraValues() {
-        return this.state.values;
+        return this.companyMode ? { ...this.state.values, for_company: true } : this.state.values;
     }
     async next1() {
         if (!this.ready1) {
@@ -278,9 +241,6 @@ export class ConnectNumber extends Component {
             this.useSession(session);
         } catch (err) {
             this.state.error = this.message(err);
-            if (!this.state.picked && this.complete) {
-                await this.lookNow();           // taken in the meantime: it can be moved
-            }
         }
         this.state.busy = false;
     }

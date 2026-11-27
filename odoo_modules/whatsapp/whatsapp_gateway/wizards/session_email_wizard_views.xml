@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_whatsapp_session_email_wizard_form" model="ir.ui.view">
+        <field name="name">whatsapp.session.email.wizard.form</field>
+        <field name="model">whatsapp.session.email.wizard</field>
+        <field name="arch" type="xml">
+            <form string="E-mail of this number">
+                <div class="alert alert-info" role="status">
+                    Documents of <b><field name="company_id" readonly="1" nolabel="1" class="oe_inline"/></b>
+                    that go out on this number are e-mailed from this address. The mail server is tested
+                    first; the password is kept on the WhatsApp panel, not in Odoo.
+                </div>
+                <field name="session_id" invisible="1"/>
+                <field name="current_email" invisible="1"/>
+                <group>
+                    <group>
+                        <field name="provider"/>
+                        <field name="from_email" placeholder="sales@company.com"/>
+                        <field name="from_name"/>
+                        <field name="password" password="True"
+                               placeholder="app password (empty = keep the saved one)"/>
+                    </group>
+                    <group>
+                        <field name="host" readonly="provider != 'custom'" force_save="1"/>
+                        <field name="port" readonly="provider != 'custom'" force_save="1"/>
+                        <field name="secure" readonly="provider != 'custom'" force_save="1"/>
+                        <field name="username"/>
+                    </group>
+                </group>
+                <div class="alert alert-light d-flex align-items-center justify-content-between gap-2 mb-0" role="status">
+                    <span>
+                        <span invisible="provider != 'gmail'">Gmail needs an <b>app password</b> (2-Step Verification on).</span>
+                        <span invisible="provider not in ('zoho', 'zoho_in')">Zoho needs an <b>app password</b> (MFA on).</span>
+                        <span invisible="provider != 'office365'">Microsoft 365: the administrator must allow <b>Authenticated SMTP</b>; Microsoft is switching it off (end of 2026 by default).</span>
+                        <span invisible="provider != 'yahoo'">Yahoo needs an <b>app password</b>.</span>
+                        <span invisible="provider != 'custom'">Ask your mail provider for the SMTP server, port, username and password.</span>
+                        Not sure how? See it step by step.
+                    </span>
+                    <button name="action_show_steps" type="object" class="btn-primary text-nowrap"
+                            string="How to get it? View steps" icon="fa-play-circle"/>
+                </div>
+                <footer>
+                    <button name="action_save" type="object" string="Test and save" class="btn-primary"/>
+                    <button name="action_remove" type="object" string="Remove e-mail" class="btn-secondary"
+                            invisible="not current_email"
+                            confirm="This number will send no e-mail any more. Go on?"/>
+                    <button string="Cancel" special="cancel" class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>
