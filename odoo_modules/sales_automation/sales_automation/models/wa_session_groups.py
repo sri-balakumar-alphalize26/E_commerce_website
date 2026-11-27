@@ -67,9 +67,11 @@ class WhatsAppSession(models.Model):
         SalesGroup = self.env['sa.sales.group']
         fetched = self._sa_fetch_groups()
 
+        # sudo: every branch's groups, not only the ticked ones - otherwise a
+        # refresh with one branch ticked made copies of the other branches'.
         existing = {
             rec.group_jid: rec
-            for rec in SalesGroup.search([('session_id', '=', self.id)])
+            for rec in SalesGroup.sudo().search([('session_id', '=', self.id)])
         }
         created = 0
         for group in fetched:

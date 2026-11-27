@@ -12,7 +12,8 @@
                 <field name="name" readonly="1"/>
                 <field name="used_by_text" readonly="1" optional="show"/>
                 <field name="group_type"/>
-                <field name="company_id" optional="show"
+                <field name="sa_can_move_branch" column_invisible="1"/>
+                <field name="company_id" optional="show" readonly="not sa_can_move_branch"
                        groups="base.group_multi_company"/>
                 <field name="session_id" readonly="1"/>
                 <field name="employee_session_id" optional="show"/>
@@ -69,8 +70,10 @@
                         <group string="Link">
                             <field name="enabled" widget="boolean_toggle"/>
                             <field name="group_type"/>
+                            <field name="sa_can_move_branch" invisible="1"/>
                             <field name="company_id"
                                    options="{'no_create': True}"
+                                   readonly="id and not sa_can_move_branch"
                                    groups="base.group_multi_company"/>
                             <field name="session_id" options="{'no_create': True}"/>
                             <field name="employee_session_id"

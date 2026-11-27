@@ -73,6 +73,35 @@
             <field name="domain_force">[(1, '=', 1)]</field>
         </record>
 
+        <!-- Branch switch (top right): only the ticked companies' groups and
+             enquiries show. Global (no groups), so managers too. A group with
+             no Company is shared and shows in every branch. -->
+        <record id="rule_sa_sales_group_branch" model="ir.rule">
+            <field name="name">Sales groups: switched-on branches</field>
+            <field name="model_id" ref="model_sa_sales_group"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+        </record>
+        <record id="rule_sa_group_request_branch" model="ir.rule">
+            <field name="name">Group enquiries: switched-on branches</field>
+            <field name="model_id" ref="model_sa_group_request"/>
+            <field name="domain_force">['|', ('group_id.company_id', '=', False), ('group_id.company_id', 'in', company_ids)]</field>
+        </record>
+        <record id="rule_sa_vendor_quote_branch" model="ir.rule">
+            <field name="name">Vendor quotes: switched-on branches</field>
+            <field name="model_id" ref="model_sa_vendor_quote"/>
+            <field name="domain_force">['|', ('request_id.group_id.company_id', '=', False), ('request_id.group_id.company_id', 'in', company_ids)]</field>
+        </record>
+        <record id="rule_sa_after_task_branch" model="ir.rule">
+            <field name="name">After-order tasks: switched-on branches</field>
+            <field name="model_id" ref="model_sa_after_task"/>
+            <field name="domain_force">['|', ('request_id.group_id.company_id', '=', False), ('request_id.group_id.company_id', 'in', company_ids)]</field>
+        </record>
+        <record id="rule_sa_address_link_branch" model="ir.rule">
+            <field name="name">Address links: switched-on branches</field>
+            <field name="model_id" ref="model_sa_address_link"/>
+            <field name="domain_force">['|', ('request_id.group_id.company_id', '=', False), ('request_id.group_id.company_id', 'in', company_ids)]</field>
+        </record>
+
     
     <!-- Administration > Settings gets these menus without a hand-tick on
          every new database: the admin group implies the module's manager group. -->

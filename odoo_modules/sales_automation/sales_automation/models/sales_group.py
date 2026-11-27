@@ -18,7 +18,7 @@ why it is a required choice with no silent default on the vendor side.
 import logging
 
 from odoo import _, api, fields, models
-from odoo.exceptions import ValidationError
+from odoo.exceptions import UserError, ValidationError
 
 from odoo.addons.whatsapp_employee_tracker.models.phone_digits import same_number
 
@@ -132,6 +132,7 @@ class SalesGroup(models.Model):
              "A requester whose number is hidden has no private chat to move "
              "to, so their question stays in the group as a poll.",
     )
+    sa_can_move_branch = fields.Boolean(compute='_compute_sa_can_move_branch')
     company_id = fields.Many2one(
         'res.company', string='Company',
         default=lambda self: self.env.company,
@@ -271,7 +272,20 @@ class SalesGroup(models.Model):
                     vals.get('session_id', rec.session_id.id))
                 if found:
                     super(SalesGroup, rec).write({'employee_session_id': found.id})
+        # Moving a group to another branch is for the admin only.
+        if 'company_id' in vals and not self.env.su \
+                and not self.env.user.has_group('base.group_system') \
+                and any(rec.company_id.id != (vals['company_id'] or False)
+                        for rec in self):
+            raise UserError(_("Only an administrator can move a group to "
+                              "another branch."))
         return super().write(vals)
+
+    @api.depends_context('uid')
+    def _compute_sa_can_move_branch(self):
+        can = self.env.user.has_group('base.group_system')
+        for rec in self:
+            rec.sa_can_move_branch = can
 
     def _compute_request_count(self):
         Request = self.env['sa.group.request']
