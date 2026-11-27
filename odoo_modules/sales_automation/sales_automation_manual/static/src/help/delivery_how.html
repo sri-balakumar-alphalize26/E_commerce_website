@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="en" data-theme="light" style="color-scheme:light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How It Works</title>
+<style>
+:root {
+  --bg: #f4f5f7; --card: #ffffff; --ink: #1f2430; --muted: #6b7280; --line: #e3e6ea;
+  --brand: #714b67; --brand-ink: #ffffff; --accent: #017e84; --screen: #fbfbfc; --chip: #eef0f3;
+  --ok: #1e8e3e; --ok-bg: #e6f4ea; --warn-bg: #fff4e5; --warn-ink: #8a4b00; --ring: rgba(1,126,132,.35);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #15171c; --card: #1e2128; --ink: #e8eaee; --muted: #9aa1ad; --line: #2f343d;
+    --brand: #a27a98; --brand-ink: #15171c; --accent: #3fb5ba; --screen: #23262e; --chip: #2a2e36;
+    --ok: #5bd17d; --ok-bg: #173523; --warn-bg: #3a2a12; --warn-ink: #ffcf8a; --ring: rgba(63,181,186,.35);
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #15171c; --card: #1e2128; --ink: #e8eaee; --muted: #9aa1ad; --line: #2f343d;
+  --brand: #a27a98; --brand-ink: #15171c; --accent: #3fb5ba; --screen: #23262e; --chip: #2a2e36;
+  --ok: #5bd17d; --ok-bg: #173523; --warn-bg: #3a2a12; --warn-ink: #ffcf8a; --ring: rgba(63,181,186,.35);
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+.wrap { max-width: min(1280px, 100%); margin: 0 auto; padding: 20px 16px 40px; }
+.vid { text-decoration: none; display: inline-block; }
+.full { margin-left: 6px; border: 1px solid var(--line); background: var(--card); color: var(--ink); border-radius: 999px; padding: 6px 14px; cursor: pointer; font: inherit; }
+/* full screen: the card fills the screen, the screenshot as large as it fits */
+.card:fullscreen { overflow: auto; border-radius: 0; display: flex; flex-direction: column; }
+.card:fullscreen .slide { flex: 1; display: flex; flex-direction: column; }
+.card:fullscreen .screen { flex: 1; }
+h1 { font-size: 20px; margin: 0 0 4px; }
+.sub { color: var(--muted); margin: 0 0 14px; }
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; align-items: center; }
+.tab { border: 1px solid var(--line); background: var(--card); color: var(--ink); border-radius: 999px; padding: 6px 14px; cursor: pointer; font: inherit; }
+.tab[aria-selected="true"] { background: var(--brand); color: var(--brand-ink); border-color: var(--brand); }
+.play { margin-left: auto; border: 1px solid var(--line); background: var(--card); color: var(--ink); border-radius: 999px; padding: 6px 14px; cursor: pointer; font: inherit; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 16px 0; }
+.count { color: var(--muted); font-size: 13px; white-space: nowrap; }
+.title { font-size: 18px; font-weight: 600; margin: 0; }
+.text { padding: 6px 16px 12px; margin: 0; }
+.text b { color: var(--accent); }
+.screen { margin: 0 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--screen); position: relative; overflow: hidden; min-height: 220px; }
+.bar { display: flex; align-items: center; gap: 6px; padding: 7px 10px; border-bottom: 1px solid var(--line); background: var(--chip); }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--line); }
+.url { flex: 1; margin-left: 6px; background: var(--card); border-radius: 6px; padding: 3px 10px; font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.body { padding: 14px; display: grid; gap: 8px; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); font-size: 14px; }
+.row .val { color: var(--muted); font-size: 13px; text-align: right; }
+.row.ghost { opacity: .55; }
+.row.okrow { background: var(--ok-bg); border-color: transparent; color: var(--ok); font-weight: 600; justify-content: flex-start; }
+.btn { display: inline-block; padding: 6px 14px; border-radius: 6px; background: var(--accent); color: #fff; font-size: 13px; font-weight: 600; }
+.input { flex: 1; max-width: 62%; border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; font-size: 13px; color: var(--muted); background: var(--screen); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.typing::after { content: '|'; animation: blink 1s steps(1) infinite; color: var(--accent); }
+@keyframes blink { 50% { opacity: 0; } }
+.secret { font-family: ui-monospace, Consolas, monospace; letter-spacing: 2px; font-size: 16px; }
+.warn { background: var(--warn-bg); color: var(--warn-ink); padding: 10px 14px; font-size: 14px; border-bottom: 1px solid var(--line); }
+.qr { width: 92px; height: 92px; margin: 4px auto; background:
+  conic-gradient(var(--ink) 0 25%, transparent 0 50%, var(--ink) 0 75%, transparent 0) 0 0/18px 18px; border: 6px solid var(--card); outline: 1px solid var(--line); }
+.target { position: relative; box-shadow: 0 0 0 3px var(--ring); animation: pulse 1.6s ease-in-out infinite; }
+/* a real screenshot: the highlight sits on the exact button */
+.shot { position: relative; line-height: 0; background: #fff; width: fit-content; max-width: 100%; margin: 0 auto; }
+.shot img { width: auto; max-width: 100%; height: auto; display: block; cursor: zoom-in; }
+.shot .hl { position: absolute; border: 3px solid #e8590c; border-radius: 7px; box-sizing: content-box;
+  margin: -6px 0 0 -6px; padding: 3px; animation: hl 1.6s ease-in-out infinite; pointer-events: none; }
+@keyframes hl { 0%,100% { box-shadow: 0 0 0 3px rgba(232,89,12,.25); } 50% { box-shadow: 0 0 0 10px rgba(232,89,12,.15); } }
+.shot .num { position: absolute; transform: translate(-50%, -115%); background: #e8590c; color: #fff; font: 700 13px/1 system-ui;
+  padding: 5px 8px; border-radius: 12px; white-space: nowrap; pointer-events: none; }
+.shot .num.below { transform: translate(-50%, 35%); }
+.shot .num.badge { width: 22px; height: 22px; padding: 0; border-radius: 50%; display: grid; place-items: center; font-size: 13px;
+  background: #e11d48; transform: translate(-120%, -50%); box-shadow: 0 0 0 2px #fff, 0 1px 4px rgba(0,0,0,.35); }
+.shot .num.badge.inside { transform: translate(-115%, -50%); }
+@keyframes pulse { 0%,100% { box-shadow: 0 0 0 2px var(--ring); } 50% { box-shadow: 0 0 0 7px var(--ring); } }
+.pointer { position: absolute; width: 26px; height: 26px; pointer-events: none; z-index: 3; transition: left .9s cubic-bezier(.3,.7,.3,1), top .9s cubic-bezier(.3,.7,.3,1); filter: drop-shadow(0 2px 2px rgba(0,0,0,.3)); }
+.pointer.click { animation: tap .5s ease-out 1s 2; }
+@keyframes tap { 50% { transform: scale(.8); } }
+.slide { animation: in .35s ease-out; }
+@keyframes in { from { opacity: 0; transform: translateX(18px); } to { opacity: 1; transform: none; } }
+.tip { margin: 12px 16px 0; padding: 8px 12px; border-left: 3px solid var(--accent); background: var(--chip); border-radius: 6px; font-size: 13px; }
+.tip.warn { border-color: var(--warn-ink); background: var(--warn-bg); color: var(--warn-ink); }
+.nav { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 16px 16px; }
+.arrow { border: 0; border-radius: 8px; padding: 9px 18px; font: inherit; font-weight: 600; cursor: pointer; }
+.arrow.prev { background: var(--chip); color: var(--ink); }
+.arrow.next { background: var(--brand); color: var(--brand-ink); }
+.arrow:disabled { opacity: .4; cursor: default; }
+.dots { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+.dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--line); display: block; }
+.dots i.on { background: var(--brand); width: 20px; border-radius: 4px; }
+.progress { height: 3px; background: var(--accent); width: 0; }
+.progress.run { animation: fill linear forwards; }
+@keyframes fill { to { width: 100%; } }
+.foot { color: var(--muted); font-size: 12px; margin-top: 12px; }
+/* inside the Odoo Help pop-up: compact, everything on one screen */
+.framed .wrap { padding: 10px 14px 6px; }
+.framed .foot { display: none; }
+.framed h1 { font-size: 18px; margin: 0; }
+.framed .sub { margin: 0 0 8px; }
+.framed .top { margin: 0 0 4px; }
+.framed .tabs { margin-bottom: 8px; }
+.framed .nav { padding: 10px 16px 12px; }
+.framed .text { padding: 4px 16px 8px; }
+.top { display: flex; align-items: center; gap: 12px; margin: 0 0 10px; font-size: 14px; }
+.top[hidden] { display: none; }
+.top a { background: var(--chip); color: var(--ink); text-decoration: none; font-weight: 600; border-radius: 8px; padding: 7px 14px; }
+.top a:hover { background: var(--line); }
+.top h1 { margin: 0; }
+.arrow.prev:disabled { visibility: hidden; }   /* first step: no "Previous" at all */
+/* screenshot zoom: over the guide, never a new tab */
+.lb { position: fixed; inset: 0; z-index: 50; background: rgba(10,12,16,.86); display: none; align-items: center; justify-content: center; padding: 24px; cursor: zoom-out; }
+.lb.on { display: flex; }
+.lb img { max-width: 100%; max-height: 100%; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,.5); background: #fff; }
+.lb button { position: absolute; top: 12px; right: 14px; border: 0; border-radius: 999px; width: 38px; height: 38px; font-size: 20px; line-height: 1; cursor: pointer; background: #fff; color: #1f2430; }
+@media (max-width: 520px) { .arrow { padding: 9px 12px; } .row { flex-wrap: wrap; } .input { max-width: 100%; } .play { margin-left: 0; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top" id="top" hidden><a href="/sales_automation_manual/static/help/help.html">&larr; All guides</a></div>
+  <h1>Delivery: how it works</h1>
+  <p class="sub">Set up once, then dispatch and follow every delivery. Follow the arrows, press Play, or <a class="vidlink" href="/sales_automation_manual/static/src/help/video.html?v=/sales_automation_manual/static/src/help/delivery_how.webm&amp;t=How%20It%20Works&amp;back=/sales_automation_manual/static/src/help/delivery_how.html" style="color:var(--accent)">watch the video</a>.</p>
+  <div class="tabs" id="tabs"></div>
+  <div class="card" id="card"></div>
+  <p class="foot">Keyboard: &larr; / &rarr;. <a href="/sales_automation_manual/static/help/help.html" style="color:var(--accent)">All guides of this module</a>.</p>
+</div>
+<div class="lb" id="lb" role="dialog" aria-label="Screenshot"><button type="button" aria-label="Close">&times;</button><img alt=""></div>
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="hand" viewBox="0 0 24 24"><path fill="#fff" stroke="#222" stroke-width="1.3" stroke-linejoin="round"
+    d="M9 2.8c.9 0 1.6.7 1.6 1.6v6.3l.6-.1c.9-.1 1.6.5 1.7 1.3l.1.4.4-.1c.9-.1 1.6.5 1.7 1.3l.1.5.3-.1c.9-.1 1.7.5 1.8 1.4l.4 3.4c.3 2.6-1.6 4.9-4.2 5.2l-1.6.1c-1.6.1-3.1-.6-4-1.9L4 16.7c-.5-.7-.3-1.6.4-2.1.7-.4 1.5-.3 2 .3l1 1.2V4.4c0-.9.7-1.6 1.6-1.6z"/></symbol>
+</svg>
+<script>
+const SHOTS = {"delivery/01_shops": {"src": "/sales_automation_manual/static/src/help/shots/delivery/01_shops.jpg", "box": [1.0, 18.2, 98.0, 4.8]}, "delivery/02_riders": {"src": "/sales_automation_manual/static/src/help/shots/delivery/02_riders.jpg", "box": [35.6, 19.8, 32.0, 7.8]}, "delivery/03_settings": {"src": "/sales_automation_manual/static/src/help/shots/delivery/03_settings.jpg", "box": [16.0, 32.0, 40.0, 15.0]}, "delivery/04_to_dispatch": {"src": "/sales_automation_manual/static/src/help/shots/delivery/04_to_dispatch.jpg", "box": [34.0, 6.8, 32.0, 4.2]}, "delivery/05_in_progress": {"src": "/sales_automation_manual/static/src/help/shots/delivery/05_in_progress.jpg", "box": [1.0, 18.8, 30.0, 7.0]}, "delivery/06_live_map": {"src": "/sales_automation_manual/static/src/help/shots/delivery/06_live_map.png", "box": [16.0, 5.0, 50.0, 4.0]}, "delivery/07_create_otp": {"src": "/sales_automation_manual/static/src/help/shots/delivery/07_create_otp.jpg", "box": [12.5, 38.0, 75.0, 5.0]}, "delivery/08_delivered": {"src": "/sales_automation_manual/static/src/help/shots/delivery/08_delivered.jpg", "box": [1.0, 26.8, 80.0, 3.4]}, "delivery/09_failed": {"src": "/sales_automation_manual/static/src/help/shots/delivery/09_failed.jpg", "box": [1.0, 34.8, 80.0, 3.4]}, "delivery/10_sos": {"src": "/sales_automation_manual/static/src/help/shots/delivery/10_sos.jpg", "box": [36.4, 6.8, 8.6, 4.0]}, "delivery/11_analysis": {"src": "/sales_automation_manual/static/src/help/shots/delivery/11_analysis.jpg", "box": [1.0, 26.4, 60.0, 3.8]}};
+const G = {
+  setup: {
+    name: 'Set up',
+    steps: [
+      { title: 'Your shops', url: 'Delivery → Configuration → Shops',
+        text: 'Each shop that sends out orders, its <b>Warehouse</b> and the <b>Service Areas</b> it delivers to. Click a shop to change it.',
+        shot: 'delivery/01_shops', mark: 'A shop' },
+      { title: 'Riders and couriers', url: 'Delivery → Configuration → Riders & Couriers',
+        text: 'Every rider with a label: <b>Free</b> can take a job, <b>Busy</b> has one. Click <b>New</b> to add a rider.',
+        shot: 'delivery/02_riders', mark: 'Free rider' },
+      { title: 'How far the order flow goes', url: 'Delivery → Configuration → Delivery Settings',
+        text: 'Pick where a WhatsApp order stops. <b>Delivered</b> is the full flow: a rider, a pickup code and a delivery code.',
+        shot: 'delivery/03_settings', mark: 'Choose' },
+    ],
+  },
+  daily: {
+    name: 'Daily work',
+    steps: [
+      { title: 'Ready to send out', url: 'Delivery → Deliveries → To Dispatch',
+        text: 'Orders that are packed and need a rider. Open one and press <b>Call a Rider</b>. An empty list means nothing is waiting.',
+        shot: 'delivery/04_to_dispatch', mark: 'Search' },
+      { title: 'On the way', url: 'Delivery → Deliveries → In Progress',
+        text: 'Orders a rider has taken, grouped by status, for example <b>Collected by Rider</b> or <b>Offered</b>.',
+        shot: 'delivery/05_in_progress', mark: 'By status' },
+      { title: 'Where the riders are', url: 'Delivery → Fleet → Live Map',
+        text: 'The map shows every rider and order live; it refreshes by itself. The colours at the top say <b>SOS</b>, <b>Free</b> or <b>On a run</b>.',
+        shot: 'delivery/06_live_map', mark: 'Colours' },
+      { title: 'Make a code by hand', url: 'Delivery → Deliveries → Create OTP',
+        text: 'Pick the <b>Order / job</b>, the <b>Kind</b> (pickup or delivery) and <b>Send</b>, then press <b>Generate</b>. Press <b>Close</b> if you only wanted to look.',
+        shot: 'delivery/07_create_otp', mark: 'Order / job' },
+    ],
+  },
+  check: {
+    name: 'Check',
+    steps: [
+      { title: 'Delivered', url: 'Delivery → Deliveries → All Deliveries',
+        text: 'All deliveries grouped by status. Open <b>Delivered</b> to see every finished delivery and the money collected.',
+        shot: 'delivery/08_delivered', mark: 'Delivered' },
+      { title: 'Failed', url: 'Delivery → Deliveries → All Deliveries',
+        text: 'Open <b>Failed</b> to see deliveries that did not reach the customer, so someone can call them.',
+        shot: 'delivery/09_failed', mark: 'Failed' },
+      { title: 'SOS from a rider', url: 'Delivery → Fleet → SOS Alerts',
+        text: 'When a rider holds the red SOS button, the alert lands here and the managers are told. <b>No SOS alerts</b> means all is well.',
+        shot: 'delivery/10_sos', mark: 'Open alerts' },
+      { title: 'How deliveries went', url: 'Delivery → Reporting → Delivery Analysis',
+        text: 'Totals per status: how many, how fast and how much money was collected. If a group shows only a number, use <b>All Deliveries</b> for the status names.',
+        shot: 'delivery/11_analysis', mark: 'Totals' },
+    ],
+  },
+};
+const order = ['setup', 'daily', 'check'];
+if (window.top !== window.self) document.documentElement.classList.add('framed');
+const VIDEO = '/sales_automation_manual/static/src/help/delivery_how.webm', VTITLE = 'How It Works';
+const q = new URLSearchParams(location.search);
+let cur = order.includes(q.get('for')) ? q.get('for') : order[0], step = 0, playing = q.has('play'), timer = null;
+const tabs = document.getElementById('tabs'), card = document.getElementById('card');
+order.forEach(k => { const b = document.createElement('button'); b.className = 'tab'; b.textContent = G[k].name;
+  b.onclick = () => { cur = k; step = 0; draw(); }; tabs.appendChild(b); });
+const play = document.createElement('button'); play.className = 'play'; tabs.appendChild(play);
+// this guide's own video, in the same window; Back returns to this guide
+const videoUrl = '/sales_automation_manual/static/src/help/video.html?v=' + encodeURIComponent(VIDEO) +
+  '&t=' + encodeURIComponent(VTITLE) + '&back=' + encodeURIComponent(location.pathname + location.search);
+const vid = document.createElement('a'); vid.className = 'full vid'; vid.href = videoUrl; vid.textContent = '🎬 Watch video';
+tabs.appendChild(vid);
+document.querySelectorAll('a.vidlink').forEach(a => { a.href = videoUrl; });
+if (q.get('from') === 'help') document.getElementById('top').hidden = false;
+// ?back=/same/site/page: "Back" returns there (e.g. a module's Help choices); the video link keeps it
+const bk = q.get('back');
+if (bk && bk.startsWith('/') && !bk.startsWith('//')) {
+  const top = document.getElementById('top'), a = top.querySelector('a');
+  top.hidden = false; a.href = bk; a.innerHTML = '&larr; Back';
+  top.appendChild(document.querySelector('h1'));   // one bar: Back + title, like the User Manual
+  const here = location.pathname + '?back=' + encodeURIComponent(bk);
+  document.querySelectorAll('a.vidlink, a.vid').forEach(l => {
+    const u = new URL(l.getAttribute('href'), location.href);
+    if (u.pathname.endsWith('/video.html')) { u.searchParams.set('back', here); l.href = u.pathname + u.search; }
+  });
+}
+play.onclick = () => { playing = !playing; draw(); };
+const full = document.createElement('button'); full.className = 'full'; full.textContent = '⛶ Full screen'; tabs.appendChild(full);
+full.onclick = () => {
+  if (document.fullscreenElement) { document.exitFullscreen(); return; }
+  if (card.requestFullscreen) card.requestFullscreen().then(() => setTimeout(draw, 150)).catch(() => {});
+};
+document.addEventListener('fullscreenchange', () => {
+  full.textContent = document.fullscreenElement ? '✕ Exit full screen' : '⛶ Full screen'; setTimeout(draw, 150);
+});
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function row(r) {
+  const cls = 'row' + (r.ghost ? ' ghost' : '') + (r.target ? ' target' : '');
+  if (r.kind === 'btn') return `<div class="row" style="justify-content:flex-end;border:0;background:none"><span class="btn${r.target ? ' target' : ''}">${esc(r.t)}</span></div>`;
+  if (r.kind === 'input') return `<div class="${cls}"><span>${esc(r.t)}</span><span class="input" data-v="${esc(r.v || '')}"></span></div>`;
+  if (r.kind === 'ok') return `<div class="row okrow">${esc(r.t)}</div>`;
+  if (r.kind === 'secret') return `<div class="${cls}" style="justify-content:center"><span class="secret">${esc(r.t)}</span></div>`;
+  if (r.kind === 'qr') return `<div class="qr" aria-label="QR code"></div>`;
+  return `<div class="${cls}"><span>${esc(r.t)}</span>${r.v ? `<span class="val">${esc(r.v)}</span>` : ''}</div>`;
+}
+function typeIn(box, i) {   // type the example values one box after another
+  const boxes = [...box.querySelectorAll('.input')];
+  const go = n => {
+    if (n >= boxes.length) return;
+    const el = boxes[n], full = el.dataset.v; let k = 0; el.classList.add('typing');
+    const t = setInterval(() => { el.textContent = full.slice(0, ++k);
+      if (k >= full.length) { clearInterval(t); el.classList.remove('typing'); go(n + 1); } }, 28);
+  };
+  go(0);
+}
+// a real screenshot step: {shot: 'gateway/04_connect_button', mark: 'Click here'} (SHOTS is filled by build.py)
+function shotHtml(s) {
+  const sh = s.shot && typeof SHOTS !== 'undefined' ? SHOTS[s.shot] : null;
+  if (!sh) return '';
+  // the marker always stays on the picture
+  let b = s.box || sh.box;
+  if (b) { const x = Math.max(0.5, b[0]), y = Math.max(0.5, b[1]);
+    b = [x, y, Math.min(b[2] - (x - b[0]), 99.5 - x), Math.min(b[3] - (y - b[1]), 99.5 - y)]; }
+  // 27 Nov 2026: numbered callouts. s.nums (or the picture's own nums) = boxes in %; the red box sits on
+  // number 1 unless the picture already has its boxes drawn in (sh.drawn): then only the numbers show.
+  const nums = s.nums || sh.nums;
+  if (nums && nums.length) {
+    const f = nums[0];
+    const ring = sh.drawn || s.nohl
+      ? `<div class="target" style="position:absolute;left:${f[0]}%;top:${f[1]}%;width:${f[2]}%;height:${f[3]}%;box-shadow:none;animation:none"></div>`
+      : `<div class="hl target" style="left:${f[0]}%;top:${f[1]}%;width:${f[2]}%;height:${f[3]}%"></div>`;
+    // each number sits just left of its box (inside it when the box touches the left edge), never on the value
+    const marks = sh.numbered ? '' : nums.map((n, i) => `<div class="num badge${n[0] < 3 ? ' inside' : ''}" style="left:${n[0] < 3 ? n[0] + n[2] : n[0]}%;top:${n[1] + n[3] / 2}%">${i + 1}</div>`).join('');
+    return `<div class="shot"><img src="${sh.src}" alt="${esc(s.title)}" onclick="zoom(this)">${ring}${marks}</div>`;
+  }
+  const hl = b ? `<div class="hl target" style="left:${b[0]}%;top:${b[1]}%;width:${b[2]}%;height:${b[3]}%"></div>
+     ${s.mark ? `<div class="num${b[1] < 12 ? ' below' : ''}" style="left:${b[0] + b[2] / 2}%;top:${b[1] < 12 ? b[1] + b[3] : b[1]}%">${esc(s.mark)}</div>` : ''}` : '';
+  return `<div class="shot"><img src="${sh.src}" alt="${esc(s.title)}" onclick="zoom(this)">${hl}</div>`;
+}
+const lb = document.getElementById('lb');
+function zoom(img) { lb.querySelector('img').src = img.src; lb.querySelector('img').alt = img.alt; lb.classList.add('on'); }
+lb.onclick = () => lb.classList.remove('on');
+function fit() {
+  const img = card.querySelector('.shot img');
+  if (!img || !img.naturalWidth) return;
+  const box = document.fullscreenElement || document.documentElement;
+  img.style.maxHeight = '';
+  const over = box.scrollHeight - box.clientHeight;
+  if (over > 0) img.style.maxHeight = Math.max(180, img.getBoundingClientRect().height - over - 2) + 'px';
+}
+addEventListener('resize', () => { fit(); });
+function draw() {
+  clearTimeout(timer);
+  const keepY = scrollY;
+  const g = G[cur], steps = g.steps, s = steps[step];
+  [...tabs.querySelectorAll('.tab')].forEach((b, i) => b.setAttribute('aria-selected', order[i] === cur));
+  play.textContent = playing ? '❚❚ Pause' : '▶ Play';
+  const ms = s.ms || (typeof STEP_MS !== 'undefined' ? STEP_MS : 5200);   // a guide may set a slower pace
+  card.innerHTML = `
+    ${playing ? `<div class="progress run" style="animation-duration:${ms}ms"></div>` : ''}
+    ${g.warn ? `<div class="warn">⚠ ${g.warn}</div>` : ''}
+    <div class="slide">
+      <div class="head"><h2 class="title">${step + 1}. ${s.title}</h2><span class="count">Step ${step + 1} of ${steps.length}</span></div>
+      <p class="text">${s.text}</p>
+      <div class="screen" id="screen">
+        <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">${esc(s.url)}</span></div>
+        ${shotHtml(s) || `<div class="body">${(s.rows || []).map(row).join('')}</div>`}
+        <svg class="pointer" id="ptr" style="left:85%;top:85%"><use href="#hand"/></svg>
+      </div>
+      ${s.tip ? `<div class="tip">${s.tip}</div>` : ''}
+    </div>
+    <div class="nav">
+      <button class="arrow prev" ${step === 0 ? 'disabled' : ''}>&larr; Previous</button>
+      <div class="dots">${steps.map((_, i) => `<i class="${i === step ? 'on' : ''}"></i>`).join('')}</div>
+      <button class="arrow next">${step === steps.length - 1 ? 'Start again ↺' : 'Next &rarr;'}</button>
+    </div>`;
+  card.querySelector('.prev').onclick = () => { if (step > 0) { step--; draw(); } };
+  card.querySelector('.next').onclick = () => { step = step === steps.length - 1 ? 0 : step + 1; draw(); };
+  const screen = document.getElementById('screen');
+  typeIn(screen);
+  const place = () => setTimeout(() => {
+    const ptr = document.getElementById('ptr'), t = screen.querySelector('.target');
+    if (!ptr) return;
+    if (!t) { ptr.style.display = 'none'; return; }
+    const a = screen.getBoundingClientRect(), b = t.getBoundingClientRect();
+    ptr.style.left = (b.left - a.left + Math.min(b.width * 0.6, Math.max(8, b.width - 14))) + 'px';
+    ptr.style.top = (b.top - a.top + b.height * 0.45) + 'px';
+    ptr.classList.add('click');
+  }, 700);
+  const img = screen.querySelector('.shot img');
+  const ready = () => { fit(); scrollTo(0, keepY); place(); };
+  if (img && !img.complete) img.addEventListener('load', ready, { once: true }); else requestAnimationFrame(ready);
+  if (playing) timer = setTimeout(() => {
+    if (step < steps.length - 1) { step++; draw(); }
+    else if (q.has('play') && !q.has('for') && order.indexOf(cur) < order.length - 1) { cur = order[order.indexOf(cur) + 1]; step = 0; draw(); }   // video: every part
+    else { playing = false; draw(); document.title = 'DONE'; }
+  }, ms);
+}
+document.addEventListener('keydown', e => {
+  if (lb.classList.contains('on')) { if (e.key === 'Escape') { lb.classList.remove('on'); e.stopPropagation(); } return; }
+  if (e.key === 'ArrowRight') card.querySelector('.next').click();
+  if (e.key === 'ArrowLeft') card.querySelector('.prev').click();
+});
+draw();
+</script>
+</body>
+</html>

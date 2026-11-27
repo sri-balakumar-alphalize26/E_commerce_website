@@ -1,0 +1,792 @@
+<!doctype html>
+<html lang="en" data-theme="light" style="color-scheme:light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Full Flow</title>
+<style>
+:root {
+  --bg: #f4f5f7; --card: #ffffff; --ink: #1f2430; --muted: #6b7280; --line: #e3e6ea;
+  --brand: #714b67; --brand-ink: #ffffff; --accent: #017e84; --screen: #fbfbfc; --chip: #eef0f3;
+  --ok: #1e8e3e; --ok-bg: #e6f4ea; --warn-bg: #fff4e5; --warn-ink: #8a4b00; --ring: rgba(1,126,132,.35);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #15171c; --card: #1e2128; --ink: #e8eaee; --muted: #9aa1ad; --line: #2f343d;
+    --brand: #a27a98; --brand-ink: #15171c; --accent: #3fb5ba; --screen: #23262e; --chip: #2a2e36;
+    --ok: #5bd17d; --ok-bg: #173523; --warn-bg: #3a2a12; --warn-ink: #ffcf8a; --ring: rgba(63,181,186,.35);
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #15171c; --card: #1e2128; --ink: #e8eaee; --muted: #9aa1ad; --line: #2f343d;
+  --brand: #a27a98; --brand-ink: #15171c; --accent: #3fb5ba; --screen: #23262e; --chip: #2a2e36;
+  --ok: #5bd17d; --ok-bg: #173523; --warn-bg: #3a2a12; --warn-ink: #ffcf8a; --ring: rgba(63,181,186,.35);
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+.wrap { max-width: min(1280px, 100%); margin: 0 auto; padding: 20px 16px 40px; }
+.vid { text-decoration: none; display: inline-block; }
+.full { margin-left: 6px; border: 1px solid var(--line); background: var(--card); color: var(--ink); border-radius: 999px; padding: 6px 14px; cursor: pointer; font: inherit; }
+/* full screen: the card fills the screen, the screenshot as large as it fits */
+.card:fullscreen { overflow: auto; border-radius: 0; display: flex; flex-direction: column; }
+.card:fullscreen .slide { flex: 1; display: flex; flex-direction: column; }
+.card:fullscreen .screen { flex: 1; }
+h1 { font-size: 20px; margin: 0 0 4px; }
+.sub { color: var(--muted); margin: 0 0 14px; }
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; align-items: center; }
+.tab { border: 1px solid var(--line); background: var(--card); color: var(--ink); border-radius: 999px; padding: 6px 14px; cursor: pointer; font: inherit; }
+.tab[aria-selected="true"] { background: var(--brand); color: var(--brand-ink); border-color: var(--brand); }
+.play { margin-left: auto; border: 1px solid var(--line); background: var(--card); color: var(--ink); border-radius: 999px; padding: 6px 14px; cursor: pointer; font: inherit; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 16px 0; }
+.count { color: var(--muted); font-size: 13px; white-space: nowrap; }
+.title { font-size: 18px; font-weight: 600; margin: 0; }
+.text { padding: 6px 16px 12px; margin: 0; }
+.text b { color: var(--accent); }
+.screen { margin: 0 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--screen); position: relative; overflow: hidden; min-height: 220px; }
+.bar { display: flex; align-items: center; gap: 6px; padding: 7px 10px; border-bottom: 1px solid var(--line); background: var(--chip); }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--line); }
+.url { flex: 1; margin-left: 6px; background: var(--card); border-radius: 6px; padding: 3px 10px; font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.body { padding: 14px; display: grid; gap: 8px; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); font-size: 14px; }
+.row .val { color: var(--muted); font-size: 13px; text-align: right; }
+.row.ghost { opacity: .55; }
+.row.okrow { background: var(--ok-bg); border-color: transparent; color: var(--ok); font-weight: 600; justify-content: flex-start; }
+.btn { display: inline-block; padding: 6px 14px; border-radius: 6px; background: var(--accent); color: #fff; font-size: 13px; font-weight: 600; }
+.input { flex: 1; max-width: 62%; border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; font-size: 13px; color: var(--muted); background: var(--screen); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.typing::after { content: '|'; animation: blink 1s steps(1) infinite; color: var(--accent); }
+@keyframes blink { 50% { opacity: 0; } }
+.secret { font-family: ui-monospace, Consolas, monospace; letter-spacing: 2px; font-size: 16px; }
+.warn { background: var(--warn-bg); color: var(--warn-ink); padding: 10px 14px; font-size: 14px; border-bottom: 1px solid var(--line); }
+.qr { width: 92px; height: 92px; margin: 4px auto; background:
+  conic-gradient(var(--ink) 0 25%, transparent 0 50%, var(--ink) 0 75%, transparent 0) 0 0/18px 18px; border: 6px solid var(--card); outline: 1px solid var(--line); }
+.target { position: relative; box-shadow: 0 0 0 3px var(--ring); animation: pulse 1.6s ease-in-out infinite; }
+/* a real screenshot: the highlight sits on the exact button */
+.shot { position: relative; line-height: 0; background: #fff; width: fit-content; max-width: 100%; margin: 0 auto; }
+.shot img { width: auto; max-width: 100%; height: auto; display: block; cursor: zoom-in; }
+.shot .hl { position: absolute; border: 3px solid #e8590c; border-radius: 7px; box-sizing: content-box;
+  margin: -6px 0 0 -6px; padding: 3px; animation: hl 1.6s ease-in-out infinite; pointer-events: none; }
+@keyframes hl { 0%,100% { box-shadow: 0 0 0 3px rgba(232,89,12,.25); } 50% { box-shadow: 0 0 0 10px rgba(232,89,12,.15); } }
+.shot .num { position: absolute; transform: translate(-50%, -115%); background: #e8590c; color: #fff; font: 700 13px/1 system-ui;
+  padding: 5px 8px; border-radius: 12px; white-space: nowrap; pointer-events: none; }
+.shot .num.below { transform: translate(-50%, 35%); }
+.shot .num.badge { width: 22px; height: 22px; padding: 0; border-radius: 50%; display: grid; place-items: center; font-size: 13px;
+  background: #e11d48; transform: translate(-120%, -50%); box-shadow: 0 0 0 2px #fff, 0 1px 4px rgba(0,0,0,.35); }
+.shot .num.badge.inside { transform: translate(-115%, -50%); }
+@keyframes pulse { 0%,100% { box-shadow: 0 0 0 2px var(--ring); } 50% { box-shadow: 0 0 0 7px var(--ring); } }
+.pointer { position: absolute; width: 26px; height: 26px; pointer-events: none; z-index: 3; transition: left .9s cubic-bezier(.3,.7,.3,1), top .9s cubic-bezier(.3,.7,.3,1); filter: drop-shadow(0 2px 2px rgba(0,0,0,.3)); }
+.pointer.click { animation: tap .5s ease-out 1s 2; }
+@keyframes tap { 50% { transform: scale(.8); } }
+.slide { animation: in .35s ease-out; }
+@keyframes in { from { opacity: 0; transform: translateX(18px); } to { opacity: 1; transform: none; } }
+.tip { margin: 12px 16px 0; padding: 8px 12px; border-left: 3px solid var(--accent); background: var(--chip); border-radius: 6px; font-size: 13px; }
+.tip.warn { border-color: var(--warn-ink); background: var(--warn-bg); color: var(--warn-ink); }
+.nav { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 16px 16px; }
+.arrow { border: 0; border-radius: 8px; padding: 9px 18px; font: inherit; font-weight: 600; cursor: pointer; }
+.arrow.prev { background: var(--chip); color: var(--ink); }
+.arrow.next { background: var(--brand); color: var(--brand-ink); }
+.arrow:disabled { opacity: .4; cursor: default; }
+.dots { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+.dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--line); display: block; }
+.dots i.on { background: var(--brand); width: 20px; border-radius: 4px; }
+.progress { height: 3px; background: var(--accent); width: 0; }
+.progress.run { animation: fill linear forwards; }
+@keyframes fill { to { width: 100%; } }
+.foot { color: var(--muted); font-size: 12px; margin-top: 12px; }
+/* inside the Odoo Help pop-up: compact, everything on one screen */
+.framed .wrap { padding: 10px 14px 6px; }
+.framed .foot { display: none; }
+.framed h1 { font-size: 18px; margin: 0; }
+.framed .sub { margin: 0 0 8px; }
+.framed .top { margin: 0 0 4px; }
+.framed .tabs { margin-bottom: 8px; }
+.framed .nav { padding: 10px 16px 12px; }
+.framed .text { padding: 4px 16px 8px; }
+.top { display: flex; align-items: center; gap: 12px; margin: 0 0 10px; font-size: 14px; }
+.top[hidden] { display: none; }
+.top a { background: var(--chip); color: var(--ink); text-decoration: none; font-weight: 600; border-radius: 8px; padding: 7px 14px; }
+.top a:hover { background: var(--line); }
+.top h1 { margin: 0; }
+.arrow.prev:disabled { visibility: hidden; }   /* first step: no "Previous" at all */
+/* screenshot zoom: over the guide, never a new tab */
+.lb { position: fixed; inset: 0; z-index: 50; background: rgba(10,12,16,.86); display: none; align-items: center; justify-content: center; padding: 24px; cursor: zoom-out; }
+.lb.on { display: flex; }
+.lb img { max-width: 100%; max-height: 100%; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,.5); background: #fff; }
+.lb button { position: absolute; top: 12px; right: 14px; border: 0; border-radius: 999px; width: 38px; height: 38px; font-size: 20px; line-height: 1; cursor: pointer; background: #fff; color: #1f2430; }
+@media (max-width: 520px) { .arrow { padding: 9px 12px; } .row { flex-wrap: wrap; } .input { max-width: 100%; } .play { margin-left: 0; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top" id="top" hidden><a href="/sales_automation_manual/static/help/help.html">&larr; All guides</a></div>
+  <h1>The full flow, step by step</h1>
+  <p class="sub">Do each step yourself: one click per step. Follow the arrows, press Play, or <a class="vidlink" href="/sales_automation_manual/static/src/help/video.html?v=/sales_automation_manual/static/src/help/full_flow.webm&amp;t=Full%20Flow&amp;back=/sales_automation_manual/static/src/help/full_flow.html" style="color:var(--accent)">watch the video</a>.</p>
+  <div class="tabs" id="tabs"></div>
+  <div class="card" id="card"></div>
+  <p class="foot">Keyboard: &larr; / &rarr;. <a href="/sales_automation_manual/static/help/help.html" style="color:var(--accent)">All guides of this module</a>.</p>
+</div>
+<div class="lb" id="lb" role="dialog" aria-label="Screenshot"><button type="button" aria-label="Close">&times;</button><img alt=""></div>
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="hand" viewBox="0 0 24 24"><path fill="#fff" stroke="#222" stroke-width="1.3" stroke-linejoin="round"
+    d="M9 2.8c.9 0 1.6.7 1.6 1.6v6.3l.6-.1c.9-.1 1.6.5 1.7 1.3l.1.4.4-.1c.9-.1 1.6.5 1.7 1.3l.1.5.3-.1c.9-.1 1.7.5 1.8 1.4l.4 3.4c.3 2.6-1.6 4.9-4.2 5.2l-1.6.1c-1.6.1-3.1-.6-4-1.9L4 16.7c-.5-.7-.3-1.6.4-2.1.7-.4 1.5-.3 2 .3l1 1.2V4.4c0-.9.7-1.6 1.6-1.6z"/></symbol>
+</svg>
+<script>
+const SHOTS = {"sa/01_groups": {"src": "/sales_automation_manual/static/src/help/shots/sa/01_groups.jpg", "box": [3.2, 18.8, 3.2, 3.6]}, "sa/03_delivery_address": {"src": "/sales_automation_manual/static/src/help/shots/sa/03_delivery_address.jpg", "box": [3.0, 44.0, 16.0, 6.0]}, "store/01_shop_queue": {"src": "/sales_automation_manual/static/src/help/shots/store/01_shop_queue.jpg", "box": [63.0, 19.0, 7.6, 2.8]}, "store/05_quick": {"src": "/sales_automation_manual/static/src/help/shots/store/05_quick.png", "box": [44.0, 5.6, 27.5, 4.0]}, "delivery/04_to_dispatch": {"src": "/sales_automation_manual/static/src/help/shots/delivery/04_to_dispatch.jpg", "box": [34.0, 6.8, 32.0, 4.2]}, "delivery/05_in_progress": {"src": "/sales_automation_manual/static/src/help/shots/delivery/05_in_progress.jpg", "box": [1.0, 18.8, 30.0, 7.0]}, "delivery/07_create_otp": {"src": "/sales_automation_manual/static/src/help/shots/delivery/07_create_otp.jpg", "box": [12.5, 38.0, 75.0, 5.0]}, "delivery/08_delivered": {"src": "/sales_automation_manual/static/src/help/shots/delivery/08_delivered.jpg", "box": [1.0, 26.8, 80.0, 3.4]}, "delivery/10_sos": {"src": "/sales_automation_manual/static/src/help/shots/delivery/10_sos.jpg", "box": [36.4, 6.8, 8.6, 4.0]}, "delivery/11_analysis": {"src": "/sales_automation_manual/static/src/help/shots/delivery/11_analysis.jpg", "box": [1.0, 26.4, 60.0, 3.8]}, "insights/01_customers": {"src": "/sales_automation_manual/static/src/help/shots/insights/01_customers.jpg", "box": [1.5, 33.6, 48.0, 5.0]}, "insights/02_vendors": {"src": "/sales_automation_manual/static/src/help/shots/insights/02_vendors.jpg", "box": [5.2, 39.4, 65.0, 5.0]}, "insights/03_rated_rows": {"src": "/sales_automation_manual/static/src/help/shots/insights/03_rated_rows.jpg", "box": [34.4, 18.4, 11.0, 4.6]}, "full/c4-attribute-new": {"src": "/sales_automation_manual/static/src/help/shots/full/c4-attribute-new.jpg", "box": [9.45, 4.0, 2.68, 5.0], "nums": [[9.45, 4.0, 2.68, 5.0], [12.35, 15.33, 36.9, 6.33], [12.35, 21.83, 36.9, 6.67], [12.35, 28.67, 36.9, 6.67], [3.42, 67.67, 5.43, 5.17]], "drawn": true}, "full/c10-variants-list": {"src": "/sales_automation_manual/static/src/help/shots/full/c10-variants-list.jpg", "box": [25.22, 23.7, 28.27, 76.09], "nums": [[25.22, 23.7, 28.27, 76.09]], "drawn": true}, "full/p1-photographs-link": {"src": "/sales_automation_manual/static/src/help/shots/full/p1-photographs-link.jpg", "box": [12.74, 47.0, 8.86, 13.44], "nums": [[12.74, 47.0, 8.86, 13.44]], "drawn": true}, "full/p2-paste-box": {"src": "/sales_automation_manual/static/src/help/shots/full/p2-paste-box.jpg", "box": [4.9, 49.33, 42.09, 18.78], "nums": [[4.9, 49.33, 42.09, 18.78]], "drawn": true}, "full/p3-links-added": {"src": "/sales_automation_manual/static/src/help/shots/full/p3-links-added.jpg", "box": [14.79, 7.11, 2.64, 3.33], "nums": [[14.79, 7.11, 2.64, 3.33], [2.64, 47.0, 46.63, 13.44]], "drawn": true}, "full/p6-saved": {"src": "/sales_automation_manual/static/src/help/shots/full/p6-saved.jpg", "box": [2.64, 47.0, 46.63, 13.44], "nums": [[2.64, 47.0, 46.63, 13.44]], "drawn": true}, "full/n2-sign": {"src": "/sales_automation_manual/static/src/help/shots/full/n2-sign.jpg", "box": [62.48, 11.49, 29.09, 2.87], "nums": [[62.48, 11.49, 29.09, 2.87], [62.48, 52.66, 29.09, 6.17], [62.48, 80.0, 29.09, 6.38]], "drawn": true, "numbered": true}, "full/n2-pay-link": {"src": "/sales_automation_manual/static/src/help/shots/full/n2-pay-link.jpg", "box": [63.43, 16.74, 4.93, 3.26], "nums": [[63.43, 16.74, 4.93, 3.26], [62.48, 26.86, 29.09, 6.98]], "drawn": true, "numbered": true}, "full/n2-pay": {"src": "/sales_automation_manual/static/src/help/shots/full/n2-pay.jpg", "box": [62.48, 12.56, 29.09, 3.14], "nums": [[62.48, 12.56, 29.09, 3.14], [62.48, 46.05, 29.09, 6.98]], "drawn": true, "numbered": true}, "full/s10-menu": {"src": "/sales_automation_manual/static/src/help/shots/full/s10-menu.jpg", "box": [7.29, 63.63, 31.93, 6.2], "nums": [[7.29, 63.63, 31.93, 6.2]], "drawn": true}, "full/s10-product": {"src": "/sales_automation_manual/static/src/help/shots/full/s10-product.jpg", "box": [5.72, 36.24, 32.13, 6.16], "nums": [[5.72, 36.24, 32.13, 6.16]], "drawn": true}, "full/s10-options": {"src": "/sales_automation_manual/static/src/help/shots/full/s10-options.jpg", "box": [5.72, 61.96, 32.13, 6.93], "nums": [[5.72, 61.96, 32.13, 6.93]], "drawn": true}, "full/n2-address-form": {"src": "/sales_automation_manual/static/src/help/shots/full/n2-address-form.jpg", "box": null, "drawn": true}, "full/n1-numbers-list": {"src": "/sales_automation_manual/static/src/help/shots/full/n1-numbers-list.jpg", "box": [31.99, 30.0, 36.02, 14.41], "nums": [[31.99, 30.0, 36.02, 14.41]], "drawn": true}, "full/n1-connect-1": {"src": "/sales_automation_manual/static/src/help/shots/full/n1-connect-1.jpg", "box": [8.89, 23.26, 82.22, 6.33], "nums": [[8.89, 23.26, 82.22, 6.33], [8.89, 33.86, 82.22, 6.82], [20.48, 45.19, 63.33, 7.55], [8.89, 62.97, 82.22, 6.33], [8.89, 84.53, 82.22, 6.33], [8.89, 92.57, 82.22, 7.06]], "drawn": true, "numbered": true}, "full/n1-connect-2-scan": {"src": "/sales_automation_manual/static/src/help/shots/full/n1-connect-2-scan.jpg", "box": null, "drawn": true}, "full/n1-connect-3-groups": {"src": "/sales_automation_manual/static/src/help/shots/full/n1-connect-3-groups.jpg", "box": [7.54, 26.97, 84.92, 10.68], "nums": [[7.54, 26.97, 84.92, 10.68], [7.7, 45.71, 84.59, 9.46], [7.54, 81.79, 84.92, 10.16]], "drawn": true, "numbered": true}, "full/n1-connect-ready": {"src": "/sales_automation_manual/static/src/help/shots/full/n1-connect-ready.jpg", "box": [39.02, 73.87, 17.38, 12.31], "nums": [[39.02, 73.87, 17.38, 12.31]], "drawn": true, "numbered": true}, "full/n2-groups": {"src": "/sales_automation_manual/static/src/help/shots/full/n2-groups.jpg", "box": null, "drawn": true}, "full/n2-contact-phone": {"src": "/sales_automation_manual/static/src/help/shots/full/n2-contact-phone.jpg", "box": [11.95, 45.38, 42.03, 6.73], "nums": [[11.95, 45.38, 42.03, 6.73]], "drawn": true, "numbered": true}, "full/f2-all-enquiries": {"src": "/sales_automation_manual/static/src/help/shots/full/f2-all-enquiries.jpg", "box": [13.54, 0.0, 6.4, 6.97], "nums": [[13.54, 0.0, 6.4, 6.97], [85.49, 14.34, 7.37, 6.17]], "drawn": true}, "full/n2-enquiries": {"src": "/sales_automation_manual/static/src/help/shots/full/n2-enquiries.jpg", "box": [61.09, 7.62, 4.61, 4.5], "nums": [[61.09, 7.62, 4.61, 4.5], [66.95, 8.12, 5.16, 3.62], [1.17, 15.12, 9.22, 6.25], [9.61, 13.88, 13.91, 7.5], [0.94, 22.0, 7.97, 5.25]], "drawn": true, "numbered": true}, "full/n2-quotes": {"src": "/sales_automation_manual/static/src/help/shots/full/n2-quotes.jpg", "box": null, "drawn": true}, "full/n2-vendor-price": {"src": "/sales_automation_manual/static/src/help/shots/full/n2-vendor-price.jpg", "box": [28.24, 69.0, 52.16, 9.86], "nums": [[28.24, 69.0, 52.16, 9.86], [19.32, 80.86, 61.35, 8.57]], "drawn": true, "numbered": true}, "full/n2-vendor-cards": {"src": "/sales_automation_manual/static/src/help/shots/full/n2-vendor-cards.jpg", "box": [50.39, 36.5, 5.55, 5.25], "nums": [[50.39, 36.5, 5.55, 5.25], [60.94, 36.5, 4.69, 5.25], [51.41, 59.12, 13.67, 5.5]], "drawn": true, "numbered": true}, "full/n2-two-prices": {"src": "/sales_automation_manual/static/src/help/shots/full/n2-two-prices.jpg", "box": [66.48, 51.5, 16.72, 4.12], "nums": [[66.48, 51.5, 16.72, 4.12], [50.39, 68.0, 41.41, 8.5]], "drawn": true, "numbered": true}, "full/o10-confirm-phone": {"src": "/sales_automation_manual/static/src/help/shots/full/o10-confirm-phone.jpg", "box": [2.56, 88.63, 94.87, 7.58], "nums": [[2.56, 88.63, 94.87, 7.58]], "drawn": true}, "full/o9-confirm": {"src": "/sales_automation_manual/static/src/help/shots/full/o9-confirm.jpg", "box": [6.28, 14.88, 50.87, 60.59], "nums": [[6.28, 14.88, 50.87, 60.59], [59.62, 52.82, 32.27, 8.58]], "drawn": true, "numbered": true}, "full/n2-orders": {"src": "/sales_automation_manual/static/src/help/shots/full/n2-orders.jpg", "box": [66.09, 8.12, 5.16, 3.62], "nums": [[66.09, 8.12, 5.16, 3.62], [1.17, 15.12, 6.64, 6.25], [0.94, 22.0, 7.97, 5.25], [41.64, 39.0, 5.78, 5.12]], "drawn": true, "numbered": true}, "full/n2-waiting-goods": {"src": "/sales_automation_manual/static/src/help/shots/full/n2-waiting-goods.jpg", "box": [8.59, 14.07, 12.58, 5.81], "nums": [[8.59, 14.07, 12.58, 5.81], [38.12, 36.28, 9.3, 4.77]], "drawn": true, "numbered": true}, "full/n2-accept": {"src": "/sales_automation_manual/static/src/help/shots/full/n2-accept.jpg", "box": [5.3, 76.95, 41.26, 12.28], "nums": [[5.3, 76.95, 41.26, 12.28]], "drawn": true, "numbered": true}, "full/n2-packing": {"src": "/sales_automation_manual/static/src/help/shots/full/n2-packing.jpg", "box": [41.56, 31.0, 5.86, 4.1], "nums": [[41.56, 31.0, 5.86, 4.1], [74.14, 51.1, 23.59, 5.8]], "drawn": true, "numbered": true}, "full/n2-paid": {"src": "/sales_automation_manual/static/src/help/shots/full/n2-paid.jpg", "box": [62.48, 23.02, 29.09, 3.14], "nums": [[62.48, 23.02, 29.09, 3.14]], "drawn": true}, "full/d1-to-dispatch": {"src": "/sales_automation_manual/static/src/help/shots/full/d1-to-dispatch.jpg", "box": [8.62, 0.0, 7.12, 6.5], "nums": [[8.62, 0.0, 7.12, 6.5]], "drawn": true}, "full/d4-riders": {"src": "/sales_automation_manual/static/src/help/shots/full/d4-riders.jpg", "box": [14.88, 0.0, 4.69, 6.5], "nums": [[14.88, 0.0, 4.69, 6.5]], "drawn": true}, "full/m2-lm1-live-map": {"src": "/sales_automation_manual/static/src/help/shots/full/m2-lm1-live-map.jpg", "box": [28.27, 7.5, 31.47, 3.29], "nums": [[28.27, 7.5, 31.47, 3.29], [0.89, 17.24, 23.51, 19.61], [65.62, 33.42, 2.75, 5.0], [0.89, 53.68, 23.51, 12.89], [61.16, 52.63, 3.5, 8.03], [58.63, 67.11, 2.75, 5.13]], "drawn": true, "numbered": true}, "full/m2-t1-track-moment-1": {"src": "/sales_automation_manual/static/src/help/shots/full/m2-t1-track-moment-1.jpg", "box": [41.86, 28.84, 12.09, 7.91], "nums": [[41.86, 28.84, 12.09, 7.91]], "drawn": true}, "full/m2-t2-track-moment-2": {"src": "/sales_automation_manual/static/src/help/shots/full/m2-t2-track-moment-2.jpg", "box": [33.95, 30.23, 15.81, 5.58], "nums": [[33.95, 30.23, 15.81, 5.58], [1.4, 50.81, 92.79, 9.88]], "drawn": true}, "full/n2-home-delivery": {"src": "/sales_automation_manual/static/src/help/shots/full/n2-home-delivery.jpg", "box": [5.3, 83.17, 19.63, 9.62], "nums": [[5.3, 83.17, 19.63, 9.62]], "drawn": true, "numbered": true}, "full/x_home": {"src": "/sales_automation_manual/static/src/help/shots/full/x_home.jpg", "box": [0.31, 28.33, 12.87, 5.89], "nums": [[0.31, 28.33, 12.87, 5.89], [0.31, 16.56, 12.87, 5.89], [0.31, 22.44, 12.87, 5.89], [0.31, 69.56, 12.87, 5.89], [0.31, 75.44, 12.87, 5.89], [0.31, 81.33, 12.87, 5.89]]}, "full/x_sa_menu": {"src": "/sales_automation_manual/static/src/help/shots/full/x_sa_menu.jpg", "box": [1.38, 16.44, 13.5, 3.33], "nums": [[1.38, 16.44, 13.5, 3.33], [1.38, 20.67, 13.5, 3.33], [1.38, 28.67, 13.5, 3.78]]}, "full/x_store_menu": {"src": "/sales_automation_manual/static/src/help/shots/full/x_store_menu.jpg", "box": [1.38, 15.56, 13.5, 3.78], "nums": [[1.38, 15.56, 13.5, 3.78], [1.38, 19.33, 13.5, 3.78], [1.38, 23.11, 13.5, 3.78]]}, "full/x_delivery_menu": {"src": "/sales_automation_manual/static/src/help/shots/full/x_delivery_menu.jpg", "box": [1.38, 16.44, 13.5, 3.33], "nums": [[1.38, 16.44, 13.5, 3.33], [1.38, 20.67, 13.5, 3.33], [1.38, 29.11, 13.5, 3.33]]}, "full/x_contacts_list": {"src": "/sales_automation_manual/static/src/help/shots/full/x_contacts_list.jpg", "box": [16.5, 5.67, 3.17, 3.67], "nums": [[16.5, 5.67, 3.17, 3.67]]}, "full/x_customer_form": {"src": "/sales_automation_manual/static/src/help/shots/full/x_customer_form.jpg", "box": [26.75, 16.56, 28.97, 4.29], "nums": [[26.75, 16.56, 28.97, 4.29], [28.05, 24.84, 18.01, 3.0], [28.05, 21.4, 18.01, 2.89]]}, "full/x_customer_address": {"src": "/sales_automation_manual/static/src/help/shots/full/x_customer_address.jpg", "box": [22.67, 33.67, 17.83, 2.89], "nums": [[22.67, 33.67, 17.83, 2.89], [22.67, 40.56, 6.78, 2.89], [22.67, 44.0, 17.83, 2.89]]}, "full/x_contact_save": {"src": "/sales_automation_manual/static/src/help/shots/full/x_contact_save.jpg", "box": [23.79, 7.47, 1.62, 1.94], "nums": [[23.79, 7.47, 1.62, 1.94]]}, "full/x_vendor_form": {"src": "/sales_automation_manual/static/src/help/shots/full/x_vendor_form.jpg", "box": [26.75, 16.56, 28.97, 4.29], "nums": [[26.75, 16.56, 28.97, 4.29], [28.05, 24.84, 18.01, 3.0]]}, "full/x_vendor_purchase": {"src": "/sales_automation_manual/static/src/help/shots/full/x_vendor_purchase.jpg", "box": [21.39, 50.44, 8.04, 4.89], "nums": [[21.39, 50.44, 8.04, 4.89]]}, "full/x_customer_links": {"src": "/sales_automation_manual/static/src/help/shots/full/x_customer_links.jpg", "box": [15.62, 4.56, 84.38, 100.0]}, "full/x_wechat": {"src": "/sales_automation_manual/static/src/help/shots/full/x_wechat.jpg", "box": [15.62, 4.56, 84.38, 100.0]}, "full/x_variants_setting": {"src": "/sales_automation_manual/static/src/help/shots/full/x_variants_setting.jpg", "box": [29.52, 53.21, 29.5, 11.44], "nums": [[29.52, 53.21, 29.5, 11.44], [30.52, 53.6, 0.88, 1.56], [16.5, 5.78, 3.21, 3.67]]}, "full/x_attributes": {"src": "/sales_automation_manual/static/src/help/shots/full/x_attributes.jpg", "box": [16.5, 5.67, 3.17, 3.67], "nums": [[16.5, 5.67, 3.17, 3.67]]}, "full/x_categories": {"src": "/sales_automation_manual/static/src/help/shots/full/x_categories.jpg", "box": [16.5, 5.67, 3.17, 3.67], "nums": [[16.5, 5.67, 3.17, 3.67]]}, "full/x_category_sourcing": {"src": "/sales_automation_manual/static/src/help/shots/full/x_category_sourcing.jpg", "box": null, "nums": [[17.62, 87.39, 47.75, 3.0]]}, "full/x_product_basics": {"src": "/sales_automation_manual/static/src/help/shots/full/x_product_basics.jpg", "box": [20.0, 20.33, 33.44, 4.44], "nums": [[20.0, 20.33, 33.44, 4.44], [52.88, 37.89, 7.78, 2.89], [52.88, 62.89, 12.5, 2.89]]}, "full/x_product_sold": {"src": "/sales_automation_manual/static/src/help/shots/full/x_product_sold.jpg", "box": [17.62, 26.44, 1.31, 2.56], "nums": [[17.62, 26.44, 1.31, 2.56]]}, "full/x_product_variants": {"src": "/sales_automation_manual/static/src/help/shots/full/x_product_variants.jpg", "box": [25.96, 31.22, 9.6, 4.89], "nums": [[25.96, 31.22, 9.6, 4.89], [18.74, 50.35, 3.9, 2.11], [17.62, 37.89, 47.75, 21.02]]}, "full/x_products_list": {"src": "/sales_automation_manual/static/src/help/shots/full/x_products_list.jpg", "box": [16.5, 5.67, 3.17, 3.67], "nums": [[16.5, 5.67, 3.17, 3.67]]}};
+// Full Flow "How It Works" (27 Nov 2026), written by make_full_flow.py - edit that file, not this one.
+const STEP_MS = 8000;   // slower than the app guides: juniors follow along
+const G = {
+ "menus": {
+  "name": "After install: your menus",
+  "steps": [
+   {
+    "title": "Open the apps",
+    "url": "Left side of the screen",
+    "text": "All apps are listed on the <b>left side</b>. Click an app name to open it. <i>Done when:</i> you see the list of apps.",
+    "shot": "full/x_home"
+   },
+   {
+    "title": "The apps you will use",
+    "url": "Left side of the screen",
+    "text": "<b>Contacts</b>, <b>Store</b>, <b>Insights</b>, <b>WA Tracker</b>, <b>Sales Automation</b> and <b>Delivery</b> (with <b>Inventory</b> further down) run the WhatsApp shop.",
+    "shot": "full/x_home"
+   },
+   {
+    "title": "Sales Automation menus",
+    "url": "Sales Automation  ›",
+    "text": "Click the <b>›</b> beside <b>Sales Automation</b>: <b>Enquiries</b> = customer requests, <b>Configuration</b> = set up once, <b>Help</b> = this guide.",
+    "shot": "full/x_sa_menu"
+   },
+   {
+    "title": "Store menus",
+    "url": "Store  ›",
+    "text": "Click the <b>›</b> beside <b>Store</b>: <b>Orders</b>, <b>Shop Queue</b> and <b>Enquiries</b> are the shop counter.",
+    "shot": "full/x_store_menu"
+   },
+   {
+    "title": "Delivery menus",
+    "url": "Delivery  ›",
+    "text": "Click the <b>›</b> beside <b>Delivery</b>: <b>Deliveries</b>, <b>Fleet</b> (riders) and <b>Configuration</b>.",
+    "shot": "full/x_delivery_menu"
+   }
+  ]
+ },
+ "contacts": {
+  "name": "Contacts, vendors, WhatsApp",
+  "steps": [
+   {
+    "title": "Open Contacts",
+    "url": "Contacts",
+    "text": "Click <b>Contacts</b> on the left. All customers and vendors live here.",
+    "shot": "full/x_home",
+    "nums": [
+     [
+      0.31,
+      28.33,
+      12.87,
+      5.89
+     ]
+    ]
+   },
+   {
+    "title": "New contact",
+    "url": "Contacts",
+    "text": "Click <b>New</b>. <i>Done when:</i> an empty contact form opens.",
+    "shot": "full/x_contacts_list"
+   },
+   {
+    "title": "Customer name, phone, e-mail",
+    "url": "Contacts › New",
+    "text": "Type the name (<b>Demo Customer</b>), choose the country, type the mobile <b>without</b> the country code, then the e-mail.",
+    "shot": "full/x_customer_form"
+   },
+   {
+    "title": "Customer address",
+    "url": "Contacts › Demo Customer",
+    "text": "Type the <b>Street</b>, <b>City</b> and <b>Country</b>: the rider delivers there.",
+    "shot": "full/x_customer_address"
+   },
+   {
+    "title": "Save",
+    "url": "Contacts › New",
+    "text": "Click the <b>cloud icon</b> to save. <i>Done when:</i> the cloud icon disappears.",
+    "shot": "full/x_contact_save"
+   },
+   {
+    "title": "New vendor",
+    "url": "Contacts › New",
+    "text": "Click <b>New</b> again and type <b>Demo Vendor</b> and its mobile, the same way.",
+    "shot": "full/x_vendor_form"
+   },
+   {
+    "title": "Make it a vendor",
+    "url": "Contacts › Demo Vendor › Sales & Purchase",
+    "text": "Open the <b>Sales &amp; Purchase</b> tab: vendors are asked for prices from here (<b>Price checks via</b> WhatsApp).",
+    "shot": "full/x_vendor_purchase"
+   },
+   {
+    "title": "Vendor phone for price checks",
+    "url": "Contacts › the vendor",
+    "text": "Check the vendor’s <b>mobile</b>: price questions go to this WhatsApp number.",
+    "shot": "full/n2-contact-phone"
+   },
+   {
+    "title": "WhatsApp numbers",
+    "url": "WA Tracker › Configuration › WhatsApp Numbers",
+    "text": "Open <b>WhatsApp Numbers</b> and click <b>+ Connect a number</b>. You do this once per number.",
+    "shot": "full/n1-numbers-list"
+   },
+   {
+    "title": "Employee and number",
+    "url": "Connect a number",
+    "text": "Choose the <b>employee</b>, the <b>country</b> and type the <b>number</b>, then click <b>Next</b>.",
+    "shot": "full/n1-connect-1"
+   },
+   {
+    "title": "Scan the QR",
+    "url": "Connect a number › Scan",
+    "text": "On that phone open WhatsApp › <b>Linked devices</b> › <b>Link a device</b> and scan. <i>Done when:</i> it says Connected.",
+    "shot": "full/n1-connect-2-scan"
+   },
+   {
+    "title": "Tick the groups",
+    "url": "Connect a number › Groups",
+    "text": "Tick the WhatsApp groups where customers order, then finish.",
+    "shot": "full/n1-connect-3-groups"
+   },
+   {
+    "title": "Number ready",
+    "url": "Connect a number",
+    "text": "<i>Done when:</i> the number shows <b>Connected</b> with its groups.",
+    "shot": "full/n1-connect-ready"
+   },
+   {
+    "title": "WhatsApp Groups",
+    "url": "Sales Automation › Configuration › WhatsApp Groups",
+    "text": "All groups of the number are listed here. Turn <b>On</b> the groups that sell.",
+    "shot": "sa/01_groups",
+    "mark": "1"
+   },
+   {
+    "title": "Group company",
+    "url": "Sales Automation › Configuration › WhatsApp Groups",
+    "text": "Set each group’s <b>Company</b>: orders from that group are made in that shop.",
+    "shot": "full/n2-groups"
+   },
+   {
+    "title": "Delivery address settings",
+    "url": "Sales Automation › Configuration › Delivery Address",
+    "text": "Choose how customers send their address (a short form link).",
+    "shot": "sa/03_delivery_address",
+    "mark": "1"
+   },
+   {
+    "title": "Customer links",
+    "url": "Sales Automation › Configuration › Customer Links",
+    "text": "Choose where each link goes: <b>Private chat</b> or <b>Group</b>.",
+    "shot": "full/x_customer_links"
+   },
+   {
+    "title": "WeChat vendors (optional)",
+    "url": "Sales Automation › WeChat Messages",
+    "text": "Vendors on WeChat answer the same way; their messages show here.",
+    "shot": "full/x_wechat"
+   }
+  ]
+ },
+ "products": {
+  "name": "Products, variants, pictures",
+  "steps": [
+   {
+    "title": "Switch on Variants",
+    "url": "Settings › Inventory › Products",
+    "text": "Tick <b>Variants</b> (sizes, colours) and click <b>Save</b>. Already on? Leave it.",
+    "shot": "full/x_variants_setting"
+   },
+   {
+    "title": "Attributes",
+    "url": "Inventory › Configuration › Attributes",
+    "text": "Click <b>New</b> to make an attribute such as <b>Size</b> or <b>Colour</b>.",
+    "shot": "full/x_attributes"
+   },
+   {
+    "title": "Attribute values",
+    "url": "Inventory › Configuration › Attributes › New",
+    "text": "Type the name, keep <b>Instantly</b>, and add a value per line (<b>Black</b>, <b>Silver</b>).",
+    "shot": "full/c4-attribute-new"
+   },
+   {
+    "title": "Product categories",
+    "url": "Inventory › Configuration › Product Categories",
+    "text": "Click <b>New</b> and type the category name (<b>Demo Category</b>). (This database shows it under Accounting.)",
+    "shot": "full/x_categories"
+   },
+   {
+    "title": "Vendors on the category",
+    "url": "Product Category › WhatsApp Sourcing",
+    "text": "Add <b>Demo Vendor</b> under <b>WhatsApp Sourcing</b>: these vendors get the price questions.",
+    "shot": "full/x_category_sourcing"
+   },
+   {
+    "title": "New product",
+    "url": "Inventory › Products › Products",
+    "text": "Click <b>New</b> to create the product customers ask for.",
+    "shot": "full/x_products_list"
+   },
+   {
+    "title": "Name, price, category",
+    "url": "Inventory › Products › Demo Laptop 14",
+    "text": "Type the name, the <b>Sales Price</b> and pick the <b>Category</b>.",
+    "shot": "full/x_product_basics"
+   },
+   {
+    "title": "Can be sold",
+    "url": "Inventory › Products › Demo Laptop 14",
+    "text": "Make sure <b>Sales</b> is ticked, or it never shows in WhatsApp.",
+    "shot": "full/x_product_sold"
+   },
+   {
+    "title": "Add variants",
+    "url": "Product › Attributes & Variants",
+    "text": "Open <b>Attributes &amp; Variants</b>, click <b>Add a line</b>, pick <b>Size</b> / <b>Colour</b> and their values.",
+    "shot": "full/x_product_variants"
+   },
+   {
+    "title": "Check the variants",
+    "url": "Product › Variants",
+    "text": "The <b>Variants</b> button shows every version Odoo made (2 sizes × 2 colours = 4).",
+    "shot": "full/c10-variants-list"
+   },
+   {
+    "title": "Pictures by link",
+    "url": "Product › 369 MART › Photographs",
+    "text": "In <b>Photographs</b> click <b>Link</b>. (Needs the 369 Mart app on your database.)",
+    "shot": "full/p1-photographs-link"
+   },
+   {
+    "title": "Paste the links",
+    "url": "Photographs › Link",
+    "text": "Paste the picture links, <b>one per line</b>, then click <b>Add</b>.",
+    "shot": "full/p2-paste-box"
+   },
+   {
+    "title": "Pictures added",
+    "url": "Photographs",
+    "text": "The pictures appear, marked <b>Not saved</b>. The first one is <b>On the card</b>.",
+    "shot": "full/p3-links-added"
+   },
+   {
+    "title": "Save the product",
+    "url": "Photographs",
+    "text": "Click the <b>cloud icon</b>. <i>Done when:</i> no picture says Not saved.",
+    "shot": "full/p6-saved"
+   }
+  ]
+ },
+ "asks": {
+  "name": "A customer orders in WhatsApp",
+  "steps": [
+   {
+    "title": "Customer says hi",
+    "url": "WhatsApp group",
+    "text": "The customer writes <b>hi</b> in the group and taps <b>NEW ORDER</b>.",
+    "shot": "full/s10-menu"
+   },
+   {
+    "title": "Customer picks the product",
+    "url": "WhatsApp group",
+    "text": "The bot lists the products; the customer taps one.",
+    "shot": "full/s10-product"
+   },
+   {
+    "title": "Customer picks an option",
+    "url": "WhatsApp group",
+    "text": "The customer taps the version (size, colour, RAM…).",
+    "shot": "full/s10-options"
+   },
+   {
+    "title": "The enquiry in Odoo",
+    "url": "Sales Automation › Enquiries › All Enquiries",
+    "text": "Every request becomes an enquiry: who asked, for what, and its state.",
+    "shot": "full/f2-all-enquiries"
+   },
+   {
+    "title": "Shop Queue rings",
+    "url": "Store › Shop Queue",
+    "text": "The counter screen shows (and rings for) new work.",
+    "shot": "store/01_shop_queue",
+    "mark": "1"
+   },
+   {
+    "title": "Store Enquiries",
+    "url": "Store › Enquiries",
+    "text": "Requests that need a person wait under <b>Needs you</b>.",
+    "shot": "full/n2-enquiries"
+   }
+  ]
+ },
+ "price": {
+  "name": "Vendor price to order",
+  "steps": [
+   {
+    "title": "Vendors are asked",
+    "url": "Store › Enquiries",
+    "text": "Not in stock? The vendors of the category get a price question by themselves.",
+    "shot": "full/n2-quotes"
+   },
+   {
+    "title": "Vendor answers",
+    "url": "Vendor’s WhatsApp",
+    "text": "The vendor replies with a price.",
+    "shot": "full/n2-vendor-price"
+   },
+   {
+    "title": "Choose the vendor",
+    "url": "Store › Enquiries › vendor cards",
+    "text": "Compare the vendor cards and pick the best price.",
+    "shot": "full/n2-vendor-cards"
+   },
+   {
+    "title": "Two prices: approve",
+    "url": "Store › Enquiries › Needs you",
+    "text": "If the vendor price differs from the page price, approve the one to use.",
+    "shot": "full/n2-two-prices"
+   },
+   {
+    "title": "Price to the customer",
+    "url": "Customer’s WhatsApp",
+    "text": "The customer gets the price and a link to check the product.",
+    "shot": "full/o10-confirm-phone"
+   },
+   {
+    "title": "Customer confirms",
+    "url": "“Is this the product?” page",
+    "text": "The customer checks the pictures and taps <b>Accept</b>.",
+    "shot": "full/o9-confirm"
+   },
+   {
+    "title": "Address",
+    "url": "Address form",
+    "text": "A new customer fills in the address form.",
+    "shot": "full/n2-address-form"
+   },
+   {
+    "title": "Sign the order",
+    "url": "Order page › Sign",
+    "text": "The customer types the name and taps <b>Accept &amp; Sign</b>.",
+    "shot": "full/n2-sign"
+   },
+   {
+    "title": "Pay",
+    "url": "Order page › Pay",
+    "text": "The customer taps <b>Pay</b> (or pays cash on delivery).",
+    "shot": "full/n2-pay-link"
+   },
+   {
+    "title": "Payment details",
+    "url": "Order page › Pay",
+    "text": "The card is checked and the order is paid.",
+    "shot": "full/n2-pay"
+   },
+   {
+    "title": "The order appears",
+    "url": "Store › Orders",
+    "text": "A new order card appears in <b>Store › Orders</b>.",
+    "shot": "full/n2-orders"
+   }
+  ]
+ },
+ "order": {
+  "name": "Order card to dispatch",
+  "steps": [
+   {
+    "title": "Read the card",
+    "url": "Store › Orders",
+    "text": "Check the items, the amount and how it was paid.",
+    "shot": "full/n2-waiting-goods"
+   },
+   {
+    "title": "Accept",
+    "url": "Store › Orders",
+    "text": "Click <b>Accept</b> to start the order.",
+    "shot": "full/n2-accept"
+   },
+   {
+    "title": "Pack it",
+    "url": "Store › Orders",
+    "text": "Pack the items, then click <b>Packed</b>.",
+    "shot": "full/n2-packing"
+   },
+   {
+    "title": "Quick and Express",
+    "url": "Store › Quick Delivery",
+    "text": "Fast orders are grouped in <b>Quick Delivery</b> and <b>Express Delivery</b>.",
+    "shot": "store/05_quick",
+    "mark": "1"
+   },
+   {
+    "title": "Invoice and documents",
+    "url": "Order page after paying",
+    "text": "The invoice and receipt are on the order page.",
+    "shot": "full/n2-paid"
+   }
+  ]
+ },
+ "delivery": {
+  "name": "Delivery",
+  "steps": [
+   {
+    "title": "To Dispatch",
+    "url": "Delivery › Deliveries › To Dispatch",
+    "text": "Packed orders wait here for a rider.",
+    "shot": "delivery/04_to_dispatch",
+    "mark": "1"
+   },
+   {
+    "title": "Call a Rider",
+    "url": "Delivery › Deliveries › To Dispatch",
+    "text": "Click <b>Call a Rider</b>: Odoo asks the nearest free rider.",
+    "shot": "full/d1-to-dispatch"
+   },
+   {
+    "title": "Riders",
+    "url": "Delivery › Fleet › Riders & Couriers",
+    "text": "See each rider and whether they are on duty.",
+    "shot": "full/d4-riders"
+   },
+   {
+    "title": "On the way",
+    "url": "Delivery › Deliveries › In Progress",
+    "text": "Orders on the way are listed here.",
+    "shot": "delivery/05_in_progress",
+    "mark": "1"
+   },
+   {
+    "title": "Live Map",
+    "url": "Delivery › Fleet › Live Map",
+    "text": "See where every rider is right now.",
+    "shot": "full/m2-lm1-live-map"
+   },
+   {
+    "title": "Customer tracking page",
+    "url": "Tracking page",
+    "text": "The customer follows the rider live from the link.",
+    "shot": "full/m2-t1-track-moment-1"
+   },
+   {
+    "title": "Rider near the customer",
+    "url": "Tracking page",
+    "text": "The page updates as the rider gets close.",
+    "shot": "full/m2-t2-track-moment-2"
+   },
+   {
+    "title": "Delivery code",
+    "url": "Delivery › Deliveries › Create OTP",
+    "text": "If the customer can’t read the code, create one by hand here.",
+    "shot": "delivery/07_create_otp",
+    "mark": "1"
+   },
+   {
+    "title": "Hand over",
+    "url": "Store › Orders",
+    "text": "The parcel is handed over; the code is checked.",
+    "shot": "full/n2-home-delivery"
+   },
+   {
+    "title": "Delivered",
+    "url": "Delivery › Deliveries › Delivered",
+    "text": "Finished orders move to <b>Delivered</b>.",
+    "shot": "delivery/08_delivered",
+    "mark": "1"
+   },
+   {
+    "title": "Problems and SOS",
+    "url": "Delivery › Fleet › SOS Alerts",
+    "text": "Failed jobs and rider SOS alerts show here.",
+    "shot": "delivery/10_sos",
+    "mark": "1"
+   },
+   {
+    "title": "Delivery report",
+    "url": "Delivery › Reporting › Delivery Analysis",
+    "text": "See how the deliveries went.",
+    "shot": "delivery/11_analysis",
+    "mark": "1"
+   }
+  ]
+ },
+ "insights": {
+  "name": "Afterwards: ratings",
+  "steps": [
+   {
+    "title": "Customer stars",
+    "url": "Insights › Customer Dashboard",
+    "text": "Each customer gets stars from their orders.",
+    "shot": "insights/01_customers",
+    "mark": "1"
+   },
+   {
+    "title": "Vendor stars",
+    "url": "Insights › Vendor Dashboard",
+    "text": "Vendors are rated on price and speed.",
+    "shot": "insights/02_vendors",
+    "mark": "1"
+   },
+   {
+    "title": "Why each star",
+    "url": "Insights › Configuration › Rated Rows",
+    "text": "See every rated row behind the stars.",
+    "shot": "insights/03_rated_rows",
+    "mark": "1"
+   }
+  ]
+ }
+};
+const order = ["menus", "contacts", "products", "asks", "price", "order", "delivery", "insights"];
+if (window.top !== window.self) document.documentElement.classList.add('framed');
+const VIDEO = '/sales_automation_manual/static/src/help/full_flow.webm', VTITLE = 'Full Flow';
+const q = new URLSearchParams(location.search);
+let cur = order.includes(q.get('for')) ? q.get('for') : order[0], step = 0, playing = q.has('play'), timer = null;
+const tabs = document.getElementById('tabs'), card = document.getElementById('card');
+order.forEach(k => { const b = document.createElement('button'); b.className = 'tab'; b.textContent = G[k].name;
+  b.onclick = () => { cur = k; step = 0; draw(); }; tabs.appendChild(b); });
+const play = document.createElement('button'); play.className = 'play'; tabs.appendChild(play);
+// this guide's own video, in the same window; Back returns to this guide
+const videoUrl = '/sales_automation_manual/static/src/help/video.html?v=' + encodeURIComponent(VIDEO) +
+  '&t=' + encodeURIComponent(VTITLE) + '&back=' + encodeURIComponent(location.pathname + location.search);
+const vid = document.createElement('a'); vid.className = 'full vid'; vid.href = videoUrl; vid.textContent = '🎬 Watch video';
+tabs.appendChild(vid);
+document.querySelectorAll('a.vidlink').forEach(a => { a.href = videoUrl; });
+if (q.get('from') === 'help') document.getElementById('top').hidden = false;
+// ?back=/same/site/page: "Back" returns there (e.g. a module's Help choices); the video link keeps it
+const bk = q.get('back');
+if (bk && bk.startsWith('/') && !bk.startsWith('//')) {
+  const top = document.getElementById('top'), a = top.querySelector('a');
+  top.hidden = false; a.href = bk; a.innerHTML = '&larr; Back';
+  top.appendChild(document.querySelector('h1'));   // one bar: Back + title, like the User Manual
+  const here = location.pathname + '?back=' + encodeURIComponent(bk);
+  document.querySelectorAll('a.vidlink, a.vid').forEach(l => {
+    const u = new URL(l.getAttribute('href'), location.href);
+    if (u.pathname.endsWith('/video.html')) { u.searchParams.set('back', here); l.href = u.pathname + u.search; }
+  });
+}
+play.onclick = () => { playing = !playing; draw(); };
+const full = document.createElement('button'); full.className = 'full'; full.textContent = '⛶ Full screen'; tabs.appendChild(full);
+full.onclick = () => {
+  if (document.fullscreenElement) { document.exitFullscreen(); return; }
+  if (card.requestFullscreen) card.requestFullscreen().then(() => setTimeout(draw, 150)).catch(() => {});
+};
+document.addEventListener('fullscreenchange', () => {
+  full.textContent = document.fullscreenElement ? '✕ Exit full screen' : '⛶ Full screen'; setTimeout(draw, 150);
+});
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function row(r) {
+  const cls = 'row' + (r.ghost ? ' ghost' : '') + (r.target ? ' target' : '');
+  if (r.kind === 'btn') return `<div class="row" style="justify-content:flex-end;border:0;background:none"><span class="btn${r.target ? ' target' : ''}">${esc(r.t)}</span></div>`;
+  if (r.kind === 'input') return `<div class="${cls}"><span>${esc(r.t)}</span><span class="input" data-v="${esc(r.v || '')}"></span></div>`;
+  if (r.kind === 'ok') return `<div class="row okrow">${esc(r.t)}</div>`;
+  if (r.kind === 'secret') return `<div class="${cls}" style="justify-content:center"><span class="secret">${esc(r.t)}</span></div>`;
+  if (r.kind === 'qr') return `<div class="qr" aria-label="QR code"></div>`;
+  return `<div class="${cls}"><span>${esc(r.t)}</span>${r.v ? `<span class="val">${esc(r.v)}</span>` : ''}</div>`;
+}
+function typeIn(box, i) {   // type the example values one box after another
+  const boxes = [...box.querySelectorAll('.input')];
+  const go = n => {
+    if (n >= boxes.length) return;
+    const el = boxes[n], full = el.dataset.v; let k = 0; el.classList.add('typing');
+    const t = setInterval(() => { el.textContent = full.slice(0, ++k);
+      if (k >= full.length) { clearInterval(t); el.classList.remove('typing'); go(n + 1); } }, 28);
+  };
+  go(0);
+}
+// a real screenshot step: {shot: 'gateway/04_connect_button', mark: 'Click here'} (SHOTS is filled by build.py)
+function shotHtml(s) {
+  const sh = s.shot && typeof SHOTS !== 'undefined' ? SHOTS[s.shot] : null;
+  if (!sh) return '';
+  // the marker always stays on the picture
+  let b = s.box || sh.box;
+  if (b) { const x = Math.max(0.5, b[0]), y = Math.max(0.5, b[1]);
+    b = [x, y, Math.min(b[2] - (x - b[0]), 99.5 - x), Math.min(b[3] - (y - b[1]), 99.5 - y)]; }
+  // 27 Nov 2026: numbered callouts. s.nums (or the picture's own nums) = boxes in %; the red box sits on
+  // number 1 unless the picture already has its boxes drawn in (sh.drawn): then only the numbers show.
+  const nums = s.nums || sh.nums;
+  if (nums && nums.length) {
+    const f = nums[0];
+    const ring = sh.drawn || s.nohl
+      ? `<div class="target" style="position:absolute;left:${f[0]}%;top:${f[1]}%;width:${f[2]}%;height:${f[3]}%;box-shadow:none;animation:none"></div>`
+      : `<div class="hl target" style="left:${f[0]}%;top:${f[1]}%;width:${f[2]}%;height:${f[3]}%"></div>`;
+    // each number sits just left of its box (inside it when the box touches the left edge), never on the value
+    const marks = sh.numbered ? '' : nums.map((n, i) => `<div class="num badge${n[0] < 3 ? ' inside' : ''}" style="left:${n[0] < 3 ? n[0] + n[2] : n[0]}%;top:${n[1] + n[3] / 2}%">${i + 1}</div>`).join('');
+    return `<div class="shot"><img src="${sh.src}" alt="${esc(s.title)}" onclick="zoom(this)">${ring}${marks}</div>`;
+  }
+  const hl = b ? `<div class="hl target" style="left:${b[0]}%;top:${b[1]}%;width:${b[2]}%;height:${b[3]}%"></div>
+     ${s.mark ? `<div class="num${b[1] < 12 ? ' below' : ''}" style="left:${b[0] + b[2] / 2}%;top:${b[1] < 12 ? b[1] + b[3] : b[1]}%">${esc(s.mark)}</div>` : ''}` : '';
+  return `<div class="shot"><img src="${sh.src}" alt="${esc(s.title)}" onclick="zoom(this)">${hl}</div>`;
+}
+const lb = document.getElementById('lb');
+function zoom(img) { lb.querySelector('img').src = img.src; lb.querySelector('img').alt = img.alt; lb.classList.add('on'); }
+lb.onclick = () => lb.classList.remove('on');
+function fit() {
+  const img = card.querySelector('.shot img');
+  if (!img || !img.naturalWidth) return;
+  const box = document.fullscreenElement || document.documentElement;
+  img.style.maxHeight = '';
+  const over = box.scrollHeight - box.clientHeight;
+  if (over > 0) img.style.maxHeight = Math.max(180, img.getBoundingClientRect().height - over - 2) + 'px';
+}
+addEventListener('resize', () => { fit(); });
+function draw() {
+  clearTimeout(timer);
+  const keepY = scrollY;
+  const g = G[cur], steps = g.steps, s = steps[step];
+  [...tabs.querySelectorAll('.tab')].forEach((b, i) => b.setAttribute('aria-selected', order[i] === cur));
+  play.textContent = playing ? '❚❚ Pause' : '▶ Play';
+  const ms = s.ms || (typeof STEP_MS !== 'undefined' ? STEP_MS : 5200);   // a guide may set a slower pace
+  card.innerHTML = `
+    ${playing ? `<div class="progress run" style="animation-duration:${ms}ms"></div>` : ''}
+    ${g.warn ? `<div class="warn">⚠ ${g.warn}</div>` : ''}
+    <div class="slide">
+      <div class="head"><h2 class="title">${step + 1}. ${s.title}</h2><span class="count">Step ${step + 1} of ${steps.length}</span></div>
+      <p class="text">${s.text}</p>
+      <div class="screen" id="screen">
+        <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">${esc(s.url)}</span></div>
+        ${shotHtml(s) || `<div class="body">${(s.rows || []).map(row).join('')}</div>`}
+        <svg class="pointer" id="ptr" style="left:85%;top:85%"><use href="#hand"/></svg>
+      </div>
+      ${s.tip ? `<div class="tip">${s.tip}</div>` : ''}
+    </div>
+    <div class="nav">
+      <button class="arrow prev" ${step === 0 ? 'disabled' : ''}>&larr; Previous</button>
+      <div class="dots">${steps.map((_, i) => `<i class="${i === step ? 'on' : ''}"></i>`).join('')}</div>
+      <button class="arrow next">${step === steps.length - 1 ? 'Start again ↺' : 'Next &rarr;'}</button>
+    </div>`;
+  card.querySelector('.prev').onclick = () => { if (step > 0) { step--; draw(); } };
+  card.querySelector('.next').onclick = () => { step = step === steps.length - 1 ? 0 : step + 1; draw(); };
+  const screen = document.getElementById('screen');
+  typeIn(screen);
+  const place = () => setTimeout(() => {
+    const ptr = document.getElementById('ptr'), t = screen.querySelector('.target');
+    if (!ptr) return;
+    if (!t) { ptr.style.display = 'none'; return; }
+    const a = screen.getBoundingClientRect(), b = t.getBoundingClientRect();
+    ptr.style.left = (b.left - a.left + Math.min(b.width * 0.6, Math.max(8, b.width - 14))) + 'px';
+    ptr.style.top = (b.top - a.top + b.height * 0.45) + 'px';
+    ptr.classList.add('click');
+  }, 700);
+  const img = screen.querySelector('.shot img');
+  const ready = () => { fit(); scrollTo(0, keepY); place(); };
+  if (img && !img.complete) img.addEventListener('load', ready, { once: true }); else requestAnimationFrame(ready);
+  if (playing) timer = setTimeout(() => {
+    if (step < steps.length - 1) { step++; draw(); }
+    else if (q.has('play') && !q.has('for') && order.indexOf(cur) < order.length - 1) { cur = order[order.indexOf(cur) + 1]; step = 0; draw(); }   // video: every part
+    else { playing = false; draw(); document.title = 'DONE'; }
+  }, ms);
+}
+document.addEventListener('keydown', e => {
+  if (lb.classList.contains('on')) { if (e.key === 'Escape') { lb.classList.remove('on'); e.stopPropagation(); } return; }
+  if (e.key === 'ArrowRight') card.querySelector('.next').click();
+  if (e.key === 'ArrowLeft') card.querySelector('.prev').click();
+});
+draw();
+</script>
+</body>
+</html>

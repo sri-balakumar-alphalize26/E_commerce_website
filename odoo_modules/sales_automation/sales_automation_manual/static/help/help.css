@@ -1,0 +1,44 @@
+/* 27 Nov 2026: the Help pages of Sales Automation, Store, Delivery and Insights.
+   Light only (same look as WA Tracker Help). */
+:root { --bg:#f4f5f7; --card:#fff; --ink:#1f2430; --muted:#6b7280; --line:#e3e6ea; --brand:#714b67; --accent:#017e84; --chip:#eef0f3; }
+* { box-sizing:border-box; }
+html, body { height:100%; }
+body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+.wrap { max-width:860px; margin:0 auto; padding:28px 16px; }
+h1 { font-size:22px; margin:0; text-align:center; }
+.sub { color:var(--muted); text-align:center; margin:4px 0 24px; }
+.grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:16px; }
+a.pick { display:block; text-decoration:none; color:inherit; background:var(--card); border:1px solid var(--line);
+         border-radius:14px; padding:28px 20px; text-align:center; transition:box-shadow .15s, border-color .15s; }
+a.pick:hover, a.pick:focus-visible { border-color:var(--accent); box-shadow:0 4px 18px rgba(1,126,132,.15); outline:none; }
+.ic { font-size:46px; line-height:1; }
+.t { display:block; font-size:20px; font-weight:700; margin-top:12px; }
+.d { display:block; color:var(--muted); margin-top:6px; }
+/* top bar: Back + title (+ Open in a new tab) */
+.top { display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:12px 16px; }
+.top a { text-decoration:none; border-radius:8px; padding:7px 14px; font-weight:600; font-size:14px; background:var(--chip); color:var(--ink); }
+.top a:hover { background:var(--line); }
+.top a.s { background:var(--brand); color:#fff; }
+.top h1 { font-size:20px; margin:0 auto 0 0; text-align:left; }
+.wrap.under { padding-top:4px; }
+/* the PDF */
+body.doc { display:flex; flex-direction:column; }
+.box { flex:1; margin:0 16px 16px; background:var(--card); border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+.box iframe { display:block; width:100%; height:100%; border:0; }
+/* the "where to open" question */
+.ask { position:fixed; inset:0; background:rgba(31,36,48,.35); display:none; align-items:center; justify-content:center; padding:16px; }
+.ask.on { display:flex; }
+.ask .qbox { background:var(--card); border-radius:14px; padding:22px; width:100%; max-width:380px; box-shadow:0 12px 40px rgba(0,0,0,.2); text-align:center; }
+.ask h2 { font-size:18px; margin:0 0 4px; }
+.ask p { color:var(--muted); margin:0 0 16px; }
+.ask button { display:block; width:100%; border:0; border-radius:10px; padding:12px; font:inherit; font-weight:600; cursor:pointer; margin-top:8px; }
+.ask .here { background:var(--brand); color:#fff; }
+.ask .tab { background:var(--chip); color:var(--ink); }
+.ask .no { background:none; color:var(--muted); font-weight:400; }
+/* 27 Nov 2026: User Manual shows its 2 buttons under the cards (no question for the card itself) */
+a.pick.toggle.sel { border-color:var(--brand); box-shadow:0 0 0 2px var(--brand) inset; }
+.row { margin-top:20px; }
+.row .sub { margin:0 0 12px; }
+a.pick.small { padding:18px 16px; }
+a.pick.small .ic { font-size:34px; }
+a.pick.small .t { font-size:17px; margin-top:8px; }

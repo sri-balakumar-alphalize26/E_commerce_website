@@ -1,34 +1,38 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- One "User Manual" entry under every module's root menu, each opening
-         the chapter of that module in a new tab. -->
-    <record id="action_sa_manual" model="ir.actions.act_url">
-        <field name="name">User Manual</field>
-        <field name="url">/sa/manual</field>
-        <field name="target">new</field>
+    <!-- 27 Nov 2026 (1.4.0): ONE "Help" at the end of each app's top menu (Sales
+         Automation, Store, Delivery, Insights). It opens the WhatsApp Help pop-up on
+         static/help/help.html?app=..: "User Manual" (the app's manual or the Full
+         manual) and "How It Works" (the app's step guide + video). The old
+         "📖 User Manual" entries are gone: removing them here deletes them on upgrade.
+         ?v=4 in every url: browsers keep static pages 7 days - bump it with changes. -->
+    <record id="action_sa_help_sa" model="ir.actions.client">
+        <field name="name">Sales Automation Help</field>
+        <field name="tag">sales_automation_manual.help</field>
+        <field name="params" eval="{'url': '/sales_automation_manual/static/help/help.html?app=sa&amp;v=4'}"/>
     </record>
-    <record id="action_sa_manual_store" model="ir.actions.act_url">
-        <field name="name">User Manual - Store</field>
-        <field name="url">/sa/manual#store</field>
-        <field name="target">new</field>
+    <record id="action_sa_help_store" model="ir.actions.client">
+        <field name="name">Store Help</field>
+        <field name="tag">sales_automation_manual.help</field>
+        <field name="params" eval="{'url': '/sales_automation_manual/static/help/help.html?app=store&amp;v=4'}"/>
     </record>
-    <record id="action_sa_manual_delivery" model="ir.actions.act_url">
-        <field name="name">User Manual - Delivery</field>
-        <field name="url">/sa/manual#delivery</field>
-        <field name="target">new</field>
+    <record id="action_sa_help_delivery" model="ir.actions.client">
+        <field name="name">Delivery Help</field>
+        <field name="tag">sales_automation_manual.help</field>
+        <field name="params" eval="{'url': '/sales_automation_manual/static/help/help.html?app=delivery&amp;v=4'}"/>
     </record>
-    <record id="action_sa_manual_insights" model="ir.actions.act_url">
-        <field name="name">User Manual - Insights</field>
-        <field name="url">/sa/manual#insights</field>
-        <field name="target">new</field>
+    <record id="action_sa_help_insights" model="ir.actions.client">
+        <field name="name">Insights Help</field>
+        <field name="tag">sales_automation_manual.help</field>
+        <field name="params" eval="{'url': '/sales_automation_manual/static/help/help.html?app=insights&amp;v=4'}"/>
     </record>
 
-    <menuitem id="menu_sa_manual" name="📖 User Manual"
-              parent="sales_automation.menu_sa_root" action="action_sa_manual" sequence="99"/>
-    <menuitem id="menu_sa_manual_store" name="📖 User Manual"
-              parent="sales_automation_store.menu_sa_store_root" action="action_sa_manual_store" sequence="99"/>
-    <menuitem id="menu_sa_manual_delivery" name="📖 User Manual"
-              parent="sales_automation_delivery.menu_sa_delivery_root" action="action_sa_manual_delivery" sequence="99"/>
-    <menuitem id="menu_sa_manual_insights" name="📖 User Manual"
-              parent="sales_automation_insights.menu_sa_insights_root" action="action_sa_manual_insights" sequence="99"/>
+    <menuitem id="menu_sa_help_sa" name="Help"
+              parent="sales_automation.menu_sa_root" action="action_sa_help_sa" sequence="9999"/>
+    <menuitem id="menu_sa_help_store" name="Help"
+              parent="sales_automation_store.menu_sa_store_root" action="action_sa_help_store" sequence="9999"/>
+    <menuitem id="menu_sa_help_delivery" name="Help"
+              parent="sales_automation_delivery.menu_sa_delivery_root" action="action_sa_help_delivery" sequence="9999"/>
+    <menuitem id="menu_sa_help_insights" name="Help"
+              parent="sales_automation_insights.menu_sa_insights_root" action="action_sa_help_insights" sequence="9999"/>
 </odoo>
