@@ -13,16 +13,28 @@ class WaChatController(http.Controller):
         # auth='user' lets a customer's portal login in as well
         if not request.env.user._is_internal():
             raise AccessError("Only for employees.")
+        # 27 Nov 2026: the top-right branch switch. These calls carry no context,
+        # so the switched-on branches are read from Odoo's own `cids` cookie.
+        request.update_context(allowed_company_ids=self._branch_ids())
 
-    def _mine(self):
-        """Whose chats: all, the department's, or one's own."""
+    def _branch_ids(self):
         user = request.env.user
+        mine = user._get_company_ids()
+        wanted = [int(c) for c in (request.cookies.get('cids') or '').replace(',', '-').split('-') if c.isdigit()]
+        return [c for c in wanted if c in mine] or [user.company_id.id]
+
+    def _mine(self, path=''):
+        """Whose chats: all, the department's, or one's own, of the switched-on
+        branches only. path: from the searched model to wa.employee.session."""
+        user = request.env.user
+        ids = request.env.context.get('allowed_company_ids') or self._branch_ids()
+        branch = ['|', (path + 'company_id', '=', False), (path + 'company_id', 'in', ids)]
         if user.has_group('whatsapp_employee_tracker.group_wa_tracker_manager'):
-            return []
+            return branch
         own = [('employee_id.user_id', '=', user.id)]
         if user.has_group('whatsapp_employee_tracker.group_wa_tracker_dept_head'):
-            return ['|', ('employee_id.department_id.manager_id.user_id', '=', user.id)] + own
-        return own
+            return branch + ['|', ('employee_id.department_id.manager_id.user_id', '=', user.id)] + own
+        return branch + own
 
     @http.route('/wa_tracker/employee_sessions', type='jsonrpc', auth='user')
     def get_employee_sessions(self):
@@ -98,7 +110,7 @@ class WaChatController(http.Controller):
     def get_conversations(self, employee_session_id=None, employee_id=None):
         """Get conversations list for the chat panel."""
         self._staff()
-        domain = [('total_messages', '>', 0)] + self._mine()
+        domain = [('total_messages', '>', 0)] + self._mine('employee_session_id.')
         if employee_session_id:
             domain.append(('employee_session_id', '=', int(employee_session_id)))
         elif employee_id:
@@ -157,7 +169,8 @@ class WaChatController(http.Controller):
     # ---- as the phone has it (24 Nov 2026): administrators, the present number
     def _phone(self, employee_session_id):
         self._staff()
-        link = request.env['wa.employee.session'].browse(int(employee_session_id or 0)).exists()
+        link = request.env['wa.employee.session'].search(
+            [('id', '=', int(employee_session_id or 0))] + self._mine(), limit=1)
         if not link or not request.env.user.has_group('base.group_system'):
             return None
         return link if link.active and link.sudo().session_id.active else None
@@ -220,7 +233,7 @@ class WaChatController(http.Controller):
         """Get messages for a conversation."""
         self._staff()
         chat = request.env['wa.conversation'].sudo().with_context(active_test=False).search(
-            [('id', '=', int(conversation_id))] + self._mine())
+            [('id', '=', int(conversation_id))] + self._mine('employee_session_id.'))
         logs = request.env['wa.communication.log'].sudo().search([
             ('conversation_id', 'in', chat.ids),
         ], order='message_date asc')
