@@ -287,7 +287,7 @@ class WhatsAppConnect(models.AbstractModel):
             self._keep_try('open', '', why)
         country = self.env.company.country_id
         return {
-            'countries': self._countries(),
+            'countries': self._countries(), 'db': self.env.cr.dbname,
             'country': country.id if country.phone_code else False,
             # every company the user may use, branches as "Parent / Branch" -
             # not only those ticked in the company switcher right now
@@ -378,13 +378,58 @@ class WhatsAppConnect(models.AbstractModel):
                 self._keep_try('number', whole, why)
                 return {'where': '', 'ok': True, 'text': _("Could not check in the panel: %s", why)}
             return {'where': '', 'ok': True, 'text': _("Could not check in the panel now; checked again on Next") if self._askers() else ''}
+        if where == 'elsewhere' and body.get('can_switch'):
+            used = [d for d in body.get('used_in') or [] if d]
+            return {'where': 'elsewhere', 'ok': False, 'switch': True, 'used_in': used,
+                    'paired': bool(body.get('paired')), 'pretty': self._pretty(whole),
+                    'text': (_("In use in %s.", ', '.join(used)) if used
+                             else _("In the panel, but not given to this database."))}
         if where == 'elsewhere':
             self._keep_try('number', whole, answer[1])
         return {'where': where, 'ok': answer[0], 'text': answer[1]}
 
     @api.model
     def _elsewhere(self):
-        return _("Used by another database. Remove it there first, or assign it to this database in the panel.")
+        return _("This number belongs to another company. Only the panel administrator can move it.")
+
+    # ------------------------------------------------------------ switch here (27 Nov 2026)
+    @api.model
+    def _ask_switch(self, path, payload):
+        """POST to the panel with the first key that may ask."""
+        why = ''
+        for asked in self._askers():
+            try:
+                return asked._gateway_call('POST', path, payload, timeout=(5, 25)) or {}
+            except UserError as err:
+                text = self._last_line(err)
+                if 'refused the request' in str(err):     # the panel answered: say its reason
+                    raise UserError(text) from err
+                why = why or text
+        raise UserError(why or _("The WhatsApp panel cannot be reached now. Try again in a few minutes."))
+
+    @api.model
+    def switch_code(self, country_id, number):
+        """Send a code: the number writes it to itself ("Message yourself")."""
+        self._check_admin()
+        whole = self._number(self.env['res.country'].sudo().browse(int(country_id or 0)).exists(), number)
+        answer = self._ask_switch('/v1/numbers/switch_code', {'number': whole})
+        _logger.info("WhatsApp: switch code for %s asked by %s", whole, self.env.user.login)
+        return {'ok': True, 'from': answer.get('from') or []}
+
+    @api.model
+    def switch(self, country_id, number, code):
+        """With the right code the number leaves the other database and is free here."""
+        self._check_admin()
+        whole = self._number(self.env['res.country'].sudo().browse(int(country_id or 0)).exists(), number)
+        answer = self._ask_switch('/v1/numbers/switch', {
+            'number': whole, 'code': ''.join(c for c in str(code or '') if c.isdigit()), 'by': self.env.user.name})
+        _logger.info("WhatsApp: number %s switched here from %s by %s", whole,
+                     ', '.join(answer.get('from') or []) or '-', self.env.user.login)
+        # switched away from here once: that old entry gives way to the new one
+        self.env['whatsapp.session'].sudo().search([
+            ('active', '=', False), ('removed', '=', False), ('authorized_number', '=', whole)
+        ]).filtered('switched_to')._forget_switch()
+        return self.look(country_id, number)
 
     @api.model
     def _keep_try(self, step, number, error, apart=False):
@@ -558,8 +603,10 @@ class WhatsAppConnect(models.AbstractModel):
 
     @api.model
     def _off_session(self, number):
+        # one switched to another database is not "off here": it is switched back
         return self.env['whatsapp.session'].sudo().search(
-            [('active', '=', False), ('removed', '=', False), ('authorized_number', '=', number)], limit=1)
+            [('active', '=', False), ('removed', '=', False), ('authorized_number', '=', number)]
+        ).filtered(lambda s: not s.switched_to)[:1]
 
     @api.model
     def _label(self, vals, number):
@@ -655,11 +702,13 @@ class WhatsAppConnect(models.AbstractModel):
                 qr = str(body.get('qr') or '')
                 out['qr'] = qr if qr.startswith('data:image/') else ''
                 out['wrong'] = body.get('state') == 'wrong_number'
+                # scanned: the phone is linked, Odoo is a moment behind (27 Nov 2026)
+                out['scanned'] = body.get('state') == 'open'
                 if not session.active:
                     out['error'] = _("This number is turned off. Turn it on first.")
                 elif not out['qr']:
                     out['error'] = {
-                        'open': _("The panel says this number is connected already. If it does not go on, press Load Settings on its page."),
+                        'open': '' if out['scanned'] else _("The panel says this number is connected already. If it does not go on, press Load Settings on its page."),
                         'missing': _("The gateway does not know this number. Use Full reset on its page."),
                         'unreachable': _("The WhatsApp gateway cannot be reached now."),
                     }.get(body.get('state'), '')

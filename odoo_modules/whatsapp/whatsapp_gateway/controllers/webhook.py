@@ -125,6 +125,9 @@ class WhatsAppWebhook(http.Controller):
             return request.make_json_response({'ok': False}, status=404)
 
         event = payload.get('event') or ''
+        if event == 'panel.number_switched':
+            self._number_switched(session, payload.get('data') or {})
+            return request.make_json_response({'ok': True})
         if event not in HANDLED_EVENTS:
             return request.make_json_response({'ok': True, 'ignored': event})
 
@@ -142,6 +145,32 @@ class WhatsAppWebhook(http.Controller):
                               event, err)
             return request.make_json_response({'ok': False})
         return request.make_json_response({'ok': True})
+
+    def _number_switched(self, session, data):
+        """The panel moved this number to another database (27 Nov 2026):
+        every administrator gets it in the Inbox, and as a pop-up when online."""
+        env = request.env(su=True)
+        pretty = env['whatsapp.connect']._pretty(str(data.get('number') or '')) or session.name
+        text = env._("WhatsApp number %(number)s (%(name)s) was moved to database %(db)s by %(by)s on %(at)s. "
+                     "It no longer sends or receives here. Old messages and orders stay.",
+                     number=pretty, name=session.name, db=data.get('to_db') or '?',
+                     by=data.get('by') or '?', at=data.get('at') or '')
+        _logger.warning("WhatsApp: %s", text)
+        admins = env.ref('base.group_system').all_user_ids.filtered(lambda u: u.active and not u.share)
+        # the Inbox only: never an e-mail (a database without a mail sender logs an error)
+        inbox = admins.filtered(lambda u: u.notification_type == 'inbox')
+        try:
+            if inbox:
+                with env.cr.savepoint():
+                    env['mail.thread'].message_notify(
+                        partner_ids=inbox.partner_id.ids, subject=env._("WhatsApp number moved away"), body=text)
+        except Exception as err:  # noqa: BLE001 - the panel is never kept waiting
+            _logger.info("WhatsApp: the move notice was not put in the inbox: %s", err)
+        for user in admins:
+            user._bus_send("simple_notification", {
+                "type": "warning", "sticky": True, "title": env._("WhatsApp number moved away"), "message": text})
+        session._switched_away(env._("Switched to %(db)s by %(by)s on %(at)s",
+                                     db=data.get('to_db') or '?', by=data.get('by') or '?', at=data.get('at') or ''))
 
     def _handle_message(self, session, payload):
         data = payload.get('data') or {}

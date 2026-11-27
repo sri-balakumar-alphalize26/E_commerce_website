@@ -42,15 +42,13 @@
                     <t t-if="!state.picked">
                     <label class="o_wa_label">Country</label>
                     <div class="o_wa_country">
-                        <button type="button" class="o_wa_pick" t-on-click="openCountries" t-att-aria-expanded="state.countryOpen ? 'true' : 'false'">
-                            <span t-if="state.country"><b t-esc="state.country.name"/> <span class="text-muted">+<t t-esc="state.country.dial"/></span></span>
-                            <span t-else="" class="text-muted">Choose the country</span>
-                            <i class="fa fa-chevron-down"/>
-                        </button>
+                        <input type="text" class="o_wa_pick o_wa_type" autocomplete="off"
+                               placeholder="Type a country or its code: India or 91"
+                               t-att-value="countryText" t-on-focus="onCountryFocus" t-on-input="onCountryInput"
+                               t-on-keydown="onCountryKey" t-on-blur="onCountryBlur"/>
                         <div t-if="state.countryOpen" class="o_wa_menu">
-                            <input type="text" class="form-control" placeholder="Search a country" t-model="state.countrySearch"/>
                             <div class="o_wa_options">
-                                <button type="button" t-foreach="countries" t-as="c" t-key="c.id" t-on-click="() => this.pickCountry(c)">
+                                <button type="button" t-foreach="countries.slice(0, 50)" t-as="c" t-key="c.id" t-on-mousedown.prevent="() => this.pickCountry(c)">
                                     <span t-esc="c.name"/><span class="text-muted">+<t t-esc="c.dial"/></span>
                                 </button>
                                 <div t-if="!countries.length" class="text-muted p-2">No country found.</div>
@@ -72,6 +70,21 @@
                         <span t-elif="state.country" class="text-muted"><t t-esc="wanted"/>, digits only</span>
                         <div t-if="state.look and state.look.text" t-att-class="state.look.ok ? (state.look.where ? 'text-success' : 'text-muted') : 'text-danger'">
                             <t t-if="state.look.ok and state.look.where">&#10003; </t><t t-esc="state.look.text"/></div>
+                        <div t-if="state.look and state.look.switch" class="o_wa_switch mt-2">
+                            <button t-if="!state.switching" type="button" class="btn btn-sm btn-warning"
+                                    t-att-disabled="state.switchBusy" t-on-click="switchHere">
+                                <i t-att-class="state.switchBusy ? 'fa fa-spinner fa-spin me-1' : 'fa fa-exchange me-1'"/>Switch it to this database</button>
+                            <div t-else="" class="o_wa_switch_code">
+                                <div class="text-muted mb-1">A 6-digit code was sent to the <b>"Message yourself"</b> chat on <t t-esc="state.look.pretty"/>. Type it here:</div>
+                                <input type="text" inputmode="numeric" maxlength="6" autocomplete="one-time-code" class="form-control d-inline-block me-2"
+                                       style="width:9em;letter-spacing:.3em;font-size:1.2em" placeholder="------"
+                                       t-att-value="state.switchCode" t-on-input="onSwitchCode" t-att-disabled="state.switchBusy"/>
+                                <button type="button" class="btn btn-sm btn-primary" t-att-disabled="state.switchBusy or state.switchCode.length != 6"
+                                        t-on-click="confirmSwitch">Switch</button>
+                                <button type="button" class="btn btn-sm btn-link" t-att-disabled="state.switchBusy" t-on-click="sendSwitchCode">Send a new code</button>
+                            </div>
+                            <div t-if="state.switchError" class="text-danger mt-1" t-esc="state.switchError"/>
+                        </div>
                         <div t-elif="state.check" class="text-muted"><i class="fa fa-spinner fa-spin"/> Looking in the panel…</div>
                     </div>
                     </t>
@@ -130,7 +143,16 @@
                     </div>
                     <div t-if="state.session.error" class="alert alert-warning" role="alert" t-esc="state.session.error"/>
                     <div class="o_wa_qr">
-                        <img t-if="state.session.qr" t-att-src="state.session.qr" alt="WhatsApp QR code"/>
+                        <div t-if="state.scanned" class="o_wa_wait o_wa_scanned" role="status">
+                            <div><i class="fa fa-spinner fa-spin fa-2x"/></div>
+                            <div class="mt-2"><b>&#10003; Scanned.</b> Connecting <t t-esc="state.session.number"/>…</div>
+                            <div class="small">Keep this page open.</div>
+                            <t t-if="state.showQrAgain">
+                                <div class="small text-warning mt-2">Still connecting. Check that the phone has internet.</div>
+                                <button type="button" class="btn btn-sm btn-secondary mt-2" t-on-click="qrAgain">Show QR again</button>
+                            </t>
+                        </div>
+                        <img t-elif="state.session.qr" t-att-src="state.session.qr" alt="WhatsApp QR code"/>
                         <div t-else="" class="o_wa_wait"><i class="fa fa-spinner fa-spin"/> Getting the QR code…</div>
                     </div>
                     <ol class="o_wa_how">

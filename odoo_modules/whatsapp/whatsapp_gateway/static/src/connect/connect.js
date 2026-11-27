@@ -3,6 +3,7 @@
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
 import { _t } from "@web/core/l10n/translation";
+import { ConfirmationDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
 import { Component, onWillStart, onWillUnmount, useState } from "@odoo/owl";
 import { cleanPhone, findCountries } from "@whatsapp_gateway/phone/phone_data";
 
@@ -14,7 +15,10 @@ export class ConnectNumber extends Component {
     setup() {
         this.orm = useService("orm");
         this.action = useService("action");
+        this.dialog = useService("dialog");
         this.state = useState({
+            switching: false, switchCode: "", switchError: "", switchBusy: false,
+            scanned: false, scannedSince: 0, showQrAgain: false,
             ready: false, step: "number", busy: false, error: "", data: {},
             countrySearch: "", countryOpen: false, country: null, number: "", check: "", checkError: "", look: null, confirm: false, turnOn: null, showKey: false, saved: false,
             company: 0, label: "", key: "", values: {}, picked: null,
@@ -72,6 +76,16 @@ export class ConnectNumber extends Component {
                 this.state.turnOn = data.off.ask_on;
             }
             this.onLoaded(data);
+            // Switch back (27 Nov 2026): the number is typed, the red line offers Switch
+            const back = String(params.switch_number || "");
+            if (back) {
+                const whole = this.countryOfWhole("+" + back);
+                if (whole) {
+                    this.state.country = whole.country;
+                    this.state.number = whole.number;
+                    this.checkNumber();
+                }
+            }
             if (data.session) {
                 this.useSession(data.session);
             }
@@ -85,6 +99,76 @@ export class ConnectNumber extends Component {
     // ------------------------------------------------------------ 1. number
     get countries() {
         return findCountries(this.state.data.countries || [], this.state.countrySearch);
+    }
+    // ---- the country, typed: "india", "91", "+91" (27 Nov 2026)
+    get countryText() {
+        const c = this.state.country;
+        return this.state.countryOpen ? this.state.countrySearch : (c ? `${c.name}  +${c.dial}` : "");
+    }
+    /** The one country the text can only mean, or null. */
+    exactCountry(typed) {
+        const all = this.state.data.countries || [];
+        const word = (typed || "").trim().toLowerCase().replace(/^\+/, "");
+        if (!word) {
+            return null;
+        }
+        if (/^[0-9]+$/.test(word)) {
+            const same = all.filter((c) => c.dial === word);
+            const longer = all.some((c) => c.dial !== word && c.dial.startsWith(word));
+            return same.length === 1 && !longer ? same[0] : null;
+        }
+        const named = all.find((c) => c.name.toLowerCase() === word);
+        if (named) {
+            return named;
+        }
+        const found = findCountries(all, word);
+        return found.length === 1 ? found[0] : null;
+    }
+    onCountryFocus(ev) {
+        this.state.countrySearch = "";
+        this.state.countryOpen = true;
+        ev.target.value = "";               // typing starts fresh, never after "Oman +968"
+    }
+    onCountryInput(ev) {
+        this.state.countrySearch = ev.target.value;
+        this.state.countryOpen = true;
+        const exact = this.exactCountry(ev.target.value);
+        if (exact) {
+            this.pickCountry(exact);
+            ev.target.blur();
+        }
+    }
+    onCountryKey(ev) {
+        if (ev.key === "Enter") {
+            ev.preventDefault();
+            const first = this.countries[0];
+            if (first) {
+                this.pickCountry(first);
+                ev.target.blur();
+            }
+        } else if (ev.key === "Escape") {
+            this.state.countryOpen = false;
+            ev.target.blur();
+        }
+    }
+    onCountryBlur() {
+        // a click on the list is a mousedown first: it is picked before this
+        setTimeout(() => (this.state.countryOpen = false), 150);
+    }
+    /** "+91 70106 16092" pasted in the number box: India, then the digits. */
+    countryOfWhole(raw) {
+        const all = this.state.data.countries || [];
+        const digits = (raw || "").replace(/[^0-9]/g, "");
+        const plus = (raw || "").trim().startsWith("+") || (raw || "").trim().startsWith("00");
+        const whole = (raw || "").trim().startsWith("00") ? digits.slice(2) : digits;
+        const c = this.state.country;
+        if (!plus && (!c || whole.length <= c.max)) {
+            return null;
+        }
+        const fits = all.filter((x) => whole.startsWith(x.dial)
+            && whole.length - x.dial.length >= x.min && whole.length - x.dial.length <= x.max);
+        fits.sort((a, b) => b.dial.length - a.dial.length);
+        return fits[0] ? { country: fits[0], number: whole.slice(fits[0].dial.length) } : null;
     }
     openCountries() {
         this.state.countryOpen = !this.state.countryOpen;
@@ -107,13 +191,21 @@ export class ConnectNumber extends Component {
         return cleanPhone(text, this.state.country);
     }
     onNumber(ev) {
+        const whole = this.countryOfWhole(ev.target.value);
+        if (whole) {
+            this.state.country = whole.country;
+            this.state.number = whole.number;
+            ev.target.value = whole.number;
+            this.checkNumber();
+            return;
+        }
         const digits = this.clean(ev.target.value);
         this.state.number = digits;
         ev.target.value = digits;           // nothing else stays in the box
         this.checkNumber();
     }
     onNumberKey(ev) {
-        if (ev.key.length === 1 && !/[0-9]/.test(ev.key) && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {
+        if (ev.key.length === 1 && !/[0-9+]/.test(ev.key) && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {
             ev.preventDefault();
         }
     }
@@ -122,6 +214,9 @@ export class ConnectNumber extends Component {
         return !!c && this.state.number.length >= c.min && this.state.number.length <= c.max;
     }
     async checkNumber() {
+        this.state.switching = false;
+        this.state.switchCode = "";
+        this.state.switchError = "";
         this.state.check = "";
         this.state.checkError = "";
         this.state.look = null;
@@ -160,6 +255,67 @@ export class ConnectNumber extends Component {
         }
         return asked === this.asked;
     }
+    // ------------------------------------------------------------ switch here (27 Nov 2026)
+    /** From another database of the same vendor: a pop-up, then a code the number sends to itself. */
+    switchHere() {
+        const look = this.state.look;
+        const from = (look.used_in || []).join(", ");
+        const here = this.state.data.db || _t("this database");
+        const body = from
+            ? _t("Switch %(number)s from %(from)s to %(here)s? In %(from)s this number stops at once: its WhatsApp groups, Sales Automation and WA Tracker get no more messages from it. Old messages and orders stay there. A code will be sent to the \"Message yourself\" chat on that phone. No QR scan.",
+                  { number: look.pretty, from, here })
+            : _t("Use %(number)s in %(here)s? A code will be sent to the \"Message yourself\" chat on that phone. No QR scan.",
+                  { number: look.pretty, here });
+        this.dialog.add(ConfirmationDialog, {
+            title: _t("Switch WhatsApp number"),
+            body,
+            confirmLabel: _t("Switch"),
+            cancelLabel: _t("Cancel"),
+            confirm: () => this.sendSwitchCode(),
+            cancel: () => {},
+        });
+    }
+    async sendSwitchCode() {
+        this.state.switchBusy = true;
+        this.state.switchError = "";
+        try {
+            await this.call("switch_code", [this.state.country.id, this.state.number]);
+            this.state.switching = true;
+            this.state.switchCode = "";
+        } catch (err) {
+            this.state.switchError = this.message(err);
+        }
+        this.state.switchBusy = false;
+    }
+    onSwitchCode(ev) {
+        this.state.switchCode = ev.target.value.replace(/\D/g, "").slice(0, 6);
+        ev.target.value = this.state.switchCode;
+        if (this.state.switchCode.length === 6) {
+            this.confirmSwitch();
+        }
+    }
+    async confirmSwitch() {
+        if (this.state.switchBusy || this.state.switchCode.length !== 6) {
+            return;
+        }
+        this.state.switchBusy = true;
+        this.state.switchError = "";
+        try {
+            const look = await this.call("switch", [this.state.country.id, this.state.number, this.state.switchCode]);
+            this.state.look = look;
+            if (look.ok) {
+                this.state.switching = false;
+                this.state.switchBusy = false;
+                // straight on: the phone is linked already, so no QR is needed
+                return this.next1();
+            }
+            this.state.switchError = look.text || _t("The number could not be switched.");
+        } catch (err) {
+            this.state.switchError = this.message(err);
+        }
+        this.state.switchBusy = false;
+    }
+
     /** Whom it is for, in the question. */
     get forWhom() {
         return (this.state.label || "").trim();
@@ -249,13 +405,29 @@ export class ConnectNumber extends Component {
     useSession(session) {
         this.state.session = session;
         if (session.connected) {
+            this.state.scanned = false;
             this.stopTimer();
             this.toGroups();
             return;
         }
+        if (session.scanned && !this.state.scanned) {
+            // the phone has scanned: the QR goes, a spinner until Odoo has it
+            this.state.scanned = true;
+            this.state.scannedSince = Date.now();
+            this.state.showQrAgain = false;
+        }
+        if (this.state.scanned && Date.now() - this.state.scannedSince > 90000) {
+            this.state.showQrAgain = true;
+        }
         this.state.step = "scan";
         this.stopTimer();
-        this.timer = setTimeout(() => this.poll(), session.qr ? 5000 : session.first ? 50 : session.error ? 3000 : 1000);
+        this.timer = setTimeout(() => this.poll(), this.state.scanned ? 1000
+            : session.qr ? 2500 : session.first ? 50 : session.error ? 3000 : 1000);
+    }
+    qrAgain() {
+        this.state.scanned = false;
+        this.state.showQrAgain = false;
+        this.poll();
     }
     async poll() {
         if (this.state.step !== "scan" || !this.state.session) {
