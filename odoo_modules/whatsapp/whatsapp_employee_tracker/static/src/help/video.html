@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en" data-theme="light" style="color-scheme:light"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Video</title>
+<style>
+:root { --bg:#f4f5f7; --card:#fff; --ink:#1f2430; --muted:#6b7280; --line:#e3e6ea; --brand:#714b67; --brand-ink:#fff; --accent:#017e84; --chip:#eef0f3; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#15171c; --card:#1e2128; --ink:#e8eaee; --muted:#9aa1ad; --line:#2f343d; --brand:#a27a98; --brand-ink:#15171c; --accent:#3fb5ba; --chip:#2a2e36; } }
+:root[data-theme="dark"] { --bg:#15171c; --card:#1e2128; --ink:#e8eaee; --muted:#9aa1ad; --line:#2f343d; --brand:#a27a98; --brand-ink:#15171c; --accent:#3fb5ba; --chip:#2a2e36; }
+* { box-sizing:border-box; } body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+.wrap { max-width:1000px; margin:0 auto; padding:16px 16px 28px; }
+.top { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:12px; }
+.top a { text-decoration:none; border-radius:8px; padding:7px 14px; font-weight:600; font-size:14px; background:var(--chip); color:var(--ink); }
+.top a.s { background:var(--brand); color:var(--brand-ink); }
+h1 { font-size:20px; margin:0 auto 0 0; }
+.box { background:#fff; border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+video { display:block; width:100%; max-height:calc(100vh - 120px); background:#fff; }
+.err { padding:40px 16px; text-align:center; color:var(--ink); }
+</style></head><body><div class="wrap">
+<div class="top"><a id="back" href="help.html">&larr; Back</a><h1 id="t">Video</h1><a class="s" id="steps" href="#">Steps instead</a></div>
+<div class="box"><video id="v" controls autoplay playsinline></video></div>
+</div>
+<script>
+const q = new URLSearchParams(location.search);
+const v = q.get('v') || '', same = u => u.startsWith('/') && !u.startsWith('//');
+const video = document.getElementById('v'), steps = v.replace(/\.webm$/, '.html');
+const title = q.get('t') || (v.split('/').pop() || 'Video').replace(/\.webm$/, '').replace(/_/g, ' ');
+document.getElementById('t').textContent = title; document.title = title + ' - video';
+const back = q.get('back') && same(q.get('back')) ? q.get('back') : (same(steps) ? steps : 'help.html');
+document.getElementById('back').href = back;
+// the steps keep the way back: came from the steps -> back to them; else steps with ?back=
+const bq = q.get('back');
+document.getElementById('steps').href = !same(steps) ? 'help.html'
+  : (bq && same(bq) ? (bq.split('?')[0] === steps ? bq : steps + '?back=' + encodeURIComponent(bq)) : steps);
+if (same(v)) { video.src = v; } else { video.replaceWith(Object.assign(document.createElement('div'), {className: 'err', textContent: 'No video.'})); }
+video.onerror = () => video.replaceWith(Object.assign(document.createElement('div'), {className: 'err', textContent: 'The video could not be loaded.'}));
+</script>
+</body></html>

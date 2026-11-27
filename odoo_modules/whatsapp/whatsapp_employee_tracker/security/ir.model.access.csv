@@ -22,4 +22,3 @@ access_wa_response_time_summary_all,wa.response.time.summary.all,model_wa_respon
 access_wa_response_time_summary_user,wa.response.time.summary.user,model_wa_response_time_summary,base.group_user,1,0,0,0
 access_wa_employee_handover_system,wa.employee.handover.system,model_wa_employee_handover,base.group_system,1,1,1,1
 access_wa_phone_name_admin,wa.phone.name.admin,model_wa_phone_name,base.group_system,1,0,0,0
-access_wa_tracker_help_user,wa.tracker.help.user,model_wa_tracker_help,base.group_user,1,1,1,0

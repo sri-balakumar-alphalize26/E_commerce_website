@@ -1,47 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- In-app User Guide (opens the static HTML manual) -->
-    <record id="action_wa_help_guide" model="ir.actions.act_url">
-        <field name="name">User Guide</field>
-        <field name="url">/whatsapp_employee_tracker/static/help/index.html?v=3</field>
-        <field name="target">new</field>
-    </record>
-
-    <menuitem id="menu_wa_help_guide"
-              name="📖 User Guide"
-              parent="menu_wa_tracker_config"
-              action="action_wa_help_guide"
-              sequence="100"/>
-
-    <!-- 26 Nov 2026: Help in the top menu opens a small window with the manual -->
-    <record id="view_wa_tracker_help_form" model="ir.ui.view">
-        <field name="name">wa.tracker.help.form</field>
-        <field name="model">wa.tracker.help</field>
-        <field name="arch" type="xml">
-            <form string="Help">
-                <div class="text-center py-3">
-                    <i class="fa fa-file-pdf-o fa-4x text-danger"/>
-                    <p class="mt-3">The user manual: how to connect a number, branches, alerts and daily work.</p>
-                    <button name="action_open_manual" type="object" class="btn-primary"
-                            icon="fa-external-link" string="manual.pdf"/>
-                </div>
-                <footer>
-                    <button string="Close" special="cancel" class="btn-secondary"/>
-                </footer>
-            </form>
-        </field>
-    </record>
-
-    <record id="action_wa_tracker_help" model="ir.actions.act_window">
-        <field name="name">Help</field>
-        <field name="res_model">wa.tracker.help</field>
-        <field name="view_mode">form</field>
-        <field name="target">new</field>
+    <!-- 27 Nov 2026: ONE Help in the top menu. It opens the WhatsApp Help pop-up
+         on static/help/help.html: two choices, "User Manual" (PDF) and "How It
+         Works" (steps, with the video inside). A tap asks "Open here" (pop-up, Back
+         to the choices) or "Open in a new tab"; the pop-up's X closes it.
+         ?v=14 in the url: browsers keep static pages 7 days - bump it with changes.
+         The old "User Guide" (Configuration) and the small Odoo form are gone:
+         removing their records here deletes them on upgrade. -->
+    <record id="action_wa_tracker_help_centre" model="ir.actions.client">
+        <field name="name">WA Tracker Help</field>
+        <field name="tag">whatsapp_employee_tracker.help</field>
+        <field name="params" eval="{'url': '/whatsapp_employee_tracker/static/help/help.html?v=14'}"/>
     </record>
 
     <menuitem id="menu_wa_tracker_help"
               name="Help"
               parent="menu_wa_tracker_root"
-              action="action_wa_tracker_help"
+              action="action_wa_tracker_help_centre"
               sequence="99"/>
 </odoo>

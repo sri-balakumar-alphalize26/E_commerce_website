@@ -1,6 +1,6 @@
 {
     'name': 'Employee Tracker & Sales Agent',
-    'version': '19.0.1.5.8',
+    'version': '19.0.1.5.14',
     'category': 'Human Resources',
     'summary': 'Track & monitor employee WhatsApp communications on company numbers',
     'description': """
@@ -50,6 +50,10 @@
             'whatsapp_employee_tracker/static/src/xml/dashboard.xml',
             'whatsapp_employee_tracker/static/src/js/connect_employee.js',
             'whatsapp_employee_tracker/static/src/xml/connect_employee.xml',
+            # 1.5.14 (27 Nov 2026): its own Help pop-up, so Help works with any whatsapp_gateway version
+            'whatsapp_employee_tracker/static/src/help_dialog/help_dialog.js',
+            'whatsapp_employee_tracker/static/src/help_dialog/help_dialog.xml',
+            'whatsapp_employee_tracker/static/src/help_dialog/help_dialog.scss',
         ],
     },
 }
