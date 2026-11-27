@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_sa_settings_loyalty_form" model="ir.ui.view">
+        <field name="name">sa.settings.loyalty.form</field>
+        <field name="model">sa.ai.settings</field>
+        <field name="priority">48</field>
+        <field name="arch" type="xml">
+            <form string="Loyalty on WhatsApp">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="loyalty_offer_enabled"/>
+                            <field name="loyalty_offer_wait_minutes" invisible="not loyalty_offer_enabled"/>
+                            <field name="loyalty_offer_text" invisible="not loyalty_offer_enabled"/>
+                            <field name="loyalty_paid_text"/>
+                            <field name="loyalty_notify_dm"/>
+                        </group>
+                        <group>
+                            <div class="text-muted">
+                                Points come from the POS loyalty card: the same card,
+                                the same rule (<b>Point of Sale &gt; Loyalty &gt; Points
+                                Rules</b>), the same history. A sales order earns when
+                                it is <b>paid</b>; a customer without a card gets one
+                                from their phone number.
+                                <br/><br/>
+                                Before the pay link goes out, a customer whose card
+                                can redeem is asked once, in the group: <b>USE
+                                POINTS</b> or <b>PAY FULL</b>. USE puts the discount on
+                                the order and the link is built for the new amount.
+                                No answer for the minutes above: the full link goes out.
+                                <br/><br/>
+                                After payment the group gets the points-earned line
+                                below. Placeholders: <code>{points}</code>
+                                <code>{value}</code> <code>{cur}</code>
+                                <code>{ref}</code> in the offer; <code>{earned}</code>
+                                <code>{balance}</code> <code>{ref}</code> in the
+                                paid text.
+                            </div>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_sa_settings_loyalty" model="ir.actions.server">
+        <field name="name">Loyalty on WhatsApp</field>
+        <field name="model_id" ref="sales_automation.model_sa_ai_settings"/>
+        <field name="state">code</field>
+        <field name="code">
+action = {'type': 'ir.actions.act_window', 'name': 'Loyalty on WhatsApp', 'res_model': 'sa.ai.settings',
+          'res_id': model.get_settings().id, 'view_mode': 'form', 'target': 'current',
+          'views': [[env.ref('sales_automation_loyalty.view_sa_settings_loyalty_form').id, 'form']]}
+        </field>
+    </record>
+
+    <menuitem id="menu_sa_settings_loyalty" name="Loyalty on WhatsApp"
+              parent="sales_automation.menu_sa_config" action="action_sa_settings_loyalty" sequence="37"/>
+</odoo>
