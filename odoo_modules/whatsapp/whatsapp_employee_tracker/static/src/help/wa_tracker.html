@@ -131,7 +131,7 @@ h1 { font-size: 20px; margin: 0 0 4px; }
     d="M9 2.8c.9 0 1.6.7 1.6 1.6v6.3l.6-.1c.9-.1 1.6.5 1.7 1.3l.1.4.4-.1c.9-.1 1.6.5 1.7 1.3l.1.5.3-.1c.9-.1 1.7.5 1.8 1.4l.4 3.4c.3 2.6-1.6 4.9-4.2 5.2l-1.6.1c-1.6.1-3.1-.6-4-1.9L4 16.7c-.5-.7-.3-1.6.4-2.1.7-.4 1.5-.3 2 .3l1 1.2V4.4c0-.9.7-1.6 1.6-1.6z"/></symbol>
 </svg>
 <script>
-const SHOTS = {"gateway/05_connect_form": {"src": "/whatsapp_employee_tracker/static/src/help/shots/gateway/05_connect_form.png", "box": [28.27, 39.72, 43.46, 6.0]}, "tracker/01_employee_sessions": {"src": "/whatsapp_employee_tracker/static/src/help/shots/tracker/01_employee_sessions.png", "box": [4.57, 19.93, 94.43, 7.04]}, "tracker/02_chat_view": {"src": "/whatsapp_employee_tracker/static/src/help/shots/tracker/02_chat_view.png", "box": [3.57, -9.21, 96.43, 118.42]}, "tracker/03_comm_log": {"src": "/whatsapp_employee_tracker/static/src/help/shots/tracker/03_comm_log.png", "box": [4.57, 19.93, 96.1, 30.46]}, "tracker/04_dashboard": {"src": "/whatsapp_employee_tracker/static/src/help/shots/tracker/04_dashboard.png", "box": [3.57, -9.21, 96.43, 118.42]}, "tracker/05_alert_rules": {"src": "/whatsapp_employee_tracker/static/src/help/shots/tracker/05_alert_rules.png", "box": [3.57, -9.21, 96.43, 118.42]}, "tracker/06_owner_numbers": {"src": "/whatsapp_employee_tracker/static/src/help/shots/tracker/06_owner_numbers.png", "box": [3.57, -9.21, 96.43, 118.42]}};
+const SHOTS = {"gateway/05_connect_form": {"src": "/whatsapp_employee_tracker/static/src/help/shots/gateway/05_connect_form.png", "box": [4.43, 41.6, 91.14, 6.99]}, "tracker/01_employee_sessions": {"src": "/whatsapp_employee_tracker/static/src/help/shots/tracker/01_employee_sessions.png", "box": [4.57, 19.93, 94.43, 7.04]}, "tracker/02_chat_view": {"src": "/whatsapp_employee_tracker/static/src/help/shots/tracker/02_chat_view.png", "box": [3.57, -9.21, 96.43, 118.42]}, "tracker/03_comm_log": {"src": "/whatsapp_employee_tracker/static/src/help/shots/tracker/03_comm_log.png", "box": [4.57, 19.93, 96.1, 30.46]}, "tracker/04_dashboard": {"src": "/whatsapp_employee_tracker/static/src/help/shots/tracker/04_dashboard.png", "box": [3.57, -9.21, 96.43, 118.42]}, "tracker/05_alert_rules": {"src": "/whatsapp_employee_tracker/static/src/help/shots/tracker/05_alert_rules.png", "box": [3.57, -9.21, 96.43, 118.42]}, "tracker/06_owner_numbers": {"src": "/whatsapp_employee_tracker/static/src/help/shots/tracker/06_owner_numbers.png", "box": [3.57, -9.21, 96.43, 118.42]}};
 const G = {
   employees: {
     name: 'Numbers for employees',
@@ -140,8 +140,8 @@ const G = {
         text: 'One line per employee and number. Press <b>+ Connect a number</b> to give an employee a number.',
         shot: 'tracker/01_employee_sessions', box: [8.5, 6.7, 11, 4.4], mark: 'Click' },
       { title: 'Choose the employee, type the number', url: 'Connect a number',
-        text: 'Choose the <b>employee</b> (or <b>+ New employee</b>), the country and the number, then <b>Next: scan</b> and scan with that phone.',
-        shot: 'gateway/05_connect_form', mark: 'Employee' },
+        text: '<b>Employee</b>: type part of the name and click it (or <b>+ New employee</b>). Type the <b>country</b> (e.g. <b>India</b> or <b>91</b>) and the number, then <b>Next: scan</b> and scan with that phone.',
+        shot: 'gateway/05_connect_form', box: [4.43, 29.0, 91.14, 6.3], mark: 'Search the employee' },
       { title: 'Who has which number', url: 'WA Tracker → Configuration → Employee Sessions',
         text: 'Each employee, the number, connected or not, messages sent and received today.',
         shot: 'tracker/01_employee_sessions', box: [4.5, 20, 95, 14], mark: 'Employees and numbers' },
@@ -153,12 +153,20 @@ const G = {
       { title: 'Live chats', url: 'WA Tracker → Monitoring → Chat View',
         text: '<b>Chat View</b>: every chat of every employee, newest first; pick one to read it (also what was typed on the phone).',
         shot: 'tracker/02_chat_view', box: [3.7, 11.5, 29.8, 9.2], mark: 'Open a chat' },
+      { title: 'Only the branches you switched on', url: 'Top right → the company / branch switcher',
+        text: 'Chat View and every WA Tracker list show only the <b>branches ticked</b> in the top-right switcher. Tick one branch to see its employees and chats; tick several to see them together.',
+        rows: [{ t: 'Branch A', v: '✓ ticked' }, { t: 'Branch B', v: 'not ticked' }, { kind: 'ok', t: '✓ Chat View: only the employees and chats of Branch A' }],
+        tip: 'Switch branches and the page reloads by itself.' },
       { title: 'Every message in one list', url: 'WA Tracker → Monitoring → Communication Log',
         text: '<b>Communication Log</b>: every message in and out - filter by employee, contact, date.',
         shot: 'tracker/03_comm_log', mark: 'Messages' },
       { title: 'Each employee at a glance', url: 'WA Tracker → Dashboard → Employee Overview',
         text: 'Messages today, response time, quality score and alerts per number.',
         shot: 'tracker/04_dashboard', box: [4.5, 1.1, 23, 30], mark: 'One card per number' },
+      { title: 'Start a number fresh: Clear chats', url: 'Configuration → WhatsApp Numbers → the number',
+        text: '<b>Clear chats</b> (top of the page of the number) deletes its chats, messages, alerts and scores in WA Tracker after you confirm. Removing a number can do the same with the tick <b>Also clear its chats in WA Tracker</b> (off at first).',
+        rows: [{ kind: 'btn', t: 'Clear chats', target: true }],
+        tip: 'WA Tracker only - the phone keeps all its chats. Orders, invoices and the send log stay. It cannot be undone.' },
     ],
   },
   alerts: {
