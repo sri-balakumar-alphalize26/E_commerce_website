@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en" data-theme="light" style="color-scheme:light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WhatsApp and Email Help</title>
+<!-- 27 Nov 2026: WhatsApp and Email > Help opens this page in the WhatsApp Help pop-up.
+     Tapping a choice asks: open here (in the pop-up, with Back to this page) or in
+     a new browser tab. The pop-up's X closes everything.
+     ?v= on every link: browsers keep these pages 7 days, so a new version must
+     change the address or users keep seeing the old page. Bump V with the module. -->
+<style>
+:root { --bg:#f4f5f7; --card:#fff; --ink:#1f2430; --muted:#6b7280; --line:#e3e6ea; --brand:#714b67; --accent:#017e84; --chip:#eef0f3; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+.wrap { max-width:860px; margin:0 auto; padding:28px 16px; }
+h1 { font-size:22px; margin:0; text-align:center; }
+.sub { color:var(--muted); text-align:center; margin:4px 0 24px; }
+.grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:16px; }
+a.pick { display:block; text-decoration:none; color:inherit; background:var(--card); border:1px solid var(--line);
+         border-radius:14px; padding:28px 20px; text-align:center; transition:box-shadow .15s, border-color .15s; }
+a.pick:hover, a.pick:focus-visible { border-color:var(--accent); box-shadow:0 4px 18px rgba(1,126,132,.15); outline:none; }
+.ic { font-size:46px; line-height:1; }
+.t { display:block; font-size:20px; font-weight:700; margin-top:12px; }
+.d { display:block; color:var(--muted); margin-top:6px; }
+/* the "where to open" question */
+.ask { position:fixed; inset:0; background:rgba(31,36,48,.35); display:none; align-items:center; justify-content:center; padding:16px; }
+.ask.on { display:flex; }
+.ask .box { background:var(--card); border-radius:14px; padding:22px; width:100%; max-width:380px; box-shadow:0 12px 40px rgba(0,0,0,.2); text-align:center; }
+.ask h2 { font-size:18px; margin:0 0 4px; }
+.ask p { color:var(--muted); margin:0 0 16px; }
+.ask button { display:block; width:100%; border:0; border-radius:10px; padding:12px; font:inherit; font-weight:600; cursor:pointer; margin-top:8px; }
+.ask .here { background:var(--brand); color:#fff; }
+.ask .tab { background:var(--chip); color:var(--ink); }
+.ask .no { background:none; color:var(--muted); font-weight:400; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>WhatsApp and Email Help</h1>
+  <p class="sub">Learn WhatsApp and Email your way</p>
+  <div class="grid">
+    <a class="pick" href="manual.html?v=15" data-tab="manual.pdf" data-name="User Manual">
+      <span class="ic">&#128214;</span>
+      <span class="t">User Manual</span>
+      <span class="d">Every screen, step by step. Read or print (PDF).</span>
+    </a>
+    <a class="pick" href="/whatsapp_email/static/src/help/send_documents.html?back=/whatsapp_email/static/help/help.html%3Fv%3D15&amp;v=15"
+       data-tab="/whatsapp_email/static/src/help/send_documents.html?v=15" data-name="How It Works">
+      <span class="ic">&#129517;</span>
+      <span class="t">How It Works</span>
+      <span class="d">Step by step with pictures: quotations, orders and invoices sent on WhatsApp and by e-mail. Press Play or watch the video.</span>
+    </a>
+  </div>
+</div>
+
+<div class="ask" id="ask" role="dialog" aria-modal="true" aria-labelledby="askT">
+  <div class="box">
+    <h2 id="askT">Open</h2>
+    <p>Where do you want to open it?</p>
+    <button class="here" id="here" type="button">Open here</button>
+    <button class="tab" id="tab" type="button">Open in a new tab</button>
+    <button class="no" id="no" type="button">Cancel</button>
+  </div>
+</div>
+
+<script>
+const ask = document.getElementById('ask');
+let picked = null;
+document.querySelectorAll('a.pick').forEach(a => a.addEventListener('click', ev => {
+  ev.preventDefault();
+  picked = a;
+  document.getElementById('askT').textContent = 'Open ' + a.dataset.name;
+  ask.classList.add('on');
+  document.getElementById('here').focus();
+}));
+function close() { ask.classList.remove('on'); if (picked) picked.focus(); }
+document.getElementById('here').onclick = () => { location.href = picked.getAttribute('href'); };
+document.getElementById('tab').onclick = () => { window.open(picked.dataset.tab, '_blank', 'noopener'); close(); };
+document.getElementById('no').onclick = close;
+ask.addEventListener('click', ev => { if (ev.target === ask) close(); });
+document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && ask.classList.contains('on')) close(); });
+</script>
+</body>
+</html>

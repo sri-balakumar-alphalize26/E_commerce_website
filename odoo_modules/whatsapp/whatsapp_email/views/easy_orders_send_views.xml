@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- easy.sales -->
+    <record id="view_easy_sales_form_wa_send" model="ir.ui.view">
+        <field name="name">easy.sales.form.wa.send</field>
+        <field name="model">easy.sales</field>
+        <field name="inherit_id" ref="easy_sales.easy_sales_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <button name="action_send_via_channels"
+                        string="📱 Send via WhatsApp &amp; Email"
+                        type="object"
+                        class="btn-secondary"
+                        invisible="state == 'cancelled'"
+                        groups="whatsapp_gateway.group_whatsapp_user"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- easy.purchase -->
+    <record id="view_easy_purchase_form_wa_send" model="ir.ui.view">
+        <field name="name">easy.purchase.form.wa.send</field>
+        <field name="model">easy.purchase</field>
+        <field name="inherit_id" ref="easy_purchase.easy_purchase_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <button name="action_send_via_channels"
+                        string="📱 Send via WhatsApp &amp; Email"
+                        type="object"
+                        class="btn-secondary"
+                        invisible="state == 'cancelled'"
+                        groups="whatsapp_gateway.group_whatsapp_user"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- estimate.sale -->
+    <record id="view_estimate_sale_form_wa_send" model="ir.ui.view">
+        <field name="name">estimate.sale.form.wa.send</field>
+        <field name="model">estimate.sale</field>
+        <field name="inherit_id" ref="estimate_sale.estimate_sale_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <button name="action_send_via_channels"
+                        string="📱 Send via WhatsApp &amp; Email"
+                        type="object"
+                        class="btn-secondary"
+                        invisible="state == 'cancelled'"
+                        groups="whatsapp_gateway.group_whatsapp_user"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- estimate.purchase -->
+    <record id="view_estimate_purchase_form_wa_send" model="ir.ui.view">
+        <field name="name">estimate.purchase.form.wa.send</field>
+        <field name="model">estimate.purchase</field>
+        <field name="inherit_id" ref="estimate_purchase.estimate_purchase_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <button name="action_send_via_channels"
+                        string="📱 Send via WhatsApp &amp; Email"
+                        type="object"
+                        class="btn-secondary"
+                        invisible="state == 'cancelled'"
+                        groups="whatsapp_gateway.group_whatsapp_user"/>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

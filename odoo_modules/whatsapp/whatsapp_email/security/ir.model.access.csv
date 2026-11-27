@@ -1,0 +1,7 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_email_session_user,email.session.user,model_email_session,group_whatsapp_user,1,0,0,0
+access_email_session_manager,email.session.manager,model_email_session,group_whatsapp_manager,1,1,1,1
+access_send_channel_wizard_user,whatsapp.send.channel.wizard.user,model_whatsapp_send_channel_wizard,group_whatsapp_user,1,1,1,1
+access_help_document_user,whatsapp.help.document.user,model_whatsapp_help_document,group_whatsapp_user,1,0,0,0
+access_help_document_manager,whatsapp.help.document.manager,model_whatsapp_help_document,group_whatsapp_manager,1,1,1,1
+access_session_company_wizard_system,whatsapp.session.company.wizard.system,model_whatsapp_session_company_wizard,base.group_system,1,1,1,1

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Session auto-reconnect / health-check / group-name / LID crons are
+         owned by whatsapp_gateway. This module keeps only its email-side and
+         invoice-reminder crons. -->
+
+    <!-- Email: Poll inboxes for credit-approval YES/NO replies -->
+    <record id="ir_cron_email_poll_replies" model="ir.cron">
+        <field name="name">Email: Poll for Approval Replies (YES/NO)</field>
+        <field name="model_id" ref="model_email_session"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_poll_replies()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">minutes</field>
+        <field name="active">True</field>
+    </record>
+
+    <!-- NOTE: the old "WhatsApp: Invoice Payment Reminders" cron was removed.
+         It called account.move._cron_whatsapp_payment_reminders(), but that
+         method only ever existed on the (now removed) duplicate whatsapp.session
+         model — so the cron was already failing every day. Re-add it properly
+         on account.move if invoice reminders are wanted. -->
+
+</odoo>

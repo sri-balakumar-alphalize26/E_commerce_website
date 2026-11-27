@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+<t t-name="whatsapp_gateway.HelpDocumentsPage">
+    <div class="o_action" style="background: #f8f9fa; min-height: 100vh; padding: 40px 20px;">
+        <div style="max-width: 960px; margin: 0 auto;">
+
+            <!-- Header -->
+            <div style="text-align: center; margin-bottom: 40px;">
+                <h1 style="color: #714B67; font-weight: 700; font-size: 32px; margin-bottom: 10px;">
+                    Help &amp; User Guides
+                </h1>
+                <p style="color: #666; font-size: 16px;">
+                    Browse the guides below to learn how to use all features.
+                </p>
+            </div>
+
+            <!-- No documents message -->
+            <t t-if="!state.docs.length">
+                <div style="text-align:center; color:#999; font-size:18px; margin-top:60px;">
+                    No help documents available yet.
+                </div>
+            </t>
+
+            <!-- Document Cards -->
+            <div style="display: flex; gap: 30px; flex-wrap: wrap; justify-content: center;">
+                <t t-foreach="state.docs" t-as="doc" t-key="doc.id">
+                    <div style="background: white; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); padding: 30px; flex: 1; min-width: 280px; max-width: 420px; display:flex; flex-direction:column;">
+
+                        <!-- Icon -->
+                        <div t-if="doc.icon" style="text-align: center; margin-bottom: 15px;">
+                            <span style="font-size: 48px;" t-esc="doc.icon"/>
+                        </div>
+
+                        <!-- Title -->
+                        <h3 style="color: #714B67; text-align: center; margin-bottom: 12px;" t-esc="doc.name"/>
+
+                        <!-- Description -->
+                        <p t-if="doc.description"
+                           style="color: #555; font-size: 14px; line-height: 1.6; flex:1;"
+                           t-esc="doc.description"/>
+
+                        <!-- Buttons -->
+                        <div style="text-align: center; margin-top: 20px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+                            <a t-if="doc.download_url"
+                               t-att-href="doc.download_url"
+                               download=""
+                               style="display: inline-block; background: #714B67; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 14px; cursor:pointer;">
+                                Download PDF
+                            </a>
+                            <a t-if="doc.view_url"
+                               t-att-href="doc.view_url"
+                               target="_blank"
+                               style="display: inline-block; background: white; color: #714B67; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 14px; cursor:pointer; border: 2px solid #714B67;">
+                                View
+                            </a>
+                        </div>
+                    </div>
+                </t>
+            </div>
+
+            <!-- Footer -->
+            <div style="text-align: center; margin-top: 40px; color: #999; font-size: 13px;">
+                <p>WhatsApp &amp; Email Integration by Alphalize Technologies</p>
+            </div>
+
+        </div>
+    </div>
+</t>
+
+</templates>

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+
+    <record id="help_doc_email_config" model="whatsapp.help.document">
+        <field name="name">WhatsApp &amp; Email Configuration</field>
+        <field name="description">Learn how to set up WhatsApp sessions, Email sessions, auto-send toggles, and configure your module for seamless communication. Covers WhatsApp QR code setup, Email session (Gmail/Outlook) setup, auto-send configuration, payment receipt settings, and POS notification settings.</field>
+        <field name="icon">&#128231;</field>
+        <field name="sequence">10</field>
+        <field name="active" eval="True"/>
+        <field name="static_pdf_url">/whatsapp_email/static/doc/WhatsApp_Email_Neonize_User_Manual.pdf</field>
+    </record>
+
+    <record id="help_doc_broadcasting" model="whatsapp.help.document">
+        <field name="name">WhatsApp Broadcasting Guide</field>
+        <field name="description">Learn how to create broadcast campaigns, import contacts, schedule messages, and reach multiple customers at once. Covers creating broadcast campaigns, importing contacts from CSV/Excel, Lead Finder integration, scheduling broadcasts, and tracking delivery status.</field>
+        <field name="icon">&#128226;</field>
+        <field name="sequence">20</field>
+        <field name="active" eval="True"/>
+        <field name="static_pdf_url">/whatsapp_email/static/doc/WhatsApp_Broadcasting_User_Manual_EN.pdf</field>
+    </record>
+
+</odoo>

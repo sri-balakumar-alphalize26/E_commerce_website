@@ -1,0 +1,1592 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* whatsapp_email
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: 369ai Server 19.0\n"
+"Report-Msgid-Bugs-To: \n"
+"Last-Translator: \n"
+"Language-Team: Arabic\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: \n"
+"Language: ar\n"
+"Plural-Forms: nplurals=6; plural=(n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 && n%100<=10 ? 3 : n%100>=11 ? 4 : 5);\n"
+
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/email_session.py:0
+msgid ""
+"\n"
+"\n"
+"Ask your IT admin to enable IMAP on the server.\n"
+"\n"
+"Underlying error: %s"
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/email_session.py:0
+msgid ""
+"\n"
+"\n"
+"Enable IMAP here: %s\n"
+"\n"
+"Then click 'Connect & Test' again."
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/email_session.py:0
+msgid ""
+"\n"
+"\n"
+"For Gmail, do this once (3 clicks, 30 seconds):\n"
+"1. Open this link: %s\n"
+"2. Scroll to 'IMAP access' → click 'Enable IMAP'.\n"
+"3. Click 'Save Changes' at the bottom.\n"
+"4. Come back here and click 'Connect & Test' again.\n"
+"\n"
+"If you don't need auto-approval replies, you can ignore this — sending and auto-send features all work."
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/email_session.py:0
+msgid ""
+"\n"
+"\n"
+"Get your App Password here:\n"
+"%s"
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/easy_orders_send.py:0
+msgid ""
+"%(emoji)s *%(label)s %(name)s*\n"
+"👤 %(partner)s\n"
+"💰 Total: %(symbol)s %(amount)s\n"
+"— %(company)s"
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/account_payment.py:0
+msgid ""
+"%(emoji)s *%(label)s*\n"
+"%(intro)s\n"
+"\n"
+"👤 %(partner)s\n"
+"💰 Amount: %(symbol)s %(amount)s\n"
+"🧾 Reference: %(name)s\n"
+"📅 Date: %(date)s\n"
+"— %(company)s"
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/account_payment.py:0
+#: code:addons/whatsapp_email/models/easy_orders_send.py:0
+msgid "%s %s - %s"
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_help_document_form
+msgid "/whatsapp_neonize/static/doc/manual.pdf"
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_email_session_form
+msgid ""
+"<em>This is a one-time setup. Once enabled,\n"
+"                            you'll never have to touch it again.</em>"
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_email_session_form
+msgid ""
+"<strong>Company email:</strong> ask your IT admin for the SMTP password."
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_email_session_form
+msgid "<strong>Gmail / Google Workspace:</strong>"
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_email_session_form
+msgid "<strong>Outlook / Hotmail / Live:</strong>"
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_whatsapp_config_form
+msgid ""
+"<strong>PO Confirm:</strong> sends the purchase order PDF to the vendor.<br/>\n"
+"                                <strong>Vendor Bill Posted:</strong> sends the bill PDF to the vendor.<br/>\n"
+"                                <strong>Customer Invoice Posted:</strong> sends the invoice PDF to the customer.<br/>\n"
+"                                Manual <em>Send WhatsApp &amp; Email</em> buttons are also available\n"
+"                                on each document form."
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_whatsapp_config_form
+msgid ""
+"<strong>Quotation send:</strong> when you click 369ai's\n"
+"                                <em>Send by Email</em> button (which sets state=Sent), the email\n"
+"                                is delivered by 369ai's standard flow. Toggle <em>Auto WhatsApp\n"
+"                                Quotation</em> ON to also fire WhatsApp at the same time.<br/>\n"
+"                                <strong>Order confirmation:</strong> when you click Confirm,\n"
+"                                both WhatsApp and Email fire (according to the toggles).\n"
+"                                A manual <em>Send WhatsApp &amp; Email</em> button is also\n"
+"                                available on the sale order form for ad-hoc sends at any state."
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_email_session_form
+msgid "<strong>Yahoo:</strong>"
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_email_session_form
+msgid ""
+"<strong>📥 Auto-Process Approval Replies</strong> is ON.\n"
+"                        When the approver replies <strong>YES</strong> or <strong>NO</strong>\n"
+"                        to a credit-facility approval email, the application is\n"
+"                        approved/rejected automatically within a minute."
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_email_session_form
+msgid "<strong>📨 For Gmail / Google Workspace</strong> — 3 clicks:"
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_email_session_form
+msgid ""
+"<strong>📨 For Outlook / Hotmail / Live</strong> — IMAP is on by default.\n"
+"                            If it fails, you may need to use an App Password (see App Password help above)."
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_email_session_form
+msgid "<strong>📨 For Yahoo</strong> — go to"
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_email_session_form
+msgid ""
+"<strong>📨 For company email (your own domain):</strong> ask your IT\n"
+"                            admin to confirm IMAP is enabled on the mail server."
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_email_session__active
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_help_document__active
+msgid "Active"
+msgstr "نشط"
+
+#. module: whatsapp_email
+#: model_terms:ir.actions.act_window,help:whatsapp_email.action_email_session
+msgid "Add an Email Account"
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.actions.act_window,help:whatsapp_email.action_email_session
+msgid ""
+"Add as many email accounts as you want. Pick one as <strong>Default</strong>\n"
+"                so auto-send features (sale confirm, PO confirm, vendor bills, POS) use it.\n"
+"                The manual <em>Send WhatsApp &amp; Email</em> button on documents will let\n"
+"                you pick which account to send from when more than one is configured."
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_whatsapp_config_form
+msgid ""
+"Add phone numbers (with country code, no + sign) to receive\n"
+"                        business notifications via WhatsApp."
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_email_session__app_password
+msgid "App Password"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_config__auto_send_invoice_email
+msgid "Auto Email Customer Invoice on Post"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_config__auto_send_po_confirm_email
+msgid "Auto Email PO on Confirm"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_config__auto_send_payment_receipt_email
+msgid "Auto Email Payment Receipt"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_config__auto_send_so_quotation_email
+msgid "Auto Email Quotation"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_account_payment__auto_email_receipt_sent
+msgid "Auto Email Receipt Sent"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_purchase_order__auto_email_sent_at_confirm
+#: model:ir.model.fields,field_description:whatsapp_email.field_sale_order__auto_email_sent_at_confirm
+msgid "Auto Email Sent At Confirm"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_account_bank_statement_line__auto_email_sent_at_post
+#: model:ir.model.fields,field_description:whatsapp_email.field_account_move__auto_email_sent_at_post
+msgid "Auto Email Sent At Post"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_config__auto_send_bill_email
+msgid "Auto Email Vendor Bill on Post"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_config__auto_send_so_confirm_email
+msgid "Auto Email on SO Confirm"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_account_payment__auto_wa_receipt_sent
+msgid "Auto Wa Receipt Sent"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_purchase_order__auto_wa_sent_at_confirm
+#: model:ir.model.fields,field_description:whatsapp_email.field_sale_order__auto_wa_sent_at_confirm
+msgid "Auto Wa Sent At Confirm"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_account_bank_statement_line__auto_wa_sent_at_post
+#: model:ir.model.fields,field_description:whatsapp_email.field_account_move__auto_wa_sent_at_post
+msgid "Auto Wa Sent At Post"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_sale_order__auto_wa_sent_at_quote
+msgid "Auto Wa Sent At Quote"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_config__auto_send_invoice_wa
+msgid "Auto WhatsApp Customer Invoice on Post"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_config__auto_send_po_confirm_wa
+msgid "Auto WhatsApp PO on Confirm"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_config__auto_send_payment_receipt_wa
+msgid "Auto WhatsApp Payment Receipt"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_config__auto_send_so_quotation_wa
+msgid "Auto WhatsApp Quotation"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_config__auto_send_bill_wa
+msgid "Auto WhatsApp Vendor Bill on Post"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_config__auto_send_so_confirm_wa
+msgid "Auto WhatsApp on SO Confirm"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_email_session__enable_reply_polling
+msgid "Auto-Process Approval Replies"
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_whatsapp_config_form
+msgid ""
+"Auto-send (sale confirm, PO confirm, vendor bills, POS, credit approvals)\n"
+"                        uses the <strong>default email session</strong> selected below. Add or\n"
+"                        manage email accounts under\n"
+"                        <strong>WhatsApp and Email → Email Sessions</strong>."
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/account_move.py:0
+msgid "Auto-send failed: %s"
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/notification_dispatch.py:0
+msgid "Auto-send skipped: no partner on record."
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-javascript
+#: code:addons/whatsapp_email/static/src/xml/help_documents.xml:0
+msgid "Browse the guides below to learn how to use all features."
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_send_channel_wizard_form
+msgid "Cancel"
+msgstr "إلغاء"
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/account_payment.py:0
+#: code:addons/whatsapp_email/models/easy_orders_send.py:0
+msgid "Cannot send"
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_send_channel_wizard_form
+msgid "Choose Channels"
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_email_session_form
+msgid "Click <strong>\"Save Changes\"</strong> at the bottom."
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_email_session_form
+msgid "Come back here, click <strong>Connect &amp; Test</strong> — done."
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_email_session__company_id
+msgid "Company"
+msgstr "الشركة"
+
+#. module: whatsapp_email
+#: model:ir.ui.menu,name:whatsapp_email.menu_whatsapp_config
+msgid "Configuration"
+msgstr "الإعدادات"
+
+#. module: whatsapp_email
+#: model:ir.model,name:whatsapp_email.model_email_session
+msgid "Connected Email Account / Session"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields.selection,name:whatsapp_email.selection__email_session__status__connected
+msgid "Connected ✓"
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/email_session.py:0
+msgid "Connected. Sending + inbox-polling both working."
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_email_session_form
+msgid "Copy the 16-character password and paste it above."
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/email_session.py:0
+msgid "Could not reach IMAP server: %s"
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/email_session.py:0
+msgid "Could not save SMTP settings: %s"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_email_session__create_uid
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_help_document__create_uid
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_send_channel_wizard__create_uid
+msgid "Created by"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_email_session__create_date
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_help_document__create_date
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_send_channel_wizard__create_date
+msgid "Created on"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model,name:whatsapp_email.model_whatsapp_email_dispatch
+msgid "Cross-channel (Email + WhatsApp) Notification Dispatcher"
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_whatsapp_config_form
+msgid "Customer Invoice Posted"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_email_session__is_default
+msgid "Default"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_config__admin_email
+msgid "Default Admin Email"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_config__default_email_session_id
+msgid "Default Email Session"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_config__from_email
+msgid "Default Send From"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_config__default_whatsapp_session_id
+msgid "Default WhatsApp Session"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,help:whatsapp_email.field_whatsapp_config__default_whatsapp_session_id
+msgid ""
+"Default WhatsApp session used for auto-send. Leave blank to use the first "
+"connected session."
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,help:whatsapp_email.field_whatsapp_config__default_email_session_id
+msgid ""
+"Default email account used for auto-send (sale confirm, PO confirm, vendor "
+"bill post, POS, credit approvals)."
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,help:whatsapp_email.field_whatsapp_config__admin_email
+msgid "Default email address. Comes from the Default Email Session."
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_help_document__description
+msgid "Description"
+msgstr "الوصف"
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_account_move__display_name
+#: model:ir.model.fields,field_description:whatsapp_email.field_account_payment__display_name
+#: model:ir.model.fields,field_description:whatsapp_email.field_email_session__display_name
+#: model:ir.model.fields,field_description:whatsapp_email.field_pos_order__display_name
+#: model:ir.model.fields,field_description:whatsapp_email.field_purchase_order__display_name
+#: model:ir.model.fields,field_description:whatsapp_email.field_sale_order__display_name
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_config__display_name
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_email_dispatch__display_name
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_email_sendable_mixin__display_name
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_help_document__display_name
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_message__display_name
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_send_channel_wizard__display_name
+msgid "Display Name"
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-javascript
+#: code:addons/whatsapp_email/static/src/xml/help_documents.xml:0
+msgid "Download PDF"
+msgstr "تنزيل PDF"
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_whatsapp_config_form
+msgid "Email (mirrors WhatsApp)"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_email_session__email_address
+msgid "Email Address"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_config__pos_email_notify_owners
+msgid "Email POS Order to Owners"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_config__pos_email_notify_customer
+msgid "Email POS Receipt to Customer"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.actions.act_window,name:whatsapp_email.action_email_session
+#: model:ir.ui.menu,name:whatsapp_email.menu_email_sessions
+#: model:ir.ui.menu,name:whatsapp_email.menu_email_sessions_config
+msgid "Email Sessions"
+msgstr "جلسات البريد"
+
+#. module: whatsapp_email
+#: model:ir.model.fields,help:whatsapp_email.field_whatsapp_config__auto_send_payment_receipt_email
+msgid ""
+"Email a receipt to the customer when an inbound payment is posted, OR a "
+"remittance to the vendor when an outbound payment is posted."
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,help:whatsapp_email.field_whatsapp_config__pos_email_notify_owners
+msgid ""
+"Email the POS order summary to the addresses listed in Owner Emails when a "
+"POS order is paid/done/invoiced."
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,help:whatsapp_email.field_whatsapp_config__pos_email_notify_customer
+msgid ""
+"Email the POS order summary to the customer (partner_id.email) when a POS "
+"order is paid/done/invoiced."
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,help:whatsapp_email.field_whatsapp_config__auto_send_invoice_email
+msgid "Email the customer invoice PDF to the customer when posted."
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,help:whatsapp_email.field_whatsapp_config__auto_send_po_confirm_email
+msgid "Email the purchase order PDF to the vendor when the PO is confirmed."
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,help:whatsapp_email.field_whatsapp_config__auto_send_so_quotation_email
+msgid ""
+"Email the quotation PDF when state changes to 'sent' (Send by Email "
+"pressed)."
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,help:whatsapp_email.field_whatsapp_config__auto_send_so_confirm_email
+msgid "Email the sale order PDF to the customer when the order is confirmed."
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,help:whatsapp_email.field_whatsapp_config__auto_send_bill_email
+msgid "Email the vendor bill PDF when posted."
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/notification_dispatch.py:0
+msgid "Email: %s"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.actions.server,name:whatsapp_email.ir_cron_email_poll_replies_ir_actions_server
+msgid "Email: Poll for Approval Replies (YES/NO)"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,help:whatsapp_email.field_whatsapp_help_document__icon
+msgid "Emoji or icon character (e.g. clock, envelope)"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_config__pos_email_notify_enabled
+msgid "Enable POS Email Notifications"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields.selection,name:whatsapp_email.selection__email_session__status__failed
+msgid "Failed"
+msgstr "فشل"
+
+#. module: whatsapp_email
+#: model:ir.model.fields,help:whatsapp_email.field_email_session__app_password
+msgid ""
+"For Gmail / Outlook / Yahoo this MUST be an App Password — NOT the normal "
+"login password."
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/email_session.py:0
+msgid "Force Poll — Result"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,help:whatsapp_email.field_email_session__name
+msgid "Friendly label, e.g. \"Sales Team\" or \"Support\"."
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_send_channel_wizard__email_session_id
+msgid "From Email Account"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_send_channel_wizard__whatsapp_session_id
+msgid "From WhatsApp Session"
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_email_session_form
+msgid "Gmail → Settings → Forwarding and POP/IMAP"
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_email_session_form
+msgid "Google Account → Security"
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_help_document_form
+msgid "HTML Content (optional — shown instead of the PDF on 'Open Guide')"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_help_document__html_content
+msgid "HTML Content (optional)"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.actions.client,name:whatsapp_email.action_help_document_page
+#: model:ir.ui.menu,name:whatsapp_email.menu_wa_help
+msgid "Help"
+msgstr "المساعدة"
+
+#. module: whatsapp_email
+#. odoo-javascript
+#: code:addons/whatsapp_email/static/src/xml/help_documents.xml:0
+msgid "Help & User Guides"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model,name:whatsapp_email.model_whatsapp_help_document
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_help_document_form
+msgid "Help Document"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.actions.act_window,name:whatsapp_email.action_help_document_admin
+#: model:ir.ui.menu,name:whatsapp_email.menu_help_document_admin
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_help_document_tree
+msgid "Help Documents"
+msgstr "مستندات المساعدة"
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_account_move__id
+#: model:ir.model.fields,field_description:whatsapp_email.field_account_payment__id
+#: model:ir.model.fields,field_description:whatsapp_email.field_email_session__id
+#: model:ir.model.fields,field_description:whatsapp_email.field_pos_order__id
+#: model:ir.model.fields,field_description:whatsapp_email.field_purchase_order__id
+#: model:ir.model.fields,field_description:whatsapp_email.field_sale_order__id
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_config__id
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_email_dispatch__id
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_email_sendable_mixin__id
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_help_document__id
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_message__id
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_send_channel_wizard__id
+msgid "ID"
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/email_session.py:0
+msgid "IMAP is disabled on this account"
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/email_session.py:0
+msgid "IMAP login failed: %s"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_help_document__icon
+msgid "Icon"
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/account_move.py:0
+msgid "Invoice %s - %s"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model,name:whatsapp_email.model_account_move
+msgid "Journal Entry"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_email_session__name
+msgid "Label"
+msgstr "التسمية"
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_email_session__last_message
+msgid "Last Connection Message"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_email_session__last_poll_at
+msgid "Last Poll At"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_email_session__write_uid
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_help_document__write_uid
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_send_channel_wizard__write_uid
+msgid "Last Updated by"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_email_session__write_date
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_help_document__write_date
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_send_channel_wizard__write_date
+msgid "Last Updated on"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_email_session__mail_server_id
+msgid "Linked SMTP Server"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:res.groups,name:whatsapp_email.group_whatsapp_manager
+msgid "Manager"
+msgstr "المدير"
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_whatsapp_config_form
+msgid "Message Template (used for both channels)"
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_whatsapp_config_form
+msgid "Message template for POS orders..."
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.ui.menu,name:whatsapp_email.menu_whatsapp_messages
+msgid "Messages"
+msgstr "الرسائل"
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/wizards/send_channel_wizard.py:0
+msgid "Model %s does not implement _send_via_channels_with_sessions yet."
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_email_session_form
+msgid ""
+"Most providers ship with IMAP already enabled, so you usually don't\n"
+"                            need to do anything. If <strong>Connect &amp; Test</strong> says replies\n"
+"                            aren't working, follow the steps for your provider:"
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/notification_dispatch.py:0
+msgid ""
+"No connected Email Session.\n"
+"\n"
+"Add one under WhatsApp and Email → Email Sessions, mark it Default, and try again."
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/notification_dispatch.py:0
+msgid ""
+"No connected WhatsApp session. Open WhatsApp and Email → WhatsApp Sessions, "
+"scan the QR, then try again."
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-javascript
+#: code:addons/whatsapp_email/static/src/xml/help_documents.xml:0
+msgid "No help documents available yet."
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields.selection,name:whatsapp_email.selection__email_session__status__not_set
+msgid "Not Connected"
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_whatsapp_config_form
+msgid "On Order Confirmation"
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_whatsapp_config_form
+msgid "On PO Confirmation"
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_whatsapp_config_form
+msgid "On Quotation Send (state = Sent)"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,help:whatsapp_email.field_whatsapp_config__pos_owner_emails
+msgid ""
+"One or more email addresses (comma-separated) that receive POS order "
+"summaries."
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_email_session_form
+msgid "Open"
+msgstr "مفتوح"
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_email_session_form
+msgid "Open this link in a new tab:"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,help:whatsapp_email.field_email_session__from_email
+msgid "Override the From address. Leave blank to use the email address above."
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_config__pos_owner_emails
+msgid "Owner Emails (comma-separated)"
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_help_document_form
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_help_document_tree
+msgid "PDF"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_help_document__pdf_filename
+msgid "PDF Filename"
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_whatsapp_config_form
+msgid "POS Notifications"
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_whatsapp_config_form
+msgid ""
+"POS notifications use the <strong>Default WhatsApp Session</strong>\n"
+"                                and <strong>Default Email Session</strong> selected at the top of\n"
+"                                this page."
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_send_channel_wizard__partner_id
+msgid "Partner"
+msgstr "الشريك"
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/notification_dispatch.py:0
+msgid "Partner '%s' has no email address — cannot send."
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/notification_dispatch.py:0
+msgid ""
+"Partner '%s' has no phone/mobile number — set one on the partner to enable "
+"WhatsApp auto-send."
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,help:whatsapp_email.field_whatsapp_help_document__static_pdf_url
+msgid "Path to a static PDF file, e.g. /whatsapp_email/static/doc/manual.pdf"
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_whatsapp_config_form
+msgid "Payment Posted (Receipt / Remittance)"
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/account_payment.py:0
+msgid "Payment Receipt"
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/account_payment.py:0
+msgid "Payment Sent"
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/account_payment.py:0
+msgid "Payment has no partner — cannot send receipt."
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model,name:whatsapp_email.model_account_payment
+msgid "Payments"
+msgstr "المدفوعات"
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/wizards/send_channel_wizard.py:0
+msgid "Pick a WhatsApp session, or uncheck Send by WhatsApp."
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/wizards/send_channel_wizard.py:0
+msgid "Pick an Email account, or uncheck Send by Email."
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model,name:whatsapp_email.model_whatsapp_send_channel_wizard
+msgid "Pick channel(s) for sending a document"
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/email_session.py:0
+msgid "Please type a valid email address first."
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/email_session.py:0
+msgid ""
+"Please type your email App Password first.\n"
+"\n"
+"If you use Gmail, Outlook, or Yahoo, this is a special password — not your normal login password. See the help section below the form."
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model,name:whatsapp_email.model_pos_order
+msgid "Point of Sale Orders"
+msgstr "طلبات نقاط البيع"
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_whatsapp_config_form
+msgid "Purchase & Invoicing Auto-Send"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model,name:whatsapp_email.model_purchase_order
+msgid "Purchase Order"
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/purchase_order.py:0
+msgid "Purchase Order %s - %s"
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/account_payment.py:0
+msgid "Receipt Send Result"
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/account_payment.py:0
+msgid "Receipt dispatched. Check the chatter for per-channel status."
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_send_channel_wizard__record_label
+msgid "Record Label"
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/wizards/send_channel_wizard.py:0
+msgid "Record no longer exists."
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_send_channel_wizard__res_id
+msgid "Res"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_send_channel_wizard__res_model
+msgid "Res Model"
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/sale_order.py:0
+msgid "Sale Order %s - %s"
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_whatsapp_config_form
+msgid "Sales Auto-Send"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model,name:whatsapp_email.model_sale_order
+msgid "Sales Order"
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_email_session_form
+msgid ""
+"Scroll to <strong>\"IMAP access\"</strong> → click\n"
+"                                    <strong>\"Enable IMAP\"</strong>."
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/wizards/send_channel_wizard.py:0
+msgid "Select at least one channel (Email or WhatsApp)."
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_whatsapp_config_form
+msgid "Select connected WhatsApp session"
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_whatsapp_config_form
+msgid "Select connected email account"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_email_session__from_email
+msgid "Send From (optional)"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.ui.menu,name:whatsapp_email.menu_whatsapp_send
+msgid "Send Message"
+msgstr "إرسال رسالة"
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/account_payment.py:0
+msgid "Send Receipt via Email & WhatsApp"
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/account_move.py:0
+#: code:addons/whatsapp_email/models/easy_orders_send.py:0
+#: code:addons/whatsapp_email/models/purchase_order.py:0
+#: code:addons/whatsapp_email/models/sale_order.py:0
+msgid "Send Result"
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/account_move.py:0
+#: code:addons/whatsapp_email/models/purchase_order.py:0
+#: code:addons/whatsapp_email/models/sale_order.py:0
+#: model:ir.actions.act_window,name:whatsapp_email.action_send_channel_wizard
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_purchase_order_form_send_channels
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_sale_order_form_send_channels
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_send_channel_wizard_form
+msgid "Send WhatsApp & Email"
+msgstr "إرسال واتساب وبريد"
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_send_channel_wizard__send_email
+msgid "Send by Email"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_send_channel_wizard__send_whatsapp
+msgid "Send by WhatsApp"
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/account_move.py:0
+#: code:addons/whatsapp_email/models/easy_orders_send.py:0
+#: code:addons/whatsapp_email/models/purchase_order.py:0
+#: code:addons/whatsapp_email/models/sale_order.py:0
+msgid "Send dispatched. Check the chatter for per-channel status."
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/easy_orders_send.py:0
+msgid "Send via Email & WhatsApp"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model,name:whatsapp_email.model_whatsapp_email_sendable_mixin
+msgid "Send via Email/WhatsApp helper mixin"
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/email_session.py:0
+msgid "Sending works ✓ — but inbox polling is disabled. %s"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_email_session__sequence
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_help_document__sequence
+msgid "Sequence"
+msgstr "التسلسل"
+
+#. module: whatsapp_email
+#: model:ir.model.fields,help:whatsapp_email.field_whatsapp_help_document__html_content
+msgid "Shown instead of the PDF on \"Open Guide\"."
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_help_document__static_pdf_url
+msgid "Static PDF URL"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_email_session__status
+msgid "Status"
+msgstr "الحالة"
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/email_session.py:0
+msgid ""
+"Test email sent to %s. Auto-approval replies will be processed "
+"automatically."
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/account_payment.py:0
+msgid "Thank you! We have received your payment."
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,help:whatsapp_email.field_email_session__email_address
+msgid "The email account to send from. e.g. sales@yourcompany.com"
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/easy_orders_send.py:0
+msgid "This document has no partner — set one first."
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,help:whatsapp_email.field_email_session__last_poll_at
+msgid "Timestamp of the most recent IMAP poll cycle."
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_help_document__name
+msgid "Title"
+msgstr "العنوان"
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_email_session_form
+msgid "Type a name like \"369ai\" → click <strong>Create</strong>."
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,field_description:whatsapp_email.field_whatsapp_help_document__pdf_file
+msgid "Upload PDF"
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_help_document_form
+msgid ""
+"Upload a <strong>PDF</strong> (and optionally write HTML content).\n"
+"                    It appears as a card in the <strong>Help</strong> menu;\n"
+"                    \"Open guide\" shows it in the browser and \"Open in PDF doc\" opens the full PDF."
+msgstr ""
+
+#. module: whatsapp_email
+#: model:res.groups,name:whatsapp_email.group_whatsapp_user
+msgid "User"
+msgstr "المستخدم"
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/account_move.py:0
+msgid "Vendor Bill %s - %s"
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_whatsapp_config_form
+msgid "Vendor Bill Posted"
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-javascript
+#: code:addons/whatsapp_email/static/src/xml/help_documents.xml:0
+msgid "View"
+msgstr "عرض"
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/account_payment.py:0
+msgid "We have processed a payment to your account."
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.module.category,name:whatsapp_email.module_category_whatsapp
+#: model:res.groups.privilege,name:whatsapp_email.privilege_whatsapp
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_whatsapp_config_form
+msgid "WhatsApp"
+msgstr "واتساب"
+
+#. module: whatsapp_email
+#. odoo-javascript
+#: code:addons/whatsapp_email/static/src/xml/help_documents.xml:0
+msgid "WhatsApp & Email Integration by Alphalize Technologies"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model,name:whatsapp_email.model_whatsapp_config
+msgid "WhatsApp Configuration"
+msgstr "إعدادات واتساب"
+
+#. module: whatsapp_email
+#: model:ir.model,name:whatsapp_email.model_whatsapp_message
+msgid "WhatsApp Message"
+msgstr "رسالة واتساب"
+
+#. module: whatsapp_email
+#: model:ir.ui.menu,name:whatsapp_email.menu_whatsapp_config_sessions
+#: model:ir.ui.menu,name:whatsapp_email.menu_whatsapp_sessions
+msgid "WhatsApp Sessions"
+msgstr "جلسات واتساب"
+
+#. module: whatsapp_email
+#: model:ir.model.fields,help:whatsapp_email.field_whatsapp_config__auto_send_payment_receipt_wa
+msgid "WhatsApp a receipt to the customer/vendor when a payment is posted."
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.ui.menu,name:whatsapp_email.menu_whatsapp_root
+msgid "WhatsApp and Email"
+msgstr "واتساب والبريد الإلكتروني"
+
+#. module: whatsapp_email
+#: model:ir.actions.act_window,name:whatsapp_email.action_whatsapp_config
+#: model:ir.actions.server,name:whatsapp_email.action_whatsapp_config_server
+#: model:ir.ui.menu,name:whatsapp_email.menu_whatsapp_config_settings
+msgid "WhatsApp and Email Settings"
+msgstr "إعدادات واتساب والبريد"
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/notification_dispatch.py:0
+msgid ""
+"WhatsApp session '%s' is not connected (status: %s). Reconnect it before "
+"retrying."
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,help:whatsapp_email.field_whatsapp_config__auto_send_invoice_wa
+msgid "WhatsApp the customer invoice PDF to the customer when posted."
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,help:whatsapp_email.field_whatsapp_config__auto_send_po_confirm_wa
+msgid ""
+"WhatsApp the purchase order PDF to the vendor when the PO is confirmed."
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,help:whatsapp_email.field_whatsapp_config__auto_send_so_quotation_wa
+msgid "WhatsApp the quotation PDF when state changes to 'sent'."
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,help:whatsapp_email.field_whatsapp_config__auto_send_so_confirm_wa
+msgid ""
+"WhatsApp the sale order PDF to the customer when the order is confirmed."
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,help:whatsapp_email.field_whatsapp_config__auto_send_bill_wa
+msgid "WhatsApp the vendor bill PDF when posted."
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/notification_dispatch.py:0
+msgid "WhatsApp: %s"
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,help:whatsapp_email.field_email_session__is_default
+msgid "When checked, this session is used by default for auto-send features."
+msgstr ""
+
+#. module: whatsapp_email
+#: model:ir.model.fields,help:whatsapp_email.field_email_session__enable_reply_polling
+msgid ""
+"When enabled, the system polls this inbox every minute. When the approver "
+"replies YES or NO to a credit facility approval email, the application is "
+"auto-approved or auto-rejected. Requires IMAP access (Gmail App Password "
+"works for both SMTP and IMAP)."
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_email_session_form
+msgid "Yahoo Account Security"
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_email_session_form
+msgid "account.microsoft.com/security/app-passwords"
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_email_session_form
+msgid "and turn on <strong>2-Step Verification</strong>."
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_whatsapp_config_form
+msgid "e.g. 919944080209"
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_whatsapp_config_form
+msgid "e.g. Owner / Manager"
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_email_session_form
+msgid "e.g. Sales Team"
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_help_document_form
+msgid "e.g. emoji character"
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_email_session_form
+msgid "leave blank to use email above"
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_email_session_form
+msgid "login.yahoo.com/account/security"
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_whatsapp_config_form
+msgid "manager@co.com, owner@co.com"
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/email_session.py:0
+msgid "missing email or password"
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_email_session_form
+msgid "myaccount.google.com/apppasswords"
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_email_session_form
+msgid "paste your app password"
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_email_session_form
+msgid "you@gmail.com"
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_email_session_form
+msgid "→ enable \"Allow apps that use less secure sign in\"."
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/email_session.py:0
+msgid ""
+"✅ Sending works — your test email was delivered to %s.\n"
+"\n"
+"⚠️ Auto-approval REPLIES are not active yet. For replies to be processed automatically, your email needs IMAP enabled."
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_email_session_form
+msgid "✓ Connect & Test"
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/email_session.py:0
+msgid "✓ Fully Connected"
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_send_channel_wizard_form
+msgid "✓ Send"
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/email_session.py:0
+msgid "❌ Connection failed: %s"
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/email_session.py:0
+msgid ""
+"❌ Could not connect to the email server.\n"
+"\n"
+"Your network or firewall may be blocking outgoing SMTP (port 587)."
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/email_session.py:0
+msgid ""
+"❌ Could not find the email server.\n"
+"\n"
+"DNS lookup failed. Check the email spelling, or your internet."
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/email_session.py:0
+msgid ""
+"❌ Wrong password.\n"
+"\n"
+"Most providers (Gmail, Outlook, Yahoo) DO NOT accept your normal login password. You need an App Password — a special 16-character password generated for apps like 369ai."
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/email_session.py:0
+msgid ""
+"❌ Your provider rejected the sender address.\n"
+"\n"
+"Make sure the email above is the same address tied to the App Password."
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_email_session_form
+msgid "❓ Replies not working? Click here for the 30-second fix"
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_email_session_form
+msgid "⭐ Set as Default"
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/sale_order.py:0
+msgid ""
+"📄 Sale Order %s\n"
+"Total: %s %s"
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_email_session_form
+msgid "📖 How to get an App Password (click to expand)"
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/purchase_order.py:0
+msgid ""
+"📦 Purchase Order %s\n"
+"Total: %s %s"
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_whatsapp_config_form
+msgid "📧 Default Email Session"
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/notification_dispatch.py:0
+msgid "📧 Email FAILED: %s"
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/notification_dispatch.py:0
+msgid "📧 Email sent to %s"
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/sale_order.py:0
+msgid "📱 Auto-WhatsApp on quotation FAILED: %s"
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/account_payment.py:0
+#: code:addons/whatsapp_email/models/purchase_order.py:0
+msgid "📱 Auto-send error: %s"
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_whatsapp_config_form
+msgid "📱 Owner Notification Numbers (WhatsApp)"
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_account_payment_form_wa_send
+msgid "📱 Send Receipt via WhatsApp & Email"
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/notification_dispatch.py:0
+msgid "📱 WhatsApp FAILED: %s"
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/notification_dispatch.py:0
+msgid "📱 WhatsApp sent to %s"
+msgstr ""
+
+#. module: whatsapp_email
+#: model_terms:ir.ui.view,arch_db:whatsapp_email.view_email_session_form
+msgid "🔍 Force Poll Now"
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/account_move.py:0
+msgid ""
+"🧾 Invoice %s\n"
+"Amount: %s %s"
+msgstr ""
+
+#. module: whatsapp_email
+#. odoo-python
+#: code:addons/whatsapp_email/models/account_move.py:0
+msgid ""
+"🧾 Vendor Bill %s\n"
+"Amount: %s %s"
+
+msgstr ""

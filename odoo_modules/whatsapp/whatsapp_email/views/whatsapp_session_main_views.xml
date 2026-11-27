@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Main number / Main e-mail of each company, on the numbers list (also
+         WA Tracker > Configuration > WhatsApp Numbers) and the number form. -->
+    <record id="view_whatsapp_session_list_main" model="ir.ui.view">
+        <field name="name">whatsapp.session.list.main</field>
+        <field name="model">whatsapp.session</field>
+        <field name="inherit_id" ref="whatsapp_gateway.view_whatsapp_session_list"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='authorized_email']" position="after">
+                <field name="is_main_whatsapp" string="Main WhatsApp" optional="show"/>
+                <field name="is_main_email" string="Main e-mail" optional="show"/>
+                <field name="main_for" optional="hide"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_whatsapp_session_form_main" model="ir.ui.view">
+        <field name="name">whatsapp.session.form.main</field>
+        <field name="model">whatsapp.session</field>
+        <field name="inherit_id" ref="whatsapp_gateway.view_whatsapp_session_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//page[@name='general']//field[@name='company_id']" position="attributes">
+                <attribute name="readonly">1</attribute>
+            </xpath>
+            <xpath expr="//page[@name='general']//field[@name='company_id']" position="after">
+                <button name="action_change_company" type="object" string="Change company" class="btn-link p-0"
+                        icon="fa-exchange" invisible="not id" groups="base.group_system" colspan="2"/>
+            </xpath>
+            <xpath expr="//div[@name='general_more']" position="before">
+                <group string="Sends documents for" invisible="not id">
+                    <field name="is_main_whatsapp" invisible="1"/>
+                    <field name="is_main_email" invisible="1"/>
+                    <field name="main_for" readonly="1" string="Main for"
+                           placeholder="no company sends from this number yet"/>
+                    <div colspan="2" class="d-flex gap-2">
+                        <button name="action_make_main_whatsapp" type="object" class="btn-secondary"
+                                string="Make main WhatsApp of its company" invisible="is_main_whatsapp or not company_id"/>
+                        <button name="action_make_main_email" type="object" class="btn-secondary"
+                                string="Make main e-mail of its company"
+                                invisible="is_main_email or not authorized_email or not company_id"/>
+                    </div>
+                </group>
+            </xpath>
+        </field>
+    </record>
+</odoo>

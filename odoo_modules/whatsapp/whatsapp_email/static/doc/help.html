@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp &amp; Email - User Guide</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8f9fa;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        .header { text-align: center; margin-bottom: 40px; }
+        .header h1 { color: #714B67; font-weight: 700; font-size: 32px; margin-bottom: 10px; }
+        .header p { color: #666; font-size: 16px; }
+        .back-btn {
+            display: inline-block; background: #714B67; color: white;
+            padding: 8px 20px; border-radius: 6px; text-decoration: none;
+            font-weight: 600; margin-bottom: 20px; font-size: 14px;
+        }
+        .back-btn:hover { background: #5a3a52; }
+        .cards { display: flex; gap: 30px; flex-wrap: wrap; justify-content: center; }
+        .card {
+            background: white; border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            padding: 30px; flex: 1; min-width: 300px; max-width: 400px;
+        }
+        .card-icon { text-align: center; margin-bottom: 20px; font-size: 48px; }
+        .card h3 { color: #714B67; text-align: center; margin-bottom: 15px; }
+        .card p { color: #555; font-size: 14px; line-height: 1.6; }
+        .card ul { color: #555; font-size: 13px; line-height: 1.8; padding-left: 20px; margin-top: 10px; }
+        .download-btn {
+            display: inline-block; background: #714B67; color: white;
+            padding: 10px 25px; border-radius: 6px; text-decoration: none;
+            font-weight: 600; margin-top: 20px;
+        }
+        .download-btn:hover { background: #5a3a52; }
+        .btn-center { text-align: center; margin-top: 20px; }
+        .quick-ref {
+            background: white; border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            padding: 30px; margin-top: 30px;
+        }
+        .quick-ref h3 { color: #714B67; margin-bottom: 15px; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        thead tr { border-bottom: 2px solid #714B67; color: #714B67; }
+        th, td { padding: 10px; text-align: left; }
+        tbody tr { border-bottom: 1px solid #eee; }
+        td:first-child { font-weight: 600; }
+        .footer { text-align: center; margin-top: 30px; color: #999; font-size: 13px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <!-- Back button -->
+        <a href="/odoo" class="back-btn">← Back to 369ai</a>
+
+        <!-- Header -->
+        <div class="header">
+            <h1>&#128214; WhatsApp &amp; Email — User Guide</h1>
+            <p>Download the user manuals below to learn how to configure and use all features.</p>
+        </div>
+
+        <!-- Manual Cards -->
+        <div class="cards">
+
+            <!-- Card 1: Mail Config Manual -->
+            <div class="card">
+                <div class="card-icon">&#128231;</div>
+                <h3>WhatsApp &amp; Email Configuration</h3>
+                <p>Learn how to set up WhatsApp sessions, Email sessions, auto-send
+                   toggles, and configure your module for seamless communication.</p>
+                <ul>
+                    <li>WhatsApp QR code setup</li>
+                    <li>Email session (Gmail/Outlook) setup</li>
+                    <li>Auto-send configuration</li>
+                    <li>Payment receipt settings</li>
+                    <li>POS notification settings</li>
+                </ul>
+                <div class="btn-center">
+                    <a href="/whatsapp_neonize/static/doc/WhatsApp_mail_config_User_Manual.docx"
+                       download class="download-btn">
+                        &#11015; Download Manual
+                    </a>
+                </div>
+            </div>
+
+            <!-- Card 2: Broadcasting Manual -->
+            <div class="card">
+                <div class="card-icon">&#128226;</div>
+                <h3>WhatsApp Broadcasting Guide</h3>
+                <p>Learn how to create broadcast campaigns, import contacts,
+                   schedule messages, and reach multiple customers at once.</p>
+                <ul>
+                    <li>Create broadcast campaigns</li>
+                    <li>Import contacts from CSV/Excel</li>
+                    <li>Lead Finder integration</li>
+                    <li>Schedule broadcasts</li>
+                    <li>Track delivery status</li>
+                </ul>
+                <div class="btn-center">
+                    <a href="/whatsapp_neonize/static/doc/WhatsApp_Broadcasting_User_Manual.docx"
+                       download class="download-btn">
+                        &#11015; Download Manual
+                    </a>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Quick Reference -->
+        <div class="quick-ref">
+            <h3>&#9889; Quick Reference</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Feature</th>
+                        <th>How It Works</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>WhatsApp Session</td>
+                        <td>WhatsApp Sessions &#8594; New &#8594; Scan QR with your phone</td>
+                    </tr>
+                    <tr>
+                        <td>Email Session</td>
+                        <td>Email Sessions &#8594; New &#8594; Enter email + App Password &#8594; Test Connection</td>
+                    </tr>
+                    <tr>
+                        <td>Auto-Send Setup</td>
+                        <td>Configuration &#8594; Settings &#8594; Enable checkboxes for SO/PO/Invoice/Payment</td>
+                    </tr>
+                    <tr>
+                        <td>Manual Send</td>
+                        <td>Open any SO/PO/Invoice/Payment &#8594; Click "Send WhatsApp &amp; Email" button</td>
+                    </tr>
+                    <tr>
+                        <td>Broadcast</td>
+                        <td>Broadcast &#8594; Campaigns &#8594; New &#8594; Add contacts &#8594; Send</td>
+                    </tr>
+                    <tr>
+                        <td>Direct Message</td>
+                        <td>Send Message &#8594; Enter phone &#8594; Type message &#8594; Send</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>WhatsApp &amp; Email Integration by Alphalize Technologies</p>
+        </div>
+
+    </div>
+</body>
+</html>

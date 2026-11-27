@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Root Menu - visible to WhatsApp users -->
+    <menuitem id="menu_whatsapp_root"
+              name="WhatsApp and Email"
+              web_icon="whatsapp_email,static/description/icon.png"
+              groups="group_whatsapp_user"
+              sequence="100"/>
+
+    <menuitem id="menu_whatsapp_messages"
+              name="Messages"
+              parent="menu_whatsapp_root"
+              action="whatsapp_gateway.action_whatsapp_message"
+              groups="group_whatsapp_user"
+              sequence="20"/>
+
+    <!-- Configuration -->
+    <menuitem id="menu_whatsapp_config"
+              name="Configuration"
+              parent="menu_whatsapp_root"
+              groups="group_whatsapp_manager"
+              sequence="90"/>
+
+    <!-- 27 Nov 2026: two entries, no duplicates. "Companies" is every company's
+         sending settings (click one = its full settings page - the old
+         "WhatsApp and Email Settings" entry, which showed only the current
+         company, is gone; its action stays for the buttons that open it). -->
+    <menuitem id="menu_whatsapp_config_companies"
+              name="Companies"
+              parent="menu_whatsapp_config"
+              action="action_whatsapp_config_companies"
+              groups="group_whatsapp_manager"
+              sequence="10"/>
+
+    <menuitem id="menu_whatsapp_config_numbers"
+              name="WhatsApp Numbers"
+              parent="menu_whatsapp_config"
+              action="whatsapp_gateway.action_whatsapp_session"
+              groups="base.group_system"
+              sequence="20"/>
+
+    <!-- 27 Nov 2026: ONE Help, same as WA Tracker. It opens the WhatsApp Help
+         pop-up on the choices page (User Manual / Watch How It Works); each page
+         has "Back" to the choices and the pop-up's X closes everything. -->
+    <record id="action_whatsapp_email_help_centre" model="ir.actions.client">
+        <field name="name">WhatsApp and Email Help</field>
+        <field name="tag">whatsapp_gateway.help</field>
+        <field name="params" eval="{'url': '/whatsapp_email/static/help/help.html?v=15'}"/>
+    </record>
+
+    <menuitem id="menu_send_documents_guide"
+              name="Help"
+              parent="menu_whatsapp_root"
+              action="action_whatsapp_email_help_centre"
+              groups="group_whatsapp_user"
+              sequence="200"/>
+
+</odoo>

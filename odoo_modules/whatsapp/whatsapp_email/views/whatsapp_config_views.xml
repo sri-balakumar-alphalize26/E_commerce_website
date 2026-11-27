@@ -1,0 +1,279 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ============ WHATSAPP CONFIG FORM ============ -->
+    <!-- Standalone form for the shared whatsapp.config model. priority=1 so this
+         richer (Email + auto-send) form is the default over whatsapp_gateway's. -->
+    <record id="view_whatsapp_config_form" model="ir.ui.view">
+        <field name="name">whatsapp.config.form.email</field>
+        <field name="model">whatsapp.config</field>
+        <field name="priority">1</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="company_id" readonly="1" options="{'no_open': True}"/></h1>
+                    </div>
+
+                    <field name="panel_linked" invisible="1"/>
+                    <div class="alert alert-warning d-flex align-items-center justify-content-between gap-2" role="alert"
+                         invisible="panel_linked" groups="base.group_system">
+                        <span><b>Step 1: link this database to the WhatsApp panel</b> - Settings &#8594; WhatsApp: the panel
+                            address and your vendor's link token. Once; then connect numbers here.</span>
+                        <button name="action_link_panel" type="object" class="btn-primary text-nowrap"
+                                string="Link to WhatsApp panel" icon="fa-link"/>
+                    </div>
+                    <div class="text-muted small mb-2" invisible="not panel_linked">
+                        <i class="fa fa-link"/> <field name="panel_link_text" readonly="1" nolabel="1" class="oe_inline"/>
+                        <button name="action_link_panel" type="object" class="btn-link p-0 ms-2" string="change"
+                                groups="base.group_system"/>
+                    </div>
+
+                    <div class="d-flex gap-2 mb-2">
+                        <button name="action_send_steps" type="object" class="btn-secondary" icon="fa-list-ol"
+                                string="How sending works (automatic + button)"/>
+                        <button name="action_send_video" type="object" class="btn-secondary" icon="fa-play-circle"
+                                string="Watch video"/>
+                    </div>
+
+                    <separator string="Sends from"/>
+                    <div class="alert alert-info" role="status" style="margin: 8px 0;">
+                        Quotations, orders, purchase orders, invoices, bills and payment receipts of
+                        <b><field name="company_id" readonly="1" nolabel="1" class="oe_inline" options="{'no_open': True}"/></b>
+                        go out on the WhatsApp number and the e-mail address chosen here.
+                        <ul class="mb-0">
+                            <li>Each company its own: connect a number for it and press <b>Add email</b> on that number.</li>
+                            <li>One for all companies: choose them here and press <b>Use these for all companies</b>.</li>
+                        </ul>
+                        Other companies: switch company at the top right, or open
+                        <b>Configuration → Companies</b>.
+                    </div>
+                    <group>
+                        <group string="WhatsApp">
+                            <field name="default_whatsapp_session_id"
+                                   options="{'no_create': True}"
+                                   placeholder="the company's own number"/>
+                            <field name="wa_status_text" readonly="1" string="Now sends on"/>
+                            <field name="wa_send_pdf" widget="boolean_toggle"/>
+                        </group>
+                        <group string="Email">
+                            <field name="email_session_id" context="{'wa_show_email': True}"
+                                   options="{'no_create': True}"
+                                   placeholder="the company's own address"/>
+                            <field name="email_status_text" readonly="1" string="Now mails from"/>
+                            <field name="email_send_pdf" widget="boolean_toggle"/>
+                            <field name="sender_name" placeholder="empty = the database name"/>
+                        </group>
+                    </group>
+                    <div class="d-flex gap-2 mb-3" groups="base.group_system">
+                        <button name="action_connect_number" type="object" class="btn-primary"
+                                string="Connect a new number for this company"/>
+                        <button name="action_open_numbers" type="object" class="btn-secondary"
+                                string="Numbers and their e-mail (Add email)"/>
+                        <button name="action_use_for_all_companies" type="object" class="btn-secondary"
+                                string="Use these for all companies"
+                                confirm="Every other company will send from the same WhatsApp number and e-mail, with the same auto-send switches. Go on?"/>
+                    </div>
+                    <field name="default_email_session_id" invisible="1"/>
+                    <field name="parent_company_id" invisible="1"/>
+                    <div class="text-muted mb-2" invisible="not parent_company_id">
+                        This is a branch of <field name="parent_company_id" readonly="1" nolabel="1" class="oe_inline"/>.
+                        With nothing chosen here it sends like its parent company.
+                    </div>
+
+                    <separator string="Numbers of this company"/>
+                    <p class="text-muted">
+                        Every number connected for this company - here, in WA Tracker or in Sales Automation.
+                        A number already connected is only linked: tick it Main, nothing is scanned again.
+                    </p>
+                    <field name="company_session_ids" readonly="1" nolabel="1">
+                        <list create="false" delete="false" no_open="1">
+                            <field name="name"/>
+                            <field name="shown_number" string="Number"/>
+                            <field name="authorized_email" string="E-mail"/>
+                            <field name="status" widget="badge"
+                                   decoration-success="status == 'connected'"
+                                   decoration-danger="status in ('wrong_number', 'error', 'disconnected')"
+                                   decoration-warning="status in ('connecting', 'waiting_qr')"/>
+                            <field name="is_main_whatsapp" string="Main WhatsApp" widget="boolean" readonly="1"/>
+                            <field name="is_main_email" string="Main e-mail" widget="boolean" readonly="1"/>
+                            <button name="action_make_main_whatsapp" type="object" string="Make main WhatsApp"
+                                    class="btn-link" invisible="is_main_whatsapp"/>
+                            <button name="action_make_main_email" type="object" string="Make main e-mail"
+                                    class="btn-link" invisible="is_main_email or not authorized_email"/>
+                            <button name="action_change_company" type="object" string="Change company"
+                                    class="btn-link" groups="base.group_system"/>
+                            <button name="action_add_email" type="object" string="Add email"
+                                    class="btn-link" invisible="authorized_email" groups="base.group_system"/>
+                        </list>
+                    </field>
+
+                    <separator string="📱 Owner Notification Numbers (WhatsApp)"/>
+                    <p class="text-muted">
+                        Add phone numbers (with country code, no + sign) to receive
+                        business notifications via WhatsApp.
+                    </p>
+                    <field name="owner_number_ids">
+                        <list editable="bottom">
+                            <field name="sequence" widget="handle"/>
+                            <field name="name" placeholder="e.g. Owner / Manager"/>
+                            <field name="phone" placeholder="e.g. 919944080209"/>
+                            <field name="active"/>
+                        </list>
+                    </field>
+
+                    <notebook>
+                        <page string="Sales Auto-Send" name="sales_auto">
+                            <group>
+                                <group string="On Quotation Send (state = Sent)">
+                                    <field name="auto_send_so_quotation_wa"/>
+                                    <field name="auto_send_so_quotation_email" invisible="1"/>
+                                </group>
+                                <group string="On Order Confirmation">
+                                    <field name="auto_send_so_confirm_email"/>
+                                    <field name="auto_send_so_confirm_wa"/>
+                                </group>
+                            </group>
+                            <p class="text-muted" style="padding: 10px;">
+                                <strong>Quotation send:</strong> when you click 369ai's
+                                <em>Send by Email</em> button (which sets state=Sent), the email
+                                is delivered by 369ai's standard flow. Toggle <em>Auto WhatsApp
+                                Quotation</em> ON to also fire WhatsApp at the same time.<br/>
+                                <strong>Order confirmation:</strong> when you click Confirm,
+                                both WhatsApp and Email fire (according to the toggles).
+                                A manual <em>Send WhatsApp &amp; Email</em> button is also
+                                available on the sale order form for ad-hoc sends at any state.
+                            </p>
+                        </page>
+
+                        <page string="Purchase &amp; Invoicing Auto-Send" name="purchase_auto">
+                            <group>
+                                <group string="On PO Confirmation">
+                                    <field name="auto_send_po_confirm_email"/>
+                                    <field name="auto_send_po_confirm_wa"/>
+                                </group>
+                                <group string="Vendor Bill Posted">
+                                    <field name="auto_send_bill_email"/>
+                                    <field name="auto_send_bill_wa"/>
+                                </group>
+                                <group string="Customer Invoice Posted">
+                                    <field name="auto_send_invoice_email"/>
+                                    <field name="auto_send_invoice_wa"/>
+                                </group>
+                                <group string="Payment Posted (Receipt / Remittance)">
+                                    <field name="auto_send_payment_receipt_email"/>
+                                    <field name="auto_send_payment_receipt_wa"/>
+                                </group>
+                            </group>
+                            <p class="text-muted" style="padding: 10px;">
+                                <strong>PO Confirm:</strong> sends the purchase order PDF to the vendor.<br/>
+                                <strong>Vendor Bill Posted:</strong> sends the bill PDF to the vendor.<br/>
+                                <strong>Customer Invoice Posted:</strong> sends the invoice PDF to the customer.<br/>
+                                Manual <em>Send WhatsApp &amp; Email</em> buttons are also available
+                                on each document form.
+                            </p>
+                        </page>
+
+                        <page string="POS Notifications" name="pos_auto">
+                            <p class="text-muted" style="padding: 8px 0;">
+                                POS notifications use the <strong>Default WhatsApp Session</strong>
+                                and <strong>Default Email Session</strong> selected at the top of
+                                this page.
+                            </p>
+                            <p class="text-muted" style="padding: 8px 0;">
+                                The WhatsApp side of POS notifications is configured in
+                                <strong>WhatsApp Gateway - POS</strong>, which owns those
+                                settings. Install it to see them.
+                            </p>
+                            <group>
+                                <group string="Email">
+                                    <field name="pos_email_notify_enabled"/>
+                                    <field name="pos_email_notify_owners"
+                                           invisible="not pos_email_notify_enabled"/>
+                                    <field name="pos_email_notify_customer"
+                                           invisible="not pos_email_notify_enabled"/>
+                                    <field name="pos_owner_emails"
+                                           invisible="not pos_email_notify_enabled or not pos_email_notify_owners"
+                                           placeholder="manager@co.com, owner@co.com"/>
+                                </group>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- ============ WHATSAPP CONFIG ACTION ============ -->
+    <!-- Server action to get/create config and open it -->
+    <record id="action_whatsapp_config_server" model="ir.actions.server">
+        <field name="name">WhatsApp and Email Settings</field>
+        <field name="model_id" ref="whatsapp_gateway.model_whatsapp_config"/>
+        <field name="state">code</field>
+        <field name="code">
+config = env['whatsapp.config'].sudo().get_config()
+action = {
+    'type': 'ir.actions.act_window',
+    'name': 'WhatsApp and Email Settings',
+    'res_model': 'whatsapp.config',
+    'view_mode': 'form',
+    'res_id': config.id,
+    'target': 'current',
+    'context': {'form_view_initial_mode': 'edit'},
+}
+        </field>
+    </record>
+
+    <record id="action_whatsapp_config" model="ir.actions.act_window">
+        <field name="name">WhatsApp and Email Settings</field>
+        <field name="res_model">whatsapp.config</field>
+        <field name="view_mode">form</field>
+        <field name="target">current</field>
+        <field name="context">{'form_view_initial_mode': 'edit'}</field>
+    </record>
+
+    <!-- ============ SENDING PER COMPANY (all companies on one page) ============ -->
+    <record id="view_whatsapp_config_company_list" model="ir.ui.view">
+        <field name="name">whatsapp.config.company.list</field>
+        <field name="model">whatsapp.config</field>
+        <field name="priority">20</field>
+        <field name="arch" type="xml">
+            <list string="Companies" create="false" delete="false">
+                <field name="company_id" readonly="1"/>
+                <field name="parent_company_id" optional="hide"/>
+                <field name="number_count" optional="hide"/>
+                <field name="email_count" optional="hide"/>
+                <field name="default_whatsapp_session_id" options="{'no_create': True}"
+                       placeholder="own number"/>
+                <field name="wa_send_pdf" string="PDF on WhatsApp" optional="show"/>
+                <field name="email_send_pdf" string="PDF in e-mail" optional="show"/>
+                <field name="sender_name" optional="show" placeholder="database name"/>
+                <field name="wa_status_text" string="Now sends on" optional="hide"/>
+                <field name="email_session_id" context="{'wa_show_email': True}" options="{'no_create': True}"
+                       placeholder="own address"/>
+                <field name="email_status_text" string="Now mails from" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_whatsapp_config_companies" model="ir.actions.server">
+        <field name="name">Companies</field>
+        <field name="model_id" ref="whatsapp_gateway.model_whatsapp_config"/>
+        <field name="state">code</field>
+        <field name="code">
+Config = env['whatsapp.config'].sudo()
+ids = [Config.get_config(company.id).id for company in env.user.company_ids]
+action = {
+    'type': 'ir.actions.act_window',
+    'name': 'Companies',
+    'res_model': 'whatsapp.config',
+    'view_mode': 'list,form',
+    'views': [(env.ref('whatsapp_email.view_whatsapp_config_company_list').id, 'list'),
+              (env.ref('whatsapp_email.view_whatsapp_config_form').id, 'form')],
+    'domain': [('id', 'in', ids)],
+    'target': 'current',
+}
+        </field>
+    </record>
+
+</odoo>
