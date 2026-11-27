@@ -4,6 +4,7 @@
     <!-- Its own root menu, not a branch of Sales Automation: dispatching is a
          different job done by different people. -->
     <menuitem id="menu_sa_delivery_root"
+              web_icon="sales_automation_delivery,static/description/icon.png"
               name="Delivery"
               groups="group_sa_delivery_user"
               sequence="87"/>

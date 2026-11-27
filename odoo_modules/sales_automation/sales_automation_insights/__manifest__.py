@@ -3,7 +3,7 @@
     'name': 'Sales Automation - Insights',
     'summary': 'Star ratings for customers and suppliers, with one-page '
                'dashboards and side-by-side comparison',
-    'version': '19.0.3.5.0',
+    'version': '19.0.3.5.1',
     'category': 'Sales',
     'license': 'LGPL-3',
     'author': 'Alphalize',

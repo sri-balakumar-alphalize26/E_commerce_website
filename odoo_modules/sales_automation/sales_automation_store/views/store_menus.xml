@@ -12,6 +12,7 @@
          a different person from Delivery, and burying it two levels down is
          how a screen that has to be watched stops being watched. -->
     <menuitem id="menu_sa_store_root"
+              web_icon="sales_automation_store,static/description/icon.png"
               name="Store"
               sequence="16"/>
 

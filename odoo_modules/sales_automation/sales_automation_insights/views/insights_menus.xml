@@ -15,6 +15,7 @@
     </record>
 
     <menuitem id="menu_sa_insights_root"
+              web_icon="sales_automation_insights,static/description/icon.png"
               name="Insights"
               sequence="17"
               groups="sales_automation.group_sa_user"/>
