@@ -19,8 +19,12 @@ class ProductTemplate(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
+        importing = self.env.context.get('import_file')
         for vals in vals_list:
-            vals.setdefault('is_published', True)
+            if importing:
+                vals['is_published'] = True   # an import always comes in the store; switch off by hand after
+            else:
+                vals.setdefault('is_published', True)
         return super().create(vals_list)
 
     mart_features = fields.Text(

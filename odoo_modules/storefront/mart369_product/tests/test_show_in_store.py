@@ -16,6 +16,12 @@ class TestShowInStore(TransactionCase):
         self.assertFalse(rows['messages'])
         self.assertTrue(all(self.env['product.template'].browse(rows['ids']).mapped('is_published')))
 
+    def test_an_import_saying_off_still_comes_in_on(self):
+        Template = self.env['product.template'].with_context(import_file=True)
+        rows = Template.load(['name', 'is_published'], [['Zz import off', 'False']])
+        self.assertFalse(rows['messages'])
+        self.assertTrue(self.env['product.template'].browse(rows['ids']).is_published)
+
     def test_switched_off_stays_off(self):
         product = self.env['product.template'].create({'name': 'Zz hidden', 'is_published': False})
         self.assertFalse(product.is_published, 'an import column or a person saying off is kept')
