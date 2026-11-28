@@ -20,6 +20,7 @@ _logger = logging.getLogger(__name__)
 # Closed at two looks is down; one that is still trying is told after a minute.
 AGAIN_SECONDS = 6
 TRYING_SECONDS = 60
+LATE_SECONDS = 15 * 60          # an alert sent this long after it was due is marked late
 ON_PURPOSE = ('turned off', 'switched off', 'no WhatsApp number assigned')
 
 
@@ -117,6 +118,10 @@ class WhatsAppSessionAlert(models.Model):
                     continue                # nobody can send now; the next round looks again
                 session._alert_write({'wa_down_told': True})
                 since = _("Since: %s", session._alert_time(session.wa_down_since))
+                # Held back because no number could send it: say so, the date alone looks wrong.
+                late = now - session.wa_down_since > session._alert_wait() + timedelta(seconds=LATE_SECONDS)
+                if late:
+                    since += _("\n_(Late notice: no WhatsApp number was connected to send this earlier.)_")
                 if session._alert_on('alert_down'):
                     session._tell_owners(_("⚠️ *WhatsApp disconnected*\n%(who)s\n%(since)s", who=session._alert_who(), since=since))
                 if session._alert_on('alert_steps'):

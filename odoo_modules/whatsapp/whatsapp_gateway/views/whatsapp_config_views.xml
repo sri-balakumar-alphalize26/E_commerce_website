@@ -18,14 +18,19 @@
                         Add phone numbers (choose the country) to receive
                         business notifications via WhatsApp.
                     </p>
-                    <field name="owner_number_ids">
-                        <list editable="bottom">
+                    <!-- owner_number_all_ids includes switched-off numbers: they stay
+                         in the list (greyed) until deleted with the trash icon.
+                         Senders still read owner_number_ids (active only). -->
+                    <field name="owner_number_all_ids">
+                        <list editable="bottom" decoration-muted="not active">
                             <field name="sequence" widget="handle"/>
                             <field name="name" placeholder="e.g. Owner / Manager"/>
                             <field name="phone" widget="wa_phone"/>
-                            <field name="active"/>
+                            <field name="active" string="On" widget="boolean_toggle"/>
                         </list>
                     </field>
+                    <!-- kept (hidden) as the anchor other modules add their settings after -->
+                    <field name="owner_number_ids" invisible="1"/>
 
                 </sheet>
             </form>

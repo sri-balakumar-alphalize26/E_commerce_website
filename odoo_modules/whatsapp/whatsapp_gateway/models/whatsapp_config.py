@@ -40,6 +40,13 @@ class WhatsAppConfig(models.Model):
     owner_number_ids = fields.One2many(
         'whatsapp.owner.number', 'config_id', string='Owner Numbers',
     )
+    # Same numbers, switched-off ones included: only for the settings screen, so
+    # turning a number off keeps it in the list until it is deleted. Senders use
+    # owner_number_ids (active only).
+    owner_number_all_ids = fields.One2many(
+        'whatsapp.owner.number', 'config_id', string='Owner Numbers (all)',
+        context={'active_test': False},
+    )
 
     @api.model
     def get_config(self, company_id=None):
