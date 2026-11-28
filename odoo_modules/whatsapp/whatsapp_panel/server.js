@@ -909,8 +909,6 @@ app.post('/hook/:instance', async (req, res) => {
 
   const arrived = nextArrival();
   const payload = JSON.stringify(req.body || {});
-  // the code of a move is for the phone only, not for a chat history
-  if (payload.includes(MOVE_MARK) && [...moveCodes.values()].some(m => m.code && payload.includes(m.code))) return;
   const targets = (await numberDatabases(n.id)).filter(d => d.active && d.odoo_webhook_url);
   await Promise.allSettled(targets.map(async d => {
     // Behind those already waiting, so messages keep their order.
@@ -1078,6 +1076,166 @@ app.get('/v1/config', async (req, res) => {
   });
 });
 
+/** The vendor's link token, to copy into every new Odoo database of this vendor. */
+function linkTokenCard(c, isAdmin) {
+  const address = (process.env.PANEL_PUBLIC_URL || `http://127.0.0.1:${PORT}`).replace(/\/+$/, '');
+  const copy = id => `<button type="button" class="primary" onclick="var i=document.getElementById('${id}');i.select();
+          (navigator.clipboard ? navigator.clipboard.writeText(i.value) : Promise.resolve(document.execCommand('copy')));
+          this.textContent='Copied';">Copy</button>`;
+  return `
+    <div class="card narrow">
+      <h2>Link an Odoo database</h2>
+      <p class="muted">In Odoo: <b>Settings &rarr; WhatsApp</b> &rarr; type the <b>panel address</b>, paste the
+        <b>link token</b> &rarr; <b>Link</b>. The same two for every Odoo database of <b>${esc(c.name)}</b>.
+        ${c.odoo_link ? '' : ' <b class="bad">Linking is switched off for this vendor.</b>'}</p>
+      <label>WhatsApp panel address</label>
+      <div class="row gap"><input id="la${c.id}" value="${esc(address)}" readonly style="flex:1;font-family:monospace">${copy('la' + c.id)}</div>
+      <label style="margin-top:8px">Link token</label>
+      <div class="row gap"><input id="lt${c.id}" value="${esc(c.link_token || '')}" readonly style="flex:1;font-family:monospace">${copy('lt' + c.id)}</div>
+      ${isAdmin ? `<form method="post" action="/company/${c.id}/link-token" style="margin-top:8px"
+            onsubmit="return confirm('Make a new token? The old one stops linking NEW databases. Databases linked already keep working.')">
+        <button>New token</button> <span class="muted">if the token was shared with the wrong person</span>
+      </form>` : ''}
+    </div>`;
+}
+
+/**
+ * POST /v1/link - a new Odoo database links itself (26 Nov 2026).
+ *
+ * Body {token}: the vendor's link token (one per vendor, the same for every
+ * database; Odoo is handed it as wl1_<base64url(panel url|token)>). Headers
+ * X-Odoo-Db and X-Odoo-Url say which database on which server; it is
+ * registered (or found) under that vendor.
+ * Answers the database's link key: a row with no number, used by Odoo only to
+ * ask the panel (add numbers, e-mail). Asked again it answers the same row, so
+ * linking twice never makes a second database or a second session.
+ */
+function linkKey(tok) {
+  const base = (process.env.PANEL_PUBLIC_URL || `http://127.0.0.1:${PORT}`).replace(/\/+$/, '');
+  return 'wl1_' + Buffer.from(`${base}|${tok}`, 'utf8').toString('base64url');
+}
+
+const linkTries = new Map();
+function mayTryLink(ip) {
+  const now = Date.now();
+  const list = (linkTries.get(ip) || []).filter(t => now - t < 10 * 60000);
+  if (list.length >= 10) return false;      // 10 tries per 10 minutes per address
+  list.push(now);
+  linkTries.set(ip, list);
+  return true;
+}
+
+app.post('/v1/link', async (req, res) => {
+  const ip = clientIp(req);
+  const b = req.body || {};
+  const dbName = String(req.headers['x-odoo-db'] || '').trim();
+  const odooUrl = origin(req.headers['x-odoo-url'] || '');
+  const refuse = async (detail, status = 403) => {
+    await log({ databaseId: null, db: dbName, ip, endpoint: '/v1/link', status: 'refused', detail });
+    return res.status(status).json({ error: 'Refused', detail });
+  };
+  if (!mayTryLink(ip)) return refuse('too many tries: wait 10 minutes', 429);
+  const tok = String(b.token || '').trim();
+  if (!tok) return refuse('paste the vendor link token', 400);
+  if (!dbName || !odooUrl) return refuse('X-Odoo-Db and X-Odoo-Url are needed', 400);
+
+  const c = await pool.query('SELECT * FROM wap_company WHERE link_token = $1', [tok]);
+  if (!c.rows.length) return refuse('this link token is not valid (old, or mistyped): copy it again from the panel');
+  const company = c.rows[0];
+  if (!company.active) return refuse(`${company.name} is switched off in the WhatsApp panel`);
+  if (!company.odoo_link) return refuse(`linking from Odoo is switched off for ${company.name}: ask the panel administrator`);
+
+  const server = await serverFromUrl(odooUrl);
+  if (!server) return refuse('the Odoo address is not valid', 400);
+  if (!server.active) return refuse(`server ${server.base_url} is switched off in the WhatsApp panel`);
+
+  const { rows: here } = await pool.query(
+    'SELECT * FROM wap_database WHERE server_id = $1 AND db_name = $2 ORDER BY id', [server.id, dbName]);
+  if (here.some(d => d.company_id !== company.id)) {
+    return refuse(`database ${dbName} on ${server.base_url} is registered to another vendor`);
+  }
+  let row = here.find(d => !d.number_id);
+  let made = false;
+  if (!row) {
+    const first = here[0];
+    const ins = await pool.query(
+      `INSERT INTO wap_database (server_id, company_id, number_id, db_name, tenant_label, contact_number,
+                                 token, daily_cap, per_minute, sign_messages, active, own_numbers_max)
+       VALUES ($1,$2,NULL,$3,$4,$5,$6,$7,$8,$9,TRUE,$10) RETURNING *`,
+      [server.id, company.id, dbName, first ? first.tenant_label : company.name, first ? first.contact_number : '',
+       token(), first ? first.daily_cap : 0, first ? first.per_minute : 0, first ? first.sign_messages : true,
+       first ? Math.max(first.own_numbers_max, 10) : 10]);
+    row = ins.rows[0];
+    made = !first;
+  }
+  if (!row.active) return refuse(`database ${dbName} is switched off in the WhatsApp panel`);
+  await log({ databaseId: row.id, db: dbName, ip, endpoint: '/v1/link',
+              status: made ? 'database linked' : 'linked again', detail: "from Odoo, with the vendor link token" });
+  const numbers = here.filter(d => d.number_id).length;
+  res.json({ key: setupKey(row.token), vendor: company.name, database: dbName, server: server.base_url,
+             new_database: made, numbers, may_add: Math.max(row.own_numbers_max, ...here.map(d => d.own_numbers_max)) });
+});
+
+/**
+ * The key's own e-mail account, set from Odoo (each number / company its own).
+ *
+ * GET    - what is set (never the password).
+ * POST   - {from_email, from_name, host, port, secure, username, password}.
+ *          The mail server is asked first; nothing is saved when it refuses.
+ *          An empty password keeps the saved one.
+ * DELETE - remove it; this key then sends no e-mail.
+ */
+app.get('/v1/email', async (req, res) => {
+  const who = await identify(req);
+  if (who.error) return res.status(403).json({ error: 'Refused', detail: who.error });
+  const { rows } = await pool.query(
+    'SELECT from_email, from_name, host, port, secure, username, active FROM wap_email WHERE database_id = $1', [who.row.id]);
+  res.json(rows.length ? { configured: true, ...rows[0] } : { configured: false });
+});
+
+app.post('/v1/email', async (req, res) => {
+  const who = await identify(req);
+  const row = who.row;
+  const refuse = async (detail, status = 400) => {
+    await log({ databaseId: row ? row.id : null, db: row ? row.db_name : '', ip: clientIp(req), endpoint: '/v1/email', status: 'refused', detail });
+    return res.status(status).json({ error: 'Refused', detail });
+  };
+  if (who.error) return refuse(who.error, 403);
+  const b = req.body || {};
+  const fromEmail = String(b.from_email || '').trim();
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(fromEmail)) return refuse('type a valid From address');
+  if (!String(b.host || '').trim()) return refuse('type the SMTP server');
+  const old = await pool.query('SELECT * FROM wap_email WHERE database_id = $1', [row.id]);
+  const password = String(b.password || '') || (old.rows[0] ? old.rows[0].password : '');
+  if (!password) return refuse('type the SMTP password (app password)');
+  const trial = {
+    id: 'try-' + row.id + '-' + Date.now(), host: String(b.host).trim(), port: Number(b.port) || 587,
+    secure: b.secure === true || b.secure === 'true' || b.secure === 1,
+    username: String(b.username || '').trim() || fromEmail, password,
+  };
+  const ok = await mailer.verify(trial);
+  mailer.forget(trial.id);
+  if (!ok.ok) return refuse('the mail server refused these settings: ' + String(ok.error || '').slice(0, 200), 422);
+  const err = await saveEmailAccount(row, {
+    from_email: fromEmail, from_name: String(b.from_name || '').trim().slice(0, 80),
+    host: trial.host, port: trial.port, secure: trial.secure, username: trial.username, password,
+    daily_cap: old.rows[0] ? old.rows[0].daily_cap : 1000, per_minute: old.rows[0] ? old.rows[0].per_minute : 30,
+    active: true,
+  });
+  if (err) return refuse(err);
+  await log({ databaseId: row.id, db: row.db_name, ip: clientIp(req), endpoint: '/v1/email', status: 'email saved', detail: 'from Odoo: ' + fromEmail });
+  res.json({ ok: true, configured: true, from: fromEmail });
+});
+
+app.delete('/v1/email', async (req, res) => {
+  const who = await identify(req);
+  if (who.error) return res.status(403).json({ error: 'Refused', detail: who.error });
+  const old = await pool.query('DELETE FROM wap_email WHERE database_id = $1 RETURNING id', [who.row.id]);
+  old.rows.forEach(r => mailer.forget(r.id));
+  await log({ databaseId: who.row.id, db: who.row.db_name, ip: clientIp(req), endpoint: '/v1/email', status: 'email removed', detail: 'from Odoo' });
+  res.json({ ok: true, configured: false });
+});
+
 let addingNumber = Promise.resolve();
 
 /**
@@ -1092,6 +1250,18 @@ let addingNumber = Promise.resolve();
  */
 const FREE_NUMBERS = `SELECT n.* FROM wap_number n WHERE n.active AND n.company_id IS NOT DISTINCT FROM $1
         AND NOT EXISTS (SELECT 1 FROM wap_database x WHERE x.number_id = n.id)
+      ORDER BY (n.pair_state = 'open') DESC, n.label`;
+
+/**
+ * 26 Nov 2026: each Odoo database is a separate client. A free number is
+ * offered in Odoo only where the administrator allowed it (the number's page,
+ * "Offered in Odoo to"): one database ("<server id>:<db name>"), or every
+ * database of the vendor ("*"). '' = nobody: the administrator assigns it.
+ */
+const offerKey = row => `${row.server_id}:${row.db_name}`;
+const FREE_FOR_DB = `SELECT n.* FROM wap_number n WHERE n.active AND n.company_id IS NOT DISTINCT FROM $1
+        AND NOT EXISTS (SELECT 1 FROM wap_database x WHERE x.number_id = n.id)
+        AND (n.offer_to = '*' OR n.offer_to = $2)
       ORDER BY (n.pair_state = 'open') DESC, n.label`;
 
 /**
@@ -1110,141 +1280,11 @@ async function whereIs(row, number, all) {
        FROM wap_number n WHERE n.authorized_number = $1 ORDER BY n.active DESC, n.id DESC`, [number]);
   if (!rows.length) return { where: 'new' };
   if (rows.some(n => n.taken)) return { where: 'elsewhere' };
-  const free = rows.find(n => n.active && n.company_id === row.company_id);
+  // free only where offered: another client database never gets it by typing it
+  const free = rows.find(n => n.active && n.company_id === row.company_id
+                              && (n.offer_to === '*' || n.offer_to === offerKey(row)));
   return free ? { where: 'free', row: free } : { where: 'elsewhere' };
 }
-
-// ---- a number moves to another database. Who asks proves that the phone is
-// theirs: a code goes to the number's own WhatsApp. In memory: after a restart
-// a new code is asked for.
-const MOVE_CODE_FOR = 10 * 60000, MOVE_TRIES = 5, MOVE_WAIT = 15 * 60000;
-const moveCodes = new Map();      // who -> {code, until, tries, blocked}
-const moveGrants = new Map();     // who -> until
-const moveSent = new Map();       // number -> when its codes were sent
-const MOVE_MARK = 'Move code:';
-const moveWho = (row, number) => `${row.server_id}|${row.db_name}|${number}`;
-const mayMove = (row, number) => (moveGrants.get(moveWho(row, number)) || 0) > Date.now();
-
-/** {n, dbs, why, no}: the number, who has it, and why it cannot be moved from Odoo. */
-async function moveState(row, number, all) {
-  const { rows } = await pool.query('SELECT * FROM wap_number WHERE authorized_number = $1 ORDER BY active DESC, id DESC', [number]);
-  const n = rows[0];
-  if (!n) return { no: 'it is not in the panel' };
-  const dbs = (await pool.query('SELECT * FROM wap_database WHERE number_id = $1 ORDER BY id', [n.id])).rows;
-  const why = dbs.length ? 'used' : !n.active ? 'off' : 'vendor';
-  const max = Math.max(0, ...all.map(x => x.own_numbers_max));
-  const no = !max ? 'adding numbers from Odoo is not allowed for this database'
-    : all.filter(x => x.number_id).length >= max ? `this database may have ${max} number(s)`
-    : !n.active || dbs.some(d => !d.active || d.off_by === 'admin') ? 'it is switched off in the panel'
-    : dbs.length > 1 ? 'several databases use it'
-    : n.pair_state !== 'open' ? 'it is not connected, so no code can be sent to it' : '';
-  return { n, dbs, why, no };
-}
-
-/** Takes the number out of these rows; the databases, keys, logins and e-mail stay. */
-async function releaseRows(client, rows) {
-  const ids = rows.map(x => x.id);
-  if (!ids.length) return;
-  await client.query("UPDATE wap_database SET number_id = NULL, off_by = '' WHERE id = ANY($1::int[])", [ids]);
-  await client.query('DELETE FROM wap_retry WHERE database_id = ANY($1::int[])', [ids]);
-}
-
-/** Number n out of everything else and into the database of `row`, all or nothing. */
-async function moveNumber(n, row, olds) {
-  const fresh = token();
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-    await releaseRows(client, olds);
-    await client.query('UPDATE wap_number SET company_id = $1 WHERE id = $2', [row.company_id, n.id]);
-    const empty = await client.query(
-      'SELECT id, token FROM wap_database WHERE server_id = $1 AND db_name = $2 AND number_id IS NULL AND odoo_webhook_url = \'\' ORDER BY id LIMIT 1', [row.server_id, row.db_name]);
-    let key = fresh;
-    if (empty.rows.length) {
-      key = empty.rows[0].token;
-      await client.query('UPDATE wap_database SET number_id = $2 WHERE id = $1', [empty.rows[0].id, n.id]);
-    } else {
-      await client.query(
-        `INSERT INTO wap_database (server_id, company_id, number_id, db_name, tenant_label, contact_number,
-                                   token, daily_cap, per_minute, sign_messages, active, own_numbers_max)
-         SELECT server_id, company_id, $2, db_name, tenant_label, contact_number,
-                $3, daily_cap, per_minute, sign_messages, active, own_numbers_max
-           FROM wap_database WHERE id = $1`, [row.id, n.id, fresh]);
-    }
-    await client.query('COMMIT');
-    return key;
-  } catch (err) {
-    await client.query('ROLLBACK');
-    throw err;
-  } finally {
-    client.release();
-  }
-}
-
-/** POST /v1/numbers/move {number, do: 'code' | 'check', code} - always an answer, {ok, detail}. */
-app.post('/v1/numbers/move', async (req, res) => {
-  const who = await identify(req);
-  const ip = clientIp(req);
-  if (!maySeeNumbers(who)) return res.status(403).json({ error: 'Refused', detail: who.error });
-  const row = who.row;
-  const number = digits((req.body || {}).number);
-  const answer = async (ok, detail, note) => {
-    await log({ databaseId: row.id, db: row.db_name, ip, phone: number, endpoint: '/v1/numbers/move', status: ok ? note : 'refused', detail: ok ? 'from Odoo' : detail });
-    return res.json({ ok, detail });
-  };
-  try {
-    const key = moveWho(row, number);
-    const now = Date.now();
-    const all = await siblings(row);
-    if ((await whereIs(row, number, all)).where !== 'elsewhere') return await answer(false, 'this number need not be moved');
-    const it = await moveState(row, number, all);
-    if (it.no) return await answer(false, it.no);
-    const had = moveCodes.get(key) || {};
-    if (had.blocked > now) return await answer(false, `too many wrong codes, wait ${Math.ceil((had.blocked - now) / 60000)} minute(s)`);
-    if ((req.body || {}).do === 'check') {
-      if (!had.code || had.until < now) return await answer(false, 'the code is too old, ask for a new one');
-      if (digits((req.body || {}).code) !== had.code) {
-        had.tries += 1;
-        if (had.tries >= MOVE_TRIES) moveCodes.set(key, { blocked: now + MOVE_WAIT });
-        return await answer(false, had.tries >= MOVE_TRIES ? 'too many wrong codes, wait 15 minutes' : 'wrong code');
-      }
-      moveCodes.delete(key);
-      moveGrants.set(key, now + MOVE_CODE_FOR);
-      return await answer(true, '', 'move allowed');
-    }
-    const sent = (moveSent.get(number) || []).filter(t => now - t < 3600000);
-    if (sent.length && now - sent[sent.length - 1] < 60000) return await answer(false, 'a code was sent just now, wait a minute');
-    if (sent.length >= 5) return await answer(false, 'too many codes for this number, try again in an hour');
-    const n = await refreshNumber(it.n);
-    if (n.gateway_error) return await answer(false, 'the gateway is not reachable');
-    if (n.pair_state !== 'open') return await answer(false, 'it is not connected, so no code can be sent to it');
-    // asked again: somebody else may have been quicker while the gateway answered
-    const again = (moveSent.get(number) || []).filter(t => now - t < 3600000);
-    if (again.length !== sent.length) return await answer(false, 'a code was sent just now, wait a minute');
-    moveSent.set(number, [...sent, now]);
-    const code = String(crypto.randomInt(100000, 1000000));
-    moveCodes.set(key, { code, until: now + MOVE_CODE_FOR, tries: 0 });
-    const text = `${MOVE_MARK} *${code}*\nSomebody wants to use this WhatsApp number in the database ${row.db_name}. It stops in the database that uses it now.\nNot you? Do not give this code to anybody.`;
-    let went;
-    try { went = await evo('/message/sendText/' + n.instance_name, 'POST', { number, text }); } catch (err) { went = { ok: false }; }
-    if (!went.ok) {
-      moveCodes.delete(key);
-      return await answer(false, 'the code could not be sent');
-    }
-    return await answer(true, '', 'move code sent');
-  } catch (err) {
-    console.error('[panel] move:', err.message);
-    return res.status(500).json({ error: 'Failed', detail: 'the number could not be moved' });
-  }
-});
-
-// What is over is forgotten.
-setInterval(() => {
-  const now = Date.now();
-  for (const [k, v] of moveCodes) if ((v.blocked || v.until) < now) moveCodes.delete(k);
-  for (const [k, v] of moveGrants) if (v < now) moveGrants.delete(k);
-  for (const [k, v] of moveSent) if (v.every(t => now - t > 3600000)) moveSent.delete(k);
-}, 60000).unref();
 
 // How often a database asks where a number is: 30 times a minute.
 const asked = new Map();
@@ -1270,22 +1310,127 @@ app.get('/v1/numbers', async (req, res) => {
     if (!mayAsk(who.row.id)) return res.status(429).json({ error: 'Refused', detail: 'too many checks, try again in a minute' });
     const it = await whereIs(who.row, number, all);
     const mine = it.where === 'here' || it.where === 'off';
+    const out = { check: it.where, in_use: mine ? !!it.row.odoo_webhook_url : false };
     if (it.where === 'elsewhere') {
-      const m = await moveState(who.row, number, all);
-      if (!m.no && mayMove(who.row, number)) return res.json({ check: 'free', in_use: false, moves: true });
-      return res.json({ check: 'elsewhere', in_use: false, why: m.why || '', can_move: !m.no, move_no: m.no || '' });
+      const sw = await switchable(who.row, number);
+      if (sw) Object.assign(out, { can_switch: true, used_in: sw.from.map(d => d.db_name), paired: sw.n.pair_state === 'open' });
     }
-    return res.json({ check: it.where, in_use: mine ? !!it.row.odoo_webhook_url : false });
+    return res.json(out);
   }
   const max = Math.max(0, ...all.map(x => x.own_numbers_max));
-  // of this vendor and in no database, as on the panel page; only for who may add
-  const free = max ? (await pool.query(FREE_NUMBERS, [who.row.company_id])).rows : [];
+  // of this vendor, in no database, and offered to THIS database (or to all of the vendor's)
+  const free = max ? (await pool.query(FREE_FOR_DB, [who.row.company_id, offerKey(who.row)])).rows : [];
   res.json({
     may_add: max,
     free: free.filter(x => x.authorized_number).map(x => ({ label: x.label, authorized_number: x.authorized_number, state: x.pair_state })),
     numbers: all.filter(x => x.number_id).map(x => ({
       label: x.number_label, authorized_number: x.authorized_number, state: x.pair_state, in_use: !!x.odoo_webhook_url })),
   });
+});
+
+/**
+ * Switch a number from another database of the SAME vendor to this one
+ * (27 Nov 2026). Proof: a 6-digit code the number sends to itself (its
+ * "Message yourself" chat), so only who holds the phone can switch it.
+ */
+const switchCodes = new Map();          // `${dbRowId}:${number}` -> {code, until, tries}
+
+async function switchable(row, number) {
+  if (!row || !row.company_id) return null;
+  const { rows } = await pool.query(
+    `SELECT * FROM wap_number WHERE authorized_number = $1 AND active AND company_id = $2 ORDER BY id DESC LIMIT 1`,
+    [number, row.company_id]);
+  if (!rows.length) return null;
+  const n = rows[0];
+  const from = (await numberDatabases(n.id)).filter(d => !(d.db_name === row.db_name));
+  return { n, from };
+}
+
+async function switchWho(req, res) {
+  const who = await identify(req);
+  if (!maySeeNumbers(who)) {
+    res.status(403).json({ error: 'Refused', detail: who.error });
+    return null;
+  }
+  const number = digits((req.body || {}).number);
+  if (number.length < 8 || number.length > 15) {
+    res.status(400).json({ error: 'Refused', detail: 'The phone number needs 8 to 15 digits, with the country code.' });
+    return null;
+  }
+  if (!mayAsk(who.row.id)) {
+    // not 429: Odoo would hold this number's sends for a minute
+    res.status(409).json({ error: 'Refused', detail: 'Too many tries. Wait a minute and try again.' });
+    return null;
+  }
+  const sw = await switchable(who.row, number);
+  if (!sw) {
+    await log({ databaseId: who.row.id, db: who.row.db_name, ip: clientIp(req), phone: number, endpoint: '/v1/numbers/switch', status: 'refused', detail: 'not a number of this vendor' });
+    res.status(403).json({ error: 'Refused', detail: 'This number belongs to another company. Only the panel administrator can move it.' });
+    return null;
+  }
+  return { row: who.row, number, ...sw };
+}
+
+app.post('/v1/numbers/switch_code', async (req, res) => {
+  const w = await switchWho(req, res);
+  if (!w) return;
+  if (w.n.pair_state !== 'open') {
+    return res.status(409).json({ error: 'Refused', detail: 'The phone of this number is not connected. Connect it first, then switch.' });
+  }
+  const code = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
+  const text = `🔐 WhatsApp switch code: *${code}*\n\nSomeone in database "${w.row.db_name}" wants to move this number there`
+    + (w.from.length ? ` from "${w.from.map(d => d.db_name).join('", "')}"` : '')
+    + `.\nType the code in Odoo only if it was you. It is valid for 10 minutes.`;
+  let sent;
+  try { sent = await evo('/message/sendText/' + w.n.instance_name, 'POST', { number: w.number, text }); }
+  catch (err) { sent = { ok: false }; }
+  if (!sent.ok) {
+    await log({ databaseId: w.row.id, db: w.row.db_name, ip: clientIp(req), phone: w.number, endpoint: '/v1/numbers/switch', status: 'failed', detail: 'the code could not be sent' });
+    return res.status(502).json({ error: 'Failed', detail: 'The code could not be sent to the phone. Try again in a minute.' });
+  }
+  switchCodes.set(`${w.row.id}:${w.number}`, { code, until: Date.now() + 10 * 60000, tries: 0 });
+  await log({ databaseId: w.row.id, db: w.row.db_name, ip: clientIp(req), phone: w.number, endpoint: '/v1/numbers/switch', status: 'code sent', detail: 'to the number itself' });
+  res.json({ ok: true, from: w.from.map(d => d.db_name) });
+});
+
+app.post('/v1/numbers/switch', async (req, res) => {
+  const w = await switchWho(req, res);
+  if (!w) return;
+  const k = `${w.row.id}:${w.number}`;
+  const want = switchCodes.get(k);
+  const given = String((req.body || {}).code || '').replace(/\D/g, '');
+  if (!want || want.until < Date.now()) {
+    switchCodes.delete(k);
+    return res.status(409).json({ error: 'Refused', detail: 'The code has expired. Ask for a new one.' });
+  }
+  if (given !== want.code) {
+    want.tries += 1;
+    if (want.tries >= 5) switchCodes.delete(k);
+    await log({ databaseId: w.row.id, db: w.row.db_name, ip: clientIp(req), phone: w.number, endpoint: '/v1/numbers/switch', status: 'refused', detail: 'wrong code' });
+    return res.status(409).json({ error: 'Refused', detail: want.tries >= 5 ? 'Wrong code 5 times. Ask for a new one.' : 'Wrong code. Check the "Message yourself" chat on that phone.' });
+  }
+  switchCodes.delete(k);
+  const by = String((req.body || {}).by || '').trim().slice(0, 60) || 'an administrator';
+  const when = new Date().toLocaleString('en-GB', { timeZone: 'Asia/Kolkata' });
+  // tell the old database(s) first, while their rows (and webhook addresses) still exist
+  const { rows: old } = await pool.query(
+    `SELECT d.* FROM wap_database d WHERE d.number_id = $1 AND d.db_name <> $2`, [w.n.id, w.row.db_name]);
+  for (const d of old) {
+    if (d.odoo_webhook_url) {
+      await deliver(d, JSON.stringify({ event: 'panel.number_switched', data: {
+        number: w.number, to_db: w.row.db_name, by, at: when } })).catch(() => {});
+    }
+  }
+  for (const d of old) {
+    if ((await siblings(d)).length >= 2) await dropRow(d);
+    else await pool.query('UPDATE wap_database SET number_id = NULL WHERE id = $1', [d.id]);
+    await log({ databaseId: null, db: d.db_name, ip: clientIp(req), phone: w.number, endpoint: '/v1/numbers/switch', status: 'number switched away', detail: `to ${w.row.db_name} by ${by}` });
+  }
+  await pool.query('UPDATE wap_number SET offer_to = $1 WHERE id = $2', [offerKey(w.row), w.n.id]);
+  await log({ databaseId: w.row.id, db: w.row.db_name, ip: clientIp(req), phone: w.number, endpoint: '/v1/numbers/switch', status: 'number switched here', detail: `from ${old.map(d => d.db_name).join(', ') || 'no database'} by ${by}` });
+  const note = `✅ This WhatsApp number was moved from "${old.map(d => d.db_name).join('", "') || 'the panel'}" to "${w.row.db_name}" by ${by} on ${when}.`;
+  evo('/message/sendText/' + w.n.instance_name, 'POST', { number: w.number, text: note }).catch(() => {});
+  res.json({ ok: true, from: old.map(d => d.db_name) });
 });
 
 app.post('/v1/numbers', async (req, res) => {
@@ -1327,19 +1472,11 @@ async function addOwnNumber(row, body, ip) {
   }
   if (all.filter(x => x.number_id).length >= max) return refuse(`This database may have ${max} number(s); the panel administrator can allow more.`);
   let numberId;
-  if (it.where === 'elsewhere') {
-    if (!mayMove(row, number)) return refuse(`+${number} is already used elsewhere.`);
-    const m = await moveState(row, number, all);
-    if (m.no) return refuse(`+${number} cannot be moved: ${m.no}.`);
-    const key = await moveNumber(m.n, row, m.dbs);
-    moveGrants.delete(moveWho(row, number));
-    for (const d of m.dbs) await log({ databaseId: d.id, db: d.db_name, phone: number, endpoint: 'move', status: 'number moved away', detail: 'with the code sent to its phone' });
-    await log({ databaseId: row.id, db: row.db_name, ip, phone: number, endpoint: '/v1/numbers', status: 'number moved here', detail: 'from Odoo, with the code sent to its phone' });
-    const n = await loadNumber(m.n.id);
-    return { body: { key: setupKey(key), authorized_number: n.authorized_number, state: n.pair_state } };
-  }
+  if (it.where === 'elsewhere') return refuse(`+${number} is already used elsewhere.`);
   if (it.where === 'free') {
     numberId = it.row.id;
+    // a switched or freed number takes the name it gets in its new database
+    if (label) await pool.query('UPDATE wap_number SET label = $1 WHERE id = $2', [label, numberId]);
   } else {
     const made = await createNumber(row.company_id, label || (row.db_name + ' +' + number), number);
     if (made.error) return refuse(made.error);
@@ -1349,9 +1486,10 @@ async function addOwnNumber(row, body, ip) {
   await pool.query(
     `INSERT INTO wap_database (server_id, company_id, number_id, db_name, tenant_label, contact_number,
                                token, daily_cap, per_minute, sign_messages, active, own_numbers_max)
-     SELECT server_id, company_id, $2, db_name, tenant_label, contact_number,
+     SELECT server_id, company_id, $2, db_name, COALESCE(NULLIF($4, ''), tenant_label), contact_number,
             $3, daily_cap, per_minute, sign_messages, active, own_numbers_max
-       FROM wap_database WHERE id = $1`, [row.id, numberId, fresh]);
+       FROM wap_database WHERE id = $1`,
+    [row.id, numberId, fresh, String(body.company_label || '').trim().slice(0, 60)]);
   await log({ databaseId: row.id, db: row.db_name, ip, phone: number, endpoint: '/v1/numbers', status: 'number added', detail: 'from Odoo' });
   const n = await loadNumber(numberId);
   return { body: { key: setupKey(fresh), authorized_number: n.authorized_number, state: n.pair_state } };
@@ -1397,8 +1535,10 @@ async function ownNumberDo(req, res, row, what, refuse) {
   if (what === 'footer') {
     const phone = digits(b.phone);
     if (phone && (phone.length < 8 || phone.length > 15)) return refuse('the support number needs 8 to 15 digits, with the country code', 400);
+    // only_mine: each company of the database signs with its own name (one number each)
+    const ids = b.only_mine === true ? [row.id] : (await siblings(row)).map(x => x.id);
     await pool.query('UPDATE wap_database SET tenant_label=$1, contact_number=$2, sign_messages=$3 WHERE id = ANY($4::int[])',
-      [String(b.name || '').trim().slice(0, 60), phone ? '+' + phone : '', b.on === true, (await siblings(row)).map(x => x.id)]);
+      [String(b.name || '').trim().slice(0, 60), phone ? '+' + phone : '', b.on === true, ids]);
     return done();
   }
   const n = row.number_id ? await loadNumber(row.number_id) : null;
@@ -1545,6 +1685,9 @@ app.post('/email/send', async (req, res) => {
   const body = req.body || {};
   delete body.from;
   delete body.sender;
+  // Odoo may name the sender (the company's "Sender name"); never the address.
+  const fromName = String(body.from_name || '').replace(/["<>\r\n]/g, '').trim().slice(0, 80);
+  delete body.from_name;
   const to = String(body.to || '').trim();
   if (!to) return res.status(400).json({ error: 'No recipient' });
 
@@ -1615,7 +1758,7 @@ app.post('/email/send', async (req, res) => {
   }
   if (!signed.body_html && !signed.body_text) signed.body_text = '';
 
-  const result = await mailer.send(account, signed);
+  const result = await mailer.send(fromName ? { ...account, from_name: fromName } : account, signed);
   await log({ databaseId: row.id, url: claimedUrl, db: row.db_name, ip, phone: to,
               endpoint: '/email/send', channel: 'email',
               status: result.ok ? 'sent' : 'failed',
@@ -2114,6 +2257,9 @@ app.get('/', requireLogin, async (req, res) => {
     ${dbs.rows.length ? `<table>${dbHead}${dbs.rows.map(dbRow).join('')}</table>
     <p class="muted">These are the databases assigned to you. You set each one's mail account and its client password; the administrator assigns numbers.</p>`
     : '<div class="card"><p>No databases assigned to you yet.</p></div>'}`;
+    // the vendor copies its own link token from here into each new Odoo database
+    const own = await pool.query('SELECT * FROM wap_company WHERE id = $1', [s.companyId]);
+    if (own.rows.length) body += linkTokenCard(own.rows[0], false);
   }
 
   page(req, res, isAdmin ? 'Vendors' : 'Databases', `
@@ -2554,7 +2700,7 @@ app.get('/database/:id', requireLogin, scopeDatabase('id'), async (req, res) => 
             ${used ? `<li>Open ${out(sessionsUrl, 'the numbers in Odoo')} and choose the session with <b>Instance</b>
               <code>${esc(x.n.instance_name || '')}</code>. Do not press New: this number has its session already. After <b>Reset key</b>: paste it in <b>Setup Key</b> and save.</li>` : `
             <li><b>Connect with Odoo</b> copies the key and opens a new session. Give it a name, paste the key in <b>Setup Key</b>${another
-              ? ', untick <b>Email</b> and <b>Send all 369ai email through the gateway</b> (the first number has the e-mail)' : ''} and save.
+              ? ' (its own e-mail: E-mail tab here, or <b>Add email</b> on the number in Odoo)' : ''} and save.
               Do not paste it into another number's session.</li>`}
             <li>Press <b>Load Settings</b>. Odoo shows this number; when it is not connected, scan its QR here.</li>
             <li>Press <b>Sync Groups</b> (with Sales Automation). To choose them one by one: ${out(odooAction('sales_automation.action_sa_customer_group'), 'Customer Groups')} or
@@ -2592,7 +2738,7 @@ app.get('/database/:id', requireLogin, scopeDatabase('id'), async (req, res) => 
             ${isAdmin && n ? `<form method="post" action="/database/${x.id}/number/toggle" style="margin:0"
                 ${x.off_by ? '' : `onsubmit="return confirm('Turn off ${esc(fmtNumber(n.authorized_number))}? It sends nothing and its groups get no answer until it is turned on. The phone stays linked; the other numbers go on.')"`}>
               <button class="${x.off_by ? 'primary' : ''}">${x.off_by ? 'Turn on' : 'Turn off'}</button></form>` : ''}
-            ${isAdmin && (n || !only) ? `<form method="post" action="/database/${x.id}/number/remove" style="margin:0"
+            ${isAdmin && n && only ? `<form method="post" action="/database/${x.id}/number/remove" style="margin:0"
                 onsubmit="return confirm('${ask(lastNumber(x)
                   ? `Remove ${fmtNumber(n.authorized_number) || n.label} from this database? It is the only number: nothing is sent on WhatsApp until another is added. The database, its key, login and e-mail stay. The number is free to use again.`
                   : `Remove ${n ? fmtNumber(n.authorized_number) || n.label : 'this empty line'} from this database? Its key stops at once. The other numbers stay.${n ? ' The number is free to use again.' : ''}`)}')">
@@ -2642,28 +2788,13 @@ app.get('/database/:id', requireLogin, scopeDatabase('id'), async (req, res) => 
           </form>` : ''}
           <div class="row" style="margin-top:10px;flex-wrap:wrap">
             ${isAdmin && n ? `<a class="btn" href="/number/${n.id}">Number and phone</a>` : ''}
+            ${isAdmin && !only ? `<form method="post" action="/database/${x.id}/delete" style="margin:0"
+                  onsubmit="return confirm('Remove ${n ? esc(fmtNumber(n.authorized_number)) : 'this number'} from this database? Its key stops at once. The other numbers stay. The number is free to use again.')">
+              <input type="hidden" name="sure" value="1"><button class="bad-btn">Remove from this database</button></form>` : ''}
           </div>
         </details>` : ''}
       </div>`;
   };
-
-  const moving = isAdmin && Number(q.move) ? await loadNumber(Number(q.move)) : null;
-  const movingFrom = moving ? (await pool.query(
-    'SELECT d.db_name, s.base_url FROM wap_database d JOIN wap_server s ON s.id = d.server_id WHERE d.number_id = $1 ORDER BY d.db_name', [moving.id])).rows : [];
-  const movingVendor = moving ? ((await pool.query('SELECT name FROM wap_company WHERE id = $1', [moving.company_id])).rows[0] || {}).name || '' : '';
-  const movingText = !moving ? '' : movingFrom.length
-    ? `is already used by ${movingFrom.map(x => `${x.db_name} (${x.base_url})`).join(', ')}`
-    : moving.company_id !== d.company_id ? `is in no database, but belongs to the vendor ${movingVendor}` : 'is in the panel already, in no database';
-  const movingCard = moving && !rowsOfDb.some(x => x.number_id === moving.id) ? `
-        <div class="card warn" role="alert">
-          <b class="warn-msg">${esc(fmtNumber(moving.authorized_number))} ${esc(movingText)}.</b>
-          ${moving.active ? `<p class="muted" style="margin:6px 0">${movingFrom.length ? 'Moved here, it stops there at once. That database, its key, login and e-mail stay. ' : ''}The phone stays linked.</p>
-          <form method="post" action="/database/${d.id}/number/move" style="margin:0"
-                onsubmit="return confirm('${ask(`Move ${fmtNumber(moving.authorized_number)} to ${d.db_name}?${movingFrom.length ? ` It stops in ${movingFrom.map(x => x.db_name).join(', ')} at once.` : ''}`)}')">
-            <input type="hidden" name="number_id" value="${moving.id}"><input type="hidden" name="sure" value="1">
-            <button class="primary">Move it here</button></form>`
-          : `<p class="muted" style="margin:6px 0 0">It is switched off. <a href="/number/${moving.id}">Open its page</a> and tick "Allowed to send" first.</p>`}
-        </div>` : '';
 
   const numbersCard = `
     ${problemCard}
@@ -2682,7 +2813,6 @@ app.get('/database/:id', requireLogin, scopeDatabase('id'), async (req, res) => 
       ${isAdmin ? `
       <details class="num-add" ${q.add || !withNumber.length ? 'open' : ''}>
         <summary class="btn primary">+ Add another number</summary>
-        ${movingCard}
         ${freeNumbers.length ? `
         <h3>Numbers you already added</h3>
         ${freeNumbers.map(x => `
@@ -2705,22 +2835,38 @@ app.get('/database/:id', requireLogin, scopeDatabase('id'), async (req, res) => 
       </form>` : ''}
     </div>`;
 
-  const emailCard = canEdit ? `
-    <form method="post" action="/database/${d.id}/email" class="card narrow">
-      <h2>Email account for this database</h2>
-      ${q.tested ? `<p class="${q.testbad ? 'bad' : 'ok-msg'}">${esc(q.testbad || 'The mail server accepted these settings.')}</p>` : ''}
-      <label>From address<input name="from_email" type="email" required value="${esc(d.from_email || '')}"></label>
-      <label>From name<input name="from_name" value="${esc(d.from_name || '')}" placeholder="${esc(d.tenant_label || d.company_name)}"></label>
-      ${smtpFields(d.email_id ? d : null)}
+  // One e-mail account per number (key): each company of the database can send from its own address.
+  const mailRows = canEdit ? (await pool.query('SELECT * FROM wap_email WHERE database_id = ANY($1::int[])',
+    [rowsOfDb.map(x => x.id)])).rows : [];
+  const emailForm = (x, many) => {
+    const e = mailRows.find(m => m.database_id === x.id);
+    const cur = e ? { ...e, email_id: e.id, email_username: e.username } : null;
+    const title = many
+      ? `Email for ${esc(fmtNumber(x.authorized_number) || x.number_label || ('key ' + x.id))}${x.tenant_label ? ' &middot; ' + esc(x.tenant_label) : ''}`
+      : 'Email account for this database';
+    return `
+    <form method="post" action="/database/${x.id}/email" class="card narrow" id="mail${x.id}">
+      <h2>${title}</h2>
+      ${q.tested && String(q.mail || d.id) === String(x.id) ? `<p class="${q.testbad ? 'bad' : 'ok-msg'}">${esc(q.testbad || 'The mail server accepted these settings.')}</p>` : ''}
+      <label>From address<input name="from_email" type="email" required value="${esc(e ? e.from_email : '')}"></label>
+      <label>From name<input name="from_name" value="${esc(e ? e.from_name || '' : '')}" placeholder="${esc(x.tenant_label || d.company_name)}"></label>
+      ${smtpFields(cur)}
       <div class="row gap">
-        <label style="flex:1">Daily cap<input name="daily_cap" type="number" value="${d.email_daily_cap || 1000}"></label>
-        <label style="flex:1">Per minute<input name="per_minute" type="number" value="${d.email_per_minute || 30}"></label>
+        <label style="flex:1">Daily cap<input name="daily_cap" type="number" value="${e ? e.daily_cap || 1000 : 1000}"></label>
+        <label style="flex:1">Per minute<input name="per_minute" type="number" value="${e ? e.per_minute || 30 : 30}"></label>
       </div>
-      <label class="check"><input type="checkbox" name="active" ${d.email_id ? (d.email_active ? 'checked' : '') : 'checked'}> Allowed to send email</label>
+      <label class="check"><input type="checkbox" name="active" ${e ? (e.active ? 'checked' : '') : 'checked'}> Allowed to send email</label>
       <button class="primary">Save</button>
-      ${d.email_id ? `<button formaction="/database/${d.id}/email/test">Test connection</button>` : ''}
-      <p class="muted">Odoo sends every email from this address and cannot replace it.</p>
-    </form>${SMTP_SCRIPT}` : '';
+      ${e ? `<button formaction="/database/${x.id}/email/test">Test connection</button>` : ''}
+      <p class="muted">Odoo sends the e-mail of ${many ? 'this number (its company)' : 'this database'} from this address and cannot replace it.
+      ${many ? 'Odoo can also set it itself: WhatsApp Numbers &rarr; the number &rarr; <b>Add email</b>.' : ''}</p>
+    </form>`;
+  };
+  const mailTargets = rowsOfDb.filter(x => x.number_id || x.id === d.id);
+  const emailCard = canEdit
+    ? (mailTargets.length > 1 ? '<p class="muted">Each number has its own e-mail account, so each company of the database sends from its own address. Leave a number empty to send no e-mail on it.</p>' : '')
+      + (mailTargets.length ? mailTargets : [d]).map(x => emailForm(x, mailTargets.length > 1)).join('') + SMTP_SCRIPT
+    : '';
 
   const clientCard = canEdit ? `
     <form method="post" action="/database/${d.id}/client" class="card narrow">
@@ -2921,12 +3067,6 @@ app.post('/database/:id/number/add', requireLogin, requireAdmin, scopeDatabase('
   if (!numberId && !typed) return back('Type the new number, with the country code.');
   if (typed && phoneWrong(b, 'new_number')) return back(phoneWrong(b, 'new_number'));
   if (typed) {
-    const known = await pool.query('SELECT id FROM wap_number WHERE authorized_number = $1', [typed]);
-    if (known.rows.length) {
-      const here = (await siblings(d)).find(x => x.number_id === known.rows[0].id);
-      if (here) return back('This database has that number already, with its own key.');
-      return res.redirect(`/database/${d.id}?add=1&move=${known.rows[0].id}#numbers`);
-    }
     const made = await createNumber(d.company_id, label || (d.db_name + ' +' + typed), typed);
     if (made.error) return back(made.error);
     numberId = made.row.id;
@@ -2956,27 +3096,6 @@ app.post('/database/:id/number/add', requireLogin, requireAdmin, scopeDatabase('
   await log({ databaseId: d.id, db: d.db_name, endpoint: 'admin', status: 'number added', detail: `by ${req.session.username}` });
   if (typed) return res.redirect(`/number/${numberId}/qr`);
   res.redirect(`/database/${d.id}?ok=` + encodeURIComponent('Number added. Its key is in the list below.') + '#numbers');
-});
-
-/** The administrator moves a number that another database has, or another vendor. */
-app.post('/database/:id/number/move', requireLogin, requireAdmin, scopeDatabase('id'), async (req, res) => {
-  const d = req.db;
-  const back = msg => res.redirect(`/database/${d.id}?bad=` + encodeURIComponent(msg));
-  if (!req.body.sure) return res.redirect('/database/' + d.id);
-  const n = await loadNumber(Number(req.body.number_id) || 0);
-  if (!n) return back('That number no longer exists.');
-  if (!n.active) return back('That number is switched off: tick "Allowed to send" on its own page first.');
-  if ((await siblings(d)).some(x => x.number_id === n.id)) return back('This database has that number already, with its own key.');
-  if (!d.company_id) return back('This database has no vendor.');
-  const olds = (await pool.query('SELECT * FROM wap_database WHERE number_id = $1 ORDER BY id', [n.id])).rows;
-  try {
-    await moveNumber(n, d, olds);
-  } catch (err) {
-    return back(err.message.slice(0, 160));
-  }
-  for (const x of olds) await audit(req, 'number moved away', { databaseId: x.id, db: x.db_name, phone: n.authorized_number, detail: 'to ' + d.db_name });
-  await audit(req, 'number moved here', { databaseId: d.id, db: d.db_name, phone: n.authorized_number, detail: olds.length ? 'from ' + olds.map(x => x.db_name).join(', ') : 'it was in no database' });
-  res.redirect(`/database/${d.id}?ok=` + encodeURIComponent('The number was moved here. Its key is in the list below.') + '#numbers');
 });
 
 app.post('/database/:id/number/new', requireLogin, requireAdmin, scopeDatabase('id'), async (req, res) => {
@@ -3043,7 +3162,7 @@ app.post('/database/:id/email/test', requireLogin, requireVendorOrAdmin, scopeDa
   const { rows } = await pool.query('SELECT * FROM wap_email WHERE database_id=$1', [req.db.id]);
   if (!rows.length) return res.redirect(`/database/${req.db.id}?bad=` + encodeURIComponent('Save the account first.'));
   const result = await mailer.verify(rows[0]);
-  res.redirect(`/database/${req.db.id}?tested=1` + (result.ok ? '' : '&testbad=' + encodeURIComponent(result.error.slice(0, 200))));
+  res.redirect(`/database/${req.db.id}?tested=1&mail=${req.db.id}` + (result.ok ? '' : '&testbad=' + encodeURIComponent(result.error.slice(0, 200))) + `#mail${req.db.id}`);
 });
 
 app.post('/database/:id/client', requireLogin, requireVendorOrAdmin, scopeDatabase('id'), async (req, res) => {
@@ -3105,7 +3224,8 @@ app.get('/numbers', requireLogin, requireVendorOrAdmin, async (req, res) => {
         <td>${esc(fmtNumber(n.authorized_number)) || '<span class="muted">adopts first scan</span>'}</td>
         <td>${esc(fmtNumber(n.paired_number)) || '<span class="muted">—</span>'}</td>
         <td>${statePill(n.pair_state)}</td>
-        <td>${n.dbs ? esc(n.dbs) : '<span class="muted">none</span>'}</td>
+        <td>${n.dbs ? esc(n.dbs) : `<span class="muted">none${n.offer_to === '*' ? ' &middot; offered to every database'
+          : n.offer_to ? ' &middot; offered to ' + esc(n.offer_to.split(':').slice(1).join(':')) : ' &middot; offered to nobody'}</span>`}</td>
         <td class="right"><a class="btn" href="/number/${n.id}/qr">${n.pair_state === 'open' ? 'Connection' : 'Scan QR'}</a></td>
       </tr>`).join('')}
     </table>` : `<div class="card"><p>No numbers yet.</p>${isAdmin ? '<a class="btn primary" href="/numbers/new">Add the first number</a>' : ''}</div>`}`);
@@ -3202,6 +3322,14 @@ app.get('/number/:id', requireLogin, requireVendorOrAdmin, scopeNumber('id'), as
                                   ORDER BY s.base_url, d.db_name`);
   const assigned = dbs.rows.filter(d => d.number_id === n.id);
   const q = req.query;
+  // the vendor's Odoo databases this number may be offered to (each a separate client)
+  const own = (await pool.query(
+    `SELECT DISTINCT d.server_id, d.db_name, s.base_url FROM wap_database d JOIN wap_server s ON s.id = d.server_id
+      WHERE d.company_id = $1 ORDER BY s.base_url, d.db_name`, [n.company_id])).rows;
+  const offerOptions = [`<option value="" ${!n.offer_to ? 'selected' : ''}>Nobody - I assign it here</option>`]
+    .concat(own.map(d => { const k = `${d.server_id}:${d.db_name}`;
+      return `<option value="${esc(k)}" ${n.offer_to === k ? 'selected' : ''}>Only database ${esc(d.db_name)} (${esc(d.base_url)})</option>`; }))
+    .concat([`<option value="*" ${n.offer_to === '*' ? 'selected' : ''}>Every database of ${esc(n.company_name)}</option>`]).join('');
   page(req, res, n.label, `
     <h1>${esc(n.label)} <span class="muted">— ${esc(n.company_name)}</span></h1>
     ${q.ok ? `<p class="ok-msg">${esc(q.ok)}</p>` : ''}${q.bad ? `<p class="bad">${esc(q.bad)}</p>` : ''}
@@ -3224,6 +3352,9 @@ app.get('/number/:id', requireLogin, requireVendorOrAdmin, scopeNumber('id'), as
       ${phoneField('authorized_number', 'Authorized phone number', { value: n.authorized_number })}
       <span class="muted">Changing it while another phone is paired logs that phone out.</span>
       <label class="check"><input type="checkbox" name="active" ${n.active ? 'checked' : ''}> Allowed to send</label>
+      <label>Offered in Odoo to<select name="offer_to">${offerOptions}</select>
+        <span class="muted">While it is in no database, which Odoo database sees it under "Connect a number" (and may
+        take it without a scan). Each database is a separate client: others never see it.</span></label>
       <button class="primary">Save</button>
     </form>
     <form method="get" action="/database/new" class="card narrow">
@@ -3266,8 +3397,12 @@ app.post('/number/:id', requireLogin, requireAdmin, scopeNumber('id'), async (re
   if (number && (number.length < 8 || number.length > 15)) return bad('The phone number needs 8 to 15 digits.');
   const dup = await pool.query('SELECT label FROM wap_number WHERE authorized_number = $1 AND id <> $2 AND $1 <> \'\'', [number, n.id]);
   if (dup.rows.length) return bad(`+${number} is already used by "${dup.rows[0].label}".`);
-  await pool.query('UPDATE wap_number SET label=$1, authorized_number=$2, active=$3, last_wrong_number=CASE WHEN $2 <> authorized_number THEN \'\' ELSE last_wrong_number END, pair_state=CASE WHEN pair_state=\'wrong_number\' AND $2 <> authorized_number THEN \'close\' ELSE pair_state END WHERE id=$4',
-    [label, number, !!req.body.active, n.id]);
+  await pool.query('UPDATE wap_number SET label=$1, authorized_number=$2, active=$3, last_wrong_number=CASE WHEN $2 <> authorized_number THEN \'\' ELSE last_wrong_number END, pair_state=CASE WHEN pair_state=\'wrong_number\' AND $2 <> authorized_number THEN \'close\' ELSE pair_state END, offer_to=$5 WHERE id=$4',
+    [label, number, !!req.body.active, n.id, String(req.body.offer_to || '').slice(0, 200)]);
+  const offerTo = String(req.body.offer_to || '').slice(0, 200);
+  if (offerTo !== (n.offer_to || '')) {
+    await audit(req, 'offer changed', { phone: n.authorized_number || '', detail: `${n.label}: offered to ${offerTo === '*' ? 'every database' : offerTo ? offerTo.split(':').slice(1).join(':') : 'nobody'}` });
+  }
   if (number && n.paired_number && n.paired_number !== number) {
     try { await evo(`/instance/logout/${n.instance_name}`, 'DELETE'); } catch (err) { /* sweep retries */ }
     await pool.query('UPDATE wap_number SET paired_number=\'\', profile_name=\'\', pair_state=\'close\' WHERE id=$1', [n.id]);
@@ -3495,8 +3630,11 @@ app.get('/company/:id', requireLogin, requireAdmin, async (req, res) => {
     <form method="post" action="/company/${c.id}" class="card narrow">
       <label>Vendor name<input name="name" value="${esc(c.name)}"><span class="muted">Typed at sign-in.</span></label>
       <label class="check"><input type="checkbox" name="active" ${c.active ? 'checked' : ''}> Allowed to send and to sign in (its clients too)</label>
+      <label class="check"><input type="checkbox" name="odoo_link" ${c.odoo_link ? 'checked' : ''}> A new Odoo database may link itself
+        with this vendor's link token</label>
       <button class="primary">Save</button> <a class="btn" href="/companies">Back</a>
     </form>
+    ${linkTokenCard(c, true)}
     <div class="card narrow">
       <h2>Vendor login</h2>
       ${logins.rows.map(l => `
@@ -3536,8 +3674,16 @@ app.get('/company/:id', requireLogin, requireAdmin, async (req, res) => {
 app.post('/company/:id', requireLogin, requireAdmin, async (req, res) => {
   const name = String(req.body.name || '').trim();
   const id = Number(req.params.id) || 0;
-  if (name) await pool.query('UPDATE wap_company SET name=$1, active=$2 WHERE id=$3', [name, !!req.body.active, id]);
+  if (name) await pool.query('UPDATE wap_company SET name=$1, active=$2, odoo_link=$4 WHERE id=$3',
+    [name, !!req.body.active, id, !!req.body.odoo_link]);
   res.redirect(`/company/${id}?ok=Saved.`);
+});
+
+app.post('/company/:id/link-token', requireLogin, requireAdmin, async (req, res) => {
+  const id = Number(req.params.id) || 0;
+  const gone = await pool.query("UPDATE wap_company SET link_token = md5(random()::text || clock_timestamp()::text || id::text) WHERE id = $1 RETURNING name", [id]);
+  if (gone.rows.length) await audit(req, 'link token reset', { detail: 'vendor ' + gone.rows[0].name });
+  res.redirect(`/company/${id}?ok=` + encodeURIComponent('New link token made. Send the new one for new databases.'));
 });
 
 app.post('/company/:id/password', requireLogin, requireAdmin, async (req, res) => {

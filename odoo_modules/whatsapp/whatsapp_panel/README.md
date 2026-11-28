@@ -25,16 +25,6 @@ One sign-in form for everybody: vendor name + username + password.
 | Vendor | its name | its databases and numbers | each database's e-mail account and caps, the client password, its opt-outs, the QR pages of its numbers |
 | Client (one per database) | the vendor's name | its one database | scan / reconnect the QR of its number, read the authorized number and sender address, its activity and opt-outs |
 
-A vendor that is switched off cannot send and cannot sign in, nor can its clients.
-After 5 wrong passwords there is a wait of 1 to 15 minutes. A changed or reset
-password signs out whoever used the old one. Removals, key resets and number
-changes made here are in Activity with the login that made them.
-**Move it here**: a number another database has can be moved. Odoo asks for a code
-that goes to the number's own WhatsApp (`POST /v1/numbers/move`); the administrator
-moves it on the database page without a code. The phone stays linked.
-**Remove** beside a number takes it off the database; with the last one the
-database, its key, login and e-mail stay.
-
 Reset or create a login from the command line:
 
     node reset_login.js --admin "password"

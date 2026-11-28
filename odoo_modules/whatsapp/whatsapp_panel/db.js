@@ -250,6 +250,21 @@ CREATE TABLE IF NOT EXISTS wap_retry (
 );
 CREATE INDEX IF NOT EXISTS wap_retry_db_idx ON wap_retry (database_id, id);
 ALTER TABLE wap_retry ADD COLUMN IF NOT EXISTS arrived BIGINT NOT NULL DEFAULT 0;
+
+-- 2026-11-26: a new Odoo database links itself (POST /v1/link) with its
+-- vendor's link token (one per vendor, the same for every database). Per
+-- vendor; the administrator can switch it off or make a new token.
+ALTER TABLE wap_company ADD COLUMN IF NOT EXISTS odoo_link BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE wap_company ADD COLUMN IF NOT EXISTS link_token TEXT;
+ALTER TABLE wap_company ALTER COLUMN link_token SET DEFAULT md5(random()::text || clock_timestamp()::text);
+UPDATE wap_company SET link_token = md5(random()::text || clock_timestamp()::text || id::text)
+ WHERE link_token IS NULL OR link_token = '';
+CREATE UNIQUE INDEX IF NOT EXISTS wap_company_link_token_idx ON wap_company (link_token);
+
+-- 2026-11-26: a free number is offered in Odoo only where allowed - each Odoo
+-- database is a separate client. '' = nobody (the administrator assigns it),
+-- '*' = every database of the vendor, '<server id>:<db name>' = that database.
+ALTER TABLE wap_number ADD COLUMN IF NOT EXISTS offer_to TEXT NOT NULL DEFAULT '';
 `;
 
 /**
