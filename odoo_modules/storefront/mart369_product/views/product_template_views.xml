@@ -119,4 +119,36 @@
         </field>
     </record>
 
+    <!-- 28 Nov 2026: Publish is called Show in store on the product screens -->
+    <record id="mart369_show_in_store_search" model="ir.ui.view">
+        <field name="name">product.template.search.show.in.store</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="website_sale.product_template_search_view_website"/>
+        <field name="arch" type="xml">
+            <filter name="published" position="attributes">
+                <attribute name="string">Show in store</attribute>
+            </filter>
+        </field>
+    </record>
+    <record id="mart369_show_in_store_template_list" model="ir.ui.view">
+        <field name="name">product.template.list.show.in.store</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="website_sale.product_template_view_tree_website_sale"/>
+        <field name="arch" type="xml">
+            <field name="is_published" position="attributes">
+                <attribute name="string">Show in store</attribute>
+            </field>
+        </field>
+    </record>
+    <record id="mart369_show_in_store_variant_list" model="ir.ui.view">
+        <field name="name">product.product.list.show.in.store</field>
+        <field name="model">product.product</field>
+        <field name="inherit_id" ref="website_sale.product_product_website_tree_view"/>
+        <field name="arch" type="xml">
+            <field name="is_published" position="attributes">
+                <attribute name="string">Show in store</attribute>
+            </field>
+        </field>
+    </record>
+
 </odoo>

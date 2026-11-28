@@ -109,8 +109,8 @@
                                             </p>
 
                                             <p t-elif="d and !d.product" class="pe-loading">
-                                                There is no published product to draw yet.
-                                                Publish one, then come back.
+                                                There is no product in the store to draw yet.
+                                                Show one in the store, then come back.
                                             </p>
 
                                             <t t-elif="d">

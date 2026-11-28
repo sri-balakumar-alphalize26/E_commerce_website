@@ -13,6 +13,16 @@ class ProductTemplate(models.Model):
 
     _inherit = 'product.template'
 
+    # 28 Nov 2026: "Publish" is "Show in store", and every new product starts
+    # with it on - desk, form, import or copy - until someone switches it off.
+    is_published = fields.Boolean(string='Show in store', default=True)
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            vals.setdefault('is_published', True)
+        return super().create(vals_list)
+
     mart_features = fields.Text(
         string='About this item',
         help='One point per line, shown as the "About this item" list on the '
