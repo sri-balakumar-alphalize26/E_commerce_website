@@ -81,8 +81,12 @@ h1 { font-size: 20px; margin: 0 0 4px; }
 @keyframes in { from { opacity: 0; transform: translateX(18px); } to { opacity: 1; transform: none; } }
 .tip { margin: 12px 16px 0; padding: 8px 12px; border-left: 3px solid var(--accent); background: var(--chip); border-radius: 6px; font-size: 13px; }
 .tip.warn { border-color: var(--warn-ink); background: var(--warn-bg); color: var(--warn-ink); }
-.nav { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 16px 16px; }
-.arrow { border: 0; border-radius: 8px; padding: 9px 18px; font: inherit; font-weight: 600; cursor: pointer; }
+/* 28 Nov 2026: Previous / Next always in the same place - a bar fixed to the bottom of the window */
+.nav { display: flex; align-items: center; justify-content: space-between; gap: 10px; position: fixed; left: 0; right: 0; bottom: 0; z-index: 5;
+  background: var(--card); border-top: 1px solid var(--line); box-shadow: 0 -4px 14px rgba(0,0,0,.08);
+  padding: 10px max(16px, calc((100% - 1280px) / 2 + 16px)) calc(10px + env(safe-area-inset-bottom, 0px)); }
+.wrap, .card:fullscreen { padding-bottom: 76px; }
+.arrow { border: 0; border-radius: 8px; padding: 9px 18px; font: inherit; font-weight: 600; cursor: pointer; min-width: 9.5em; white-space: nowrap; }
 .arrow.prev { background: var(--chip); color: var(--ink); }
 .arrow.next { background: var(--brand); color: var(--brand-ink); }
 .arrow:disabled { opacity: .4; cursor: default; }
@@ -100,7 +104,8 @@ h1 { font-size: 20px; margin: 0 0 4px; }
 .framed .sub { margin: 0 0 8px; }
 .framed .top { margin: 0 0 4px; }
 .framed .tabs { margin-bottom: 8px; }
-.framed .nav { padding: 10px 16px 12px; }
+.framed .nav { padding-top: 8px; padding-bottom: 8px; }
+.framed .wrap { padding-bottom: 64px; }
 .framed .text { padding: 4px 16px 8px; }
 .top { display: flex; align-items: center; gap: 12px; margin: 0 0 10px; font-size: 14px; }
 .top[hidden] { display: none; }
@@ -113,7 +118,7 @@ h1 { font-size: 20px; margin: 0 0 4px; }
 .lb.on { display: flex; }
 .lb img { max-width: 100%; max-height: 100%; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,.5); background: #fff; }
 .lb button { position: absolute; top: 12px; right: 14px; border: 0; border-radius: 999px; width: 38px; height: 38px; font-size: 20px; line-height: 1; cursor: pointer; background: #fff; color: #1f2430; }
-@media (max-width: 520px) { .arrow { padding: 9px 12px; } .row { flex-wrap: wrap; } .input { max-width: 100%; } .play { margin-left: 0; } }
+@media (max-width: 520px) { .arrow { padding: 9px 12px; min-width: 8.5em; } .row { flex-wrap: wrap; } .input { max-width: 100%; } .play { margin-left: 0; } }
 </style>
 </head>
 <body>
