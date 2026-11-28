@@ -40,11 +40,13 @@
                         <field name="alert_up"/>
                         <field name="alert_steps"/>
                     </group>
-                    <field name="owner_number_ids" context="{'active_test': False, 'default_company_id': company_id}">
-                        <list editable="bottom">
+                    <!-- 28 Nov 2026: owner_number_all_ids keeps switched-off numbers in the list (greyed) until deleted;
+                         the alerts still read owner_number_ids (on only) -->
+                    <field name="owner_number_all_ids" context="{'active_test': False, 'default_company_id': company_id}">
+                        <list editable="bottom" decoration-muted="not active">
                             <field name="name" string="Name" placeholder="e.g. Owner"/>
                             <field name="phone" widget="wa_phone"/>
-                            <field name="active" string="Send" widget="boolean_toggle"/>
+                            <field name="active" string="On" widget="boolean_toggle"/>
                         </list>
                     </field>
                     <field name="company_id" invisible="1"/>
