@@ -136,7 +136,7 @@ h1 { font-size: 20px; margin: 0 0 4px; }
     d="M9 2.8c.9 0 1.6.7 1.6 1.6v6.3l.6-.1c.9-.1 1.6.5 1.7 1.3l.1.4.4-.1c.9-.1 1.6.5 1.7 1.3l.1.5.3-.1c.9-.1 1.7.5 1.8 1.4l.4 3.4c.3 2.6-1.6 4.9-4.2 5.2l-1.6.1c-1.6.1-3.1-.6-4-1.9L4 16.7c-.5-.7-.3-1.6.4-2.1.7-.4 1.5-.3 2 .3l1 1.2V4.4c0-.9.7-1.6 1.6-1.6z"/></symbol>
 </svg>
 <script>
-const SHOTS = {"gateway/05_connect_form": {"src": "/whatsapp_employee_tracker/static/src/help/shots/gateway/05_connect_form.png", "box": [4.43, 41.6, 91.14, 6.99]}, "tracker/01_employee_sessions": {"src": "/whatsapp_employee_tracker/static/src/help/shots/tracker/01_employee_sessions.png", "box": [4.57, 19.93, 94.43, 7.04]}, "tracker/02_chat_view": {"src": "/whatsapp_employee_tracker/static/src/help/shots/tracker/02_chat_view.png", "box": [3.57, -9.21, 96.43, 118.42]}, "tracker/03_comm_log": {"src": "/whatsapp_employee_tracker/static/src/help/shots/tracker/03_comm_log.png", "box": [4.57, 19.93, 96.1, 30.46]}, "tracker/04_dashboard": {"src": "/whatsapp_employee_tracker/static/src/help/shots/tracker/04_dashboard.png", "box": [3.57, -9.21, 96.43, 118.42]}, "tracker/05_alert_rules": {"src": "/whatsapp_employee_tracker/static/src/help/shots/tracker/05_alert_rules.png", "box": [3.57, -9.21, 96.43, 118.42]}, "tracker/06_owner_numbers": {"src": "/whatsapp_employee_tracker/static/src/help/shots/tracker/06_owner_numbers.png", "box": [3.57, -9.21, 96.43, 118.42]}};
+const SHOTS = {"gateway/05_connect_form": {"src": "/whatsapp_employee_tracker/static/src/help/shots/gateway/05_connect_form.png", "box": [4.43, 41.6, 91.14, 6.99]}, "tracker/01_employee_sessions": {"src": "/whatsapp_employee_tracker/static/src/help/shots/tracker/01_employee_sessions.png", "box": [4.57, 19.93, 94.43, 7.04]}, "tracker/02_chat_view": {"src": "/whatsapp_employee_tracker/static/src/help/shots/tracker/02_chat_view.png", "box": [3.57, -9.21, 96.43, 118.42]}, "tracker/03_comm_log": {"src": "/whatsapp_employee_tracker/static/src/help/shots/tracker/03_comm_log.png", "box": [4.57, 19.93, 96.1, 30.46]}, "tracker/04_dashboard": {"src": "/whatsapp_employee_tracker/static/src/help/shots/tracker/04_dashboard.png", "box": [3.57, -9.21, 96.43, 118.42]}, "tracker/05_alert_rules": {"src": "/whatsapp_employee_tracker/static/src/help/shots/tracker/05_alert_rules.png", "box": [3.57, -9.21, 96.43, 118.42]}, "tracker/06_owner_numbers": {"src": "/whatsapp_employee_tracker/static/src/help/shots/tracker/06_owner_numbers.png", "box": [5.86, 47.24, 91.86, 5.26]}};
 const G = {
   employees: {
     name: 'Numbers for employees',
@@ -181,8 +181,10 @@ const G = {
         text: '<b>Alert Rules</b>: words like a competitor\'s name or rude phrases. A match shows in <b>Monitoring → Keyword Alerts</b>.',
         shot: 'tracker/05_alert_rules', box: [4.5, 5, 94, 20], mark: 'A rule and its words' },
       { title: 'Told when a number goes offline', url: 'WA Tracker → Configuration → Owner Numbers',
-        text: '<b>Owner Numbers</b>: press <b>Add a line</b>, name and phone - they get a WhatsApp when a number disconnects and when it is back.',
-        shot: 'tracker/06_owner_numbers', box: [5.5, 42.3, 8, 4.6], mark: 'Add a line' },
+        text: '<b>Owner Numbers</b>: press <b>Add a line</b>, name and phone - they get a WhatsApp when a number disconnects and when it is back. ' +
+          'Only numbers with <b>On</b> switched on get it. A switched-off number stays in the list, greyed out, until you delete it with the trash icon. ' +
+          'If no number could send the message on time, it ends with "(Late notice: no WhatsApp number was connected to send this earlier.)"',
+        shot: 'tracker/06_owner_numbers', box: [5.86, 47.24, 91.86, 5.26], mark: 'Switched off: greyed, stays until deleted' },
     ],
   },
 };
